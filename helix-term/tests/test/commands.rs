@@ -1177,3 +1177,25 @@ async fn substitute_backreference() -> anyhow::Result<()> {
     test(("#[|f]#oozoo\n", ":s/(o+)/[\\1]/<ret>", "#[f|]#[oo]zoo\n")).await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn global_delete_matching_lines() -> anyhow::Result<()> {
+    test((
+        "#[|f]#oo\nbar\nfoo baz\nqux\n",
+        ":g/foo/d<ret>",
+        "#[b|]#ar\nqux\n",
+    ))
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vglobal_delete_nonmatching_lines() -> anyhow::Result<()> {
+    test((
+        "#[|f]#oo\nbar\nfoozoo\nqux\n",
+        ":v/foo/d<ret>",
+        "#[f|]#oo\nfoozoo\n",
+    ))
+    .await?;
+    Ok(())
+}

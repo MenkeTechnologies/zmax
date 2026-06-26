@@ -2819,6 +2819,137 @@ fn do_substitute(
     Ok(())
 }
 
+/// Match the longest prefix (>= 1 char) of `name` that `s` starts with, where
+/// the following character is a delimiter (`!` or non-alphanumeric). Returns the
+/// remainder after the matched name. Prevents matching e.g. `goto` for `global`.
+fn match_command_prefix<'a>(s: &'a str, name: &str) -> Option<&'a str> {
+    (1..=name.len()).rev().find_map(|n| {
+        if s.starts_with(&name[..n]) {
+            let next = s[n..].chars().next();
+            match next {
+                Some('!') => Some(&s[n..]),
+                Some(c) if !c.is_alphanumeric() && !c.is_whitespace() => Some(&s[n..]),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    })
+}
+
+/// Parse a vim global command line: `g/pat/cmd`, `g!/pat/cmd`, `v/pat/cmd`.
+/// Returns (invert, pattern, command) or None.
+fn parse_vim_global(input: &str) -> Option<(bool, String, String)> {
+    let s = input.trim_start();
+    let (mut invert, rest) = if let Some(r) = match_command_prefix(s, "vglobal") {
+        (true, r)
+    } else if let Some(r) = match_command_prefix(s, "global") {
+        (false, r)
+    } else {
+        return None;
+    };
+    let rest = if let Some(r) = rest.strip_prefix('!') {
+        invert = !invert;
+        r
+    } else {
+        rest
+    };
+    let delim = rest.chars().next()?;
+    if delim.is_alphanumeric() || delim.is_whitespace() {
+        return None;
+    }
+    let body = &rest[delim.len_utf8()..];
+    let mut parts = body.splitn(2, delim);
+    let pattern = parts.next()?.to_string();
+    if pattern.is_empty() {
+        return None;
+    }
+    let command = parts.next().unwrap_or("").trim().to_string();
+    Some((invert, pattern, command))
+}
+
+/// `:g/pat/d` and `:v/pat/d`: delete lines (not) matching `pattern`.
+fn do_global(
+    cx: &mut compositor::Context,
+    invert: bool,
+    pattern: &str,
+    command: &str,
+) -> anyhow::Result<()> {
+    if !matches!(command, "d" | "delete") {
+        bail!("global: only the 'd' (delete) command is supported");
+    }
+
+    let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let len = slice.len_chars();
+
+    let mut changes = Vec::new();
+    for line in 0..total {
+        let lstart = slice.line_to_char(line);
+        let lend = line_ending::line_end_char_index(&slice, line);
+        // Skip the phantom trailing empty line.
+        let next = if line + 1 < total {
+            slice.line_to_char(line + 1)
+        } else {
+            len
+        };
+        if lstart == next {
+            continue;
+        }
+        let text: std::borrow::Cow<str> = slice.slice(lstart..lend).into();
+        let matched = re.is_match(&text);
+        if matched != invert {
+            changes.push((lstart, next, None));
+        }
+    }
+
+    if changes.is_empty() {
+        return Ok(());
+    }
+
+    let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::point(0.min(doc.text().len_chars())));
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn global_command(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    invert: bool,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let raw = args[0].trim();
+    let delim = raw
+        .chars()
+        .next()
+        .filter(|c| !c.is_alphanumeric() && !c.is_whitespace())
+        .ok_or_else(|| anyhow!("usage: :global/pattern/command"))?;
+    let body = &raw[delim.len_utf8()..];
+    let mut parts = body.splitn(2, delim);
+    let pattern = parts.next().unwrap_or("");
+    let command = parts.next().unwrap_or("").trim();
+    if pattern.is_empty() {
+        bail!("usage: :global/pattern/command");
+    }
+    do_global(cx, invert, pattern, command)
+}
+
+fn global(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    global_command(cx, args, event, false)
+}
+
+fn vglobal(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    global_command(cx, args, event, true)
+}
+
 fn substitute(
     cx: &mut compositor::Context,
     args: Args,
@@ -4597,6 +4728,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "global",
+        aliases: &[],
+        doc: "Run a command on matching lines: :g/pattern/d (delete). Also :g!/pat/d.",
+        fun: global,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vglobal",
+        aliases: &[],
+        doc: "Run a command on non-matching lines: :v/pattern/d (delete).",
+        fun: vglobal,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "substitute",
         aliases: &["s"],
         doc: "Substitute: :s/pattern/replacement/[flags]. Also :%s/.../.../g for the whole file.",
@@ -4997,6 +5150,14 @@ fn execute_command_line(
             return Ok(());
         }
         return do_substitute(cx, whole, &pattern, &replacement, &flags);
+    }
+
+    // vim-style global: `:g/pat/d`, `:g!/pat/d`, `:v/pat/d`.
+    if let Some((invert, pattern, gcommand)) = parse_vim_global(input) {
+        if event != PromptEvent::Validate {
+            return Ok(());
+        }
+        return do_global(cx, invert, &pattern, &gcommand);
     }
 
     match typed::TYPABLE_COMMAND_MAP.get(command) {

@@ -7,15 +7,15 @@
 <div class=kpi>
 <div class=card><b>5743</b>feature items (denominator)</div>
 <div class=card><b class=ported>244</b>ported (4.2%)</div>
-<div class=card><b class=partial>101</b>partial (1.8%)</div>
-<div class=card><b class=absent>5398</b>absent</div>
+<div class=card><b class=partial>103</b>partial (1.8%)</div>
+<div class=card><b class=absent>5396</b>absent</div>
 <div class=card><b class=ported>0</b>broken mappings</div>
 </div>
-<p class=muted>zemacs surface: 313 static commands · 195 typable commands · 371 default keybindings</p>
+<p class=muted>zemacs surface: 313 static commands · 197 typable commands · 371 default keybindings</p>
 <h2>Coverage by source</h2><table>
 <tr><th>Source</th><th>Total</th><th>Ported</th><th>Partial</th><th>Progress</th></tr>
 <tr><td>emacs</td><td class=n>3008</td><td class='n ported'>12</td><td class='n partial'>1</td><td><div class="bar"><div class="fill" style="width:0.4%"></div><span>0.4%</span></div></td></tr>
-<tr><td>neovim</td><td class=n>2077</td><td class='n ported'>154</td><td class='n partial'>100</td><td><div class="bar"><div class="fill" style="width:7.4%"></div><span>7.4%</span></div></td></tr>
+<tr><td>neovim</td><td class=n>2077</td><td class='n ported'>154</td><td class='n partial'>102</td><td><div class="bar"><div class="fill" style="width:7.4%"></div><span>7.4%</span></div></td></tr>
 <tr><td>spacemacs</td><td class=n>658</td><td class='n ported'>78</td><td class='n partial'>0</td><td><div class="bar"><div class="fill" style="width:11.9%"></div><span>11.9%</span></div></td></tr>
 </table>
 <h2>Coverage by source / category</h2><table>
@@ -23,7 +23,7 @@
 <tr><td>emacs</td><td>command</td><td class=n>1884</td><td class='n ported'>12</td><td class='n partial'>1</td><td><div class="bar"><div class="fill" style="width:0.6%"></div><span>0.6%</span></div></td></tr>
 <tr><td>emacs</td><td>keybinding</td><td class=n>1124</td><td class='n ported'>0</td><td class='n partial'>0</td><td><div class="bar"><div class="fill" style="width:0.0%"></div><span>0.0%</span></div></td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td class=n>53</td><td class='n ported'>0</td><td class='n partial'>0</td><td><div class="bar"><div class="fill" style="width:0.0%"></div><span>0.0%</span></div></td></tr>
-<tr><td>neovim</td><td>ex-command</td><td class=n>561</td><td class='n ported'>35</td><td class='n partial'>7</td><td><div class="bar"><div class="fill" style="width:6.2%"></div><span>6.2%</span></div></td></tr>
+<tr><td>neovim</td><td>ex-command</td><td class=n>561</td><td class='n ported'>35</td><td class='n partial'>9</td><td><div class="bar"><div class="fill" style="width:6.2%"></div><span>6.2%</span></div></td></tr>
 <tr><td>neovim</td><td>function</td><td class=n>451</td><td class='n ported'>0</td><td class='n partial'>0</td><td><div class="bar"><div class="fill" style="width:0.0%"></div><span>0.0%</span></div></td></tr>
 <tr><td>neovim</td><td>insert-mode</td><td class=n>98</td><td class='n ported'>20</td><td class='n partial'>0</td><td><div class="bar"><div class="fill" style="width:20.4%"></div><span>20.4%</span></div></td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td class=n>479</td><td class='n ported'>80</td><td class='n partial'>55</td><td><div class="bar"><div class="fill" style="width:16.7%"></div><span>16.7%</span></div></td></tr>
@@ -3103,7 +3103,7 @@
 <tr><td>CTRL-^</td><td class=absent>absent</td><td class=muted>index.txt:c_CTRL-^</td></tr>
 <tr><td>{char1} &lt;BS&gt; {char2}</td><td class=absent>absent</td><td class=muted>index.txt:c_digraph</td></tr>
 </table></details>
-<details><summary>neovim / ex-command <span class=muted>(561 items · <span class=ported>35 ported</span> · <span class=partial>7 partial</span>)</span></summary>
+<details><summary>neovim / ex-command <span class=muted>(561 items · <span class=ported>35 ported</span> · <span class=partial>9 partial</span>)</span></summary>
 <table><tr><th>Feature</th><th>Status</th><th>Source ref</th></tr>
 <tr><td>:!</td><td class=ported>ported</td><td class=muted>index.txt::!</td></tr>
 <tr><td>:bN[ext]</td><td class=ported>ported</td><td class=muted>index.txt::bNext</td></tr>
@@ -3142,11 +3142,13 @@
 <tr><td>:xa[ll]</td><td class=ported>ported</td><td class=muted>index.txt::xall</td></tr>
 <tr><td>:bun[load]</td><td class=partial>partial</td><td class=muted>index.txt::bunload</td></tr>
 <tr><td>:bw[ipeout]</td><td class=partial>partial</td><td class=muted>index.txt::bwipeout</td></tr>
+<tr><td>:g[lobal]</td><td class=partial>partial</td><td class=muted>index.txt::global</td></tr>
 <tr><td>:go[to]</td><td class=partial>partial</td><td class=muted>index.txt::goto</td></tr>
 <tr><td>:lc[d]</td><td class=partial>partial</td><td class=muted>index.txt::lcd</td></tr>
 <tr><td>:sav[eas]</td><td class=partial>partial</td><td class=muted>index.txt::saveas</td></tr>
 <tr><td>:setg[lobal]</td><td class=partial>partial</td><td class=muted>index.txt::setglobal</td></tr>
 <tr><td>:setl[ocal]</td><td class=partial>partial</td><td class=muted>index.txt::setlocal</td></tr>
+<tr><td>:v[global]</td><td class=partial>partial</td><td class=muted>index.txt::vglobal</td></tr>
 <tr><td>:</td><td class=absent>absent</td><td class=muted>index.txt::</td></tr>
 <tr><td>:!!</td><td class=absent>absent</td><td class=muted>index.txt::!!</td></tr>
 <tr><td>:#</td><td class=absent>absent</td><td class=muted>index.txt::#</td></tr>
@@ -3317,7 +3319,6 @@
 <tr><td>:foldo[pen]</td><td class=absent>absent</td><td class=muted>index.txt::foldopen</td></tr>
 <tr><td>:for</td><td class=absent>absent</td><td class=muted>index.txt::for</td></tr>
 <tr><td>:fu[nction]</td><td class=absent>absent</td><td class=muted>index.txt::function</td></tr>
-<tr><td>:g[lobal]</td><td class=absent>absent</td><td class=muted>index.txt::global</td></tr>
 <tr><td>:gr[ep]</td><td class=absent>absent</td><td class=muted>index.txt::grep</td></tr>
 <tr><td>:grepa[dd]</td><td class=absent>absent</td><td class=muted>index.txt::grepadd</td></tr>
 <tr><td>:gu[i]</td><td class=absent>absent</td><td class=muted>index.txt::gui</td></tr>
@@ -3629,7 +3630,6 @@
 <tr><td>:unme[nu]</td><td class=absent>absent</td><td class=muted>index.txt::unmenu</td></tr>
 <tr><td>:uns[ilent]</td><td class=absent>absent</td><td class=muted>index.txt::unsilent</td></tr>
 <tr><td>:upt[ime]</td><td class=absent>absent</td><td class=muted>index.txt::uptime</td></tr>
-<tr><td>:v[global]</td><td class=absent>absent</td><td class=muted>index.txt::vglobal</td></tr>
 <tr><td>:ve[rsion]</td><td class=absent>absent</td><td class=muted>index.txt::version</td></tr>
 <tr><td>:verb[ose]</td><td class=absent>absent</td><td class=muted>index.txt::verbose</td></tr>
 <tr><td>:vert[ical]</td><td class=absent>absent</td><td class=muted>index.txt::vertical</td></tr>

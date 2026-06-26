@@ -2758,5 +2758,21 @@
       "typable:substitute"
     ],
     "note": "vim :s/:%s via :substitute (regex, /g, /i, backrefs) + dispatcher hook"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_global",
+    "status": "partial",
+    "evidence": [
+      "typable:global"
+    ],
+    "note": "vim :g/:v via dispatcher hook; delete (d) action supported"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_vglobal",
+    "status": "partial",
+    "evidence": [
+      "typable:vglobal"
+    ],
+    "note": "vim :g/:v via dispatcher hook; delete (d) action supported"
   }
 ]
