@@ -1199,3 +1199,14 @@ async fn vglobal_delete_nonmatching_lines() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn global_substitute_on_matching_lines() -> anyhow::Result<()> {
+    test((
+        "#[|f]#oo\nbar\nfoo x\nbaz\n",
+        ":g/foo/s/o/0/g<ret>",
+        "#[f|]#00\nbar\nf00 x\nbaz\n",
+    ))
+    .await?;
+    Ok(())
+}

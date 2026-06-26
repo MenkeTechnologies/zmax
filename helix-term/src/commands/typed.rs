@@ -2788,26 +2788,8 @@ fn do_substitute(
         )
     };
 
-    let mut changes = Vec::new();
-    for line in first_line..=last_line {
-        if line >= total {
-            break;
-        }
-        let lstart = slice.line_to_char(line);
-        let lend = line_ending::line_end_char_index(&slice, line);
-        if lstart > lend {
-            continue;
-        }
-        let text: std::borrow::Cow<str> = slice.slice(lstart..lend).into();
-        let new = if global {
-            re.replace_all(&text, rep.as_str())
-        } else {
-            re.replacen(&text, 1, rep.as_str())
-        };
-        if new != text {
-            changes.push((lstart, lend, Some(Tendril::from(new.as_ref()))));
-        }
-    }
+    let lines = (first_line..=last_line).filter(|&l| l < total);
+    let changes = substitute_changes(&slice, lines, &re, &rep, global);
 
     if changes.is_empty() {
         return Ok(());
@@ -2817,6 +2799,34 @@ fn do_substitute(
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
+}
+
+/// Build the per-line replacement changes for a substitute over `lines`.
+fn substitute_changes(
+    slice: &helix_core::ropey::RopeSlice,
+    lines: impl Iterator<Item = usize>,
+    re: &regex::Regex,
+    rep: &str,
+    global: bool,
+) -> Vec<(usize, usize, Option<Tendril>)> {
+    let mut changes = Vec::new();
+    for line in lines {
+        let lstart = slice.line_to_char(line);
+        let lend = line_ending::line_end_char_index(slice, line);
+        if lstart > lend {
+            continue;
+        }
+        let text: std::borrow::Cow<str> = slice.slice(lstart..lend).into();
+        let new = if global {
+            re.replace_all(&text, rep)
+        } else {
+            re.replacen(&text, 1, rep)
+        };
+        if new != text {
+            changes.push((lstart, lend, Some(Tendril::from(new.as_ref()))));
+        }
+    }
+    changes
 }
 
 /// Match the longest prefix (>= 1 char) of `name` that `s` starts with, where
@@ -2868,17 +2878,14 @@ fn parse_vim_global(input: &str) -> Option<(bool, String, String)> {
     Some((invert, pattern, command))
 }
 
-/// `:g/pat/d` and `:v/pat/d`: delete lines (not) matching `pattern`.
+/// `:g/pat/{d,s/.../.../ }` and the `:v` inverse: on lines (not) matching
+/// `pattern`, run the action `command` — delete (`d`) or substitute (`s`).
 fn do_global(
     cx: &mut compositor::Context,
     invert: bool,
     pattern: &str,
     command: &str,
 ) -> anyhow::Result<()> {
-    if !matches!(command, "d" | "delete") {
-        bail!("global: only the 'd' (delete) command is supported");
-    }
-
     let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
 
     let (view, doc) = current!(cx.editor);
@@ -2886,11 +2893,10 @@ fn do_global(
     let total = slice.len_lines();
     let len = slice.len_chars();
 
-    let mut changes = Vec::new();
+    // The (non-)matching line numbers, skipping the phantom trailing line.
+    let mut targets = Vec::new();
     for line in 0..total {
         let lstart = slice.line_to_char(line);
-        let lend = line_ending::line_end_char_index(&slice, line);
-        // Skip the phantom trailing empty line.
         let next = if line + 1 < total {
             slice.line_to_char(line + 1)
         } else {
@@ -2899,12 +2905,57 @@ fn do_global(
         if lstart == next {
             continue;
         }
+        let lend = line_ending::line_end_char_index(&slice, line);
         let text: std::borrow::Cow<str> = slice.slice(lstart..lend).into();
-        let matched = re.is_match(&text);
-        if matched != invert {
-            changes.push((lstart, next, None));
+        if re.is_match(&text) != invert {
+            targets.push(line);
         }
     }
+    if targets.is_empty() {
+        return Ok(());
+    }
+
+    let changes = if matches!(command, "d" | "delete") {
+        targets
+            .iter()
+            .map(|&line| {
+                let lstart = slice.line_to_char(line);
+                let next = if line + 1 < total {
+                    slice.line_to_char(line + 1)
+                } else {
+                    len
+                };
+                (lstart, next, None)
+            })
+            .collect::<Vec<_>>()
+    } else if let Some(rest) = match_command_prefix(command, "substitute") {
+        let delim = rest
+            .chars()
+            .next()
+            .filter(|c| !c.is_alphanumeric() && !c.is_whitespace())
+            .ok_or_else(|| anyhow!("global: bad substitute command"))?;
+        let body = &rest[delim.len_utf8()..];
+        let mut parts = body.splitn(3, delim);
+        let pat2 = parts.next().unwrap_or("");
+        let rep2 = vim_replacement_to_regex(parts.next().unwrap_or(""));
+        let flags2 = parts.next().unwrap_or("");
+        if pat2.is_empty() {
+            bail!("global: empty substitute pattern");
+        }
+        let re2 = regex::RegexBuilder::new(pat2)
+            .case_insensitive(flags2.contains('i'))
+            .build()
+            .map_err(|e| anyhow!("invalid pattern: {e}"))?;
+        substitute_changes(
+            &slice,
+            targets.iter().copied(),
+            &re2,
+            &rep2,
+            flags2.contains('g'),
+        )
+    } else {
+        bail!("global: only 'd' (delete) and 's/.../.../' are supported");
+    };
 
     if changes.is_empty() {
         return Ok(());

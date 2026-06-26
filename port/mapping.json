@@ -2765,7 +2765,7 @@
     "evidence": [
       "typable:global"
     ],
-    "note": "vim :g/:v via dispatcher hook; delete (d) action supported"
+    "note": "vim :g/:v via dispatcher hook; delete (d) and substitute (s/.../.../) actions"
   },
   {
     "spec_id": "neovim.ex-command.colon_vglobal",
@@ -2773,6 +2773,6 @@
     "evidence": [
       "typable:vglobal"
     ],
-    "note": "vim :g/:v via dispatcher hook; delete (d) action supported"
+    "note": "vim :g/:v via dispatcher hook; delete (d) and substitute (s/.../.../) actions"
   }
 ]
