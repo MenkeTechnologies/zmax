@@ -752,95 +752,7 @@
     "note": "next paragraph (approx of section nav)"
   },
   {
-    "spec_id": "neovim.normal-mode.a_quote",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.a_apos",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.a_lparen",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.a_rparen",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.a_lt",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.a_gt",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
     "spec_id": "neovim.normal-mode.ab",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.aw",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.a_lbracket",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.a_rbracket",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.a_backtick",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.ab_1",
     "status": "partial",
     "evidence": [
       "key:select:a"
@@ -856,102 +768,6 @@
     "note": "textobject via select-mode a base (operator-pending not chained)"
   },
   {
-    "spec_id": "neovim.normal-mode.ap",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.as",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.at",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.aw_1",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.a_lbrace",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.a_rbrace",
-    "status": "partial",
-    "evidence": [
-      "key:select:a"
-    ],
-    "note": "textobject via select-mode a base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.i_quote",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.i_apos",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.i_lparen",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.i_rparen",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.i_lt",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.i_gt",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
     "spec_id": "neovim.normal-mode.ib",
     "status": "partial",
     "evidence": [
@@ -960,95 +776,7 @@
     "note": "textobject via select-mode i base (operator-pending not chained)"
   },
   {
-    "spec_id": "neovim.normal-mode.iw",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.i_lbracket",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.i_rbracket",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.i_backtick",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.ib_1",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
     "spec_id": "neovim.normal-mode.il",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.ip",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.is",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.it",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.iw_1",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.i_lbrace",
-    "status": "partial",
-    "evidence": [
-      "key:select:i"
-    ],
-    "note": "textobject via select-mode i base (operator-pending not chained)"
-  },
-  {
-    "spec_id": "neovim.normal-mode.i_rbrace",
     "status": "partial",
     "evidence": [
       "key:select:i"
@@ -2774,5 +2502,277 @@
       "typable:vglobal"
     ],
     "note": "vim :g/:v via dispatcher hook; delete (d) and substitute (s/.../.../) actions"
+  },
+  {
+    "spec_id": "neovim.normal-mode.a_quote",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim a\" via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.a_apos",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim a' via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.a_lparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim a( via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.a_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim a) via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.a_lt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim a< via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.a_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim a> via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.aw",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim aW via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.a_lbracket",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim a[ via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.a_rbracket",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim a] via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.a_backtick",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim a` via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ab_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim ab: helix maps the object char differently (block-letter/tag/sentence)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ap",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim ap via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.as",
+    "status": "partial",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim as: helix maps the object char differently (block-letter/tag/sentence)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.at",
+    "status": "partial",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim at: helix maps the object char differently (block-letter/tag/sentence)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.aw_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim aw via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.a_lbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim a{ via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.a_rbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d a"
+    ],
+    "note": "vim a} via c/d/y + i/a textobject (around)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.i_quote",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim i\" via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.i_apos",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim i' via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.i_lparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim i( via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.i_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim i) via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.i_lt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim i< via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.i_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim i> via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.iw",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim iW via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.i_lbracket",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim i[ via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.i_rbracket",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim i] via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.i_backtick",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim i` via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ib_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim ib: helix maps the object char differently (block-letter/tag/sentence)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ip",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim ip via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.is",
+    "status": "partial",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim is: helix maps the object char differently (block-letter/tag/sentence)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.it",
+    "status": "partial",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim it: helix maps the object char differently (block-letter/tag/sentence)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.iw_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim iw via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.i_lbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim i{ via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.i_rbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d i"
+    ],
+    "note": "vim i} via c/d/y + i/a textobject (inner)"
   }
 ]

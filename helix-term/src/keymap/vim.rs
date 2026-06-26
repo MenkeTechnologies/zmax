@@ -188,6 +188,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "^" => [collapse_selection, extend_to_first_nonwhitespace, delete_selection],
             "G" => [collapse_selection, extend_to_last_line, delete_selection],
             "%" => [match_brackets, delete_selection],
+            "i" => delete_textobject_inner,   // diw, di(, dip, ...
+            "a" => delete_textobject_around,  // daw, da(, ...
         },
 
         // --- operator-pending: change --------------------------------------
@@ -201,6 +203,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "B" => [collapse_selection, extend_prev_long_word_start, change_selection],
             "$" => [collapse_selection, extend_to_line_end, change_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, change_selection],
+            "i" => change_textobject_inner,   // ciw, ci(, cip, ...
+            "a" => change_textobject_around,  // caw, ca(, ...
         },
 
         // --- operator-pending: yank ----------------------------------------
@@ -214,6 +218,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "0" => [collapse_selection, extend_to_line_start, yank, collapse_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, yank, collapse_selection],
             "G" => [collapse_selection, extend_to_last_line, yank, collapse_selection],
+            "i" => yank_textobject_inner,     // yiw, yi(, yip, ...
+            "a" => yank_textobject_around,    // yaw, ya(, ...
         },
 
         // --- indent operators ----------------------------------------------

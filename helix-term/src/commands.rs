@@ -566,6 +566,12 @@ impl MappableCommand {
         surround_delete, "Surround delete",
         select_textobject_around, "Select around object",
         select_textobject_inner, "Select inside object",
+        change_textobject_inner, "Change inside object (ci)",
+        change_textobject_around, "Change around object (ca)",
+        delete_textobject_inner, "Delete inside object (di)",
+        delete_textobject_around, "Delete around object (da)",
+        yank_textobject_inner, "Yank inside object (yi)",
+        yank_textobject_around, "Yank around object (ya)",
         goto_next_function, "Goto next function",
         goto_prev_function, "Goto previous function",
         goto_next_class, "Goto next type definition",
@@ -6236,7 +6242,44 @@ fn select_textobject_inner(cx: &mut Context) {
     select_textobject(cx, textobject::TextObject::Inside);
 }
 
+// vim operator + text object: select the inner/around object (capturing the
+// object char interactively, like `mi`/`ma`) then apply the operator. These
+// make `ciw`, `diw`, `yiw`, `ci(`, `da"`, `dip`, … work.
+fn change_textobject_inner(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Inside, Some(change_selection));
+}
+fn change_textobject_around(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Around, Some(change_selection));
+}
+fn delete_textobject_inner(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Inside, Some(delete_selection));
+}
+fn delete_textobject_around(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Around, Some(delete_selection));
+}
+fn yank_textobject_inner(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Inside, Some(yank_textobject));
+}
+fn yank_textobject_around(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Around, Some(yank_textobject));
+}
+
+/// Yank the current selection then collapse it (vim `yi`/`ya` leave the cursor
+/// at the object start rather than keeping it selected).
+fn yank_textobject(cx: &mut Context) {
+    yank(cx);
+    collapse_selection(cx);
+}
+
 fn select_textobject(cx: &mut Context, objtype: textobject::TextObject) {
+    select_textobject_then(cx, objtype, None);
+}
+
+fn select_textobject_then(
+    cx: &mut Context,
+    objtype: textobject::TextObject,
+    after: Option<fn(&mut Context)>,
+) {
     let count = cx.count();
 
     cx.on_next_key(move |cx, event| {
@@ -6312,6 +6355,10 @@ fn select_textobject(cx: &mut Context, objtype: textobject::TextObject) {
                 doc.set_selection(view.id, selection);
             };
             cx.editor.apply_motion(textobject);
+            // Apply the pending operator (vim `c`/`d`/`y` + text object).
+            if let Some(after) = after {
+                after(cx);
+            }
         }
     });
 

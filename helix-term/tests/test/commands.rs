@@ -1210,3 +1210,29 @@ async fn global_substitute_on_matching_lines() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_delete_inner_word() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(helix_term::config::Config {
+            keys: helix_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        ("foo #[|b]#ar baz\n", "diw", "foo #[ |]#baz\n"),
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_change_inner_paren() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(helix_term::config::Config {
+            keys: helix_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        ("f(#[|a]#bc)\n", "ci(X", "f(X#[)|]#\n"),
+    )
+    .await?;
+    Ok(())
+}
