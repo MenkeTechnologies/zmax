@@ -1129,3 +1129,15 @@ async fn change_case_snake_to_camel() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cycle_case_snake_to_camel() -> anyhow::Result<()> {
+    test((
+        "#[|f]#oo_bar\n",
+        ":cycle-case<ret>",
+        "#[f|]#ooBar\n",
+    ))
+    .await?;
+
+    Ok(())
+}

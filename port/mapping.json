@@ -2384,6 +2384,14 @@
     "note": "spacemacs SPC x i c -> change-case camel"
   },
   {
+    "spec_id": "spacemacs.keybinding.spc_x_i_i",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x i i"
+    ],
+    "note": "spacemacs SPC x i i -> cycle-case"
+  },
+  {
     "spec_id": "spacemacs.keybinding.spc_x_i_k",
     "status": "ported",
     "evidence": [

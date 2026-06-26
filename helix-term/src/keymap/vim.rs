@@ -65,6 +65,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x i u", "Text",    ":change-case snake"),                    // SPC x i u
     ("space x i k", "Text",    ":change-case kebab"),                    // SPC x i k
     ("space x i p", "Text",    ":change-case pascal"),                   // PascalCase
+    ("space x i i", "Text",    ":cycle-case"),                           // SPC x i i : cycle
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes

@@ -2592,17 +2592,44 @@ fn capitalize(w: &str) -> String {
     }
 }
 
-fn change_case(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
-    if event != PromptEvent::Validate {
-        return Ok(());
+/// Rejoin the words of `sym` in the given case `style`. Returns None for an
+/// unknown style.
+fn symbol_to_case(sym: &str, style: &str) -> Option<String> {
+    let words = split_symbol_words(sym);
+    Some(match style {
+        "snake" => words.join("_"),
+        "kebab" => words.join("-"),
+        "camel" => words
+            .iter()
+            .enumerate()
+            .map(|(i, w)| if i == 0 { w.clone() } else { capitalize(w) })
+            .collect(),
+        "pascal" => words.iter().map(|w| capitalize(w)).collect(),
+        _ => return None,
+    })
+}
+
+/// Detect the case style of a symbol, for cycling.
+fn detect_case(sym: &str) -> &'static str {
+    if sym.contains('_') {
+        "snake"
+    } else if sym.contains('-') {
+        "kebab"
+    } else if sym.chars().next().is_some_and(char::is_uppercase) {
+        "pascal"
+    } else if sym.chars().any(char::is_uppercase) {
+        "camel"
+    } else {
+        "lower"
     }
+}
 
-    let style = args[0].to_lowercase();
-
+/// Apply `to_style` (a closure of the detected style) to the symbol under the
+/// cursor.
+fn transform_symbol_under_cursor(
+    cx: &mut compositor::Context,
+    to_style: impl FnOnce(&str) -> anyhow::Result<String>,
+) -> anyhow::Result<()> {
     let (view, doc) = current!(cx.editor);
     let slice = doc.text().slice(..);
     let len = slice.len_chars();
@@ -2622,18 +2649,7 @@ fn change_case(
     }
 
     let sym: String = slice.slice(start..end).chunks().collect();
-    let words = split_symbol_words(&sym);
-    let result = match style.as_str() {
-        "snake" => words.join("_"),
-        "kebab" => words.join("-"),
-        "camel" => words
-            .iter()
-            .enumerate()
-            .map(|(i, w)| if i == 0 { w.clone() } else { capitalize(w) })
-            .collect::<String>(),
-        "pascal" => words.iter().map(|w| capitalize(w)).collect::<String>(),
-        other => bail!("Unknown case style `{other}` (use camel|snake|kebab|pascal)"),
-    };
+    let result = to_style(&sym)?;
 
     let transaction = Transaction::change(
         doc.text(),
@@ -2643,6 +2659,41 @@ fn change_case(
     doc.set_selection(view.id, Selection::point(start.min(doc.text().len_chars())));
     doc.append_changes_to_history(view);
     Ok(())
+}
+
+fn change_case(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let style = args[0].to_lowercase();
+    transform_symbol_under_cursor(cx, |sym| {
+        symbol_to_case(sym, &style)
+            .ok_or_else(|| anyhow!("Unknown case style `{style}` (use camel|snake|kebab|pascal)"))
+    })
+}
+
+fn cycle_case(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    transform_symbol_under_cursor(cx, |sym| {
+        // snake -> camel -> kebab -> pascal -> snake (lower joins the cycle at camel)
+        let next = match detect_case(sym) {
+            "snake" | "lower" => "camel",
+            "camel" => "kebab",
+            "kebab" => "pascal",
+            _ => "snake",
+        };
+        Ok(symbol_to_case(sym, next).expect("known style"))
+    })
 }
 
 fn just_one_space(
@@ -4343,6 +4394,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Move the current line up by one (drag up).",
         fun: move_line_up,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cycle-case",
+        aliases: &[],
+        doc: "Cycle the case style of the symbol under the cursor.",
+        fun: cycle_case,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
