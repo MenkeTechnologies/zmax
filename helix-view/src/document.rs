@@ -155,6 +155,9 @@ pub struct Document {
     pub(crate) document_highlights: HashMap<ViewId, DocumentHighlights>,
     /// LSP code action hints for each view.
     pub(crate) code_action_hints: HashSet<ViewId>,
+    /// vim named marks (a-z etc.) -> char position. Remapped through edits in
+    /// `apply_impl`, so a mark follows its text as the buffer changes.
+    pub(crate) marks: HashMap<char, usize>,
     /// Set to `true` when the document is updated, reset to `false` on the next inlay hints
     /// update from the LSP
     pub inlay_hints_oudated: bool,
@@ -767,6 +770,7 @@ impl Document {
             jump_labels: HashMap::new(),
             document_highlights: HashMap::new(),
             code_action_hints: HashSet::new(),
+            marks: HashMap::new(),
             color_swatches: None,
             document_links: Vec::new(),
             color_swatch_controller: TaskController::new(),
@@ -1495,6 +1499,11 @@ impl Document {
                 .map_pos(view_data.view_position.anchor, Assoc::Before);
         }
 
+        // Keep vim marks pinned to their text as the buffer changes.
+        for pos in self.marks.values_mut() {
+            *pos = transaction.changes().map_pos(*pos, Assoc::After);
+        }
+
         // generate revert to savepoint
         if !self.savepoints.is_empty() {
             let revert = transaction.invert(&old_doc);
@@ -1667,6 +1676,16 @@ impl Document {
         }
         success
     }
+    /// Set a vim named mark to a char position.
+    pub fn set_mark(&mut self, mark: char, pos: usize) {
+        self.marks.insert(mark, pos);
+    }
+
+    /// Get a vim named mark's char position, clamped to the current text length.
+    pub fn mark(&self, mark: char) -> Option<usize> {
+        self.marks.get(&mark).map(|&pos| pos.min(self.text.len_chars()))
+    }
+
     /// Apply a [`Transaction`] to the [`Document`] to change its text.
     pub fn apply(&mut self, transaction: &Transaction, view_id: ViewId) -> bool {
         self.apply_inner(transaction, view_id, true)

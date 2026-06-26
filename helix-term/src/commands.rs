@@ -584,6 +584,9 @@ impl MappableCommand {
         yank_till_char_forward, "Yank till next char (yt)",
         yank_find_char_backward, "Yank to prev char (yF)",
         yank_till_char_backward, "Yank till prev char (yT)",
+        set_mark, "Set mark (m{a-z})",
+        goto_mark, "Goto mark exact (`{a-z})",
+        goto_mark_line, "Goto mark line ('{a-z})",
         goto_next_function, "Goto next function",
         goto_prev_function, "Goto previous function",
         goto_next_class, "Goto next type definition",
@@ -1801,6 +1804,53 @@ fn find_char_then(
             after(cx);
         }
     })
+}
+
+// vim named marks: `m{a-z}` sets a mark at the cursor; `` `{a-z} `` jumps to the
+// exact mark position; `'{a-z}` jumps to the mark's line (first non-blank).
+fn set_mark(cx: &mut Context) {
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        if let Some(ch) = event.char() {
+            let (view, doc) = current!(cx.editor);
+            let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+            doc.set_mark(ch, pos);
+        }
+    });
+    cx.editor.autoinfo = Some(Info::new("Set mark", &[("a-z", "mark name")]));
+}
+
+fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        if let Some(ch) = event.char() {
+            let (view, doc) = current!(cx.editor);
+            let Some(mut pos) = doc.mark(ch) else {
+                cx.editor.set_error(format!("Mark '{ch}' not set"));
+                return;
+            };
+            let text = doc.text().slice(..);
+            if to_line_start {
+                let line = text.char_to_line(pos);
+                pos = text
+                    .line(line)
+                    .first_non_whitespace_char()
+                    .map(|p| p + text.line_to_char(line))
+                    .unwrap_or_else(|| text.line_to_char(line));
+            }
+            push_jump(view, doc);
+            doc.set_selection(view.id, Selection::point(pos));
+        }
+    });
+    cx.editor.autoinfo = Some(Info::new("Goto mark", &[("a-z", "mark name")]));
+}
+
+fn goto_mark(cx: &mut Context) {
+    goto_mark_impl(cx, false);
+}
+
+fn goto_mark_line(cx: &mut Context) {
+    goto_mark_impl(cx, true);
 }
 
 // vim operator + find-char: extend to the target char (inclusive `f`/`F`,

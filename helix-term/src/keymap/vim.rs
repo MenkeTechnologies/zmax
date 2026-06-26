@@ -127,6 +127,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "G"          => goto_last_line,
         "%"          => match_brackets,
 
+        // --- marks ----------------------------------------------------------
+        "m"  => set_mark,        // m{a-z} set mark
+        "`"  => goto_mark,       // `{a-z} jump to mark (exact)
+        "'"  => goto_mark_line,  // '{a-z} jump to mark line
+
         // --- screen motions -------------------------------------------------
         "H" => goto_window_top,
         "M" => goto_window_center,

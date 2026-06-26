@@ -2774,5 +2774,45 @@
       "key:normal:d i"
     ],
     "note": "vim i} via c/d/y + i/a textobject (inner)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.apos_lbrace_a_za_z0_9_rbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:'"
+    ],
+    "note": "vim '{a-zA-Z0-9} named marks (set/jump, edit-tracked via map_pos)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.apos_lbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:'"
+    ],
+    "note": "vim '{ named marks (set/jump, edit-tracked via map_pos)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.backtick_lbrace_a_za_z0_9_rbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:`"
+    ],
+    "note": "vim `{a-zA-Z0-9} named marks (set/jump, edit-tracked via map_pos)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.backtick_lbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:`"
+    ],
+    "note": "vim `{ named marks (set/jump, edit-tracked via map_pos)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.m_lbrace_a_za_z_rbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:m"
+    ],
+    "note": "vim m{A-Za-z} named marks (set/jump, edit-tracked via map_pos)"
   }
 ]

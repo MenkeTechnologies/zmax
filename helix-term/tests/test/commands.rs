@@ -1262,3 +1262,29 @@ async fn vim_change_till_char() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_mark_set_and_jump() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(helix_term::config::Config {
+            keys: helix_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        ("#[|a]#bc\ndef\nghi\n", "maG`a", "#[a|]#bc\ndef\nghi\n"),
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_mark_tracks_edits() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(helix_term::config::Config {
+            keys: helix_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        ("abc#[|X]#yz\n", "mp0xx`p", "c#[X|]#yz\n"),
+    )
+    .await?;
+    Ok(())
+}
