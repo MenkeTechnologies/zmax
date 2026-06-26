@@ -2662,5 +2662,29 @@
       "key:normal:space q s"
     ],
     "note": "spacemacs SPC q s -> write-quit-all"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gu_lbrace_motion_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g U w"
+    ],
+    "note": "vim gU{motion} via gU/gu/g~ operator submap (motion subset: w/W/e/b/$/^/line)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gu_lbrace_motion_rbrace_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g u w"
+    ],
+    "note": "vim gu{motion} via gU/gu/g~ operator submap (motion subset: w/W/e/b/$/^/line)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_tilde_lbrace_motion_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g ~ w"
+    ],
+    "note": "vim g~{motion} via gU/gu/g~ operator submap (motion subset: w/W/e/b/$/^/line)"
   }
 ]

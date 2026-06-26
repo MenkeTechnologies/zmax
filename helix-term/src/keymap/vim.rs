@@ -226,6 +226,35 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
         // --- g submap -------------------------------------------------------
         "g" => { "Goto"
+            // case-change operators (gU / gu / g~ + motion)
+            "U" => { "Uppercase"
+                "U" => [extend_to_line_bounds, switch_to_uppercase, collapse_selection],
+                "w" => [collapse_selection, extend_next_word_start, switch_to_uppercase, collapse_selection],
+                "W" => [collapse_selection, extend_next_long_word_start, switch_to_uppercase, collapse_selection],
+                "e" => [collapse_selection, extend_next_word_end, switch_to_uppercase, collapse_selection],
+                "b" => [collapse_selection, extend_prev_word_start, switch_to_uppercase, collapse_selection],
+                "$" => [collapse_selection, extend_to_line_end, switch_to_uppercase, collapse_selection],
+                "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_to_uppercase, collapse_selection],
+            },
+            "u" => { "Lowercase"
+                "u" => [extend_to_line_bounds, switch_to_lowercase, collapse_selection],
+                "w" => [collapse_selection, extend_next_word_start, switch_to_lowercase, collapse_selection],
+                "W" => [collapse_selection, extend_next_long_word_start, switch_to_lowercase, collapse_selection],
+                "e" => [collapse_selection, extend_next_word_end, switch_to_lowercase, collapse_selection],
+                "b" => [collapse_selection, extend_prev_word_start, switch_to_lowercase, collapse_selection],
+                "$" => [collapse_selection, extend_to_line_end, switch_to_lowercase, collapse_selection],
+                "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_to_lowercase, collapse_selection],
+            },
+            "~" => { "Toggle case"
+                "~" => [extend_to_line_bounds, switch_case, collapse_selection],
+                "w" => [collapse_selection, extend_next_word_start, switch_case, collapse_selection],
+                "W" => [collapse_selection, extend_next_long_word_start, switch_case, collapse_selection],
+                "e" => [collapse_selection, extend_next_word_end, switch_case, collapse_selection],
+                "b" => [collapse_selection, extend_prev_word_start, switch_case, collapse_selection],
+                "$" => [collapse_selection, extend_to_line_end, switch_case, collapse_selection],
+                "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_case, collapse_selection],
+            },
+
             "g" => goto_file_start,
             "e" => goto_last_line,
             "j" => move_line_down,
@@ -585,6 +614,20 @@ mod tests {
             assert!(
                 matches!(leaf, KeyTrie::MappableCommand(MappableCommand::Typable { .. })),
                 "{chord_str} should be a typable command"
+            );
+        }
+    }
+
+    #[test]
+    fn vim_case_operators_are_sequences() {
+        let km = default();
+        let n = &km[&Mode::Normal];
+        for chord in ["g U U", "g U w", "g u u", "g u w", "g ~ ~", "g ~ w"] {
+            let leaf =
+                resolve(n, chord).unwrap_or_else(|| panic!("{chord} did not resolve"));
+            assert!(
+                matches!(leaf, KeyTrie::Sequence(_)),
+                "{chord} should be a case-operator sequence"
             );
         }
     }
