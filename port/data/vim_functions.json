@@ -1,0 +1,3610 @@
+[
+  {
+    "id": "neovim.function.abs",
+    "source": "neovim",
+    "category": "function",
+    "name": "abs()",
+    "desc": "Return the absolute value of {expr}. When {expr} evaluates to",
+    "doc_ref": "vimfn.txt:15"
+  },
+  {
+    "id": "neovim.function.acos",
+    "source": "neovim",
+    "category": "function",
+    "name": "acos()",
+    "desc": "Return the arc cosine of {expr} measured in radians, as a",
+    "doc_ref": "vimfn.txt:36"
+  },
+  {
+    "id": "neovim.function.add",
+    "source": "neovim",
+    "category": "function",
+    "name": "add()",
+    "desc": "Append the item {expr} to |List| or |Blob| {object}. Returns",
+    "doc_ref": "vimfn.txt:57"
+  },
+  {
+    "id": "neovim.function.and",
+    "source": "neovim",
+    "category": "function",
+    "name": "and()",
+    "desc": "Bitwise AND on the two arguments. The arguments are converted",
+    "doc_ref": "vimfn.txt:78"
+  },
+  {
+    "id": "neovim.function.api_info",
+    "source": "neovim",
+    "category": "function",
+    "name": "api_info()",
+    "desc": "Returns Dictionary of |api-metadata|.",
+    "doc_ref": "vimfn.txt:95"
+  },
+  {
+    "id": "neovim.function.append",
+    "source": "neovim",
+    "category": "function",
+    "name": "append()",
+    "desc": "When {text} is a |List|: Append each item of the |List| as a",
+    "doc_ref": "vimfn.txt:105"
+  },
+  {
+    "id": "neovim.function.appendbufline",
+    "source": "neovim",
+    "category": "function",
+    "name": "appendbufline()",
+    "desc": "Like |append()| but append the text in buffer {buf}.",
+    "doc_ref": "vimfn.txt:129"
+  },
+  {
+    "id": "neovim.function.argc",
+    "source": "neovim",
+    "category": "function",
+    "name": "argc()",
+    "desc": "The result is the number of files in the argument list. See",
+    "doc_ref": "vimfn.txt:160"
+  },
+  {
+    "id": "neovim.function.argidx",
+    "source": "neovim",
+    "category": "function",
+    "name": "argidx()",
+    "desc": "The result is the current index in the argument list. 0 is",
+    "doc_ref": "vimfn.txt:176"
+  },
+  {
+    "id": "neovim.function.arglistid",
+    "source": "neovim",
+    "category": "function",
+    "name": "arglistid()",
+    "desc": "Return the argument list ID. This is a number which",
+    "doc_ref": "vimfn.txt:183"
+  },
+  {
+    "id": "neovim.function.argv",
+    "source": "neovim",
+    "category": "function",
+    "name": "argv()",
+    "desc": "The result is the {nr}th file in the argument list. See",
+    "doc_ref": "vimfn.txt:202"
+  },
+  {
+    "id": "neovim.function.asin",
+    "source": "neovim",
+    "category": "function",
+    "name": "asin()",
+    "desc": "Return the arc sine of {expr} measured in radians, as a |Float|",
+    "doc_ref": "vimfn.txt:228"
+  },
+  {
+    "id": "neovim.function.assert_beeps",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_beeps()",
+    "desc": "Run {cmd} and add an error message to |v:errors| if it does",
+    "doc_ref": "vimfn.txt:249"
+  },
+  {
+    "id": "neovim.function.assert_equal",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_equal()",
+    "desc": "When {expected} and {actual} are not equal an error message is",
+    "doc_ref": "vimfn.txt:261"
+  },
+  {
+    "id": "neovim.function.assert_equalfile",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_equalfile()",
+    "desc": "When the files {fname_one} and {fname_two} do not contain",
+    "doc_ref": "vimfn.txt:289"
+  },
+  {
+    "id": "neovim.function.assert_exception",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_exception()",
+    "desc": "When v:exception does not contain the string {error} an error",
+    "doc_ref": "vimfn.txt:303"
+  },
+  {
+    "id": "neovim.function.assert_fails",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_fails()",
+    "desc": "Run {cmd} and add an error message to |v:errors| if it does",
+    "doc_ref": "vimfn.txt:325"
+  },
+  {
+    "id": "neovim.function.assert_false",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_false()",
+    "desc": "When {actual} is not false an error message is added to",
+    "doc_ref": "vimfn.txt:369"
+  },
+  {
+    "id": "neovim.function.assert_inrange",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_inrange()",
+    "desc": "This asserts number and |Float| values. When {actual} is lower",
+    "doc_ref": "vimfn.txt:389"
+  },
+  {
+    "id": "neovim.function.assert_match",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_match()",
+    "desc": "When {pattern} does not match {actual} an error message is",
+    "doc_ref": "vimfn.txt:408"
+  },
+  {
+    "id": "neovim.function.assert_nobeep",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_nobeep()",
+    "desc": "Run {cmd} and add an error message to |v:errors| if it",
+    "doc_ref": "vimfn.txt:437"
+  },
+  {
+    "id": "neovim.function.assert_notequal",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_notequal()",
+    "desc": "The opposite of `assert_equal()`: add an error message to",
+    "doc_ref": "vimfn.txt:448"
+  },
+  {
+    "id": "neovim.function.assert_notmatch",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_notmatch()",
+    "desc": "The opposite of `assert_match()`: add an error message to",
+    "doc_ref": "vimfn.txt:461"
+  },
+  {
+    "id": "neovim.function.assert_report",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_report()",
+    "desc": "Report a test failure directly, using String {msg}.",
+    "doc_ref": "vimfn.txt:474"
+  },
+  {
+    "id": "neovim.function.assert_true",
+    "source": "neovim",
+    "category": "function",
+    "name": "assert_true()",
+    "desc": "When {actual} is not true an error message is added to",
+    "doc_ref": "vimfn.txt:484"
+  },
+  {
+    "id": "neovim.function.atan",
+    "source": "neovim",
+    "category": "function",
+    "name": "atan()",
+    "desc": "Return the principal value of the arc tangent of {expr}, in",
+    "doc_ref": "vimfn.txt:502"
+  },
+  {
+    "id": "neovim.function.atan2",
+    "source": "neovim",
+    "category": "function",
+    "name": "atan2()",
+    "desc": "Return the arc tangent of {expr1} / {expr2}, measured in",
+    "doc_ref": "vimfn.txt:521"
+  },
+  {
+    "id": "neovim.function.blob2list",
+    "source": "neovim",
+    "category": "function",
+    "name": "blob2list()",
+    "desc": "Return a List containing the number value of each byte in Blob",
+    "doc_ref": "vimfn.txt:542"
+  },
+  {
+    "id": "neovim.function.browse",
+    "source": "neovim",
+    "category": "function",
+    "name": "browse()",
+    "desc": "Put up a file requester. This only works when \"has(\"browse\")\"",
+    "doc_ref": "vimfn.txt:556"
+  },
+  {
+    "id": "neovim.function.browsedir",
+    "source": "neovim",
+    "category": "function",
+    "name": "browsedir()",
+    "desc": "Put up a directory requester. This only works when",
+    "doc_ref": "vimfn.txt:576"
+  },
+  {
+    "id": "neovim.function.bufadd",
+    "source": "neovim",
+    "category": "function",
+    "name": "bufadd()",
+    "desc": "Adds buffer {name} to the buffer list literally: no special",
+    "doc_ref": "vimfn.txt:595"
+  },
+  {
+    "id": "neovim.function.bufexists",
+    "source": "neovim",
+    "category": "function",
+    "name": "bufexists()",
+    "desc": "bufnr.",
+    "doc_ref": "vimfn.txt:615"
+  },
+  {
+    "id": "neovim.function.buflisted",
+    "source": "neovim",
+    "category": "function",
+    "name": "buflisted()",
+    "desc": "resolving {buf} to a bufnr.",
+    "doc_ref": "vimfn.txt:646"
+  },
+  {
+    "id": "neovim.function.bufload",
+    "source": "neovim",
+    "category": "function",
+    "name": "bufload()",
+    "desc": "Ensure the buffer {buf} is loaded. When the buffer name",
+    "doc_ref": "vimfn.txt:661"
+  },
+  {
+    "id": "neovim.function.bufloaded",
+    "source": "neovim",
+    "category": "function",
+    "name": "bufloaded()",
+    "desc": "bufnr.",
+    "doc_ref": "vimfn.txt:674"
+  },
+  {
+    "id": "neovim.function.bufname",
+    "source": "neovim",
+    "category": "function",
+    "name": "bufname()",
+    "desc": "bufnr.",
+    "doc_ref": "vimfn.txt:689"
+  },
+  {
+    "id": "neovim.function.bufnr",
+    "source": "neovim",
+    "category": "function",
+    "name": "bufnr()",
+    "desc": "|nvim_create_buf()| with |nvim_buf_set_name()| for creating;",
+    "doc_ref": "vimfn.txt:729"
+  },
+  {
+    "id": "neovim.function.bufwinid",
+    "source": "neovim",
+    "category": "function",
+    "name": "bufwinid()",
+    "desc": "|nvim_win_get_buf()| after resolving {buf}; only the current",
+    "doc_ref": "vimfn.txt:758"
+  },
+  {
+    "id": "neovim.function.bufwinnr",
+    "source": "neovim",
+    "category": "function",
+    "name": "bufwinnr()",
+    "desc": "|nvim_win_get_buf()| and |nvim_win_get_number()| after",
+    "doc_ref": "vimfn.txt:779"
+  },
+  {
+    "id": "neovim.function.byte2line",
+    "source": "neovim",
+    "category": "function",
+    "name": "byte2line()",
+    "desc": "Return the line number that contains the character at byte",
+    "doc_ref": "vimfn.txt:801"
+  },
+  {
+    "id": "neovim.function.byteidx",
+    "source": "neovim",
+    "category": "function",
+    "name": "byteidx()",
+    "desc": "`\"utf-32\"` or `\"utf-16\"` and `strict_indexing = false`;",
+    "doc_ref": "vimfn.txt:817"
+  },
+  {
+    "id": "neovim.function.byteidxcomp",
+    "source": "neovim",
+    "category": "function",
+    "name": "byteidxcomp()",
+    "desc": "`\"utf-16\"` and `strict_indexing = false`.",
+    "doc_ref": "vimfn.txt:865"
+  },
+  {
+    "id": "neovim.function.call",
+    "source": "neovim",
+    "category": "function",
+    "name": "call()",
+    "desc": "Call function {func} with the items in |List| {arglist} as",
+    "doc_ref": "vimfn.txt:887"
+  },
+  {
+    "id": "neovim.function.ceil",
+    "source": "neovim",
+    "category": "function",
+    "name": "ceil()",
+    "desc": "Return the smallest integral value greater than or equal to",
+    "doc_ref": "vimfn.txt:904"
+  },
+  {
+    "id": "neovim.function.chanclose",
+    "source": "neovim",
+    "category": "function",
+    "name": "chanclose()",
+    "desc": "Close a channel or a specific stream associated with it.",
+    "doc_ref": "vimfn.txt:926"
+  },
+  {
+    "id": "neovim.function.changenr",
+    "source": "neovim",
+    "category": "function",
+    "name": "changenr()",
+    "desc": "Return the number of the most recent change. This is the same",
+    "doc_ref": "vimfn.txt:943"
+  },
+  {
+    "id": "neovim.function.chansend",
+    "source": "neovim",
+    "category": "function",
+    "name": "chansend()",
+    "desc": "the return value differ.",
+    "doc_ref": "vimfn.txt:955"
+  },
+  {
+    "id": "neovim.function.char2nr",
+    "source": "neovim",
+    "category": "function",
+    "name": "char2nr()",
+    "desc": "Return Number value of the first char in {string}.",
+    "doc_ref": "vimfn.txt:983"
+  },
+  {
+    "id": "neovim.function.charclass",
+    "source": "neovim",
+    "category": "function",
+    "name": "charclass()",
+    "desc": "Return the character class of the first character in {string}.",
+    "doc_ref": "vimfn.txt:1007"
+  },
+  {
+    "id": "neovim.function.charcol",
+    "source": "neovim",
+    "category": "function",
+    "name": "charcol()",
+    "desc": "for \".\", or |nvim_get_current_line()| with",
+    "doc_ref": "vimfn.txt:1024"
+  },
+  {
+    "id": "neovim.function.charidx",
+    "source": "neovim",
+    "category": "function",
+    "name": "charidx()",
+    "desc": "`\"utf-32\"` or `\"utf-16\"` and `strict_indexing = false`;",
+    "doc_ref": "vimfn.txt:1046"
+  },
+  {
+    "id": "neovim.function.chdir",
+    "source": "neovim",
+    "category": "function",
+    "name": "chdir()",
+    "desc": "tab-local, window-local, and return semantics differ.",
+    "doc_ref": "vimfn.txt:1093"
+  },
+  {
+    "id": "neovim.function.cindent",
+    "source": "neovim",
+    "category": "function",
+    "name": "cindent()",
+    "desc": "Get the amount of indent for line {lnum} according the",
+    "doc_ref": "vimfn.txt:1133"
+  },
+  {
+    "id": "neovim.function.clearmatches",
+    "source": "neovim",
+    "category": "function",
+    "name": "clearmatches()",
+    "desc": "Clears all matches previously defined for the current window",
+    "doc_ref": "vimfn.txt:1148"
+  },
+  {
+    "id": "neovim.function.cmdcomplete_info",
+    "source": "neovim",
+    "category": "function",
+    "name": "cmdcomplete_info()",
+    "desc": "Returns a |Dictionary| with information about cmdline",
+    "doc_ref": "vimfn.txt:1157"
+  },
+  {
+    "id": "neovim.function.col",
+    "source": "neovim",
+    "category": "function",
+    "name": "col()",
+    "desc": "`#` on |nvim_get_current_line()| for \"$\"; marks, list input,",
+    "doc_ref": "vimfn.txt:1180"
+  },
+  {
+    "id": "neovim.function.complete",
+    "source": "neovim",
+    "category": "function",
+    "name": "complete()",
+    "desc": "Set the matches for Insert mode completion. Can only be used",
+    "doc_ref": "vimfn.txt:1230"
+  },
+  {
+    "id": "neovim.function.complete_add",
+    "source": "neovim",
+    "category": "function",
+    "name": "complete_add()",
+    "desc": "Add {expr} to the list of matches. Only to be used by the",
+    "doc_ref": "vimfn.txt:1276"
+  },
+  {
+    "id": "neovim.function.complete_check",
+    "source": "neovim",
+    "category": "function",
+    "name": "complete_check()",
+    "desc": "Check for a key typed while looking for completion matches.",
+    "doc_ref": "vimfn.txt:1291"
+  },
+  {
+    "id": "neovim.function.complete_info",
+    "source": "neovim",
+    "category": "function",
+    "name": "complete_info()",
+    "desc": "Returns a |Dictionary| with information about Insert mode",
+    "doc_ref": "vimfn.txt:1302"
+  },
+  {
+    "id": "neovim.function.confirm",
+    "source": "neovim",
+    "category": "function",
+    "name": "confirm()",
+    "desc": "confirm() offers the user a dialog, from which a choice can be",
+    "doc_ref": "vimfn.txt:1380"
+  },
+  {
+    "id": "neovim.function.copy",
+    "source": "neovim",
+    "category": "function",
+    "name": "copy()",
+    "desc": "Make a copy of {expr}. For Numbers and Strings this isn't",
+    "doc_ref": "vimfn.txt:1441"
+  },
+  {
+    "id": "neovim.function.cos",
+    "source": "neovim",
+    "category": "function",
+    "name": "cos()",
+    "desc": "Return the cosine of {expr}, measured in radians, as a |Float|.",
+    "doc_ref": "vimfn.txt:1459"
+  },
+  {
+    "id": "neovim.function.cosh",
+    "source": "neovim",
+    "category": "function",
+    "name": "cosh()",
+    "desc": "Return the hyperbolic cosine of {expr} as a |Float| in the range",
+    "doc_ref": "vimfn.txt:1477"
+  },
+  {
+    "id": "neovim.function.count",
+    "source": "neovim",
+    "category": "function",
+    "name": "count()",
+    "desc": "Return the number of times an item with value {expr} appears",
+    "doc_ref": "vimfn.txt:1496"
+  },
+  {
+    "id": "neovim.function.ctxget",
+    "source": "neovim",
+    "category": "function",
+    "name": "ctxget()",
+    "desc": "Returns a |Dictionary| representing the |context| at {index}",
+    "doc_ref": "vimfn.txt:1518"
+  },
+  {
+    "id": "neovim.function.ctxpop",
+    "source": "neovim",
+    "category": "function",
+    "name": "ctxpop()",
+    "desc": "Pops and restores the |context| at the top of the",
+    "doc_ref": "vimfn.txt:1529"
+  },
+  {
+    "id": "neovim.function.ctxpush",
+    "source": "neovim",
+    "category": "function",
+    "name": "ctxpush()",
+    "desc": "Pushes the current editor state (|context|) on the",
+    "doc_ref": "vimfn.txt:1536"
+  },
+  {
+    "id": "neovim.function.ctxset",
+    "source": "neovim",
+    "category": "function",
+    "name": "ctxset()",
+    "desc": "Sets the |context| at {index} from the top of the",
+    "doc_ref": "vimfn.txt:1549"
+  },
+  {
+    "id": "neovim.function.ctxsize",
+    "source": "neovim",
+    "category": "function",
+    "name": "ctxsize()",
+    "desc": "Returns the size of the |context-stack|.",
+    "doc_ref": "vimfn.txt:1562"
+  },
+  {
+    "id": "neovim.function.cursor",
+    "source": "neovim",
+    "category": "function",
+    "name": "cursor()",
+    "desc": "",
+    "doc_ref": "vimfn.txt:1568"
+  },
+  {
+    "id": "neovim.function.debugbreak",
+    "source": "neovim",
+    "category": "function",
+    "name": "debugbreak()",
+    "desc": "outside MS-Windows); exact semantics differ.",
+    "doc_ref": "vimfn.txt:1610"
+  },
+  {
+    "id": "neovim.function.deepcopy",
+    "source": "neovim",
+    "category": "function",
+    "name": "deepcopy()",
+    "desc": "Make a copy of {expr}. For Numbers and Strings this isn't",
+    "doc_ref": "vimfn.txt:1628"
+  },
+  {
+    "id": "neovim.function.delete",
+    "source": "neovim",
+    "category": "function",
+    "name": "delete()",
+    "desc": "Without {flags} or with {flags} empty: Deletes the file by the",
+    "doc_ref": "vimfn.txt:1657"
+  },
+  {
+    "id": "neovim.function.deletebufline",
+    "source": "neovim",
+    "category": "function",
+    "name": "deletebufline()",
+    "desc": "Delete lines {first} to {last} (inclusive) from buffer {buf}.",
+    "doc_ref": "vimfn.txt:1685"
+  },
+  {
+    "id": "neovim.function.dictwatcheradd",
+    "source": "neovim",
+    "category": "function",
+    "name": "dictwatcheradd()",
+    "desc": "Adds a watcher to a dictionary. A dictionary watcher is",
+    "doc_ref": "vimfn.txt:1709"
+  },
+  {
+    "id": "neovim.function.dictwatcherdel",
+    "source": "neovim",
+    "category": "function",
+    "name": "dictwatcherdel()",
+    "desc": "Removes a watcher added with |dictwatcheradd()|. All three",
+    "doc_ref": "vimfn.txt:1757"
+  },
+  {
+    "id": "neovim.function.did_filetype",
+    "source": "neovim",
+    "category": "function",
+    "name": "did_filetype()",
+    "desc": "Returns |TRUE| when autocommands are being executed and the",
+    "doc_ref": "vimfn.txt:1770"
+  },
+  {
+    "id": "neovim.function.diff_filler",
+    "source": "neovim",
+    "category": "function",
+    "name": "diff_filler()",
+    "desc": "Returns the number of filler lines above line {lnum}.",
+    "doc_ref": "vimfn.txt:1785"
+  },
+  {
+    "id": "neovim.function.diff_hlid",
+    "source": "neovim",
+    "category": "function",
+    "name": "diff_hlID()",
+    "desc": "Returns the highlight ID for diff mode at line {lnum} column",
+    "doc_ref": "vimfn.txt:1800"
+  },
+  {
+    "id": "neovim.function.digraph_get",
+    "source": "neovim",
+    "category": "function",
+    "name": "digraph_get()",
+    "desc": "Return the digraph of {chars}. This should be a string with",
+    "doc_ref": "vimfn.txt:1818"
+  },
+  {
+    "id": "neovim.function.digraph_getlist",
+    "source": "neovim",
+    "category": "function",
+    "name": "digraph_getlist()",
+    "desc": "Return a list of digraphs. If the {listall} argument is given",
+    "doc_ref": "vimfn.txt:1841"
+  },
+  {
+    "id": "neovim.function.digraph_set",
+    "source": "neovim",
+    "category": "function",
+    "name": "digraph_set()",
+    "desc": "Add digraph {chars} to the list. {chars} must be a string",
+    "doc_ref": "vimfn.txt:1862"
+  },
+  {
+    "id": "neovim.function.digraph_setlist",
+    "source": "neovim",
+    "category": "function",
+    "name": "digraph_setlist()",
+    "desc": "Similar to |digraph_set()| but this function can add multiple",
+    "doc_ref": "vimfn.txt:1887"
+  },
+  {
+    "id": "neovim.function.empty",
+    "source": "neovim",
+    "category": "function",
+    "name": "empty()",
+    "desc": "for tables.",
+    "doc_ref": "vimfn.txt:1908"
+  },
+  {
+    "id": "neovim.function.environ",
+    "source": "neovim",
+    "category": "function",
+    "name": "environ()",
+    "desc": "|vim.env| for keyed access.",
+    "doc_ref": "vimfn.txt:1926"
+  },
+  {
+    "id": "neovim.function.escape",
+    "source": "neovim",
+    "category": "function",
+    "name": "escape()",
+    "desc": "Escape the characters in {chars} that occur in {string} with a",
+    "doc_ref": "vimfn.txt:1941"
+  },
+  {
+    "id": "neovim.function.eval",
+    "source": "neovim",
+    "category": "function",
+    "name": "eval()",
+    "desc": "Evaluate {string} and return the result. Especially useful to",
+    "doc_ref": "vimfn.txt:1956"
+  },
+  {
+    "id": "neovim.function.eventhandler",
+    "source": "neovim",
+    "category": "function",
+    "name": "eventhandler()",
+    "desc": "Returns 1 when inside an event handler. That is that Vim got",
+    "doc_ref": "vimfn.txt:1969"
+  },
+  {
+    "id": "neovim.function.executable",
+    "source": "neovim",
+    "category": "function",
+    "name": "executable()",
+    "desc": "This function checks if an executable with the name {expr}",
+    "doc_ref": "vimfn.txt:1978"
+  },
+  {
+    "id": "neovim.function.execute",
+    "source": "neovim",
+    "category": "function",
+    "name": "execute()",
+    "desc": "Execute {command} and capture its output.",
+    "doc_ref": "vimfn.txt:2018"
+  },
+  {
+    "id": "neovim.function.exepath",
+    "source": "neovim",
+    "category": "function",
+    "name": "exepath()",
+    "desc": "Returns the full path of {expr} if it is an executable and",
+    "doc_ref": "vimfn.txt:2055"
+  },
+  {
+    "id": "neovim.function.exists",
+    "source": "neovim",
+    "category": "function",
+    "name": "exists()",
+    "desc": "Checks whether the expression {expr} is defined.",
+    "doc_ref": "vimfn.txt:2067"
+  },
+  {
+    "id": "neovim.function.exp",
+    "source": "neovim",
+    "category": "function",
+    "name": "exp()",
+    "desc": "Return the exponential of {expr} as a |Float| in the range",
+    "doc_ref": "vimfn.txt:2162"
+  },
+  {
+    "id": "neovim.function.expand",
+    "source": "neovim",
+    "category": "function",
+    "name": "expand()",
+    "desc": "Expand wildcards and the following special keywords in",
+    "doc_ref": "vimfn.txt:2181"
+  },
+  {
+    "id": "neovim.function.expandcmd",
+    "source": "neovim",
+    "category": "function",
+    "name": "expandcmd()",
+    "desc": "Expand special items in String {string} like what is done for",
+    "doc_ref": "vimfn.txt:2284"
+  },
+  {
+    "id": "neovim.function.extend",
+    "source": "neovim",
+    "category": "function",
+    "name": "extend()",
+    "desc": "|vim.tbl_extend()| and |vim.tbl_deep_extend()| for dicts;",
+    "doc_ref": "vimfn.txt:2315"
+  },
+  {
+    "id": "neovim.function.extendnew",
+    "source": "neovim",
+    "category": "function",
+    "name": "extendnew()",
+    "desc": "|vim.tbl_extend()| and |vim.tbl_deep_extend()| for dicts;",
+    "doc_ref": "vimfn.txt:2364"
+  },
+  {
+    "id": "neovim.function.feedkeys",
+    "source": "neovim",
+    "category": "function",
+    "name": "feedkeys()",
+    "desc": "Characters in {string} are queued for processing as if they",
+    "doc_ref": "vimfn.txt:2381"
+  },
+  {
+    "id": "neovim.function.filecopy",
+    "source": "neovim",
+    "category": "function",
+    "name": "filecopy()",
+    "desc": "semantics differ.",
+    "doc_ref": "vimfn.txt:2436"
+  },
+  {
+    "id": "neovim.function.filereadable",
+    "source": "neovim",
+    "category": "function",
+    "name": "filereadable()",
+    "desc": "exclude directories.",
+    "doc_ref": "vimfn.txt:2455"
+  },
+  {
+    "id": "neovim.function.filewritable",
+    "source": "neovim",
+    "category": "function",
+    "name": "filewritable()",
+    "desc": "you need Vim's `2` return for directories.",
+    "doc_ref": "vimfn.txt:2481"
+  },
+  {
+    "id": "neovim.function.filter",
+    "source": "neovim",
+    "category": "function",
+    "name": "filter()",
+    "desc": "blobs differ.",
+    "doc_ref": "vimfn.txt:2496"
+  },
+  {
+    "id": "neovim.function.finddir",
+    "source": "neovim",
+    "category": "function",
+    "name": "finddir()",
+    "desc": "`count`, and return semantics differ.",
+    "doc_ref": "vimfn.txt:2559"
+  },
+  {
+    "id": "neovim.function.findfile",
+    "source": "neovim",
+    "category": "function",
+    "name": "findfile()",
+    "desc": "semantics, and |'suffixesadd'| handling differ.",
+    "doc_ref": "vimfn.txt:2588"
+  },
+  {
+    "id": "neovim.function.flatten",
+    "source": "neovim",
+    "category": "function",
+    "name": "flatten()",
+    "desc": "flattened list; in-place updates and `maxdepth` differ.",
+    "doc_ref": "vimfn.txt:2607"
+  },
+  {
+    "id": "neovim.function.flattennew",
+    "source": "neovim",
+    "category": "function",
+    "name": "flattennew()",
+    "desc": "flattened list; `maxdepth` differs.",
+    "doc_ref": "vimfn.txt:2636"
+  },
+  {
+    "id": "neovim.function.float2nr",
+    "source": "neovim",
+    "category": "function",
+    "name": "float2nr()",
+    "desc": "Convert {expr} to a Number by omitting the part after the",
+    "doc_ref": "vimfn.txt:2649"
+  },
+  {
+    "id": "neovim.function.floor",
+    "source": "neovim",
+    "category": "function",
+    "name": "floor()",
+    "desc": "Return the largest integral value less than or equal to",
+    "doc_ref": "vimfn.txt:2679"
+  },
+  {
+    "id": "neovim.function.fmod",
+    "source": "neovim",
+    "category": "function",
+    "name": "fmod()",
+    "desc": "Return the remainder of {expr1} / {expr2}, even if the",
+    "doc_ref": "vimfn.txt:2700"
+  },
+  {
+    "id": "neovim.function.fnameescape",
+    "source": "neovim",
+    "category": "function",
+    "name": "fnameescape()",
+    "desc": "Escapes {filepath} for use as a command argument.",
+    "doc_ref": "vimfn.txt:2725"
+  },
+  {
+    "id": "neovim.function.fnamemodify",
+    "source": "neovim",
+    "category": "function",
+    "name": "fnamemodify()",
+    "desc": "|vim.fs.abspath()|, and |vim.fs.normalize()| for common path",
+    "doc_ref": "vimfn.txt:2753"
+  },
+  {
+    "id": "neovim.function.foldclosed",
+    "source": "neovim",
+    "category": "function",
+    "name": "foldclosed()",
+    "desc": "Returns the first line number of the closed fold containing",
+    "doc_ref": "vimfn.txt:2781"
+  },
+  {
+    "id": "neovim.function.foldclosedend",
+    "source": "neovim",
+    "category": "function",
+    "name": "foldclosedend()",
+    "desc": "Returns the last line number of the closed fold containing",
+    "doc_ref": "vimfn.txt:2794"
+  },
+  {
+    "id": "neovim.function.foldlevel",
+    "source": "neovim",
+    "category": "function",
+    "name": "foldlevel()",
+    "desc": "Returns the fold nesting level of line {lnum} in the current",
+    "doc_ref": "vimfn.txt:2807"
+  },
+  {
+    "id": "neovim.function.foldtext",
+    "source": "neovim",
+    "category": "function",
+    "name": "foldtext()",
+    "desc": "Returns a String, to be displayed for a closed fold. This is",
+    "doc_ref": "vimfn.txt:2826"
+  },
+  {
+    "id": "neovim.function.foldtextresult",
+    "source": "neovim",
+    "category": "function",
+    "name": "foldtextresult()",
+    "desc": "Returns the text that is displayed for the closed fold at line",
+    "doc_ref": "vimfn.txt:2846"
+  },
+  {
+    "id": "neovim.function.foreach",
+    "source": "neovim",
+    "category": "function",
+    "name": "foreach()",
+    "desc": "{expr1} must be a |List|, |String|, |Blob| or |Dictionary|.",
+    "doc_ref": "vimfn.txt:2861"
+  },
+  {
+    "id": "neovim.function.fullcommand",
+    "source": "neovim",
+    "category": "function",
+    "name": "fullcommand()",
+    "desc": "Get the full command name from a short abbreviated command",
+    "doc_ref": "vimfn.txt:2905"
+  },
+  {
+    "id": "neovim.function.funcref",
+    "source": "neovim",
+    "category": "function",
+    "name": "funcref()",
+    "desc": "Just like |function()|, but the returned Funcref will lookup",
+    "doc_ref": "vimfn.txt:2931"
+  },
+  {
+    "id": "neovim.function.function",
+    "source": "neovim",
+    "category": "function",
+    "name": "function()",
+    "desc": "Return a |Funcref| variable that refers to function {name}.",
+    "doc_ref": "vimfn.txt:2951"
+  },
+  {
+    "id": "neovim.function.garbagecollect",
+    "source": "neovim",
+    "category": "function",
+    "name": "garbagecollect()",
+    "desc": "Cleanup unused |Lists| and |Dictionaries| that have circular",
+    "doc_ref": "vimfn.txt:3041"
+  },
+  {
+    "id": "neovim.function.get",
+    "source": "neovim",
+    "category": "function",
+    "name": "get()",
+    "desc": "Get item {idx} from |List| {list}. When this item is not",
+    "doc_ref": "vimfn.txt:3067"
+  },
+  {
+    "id": "neovim.function.getbufinfo",
+    "source": "neovim",
+    "category": "function",
+    "name": "getbufinfo()",
+    "desc": "",
+    "doc_ref": "vimfn.txt:3138"
+  },
+  {
+    "id": "neovim.function.getbufline",
+    "source": "neovim",
+    "category": "function",
+    "name": "getbufline()",
+    "desc": "Return a |List| with the lines starting from {lnum} to {end}",
+    "doc_ref": "vimfn.txt:3213"
+  },
+  {
+    "id": "neovim.function.getbufoneline",
+    "source": "neovim",
+    "category": "function",
+    "name": "getbufoneline()",
+    "desc": "Just like `getbufline()` but only get one line and return it",
+    "doc_ref": "vimfn.txt:3249"
+  },
+  {
+    "id": "neovim.function.getbufvar",
+    "source": "neovim",
+    "category": "function",
+    "name": "getbufvar()",
+    "desc": "{buf} to a bufnr; option names use |nvim_get_option_value()|",
+    "doc_ref": "vimfn.txt:3262"
+  },
+  {
+    "id": "neovim.function.getcellwidths",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcellwidths()",
+    "desc": "Returns a |List| of cell widths of character ranges overridden",
+    "doc_ref": "vimfn.txt:3299"
+  },
+  {
+    "id": "neovim.function.getchangelist",
+    "source": "neovim",
+    "category": "function",
+    "name": "getchangelist()",
+    "desc": "Returns the |changelist| for the buffer {buf}. For the use",
+    "doc_ref": "vimfn.txt:3308"
+  },
+  {
+    "id": "neovim.function.getchar",
+    "source": "neovim",
+    "category": "function",
+    "name": "getchar()",
+    "desc": "Get a single character from the user or input stream.",
+    "doc_ref": "vimfn.txt:3330"
+  },
+  {
+    "id": "neovim.function.getcharmod",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcharmod()",
+    "desc": "Returns the state of the keyboard modifiers for the last",
+    "doc_ref": "vimfn.txt:3430"
+  },
+  {
+    "id": "neovim.function.getcharpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcharpos()",
+    "desc": "Same as |getpos()|, except the column-number is",
+    "doc_ref": "vimfn.txt:3449"
+  },
+  {
+    "id": "neovim.function.getcharsearch",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcharsearch()",
+    "desc": "Return the current character search information as a {dict}",
+    "doc_ref": "vimfn.txt:3468"
+  },
+  {
+    "id": "neovim.function.getcharstr",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcharstr()",
+    "desc": "The same as |getchar()|, except that this always returns a",
+    "doc_ref": "vimfn.txt:3491"
+  },
+  {
+    "id": "neovim.function.getcmdcomplpat",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcmdcomplpat()",
+    "desc": "Return completion pattern of the current command-line.",
+    "doc_ref": "vimfn.txt:3502"
+  },
+  {
+    "id": "neovim.function.getcmdcompltype",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcmdcompltype()",
+    "desc": "Return the type of the current command-line completion.",
+    "doc_ref": "vimfn.txt:3513"
+  },
+  {
+    "id": "neovim.function.getcmdline",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcmdline()",
+    "desc": "Return the current command-line input. Only works when the",
+    "doc_ref": "vimfn.txt:3528"
+  },
+  {
+    "id": "neovim.function.getcmdpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcmdpos()",
+    "desc": "Return the position of the cursor in the command line as a",
+    "doc_ref": "vimfn.txt:3542"
+  },
+  {
+    "id": "neovim.function.getcmdprompt",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcmdprompt()",
+    "desc": "Return the current command-line prompt when using functions",
+    "doc_ref": "vimfn.txt:3554"
+  },
+  {
+    "id": "neovim.function.getcmdscreenpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcmdscreenpos()",
+    "desc": "Return the screen position of the cursor in the command line",
+    "doc_ref": "vimfn.txt:3565"
+  },
+  {
+    "id": "neovim.function.getcmdtype",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcmdtype()",
+    "desc": "Return the current command-line type. Possible return values",
+    "doc_ref": "vimfn.txt:3578"
+  },
+  {
+    "id": "neovim.function.getcmdwintype",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcmdwintype()",
+    "desc": "Return the current |command-line-window| type. Possible return",
+    "doc_ref": "vimfn.txt:3596"
+  },
+  {
+    "id": "neovim.function.getcompletion",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcompletion()",
+    "desc": "Return a list of command-line completion matches. The String",
+    "doc_ref": "vimfn.txt:3604"
+  },
+  {
+    "id": "neovim.function.getcompletiontype",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcompletiontype()",
+    "desc": "Return the type of the command-line completion using {pat}.",
+    "doc_ref": "vimfn.txt:3685"
+  },
+  {
+    "id": "neovim.function.getcurpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcurpos()",
+    "desc": "column, and `curswant`/invalid-window semantics differ.",
+    "doc_ref": "vimfn.txt:3698"
+  },
+  {
+    "id": "neovim.function.getcursorcharpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcursorcharpos()",
+    "desc": "Same as |getcurpos()| but the column number in the returned",
+    "doc_ref": "vimfn.txt:3732"
+  },
+  {
+    "id": "neovim.function.getcwd",
+    "source": "neovim",
+    "category": "function",
+    "name": "getcwd()",
+    "desc": "tab-local and window-local scopes differ.",
+    "doc_ref": "vimfn.txt:3748"
+  },
+  {
+    "id": "neovim.function.getenv",
+    "source": "neovim",
+    "category": "function",
+    "name": "getenv()",
+    "desc": "Return the value of environment variable {name}. The {name}",
+    "doc_ref": "vimfn.txt:3777"
+  },
+  {
+    "id": "neovim.function.getfontname",
+    "source": "neovim",
+    "category": "function",
+    "name": "getfontname()",
+    "desc": "Without an argument returns the name of the normal font being",
+    "doc_ref": "vimfn.txt:3794"
+  },
+  {
+    "id": "neovim.function.getfperm",
+    "source": "neovim",
+    "category": "function",
+    "name": "getfperm()",
+    "desc": "Returns the file permissions of the given file {fname} as a",
+    "doc_ref": "vimfn.txt:3812"
+  },
+  {
+    "id": "neovim.function.getfsize",
+    "source": "neovim",
+    "category": "function",
+    "name": "getfsize()",
+    "desc": "Returns the size in bytes of the given file {fname}.",
+    "doc_ref": "vimfn.txt:3836"
+  },
+  {
+    "id": "neovim.function.getftime",
+    "source": "neovim",
+    "category": "function",
+    "name": "getftime()",
+    "desc": "Returns the last modification time (\"mtime\") of file {fname}.",
+    "doc_ref": "vimfn.txt:3851"
+  },
+  {
+    "id": "neovim.function.getftype",
+    "source": "neovim",
+    "category": "function",
+    "name": "getftype()",
+    "desc": "Returns a description of the type of file {fname} as a",
+    "doc_ref": "vimfn.txt:3866"
+  },
+  {
+    "id": "neovim.function.getjumplist",
+    "source": "neovim",
+    "category": "function",
+    "name": "getjumplist()",
+    "desc": "window/tab arguments and return shape differ.",
+    "doc_ref": "vimfn.txt:3894"
+  },
+  {
+    "id": "neovim.function.getline",
+    "source": "neovim",
+    "category": "function",
+    "name": "getline()",
+    "desc": "|nvim_buf_get_lines()|.",
+    "doc_ref": "vimfn.txt:3924"
+  },
+  {
+    "id": "neovim.function.getloclist",
+    "source": "neovim",
+    "category": "function",
+    "name": "getloclist()",
+    "desc": "Returns a |List| with all the entries in the location list for",
+    "doc_ref": "vimfn.txt:3959"
+  },
+  {
+    "id": "neovim.function.getmarklist",
+    "source": "neovim",
+    "category": "function",
+    "name": "getmarklist()",
+    "desc": "Without the {buf} argument returns a |List| with information",
+    "doc_ref": "vimfn.txt:3998"
+  },
+  {
+    "id": "neovim.function.getmatches",
+    "source": "neovim",
+    "category": "function",
+    "name": "getmatches()",
+    "desc": "Returns a |List| with all matches previously defined for the",
+    "doc_ref": "vimfn.txt:4023"
+  },
+  {
+    "id": "neovim.function.getmousepos",
+    "source": "neovim",
+    "category": "function",
+    "name": "getmousepos()",
+    "desc": "Returns a |Dictionary| with the last known position of the",
+    "doc_ref": "vimfn.txt:4061"
+  },
+  {
+    "id": "neovim.function.getpid",
+    "source": "neovim",
+    "category": "function",
+    "name": "getpid()",
+    "desc": "Return a Number which is the process ID of the Vim process.",
+    "doc_ref": "vimfn.txt:4095"
+  },
+  {
+    "id": "neovim.function.getpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "getpos()",
+    "desc": "|nvim_buf_get_mark()| for marks; return shape, `off`, and",
+    "doc_ref": "vimfn.txt:4104"
+  },
+  {
+    "id": "neovim.function.getqflist",
+    "source": "neovim",
+    "category": "function",
+    "name": "getqflist()",
+    "desc": "Returns a |List| with all the current quickfix errors. Each",
+    "doc_ref": "vimfn.txt:4175"
+  },
+  {
+    "id": "neovim.function.getreg",
+    "source": "neovim",
+    "category": "function",
+    "name": "getreg()",
+    "desc": "Returns the contents of register {regname} as a String.",
+    "doc_ref": "vimfn.txt:4286"
+  },
+  {
+    "id": "neovim.function.getreginfo",
+    "source": "neovim",
+    "category": "function",
+    "name": "getreginfo()",
+    "desc": "Returns detailed information about register {regname} as a",
+    "doc_ref": "vimfn.txt:4317"
+  },
+  {
+    "id": "neovim.function.getregion",
+    "source": "neovim",
+    "category": "function",
+    "name": "getregion()",
+    "desc": "Returns the list of strings from {pos1} to {pos2} from a",
+    "doc_ref": "vimfn.txt:4347"
+  },
+  {
+    "id": "neovim.function.getregionpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "getregionpos()",
+    "desc": "Same as |getregion()|, but returns a list of positions",
+    "doc_ref": "vimfn.txt:4410"
+  },
+  {
+    "id": "neovim.function.getregtype",
+    "source": "neovim",
+    "category": "function",
+    "name": "getregtype()",
+    "desc": "Returns the type of register {regname} as a String.",
+    "doc_ref": "vimfn.txt:4457"
+  },
+  {
+    "id": "neovim.function.getscriptinfo",
+    "source": "neovim",
+    "category": "function",
+    "name": "getscriptinfo()",
+    "desc": "Returns a |List| with information about all the sourced Vim",
+    "doc_ref": "vimfn.txt:4474"
+  },
+  {
+    "id": "neovim.function.getstacktrace",
+    "source": "neovim",
+    "category": "function",
+    "name": "getstacktrace()",
+    "desc": "Returns the current stack trace of Vim scripts.",
+    "doc_ref": "vimfn.txt:4517"
+  },
+  {
+    "id": "neovim.function.gettabinfo",
+    "source": "neovim",
+    "category": "function",
+    "name": "gettabinfo()",
+    "desc": "If {tabnr} is not specified, then information about all the",
+    "doc_ref": "vimfn.txt:4534"
+  },
+  {
+    "id": "neovim.function.gettabvar",
+    "source": "neovim",
+    "category": "function",
+    "name": "gettabvar()",
+    "desc": "Get the value of a tab-local variable {varname} in tabpage",
+    "doc_ref": "vimfn.txt:4553"
+  },
+  {
+    "id": "neovim.function.gettabwinvar",
+    "source": "neovim",
+    "category": "function",
+    "name": "gettabwinvar()",
+    "desc": "{tabnr} and {winnr} to a winid; option names use",
+    "doc_ref": "vimfn.txt:4573"
+  },
+  {
+    "id": "neovim.function.gettagstack",
+    "source": "neovim",
+    "category": "function",
+    "name": "gettagstack()",
+    "desc": "Returns the tag stack of window {winnr} (|window-number| or",
+    "doc_ref": "vimfn.txt:4618"
+  },
+  {
+    "id": "neovim.function.gettext",
+    "source": "neovim",
+    "category": "function",
+    "name": "gettext()",
+    "desc": "Translate String {text} if possible.",
+    "doc_ref": "vimfn.txt:4652"
+  },
+  {
+    "id": "neovim.function.getwininfo",
+    "source": "neovim",
+    "category": "function",
+    "name": "getwininfo()",
+    "desc": "Returns information about windows as a |List| with Dictionaries.",
+    "doc_ref": "vimfn.txt:4669"
+  },
+  {
+    "id": "neovim.function.getwinpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "getwinpos()",
+    "desc": "Returns the [x, y] screen position of the Nvim GUI window as",
+    "doc_ref": "vimfn.txt:4712"
+  },
+  {
+    "id": "neovim.function.getwinposx",
+    "source": "neovim",
+    "category": "function",
+    "name": "getwinposx()",
+    "desc": "Returns the X coordinate in pixels of the left hand side of",
+    "doc_ref": "vimfn.txt:4740"
+  },
+  {
+    "id": "neovim.function.getwinposy",
+    "source": "neovim",
+    "category": "function",
+    "name": "getwinposy()",
+    "desc": "Returns the Y coordinate in pixels of the top of the Nvim GUI",
+    "doc_ref": "vimfn.txt:4748"
+  },
+  {
+    "id": "neovim.function.getwinvar",
+    "source": "neovim",
+    "category": "function",
+    "name": "getwinvar()",
+    "desc": "{winnr}; option names use |nvim_get_option_value()| or",
+    "doc_ref": "vimfn.txt:4756"
+  },
+  {
+    "id": "neovim.function.glob",
+    "source": "neovim",
+    "category": "function",
+    "name": "glob()",
+    "desc": "Expand the file wildcards in {expr}. See |wildcards| for the",
+    "doc_ref": "vimfn.txt:4775"
+  },
+  {
+    "id": "neovim.function.glob2regpat",
+    "source": "neovim",
+    "category": "function",
+    "name": "glob2regpat()",
+    "desc": "Convert a file pattern, as used by |glob()|, into a search",
+    "doc_ref": "vimfn.txt:4820"
+  },
+  {
+    "id": "neovim.function.globpath",
+    "source": "neovim",
+    "category": "function",
+    "name": "globpath()",
+    "desc": "Perform |glob()| for String {expr} on all directories in {path}",
+    "doc_ref": "vimfn.txt:4842"
+  },
+  {
+    "id": "neovim.function.has",
+    "source": "neovim",
+    "category": "function",
+    "name": "has()",
+    "desc": "Returns 1 if {feature} is supported, 0 otherwise. The",
+    "doc_ref": "vimfn.txt:4887"
+  },
+  {
+    "id": "neovim.function.has_key",
+    "source": "neovim",
+    "category": "function",
+    "name": "has_key()",
+    "desc": "Checks whether |Dictionary| {dict} has an entry with key",
+    "doc_ref": "vimfn.txt:4964"
+  },
+  {
+    "id": "neovim.function.haslocaldir",
+    "source": "neovim",
+    "category": "function",
+    "name": "haslocaldir()",
+    "desc": "Checks whether the window or tabpage has set a local working",
+    "doc_ref": "vimfn.txt:4978"
+  },
+  {
+    "id": "neovim.function.hasmapto",
+    "source": "neovim",
+    "category": "function",
+    "name": "hasmapto()",
+    "desc": "Checks whether a mapping exists whose rhs contains {what}.",
+    "doc_ref": "vimfn.txt:5003"
+  },
+  {
+    "id": "neovim.function.histadd",
+    "source": "neovim",
+    "category": "function",
+    "name": "histadd()",
+    "desc": "Add the String {item} to the history {history} which can be",
+    "doc_ref": "vimfn.txt:5041"
+  },
+  {
+    "id": "neovim.function.histdel",
+    "source": "neovim",
+    "category": "function",
+    "name": "histdel()",
+    "desc": "Clear {history}, i.e. delete all its entries. See |hist-names|",
+    "doc_ref": "vimfn.txt:5069"
+  },
+  {
+    "id": "neovim.function.histget",
+    "source": "neovim",
+    "category": "function",
+    "name": "histget()",
+    "desc": "Returns an entry from the specified command-line {history}.",
+    "doc_ref": "vimfn.txt:5109"
+  },
+  {
+    "id": "neovim.function.histnr",
+    "source": "neovim",
+    "category": "function",
+    "name": "histnr()",
+    "desc": "The result is the Number of the current entry in {history}.",
+    "doc_ref": "vimfn.txt:5132"
+  },
+  {
+    "id": "neovim.function.hlid",
+    "source": "neovim",
+    "category": "function",
+    "name": "hlID()",
+    "desc": "Returns the numeric ID of the highlight group with name",
+    "doc_ref": "vimfn.txt:5147"
+  },
+  {
+    "id": "neovim.function.hlexists",
+    "source": "neovim",
+    "category": "function",
+    "name": "hlexists()",
+    "desc": "Checks whether a highlight group called {name} exists.",
+    "doc_ref": "vimfn.txt:5165"
+  },
+  {
+    "id": "neovim.function.hostname",
+    "source": "neovim",
+    "category": "function",
+    "name": "hostname()",
+    "desc": "Returns the hostname of the machine on which the Nvim server",
+    "doc_ref": "vimfn.txt:5179"
+  },
+  {
+    "id": "neovim.function.iconv",
+    "source": "neovim",
+    "category": "function",
+    "name": "iconv()",
+    "desc": "Converts the encoding of {string} from {from} to {to}.",
+    "doc_ref": "vimfn.txt:5188"
+  },
+  {
+    "id": "neovim.function.id",
+    "source": "neovim",
+    "category": "function",
+    "name": "id()",
+    "desc": "Returns a |String| which is a unique identifier of the",
+    "doc_ref": "vimfn.txt:5210"
+  },
+  {
+    "id": "neovim.function.indent",
+    "source": "neovim",
+    "category": "function",
+    "name": "indent()",
+    "desc": "Returns the indent of line {lnum} in the current buffer.",
+    "doc_ref": "vimfn.txt:5233"
+  },
+  {
+    "id": "neovim.function.index",
+    "source": "neovim",
+    "category": "function",
+    "name": "index()",
+    "desc": "|Iter:find()| for lists; result is 1-based, and `start`, `ic`,",
+    "doc_ref": "vimfn.txt:5248"
+  },
+  {
+    "id": "neovim.function.indexof",
+    "source": "neovim",
+    "category": "function",
+    "name": "indexof()",
+    "desc": "|Iter:find()| for list predicates; result is 1-based, and",
+    "doc_ref": "vimfn.txt:5289"
+  },
+  {
+    "id": "neovim.function.input",
+    "source": "neovim",
+    "category": "function",
+    "name": "input()",
+    "desc": "Parameters: ~",
+    "doc_ref": "vimfn.txt:5340"
+  },
+  {
+    "id": "neovim.function.inputlist",
+    "source": "neovim",
+    "category": "function",
+    "name": "inputlist()",
+    "desc": "callback, returned item, and out-of-range semantics differ.",
+    "doc_ref": "vimfn.txt:5471"
+  },
+  {
+    "id": "neovim.function.inputrestore",
+    "source": "neovim",
+    "category": "function",
+    "name": "inputrestore()",
+    "desc": "Restore typeahead that was saved with a previous |inputsave()|.",
+    "doc_ref": "vimfn.txt:5498"
+  },
+  {
+    "id": "neovim.function.inputsave",
+    "source": "neovim",
+    "category": "function",
+    "name": "inputsave()",
+    "desc": "Preserve typeahead (also from mappings) and clear it, so that",
+    "doc_ref": "vimfn.txt:5508"
+  },
+  {
+    "id": "neovim.function.inputsecret",
+    "source": "neovim",
+    "category": "function",
+    "name": "inputsecret()",
+    "desc": "This function acts much like the |input()| function with but",
+    "doc_ref": "vimfn.txt:5519"
+  },
+  {
+    "id": "neovim.function.insert",
+    "source": "neovim",
+    "category": "function",
+    "name": "insert()",
+    "desc": "negative indexes differ.",
+    "doc_ref": "vimfn.txt:5537"
+  },
+  {
+    "id": "neovim.function.interrupt",
+    "source": "neovim",
+    "category": "function",
+    "name": "interrupt()",
+    "desc": "Interrupt script execution. It works more or less like the",
+    "doc_ref": "vimfn.txt:5565"
+  },
+  {
+    "id": "neovim.function.invert",
+    "source": "neovim",
+    "category": "function",
+    "name": "invert()",
+    "desc": "Bitwise invert. The argument is converted to a number. A",
+    "doc_ref": "vimfn.txt:5582"
+  },
+  {
+    "id": "neovim.function.isabsolutepath",
+    "source": "neovim",
+    "category": "function",
+    "name": "isabsolutepath()",
+    "desc": "Checks whether {path} is an absolute path. Returns |TRUE|",
+    "doc_ref": "vimfn.txt:5596"
+  },
+  {
+    "id": "neovim.function.isdirectory",
+    "source": "neovim",
+    "category": "function",
+    "name": "isdirectory()",
+    "desc": "Returns |TRUE| if {directory} exists, or |FALSE| if it doesn't",
+    "doc_ref": "vimfn.txt:5618"
+  },
+  {
+    "id": "neovim.function.isinf",
+    "source": "neovim",
+    "category": "function",
+    "name": "isinf()",
+    "desc": "`expr == math.huge and 1 or expr == -math.huge and -1 or 0`.",
+    "doc_ref": "vimfn.txt:5631"
+  },
+  {
+    "id": "neovim.function.islocked",
+    "source": "neovim",
+    "category": "function",
+    "name": "islocked()",
+    "desc": "Returns |TRUE| if {expr} is the name of a locked variable,",
+    "doc_ref": "vimfn.txt:5648"
+  },
+  {
+    "id": "neovim.function.isnan",
+    "source": "neovim",
+    "category": "function",
+    "name": "isnan()",
+    "desc": "Return |TRUE| if {expr} is a float with value NaN. >vim",
+    "doc_ref": "vimfn.txt:5668"
+  },
+  {
+    "id": "neovim.function.items",
+    "source": "neovim",
+    "category": "function",
+    "name": "items()",
+    "desc": "Return a |List| with all key/index and value pairs of {expr}.",
+    "doc_ref": "vimfn.txt:5681"
+  },
+  {
+    "id": "neovim.function.jobpid",
+    "source": "neovim",
+    "category": "function",
+    "name": "jobpid()",
+    "desc": "semantics differ.",
+    "doc_ref": "vimfn.txt:5709"
+  },
+  {
+    "id": "neovim.function.jobresize",
+    "source": "neovim",
+    "category": "function",
+    "name": "jobresize()",
+    "desc": "Resize the pseudo terminal window of |job-id| {job} to {width}",
+    "doc_ref": "vimfn.txt:5721"
+  },
+  {
+    "id": "neovim.function.jobstart",
+    "source": "neovim",
+    "category": "function",
+    "name": "jobstart()",
+    "desc": "PTY/term, streaming callbacks, and shell-string behavior",
+    "doc_ref": "vimfn.txt:5734"
+  },
+  {
+    "id": "neovim.function.jobstop",
+    "source": "neovim",
+    "category": "function",
+    "name": "jobstop()",
+    "desc": "|job-id| semantics differ.",
+    "doc_ref": "vimfn.txt:5836"
+  },
+  {
+    "id": "neovim.function.jobwait",
+    "source": "neovim",
+    "category": "function",
+    "name": "jobwait()",
+    "desc": "list input and status values differ.",
+    "doc_ref": "vimfn.txt:5855"
+  },
+  {
+    "id": "neovim.function.join",
+    "source": "neovim",
+    "category": "function",
+    "name": "join()",
+    "desc": "values stringify differently.",
+    "doc_ref": "vimfn.txt:5886"
+  },
+  {
+    "id": "neovim.function.json_decode",
+    "source": "neovim",
+    "category": "function",
+    "name": "json_decode()",
+    "desc": "Convert {expr} from JSON object. Accepts |readfile()|-style",
+    "doc_ref": "vimfn.txt:5907"
+  },
+  {
+    "id": "neovim.function.json_encode",
+    "source": "neovim",
+    "category": "function",
+    "name": "json_encode()",
+    "desc": "Convert {expr} into a JSON string. Accepts",
+    "doc_ref": "vimfn.txt:5930"
+  },
+  {
+    "id": "neovim.function.keys",
+    "source": "neovim",
+    "category": "function",
+    "name": "keys()",
+    "desc": "Return a |List| with all the keys of {dict}. The |List| is in",
+    "doc_ref": "vimfn.txt:5950"
+  },
+  {
+    "id": "neovim.function.keytrans",
+    "source": "neovim",
+    "category": "function",
+    "name": "keytrans()",
+    "desc": "Turn the internal byte representation of keys into a form that",
+    "doc_ref": "vimfn.txt:5962"
+  },
+  {
+    "id": "neovim.function.len",
+    "source": "neovim",
+    "category": "function",
+    "name": "len()",
+    "desc": "`#vim.tbl_keys(expr)` for dicts.",
+    "doc_ref": "vimfn.txt:5975"
+  },
+  {
+    "id": "neovim.function.libcall",
+    "source": "neovim",
+    "category": "function",
+    "name": "libcall()",
+    "desc": "Call function {funcname} in the run-time library {libname}",
+    "doc_ref": "vimfn.txt:5995"
+  },
+  {
+    "id": "neovim.function.libcallnr",
+    "source": "neovim",
+    "category": "function",
+    "name": "libcallnr()",
+    "desc": "Just like |libcall()|, but used for a function that returns an",
+    "doc_ref": "vimfn.txt:6048"
+  },
+  {
+    "id": "neovim.function.line",
+    "source": "neovim",
+    "category": "function",
+    "name": "line()",
+    "desc": "|nvim_buf_line_count()| for \"$\"; marks, lists, and other",
+    "doc_ref": "vimfn.txt:6067"
+  },
+  {
+    "id": "neovim.function.line2byte",
+    "source": "neovim",
+    "category": "function",
+    "name": "line2byte()",
+    "desc": "'fileformat' and invalid-line semantics differ.",
+    "doc_ref": "vimfn.txt:6098"
+  },
+  {
+    "id": "neovim.function.lispindent",
+    "source": "neovim",
+    "category": "function",
+    "name": "lispindent()",
+    "desc": "Get the amount of indent for line {lnum} according the lisp",
+    "doc_ref": "vimfn.txt:6120"
+  },
+  {
+    "id": "neovim.function.list2blob",
+    "source": "neovim",
+    "category": "function",
+    "name": "list2blob()",
+    "desc": "Return a Blob concatenating all the number values in {list}.",
+    "doc_ref": "vimfn.txt:6133"
+  },
+  {
+    "id": "neovim.function.list2str",
+    "source": "neovim",
+    "category": "function",
+    "name": "list2str()",
+    "desc": "Converts each codepoint in {list} to a UTF-8 character and",
+    "doc_ref": "vimfn.txt:6149"
+  },
+  {
+    "id": "neovim.function.localtime",
+    "source": "neovim",
+    "category": "function",
+    "name": "localtime()",
+    "desc": "Return the current time, measured as seconds since 1st Jan",
+    "doc_ref": "vimfn.txt:6172"
+  },
+  {
+    "id": "neovim.function.log",
+    "source": "neovim",
+    "category": "function",
+    "name": "log()",
+    "desc": "Return the natural logarithm (base e) of {expr} as a |Float|.",
+    "doc_ref": "vimfn.txt:6181"
+  },
+  {
+    "id": "neovim.function.log10",
+    "source": "neovim",
+    "category": "function",
+    "name": "log10()",
+    "desc": "Return the logarithm of Float {expr} to base 10 as a |Float|.",
+    "doc_ref": "vimfn.txt:6200"
+  },
+  {
+    "id": "neovim.function.luaeval",
+    "source": "neovim",
+    "category": "function",
+    "name": "luaeval()",
+    "desc": "Evaluate Lua expression {expr} and return its result converted",
+    "doc_ref": "vimfn.txt:6218"
+  },
+  {
+    "id": "neovim.function.map",
+    "source": "neovim",
+    "category": "function",
+    "name": "map()",
+    "desc": "string, blob, and in-place behavior differ.",
+    "doc_ref": "vimfn.txt:6233"
+  },
+  {
+    "id": "neovim.function.maparg",
+    "source": "neovim",
+    "category": "function",
+    "name": "maparg()",
+    "desc": "When {dict} is omitted or zero: Return the rhs of mapping",
+    "doc_ref": "vimfn.txt:6297"
+  },
+  {
+    "id": "neovim.function.mapcheck",
+    "source": "neovim",
+    "category": "function",
+    "name": "mapcheck()",
+    "desc": "Check if there is a mapping that matches with {name} in mode",
+    "doc_ref": "vimfn.txt:6379"
+  },
+  {
+    "id": "neovim.function.maplist",
+    "source": "neovim",
+    "category": "function",
+    "name": "maplist()",
+    "desc": "Returns a |List| of all mappings. Each List item is a |Dict|,",
+    "doc_ref": "vimfn.txt:6420"
+  },
+  {
+    "id": "neovim.function.mapnew",
+    "source": "neovim",
+    "category": "function",
+    "name": "mapnew()",
+    "desc": "`v:key` callback behavior differ.",
+    "doc_ref": "vimfn.txt:6458"
+  },
+  {
+    "id": "neovim.function.mapset",
+    "source": "neovim",
+    "category": "function",
+    "name": "mapset()",
+    "desc": "",
+    "doc_ref": "vimfn.txt:6474"
+  },
+  {
+    "id": "neovim.function.match",
+    "source": "neovim",
+    "category": "function",
+    "name": "match()",
+    "desc": "When {expr} is a |List| then this returns the index of the",
+    "doc_ref": "vimfn.txt:6519"
+  },
+  {
+    "id": "neovim.function.matchadd",
+    "source": "neovim",
+    "category": "function",
+    "name": "matchadd()",
+    "desc": "Defines a pattern to be highlighted in the current window (a",
+    "doc_ref": "vimfn.txt:6592"
+  },
+  {
+    "id": "neovim.function.matchaddpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "matchaddpos()",
+    "desc": "Same as |matchadd()|, but requires a list of positions {pos}",
+    "doc_ref": "vimfn.txt:6660"
+  },
+  {
+    "id": "neovim.function.matcharg",
+    "source": "neovim",
+    "category": "function",
+    "name": "matcharg()",
+    "desc": "Selects the {nr} match item, as set with a |:match|,",
+    "doc_ref": "vimfn.txt:6707"
+  },
+  {
+    "id": "neovim.function.matchbufline",
+    "source": "neovim",
+    "category": "function",
+    "name": "matchbufline()",
+    "desc": "Returns the |List| of matches in lines from {lnum} to {end} in",
+    "doc_ref": "vimfn.txt:6725"
+  },
+  {
+    "id": "neovim.function.matchdelete",
+    "source": "neovim",
+    "category": "function",
+    "name": "matchdelete()",
+    "desc": "Deletes a match with ID {id} previously defined by |matchadd()|",
+    "doc_ref": "vimfn.txt:6779"
+  },
+  {
+    "id": "neovim.function.matchend",
+    "source": "neovim",
+    "category": "function",
+    "name": "matchend()",
+    "desc": "Same as |match()|, but return the index of first character",
+    "doc_ref": "vimfn.txt:6793"
+  },
+  {
+    "id": "neovim.function.matchfuzzy",
+    "source": "neovim",
+    "category": "function",
+    "name": "matchfuzzy()",
+    "desc": "If {list} is a list of strings, then returns a |List| with all",
+    "doc_ref": "vimfn.txt:6821"
+  },
+  {
+    "id": "neovim.function.matchfuzzypos",
+    "source": "neovim",
+    "category": "function",
+    "name": "matchfuzzypos()",
+    "desc": "Same as |matchfuzzy()|, but returns the list of matched",
+    "doc_ref": "vimfn.txt:6892"
+  },
+  {
+    "id": "neovim.function.matchlist",
+    "source": "neovim",
+    "category": "function",
+    "name": "matchlist()",
+    "desc": "Same as |match()|, but return a |List|. The first item in the",
+    "doc_ref": "vimfn.txt:6922"
+  },
+  {
+    "id": "neovim.function.matchstr",
+    "source": "neovim",
+    "category": "function",
+    "name": "matchstr()",
+    "desc": "Same as |match()|, but return the matched string. Example: >vim",
+    "doc_ref": "vimfn.txt:6943"
+  },
+  {
+    "id": "neovim.function.matchstrlist",
+    "source": "neovim",
+    "category": "function",
+    "name": "matchstrlist()",
+    "desc": "Returns the |List| of matches in {list} where {pat} matches.",
+    "doc_ref": "vimfn.txt:6965"
+  },
+  {
+    "id": "neovim.function.matchstrpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "matchstrpos()",
+    "desc": "Same as |matchstr()|, but return the matched string, the start",
+    "doc_ref": "vimfn.txt:7006"
+  },
+  {
+    "id": "neovim.function.max",
+    "source": "neovim",
+    "category": "function",
+    "name": "max()",
+    "desc": "values and empty inputs need custom handling.",
+    "doc_ref": "vimfn.txt:7033"
+  },
+  {
+    "id": "neovim.function.menu_get",
+    "source": "neovim",
+    "category": "function",
+    "name": "menu_get()",
+    "desc": "Returns a |List| of |Dictionaries| describing |menus| (defined",
+    "doc_ref": "vimfn.txt:7052"
+  },
+  {
+    "id": "neovim.function.menu_info",
+    "source": "neovim",
+    "category": "function",
+    "name": "menu_info()",
+    "desc": "Return information about the specified menu {name} in",
+    "doc_ref": "vimfn.txt:7105"
+  },
+  {
+    "id": "neovim.function.min",
+    "source": "neovim",
+    "category": "function",
+    "name": "min()",
+    "desc": "values and empty inputs need custom handling.",
+    "doc_ref": "vimfn.txt:7183"
+  },
+  {
+    "id": "neovim.function.mkdir",
+    "source": "neovim",
+    "category": "function",
+    "name": "mkdir()",
+    "desc": "`\"p\"`, `\"D\"`, `\"R\"`, and return semantics differ.",
+    "doc_ref": "vimfn.txt:7202"
+  },
+  {
+    "id": "neovim.function.mode",
+    "source": "neovim",
+    "category": "function",
+    "name": "mode()",
+    "desc": "always returns the full mode string, unlike |mode()| without a",
+    "doc_ref": "vimfn.txt:7252"
+  },
+  {
+    "id": "neovim.function.msgpackdump",
+    "source": "neovim",
+    "category": "function",
+    "name": "msgpackdump()",
+    "desc": "and special-dict semantics differ.",
+    "doc_ref": "vimfn.txt:7316"
+  },
+  {
+    "id": "neovim.function.msgpackparse",
+    "source": "neovim",
+    "category": "function",
+    "name": "msgpackparse()",
+    "desc": "semantics differ.",
+    "doc_ref": "vimfn.txt:7345"
+  },
+  {
+    "id": "neovim.function.nextnonblank",
+    "source": "neovim",
+    "category": "function",
+    "name": "nextnonblank()",
+    "desc": "Return the line number of the first line at or below {lnum}",
+    "doc_ref": "vimfn.txt:7422"
+  },
+  {
+    "id": "neovim.function.nr2char",
+    "source": "neovim",
+    "category": "function",
+    "name": "nr2char()",
+    "desc": "Gets a UTF-8 string for a single codepoint {expr}.",
+    "doc_ref": "vimfn.txt:7437"
+  },
+  {
+    "id": "neovim.function.or",
+    "source": "neovim",
+    "category": "function",
+    "name": "or()",
+    "desc": "Bitwise OR on the two arguments. The arguments are converted",
+    "doc_ref": "vimfn.txt:7479"
+  },
+  {
+    "id": "neovim.function.pathshorten",
+    "source": "neovim",
+    "category": "function",
+    "name": "pathshorten()",
+    "desc": "Shorten directory names in the path {path} and return the",
+    "doc_ref": "vimfn.txt:7500"
+  },
+  {
+    "id": "neovim.function.perleval",
+    "source": "neovim",
+    "category": "function",
+    "name": "perleval()",
+    "desc": "Evaluate |perl| expression {expr} and return its result",
+    "doc_ref": "vimfn.txt:7521"
+  },
+  {
+    "id": "neovim.function.pow",
+    "source": "neovim",
+    "category": "function",
+    "name": "pow()",
+    "desc": "Return the power of {x} to the exponent {y} as a |Float|.",
+    "doc_ref": "vimfn.txt:7542"
+  },
+  {
+    "id": "neovim.function.preinserted",
+    "source": "neovim",
+    "category": "function",
+    "name": "preinserted()",
+    "desc": "Returns non-zero if text has been inserted after the cursor",
+    "doc_ref": "vimfn.txt:7563"
+  },
+  {
+    "id": "neovim.function.prevnonblank",
+    "source": "neovim",
+    "category": "function",
+    "name": "prevnonblank()",
+    "desc": "Return the line number of the first line at or above {lnum}",
+    "doc_ref": "vimfn.txt:7572"
+  },
+  {
+    "id": "neovim.function.printf",
+    "source": "neovim",
+    "category": "function",
+    "name": "printf()",
+    "desc": "Return a String with {fmt}, where \"%\" items are replaced by",
+    "doc_ref": "vimfn.txt:7587"
+  },
+  {
+    "id": "neovim.function.prompt_appendbuf",
+    "source": "neovim",
+    "category": "function",
+    "name": "prompt_appendbuf()",
+    "desc": "Appends text to prompt buffer before current prompt. When {text} is",
+    "doc_ref": "vimfn.txt:7920"
+  },
+  {
+    "id": "neovim.function.prompt_getinput",
+    "source": "neovim",
+    "category": "function",
+    "name": "prompt_getinput()",
+    "desc": "Gets the current user-input in |prompt-buffer| {buf} without invoking",
+    "doc_ref": "vimfn.txt:7945"
+  },
+  {
+    "id": "neovim.function.prompt_getprompt",
+    "source": "neovim",
+    "category": "function",
+    "name": "prompt_getprompt()",
+    "desc": "Returns the effective prompt text for buffer {buf}. {buf} can",
+    "doc_ref": "vimfn.txt:7958"
+  },
+  {
+    "id": "neovim.function.prompt_setcallback",
+    "source": "neovim",
+    "category": "function",
+    "name": "prompt_setcallback()",
+    "desc": "Set prompt callback for buffer {buf} to {expr}. When {expr}",
+    "doc_ref": "vimfn.txt:7971"
+  },
+  {
+    "id": "neovim.function.prompt_setinterrupt",
+    "source": "neovim",
+    "category": "function",
+    "name": "prompt_setinterrupt()",
+    "desc": "Set a callback for buffer {buf} to {expr}. When {expr} is an",
+    "doc_ref": "vimfn.txt:8011"
+  },
+  {
+    "id": "neovim.function.prompt_setprompt",
+    "source": "neovim",
+    "category": "function",
+    "name": "prompt_setprompt()",
+    "desc": "Set prompt for buffer {buf} to {text}. You most likely want",
+    "doc_ref": "vimfn.txt:8027"
+  },
+  {
+    "id": "neovim.function.pum_getpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "pum_getpos()",
+    "desc": "If the popup menu (see |ins-completion-menu|) is not visible,",
+    "doc_ref": "vimfn.txt:8042"
+  },
+  {
+    "id": "neovim.function.pumvisible",
+    "source": "neovim",
+    "category": "function",
+    "name": "pumvisible()",
+    "desc": "Returns non-zero when the popup menu is visible, zero",
+    "doc_ref": "vimfn.txt:8058"
+  },
+  {
+    "id": "neovim.function.py3eval",
+    "source": "neovim",
+    "category": "function",
+    "name": "py3eval()",
+    "desc": "Evaluate Python expression {expr} and return its result",
+    "doc_ref": "vimfn.txt:8067"
+  },
+  {
+    "id": "neovim.function.pyeval",
+    "source": "neovim",
+    "category": "function",
+    "name": "pyeval()",
+    "desc": "Evaluate Python expression {expr} and return its result",
+    "doc_ref": "vimfn.txt:8083"
+  },
+  {
+    "id": "neovim.function.pyxeval",
+    "source": "neovim",
+    "category": "function",
+    "name": "pyxeval()",
+    "desc": "Evaluate Python expression {expr} and return its result",
+    "doc_ref": "vimfn.txt:8098"
+  },
+  {
+    "id": "neovim.function.rand",
+    "source": "neovim",
+    "category": "function",
+    "name": "rand()",
+    "desc": "Return a pseudo-random Number generated with an xoshiro128**",
+    "doc_ref": "vimfn.txt:8110"
+  },
+  {
+    "id": "neovim.function.range",
+    "source": "neovim",
+    "category": "function",
+    "name": "range()",
+    "desc": "Returns a |List| with Numbers:",
+    "doc_ref": "vimfn.txt:8134"
+  },
+  {
+    "id": "neovim.function.readblob",
+    "source": "neovim",
+    "category": "function",
+    "name": "readblob()",
+    "desc": "whole-file reads; offset, size, and Blob return differ.",
+    "doc_ref": "vimfn.txt:8161"
+  },
+  {
+    "id": "neovim.function.readdir",
+    "source": "neovim",
+    "category": "function",
+    "name": "readdir()",
+    "desc": "filter results as needed.",
+    "doc_ref": "vimfn.txt:8196"
+  },
+  {
+    "id": "neovim.function.readfile",
+    "source": "neovim",
+    "category": "function",
+    "name": "readfile()",
+    "desc": "as needed; `{type}`, `{max}`, and Blob return differ.",
+    "doc_ref": "vimfn.txt:8236"
+  },
+  {
+    "id": "neovim.function.reduce",
+    "source": "neovim",
+    "category": "function",
+    "name": "reduce()",
+    "desc": "{func} is called for every item in {object}, which can be a",
+    "doc_ref": "vimfn.txt:8280"
+  },
+  {
+    "id": "neovim.function.reg_executing",
+    "source": "neovim",
+    "category": "function",
+    "name": "reg_executing()",
+    "desc": "Returns the single letter name of the register being executed.",
+    "doc_ref": "vimfn.txt:8308"
+  },
+  {
+    "id": "neovim.function.reg_recorded",
+    "source": "neovim",
+    "category": "function",
+    "name": "reg_recorded()",
+    "desc": "Returns the single letter name of the last recorded register.",
+    "doc_ref": "vimfn.txt:8316"
+  },
+  {
+    "id": "neovim.function.reg_recording",
+    "source": "neovim",
+    "category": "function",
+    "name": "reg_recording()",
+    "desc": "Returns the single letter name of the register being recorded.",
+    "doc_ref": "vimfn.txt:8324"
+  },
+  {
+    "id": "neovim.function.reltime",
+    "source": "neovim",
+    "category": "function",
+    "name": "reltime()",
+    "desc": "",
+    "doc_ref": "vimfn.txt:8331"
+  },
+  {
+    "id": "neovim.function.reltimefloat",
+    "source": "neovim",
+    "category": "function",
+    "name": "reltimefloat()",
+    "desc": "elapsed seconds.",
+    "doc_ref": "vimfn.txt:8362"
+  },
+  {
+    "id": "neovim.function.reltimestr",
+    "source": "neovim",
+    "category": "function",
+    "name": "reltimestr()",
+    "desc": "Return a String that represents the time value of {time}.",
+    "doc_ref": "vimfn.txt:8382"
+  },
+  {
+    "id": "neovim.function.remove",
+    "source": "neovim",
+    "category": "function",
+    "name": "remove()",
+    "desc": "",
+    "doc_ref": "vimfn.txt:8402"
+  },
+  {
+    "id": "neovim.function.rename",
+    "source": "neovim",
+    "category": "function",
+    "name": "rename()",
+    "desc": "Rename the file by the name {from} to the name {to}. This",
+    "doc_ref": "vimfn.txt:8467"
+  },
+  {
+    "id": "neovim.function.repeat",
+    "source": "neovim",
+    "category": "function",
+    "name": "repeat()",
+    "desc": "repetition.",
+    "doc_ref": "vimfn.txt:8484"
+  },
+  {
+    "id": "neovim.function.resolve",
+    "source": "neovim",
+    "category": "function",
+    "name": "resolve()",
+    "desc": "On MS-Windows, when {filename} is a shortcut (a .lnk file),",
+    "doc_ref": "vimfn.txt:8504"
+  },
+  {
+    "id": "neovim.function.reverse",
+    "source": "neovim",
+    "category": "function",
+    "name": "reverse()",
+    "desc": "strings, blobs, and in-place behavior differ.",
+    "doc_ref": "vimfn.txt:8523"
+  },
+  {
+    "id": "neovim.function.round",
+    "source": "neovim",
+    "category": "function",
+    "name": "round()",
+    "desc": "`expr >= 0 and math.floor(expr + 0.5) or math.ceil(expr - 0.5)`",
+    "doc_ref": "vimfn.txt:8543"
+  },
+  {
+    "id": "neovim.function.rpcnotify",
+    "source": "neovim",
+    "category": "function",
+    "name": "rpcnotify()",
+    "desc": "Sends {event} to {channel} via |RPC| and returns immediately.",
+    "doc_ref": "vimfn.txt:8567"
+  },
+  {
+    "id": "neovim.function.rpcrequest",
+    "source": "neovim",
+    "category": "function",
+    "name": "rpcrequest()",
+    "desc": "Sends a request to {channel} to invoke {method} via",
+    "doc_ref": "vimfn.txt:8584"
+  },
+  {
+    "id": "neovim.function.rubyeval",
+    "source": "neovim",
+    "category": "function",
+    "name": "rubyeval()",
+    "desc": "Evaluate Ruby expression {expr} and return its result",
+    "doc_ref": "vimfn.txt:8601"
+  },
+  {
+    "id": "neovim.function.screenattr",
+    "source": "neovim",
+    "category": "function",
+    "name": "screenattr()",
+    "desc": "Like |screenchar()|, but return the attribute. This is a rather",
+    "doc_ref": "vimfn.txt:8617"
+  },
+  {
+    "id": "neovim.function.screenchar",
+    "source": "neovim",
+    "category": "function",
+    "name": "screenchar()",
+    "desc": "Returns the character at screen position [row, col] as a",
+    "doc_ref": "vimfn.txt:8630"
+  },
+  {
+    "id": "neovim.function.screenchars",
+    "source": "neovim",
+    "category": "function",
+    "name": "screenchars()",
+    "desc": "Returns the character and any composing characters at screen",
+    "doc_ref": "vimfn.txt:8647"
+  },
+  {
+    "id": "neovim.function.screencol",
+    "source": "neovim",
+    "category": "function",
+    "name": "screencol()",
+    "desc": "Returns the current screen column of the cursor. The",
+    "doc_ref": "vimfn.txt:8662"
+  },
+  {
+    "id": "neovim.function.screenpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "screenpos()",
+    "desc": "Returns the screen position of the text character in window",
+    "doc_ref": "vimfn.txt:8680"
+  },
+  {
+    "id": "neovim.function.screenrow",
+    "source": "neovim",
+    "category": "function",
+    "name": "screenrow()",
+    "desc": "Returns the current screen row of the cursor. The top line",
+    "doc_ref": "vimfn.txt:8712"
+  },
+  {
+    "id": "neovim.function.screenstring",
+    "source": "neovim",
+    "category": "function",
+    "name": "screenstring()",
+    "desc": "Returns the base character and any composing characters at",
+    "doc_ref": "vimfn.txt:8723"
+  },
+  {
+    "id": "neovim.function.search",
+    "source": "neovim",
+    "category": "function",
+    "name": "search()",
+    "desc": "Search for regexp pattern {pattern}. The search starts at the",
+    "doc_ref": "vimfn.txt:8737"
+  },
+  {
+    "id": "neovim.function.searchcount",
+    "source": "neovim",
+    "category": "function",
+    "name": "searchcount()",
+    "desc": "Get or update the last search count, like what is displayed",
+    "doc_ref": "vimfn.txt:8852"
+  },
+  {
+    "id": "neovim.function.searchdecl",
+    "source": "neovim",
+    "category": "function",
+    "name": "searchdecl()",
+    "desc": "Search for the declaration of {name}.",
+    "doc_ref": "vimfn.txt:8980"
+  },
+  {
+    "id": "neovim.function.searchpair",
+    "source": "neovim",
+    "category": "function",
+    "name": "searchpair()",
+    "desc": "Search for the match of a nested start-end pair. This can be",
+    "doc_ref": "vimfn.txt:9008"
+  },
+  {
+    "id": "neovim.function.searchpairpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "searchpairpos()",
+    "desc": "Same as |searchpair()|, but returns a |List| with the line and",
+    "doc_ref": "vimfn.txt:9106"
+  },
+  {
+    "id": "neovim.function.searchpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "searchpos()",
+    "desc": "Same as |search()|, but returns a |List| with the line and",
+    "doc_ref": "vimfn.txt:9130"
+  },
+  {
+    "id": "neovim.function.serverlist",
+    "source": "neovim",
+    "category": "function",
+    "name": "serverlist()",
+    "desc": "Returns a list of server addresses, or empty if all servers",
+    "doc_ref": "vimfn.txt:9155"
+  },
+  {
+    "id": "neovim.function.serverstart",
+    "source": "neovim",
+    "category": "function",
+    "name": "serverstart()",
+    "desc": "Opens a socket or named pipe at {address} and listens for",
+    "doc_ref": "vimfn.txt:9186"
+  },
+  {
+    "id": "neovim.function.serverstop",
+    "source": "neovim",
+    "category": "function",
+    "name": "serverstop()",
+    "desc": "Closes the pipe or socket at {address}.",
+    "doc_ref": "vimfn.txt:9226"
+  },
+  {
+    "id": "neovim.function.setbufline",
+    "source": "neovim",
+    "category": "function",
+    "name": "setbufline()",
+    "desc": "Set line {lnum} to {text} in buffer {buf}. This works like",
+    "doc_ref": "vimfn.txt:9238"
+  },
+  {
+    "id": "neovim.function.setbufvar",
+    "source": "neovim",
+    "category": "function",
+    "name": "setbufvar()",
+    "desc": "{buf} to a bufnr; option names use |nvim_set_option_value()|.",
+    "doc_ref": "vimfn.txt:9273"
+  },
+  {
+    "id": "neovim.function.setcellwidths",
+    "source": "neovim",
+    "category": "function",
+    "name": "setcellwidths()",
+    "desc": "Specify overrides for cell widths of character ranges. This",
+    "doc_ref": "vimfn.txt:9298"
+  },
+  {
+    "id": "neovim.function.setcharpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "setcharpos()",
+    "desc": "with |vim.str_byteindex()|; special positions, `off`, and",
+    "doc_ref": "vimfn.txt:9338"
+  },
+  {
+    "id": "neovim.function.setcharsearch",
+    "source": "neovim",
+    "category": "function",
+    "name": "setcharsearch()",
+    "desc": "Set the current character search information to {dict},",
+    "doc_ref": "vimfn.txt:9360"
+  },
+  {
+    "id": "neovim.function.setcmdline",
+    "source": "neovim",
+    "category": "function",
+    "name": "setcmdline()",
+    "desc": "Set the command line to {str} and set the cursor position to",
+    "doc_ref": "vimfn.txt:9386"
+  },
+  {
+    "id": "neovim.function.setcmdpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "setcmdpos()",
+    "desc": "Set the cursor position in the command line to byte position",
+    "doc_ref": "vimfn.txt:9400"
+  },
+  {
+    "id": "neovim.function.setcursorcharpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "setcursorcharpos()",
+    "desc": "|vim.str_byteindex()|; `off`, return values, and special line",
+    "doc_ref": "vimfn.txt:9421"
+  },
+  {
+    "id": "neovim.function.setenv",
+    "source": "neovim",
+    "category": "function",
+    "name": "setenv()",
+    "desc": "Set environment variable {name} to {val}. Example: >vim",
+    "doc_ref": "vimfn.txt:9449"
+  },
+  {
+    "id": "neovim.function.setfperm",
+    "source": "neovim",
+    "category": "function",
+    "name": "setfperm()",
+    "desc": "Set the file permissions for {fname} to {mode}.",
+    "doc_ref": "vimfn.txt:9465"
+  },
+  {
+    "id": "neovim.function.setline",
+    "source": "neovim",
+    "category": "function",
+    "name": "setline()",
+    "desc": "|nvim_buf_set_lines()|.",
+    "doc_ref": "vimfn.txt:9491"
+  },
+  {
+    "id": "neovim.function.setloclist",
+    "source": "neovim",
+    "category": "function",
+    "name": "setloclist()",
+    "desc": "Create or replace or add to the location list for window {nr}",
+    "doc_ref": "vimfn.txt:9529"
+  },
+  {
+    "id": "neovim.function.setmatches",
+    "source": "neovim",
+    "category": "function",
+    "name": "setmatches()",
+    "desc": "Restores a list of matches saved by |getmatches()| for the",
+    "doc_ref": "vimfn.txt:9554"
+  },
+  {
+    "id": "neovim.function.setpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "setpos()",
+    "desc": "|nvim_buf_set_mark()| for marks; special positions, `off`, and",
+    "doc_ref": "vimfn.txt:9568"
+  },
+  {
+    "id": "neovim.function.setqflist",
+    "source": "neovim",
+    "category": "function",
+    "name": "setqflist()",
+    "desc": "Create or replace or add to the quickfix list.",
+    "doc_ref": "vimfn.txt:9633"
+  },
+  {
+    "id": "neovim.function.setreg",
+    "source": "neovim",
+    "category": "function",
+    "name": "setreg()",
+    "desc": "Set the register {regname} to {value}.",
+    "doc_ref": "vimfn.txt:9757"
+  },
+  {
+    "id": "neovim.function.settabvar",
+    "source": "neovim",
+    "category": "function",
+    "name": "settabvar()",
+    "desc": "Set tab-local variable {varname} to {val} in tabpage {tabnr}.",
+    "doc_ref": "vimfn.txt:9822"
+  },
+  {
+    "id": "neovim.function.settabwinvar",
+    "source": "neovim",
+    "category": "function",
+    "name": "settabwinvar()",
+    "desc": "{tabnr} and {winnr} to a winid; option names use",
+    "doc_ref": "vimfn.txt:9840"
+  },
+  {
+    "id": "neovim.function.settagstack",
+    "source": "neovim",
+    "category": "function",
+    "name": "settagstack()",
+    "desc": "Modify the tag stack of the window {nr} (|window-number| or",
+    "doc_ref": "vimfn.txt:9869"
+  },
+  {
+    "id": "neovim.function.setwinvar",
+    "source": "neovim",
+    "category": "function",
+    "name": "setwinvar()",
+    "desc": "{nr} to a winid; option names use |nvim_set_option_value()|.",
+    "doc_ref": "vimfn.txt:9911"
+  },
+  {
+    "id": "neovim.function.sha256",
+    "source": "neovim",
+    "category": "function",
+    "name": "sha256()",
+    "desc": "Returns a String with 64 hex characters, which is the SHA256",
+    "doc_ref": "vimfn.txt:9929"
+  },
+  {
+    "id": "neovim.function.shellescape",
+    "source": "neovim",
+    "category": "function",
+    "name": "shellescape()",
+    "desc": "escaping; `:!` and {special} semantics differ.",
+    "doc_ref": "vimfn.txt:9940"
+  },
+  {
+    "id": "neovim.function.shiftwidth",
+    "source": "neovim",
+    "category": "function",
+    "name": "shiftwidth()",
+    "desc": "`vim.bo.shiftwidth > 0 and vim.bo.shiftwidth or vim.bo.tabstop`;",
+    "doc_ref": "vimfn.txt:9982"
+  },
+  {
+    "id": "neovim.function.sign_define",
+    "source": "neovim",
+    "category": "function",
+    "name": "sign_define()",
+    "desc": "",
+    "doc_ref": "vimfn.txt:10013"
+  },
+  {
+    "id": "neovim.function.sign_getdefined",
+    "source": "neovim",
+    "category": "function",
+    "name": "sign_getdefined()",
+    "desc": "Get a list of defined signs and their attributes.",
+    "doc_ref": "vimfn.txt:10067"
+  },
+  {
+    "id": "neovim.function.sign_getplaced",
+    "source": "neovim",
+    "category": "function",
+    "name": "sign_getplaced()",
+    "desc": "Return a list of signs placed in a buffer or all the buffers.",
+    "doc_ref": "vimfn.txt:10110"
+  },
+  {
+    "id": "neovim.function.sign_jump",
+    "source": "neovim",
+    "category": "function",
+    "name": "sign_jump()",
+    "desc": "Open the buffer {buf} or jump to the window that contains",
+    "doc_ref": "vimfn.txt:10178"
+  },
+  {
+    "id": "neovim.function.sign_place",
+    "source": "neovim",
+    "category": "function",
+    "name": "sign_place()",
+    "desc": "Place the sign defined as {name} at line {lnum} in file or",
+    "doc_ref": "vimfn.txt:10202"
+  },
+  {
+    "id": "neovim.function.sign_placelist",
+    "source": "neovim",
+    "category": "function",
+    "name": "sign_placelist()",
+    "desc": "Place one or more signs. This is similar to the",
+    "doc_ref": "vimfn.txt:10261"
+  },
+  {
+    "id": "neovim.function.sign_undefine",
+    "source": "neovim",
+    "category": "function",
+    "name": "sign_undefine()",
+    "desc": "",
+    "doc_ref": "vimfn.txt:10327"
+  },
+  {
+    "id": "neovim.function.sign_unplace",
+    "source": "neovim",
+    "category": "function",
+    "name": "sign_unplace()",
+    "desc": "Remove a previously placed sign in one or more buffers. This",
+    "doc_ref": "vimfn.txt:10357"
+  },
+  {
+    "id": "neovim.function.sign_unplacelist",
+    "source": "neovim",
+    "category": "function",
+    "name": "sign_unplacelist()",
+    "desc": "Remove previously placed signs from one or more buffers. This",
+    "doc_ref": "vimfn.txt:10407"
+  },
+  {
+    "id": "neovim.function.simplify",
+    "source": "neovim",
+    "category": "function",
+    "name": "simplify()",
+    "desc": "leading `./` or trailing `/` handling differ.",
+    "doc_ref": "vimfn.txt:10442"
+  },
+  {
+    "id": "neovim.function.sin",
+    "source": "neovim",
+    "category": "function",
+    "name": "sin()",
+    "desc": "Return the sine of {expr}, measured in radians, as a |Float|.",
+    "doc_ref": "vimfn.txt:10468"
+  },
+  {
+    "id": "neovim.function.sinh",
+    "source": "neovim",
+    "category": "function",
+    "name": "sinh()",
+    "desc": "Return the hyperbolic sine of {expr} as a |Float| in the range",
+    "doc_ref": "vimfn.txt:10486"
+  },
+  {
+    "id": "neovim.function.slice",
+    "source": "neovim",
+    "category": "function",
+    "name": "slice()",
+    "desc": "Similar to using a |slice| \"expr[start : end]\", but \"end\" is",
+    "doc_ref": "vimfn.txt:10505"
+  },
+  {
+    "id": "neovim.function.sockconnect",
+    "source": "neovim",
+    "category": "function",
+    "name": "sockconnect()",
+    "desc": "Connect a socket to an address. If {mode} is \"pipe\" then",
+    "doc_ref": "vimfn.txt:10523"
+  },
+  {
+    "id": "neovim.function.sort",
+    "source": "neovim",
+    "category": "function",
+    "name": "sort()",
+    "desc": "stable and Vim's `i`/`l`/`n`/`N`/`f` modes differ.",
+    "doc_ref": "vimfn.txt:10556"
+  },
+  {
+    "id": "neovim.function.soundfold",
+    "source": "neovim",
+    "category": "function",
+    "name": "soundfold()",
+    "desc": "Return the sound-folded equivalent of {word}. Uses the first",
+    "doc_ref": "vimfn.txt:10640"
+  },
+  {
+    "id": "neovim.function.spellbadword",
+    "source": "neovim",
+    "category": "function",
+    "name": "spellbadword()",
+    "desc": "all matches with positions, not just the first one or",
+    "doc_ref": "vimfn.txt:10654"
+  },
+  {
+    "id": "neovim.function.spellsuggest",
+    "source": "neovim",
+    "category": "function",
+    "name": "spellsuggest()",
+    "desc": "Return a |List| with spelling suggestions to replace {word}.",
+    "doc_ref": "vimfn.txt:10688"
+  },
+  {
+    "id": "neovim.function.split",
+    "source": "neovim",
+    "category": "function",
+    "name": "split()",
+    "desc": "Make a |List| out of {string}. When {pattern} is omitted or",
+    "doc_ref": "vimfn.txt:10717"
+  },
+  {
+    "id": "neovim.function.sqrt",
+    "source": "neovim",
+    "category": "function",
+    "name": "sqrt()",
+    "desc": "Return the non-negative square root of Float {expr} as a",
+    "doc_ref": "vimfn.txt:10752"
+  },
+  {
+    "id": "neovim.function.srand",
+    "source": "neovim",
+    "category": "function",
+    "name": "srand()",
+    "desc": "Initialize seed used by |rand()|:",
+    "doc_ref": "vimfn.txt:10773"
+  },
+  {
+    "id": "neovim.function.state",
+    "source": "neovim",
+    "category": "function",
+    "name": "state()",
+    "desc": "Return a string which contains characters indicating the",
+    "doc_ref": "vimfn.txt:10796"
+  },
+  {
+    "id": "neovim.function.stdioopen",
+    "source": "neovim",
+    "category": "function",
+    "name": "stdioopen()",
+    "desc": "With |--headless| this opens stdin and stdout as a |channel|.",
+    "doc_ref": "vimfn.txt:10832"
+  },
+  {
+    "id": "neovim.function.stdpath",
+    "source": "neovim",
+    "category": "function",
+    "name": "stdpath()",
+    "desc": "Returns |standard-path| locations of various default files and",
+    "doc_ref": "vimfn.txt:10859"
+  },
+  {
+    "id": "neovim.function.str2float",
+    "source": "neovim",
+    "category": "function",
+    "name": "str2float()",
+    "desc": "hex forms, and trailing text differ.",
+    "doc_ref": "vimfn.txt:10890"
+  },
+  {
+    "id": "neovim.function.str2list",
+    "source": "neovim",
+    "category": "function",
+    "name": "str2list()",
+    "desc": "Return a list containing the number values which represent",
+    "doc_ref": "vimfn.txt:10919"
+  },
+  {
+    "id": "neovim.function.str2nr",
+    "source": "neovim",
+    "category": "function",
+    "name": "str2nr()",
+    "desc": "base prefixes, and trailing text differ.",
+    "doc_ref": "vimfn.txt:10939"
+  },
+  {
+    "id": "neovim.function.strcharlen",
+    "source": "neovim",
+    "category": "function",
+    "name": "strcharlen()",
+    "desc": "Returns the number of characters in String {string}, ignoring",
+    "doc_ref": "vimfn.txt:10968"
+  },
+  {
+    "id": "neovim.function.strcharpart",
+    "source": "neovim",
+    "category": "function",
+    "name": "strcharpart()",
+    "desc": "Like |strpart()| but using character index and length instead",
+    "doc_ref": "vimfn.txt:10983"
+  },
+  {
+    "id": "neovim.function.strchars",
+    "source": "neovim",
+    "category": "function",
+    "name": "strchars()",
+    "desc": "`skipcc` handling differs.",
+    "doc_ref": "vimfn.txt:11007"
+  },
+  {
+    "id": "neovim.function.strdisplaywidth",
+    "source": "neovim",
+    "category": "function",
+    "name": "strdisplaywidth()",
+    "desc": "and window-option semantics differ.",
+    "doc_ref": "vimfn.txt:11045"
+  },
+  {
+    "id": "neovim.function.strftime",
+    "source": "neovim",
+    "category": "function",
+    "name": "strftime()",
+    "desc": "Formats a date and time String specified by {format}. The",
+    "doc_ref": "vimfn.txt:11072"
+  },
+  {
+    "id": "neovim.function.strgetchar",
+    "source": "neovim",
+    "category": "function",
+    "name": "strgetchar()",
+    "desc": "Get a Number corresponding to the character at {index} in",
+    "doc_ref": "vimfn.txt:11098"
+  },
+  {
+    "id": "neovim.function.stridx",
+    "source": "neovim",
+    "category": "function",
+    "name": "stridx()",
+    "desc": "`start + 1`, then subtract 1; missing matches return nil",
+    "doc_ref": "vimfn.txt:11114"
+  },
+  {
+    "id": "neovim.function.string",
+    "source": "neovim",
+    "category": "function",
+    "name": "string()",
+    "desc": "scalars.",
+    "doc_ref": "vimfn.txt:11145"
+  },
+  {
+    "id": "neovim.function.strlen",
+    "source": "neovim",
+    "category": "function",
+    "name": "strlen()",
+    "desc": "Returns the length of String {string} in bytes.",
+    "doc_ref": "vimfn.txt:11181"
+  },
+  {
+    "id": "neovim.function.strpart",
+    "source": "neovim",
+    "category": "function",
+    "name": "strpart()",
+    "desc": "and the `chars` flag differ.",
+    "doc_ref": "vimfn.txt:11197"
+  },
+  {
+    "id": "neovim.function.strptime",
+    "source": "neovim",
+    "category": "function",
+    "name": "strptime()",
+    "desc": "Parses a date/time string and returns a unix timestamp.",
+    "doc_ref": "vimfn.txt:11235"
+  },
+  {
+    "id": "neovim.function.strridx",
+    "source": "neovim",
+    "category": "function",
+    "name": "strridx()",
+    "desc": "then subtract 1; empty-needle and missing-match semantics",
+    "doc_ref": "vimfn.txt:11264"
+  },
+  {
+    "id": "neovim.function.strtrans",
+    "source": "neovim",
+    "category": "function",
+    "name": "strtrans()",
+    "desc": "Translates all unprintable characters in {string} into",
+    "doc_ref": "vimfn.txt:11294"
+  },
+  {
+    "id": "neovim.function.strutf16len",
+    "source": "neovim",
+    "category": "function",
+    "name": "strutf16len()",
+    "desc": "`countcc = false` semantics differ.",
+    "doc_ref": "vimfn.txt:11310"
+  },
+  {
+    "id": "neovim.function.strwidth",
+    "source": "neovim",
+    "category": "function",
+    "name": "strwidth()",
+    "desc": "Returns the number of display cells String {string} occupies.",
+    "doc_ref": "vimfn.txt:11340"
+  },
+  {
+    "id": "neovim.function.submatch",
+    "source": "neovim",
+    "category": "function",
+    "name": "submatch()",
+    "desc": "Only for an expression in a |:substitute| command or",
+    "doc_ref": "vimfn.txt:11358"
+  },
+  {
+    "id": "neovim.function.substitute",
+    "source": "neovim",
+    "category": "function",
+    "name": "substitute()",
+    "desc": "patterns, flags, and replacement semantics differ.",
+    "doc_ref": "vimfn.txt:11393"
+  },
+  {
+    "id": "neovim.function.swapfilelist",
+    "source": "neovim",
+    "category": "function",
+    "name": "swapfilelist()",
+    "desc": "Returns a list of swap file names, like what \"vim -r\" shows.",
+    "doc_ref": "vimfn.txt:11448"
+  },
+  {
+    "id": "neovim.function.swapinfo",
+    "source": "neovim",
+    "category": "function",
+    "name": "swapinfo()",
+    "desc": "Returns information about the swapfile {fname} as a",
+    "doc_ref": "vimfn.txt:11463"
+  },
+  {
+    "id": "neovim.function.swapname",
+    "source": "neovim",
+    "category": "function",
+    "name": "swapname()",
+    "desc": "The result is the swap file path of the buffer {buf}.",
+    "doc_ref": "vimfn.txt:11487"
+  },
+  {
+    "id": "neovim.function.synid",
+    "source": "neovim",
+    "category": "function",
+    "name": "synID()",
+    "desc": "Returns the syntax ID at position {lnum} and {col} in the",
+    "doc_ref": "vimfn.txt:11500"
+  },
+  {
+    "id": "neovim.function.synidattr",
+    "source": "neovim",
+    "category": "function",
+    "name": "synIDattr()",
+    "desc": "Returns the {what} attribute of syntax ID {synID} as a",
+    "doc_ref": "vimfn.txt:11533"
+  },
+  {
+    "id": "neovim.function.synidtrans",
+    "source": "neovim",
+    "category": "function",
+    "name": "synIDtrans()",
+    "desc": "Returns the translated syntax ID of {synID}, following",
+    "doc_ref": "vimfn.txt:11591"
+  },
+  {
+    "id": "neovim.function.synconcealed",
+    "source": "neovim",
+    "category": "function",
+    "name": "synconcealed()",
+    "desc": "Returns conceal information for the character at position",
+    "doc_ref": "vimfn.txt:11605"
+  },
+  {
+    "id": "neovim.function.synstack",
+    "source": "neovim",
+    "category": "function",
+    "name": "synstack()",
+    "desc": "Return a |List|, which is the stack of syntax items at the",
+    "doc_ref": "vimfn.txt:11642"
+  },
+  {
+    "id": "neovim.function.system",
+    "source": "neovim",
+    "category": "function",
+    "name": "system()",
+    "desc": "string commands use the shell in Vimscript, not by default in",
+    "doc_ref": "vimfn.txt:11668"
+  },
+  {
+    "id": "neovim.function.systemlist",
+    "source": "neovim",
+    "category": "function",
+    "name": "systemlist()",
+    "desc": "string commands use the shell in Vimscript, not by default in",
+    "doc_ref": "vimfn.txt:11726"
+  },
+  {
+    "id": "neovim.function.tabpagebuflist",
+    "source": "neovim",
+    "category": "function",
+    "name": "tabpagebuflist()",
+    "desc": "|nvim_win_get_buf()|; invalid tabpages error instead of",
+    "doc_ref": "vimfn.txt:11752"
+  },
+  {
+    "id": "neovim.function.tabpagenr",
+    "source": "neovim",
+    "category": "function",
+    "name": "tabpagenr()",
+    "desc": "|nvim_get_current_tabpage()| for the current tab, or",
+    "doc_ref": "vimfn.txt:11775"
+  },
+  {
+    "id": "neovim.function.tabpagewinnr",
+    "source": "neovim",
+    "category": "function",
+    "name": "tabpagewinnr()",
+    "desc": "|nvim_tabpage_get_win()| for the current window, or the length",
+    "doc_ref": "vimfn.txt:11796"
+  },
+  {
+    "id": "neovim.function.tagfiles",
+    "source": "neovim",
+    "category": "function",
+    "name": "tagfiles()",
+    "desc": "Returns a |List| with the file names used to search for tags",
+    "doc_ref": "vimfn.txt:11821"
+  },
+  {
+    "id": "neovim.function.taglist",
+    "source": "neovim",
+    "category": "function",
+    "name": "taglist()",
+    "desc": "Returns a |List| of tags matching the regular expression {expr}.",
+    "doc_ref": "vimfn.txt:11828"
+  },
+  {
+    "id": "neovim.function.tan",
+    "source": "neovim",
+    "category": "function",
+    "name": "tan()",
+    "desc": "Return the tangent of {expr}, measured in radians, as a |Float|",
+    "doc_ref": "vimfn.txt:11878"
+  },
+  {
+    "id": "neovim.function.tanh",
+    "source": "neovim",
+    "category": "function",
+    "name": "tanh()",
+    "desc": "Return the hyperbolic tangent of {expr} as a |Float| in the",
+    "doc_ref": "vimfn.txt:11897"
+  },
+  {
+    "id": "neovim.function.tempname",
+    "source": "neovim",
+    "category": "function",
+    "name": "tempname()",
+    "desc": "|tempdir| and nonexistence are not guaranteed.",
+    "doc_ref": "vimfn.txt:11916"
+  },
+  {
+    "id": "neovim.function.test_garbagecollect_now",
+    "source": "neovim",
+    "category": "function",
+    "name": "test_garbagecollect_now()",
+    "desc": "Like |garbagecollect()|, but executed right away. This must",
+    "doc_ref": "vimfn.txt:11930"
+  },
+  {
+    "id": "neovim.function.timer_info",
+    "source": "neovim",
+    "category": "function",
+    "name": "timer_info()",
+    "desc": "Return a list with information about timers.",
+    "doc_ref": "vimfn.txt:11939"
+  },
+  {
+    "id": "neovim.function.timer_pause",
+    "source": "neovim",
+    "category": "function",
+    "name": "timer_pause()",
+    "desc": "Pause or unpause a timer. A paused timer does not invoke its",
+    "doc_ref": "vimfn.txt:11960"
+  },
+  {
+    "id": "neovim.function.timer_start",
+    "source": "neovim",
+    "category": "function",
+    "name": "timer_start()",
+    "desc": "|uv.new_timer()| for repeating timers; callback and handle",
+    "doc_ref": "vimfn.txt:11980"
+  },
+  {
+    "id": "neovim.function.timer_stop",
+    "source": "neovim",
+    "category": "function",
+    "name": "timer_stop()",
+    "desc": "|uv.new_timer()| handle; timer IDs differ.",
+    "doc_ref": "vimfn.txt:12022"
+  },
+  {
+    "id": "neovim.function.timer_stopall",
+    "source": "neovim",
+    "category": "function",
+    "name": "timer_stopall()",
+    "desc": "Stop all timers. The timer callbacks will no longer be",
+    "doc_ref": "vimfn.txt:12036"
+  },
+  {
+    "id": "neovim.function.tolower",
+    "source": "neovim",
+    "category": "function",
+    "name": "tolower()",
+    "desc": "Converts a String to lowercase (like applying |gu|).",
+    "doc_ref": "vimfn.txt:12044"
+  },
+  {
+    "id": "neovim.function.toupper",
+    "source": "neovim",
+    "category": "function",
+    "name": "toupper()",
+    "desc": "Converts a String to uppercase (like applying |gU|).",
+    "doc_ref": "vimfn.txt:12056"
+  },
+  {
+    "id": "neovim.function.tr",
+    "source": "neovim",
+    "category": "function",
+    "name": "tr()",
+    "desc": "Translates characters in {src}, replacing each character that",
+    "doc_ref": "vimfn.txt:12068"
+  },
+  {
+    "id": "neovim.function.trim",
+    "source": "neovim",
+    "category": "function",
+    "name": "trim()",
+    "desc": "Return {text} as a String where any character in {mask} is",
+    "doc_ref": "vimfn.txt:12090"
+  },
+  {
+    "id": "neovim.function.trunc",
+    "source": "neovim",
+    "category": "function",
+    "name": "trunc()",
+    "desc": "Return the largest integral value with magnitude less than or",
+    "doc_ref": "vimfn.txt:12128"
+  },
+  {
+    "id": "neovim.function.type",
+    "source": "neovim",
+    "category": "function",
+    "name": "type()",
+    "desc": "IDs differ.",
+    "doc_ref": "vimfn.txt:12149"
+  },
+  {
+    "id": "neovim.function.undofile",
+    "source": "neovim",
+    "category": "function",
+    "name": "undofile()",
+    "desc": "Return the name of the undo file that would be used for a file",
+    "doc_ref": "vimfn.txt:12186"
+  },
+  {
+    "id": "neovim.function.undotree",
+    "source": "neovim",
+    "category": "function",
+    "name": "undotree()",
+    "desc": "Return the current state of the undo tree for the current",
+    "doc_ref": "vimfn.txt:12203"
+  },
+  {
+    "id": "neovim.function.uniq",
+    "source": "neovim",
+    "category": "function",
+    "name": "uniq()",
+    "desc": "Remove second and succeeding copies of repeated adjacent",
+    "doc_ref": "vimfn.txt:12253"
+  },
+  {
+    "id": "neovim.function.utf16idx",
+    "source": "neovim",
+    "category": "function",
+    "name": "utf16idx()",
+    "desc": "`strict_indexing = false`; `countcc` and `charidx` semantics",
+    "doc_ref": "vimfn.txt:12274"
+  },
+  {
+    "id": "neovim.function.values",
+    "source": "neovim",
+    "category": "function",
+    "name": "values()",
+    "desc": "Return a |List| with all the values of {dict}. The |List| is",
+    "doc_ref": "vimfn.txt:12316"
+  },
+  {
+    "id": "neovim.function.virtcol",
+    "source": "neovim",
+    "category": "function",
+    "name": "virtcol()",
+    "desc": "Returns the virtual (screen) column of the file position",
+    "doc_ref": "vimfn.txt:12329"
+  },
+  {
+    "id": "neovim.function.virtcol2col",
+    "source": "neovim",
+    "category": "function",
+    "name": "virtcol2col()",
+    "desc": "Converts a virtual column to a byte index. Returns the byte",
+    "doc_ref": "vimfn.txt:12385"
+  },
+  {
+    "id": "neovim.function.visualmode",
+    "source": "neovim",
+    "category": "function",
+    "name": "visualmode()",
+    "desc": "Returns a String describing the last Visual mode used in the",
+    "doc_ref": "vimfn.txt:12415"
+  },
+  {
+    "id": "neovim.function.wait",
+    "source": "neovim",
+    "category": "function",
+    "name": "wait()",
+    "desc": "Waits until {condition} evaluates to |TRUE|, where {condition}",
+    "doc_ref": "vimfn.txt:12439"
+  },
+  {
+    "id": "neovim.function.wildmenumode",
+    "source": "neovim",
+    "category": "function",
+    "name": "wildmenumode()",
+    "desc": "Returns |TRUE| when the wildmenu is active and |FALSE|",
+    "doc_ref": "vimfn.txt:12465"
+  },
+  {
+    "id": "neovim.function.wildtrigger",
+    "source": "neovim",
+    "category": "function",
+    "name": "wildtrigger()",
+    "desc": "Start wildcard expansion in the command-line, using the",
+    "doc_ref": "vimfn.txt:12479"
+  },
+  {
+    "id": "neovim.function.win_execute",
+    "source": "neovim",
+    "category": "function",
+    "name": "win_execute()",
+    "desc": "Like `execute()` but in the context of window {id}.",
+    "doc_ref": "vimfn.txt:12503"
+  },
+  {
+    "id": "neovim.function.win_findbuf",
+    "source": "neovim",
+    "category": "function",
+    "name": "win_findbuf()",
+    "desc": "Returns a |List| with |window-ID|s for windows that contain",
+    "doc_ref": "vimfn.txt:12527"
+  },
+  {
+    "id": "neovim.function.win_getid",
+    "source": "neovim",
+    "category": "function",
+    "name": "win_getid()",
+    "desc": "|nvim_tabpage_list_wins()| with |nvim_win_get_number()| after",
+    "doc_ref": "vimfn.txt:12539"
+  },
+  {
+    "id": "neovim.function.win_gettype",
+    "source": "neovim",
+    "category": "function",
+    "name": "win_gettype()",
+    "desc": "Return the type of the window:",
+    "doc_ref": "vimfn.txt:12558"
+  },
+  {
+    "id": "neovim.function.win_gotoid",
+    "source": "neovim",
+    "category": "function",
+    "name": "win_gotoid()",
+    "desc": "instead of returning FALSE.",
+    "doc_ref": "vimfn.txt:12582"
+  },
+  {
+    "id": "neovim.function.win_id2tabwin",
+    "source": "neovim",
+    "category": "function",
+    "name": "win_id2tabwin()",
+    "desc": "|nvim_win_get_number()| for valid windows; invalid IDs error",
+    "doc_ref": "vimfn.txt:12596"
+  },
+  {
+    "id": "neovim.function.win_id2win",
+    "source": "neovim",
+    "category": "function",
+    "name": "win_id2win()",
+    "desc": "outside the current tabpage and invalid IDs differ.",
+    "doc_ref": "vimfn.txt:12611"
+  },
+  {
+    "id": "neovim.function.win_move_separator",
+    "source": "neovim",
+    "category": "function",
+    "name": "win_move_separator()",
+    "desc": "Move window {nr}'s vertical separator (i.e., the right border)",
+    "doc_ref": "vimfn.txt:12624"
+  },
+  {
+    "id": "neovim.function.win_move_statusline",
+    "source": "neovim",
+    "category": "function",
+    "name": "win_move_statusline()",
+    "desc": "Move window {nr}'s status line (i.e., the bottom border) by",
+    "doc_ref": "vimfn.txt:12646"
+  },
+  {
+    "id": "neovim.function.win_screenpos",
+    "source": "neovim",
+    "category": "function",
+    "name": "win_screenpos()",
+    "desc": "col; invalid-window semantics differ.",
+    "doc_ref": "vimfn.txt:12665"
+  },
+  {
+    "id": "neovim.function.win_splitmove",
+    "source": "neovim",
+    "category": "function",
+    "name": "win_splitmove()",
+    "desc": "Temporarily switch to window {target}, then move window {nr}",
+    "doc_ref": "vimfn.txt:12682"
+  },
+  {
+    "id": "neovim.function.winbufnr",
+    "source": "neovim",
+    "category": "function",
+    "name": "winbufnr()",
+    "desc": "Returns the buffer number associated with window {nr}",
+    "doc_ref": "vimfn.txt:12710"
+  },
+  {
+    "id": "neovim.function.wincol",
+    "source": "neovim",
+    "category": "function",
+    "name": "wincol()",
+    "desc": "Returns the virtual column of the cursor in the window.",
+    "doc_ref": "vimfn.txt:12728"
+  },
+  {
+    "id": "neovim.function.windowsversion",
+    "source": "neovim",
+    "category": "function",
+    "name": "windowsversion()",
+    "desc": "Returns the Windows OS version as a String. E.g, Windows 10",
+    "doc_ref": "vimfn.txt:12736"
+  },
+  {
+    "id": "neovim.function.winheight",
+    "source": "neovim",
+    "category": "function",
+    "name": "winheight()",
+    "desc": "Gets the height of |window-ID| {nr} (zero for \"current",
+    "doc_ref": "vimfn.txt:12746"
+  },
+  {
+    "id": "neovim.function.winlayout",
+    "source": "neovim",
+    "category": "function",
+    "name": "winlayout()",
+    "desc": "Returns the layout of windows in a tabpage as a nested List.",
+    "doc_ref": "vimfn.txt:12762"
+  },
+  {
+    "id": "neovim.function.winline",
+    "source": "neovim",
+    "category": "function",
+    "name": "winline()",
+    "desc": "Returns the screen line of the cursor in the window. This is",
+    "doc_ref": "vimfn.txt:12804"
+  },
+  {
+    "id": "neovim.function.winnr",
+    "source": "neovim",
+    "category": "function",
+    "name": "winnr()",
+    "desc": "|nvim_get_current_win()| for the current window, or",
+    "doc_ref": "vimfn.txt:12814"
+  },
+  {
+    "id": "neovim.function.winrestcmd",
+    "source": "neovim",
+    "category": "function",
+    "name": "winrestcmd()",
+    "desc": "Returns a sequence of |:resize| commands that should restore",
+    "doc_ref": "vimfn.txt:12857"
+  },
+  {
+    "id": "neovim.function.winrestview",
+    "source": "neovim",
+    "category": "function",
+    "name": "winrestview()",
+    "desc": "Uses the |Dictionary| returned by |winsaveview()| to restore",
+    "doc_ref": "vimfn.txt:12871"
+  },
+  {
+    "id": "neovim.function.winsaveview",
+    "source": "neovim",
+    "category": "function",
+    "name": "winsaveview()",
+    "desc": "Returns a |Dictionary| that contains information to restore",
+    "doc_ref": "vimfn.txt:12894"
+  },
+  {
+    "id": "neovim.function.winwidth",
+    "source": "neovim",
+    "category": "function",
+    "name": "winwidth()",
+    "desc": "Gets the width of |window-ID| {nr} (zero for \"current",
+    "doc_ref": "vimfn.txt:12924"
+  },
+  {
+    "id": "neovim.function.wordcount",
+    "source": "neovim",
+    "category": "function",
+    "name": "wordcount()",
+    "desc": "Returns a dictionary of byte/chars/word statistics for the",
+    "doc_ref": "vimfn.txt:12947"
+  },
+  {
+    "id": "neovim.function.writefile",
+    "source": "neovim",
+    "category": "function",
+    "name": "writefile()",
+    "desc": "Writes {data} to file {fname}.",
+    "doc_ref": "vimfn.txt:12970"
+  },
+  {
+    "id": "neovim.function.xor",
+    "source": "neovim",
+    "category": "function",
+    "name": "xor()",
+    "desc": "Bitwise XOR on the two arguments. The arguments are converted",
+    "doc_ref": "vimfn.txt:13028"
+  }
+]

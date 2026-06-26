@@ -1,0 +1,2802 @@
+[
+  {
+    "id": "neovim.option.allowrevins",
+    "source": "neovim",
+    "category": "option",
+    "name": "allowrevins",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:683"
+  },
+  {
+    "id": "neovim.option.ambiwidth",
+    "source": "neovim",
+    "category": "option",
+    "name": "ambiwidth",
+    "desc": "string (default \"single\")",
+    "doc_ref": "options.txt:690"
+  },
+  {
+    "id": "neovim.option.arabic",
+    "source": "neovim",
+    "category": "option",
+    "name": "arabic",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:724"
+  },
+  {
+    "id": "neovim.option.arabicshape",
+    "source": "neovim",
+    "category": "option",
+    "name": "arabicshape",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:742"
+  },
+  {
+    "id": "neovim.option.autochdir",
+    "source": "neovim",
+    "category": "option",
+    "name": "autochdir",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:758"
+  },
+  {
+    "id": "neovim.option.autocomplete",
+    "source": "neovim",
+    "category": "option",
+    "name": "autocomplete",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:768"
+  },
+  {
+    "id": "neovim.option.autocompletedelay",
+    "source": "neovim",
+    "category": "option",
+    "name": "autocompletedelay",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:774"
+  },
+  {
+    "id": "neovim.option.autocompletetimeout",
+    "source": "neovim",
+    "category": "option",
+    "name": "autocompletetimeout",
+    "desc": "number (default 80)",
+    "doc_ref": "options.txt:781"
+  },
+  {
+    "id": "neovim.option.autoindent",
+    "source": "neovim",
+    "category": "option",
+    "name": "autoindent",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:795"
+  },
+  {
+    "id": "neovim.option.autoread",
+    "source": "neovim",
+    "category": "option",
+    "name": "autoread",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:810"
+  },
+  {
+    "id": "neovim.option.autowrite",
+    "source": "neovim",
+    "category": "option",
+    "name": "autowrite",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:825"
+  },
+  {
+    "id": "neovim.option.autowriteall",
+    "source": "neovim",
+    "category": "option",
+    "name": "autowriteall",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:843"
+  },
+  {
+    "id": "neovim.option.background",
+    "source": "neovim",
+    "category": "option",
+    "name": "background",
+    "desc": "string (default \"dark\")",
+    "doc_ref": "options.txt:852"
+  },
+  {
+    "id": "neovim.option.backspace",
+    "source": "neovim",
+    "category": "option",
+    "name": "backspace",
+    "desc": "string (default \"indent,eol,start\")",
+    "doc_ref": "options.txt:882"
+  },
+  {
+    "id": "neovim.option.backup",
+    "source": "neovim",
+    "category": "option",
+    "name": "backup",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:899"
+  },
+  {
+    "id": "neovim.option.backupcopy",
+    "source": "neovim",
+    "category": "option",
+    "name": "backupcopy",
+    "desc": "string (default \"auto\")",
+    "doc_ref": "options.txt:913"
+  },
+  {
+    "id": "neovim.option.backupdir",
+    "source": "neovim",
+    "category": "option",
+    "name": "backupdir",
+    "desc": "string (default \".,$XDG_STATE_HOME/nvim/backup//\")",
+    "doc_ref": "options.txt:979"
+  },
+  {
+    "id": "neovim.option.backupext",
+    "source": "neovim",
+    "category": "option",
+    "name": "backupext",
+    "desc": "string (default \"~\")",
+    "doc_ref": "options.txt:1022"
+  },
+  {
+    "id": "neovim.option.backupskip",
+    "source": "neovim",
+    "category": "option",
+    "name": "backupskip",
+    "desc": "string (default \"$TMPDIR/*,$TMP/*,$TEMP/*\"",
+    "doc_ref": "options.txt:1038"
+  },
+  {
+    "id": "neovim.option.belloff",
+    "source": "neovim",
+    "category": "option",
+    "name": "belloff",
+    "desc": "string (default \"all\")",
+    "doc_ref": "options.txt:1064"
+  },
+  {
+    "id": "neovim.option.binary",
+    "source": "neovim",
+    "category": "option",
+    "name": "binary",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:1104"
+  },
+  {
+    "id": "neovim.option.bomb",
+    "source": "neovim",
+    "category": "option",
+    "name": "bomb",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:1134"
+  },
+  {
+    "id": "neovim.option.breakat",
+    "source": "neovim",
+    "category": "option",
+    "name": "breakat",
+    "desc": "string (default \" ^I!@*-+;:,./?\")",
+    "doc_ref": "options.txt:1153"
+  },
+  {
+    "id": "neovim.option.breakindent",
+    "source": "neovim",
+    "category": "option",
+    "name": "breakindent",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:1159"
+  },
+  {
+    "id": "neovim.option.breakindentopt",
+    "source": "neovim",
+    "category": "option",
+    "name": "breakindentopt",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:1166"
+  },
+  {
+    "id": "neovim.option.bufhidden",
+    "source": "neovim",
+    "category": "option",
+    "name": "bufhidden",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:1197"
+  },
+  {
+    "id": "neovim.option.buflisted",
+    "source": "neovim",
+    "category": "option",
+    "name": "buflisted",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:1220"
+  },
+  {
+    "id": "neovim.option.buftype",
+    "source": "neovim",
+    "category": "option",
+    "name": "buftype",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:1229"
+  },
+  {
+    "id": "neovim.option.busy",
+    "source": "neovim",
+    "category": "option",
+    "name": "busy",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:1278"
+  },
+  {
+    "id": "neovim.option.casemap",
+    "source": "neovim",
+    "category": "option",
+    "name": "casemap",
+    "desc": "string (default \"internal,keepascii\")",
+    "doc_ref": "options.txt:1285"
+  },
+  {
+    "id": "neovim.option.cdhome",
+    "source": "neovim",
+    "category": "option",
+    "name": "cdhome",
+    "desc": "boolean (default on on Unix, off on Windows)",
+    "doc_ref": "options.txt:1298"
+  },
+  {
+    "id": "neovim.option.cdpath",
+    "source": "neovim",
+    "category": "option",
+    "name": "cdpath",
+    "desc": "string (default equivalent to $CDPATH or \",,\")",
+    "doc_ref": "options.txt:1306"
+  },
+  {
+    "id": "neovim.option.cedit",
+    "source": "neovim",
+    "category": "option",
+    "name": "cedit",
+    "desc": "string (default CTRL-F)",
+    "doc_ref": "options.txt:1325"
+  },
+  {
+    "id": "neovim.option.channel",
+    "source": "neovim",
+    "category": "option",
+    "name": "channel",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:1338"
+  },
+  {
+    "id": "neovim.option.charconvert",
+    "source": "neovim",
+    "category": "option",
+    "name": "charconvert",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:1345"
+  },
+  {
+    "id": "neovim.option.chistory",
+    "source": "neovim",
+    "category": "option",
+    "name": "chistory",
+    "desc": "number (default 10)",
+    "doc_ref": "options.txt:1390"
+  },
+  {
+    "id": "neovim.option.cindent",
+    "source": "neovim",
+    "category": "option",
+    "name": "cindent",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:1401"
+  },
+  {
+    "id": "neovim.option.cinkeys",
+    "source": "neovim",
+    "category": "option",
+    "name": "cinkeys",
+    "desc": "string (default \"0{,0},0),0],:,0#,!^F,o,O,e\")",
+    "doc_ref": "options.txt:1415"
+  },
+  {
+    "id": "neovim.option.cinoptions",
+    "source": "neovim",
+    "category": "option",
+    "name": "cinoptions",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:1424"
+  },
+  {
+    "id": "neovim.option.cinscopedecls",
+    "source": "neovim",
+    "category": "option",
+    "name": "cinscopedecls",
+    "desc": "string (default \"public,protected,private\")",
+    "doc_ref": "options.txt:1431"
+  },
+  {
+    "id": "neovim.option.cinwords",
+    "source": "neovim",
+    "category": "option",
+    "name": "cinwords",
+    "desc": "string (default \"if,else,while,do,for,switch\")",
+    "doc_ref": "options.txt:1440"
+  },
+  {
+    "id": "neovim.option.clipboard",
+    "source": "neovim",
+    "category": "option",
+    "name": "clipboard",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:1450"
+  },
+  {
+    "id": "neovim.option.cmdheight",
+    "source": "neovim",
+    "category": "option",
+    "name": "cmdheight",
+    "desc": "number (default 1)",
+    "doc_ref": "options.txt:1476"
+  },
+  {
+    "id": "neovim.option.cmdwinheight",
+    "source": "neovim",
+    "category": "option",
+    "name": "cmdwinheight",
+    "desc": "number (default 7)",
+    "doc_ref": "options.txt:1490"
+  },
+  {
+    "id": "neovim.option.colorcolumn",
+    "source": "neovim",
+    "category": "option",
+    "name": "colorcolumn",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:1495"
+  },
+  {
+    "id": "neovim.option.columns",
+    "source": "neovim",
+    "category": "option",
+    "name": "columns",
+    "desc": "number (default 80 or terminal width)",
+    "doc_ref": "options.txt:1511"
+  },
+  {
+    "id": "neovim.option.comments",
+    "source": "neovim",
+    "category": "option",
+    "name": "comments",
+    "desc": "string (default \"s1:/*,mb:*,ex:*/,://,b:#,:%,:XCOMM,n:>,fb:-,fb:•\")",
+    "doc_ref": "options.txt:1527"
+  },
+  {
+    "id": "neovim.option.commentstring",
+    "source": "neovim",
+    "category": "option",
+    "name": "commentstring",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:1534"
+  },
+  {
+    "id": "neovim.option.complete",
+    "source": "neovim",
+    "category": "option",
+    "name": "complete",
+    "desc": "string (default \".,w,b,u,t\")",
+    "doc_ref": "options.txt:1541"
+  },
+  {
+    "id": "neovim.option.completefunc",
+    "source": "neovim",
+    "category": "option",
+    "name": "completefunc",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:1608"
+  },
+  {
+    "id": "neovim.option.completeitemalign",
+    "source": "neovim",
+    "category": "option",
+    "name": "completeitemalign",
+    "desc": "string (default \"abbr,kind,menu\")",
+    "doc_ref": "options.txt:1619"
+  },
+  {
+    "id": "neovim.option.completeopt",
+    "source": "neovim",
+    "category": "option",
+    "name": "completeopt",
+    "desc": "string (default \"menu,popup\")",
+    "doc_ref": "options.txt:1629"
+  },
+  {
+    "id": "neovim.option.completeslash",
+    "source": "neovim",
+    "category": "option",
+    "name": "completeslash",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:1720"
+  },
+  {
+    "id": "neovim.option.completetimeout",
+    "source": "neovim",
+    "category": "option",
+    "name": "completetimeout",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:1736"
+  },
+  {
+    "id": "neovim.option.concealcursor",
+    "source": "neovim",
+    "category": "option",
+    "name": "concealcursor",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:1742"
+  },
+  {
+    "id": "neovim.option.conceallevel",
+    "source": "neovim",
+    "category": "option",
+    "name": "conceallevel",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:1761"
+  },
+  {
+    "id": "neovim.option.confirm",
+    "source": "neovim",
+    "category": "option",
+    "name": "confirm",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:1783"
+  },
+  {
+    "id": "neovim.option.copyindent",
+    "source": "neovim",
+    "category": "option",
+    "name": "copyindent",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:1795"
+  },
+  {
+    "id": "neovim.option.cpoptions",
+    "source": "neovim",
+    "category": "option",
+    "name": "cpoptions",
+    "desc": "string (default \"aABceFs_\")",
+    "doc_ref": "options.txt:1808"
+  },
+  {
+    "id": "neovim.option.cursorbind",
+    "source": "neovim",
+    "category": "option",
+    "name": "cursorbind",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:2047"
+  },
+  {
+    "id": "neovim.option.cursorcolumn",
+    "source": "neovim",
+    "category": "option",
+    "name": "cursorcolumn",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:2058"
+  },
+  {
+    "id": "neovim.option.cursorline",
+    "source": "neovim",
+    "category": "option",
+    "name": "cursorline",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:2070"
+  },
+  {
+    "id": "neovim.option.cursorlineopt",
+    "source": "neovim",
+    "category": "option",
+    "name": "cursorlineopt",
+    "desc": "string (default \"both\")",
+    "doc_ref": "options.txt:2078"
+  },
+  {
+    "id": "neovim.option.debug",
+    "source": "neovim",
+    "category": "option",
+    "name": "debug",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2095"
+  },
+  {
+    "id": "neovim.option.define",
+    "source": "neovim",
+    "category": "option",
+    "name": "define",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2109"
+  },
+  {
+    "id": "neovim.option.delcombine",
+    "source": "neovim",
+    "category": "option",
+    "name": "delcombine",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:2132"
+  },
+  {
+    "id": "neovim.option.dictionary",
+    "source": "neovim",
+    "category": "option",
+    "name": "dictionary",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2145"
+  },
+  {
+    "id": "neovim.option.diff",
+    "source": "neovim",
+    "category": "option",
+    "name": "diff",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:2172"
+  },
+  {
+    "id": "neovim.option.diffanchors",
+    "source": "neovim",
+    "category": "option",
+    "name": "diffanchors",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2178"
+  },
+  {
+    "id": "neovim.option.diffexpr",
+    "source": "neovim",
+    "category": "option",
+    "name": "diffexpr",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2201"
+  },
+  {
+    "id": "neovim.option.diffopt",
+    "source": "neovim",
+    "category": "option",
+    "name": "diffopt",
+    "desc": "string (default \"internal,filler,closeoff,indent-heuristic,inline:char,linematch:40\")",
+    "doc_ref": "options.txt:2208"
+  },
+  {
+    "id": "neovim.option.digraph",
+    "source": "neovim",
+    "category": "option",
+    "name": "digraph",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:2345"
+  },
+  {
+    "id": "neovim.option.directory",
+    "source": "neovim",
+    "category": "option",
+    "name": "directory",
+    "desc": "string (default \"$XDG_STATE_HOME/nvim/swap//\")",
+    "doc_ref": "options.txt:2351"
+  },
+  {
+    "id": "neovim.option.display",
+    "source": "neovim",
+    "category": "option",
+    "name": "display",
+    "desc": "string (default \"lastline\")",
+    "doc_ref": "options.txt:2395"
+  },
+  {
+    "id": "neovim.option.eadirection",
+    "source": "neovim",
+    "category": "option",
+    "name": "eadirection",
+    "desc": "string (default \"both\")",
+    "doc_ref": "options.txt:2416"
+  },
+  {
+    "id": "neovim.option.emoji",
+    "source": "neovim",
+    "category": "option",
+    "name": "emoji",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:2424"
+  },
+  {
+    "id": "neovim.option.encoding",
+    "source": "neovim",
+    "category": "option",
+    "name": "encoding",
+    "desc": "string (default \"utf-8\")",
+    "doc_ref": "options.txt:2436"
+  },
+  {
+    "id": "neovim.option.endoffile",
+    "source": "neovim",
+    "category": "option",
+    "name": "endoffile",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:2444"
+  },
+  {
+    "id": "neovim.option.endofline",
+    "source": "neovim",
+    "category": "option",
+    "name": "endofline",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:2454"
+  },
+  {
+    "id": "neovim.option.equalalways",
+    "source": "neovim",
+    "category": "option",
+    "name": "equalalways",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:2470"
+  },
+  {
+    "id": "neovim.option.equalprg",
+    "source": "neovim",
+    "category": "option",
+    "name": "equalprg",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2488"
+  },
+  {
+    "id": "neovim.option.errorbells",
+    "source": "neovim",
+    "category": "option",
+    "name": "errorbells",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:2498"
+  },
+  {
+    "id": "neovim.option.errorfile",
+    "source": "neovim",
+    "category": "option",
+    "name": "errorfile",
+    "desc": "string (default \"errors.err\")",
+    "doc_ref": "options.txt:2507"
+  },
+  {
+    "id": "neovim.option.errorformat",
+    "source": "neovim",
+    "category": "option",
+    "name": "errorformat",
+    "desc": "string (default is very long)",
+    "doc_ref": "options.txt:2518"
+  },
+  {
+    "id": "neovim.option.eventignore",
+    "source": "neovim",
+    "category": "option",
+    "name": "eventignore",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2524"
+  },
+  {
+    "id": "neovim.option.eventignorewin",
+    "source": "neovim",
+    "category": "option",
+    "name": "eventignorewin",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2537"
+  },
+  {
+    "id": "neovim.option.expandtab",
+    "source": "neovim",
+    "category": "option",
+    "name": "expandtab",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:2626"
+  },
+  {
+    "id": "neovim.option.exrc",
+    "source": "neovim",
+    "category": "option",
+    "name": "exrc",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:2634"
+  },
+  {
+    "id": "neovim.option.fileencoding",
+    "source": "neovim",
+    "category": "option",
+    "name": "fileencoding",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2660"
+  },
+  {
+    "id": "neovim.option.fileencodings",
+    "source": "neovim",
+    "category": "option",
+    "name": "fileencodings",
+    "desc": "string (default \"ucs-bom,utf-8,default,latin1\")",
+    "doc_ref": "options.txt:2701"
+  },
+  {
+    "id": "neovim.option.fileformat",
+    "source": "neovim",
+    "category": "option",
+    "name": "fileformat",
+    "desc": "string (default Windows: \"dos\", Unix: \"unix\")",
+    "doc_ref": "options.txt:2751"
+  },
+  {
+    "id": "neovim.option.fileformats",
+    "source": "neovim",
+    "category": "option",
+    "name": "fileformats",
+    "desc": "string (default Windows: \"dos,unix\", Unix: \"unix,dos\")",
+    "doc_ref": "options.txt:2770"
+  },
+  {
+    "id": "neovim.option.fileignorecase",
+    "source": "neovim",
+    "category": "option",
+    "name": "fileignorecase",
+    "desc": "boolean (default on for systems where case in file",
+    "doc_ref": "options.txt:2819"
+  },
+  {
+    "id": "neovim.option.filetype",
+    "source": "neovim",
+    "category": "option",
+    "name": "filetype",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2832"
+  },
+  {
+    "id": "neovim.option.fillchars",
+    "source": "neovim",
+    "category": "option",
+    "name": "fillchars",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2858"
+  },
+  {
+    "id": "neovim.option.findfunc",
+    "source": "neovim",
+    "category": "option",
+    "name": "findfunc",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2933"
+  },
+  {
+    "id": "neovim.option.fixendofline",
+    "source": "neovim",
+    "category": "option",
+    "name": "fixendofline",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:2982"
+  },
+  {
+    "id": "neovim.option.foldclose",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldclose",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:2993"
+  },
+  {
+    "id": "neovim.option.foldcolumn",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldcolumn",
+    "desc": "string (default \"0\")",
+    "doc_ref": "options.txt:3000"
+  },
+  {
+    "id": "neovim.option.foldenable",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldenable",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:3011"
+  },
+  {
+    "id": "neovim.option.foldexpr",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldexpr",
+    "desc": "string (default \"0\")",
+    "doc_ref": "options.txt:3022"
+  },
+  {
+    "id": "neovim.option.foldignore",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldignore",
+    "desc": "string (default \"#\")",
+    "doc_ref": "options.txt:3038"
+  },
+  {
+    "id": "neovim.option.foldlevel",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldlevel",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:3046"
+  },
+  {
+    "id": "neovim.option.foldlevelstart",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldlevelstart",
+    "desc": "number (default -1)",
+    "doc_ref": "options.txt:3055"
+  },
+  {
+    "id": "neovim.option.foldmarker",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldmarker",
+    "desc": "string (default \"{{{,}}}\")",
+    "doc_ref": "options.txt:3068"
+  },
+  {
+    "id": "neovim.option.foldmethod",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldmethod",
+    "desc": "string (default \"manual\")",
+    "doc_ref": "options.txt:3076"
+  },
+  {
+    "id": "neovim.option.foldminlines",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldminlines",
+    "desc": "number (default 1)",
+    "doc_ref": "options.txt:3087"
+  },
+  {
+    "id": "neovim.option.foldnestmax",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldnestmax",
+    "desc": "number (default 20)",
+    "doc_ref": "options.txt:3098"
+  },
+  {
+    "id": "neovim.option.foldopen",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldopen",
+    "desc": "string (default \"block,hor,mark,percent,quickfix,search,tag,undo\")",
+    "doc_ref": "options.txt:3105"
+  },
+  {
+    "id": "neovim.option.foldtext",
+    "source": "neovim",
+    "category": "option",
+    "name": "foldtext",
+    "desc": "string (default \"foldtext()\")",
+    "doc_ref": "options.txt:3139"
+  },
+  {
+    "id": "neovim.option.formatexpr",
+    "source": "neovim",
+    "category": "option",
+    "name": "formatexpr",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:3157"
+  },
+  {
+    "id": "neovim.option.formatlistpat",
+    "source": "neovim",
+    "category": "option",
+    "name": "formatlistpat",
+    "desc": "string (default \"^\\s*\\d\\+[\\]:.)}\\t ]\\s*\")",
+    "doc_ref": "options.txt:3200"
+  },
+  {
+    "id": "neovim.option.formatoptions",
+    "source": "neovim",
+    "category": "option",
+    "name": "formatoptions",
+    "desc": "string (default \"tcqj\")",
+    "doc_ref": "options.txt:3213"
+  },
+  {
+    "id": "neovim.option.formatprg",
+    "source": "neovim",
+    "category": "option",
+    "name": "formatprg",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:3223"
+  },
+  {
+    "id": "neovim.option.fsync",
+    "source": "neovim",
+    "category": "option",
+    "name": "fsync",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:3237"
+  },
+  {
+    "id": "neovim.option.grepformat",
+    "source": "neovim",
+    "category": "option",
+    "name": "grepformat",
+    "desc": "string (default \"%f:%l:%m,%f:%l%m,%f %l%m\")",
+    "doc_ref": "options.txt:3256"
+  },
+  {
+    "id": "neovim.option.grepprg",
+    "source": "neovim",
+    "category": "option",
+    "name": "grepprg",
+    "desc": "string (default see below)",
+    "doc_ref": "options.txt:3265"
+  },
+  {
+    "id": "neovim.option.guicursor",
+    "source": "neovim",
+    "category": "option",
+    "name": "guicursor",
+    "desc": "string (default \"n-v-c-sm:block,i-ci-ve:ver25,r-cr-o:hor20,t:block-blinkon500-blinkoff500-TermCursor\")",
+    "doc_ref": "options.txt:3295"
+  },
+  {
+    "id": "neovim.option.guifont",
+    "source": "neovim",
+    "category": "option",
+    "name": "guifont",
+    "desc": "string (default \"DejaVu Sans Mono,Courier New,monospace\"",
+    "doc_ref": "options.txt:3385"
+  },
+  {
+    "id": "neovim.option.guifontwide",
+    "source": "neovim",
+    "category": "option",
+    "name": "guifontwide",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:3449"
+  },
+  {
+    "id": "neovim.option.helpfile",
+    "source": "neovim",
+    "category": "option",
+    "name": "helpfile",
+    "desc": "string (default (MS-Windows) \"$VIMRUNTIME\\doc\\help.txt\"",
+    "doc_ref": "options.txt:3460"
+  },
+  {
+    "id": "neovim.option.helpheight",
+    "source": "neovim",
+    "category": "option",
+    "name": "helpheight",
+    "desc": "number (default 20)",
+    "doc_ref": "options.txt:3473"
+  },
+  {
+    "id": "neovim.option.helplang",
+    "source": "neovim",
+    "category": "option",
+    "name": "helplang",
+    "desc": "string (default messages language or empty)",
+    "doc_ref": "options.txt:3482"
+  },
+  {
+    "id": "neovim.option.hidden",
+    "source": "neovim",
+    "category": "option",
+    "name": "hidden",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:3498"
+  },
+  {
+    "id": "neovim.option.history",
+    "source": "neovim",
+    "category": "option",
+    "name": "history",
+    "desc": "number (default 10000)",
+    "doc_ref": "options.txt:3516"
+  },
+  {
+    "id": "neovim.option.hlsearch",
+    "source": "neovim",
+    "category": "option",
+    "name": "hlsearch",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:3525"
+  },
+  {
+    "id": "neovim.option.icon",
+    "source": "neovim",
+    "category": "option",
+    "name": "icon",
+    "desc": "boolean (default off, on when title can be restored)",
+    "doc_ref": "options.txt:3548"
+  },
+  {
+    "id": "neovim.option.iconstring",
+    "source": "neovim",
+    "category": "option",
+    "name": "iconstring",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:3557"
+  },
+  {
+    "id": "neovim.option.ignorecase",
+    "source": "neovim",
+    "category": "option",
+    "name": "ignorecase",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:3568"
+  },
+  {
+    "id": "neovim.option.iminsert",
+    "source": "neovim",
+    "category": "option",
+    "name": "iminsert",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:3578"
+  },
+  {
+    "id": "neovim.option.imsearch",
+    "source": "neovim",
+    "category": "option",
+    "name": "imsearch",
+    "desc": "number (default -1)",
+    "doc_ref": "options.txt:3596"
+  },
+  {
+    "id": "neovim.option.inccommand",
+    "source": "neovim",
+    "category": "option",
+    "name": "inccommand",
+    "desc": "string (default \"nosplit\")",
+    "doc_ref": "options.txt:3611"
+  },
+  {
+    "id": "neovim.option.include",
+    "source": "neovim",
+    "category": "option",
+    "name": "include",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:3628"
+  },
+  {
+    "id": "neovim.option.includeexpr",
+    "source": "neovim",
+    "category": "option",
+    "name": "includeexpr",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:3642"
+  },
+  {
+    "id": "neovim.option.incsearch",
+    "source": "neovim",
+    "category": "option",
+    "name": "incsearch",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:3675"
+  },
+  {
+    "id": "neovim.option.indentexpr",
+    "source": "neovim",
+    "category": "option",
+    "name": "indentexpr",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:3711"
+  },
+  {
+    "id": "neovim.option.indentkeys",
+    "source": "neovim",
+    "category": "option",
+    "name": "indentkeys",
+    "desc": "string (default \"0{,0},0),0],:,0#,!^F,o,O,e\")",
+    "doc_ref": "options.txt:3755"
+  },
+  {
+    "id": "neovim.option.infercase",
+    "source": "neovim",
+    "category": "option",
+    "name": "infercase",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:3763"
+  },
+  {
+    "id": "neovim.option.isfname",
+    "source": "neovim",
+    "category": "option",
+    "name": "isfname",
+    "desc": "string (default for Windows:",
+    "doc_ref": "options.txt:3775"
+  },
+  {
+    "id": "neovim.option.isident",
+    "source": "neovim",
+    "category": "option",
+    "name": "isident",
+    "desc": "string (default for Windows:",
+    "doc_ref": "options.txt:3826"
+  },
+  {
+    "id": "neovim.option.iskeyword",
+    "source": "neovim",
+    "category": "option",
+    "name": "iskeyword",
+    "desc": "string (default \"@,48-57,_,192-255\")",
+    "doc_ref": "options.txt:3841"
+  },
+  {
+    "id": "neovim.option.isprint",
+    "source": "neovim",
+    "category": "option",
+    "name": "isprint",
+    "desc": "string (default \"@,161-255\")",
+    "doc_ref": "options.txt:3863"
+  },
+  {
+    "id": "neovim.option.joinspaces",
+    "source": "neovim",
+    "category": "option",
+    "name": "joinspaces",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:3893"
+  },
+  {
+    "id": "neovim.option.jumpoptions",
+    "source": "neovim",
+    "category": "option",
+    "name": "jumpoptions",
+    "desc": "string (default \"clean\")",
+    "doc_ref": "options.txt:3899"
+  },
+  {
+    "id": "neovim.option.keymap",
+    "source": "neovim",
+    "category": "option",
+    "name": "keymap",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:3916"
+  },
+  {
+    "id": "neovim.option.keymodel",
+    "source": "neovim",
+    "category": "option",
+    "name": "keymodel",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:3925"
+  },
+  {
+    "id": "neovim.option.keywordprg",
+    "source": "neovim",
+    "category": "option",
+    "name": "keywordprg",
+    "desc": "string (default \":Man\", Windows: \":help\")",
+    "doc_ref": "options.txt:3937"
+  },
+  {
+    "id": "neovim.option.langmap",
+    "source": "neovim",
+    "category": "option",
+    "name": "langmap",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:3961"
+  },
+  {
+    "id": "neovim.option.langmenu",
+    "source": "neovim",
+    "category": "option",
+    "name": "langmenu",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:4003"
+  },
+  {
+    "id": "neovim.option.langremap",
+    "source": "neovim",
+    "category": "option",
+    "name": "langremap",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4025"
+  },
+  {
+    "id": "neovim.option.laststatus",
+    "source": "neovim",
+    "category": "option",
+    "name": "laststatus",
+    "desc": "number (default 2)",
+    "doc_ref": "options.txt:4032"
+  },
+  {
+    "id": "neovim.option.lazyredraw",
+    "source": "neovim",
+    "category": "option",
+    "name": "lazyredraw",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4044"
+  },
+  {
+    "id": "neovim.option.lhistory",
+    "source": "neovim",
+    "category": "option",
+    "name": "lhistory",
+    "desc": "number (default 10)",
+    "doc_ref": "options.txt:4055"
+  },
+  {
+    "id": "neovim.option.linebreak",
+    "source": "neovim",
+    "category": "option",
+    "name": "linebreak",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4065"
+  },
+  {
+    "id": "neovim.option.lines",
+    "source": "neovim",
+    "category": "option",
+    "name": "lines",
+    "desc": "number (default 24 or terminal height)",
+    "doc_ref": "options.txt:4078"
+  },
+  {
+    "id": "neovim.option.linespace",
+    "source": "neovim",
+    "category": "option",
+    "name": "linespace",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:4092"
+  },
+  {
+    "id": "neovim.option.lisp",
+    "source": "neovim",
+    "category": "option",
+    "name": "lisp",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4104"
+  },
+  {
+    "id": "neovim.option.lispoptions",
+    "source": "neovim",
+    "category": "option",
+    "name": "lispoptions",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:4115"
+  },
+  {
+    "id": "neovim.option.lispwords",
+    "source": "neovim",
+    "category": "option",
+    "name": "lispwords",
+    "desc": "string (default is very long)",
+    "doc_ref": "options.txt:4125"
+  },
+  {
+    "id": "neovim.option.list",
+    "source": "neovim",
+    "category": "option",
+    "name": "list",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4131"
+  },
+  {
+    "id": "neovim.option.listchars",
+    "source": "neovim",
+    "category": "option",
+    "name": "listchars",
+    "desc": "string (default \"tab:> ,trail:-,nbsp:+\")",
+    "doc_ref": "options.txt:4151"
+  },
+  {
+    "id": "neovim.option.loadplugins",
+    "source": "neovim",
+    "category": "option",
+    "name": "loadplugins",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:4267"
+  },
+  {
+    "id": "neovim.option.makeef",
+    "source": "neovim",
+    "category": "option",
+    "name": "makeef",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:4276"
+  },
+  {
+    "id": "neovim.option.makeencoding",
+    "source": "neovim",
+    "category": "option",
+    "name": "makeencoding",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:4290"
+  },
+  {
+    "id": "neovim.option.makeprg",
+    "source": "neovim",
+    "category": "option",
+    "name": "makeprg",
+    "desc": "string (default \"make\")",
+    "doc_ref": "options.txt:4305"
+  },
+  {
+    "id": "neovim.option.matchpairs",
+    "source": "neovim",
+    "category": "option",
+    "name": "matchpairs",
+    "desc": "string (default \"(:),{:},[:]\")",
+    "doc_ref": "options.txt:4324"
+  },
+  {
+    "id": "neovim.option.matchtime",
+    "source": "neovim",
+    "category": "option",
+    "name": "matchtime",
+    "desc": "number (default 5)",
+    "doc_ref": "options.txt:4343"
+  },
+  {
+    "id": "neovim.option.maxfuncdepth",
+    "source": "neovim",
+    "category": "option",
+    "name": "maxfuncdepth",
+    "desc": "number (default 100)",
+    "doc_ref": "options.txt:4350"
+  },
+  {
+    "id": "neovim.option.maxmapdepth",
+    "source": "neovim",
+    "category": "option",
+    "name": "maxmapdepth",
+    "desc": "number (default 1000)",
+    "doc_ref": "options.txt:4362"
+  },
+  {
+    "id": "neovim.option.maxmempattern",
+    "source": "neovim",
+    "category": "option",
+    "name": "maxmempattern",
+    "desc": "number (default 1000)",
+    "doc_ref": "options.txt:4371"
+  },
+  {
+    "id": "neovim.option.maxsearchcount",
+    "source": "neovim",
+    "category": "option",
+    "name": "maxsearchcount",
+    "desc": "number (default 999)",
+    "doc_ref": "options.txt:4387"
+  },
+  {
+    "id": "neovim.option.menuitems",
+    "source": "neovim",
+    "category": "option",
+    "name": "menuitems",
+    "desc": "number (default 25)",
+    "doc_ref": "options.txt:4397"
+  },
+  {
+    "id": "neovim.option.messagesopt",
+    "source": "neovim",
+    "category": "option",
+    "name": "messagesopt",
+    "desc": "string (default \"hit-enter,history:500,progress:c\")",
+    "doc_ref": "options.txt:4404"
+  },
+  {
+    "id": "neovim.option.mkspellmem",
+    "source": "neovim",
+    "category": "option",
+    "name": "mkspellmem",
+    "desc": "string (default \"460000,2000,500\")",
+    "doc_ref": "options.txt:4431"
+  },
+  {
+    "id": "neovim.option.modeline",
+    "source": "neovim",
+    "category": "option",
+    "name": "modeline",
+    "desc": "boolean (default on (off for root))",
+    "doc_ref": "options.txt:4469"
+  },
+  {
+    "id": "neovim.option.modelineexpr",
+    "source": "neovim",
+    "category": "option",
+    "name": "modelineexpr",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4476"
+  },
+  {
+    "id": "neovim.option.modelines",
+    "source": "neovim",
+    "category": "option",
+    "name": "modelines",
+    "desc": "number (default 5)",
+    "doc_ref": "options.txt:4484"
+  },
+  {
+    "id": "neovim.option.modifiable",
+    "source": "neovim",
+    "category": "option",
+    "name": "modifiable",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:4491"
+  },
+  {
+    "id": "neovim.option.modified",
+    "source": "neovim",
+    "category": "option",
+    "name": "modified",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4498"
+  },
+  {
+    "id": "neovim.option.more",
+    "source": "neovim",
+    "category": "option",
+    "name": "more",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:4528"
+  },
+  {
+    "id": "neovim.option.mouse",
+    "source": "neovim",
+    "category": "option",
+    "name": "mouse",
+    "desc": "string (default \"nvi\")",
+    "doc_ref": "options.txt:4535"
+  },
+  {
+    "id": "neovim.option.mousefocus",
+    "source": "neovim",
+    "category": "option",
+    "name": "mousefocus",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4575"
+  },
+  {
+    "id": "neovim.option.mousehide",
+    "source": "neovim",
+    "category": "option",
+    "name": "mousehide",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:4584"
+  },
+  {
+    "id": "neovim.option.mousemodel",
+    "source": "neovim",
+    "category": "option",
+    "name": "mousemodel",
+    "desc": "string (default \"popup_setpos\")",
+    "doc_ref": "options.txt:4591"
+  },
+  {
+    "id": "neovim.option.mousemoveevent",
+    "source": "neovim",
+    "category": "option",
+    "name": "mousemoveevent",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4645"
+  },
+  {
+    "id": "neovim.option.mousescroll",
+    "source": "neovim",
+    "category": "option",
+    "name": "mousescroll",
+    "desc": "string (default \"ver:3,hor:6\")",
+    "doc_ref": "options.txt:4654"
+  },
+  {
+    "id": "neovim.option.mousetime",
+    "source": "neovim",
+    "category": "option",
+    "name": "mousetime",
+    "desc": "number (default 500)",
+    "doc_ref": "options.txt:4675"
+  },
+  {
+    "id": "neovim.option.nrformats",
+    "source": "neovim",
+    "category": "option",
+    "name": "nrformats",
+    "desc": "string (default \"bin,hex\")",
+    "doc_ref": "options.txt:4681"
+  },
+  {
+    "id": "neovim.option.number",
+    "source": "neovim",
+    "category": "option",
+    "name": "number",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4725"
+  },
+  {
+    "id": "neovim.option.numberwidth",
+    "source": "neovim",
+    "category": "option",
+    "name": "numberwidth",
+    "desc": "number (default 4)",
+    "doc_ref": "options.txt:4750"
+  },
+  {
+    "id": "neovim.option.omnifunc",
+    "source": "neovim",
+    "category": "option",
+    "name": "omnifunc",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:4764"
+  },
+  {
+    "id": "neovim.option.operatorfunc",
+    "source": "neovim",
+    "category": "option",
+    "name": "operatorfunc",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:4777"
+  },
+  {
+    "id": "neovim.option.packpath",
+    "source": "neovim",
+    "category": "option",
+    "name": "packpath",
+    "desc": "string (default see 'runtimepath')",
+    "doc_ref": "options.txt:4786"
+  },
+  {
+    "id": "neovim.option.paragraphs",
+    "source": "neovim",
+    "category": "option",
+    "name": "paragraphs",
+    "desc": "string (default \"IPLPPPQPP TPHPLIPpLpItpplpipbp\")",
+    "doc_ref": "options.txt:4794"
+  },
+  {
+    "id": "neovim.option.patchexpr",
+    "source": "neovim",
+    "category": "option",
+    "name": "patchexpr",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:4800"
+  },
+  {
+    "id": "neovim.option.patchmode",
+    "source": "neovim",
+    "category": "option",
+    "name": "patchmode",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:4807"
+  },
+  {
+    "id": "neovim.option.path",
+    "source": "neovim",
+    "category": "option",
+    "name": "path",
+    "desc": "string (default \".,,\")",
+    "doc_ref": "options.txt:4827"
+  },
+  {
+    "id": "neovim.option.preserveindent",
+    "source": "neovim",
+    "category": "option",
+    "name": "preserveindent",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4878"
+  },
+  {
+    "id": "neovim.option.previewheight",
+    "source": "neovim",
+    "category": "option",
+    "name": "previewheight",
+    "desc": "number (default 12)",
+    "doc_ref": "options.txt:4894"
+  },
+  {
+    "id": "neovim.option.previewwindow",
+    "source": "neovim",
+    "category": "option",
+    "name": "previewwindow",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4900"
+  },
+  {
+    "id": "neovim.option.pumblend",
+    "source": "neovim",
+    "category": "option",
+    "name": "pumblend",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:4907"
+  },
+  {
+    "id": "neovim.option.pumborder",
+    "source": "neovim",
+    "category": "option",
+    "name": "pumborder",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:4923"
+  },
+  {
+    "id": "neovim.option.pumheight",
+    "source": "neovim",
+    "category": "option",
+    "name": "pumheight",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:4933"
+  },
+  {
+    "id": "neovim.option.pummaxwidth",
+    "source": "neovim",
+    "category": "option",
+    "name": "pummaxwidth",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:4939"
+  },
+  {
+    "id": "neovim.option.pumwidth",
+    "source": "neovim",
+    "category": "option",
+    "name": "pumwidth",
+    "desc": "number (default 15)",
+    "doc_ref": "options.txt:4949"
+  },
+  {
+    "id": "neovim.option.pyxversion",
+    "source": "neovim",
+    "category": "option",
+    "name": "pyxversion",
+    "desc": "number (default 3)",
+    "doc_ref": "options.txt:4956"
+  },
+  {
+    "id": "neovim.option.quickfixtextfunc",
+    "source": "neovim",
+    "category": "option",
+    "name": "quickfixtextfunc",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:4964"
+  },
+  {
+    "id": "neovim.option.quoteescape",
+    "source": "neovim",
+    "category": "option",
+    "name": "quoteescape",
+    "desc": "string (default \"\\\")",
+    "doc_ref": "options.txt:4980"
+  },
+  {
+    "id": "neovim.option.readonly",
+    "source": "neovim",
+    "category": "option",
+    "name": "readonly",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:4989"
+  },
+  {
+    "id": "neovim.option.redrawdebug",
+    "source": "neovim",
+    "category": "option",
+    "name": "redrawdebug",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:5001"
+  },
+  {
+    "id": "neovim.option.redrawtime",
+    "source": "neovim",
+    "category": "option",
+    "name": "redrawtime",
+    "desc": "number (default 2000)",
+    "doc_ref": "options.txt:5035"
+  },
+  {
+    "id": "neovim.option.regexpengine",
+    "source": "neovim",
+    "category": "option",
+    "name": "regexpengine",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:5048"
+  },
+  {
+    "id": "neovim.option.relativenumber",
+    "source": "neovim",
+    "category": "option",
+    "name": "relativenumber",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:5064"
+  },
+  {
+    "id": "neovim.option.report",
+    "source": "neovim",
+    "category": "option",
+    "name": "report",
+    "desc": "number (default 2)",
+    "doc_ref": "options.txt:5085"
+  },
+  {
+    "id": "neovim.option.revins",
+    "source": "neovim",
+    "category": "option",
+    "name": "revins",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:5094"
+  },
+  {
+    "id": "neovim.option.rightleft",
+    "source": "neovim",
+    "category": "option",
+    "name": "rightleft",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:5101"
+  },
+  {
+    "id": "neovim.option.rightleftcmd",
+    "source": "neovim",
+    "category": "option",
+    "name": "rightleftcmd",
+    "desc": "string (default \"search\")",
+    "doc_ref": "options.txt:5114"
+  },
+  {
+    "id": "neovim.option.ruler",
+    "source": "neovim",
+    "category": "option",
+    "name": "ruler",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:5125"
+  },
+  {
+    "id": "neovim.option.rulerformat",
+    "source": "neovim",
+    "category": "option",
+    "name": "rulerformat",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:5151"
+  },
+  {
+    "id": "neovim.option.runtimepath",
+    "source": "neovim",
+    "category": "option",
+    "name": "runtimepath",
+    "desc": "string (default \"$XDG_CONFIG_HOME/nvim,",
+    "doc_ref": "options.txt:5165"
+  },
+  {
+    "id": "neovim.option.scroll",
+    "source": "neovim",
+    "category": "option",
+    "name": "scroll",
+    "desc": "number (default half the window height)",
+    "doc_ref": "options.txt:5251"
+  },
+  {
+    "id": "neovim.option.scrollback",
+    "source": "neovim",
+    "category": "option",
+    "name": "scrollback",
+    "desc": "number (default 10000)",
+    "doc_ref": "options.txt:5262"
+  },
+  {
+    "id": "neovim.option.scrollbind",
+    "source": "neovim",
+    "category": "option",
+    "name": "scrollbind",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:5273"
+  },
+  {
+    "id": "neovim.option.scrolljump",
+    "source": "neovim",
+    "category": "option",
+    "name": "scrolljump",
+    "desc": "number (default 1)",
+    "doc_ref": "options.txt:5287"
+  },
+  {
+    "id": "neovim.option.scrolloff",
+    "source": "neovim",
+    "category": "option",
+    "name": "scrolloff",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:5297"
+  },
+  {
+    "id": "neovim.option.scrolloffpad",
+    "source": "neovim",
+    "category": "option",
+    "name": "scrolloffpad",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:5311"
+  },
+  {
+    "id": "neovim.option.scrollopt",
+    "source": "neovim",
+    "category": "option",
+    "name": "scrollopt",
+    "desc": "string (default \"ver,jump\")",
+    "doc_ref": "options.txt:5333"
+  },
+  {
+    "id": "neovim.option.sections",
+    "source": "neovim",
+    "category": "option",
+    "name": "sections",
+    "desc": "string (default \"SHNHH HUnhsh\")",
+    "doc_ref": "options.txt:5364"
+  },
+  {
+    "id": "neovim.option.selection",
+    "source": "neovim",
+    "category": "option",
+    "name": "selection",
+    "desc": "string (default \"inclusive\")",
+    "doc_ref": "options.txt:5371"
+  },
+  {
+    "id": "neovim.option.selectmode",
+    "source": "neovim",
+    "category": "option",
+    "name": "selectmode",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:5399"
+  },
+  {
+    "id": "neovim.option.sessionoptions",
+    "source": "neovim",
+    "category": "option",
+    "name": "sessionoptions",
+    "desc": "string (default \"blank,buffers,curdir,folds,help,tabpages,winsize,terminal\")",
+    "doc_ref": "options.txt:5410"
+  },
+  {
+    "id": "neovim.option.shada",
+    "source": "neovim",
+    "category": "option",
+    "name": "shada",
+    "desc": "string (default \"!,'100,<50,s10,h,r/tmp/,r/private/\")",
+    "doc_ref": "options.txt:5451"
+  },
+  {
+    "id": "neovim.option.shadafile",
+    "source": "neovim",
+    "category": "option",
+    "name": "shadafile",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:5563"
+  },
+  {
+    "id": "neovim.option.shell",
+    "source": "neovim",
+    "category": "option",
+    "name": "shell",
+    "desc": "string (default $SHELL or \"sh\", Win32: \"cmd.exe\")",
+    "doc_ref": "options.txt:5573"
+  },
+  {
+    "id": "neovim.option.shellcmdflag",
+    "source": "neovim",
+    "category": "option",
+    "name": "shellcmdflag",
+    "desc": "string (default \"-c\"; Windows, when 'shell'",
+    "doc_ref": "options.txt:5630"
+  },
+  {
+    "id": "neovim.option.shellpipe",
+    "source": "neovim",
+    "category": "option",
+    "name": "shellpipe",
+    "desc": "string (default \">\", \"| tee\", \"|& tee\" or \"2>&1| tee\")",
+    "doc_ref": "options.txt:5645"
+  },
+  {
+    "id": "neovim.option.shellquote",
+    "source": "neovim",
+    "category": "option",
+    "name": "shellquote",
+    "desc": "string (default \"\"; Windows, when 'shell'",
+    "doc_ref": "options.txt:5680"
+  },
+  {
+    "id": "neovim.option.shellredir",
+    "source": "neovim",
+    "category": "option",
+    "name": "shellredir",
+    "desc": "string (default \">\", \">&\" or \">%s 2>&1\")",
+    "doc_ref": "options.txt:5695"
+  },
+  {
+    "id": "neovim.option.shellslash",
+    "source": "neovim",
+    "category": "option",
+    "name": "shellslash",
+    "desc": "boolean (default on; Windows: off, except when 'shell'",
+    "doc_ref": "options.txt:5721"
+  },
+  {
+    "id": "neovim.option.shelltemp",
+    "source": "neovim",
+    "category": "option",
+    "name": "shelltemp",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:5738"
+  },
+  {
+    "id": "neovim.option.shellxescape",
+    "source": "neovim",
+    "category": "option",
+    "name": "shellxescape",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:5752"
+  },
+  {
+    "id": "neovim.option.shellxquote",
+    "source": "neovim",
+    "category": "option",
+    "name": "shellxquote",
+    "desc": "string (default \"\"; Windows, when 'shell'",
+    "doc_ref": "options.txt:5760"
+  },
+  {
+    "id": "neovim.option.shiftround",
+    "source": "neovim",
+    "category": "option",
+    "name": "shiftround",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:5773"
+  },
+  {
+    "id": "neovim.option.shiftwidth",
+    "source": "neovim",
+    "category": "option",
+    "name": "shiftwidth",
+    "desc": "number (default 8)",
+    "doc_ref": "options.txt:5780"
+  },
+  {
+    "id": "neovim.option.shortmess",
+    "source": "neovim",
+    "category": "option",
+    "name": "shortmess",
+    "desc": "string (default \"ltToOCF\")",
+    "doc_ref": "options.txt:5788"
+  },
+  {
+    "id": "neovim.option.showbreak",
+    "source": "neovim",
+    "category": "option",
+    "name": "showbreak",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:5853"
+  },
+  {
+    "id": "neovim.option.showcmd",
+    "source": "neovim",
+    "category": "option",
+    "name": "showcmd",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:5872"
+  },
+  {
+    "id": "neovim.option.showcmdloc",
+    "source": "neovim",
+    "category": "option",
+    "name": "showcmdloc",
+    "desc": "string (default \"last\")",
+    "doc_ref": "options.txt:5887"
+  },
+  {
+    "id": "neovim.option.showfulltag",
+    "source": "neovim",
+    "category": "option",
+    "name": "showfulltag",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:5902"
+  },
+  {
+    "id": "neovim.option.showmatch",
+    "source": "neovim",
+    "category": "option",
+    "name": "showmatch",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:5914"
+  },
+  {
+    "id": "neovim.option.showmode",
+    "source": "neovim",
+    "category": "option",
+    "name": "showmode",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:5933"
+  },
+  {
+    "id": "neovim.option.showtabline",
+    "source": "neovim",
+    "category": "option",
+    "name": "showtabline",
+    "desc": "number (default 1)",
+    "doc_ref": "options.txt:5940"
+  },
+  {
+    "id": "neovim.option.sidescroll",
+    "source": "neovim",
+    "category": "option",
+    "name": "sidescroll",
+    "desc": "number (default 1)",
+    "doc_ref": "options.txt:5948"
+  },
+  {
+    "id": "neovim.option.sidescrolloff",
+    "source": "neovim",
+    "category": "option",
+    "name": "sidescrolloff",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:5957"
+  },
+  {
+    "id": "neovim.option.signcolumn",
+    "source": "neovim",
+    "category": "option",
+    "name": "signcolumn",
+    "desc": "string (default \"auto\")",
+    "doc_ref": "options.txt:5981"
+  },
+  {
+    "id": "neovim.option.smartcase",
+    "source": "neovim",
+    "category": "option",
+    "name": "smartcase",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:6001"
+  },
+  {
+    "id": "neovim.option.smartindent",
+    "source": "neovim",
+    "category": "option",
+    "name": "smartindent",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:6013"
+  },
+  {
+    "id": "neovim.option.smarttab",
+    "source": "neovim",
+    "category": "option",
+    "name": "smarttab",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:6036"
+  },
+  {
+    "id": "neovim.option.smoothscroll",
+    "source": "neovim",
+    "category": "option",
+    "name": "smoothscroll",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:6047"
+  },
+  {
+    "id": "neovim.option.softtabstop",
+    "source": "neovim",
+    "category": "option",
+    "name": "softtabstop",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:6058"
+  },
+  {
+    "id": "neovim.option.spell",
+    "source": "neovim",
+    "category": "option",
+    "name": "spell",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:6080"
+  },
+  {
+    "id": "neovim.option.spellcapcheck",
+    "source": "neovim",
+    "category": "option",
+    "name": "spellcapcheck",
+    "desc": "string (default \"[.?!]\\_[\\])'\"\\t ]\\+\")",
+    "doc_ref": "options.txt:6086"
+  },
+  {
+    "id": "neovim.option.spellfile",
+    "source": "neovim",
+    "category": "option",
+    "name": "spellfile",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6099"
+  },
+  {
+    "id": "neovim.option.spelllang",
+    "source": "neovim",
+    "category": "option",
+    "name": "spelllang",
+    "desc": "string (default \"en\")",
+    "doc_ref": "options.txt:6123"
+  },
+  {
+    "id": "neovim.option.spelloptions",
+    "source": "neovim",
+    "category": "option",
+    "name": "spelloptions",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6163"
+  },
+  {
+    "id": "neovim.option.spellsuggest",
+    "source": "neovim",
+    "category": "option",
+    "name": "spellsuggest",
+    "desc": "string (default \"best\")",
+    "doc_ref": "options.txt:6177"
+  },
+  {
+    "id": "neovim.option.splitbelow",
+    "source": "neovim",
+    "category": "option",
+    "name": "splitbelow",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:6245"
+  },
+  {
+    "id": "neovim.option.splitkeep",
+    "source": "neovim",
+    "category": "option",
+    "name": "splitkeep",
+    "desc": "string (default \"cursor\")",
+    "doc_ref": "options.txt:6251"
+  },
+  {
+    "id": "neovim.option.splitright",
+    "source": "neovim",
+    "category": "option",
+    "name": "splitright",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:6267"
+  },
+  {
+    "id": "neovim.option.startofline",
+    "source": "neovim",
+    "category": "option",
+    "name": "startofline",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:6273"
+  },
+  {
+    "id": "neovim.option.statuscolumn",
+    "source": "neovim",
+    "category": "option",
+    "name": "statuscolumn",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6288"
+  },
+  {
+    "id": "neovim.option.statusline",
+    "source": "neovim",
+    "category": "option",
+    "name": "statusline",
+    "desc": "string (default is very long)",
+    "doc_ref": "options.txt:6340"
+  },
+  {
+    "id": "neovim.option.suffixes",
+    "source": "neovim",
+    "category": "option",
+    "name": "suffixes",
+    "desc": "string (default \".bak,~,.o,.h,.info,.swp,.obj\")",
+    "doc_ref": "options.txt:6562"
+  },
+  {
+    "id": "neovim.option.suffixesadd",
+    "source": "neovim",
+    "category": "option",
+    "name": "suffixesadd",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6576"
+  },
+  {
+    "id": "neovim.option.swapfile",
+    "source": "neovim",
+    "category": "option",
+    "name": "swapfile",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:6584"
+  },
+  {
+    "id": "neovim.option.switchbuf",
+    "source": "neovim",
+    "category": "option",
+    "name": "switchbuf",
+    "desc": "string (default \"uselast\")",
+    "doc_ref": "options.txt:6606"
+  },
+  {
+    "id": "neovim.option.synmaxcol",
+    "source": "neovim",
+    "category": "option",
+    "name": "synmaxcol",
+    "desc": "number (default 3000)",
+    "doc_ref": "options.txt:6637"
+  },
+  {
+    "id": "neovim.option.syntax",
+    "source": "neovim",
+    "category": "option",
+    "name": "syntax",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6647"
+  },
+  {
+    "id": "neovim.option.tabclose",
+    "source": "neovim",
+    "category": "option",
+    "name": "tabclose",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6674"
+  },
+  {
+    "id": "neovim.option.tabline",
+    "source": "neovim",
+    "category": "option",
+    "name": "tabline",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6687"
+  },
+  {
+    "id": "neovim.option.tabpagemax",
+    "source": "neovim",
+    "category": "option",
+    "name": "tabpagemax",
+    "desc": "number (default 50)",
+    "doc_ref": "options.txt:6711"
+  },
+  {
+    "id": "neovim.option.tabstop",
+    "source": "neovim",
+    "category": "option",
+    "name": "tabstop",
+    "desc": "number (default 8)",
+    "doc_ref": "options.txt:6717"
+  },
+  {
+    "id": "neovim.option.tagbsearch",
+    "source": "neovim",
+    "category": "option",
+    "name": "tagbsearch",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:6727"
+  },
+  {
+    "id": "neovim.option.tagcase",
+    "source": "neovim",
+    "category": "option",
+    "name": "tagcase",
+    "desc": "string (default \"followic\")",
+    "doc_ref": "options.txt:6779"
+  },
+  {
+    "id": "neovim.option.tagfunc",
+    "source": "neovim",
+    "category": "option",
+    "name": "tagfunc",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6790"
+  },
+  {
+    "id": "neovim.option.taglength",
+    "source": "neovim",
+    "category": "option",
+    "name": "taglength",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:6802"
+  },
+  {
+    "id": "neovim.option.tagrelative",
+    "source": "neovim",
+    "category": "option",
+    "name": "tagrelative",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:6807"
+  },
+  {
+    "id": "neovim.option.tags",
+    "source": "neovim",
+    "category": "option",
+    "name": "tags",
+    "desc": "string (default \"./tags;,tags\")",
+    "doc_ref": "options.txt:6813"
+  },
+  {
+    "id": "neovim.option.tagstack",
+    "source": "neovim",
+    "category": "option",
+    "name": "tagstack",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:6834"
+  },
+  {
+    "id": "neovim.option.termbidi",
+    "source": "neovim",
+    "category": "option",
+    "name": "termbidi",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:6845"
+  },
+  {
+    "id": "neovim.option.termguicolors",
+    "source": "neovim",
+    "category": "option",
+    "name": "termguicolors",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:6857"
+  },
+  {
+    "id": "neovim.option.termpastefilter",
+    "source": "neovim",
+    "category": "option",
+    "name": "termpastefilter",
+    "desc": "string (default \"BS,HT,ESC,DEL\")",
+    "doc_ref": "options.txt:6868"
+  },
+  {
+    "id": "neovim.option.termsync",
+    "source": "neovim",
+    "category": "option",
+    "name": "termsync",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:6890"
+  },
+  {
+    "id": "neovim.option.textwidth",
+    "source": "neovim",
+    "category": "option",
+    "name": "textwidth",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:6898"
+  },
+  {
+    "id": "neovim.option.thesaurus",
+    "source": "neovim",
+    "category": "option",
+    "name": "thesaurus",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6908"
+  },
+  {
+    "id": "neovim.option.thesaurusfunc",
+    "source": "neovim",
+    "category": "option",
+    "name": "thesaurusfunc",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6927"
+  },
+  {
+    "id": "neovim.option.tildeop",
+    "source": "neovim",
+    "category": "option",
+    "name": "tildeop",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:6936"
+  },
+  {
+    "id": "neovim.option.timeout",
+    "source": "neovim",
+    "category": "option",
+    "name": "timeout",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:6941"
+  },
+  {
+    "id": "neovim.option.timeoutlen",
+    "source": "neovim",
+    "category": "option",
+    "name": "timeoutlen",
+    "desc": "number (default 1000)",
+    "doc_ref": "options.txt:6949"
+  },
+  {
+    "id": "neovim.option.title",
+    "source": "neovim",
+    "category": "option",
+    "name": "title",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:6954"
+  },
+  {
+    "id": "neovim.option.titlelen",
+    "source": "neovim",
+    "category": "option",
+    "name": "titlelen",
+    "desc": "number (default 85)",
+    "doc_ref": "options.txt:6971"
+  },
+  {
+    "id": "neovim.option.titleold",
+    "source": "neovim",
+    "category": "option",
+    "name": "titleold",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6984"
+  },
+  {
+    "id": "neovim.option.titlestring",
+    "source": "neovim",
+    "category": "option",
+    "name": "titlestring",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:6991"
+  },
+  {
+    "id": "neovim.option.ttimeout",
+    "source": "neovim",
+    "category": "option",
+    "name": "ttimeout",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:7020"
+  },
+  {
+    "id": "neovim.option.ttimeoutlen",
+    "source": "neovim",
+    "category": "option",
+    "name": "ttimeoutlen",
+    "desc": "number (default 50)",
+    "doc_ref": "options.txt:7035"
+  },
+  {
+    "id": "neovim.option.ttyfast",
+    "source": "neovim",
+    "category": "option",
+    "name": "ttyfast",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:7042"
+  },
+  {
+    "id": "neovim.option.undodir",
+    "source": "neovim",
+    "category": "option",
+    "name": "undodir",
+    "desc": "string (default \"$XDG_STATE_HOME/nvim/undo//\")",
+    "doc_ref": "options.txt:7059"
+  },
+  {
+    "id": "neovim.option.undofile",
+    "source": "neovim",
+    "category": "option",
+    "name": "undofile",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:7083"
+  },
+  {
+    "id": "neovim.option.undolevels",
+    "source": "neovim",
+    "category": "option",
+    "name": "undolevels",
+    "desc": "number (default 1000)",
+    "doc_ref": "options.txt:7095"
+  },
+  {
+    "id": "neovim.option.undoreload",
+    "source": "neovim",
+    "category": "option",
+    "name": "undoreload",
+    "desc": "number (default 10000)",
+    "doc_ref": "options.txt:7116"
+  },
+  {
+    "id": "neovim.option.updatecount",
+    "source": "neovim",
+    "category": "option",
+    "name": "updatecount",
+    "desc": "number (default 200)",
+    "doc_ref": "options.txt:7131"
+  },
+  {
+    "id": "neovim.option.updatetime",
+    "source": "neovim",
+    "category": "option",
+    "name": "updatetime",
+    "desc": "number (default 4000)",
+    "doc_ref": "options.txt:7146"
+  },
+  {
+    "id": "neovim.option.varsofttabstop",
+    "source": "neovim",
+    "category": "option",
+    "name": "varsofttabstop",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:7153"
+  },
+  {
+    "id": "neovim.option.vartabstop",
+    "source": "neovim",
+    "category": "option",
+    "name": "vartabstop",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:7171"
+  },
+  {
+    "id": "neovim.option.verbose",
+    "source": "neovim",
+    "category": "option",
+    "name": "verbose",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:7189"
+  },
+  {
+    "id": "neovim.option.verbosefile",
+    "source": "neovim",
+    "category": "option",
+    "name": "verbosefile",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:7219"
+  },
+  {
+    "id": "neovim.option.viewdir",
+    "source": "neovim",
+    "category": "option",
+    "name": "viewdir",
+    "desc": "string (default \"$XDG_STATE_HOME/nvim/view//\")",
+    "doc_ref": "options.txt:7232"
+  },
+  {
+    "id": "neovim.option.viewoptions",
+    "source": "neovim",
+    "category": "option",
+    "name": "viewoptions",
+    "desc": "string (default \"folds,cursor,curdir\")",
+    "doc_ref": "options.txt:7239"
+  },
+  {
+    "id": "neovim.option.virtualedit",
+    "source": "neovim",
+    "category": "option",
+    "name": "virtualedit",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:7255"
+  },
+  {
+    "id": "neovim.option.visualbell",
+    "source": "neovim",
+    "category": "option",
+    "name": "visualbell",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:7285"
+  },
+  {
+    "id": "neovim.option.warn",
+    "source": "neovim",
+    "category": "option",
+    "name": "warn",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:7290"
+  },
+  {
+    "id": "neovim.option.whichwrap",
+    "source": "neovim",
+    "category": "option",
+    "name": "whichwrap",
+    "desc": "string (default \"b,s\")",
+    "doc_ref": "options.txt:7296"
+  },
+  {
+    "id": "neovim.option.wildchar",
+    "source": "neovim",
+    "category": "option",
+    "name": "wildchar",
+    "desc": "number (default <Tab>)",
+    "doc_ref": "options.txt:7326"
+  },
+  {
+    "id": "neovim.option.wildcharm",
+    "source": "neovim",
+    "category": "option",
+    "name": "wildcharm",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:7349"
+  },
+  {
+    "id": "neovim.option.wildignore",
+    "source": "neovim",
+    "category": "option",
+    "name": "wildignore",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:7362"
+  },
+  {
+    "id": "neovim.option.wildignorecase",
+    "source": "neovim",
+    "category": "option",
+    "name": "wildignorecase",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:7377"
+  },
+  {
+    "id": "neovim.option.wildmenu",
+    "source": "neovim",
+    "category": "option",
+    "name": "wildmenu",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:7385"
+  },
+  {
+    "id": "neovim.option.wildmode",
+    "source": "neovim",
+    "category": "option",
+    "name": "wildmode",
+    "desc": "string (default \"full\")",
+    "doc_ref": "options.txt:7426"
+  },
+  {
+    "id": "neovim.option.wildoptions",
+    "source": "neovim",
+    "category": "option",
+    "name": "wildoptions",
+    "desc": "string (default \"pum,tagfile\")",
+    "doc_ref": "options.txt:7494"
+  },
+  {
+    "id": "neovim.option.winaltkeys",
+    "source": "neovim",
+    "category": "option",
+    "name": "winaltkeys",
+    "desc": "string (default \"menu\")",
+    "doc_ref": "options.txt:7535"
+  },
+  {
+    "id": "neovim.option.winbar",
+    "source": "neovim",
+    "category": "option",
+    "name": "winbar",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:7554"
+  },
+  {
+    "id": "neovim.option.winblend",
+    "source": "neovim",
+    "category": "option",
+    "name": "winblend",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:7571"
+  },
+  {
+    "id": "neovim.option.winborder",
+    "source": "neovim",
+    "category": "option",
+    "name": "winborder",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:7580"
+  },
+  {
+    "id": "neovim.option.window",
+    "source": "neovim",
+    "category": "option",
+    "name": "window",
+    "desc": "number (default screen height - 1)",
+    "doc_ref": "options.txt:7600"
+  },
+  {
+    "id": "neovim.option.winfixbuf",
+    "source": "neovim",
+    "category": "option",
+    "name": "winfixbuf",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:7613"
+  },
+  {
+    "id": "neovim.option.winfixheight",
+    "source": "neovim",
+    "category": "option",
+    "name": "winfixheight",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:7622"
+  },
+  {
+    "id": "neovim.option.winfixwidth",
+    "source": "neovim",
+    "category": "option",
+    "name": "winfixwidth",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:7630"
+  },
+  {
+    "id": "neovim.option.winheight",
+    "source": "neovim",
+    "category": "option",
+    "name": "winheight",
+    "desc": "number (default 1)",
+    "doc_ref": "options.txt:7637"
+  },
+  {
+    "id": "neovim.option.winhighlight",
+    "source": "neovim",
+    "category": "option",
+    "name": "winhighlight",
+    "desc": "string (default \"\")",
+    "doc_ref": "options.txt:7657"
+  },
+  {
+    "id": "neovim.option.winminheight",
+    "source": "neovim",
+    "category": "option",
+    "name": "winminheight",
+    "desc": "number (default 1)",
+    "doc_ref": "options.txt:7678"
+  },
+  {
+    "id": "neovim.option.winminwidth",
+    "source": "neovim",
+    "category": "option",
+    "name": "winminwidth",
+    "desc": "number (default 1)",
+    "doc_ref": "options.txt:7691"
+  },
+  {
+    "id": "neovim.option.winpinned",
+    "source": "neovim",
+    "category": "option",
+    "name": "winpinned",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:7705"
+  },
+  {
+    "id": "neovim.option.winwidth",
+    "source": "neovim",
+    "category": "option",
+    "name": "winwidth",
+    "desc": "number (default 20)",
+    "doc_ref": "options.txt:7712"
+  },
+  {
+    "id": "neovim.option.wrap",
+    "source": "neovim",
+    "category": "option",
+    "name": "wrap",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:7725"
+  },
+  {
+    "id": "neovim.option.wrapmargin",
+    "source": "neovim",
+    "category": "option",
+    "name": "wrapmargin",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:7749"
+  },
+  {
+    "id": "neovim.option.wrapscan",
+    "source": "neovim",
+    "category": "option",
+    "name": "wrapscan",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:7760"
+  },
+  {
+    "id": "neovim.option.write",
+    "source": "neovim",
+    "category": "option",
+    "name": "write",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:7766"
+  },
+  {
+    "id": "neovim.option.writeany",
+    "source": "neovim",
+    "category": "option",
+    "name": "writeany",
+    "desc": "boolean (default off)",
+    "doc_ref": "options.txt:7775"
+  },
+  {
+    "id": "neovim.option.writebackup",
+    "source": "neovim",
+    "category": "option",
+    "name": "writebackup",
+    "desc": "boolean (default on)",
+    "doc_ref": "options.txt:7780"
+  },
+  {
+    "id": "neovim.option.writedelay",
+    "source": "neovim",
+    "category": "option",
+    "name": "writedelay",
+    "desc": "number (default 0)",
+    "doc_ref": "options.txt:7796"
+  }
+]

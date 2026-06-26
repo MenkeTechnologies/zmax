@@ -1,0 +1,1946 @@
+[
+  {
+    "id": "spacemacs.layer.chat_erc",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "erc",
+    "desc": "chat layer",
+    "doc_ref": "https://spacemacs.org/layers/+chat/erc/README.html"
+  },
+  {
+    "id": "spacemacs.layer.chat_jabber",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "jabber",
+    "desc": "chat layer",
+    "doc_ref": "https://spacemacs.org/layers/+chat/jabber/README.html"
+  },
+  {
+    "id": "spacemacs.layer.chat_rcirc",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "rcirc",
+    "desc": "chat layer",
+    "doc_ref": "https://spacemacs.org/layers/+chat/rcirc/README.html"
+  },
+  {
+    "id": "spacemacs.layer.chat_slack",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "slack",
+    "desc": "chat layer",
+    "doc_ref": "https://spacemacs.org/layers/+chat/slack/README.html"
+  },
+  {
+    "id": "spacemacs.layer.checkers_languagetool",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "languagetool",
+    "desc": "checkers layer",
+    "doc_ref": "https://spacemacs.org/layers/+checkers/languagetool/README.html"
+  },
+  {
+    "id": "spacemacs.layer.checkers_spell_checking",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spell-checking",
+    "desc": "checkers layer",
+    "doc_ref": "https://spacemacs.org/layers/+checkers/spell-checking/README.html"
+  },
+  {
+    "id": "spacemacs.layer.checkers_syntax_checking",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "syntax-checking",
+    "desc": "checkers layer",
+    "doc_ref": "https://spacemacs.org/layers/+checkers/syntax-checking/README.html"
+  },
+  {
+    "id": "spacemacs.layer.completion_auto_completion",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "auto-completion",
+    "desc": "completion layer",
+    "doc_ref": "https://spacemacs.org/layers/+completion/auto-completion/README.html"
+  },
+  {
+    "id": "spacemacs.layer.completion_compleseus",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "compleseus",
+    "desc": "completion layer",
+    "doc_ref": "https://spacemacs.org/layers/+completion/compleseus/README.html"
+  },
+  {
+    "id": "spacemacs.layer.completion_helm",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "helm",
+    "desc": "completion layer",
+    "doc_ref": "https://spacemacs.org/layers/+completion/helm/README.html"
+  },
+  {
+    "id": "spacemacs.layer.completion_ivy",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "ivy",
+    "desc": "completion layer",
+    "doc_ref": "https://spacemacs.org/layers/+completion/ivy/README.html"
+  },
+  {
+    "id": "spacemacs.layer.completion_templates",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "templates",
+    "desc": "completion layer",
+    "doc_ref": "https://spacemacs.org/layers/+completion/templates/README.html"
+  },
+  {
+    "id": "spacemacs.layer.distributions_spacemacs",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs",
+    "desc": "distributions layer",
+    "doc_ref": "https://spacemacs.org/layers/+distributions/spacemacs/README.html"
+  },
+  {
+    "id": "spacemacs.layer.distributions_spacemacs_base",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-base",
+    "desc": "distributions layer",
+    "doc_ref": "https://spacemacs.org/layers/+distributions/spacemacs-base/README.html"
+  },
+  {
+    "id": "spacemacs.layer.distributions_spacemacs_bootstrap",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-bootstrap",
+    "desc": "distributions layer",
+    "doc_ref": "https://spacemacs.org/layers/+distributions/spacemacs-bootstrap/README.html"
+  },
+  {
+    "id": "spacemacs.layer.emacs_amx",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "amx",
+    "desc": "emacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+emacs/amx/README.html"
+  },
+  {
+    "id": "spacemacs.layer.emacs_better_defaults",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "better-defaults",
+    "desc": "emacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+emacs/better-defaults/README.html"
+  },
+  {
+    "id": "spacemacs.layer.emacs_helpful",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "helpful",
+    "desc": "emacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+emacs/helpful/README.html"
+  },
+  {
+    "id": "spacemacs.layer.emacs_ibuffer",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "ibuffer",
+    "desc": "emacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+emacs/ibuffer/README.html"
+  },
+  {
+    "id": "spacemacs.layer.emacs_org",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "org",
+    "desc": "emacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+emacs/org/README.html"
+  },
+  {
+    "id": "spacemacs.layer.emacs_outshine",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "outshine",
+    "desc": "emacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+emacs/outshine/README.html"
+  },
+  {
+    "id": "spacemacs.layer.emacs_semantic",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "semantic",
+    "desc": "emacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+emacs/semantic/README.html"
+  },
+  {
+    "id": "spacemacs.layer.emacs_tabs",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "tabs",
+    "desc": "emacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+emacs/tabs/README.html"
+  },
+  {
+    "id": "spacemacs.layer.emacs_typography",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "typography",
+    "desc": "emacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+emacs/typography/README.html"
+  },
+  {
+    "id": "spacemacs.layer.email_gnus",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "gnus",
+    "desc": "email layer",
+    "doc_ref": "https://spacemacs.org/layers/+email/gnus/README.html"
+  },
+  {
+    "id": "spacemacs.layer.email_mu4e",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "mu4e",
+    "desc": "email layer",
+    "doc_ref": "https://spacemacs.org/layers/+email/mu4e/README.html"
+  },
+  {
+    "id": "spacemacs.layer.email_notmuch",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "notmuch",
+    "desc": "email layer",
+    "doc_ref": "https://spacemacs.org/layers/+email/notmuch/README.html"
+  },
+  {
+    "id": "spacemacs.layer.filetree_neotree",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "neotree",
+    "desc": "filetree layer",
+    "doc_ref": "https://spacemacs.org/layers/+filetree/neotree/README.html"
+  },
+  {
+    "id": "spacemacs.layer.filetree_treemacs",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "treemacs",
+    "desc": "filetree layer",
+    "doc_ref": "https://spacemacs.org/layers/+filetree/treemacs/README.html"
+  },
+  {
+    "id": "spacemacs.layer.fonts_unicode_fonts",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "unicode-fonts",
+    "desc": "fonts layer",
+    "doc_ref": "https://spacemacs.org/layers/+fonts/unicode-fonts/README.html"
+  },
+  {
+    "id": "spacemacs.layer.frameworks_django",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "django",
+    "desc": "frameworks layer",
+    "doc_ref": "https://spacemacs.org/layers/+frameworks/django/README.html"
+  },
+  {
+    "id": "spacemacs.layer.frameworks_emberjs",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "emberjs",
+    "desc": "frameworks layer",
+    "doc_ref": "https://spacemacs.org/layers/+frameworks/emberjs/README.html"
+  },
+  {
+    "id": "spacemacs.layer.frameworks_phoenix",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "phoenix",
+    "desc": "frameworks layer",
+    "doc_ref": "https://spacemacs.org/layers/+frameworks/phoenix/README.html"
+  },
+  {
+    "id": "spacemacs.layer.frameworks_react",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "react",
+    "desc": "frameworks layer",
+    "doc_ref": "https://spacemacs.org/layers/+frameworks/react/README.html"
+  },
+  {
+    "id": "spacemacs.layer.frameworks_ruby_on_rails",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "ruby-on-rails",
+    "desc": "frameworks layer",
+    "doc_ref": "https://spacemacs.org/layers/+frameworks/ruby-on-rails/README.html"
+  },
+  {
+    "id": "spacemacs.layer.frameworks_svelte",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "svelte",
+    "desc": "frameworks layer",
+    "doc_ref": "https://spacemacs.org/layers/+frameworks/svelte/README.html"
+  },
+  {
+    "id": "spacemacs.layer.frameworks_vue",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "vue",
+    "desc": "frameworks layer",
+    "doc_ref": "https://spacemacs.org/layers/+frameworks/vue/README.html"
+  },
+  {
+    "id": "spacemacs.layer.fun_emoji",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "emoji",
+    "desc": "fun layer",
+    "doc_ref": "https://spacemacs.org/layers/+fun/emoji/README.html"
+  },
+  {
+    "id": "spacemacs.layer.fun_games",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "games",
+    "desc": "fun layer",
+    "doc_ref": "https://spacemacs.org/layers/+fun/games/README.html"
+  },
+  {
+    "id": "spacemacs.layer.fun_selectric",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "selectric",
+    "desc": "fun layer",
+    "doc_ref": "https://spacemacs.org/layers/+fun/selectric/README.html"
+  },
+  {
+    "id": "spacemacs.layer.fun_xkcd",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "xkcd",
+    "desc": "fun layer",
+    "doc_ref": "https://spacemacs.org/layers/+fun/xkcd/README.html"
+  },
+  {
+    "id": "spacemacs.layer.intl_chinese",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "chinese",
+    "desc": "intl layer",
+    "doc_ref": "https://spacemacs.org/layers/+intl/chinese/README.html"
+  },
+  {
+    "id": "spacemacs.layer.intl_japanese",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "japanese",
+    "desc": "intl layer",
+    "doc_ref": "https://spacemacs.org/layers/+intl/japanese/README.html"
+  },
+  {
+    "id": "spacemacs.layer.intl_keyboard_layout",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "keyboard-layout",
+    "desc": "intl layer",
+    "doc_ref": "https://spacemacs.org/layers/+intl/keyboard-layout/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_agda",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "agda",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/agda/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_alda",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "alda",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/alda/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_asciidoc",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "asciidoc",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/asciidoc/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_asm",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "asm",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/asm/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_autohotkey",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "autohotkey",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/autohotkey/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_bibtex",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "bibtex",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/bibtex/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_c_c",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "c-c++",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/c-c++/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_clojure",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "clojure",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/clojure/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_coffeescript",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "coffeescript",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/coffeescript/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_common_lisp",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "common-lisp",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/common-lisp/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_coq",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "coq",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/coq/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_crystal",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "crystal",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/crystal/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_csharp",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "csharp",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/csharp/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_csv",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "csv",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/csv/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_d",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "d",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/d/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_dart",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "dart",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/dart/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_dhall",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "dhall",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/dhall/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_elixir",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "elixir",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/elixir/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_elm",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "elm",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/elm/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_emacs_lisp",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "emacs-lisp",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/emacs-lisp/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_erlang",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "erlang",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/erlang/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_ess",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "ess",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/ess/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_extempore",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "extempore",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/extempore/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_factor",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "factor",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/factor/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_faust",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "faust",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/faust/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_forth",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "forth",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/forth/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_fountain",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "fountain",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/fountain/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_fsharp",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "fsharp",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/fsharp/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_gleam",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "gleam",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/gleam/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_go",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "go",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/go/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_gpu",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "gpu",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/gpu/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_graphql",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "graphql",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/graphql/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_graphviz",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "graphviz",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/graphviz/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_groovy",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "groovy",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/groovy/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_haskell",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "haskell",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/haskell/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_html",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "html",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/html/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_hy",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "hy",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/hy/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_idris",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "idris",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/idris/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_java",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "java",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/java/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_javascript",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "javascript",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/javascript/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_jr",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "jr",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/jr/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_json",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "json",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/json/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_jsonnet",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "jsonnet",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/jsonnet/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_julia",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "julia",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/julia/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_kivy",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "kivy",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/kivy/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_kotlin",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "kotlin",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/kotlin/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_latex",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "latex",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/latex/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_lua",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "lua",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/lua/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_major_modes",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "major-modes",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/major-modes/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_markdown",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "markdown",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/markdown/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_mercury",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "mercury",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/mercury/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_mermaid",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "mermaid",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/mermaid/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_nim",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "nim",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/nim/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_ocaml",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "ocaml",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/ocaml/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_octave",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "octave",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/octave/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_pact",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "pact",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/pact/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_perl5",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "perl5",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/perl5/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_php",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "php",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/php/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_plantuml",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "plantuml",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/plantuml/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_prolog",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "prolog",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/prolog/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_protobuf",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "protobuf",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/protobuf/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_purescript",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "purescript",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/purescript/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_python",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "python",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/python/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_racket",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "racket",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/racket/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_raku",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "raku",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/raku/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_reasonml",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "reasonml",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/reasonml/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_restructuredtext",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "restructuredtext",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/restructuredtext/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_ruby",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "ruby",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/ruby/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_rust",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "rust",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/rust/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_scala",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "scala",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/scala/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_scheme",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "scheme",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/scheme/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_semantic_web",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "semantic-web",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/semantic-web/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_shell_scripts",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "shell-scripts",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/shell-scripts/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_sml",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "sml",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/sml/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_solidity",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "solidity",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/solidity/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_sql",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "sql",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/sql/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_swift",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "swift",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/swift/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_toml",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "toml",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/toml/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_typescript",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "typescript",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/typescript/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_vimscript",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "vimscript",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/vimscript/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_windows_scripts",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "windows-scripts",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/windows-scripts/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_yaml",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "yaml",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/yaml/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_yang",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "yang",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/yang/README.html"
+  },
+  {
+    "id": "spacemacs.layer.lang_zig",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "zig",
+    "desc": "lang layer",
+    "doc_ref": "https://spacemacs.org/layers/+lang/zig/README.html"
+  },
+  {
+    "id": "spacemacs.layer.misc_copy_as_format",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "copy-as-format",
+    "desc": "misc layer",
+    "doc_ref": "https://spacemacs.org/layers/+misc/copy-as-format/README.html"
+  },
+  {
+    "id": "spacemacs.layer.misc_denote",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "denote",
+    "desc": "misc layer",
+    "doc_ref": "https://spacemacs.org/layers/+misc/denote/README.html"
+  },
+  {
+    "id": "spacemacs.layer.misc_dtrt_indent",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "dtrt-indent",
+    "desc": "misc layer",
+    "doc_ref": "https://spacemacs.org/layers/+misc/dtrt-indent/README.html"
+  },
+  {
+    "id": "spacemacs.layer.misc_ietf",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "ietf",
+    "desc": "misc layer",
+    "doc_ref": "https://spacemacs.org/layers/+misc/ietf/README.html"
+  },
+  {
+    "id": "spacemacs.layer.misc_multiple_cursors",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "multiple-cursors",
+    "desc": "misc layer",
+    "doc_ref": "https://spacemacs.org/layers/+misc/multiple-cursors/README.html"
+  },
+  {
+    "id": "spacemacs.layer.misc_nav_flash",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "nav-flash",
+    "desc": "misc layer",
+    "doc_ref": "https://spacemacs.org/layers/+misc/nav-flash/README.html"
+  },
+  {
+    "id": "spacemacs.layer.misc_parinfer",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "parinfer",
+    "desc": "misc layer",
+    "doc_ref": "https://spacemacs.org/layers/+misc/parinfer/README.html"
+  },
+  {
+    "id": "spacemacs.layer.music_pianobar",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "pianobar",
+    "desc": "music layer",
+    "doc_ref": "https://spacemacs.org/layers/+music/pianobar/README.html"
+  },
+  {
+    "id": "spacemacs.layer.music_spotify",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spotify",
+    "desc": "music layer",
+    "doc_ref": "https://spacemacs.org/layers/+music/spotify/README.html"
+  },
+  {
+    "id": "spacemacs.layer.music_tidalcycles",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "tidalcycles",
+    "desc": "music layer",
+    "doc_ref": "https://spacemacs.org/layers/+music/tidalcycles/README.html"
+  },
+  {
+    "id": "spacemacs.layer.os_nixos",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "nixos",
+    "desc": "os layer",
+    "doc_ref": "https://spacemacs.org/layers/+os/nixos/README.html"
+  },
+  {
+    "id": "spacemacs.layer.os_osx",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "osx",
+    "desc": "os layer",
+    "doc_ref": "https://spacemacs.org/layers/+os/osx/README.html"
+  },
+  {
+    "id": "spacemacs.layer.pair_programming_floobits",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "floobits",
+    "desc": "pair-programming layer",
+    "doc_ref": "https://spacemacs.org/layers/+pair-programming/floobits/README.html"
+  },
+  {
+    "id": "spacemacs.layer.readers_dash",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "dash",
+    "desc": "readers layer",
+    "doc_ref": "https://spacemacs.org/layers/+readers/dash/README.html"
+  },
+  {
+    "id": "spacemacs.layer.readers_deft",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "deft",
+    "desc": "readers layer",
+    "doc_ref": "https://spacemacs.org/layers/+readers/deft/README.html"
+  },
+  {
+    "id": "spacemacs.layer.readers_djvu",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "djvu",
+    "desc": "readers layer",
+    "doc_ref": "https://spacemacs.org/layers/+readers/djvu/README.html"
+  },
+  {
+    "id": "spacemacs.layer.readers_elfeed",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "elfeed",
+    "desc": "readers layer",
+    "doc_ref": "https://spacemacs.org/layers/+readers/elfeed/README.html"
+  },
+  {
+    "id": "spacemacs.layer.readers_epub",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "epub",
+    "desc": "readers layer",
+    "doc_ref": "https://spacemacs.org/layers/+readers/epub/README.html"
+  },
+  {
+    "id": "spacemacs.layer.readers_pdf",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "pdf",
+    "desc": "readers layer",
+    "doc_ref": "https://spacemacs.org/layers/+readers/pdf/README.html"
+  },
+  {
+    "id": "spacemacs.layer.readers_speed_reading",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "speed-reading",
+    "desc": "readers layer",
+    "doc_ref": "https://spacemacs.org/layers/+readers/speed-reading/README.html"
+  },
+  {
+    "id": "spacemacs.layer.source_control_git",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "git",
+    "desc": "source-control layer",
+    "doc_ref": "https://spacemacs.org/layers/+source-control/git/README.html"
+  },
+  {
+    "id": "spacemacs.layer.source_control_perforce",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "perforce",
+    "desc": "source-control layer",
+    "doc_ref": "https://spacemacs.org/layers/+source-control/perforce/README.html"
+  },
+  {
+    "id": "spacemacs.layer.source_control_version_control",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "version-control",
+    "desc": "source-control layer",
+    "doc_ref": "https://spacemacs.org/layers/+source-control/version-control/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_completion",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-completion",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-completion/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_defaults",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-defaults",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-defaults/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_editing",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-editing",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-editing/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_editing_visual",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-editing-visual",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-editing-visual/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_evil",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-evil",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-evil/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_language",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-language",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-language/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_layouts",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-layouts",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-layouts/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_misc",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-misc",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-misc/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_modeline",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-modeline",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-modeline/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_navigation",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-navigation",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-navigation/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_org",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-org",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-org/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_project",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-project",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-project/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_purpose",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-purpose",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-purpose/README.html"
+  },
+  {
+    "id": "spacemacs.layer.spacemacs_spacemacs_visual",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "spacemacs-visual",
+    "desc": "spacemacs layer",
+    "doc_ref": "https://spacemacs.org/layers/+spacemacs/spacemacs-visual/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tags_cscope",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "cscope",
+    "desc": "tags layer",
+    "doc_ref": "https://spacemacs.org/layers/+tags/cscope/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tags_gtags",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "gtags",
+    "desc": "tags layer",
+    "doc_ref": "https://spacemacs.org/layers/+tags/gtags/README.html"
+  },
+  {
+    "id": "spacemacs.layer.themes_colors",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "colors",
+    "desc": "themes layer",
+    "doc_ref": "https://spacemacs.org/layers/+themes/colors/README.html"
+  },
+  {
+    "id": "spacemacs.layer.themes_themes_megapack",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "themes-megapack",
+    "desc": "themes layer",
+    "doc_ref": "https://spacemacs.org/layers/+themes/themes-megapack/README.html"
+  },
+  {
+    "id": "spacemacs.layer.themes_theming",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "theming",
+    "desc": "themes layer",
+    "doc_ref": "https://spacemacs.org/layers/+themes/theming/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_aider",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "aider",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/aider/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_ansible",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "ansible",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/ansible/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_apache",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "apache",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/apache/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_bm",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "bm",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/bm/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_cfengine",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "cfengine",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/cfengine/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_chrome",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "chrome",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/chrome/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_claude_code",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "claude-code",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/claude-code/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_cmake",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "cmake",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/cmake/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_command_log",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "command-log",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/command-log/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_conda",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "conda",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/conda/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_dap",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "dap",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/dap/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_debug",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "debug",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/debug/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_docker",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "docker",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/docker/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_dotnet",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "dotnet",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/dotnet/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_eaf",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "eaf",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/eaf/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_eglot",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "eglot",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/eglot/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_elasticsearch",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "elasticsearch",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/elasticsearch/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_fasd",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "fasd",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/fasd/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_finance",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "finance",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/finance/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_geolocation",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "geolocation",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/geolocation/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_imenu_list",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "imenu-list",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/imenu-list/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_import_js",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "import-js",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/import-js/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_ipython_notebook",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "ipython-notebook",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/ipython-notebook/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_kubernetes",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "kubernetes",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/kubernetes/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_lsp",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "lsp",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/lsp/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_meson",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "meson",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/meson/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_nginx",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "nginx",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/nginx/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_node",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "node",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/node/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_pandoc",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "pandoc",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/pandoc/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_pass",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "pass",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/pass/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_prettier",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "prettier",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/prettier/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_prodigy",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "prodigy",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/prodigy/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_puppet",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "puppet",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/puppet/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_quickurl",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "quickurl",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/quickurl/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_ranger",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "ranger",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/ranger/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_rebox",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "rebox",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/rebox/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_restclient",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "restclient",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/restclient/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_sailfish_developer",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "sailfish-developer",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/sailfish-developer/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_salt",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "salt",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/salt/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_shell",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "shell",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/shell/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_sphinx",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "sphinx",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/sphinx/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_systemd",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "systemd",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/systemd/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_tern",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "tern",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/tern/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_terraform",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "terraform",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/terraform/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_tide",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "tide",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/tide/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_tmux",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "tmux",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/tmux/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_translate",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "translate",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/translate/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_transmission",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "transmission",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/transmission/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_tree_sitter",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "tree-sitter",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/tree-sitter/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_vagrant",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "vagrant",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/vagrant/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_web_beautify",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "web-beautify",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/web-beautify/README.html"
+  },
+  {
+    "id": "spacemacs.layer.tools_xclipboard",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "xclipboard",
+    "desc": "tools layer",
+    "doc_ref": "https://spacemacs.org/layers/+tools/xclipboard/README.html"
+  },
+  {
+    "id": "spacemacs.layer.vim_evil_better_jumper",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "evil-better-jumper",
+    "desc": "vim layer",
+    "doc_ref": "https://spacemacs.org/layers/+vim/evil-better-jumper/README.html"
+  },
+  {
+    "id": "spacemacs.layer.vim_evil_commentary",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "evil-commentary",
+    "desc": "vim layer",
+    "doc_ref": "https://spacemacs.org/layers/+vim/evil-commentary/README.html"
+  },
+  {
+    "id": "spacemacs.layer.vim_evil_snipe",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "evil-snipe",
+    "desc": "vim layer",
+    "doc_ref": "https://spacemacs.org/layers/+vim/evil-snipe/README.html"
+  },
+  {
+    "id": "spacemacs.layer.vim_vim_empty_lines",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "vim-empty-lines",
+    "desc": "vim layer",
+    "doc_ref": "https://spacemacs.org/layers/+vim/vim-empty-lines/README.html"
+  },
+  {
+    "id": "spacemacs.layer.vim_vinegar",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "vinegar",
+    "desc": "vim layer",
+    "doc_ref": "https://spacemacs.org/layers/+vim/vinegar/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_confluence",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "confluence",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/confluence/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_evernote",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "evernote",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/evernote/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_github_copilot",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "github-copilot",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/github-copilot/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_hackernews",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "hackernews",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/hackernews/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_llm_client",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "llm-client",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/llm-client/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_lobsters",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "lobsters",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/lobsters/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_openai",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "openai",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/openai/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_reddit",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "reddit",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/reddit/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_search_engine",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "search-engine",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/search-engine/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_streamlink",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "streamlink",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/streamlink/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_twitch",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "twitch",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/twitch/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_twitter",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "twitter",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/twitter/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_wakatime",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "wakatime",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/wakatime/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_services_whisper",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "whisper",
+    "desc": "web-services layer",
+    "doc_ref": "https://spacemacs.org/layers/+web-services/whisper/README.html"
+  },
+  {
+    "id": "spacemacs.layer.web_eww",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "eww",
+    "desc": "web layer",
+    "doc_ref": "https://spacemacs.org/layers/+web/eww/README.html"
+  },
+  {
+    "id": "spacemacs.layer.window_management_exwm",
+    "source": "spacemacs",
+    "category": "layer",
+    "name": "exwm",
+    "desc": "window-management layer",
+    "doc_ref": "https://spacemacs.org/layers/+window-management/exwm/README.html"
+  }
+]

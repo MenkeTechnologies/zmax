@@ -4,3 +4,6 @@ helix-term/rustfmt.toml
 result
 runtime/grammars
 .DS_Store
+
+# This repo ships docs/ (overrides global ignore of docs/)
+!docs/

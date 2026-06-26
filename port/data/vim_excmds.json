@@ -1,0 +1,4490 @@
+[
+  {
+    "id": "neovim.ex-command.colon",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":",
+    "desc": "nothing",
+    "doc_ref": "index.txt::"
+  },
+  {
+    "id": "neovim.ex-command.colon_range",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":{range}",
+    "desc": "go to last line in {range}",
+    "doc_ref": "index.txt::range"
+  },
+  {
+    "id": "neovim.ex-command.colon_bang",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":!",
+    "desc": "filter lines or execute an external command",
+    "doc_ref": "index.txt::!"
+  },
+  {
+    "id": "neovim.ex-command.colon_bang_bang",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":!!",
+    "desc": "repeat last \":!\" command",
+    "doc_ref": "index.txt::!!"
+  },
+  {
+    "id": "neovim.ex-command.colon_hash",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":#",
+    "desc": "same as \":number\"",
+    "doc_ref": "index.txt::#"
+  },
+  {
+    "id": "neovim.ex-command.colon_amp",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":&",
+    "desc": "repeat last \":substitute\"",
+    "doc_ref": "index.txt::&"
+  },
+  {
+    "id": "neovim.ex-command.colon_star",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":*",
+    "desc": "use the last Visual area, like \":'<,'>\"",
+    "doc_ref": "index.txt::star"
+  },
+  {
+    "id": "neovim.ex-command.colon_lt",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":<",
+    "desc": "shift lines one 'shiftwidth' left",
+    "doc_ref": "index.txt::<"
+  },
+  {
+    "id": "neovim.ex-command.colon_eq",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":=",
+    "desc": "print the last line number",
+    "doc_ref": "index.txt::="
+  },
+  {
+    "id": "neovim.ex-command.colon_gt",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":>",
+    "desc": "shift lines one 'shiftwidth' right",
+    "doc_ref": "index.txt::>"
+  },
+  {
+    "id": "neovim.ex-command.colon_at",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":@",
+    "desc": "execute contents of a register",
+    "doc_ref": "index.txt::@"
+  },
+  {
+    "id": "neovim.ex-command.colon_at_at",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":@@",
+    "desc": "repeat the previous \":@\"",
+    "doc_ref": "index.txt::@@"
+  },
+  {
+    "id": "neovim.ex-command.colon_2match",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":2mat[ch]",
+    "desc": "define a second match to highlight",
+    "doc_ref": "index.txt::2match"
+  },
+  {
+    "id": "neovim.ex-command.colon_3match",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":3mat[ch]",
+    "desc": "define a third match to highlight",
+    "doc_ref": "index.txt::3match"
+  },
+  {
+    "id": "neovim.ex-command.colon_next",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":N[ext]",
+    "desc": "go to previous file in the argument list",
+    "doc_ref": "index.txt::Next"
+  },
+  {
+    "id": "neovim.ex-command.colon_append",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":a[ppend]",
+    "desc": "append text",
+    "doc_ref": "index.txt::append"
+  },
+  {
+    "id": "neovim.ex-command.colon_abbreviate",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ab[breviate]",
+    "desc": "enter abbreviation",
+    "doc_ref": "index.txt::abbreviate"
+  },
+  {
+    "id": "neovim.ex-command.colon_abclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":abc[lear]",
+    "desc": "remove all abbreviations",
+    "doc_ref": "index.txt::abclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_aboveleft",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":abo[veleft]",
+    "desc": "make split window appear left or above",
+    "doc_ref": "index.txt::aboveleft"
+  },
+  {
+    "id": "neovim.ex-command.colon_all",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":al[l]",
+    "desc": "open a window for each file in the argument",
+    "doc_ref": "index.txt::all"
+  },
+  {
+    "id": "neovim.ex-command.colon_amenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":am[enu]",
+    "desc": "enter new menu item for all modes",
+    "doc_ref": "index.txt::amenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_anoremenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":an[oremenu]",
+    "desc": "enter a new menu for all modes that will not",
+    "doc_ref": "index.txt::anoremenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_args",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ar[gs]",
+    "desc": "print the argument list",
+    "doc_ref": "index.txt::args"
+  },
+  {
+    "id": "neovim.ex-command.colon_argadd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":arga[dd]",
+    "desc": "add items to the argument list",
+    "doc_ref": "index.txt::argadd"
+  },
+  {
+    "id": "neovim.ex-command.colon_argdedupe",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":argded[upe]",
+    "desc": "remove duplicates from the argument list",
+    "doc_ref": "index.txt::argdedupe"
+  },
+  {
+    "id": "neovim.ex-command.colon_argdelete",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":argd[elete]",
+    "desc": "delete items from the argument list",
+    "doc_ref": "index.txt::argdelete"
+  },
+  {
+    "id": "neovim.ex-command.colon_argedit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":arge[dit]",
+    "desc": "add item to the argument list and edit it",
+    "doc_ref": "index.txt::argedit"
+  },
+  {
+    "id": "neovim.ex-command.colon_argdo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":argdo",
+    "desc": "do a command on all items in the argument list",
+    "doc_ref": "index.txt::argdo"
+  },
+  {
+    "id": "neovim.ex-command.colon_argglobal",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":argg[lobal]",
+    "desc": "define the global argument list",
+    "doc_ref": "index.txt::argglobal"
+  },
+  {
+    "id": "neovim.ex-command.colon_arglocal",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":argl[ocal]",
+    "desc": "define a local argument list",
+    "doc_ref": "index.txt::arglocal"
+  },
+  {
+    "id": "neovim.ex-command.colon_argument",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":argu[ment]",
+    "desc": "go to specific file in the argument list",
+    "doc_ref": "index.txt::argument"
+  },
+  {
+    "id": "neovim.ex-command.colon_ascii",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":as[cii]",
+    "desc": "print ascii value of character under the cursor",
+    "doc_ref": "index.txt::ascii"
+  },
+  {
+    "id": "neovim.ex-command.colon_autocmd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":au[tocmd]",
+    "desc": "enter or show autocommands",
+    "doc_ref": "index.txt::autocmd"
+  },
+  {
+    "id": "neovim.ex-command.colon_augroup",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":aug[roup]",
+    "desc": "select the autocommand group to use",
+    "doc_ref": "index.txt::augroup"
+  },
+  {
+    "id": "neovim.ex-command.colon_aunmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":aun[menu]",
+    "desc": "remove menu for all modes",
+    "doc_ref": "index.txt::aunmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_buffer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":b[uffer]",
+    "desc": "go to specific buffer in the buffer list",
+    "doc_ref": "index.txt::buffer"
+  },
+  {
+    "id": "neovim.ex-command.colon_bnext",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bN[ext]",
+    "desc": "go to previous buffer in the buffer list",
+    "doc_ref": "index.txt::bNext"
+  },
+  {
+    "id": "neovim.ex-command.colon_ball",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ba[ll]",
+    "desc": "open a window for each buffer in the buffer list",
+    "doc_ref": "index.txt::ball"
+  },
+  {
+    "id": "neovim.ex-command.colon_badd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bad[d]",
+    "desc": "add buffer to the buffer list",
+    "doc_ref": "index.txt::badd"
+  },
+  {
+    "id": "neovim.ex-command.colon_balt",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":balt",
+    "desc": "like \":badd\" but also set the alternate file",
+    "doc_ref": "index.txt::balt"
+  },
+  {
+    "id": "neovim.ex-command.colon_bdelete",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bd[elete]",
+    "desc": "remove a buffer from the buffer list",
+    "doc_ref": "index.txt::bdelete"
+  },
+  {
+    "id": "neovim.ex-command.colon_belowright",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bel[owright]",
+    "desc": "make split window appear right or below",
+    "doc_ref": "index.txt::belowright"
+  },
+  {
+    "id": "neovim.ex-command.colon_bfirst",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bf[irst]",
+    "desc": "go to first buffer in the buffer list",
+    "doc_ref": "index.txt::bfirst"
+  },
+  {
+    "id": "neovim.ex-command.colon_blast",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bl[ast]",
+    "desc": "go to last buffer in the buffer list",
+    "doc_ref": "index.txt::blast"
+  },
+  {
+    "id": "neovim.ex-command.colon_bmodified",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bm[odified]",
+    "desc": "go to next buffer in the buffer list that has",
+    "doc_ref": "index.txt::bmodified"
+  },
+  {
+    "id": "neovim.ex-command.colon_bnext_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bn[ext]",
+    "desc": "go to next buffer in the buffer list",
+    "doc_ref": "index.txt::bnext"
+  },
+  {
+    "id": "neovim.ex-command.colon_botright",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bo[tright]",
+    "desc": "make split window appear at bottom or far right",
+    "doc_ref": "index.txt::botright"
+  },
+  {
+    "id": "neovim.ex-command.colon_bprevious",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bp[revious]",
+    "desc": "go to previous buffer in the buffer list",
+    "doc_ref": "index.txt::bprevious"
+  },
+  {
+    "id": "neovim.ex-command.colon_brewind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":br[ewind]",
+    "desc": "go to first buffer in the buffer list",
+    "doc_ref": "index.txt::brewind"
+  },
+  {
+    "id": "neovim.ex-command.colon_break",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":brea[k]",
+    "desc": "break out of while loop",
+    "doc_ref": "index.txt::break"
+  },
+  {
+    "id": "neovim.ex-command.colon_breakadd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":breaka[dd]",
+    "desc": "add a debugger breakpoint",
+    "doc_ref": "index.txt::breakadd"
+  },
+  {
+    "id": "neovim.ex-command.colon_breakdel",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":breakd[el]",
+    "desc": "delete a debugger breakpoint",
+    "doc_ref": "index.txt::breakdel"
+  },
+  {
+    "id": "neovim.ex-command.colon_breaklist",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":breakl[ist]",
+    "desc": "list debugger breakpoints",
+    "doc_ref": "index.txt::breaklist"
+  },
+  {
+    "id": "neovim.ex-command.colon_browse",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bro[wse]",
+    "desc": "use file selection dialog",
+    "doc_ref": "index.txt::browse"
+  },
+  {
+    "id": "neovim.ex-command.colon_bufdo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bufd[o]",
+    "desc": "execute command in each listed buffer",
+    "doc_ref": "index.txt::bufdo"
+  },
+  {
+    "id": "neovim.ex-command.colon_buffers",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":buffers",
+    "desc": "list all files in the buffer list",
+    "doc_ref": "index.txt::buffers"
+  },
+  {
+    "id": "neovim.ex-command.colon_bunload",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bun[load]",
+    "desc": "unload a specific buffer",
+    "doc_ref": "index.txt::bunload"
+  },
+  {
+    "id": "neovim.ex-command.colon_bwipeout",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":bw[ipeout]",
+    "desc": "really delete a buffer",
+    "doc_ref": "index.txt::bwipeout"
+  },
+  {
+    "id": "neovim.ex-command.colon_change",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":c[hange]",
+    "desc": "replace a line or series of lines",
+    "doc_ref": "index.txt::change"
+  },
+  {
+    "id": "neovim.ex-command.colon_cnext",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cN[ext]",
+    "desc": "go to previous error",
+    "doc_ref": "index.txt::cNext"
+  },
+  {
+    "id": "neovim.ex-command.colon_cnfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cNf[ile]",
+    "desc": "go to last error in previous file",
+    "doc_ref": "index.txt::cNfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_cabbrev",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ca[bbrev]",
+    "desc": "like \":abbreviate\" but for Command-line mode",
+    "doc_ref": "index.txt::cabbrev"
+  },
+  {
+    "id": "neovim.ex-command.colon_cabclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cabc[lear]",
+    "desc": "clear all abbreviations for Command-line mode",
+    "doc_ref": "index.txt::cabclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_cabove",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cabo[ve]",
+    "desc": "go to error above current line",
+    "doc_ref": "index.txt::cabove"
+  },
+  {
+    "id": "neovim.ex-command.colon_caddbuffer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cad[dbuffer]",
+    "desc": "add errors from buffer",
+    "doc_ref": "index.txt::caddbuffer"
+  },
+  {
+    "id": "neovim.ex-command.colon_caddexpr",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cadde[xpr]",
+    "desc": "add errors from expr",
+    "doc_ref": "index.txt::caddexpr"
+  },
+  {
+    "id": "neovim.ex-command.colon_caddfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":caddf[ile]",
+    "desc": "add error message to current quickfix list",
+    "doc_ref": "index.txt::caddfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_cafter",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":caf[ter]",
+    "desc": "go to error after current cursor",
+    "doc_ref": "index.txt::cafter"
+  },
+  {
+    "id": "neovim.ex-command.colon_call",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cal[l]",
+    "desc": "call a function",
+    "doc_ref": "index.txt::call"
+  },
+  {
+    "id": "neovim.ex-command.colon_catch",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cat[ch]",
+    "desc": "part of a :try command",
+    "doc_ref": "index.txt::catch"
+  },
+  {
+    "id": "neovim.ex-command.colon_cbefore",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cbe[fore]",
+    "desc": "go to error before current cursor",
+    "doc_ref": "index.txt::cbefore"
+  },
+  {
+    "id": "neovim.ex-command.colon_cbelow",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cbel[ow]",
+    "desc": "go to error below current line",
+    "doc_ref": "index.txt::cbelow"
+  },
+  {
+    "id": "neovim.ex-command.colon_cbottom",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cbo[ttom]",
+    "desc": "scroll to the bottom of the quickfix window",
+    "doc_ref": "index.txt::cbottom"
+  },
+  {
+    "id": "neovim.ex-command.colon_cbuffer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cb[uffer]",
+    "desc": "parse error messages and jump to first error",
+    "doc_ref": "index.txt::cbuffer"
+  },
+  {
+    "id": "neovim.ex-command.colon_cc",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cc",
+    "desc": "go to specific error",
+    "doc_ref": "index.txt::cc"
+  },
+  {
+    "id": "neovim.ex-command.colon_cclose",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ccl[ose]",
+    "desc": "close quickfix window",
+    "doc_ref": "index.txt::cclose"
+  },
+  {
+    "id": "neovim.ex-command.colon_cd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cd",
+    "desc": "change directory",
+    "doc_ref": "index.txt::cd"
+  },
+  {
+    "id": "neovim.ex-command.colon_cdo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cdo",
+    "desc": "execute command in each valid error list entry",
+    "doc_ref": "index.txt::cdo"
+  },
+  {
+    "id": "neovim.ex-command.colon_cfdo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cfd[o]",
+    "desc": "execute command in each file in error list",
+    "doc_ref": "index.txt::cfdo"
+  },
+  {
+    "id": "neovim.ex-command.colon_center",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ce[nter]",
+    "desc": "format lines at the center",
+    "doc_ref": "index.txt::center"
+  },
+  {
+    "id": "neovim.ex-command.colon_cexpr",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cex[pr]",
+    "desc": "read errors from expr and jump to first",
+    "doc_ref": "index.txt::cexpr"
+  },
+  {
+    "id": "neovim.ex-command.colon_cfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cf[ile]",
+    "desc": "read file with error messages and jump to first",
+    "doc_ref": "index.txt::cfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_cfirst",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cfir[st]",
+    "desc": "go to the specified error, default first one",
+    "doc_ref": "index.txt::cfirst"
+  },
+  {
+    "id": "neovim.ex-command.colon_cgetbuffer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cgetb[uffer]",
+    "desc": "get errors from buffer",
+    "doc_ref": "index.txt::cgetbuffer"
+  },
+  {
+    "id": "neovim.ex-command.colon_cgetexpr",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cgete[xpr]",
+    "desc": "get errors from expr",
+    "doc_ref": "index.txt::cgetexpr"
+  },
+  {
+    "id": "neovim.ex-command.colon_cgetfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cg[etfile]",
+    "desc": "read file with error messages",
+    "doc_ref": "index.txt::cgetfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_changes",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":changes",
+    "desc": "print the change list",
+    "doc_ref": "index.txt::changes"
+  },
+  {
+    "id": "neovim.ex-command.colon_chdir",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":chd[ir]",
+    "desc": "change directory",
+    "doc_ref": "index.txt::chdir"
+  },
+  {
+    "id": "neovim.ex-command.colon_checkhealth",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":che[ckhealth]",
+    "desc": "run healthchecks",
+    "doc_ref": "index.txt::checkhealth"
+  },
+  {
+    "id": "neovim.ex-command.colon_checkpath",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":checkp[ath]",
+    "desc": "list included files",
+    "doc_ref": "index.txt::checkpath"
+  },
+  {
+    "id": "neovim.ex-command.colon_checktime",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":checkt[ime]",
+    "desc": "check timestamp of loaded buffers",
+    "doc_ref": "index.txt::checktime"
+  },
+  {
+    "id": "neovim.ex-command.colon_chistory",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":chi[story]",
+    "desc": "list the error lists",
+    "doc_ref": "index.txt::chistory"
+  },
+  {
+    "id": "neovim.ex-command.colon_clast",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cla[st]",
+    "desc": "go to the specified error, default last one",
+    "doc_ref": "index.txt::clast"
+  },
+  {
+    "id": "neovim.ex-command.colon_clearjumps",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cle[arjumps]",
+    "desc": "clear the jump list",
+    "doc_ref": "index.txt::clearjumps"
+  },
+  {
+    "id": "neovim.ex-command.colon_clist",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cl[ist]",
+    "desc": "list all errors",
+    "doc_ref": "index.txt::clist"
+  },
+  {
+    "id": "neovim.ex-command.colon_close",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":clo[se]",
+    "desc": "close current window",
+    "doc_ref": "index.txt::close"
+  },
+  {
+    "id": "neovim.ex-command.colon_cmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cm[ap]",
+    "desc": "like \":map\" but for Command-line mode",
+    "doc_ref": "index.txt::cmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_cmapclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cmapc[lear]",
+    "desc": "clear all mappings for Command-line mode",
+    "doc_ref": "index.txt::cmapclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_cmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cme[nu]",
+    "desc": "add menu for Command-line mode",
+    "doc_ref": "index.txt::cmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_cnext_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cn[ext]",
+    "desc": "go to next error",
+    "doc_ref": "index.txt::cnext"
+  },
+  {
+    "id": "neovim.ex-command.colon_cnewer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cnew[er]",
+    "desc": "go to newer error list",
+    "doc_ref": "index.txt::cnewer"
+  },
+  {
+    "id": "neovim.ex-command.colon_cnfile_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cnf[ile]",
+    "desc": "go to first error in next file",
+    "doc_ref": "index.txt::cnfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_cnoremap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cno[remap]",
+    "desc": "like \":noremap\" but for Command-line mode",
+    "doc_ref": "index.txt::cnoremap"
+  },
+  {
+    "id": "neovim.ex-command.colon_cnoreabbrev",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cnorea[bbrev]",
+    "desc": "like \":noreabbrev\" but for Command-line mode",
+    "doc_ref": "index.txt::cnoreabbrev"
+  },
+  {
+    "id": "neovim.ex-command.colon_cnoremenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cnoreme[nu]",
+    "desc": "like \":noremenu\" but for Command-line mode",
+    "doc_ref": "index.txt::cnoremenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_copy",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":co[py]",
+    "desc": "copy lines",
+    "doc_ref": "index.txt::copy"
+  },
+  {
+    "id": "neovim.ex-command.colon_colder",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":col[der]",
+    "desc": "go to older error list",
+    "doc_ref": "index.txt::colder"
+  },
+  {
+    "id": "neovim.ex-command.colon_colorscheme",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":colo[rscheme]",
+    "desc": "load a specific color scheme",
+    "doc_ref": "index.txt::colorscheme"
+  },
+  {
+    "id": "neovim.ex-command.colon_command",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":com[mand]",
+    "desc": "create user-defined command",
+    "doc_ref": "index.txt::command"
+  },
+  {
+    "id": "neovim.ex-command.colon_comclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":comc[lear]",
+    "desc": "clear all user-defined commands",
+    "doc_ref": "index.txt::comclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_compiler",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":comp[iler]",
+    "desc": "do settings for a specific compiler",
+    "doc_ref": "index.txt::compiler"
+  },
+  {
+    "id": "neovim.ex-command.colon_continue",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":con[tinue]",
+    "desc": "go back to :while",
+    "doc_ref": "index.txt::continue"
+  },
+  {
+    "id": "neovim.ex-command.colon_confirm",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":conf[irm]",
+    "desc": "prompt user when confirmation required",
+    "doc_ref": "index.txt::confirm"
+  },
+  {
+    "id": "neovim.ex-command.colon_const",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cons[t]",
+    "desc": "create a variable as a constant",
+    "doc_ref": "index.txt::const"
+  },
+  {
+    "id": "neovim.ex-command.colon_copen",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cope[n]",
+    "desc": "open quickfix window",
+    "doc_ref": "index.txt::copen"
+  },
+  {
+    "id": "neovim.ex-command.colon_cprevious",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cp[revious]",
+    "desc": "go to previous error",
+    "doc_ref": "index.txt::cprevious"
+  },
+  {
+    "id": "neovim.ex-command.colon_cpfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cpf[ile]",
+    "desc": "go to last error in previous file",
+    "doc_ref": "index.txt::cpfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_cquit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cq[uit]",
+    "desc": "quit Vim with an error code",
+    "doc_ref": "index.txt::cquit"
+  },
+  {
+    "id": "neovim.ex-command.colon_crewind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cr[ewind]",
+    "desc": "go to the specified error, default first one",
+    "doc_ref": "index.txt::crewind"
+  },
+  {
+    "id": "neovim.ex-command.colon_cunmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cu[nmap]",
+    "desc": "like \":unmap\" but for Command-line mode",
+    "doc_ref": "index.txt::cunmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_cunabbrev",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cuna[bbrev]",
+    "desc": "like \":unabbrev\" but for Command-line mode",
+    "doc_ref": "index.txt::cunabbrev"
+  },
+  {
+    "id": "neovim.ex-command.colon_cunmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cunme[nu]",
+    "desc": "remove menu for Command-line mode",
+    "doc_ref": "index.txt::cunmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_cwindow",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":cw[indow]",
+    "desc": "open or close quickfix window",
+    "doc_ref": "index.txt::cwindow"
+  },
+  {
+    "id": "neovim.ex-command.colon_delete",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":d[elete]",
+    "desc": "delete lines",
+    "doc_ref": "index.txt::delete"
+  },
+  {
+    "id": "neovim.ex-command.colon_debug",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":deb[ug]",
+    "desc": "run a command in debugging mode",
+    "doc_ref": "index.txt::debug"
+  },
+  {
+    "id": "neovim.ex-command.colon_debuggreedy",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":debugg[reedy]",
+    "desc": "read debug mode commands from normal input",
+    "doc_ref": "index.txt::debuggreedy"
+  },
+  {
+    "id": "neovim.ex-command.colon_defer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":defe[r]",
+    "desc": "call function when current function is done",
+    "doc_ref": "index.txt::defer"
+  },
+  {
+    "id": "neovim.ex-command.colon_delcommand",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":delc[ommand]",
+    "desc": "delete user-defined command",
+    "doc_ref": "index.txt::delcommand"
+  },
+  {
+    "id": "neovim.ex-command.colon_delfunction",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":delf[unction]",
+    "desc": "delete a user function",
+    "doc_ref": "index.txt::delfunction"
+  },
+  {
+    "id": "neovim.ex-command.colon_delmarks",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":delm[arks]",
+    "desc": "delete marks",
+    "doc_ref": "index.txt::delmarks"
+  },
+  {
+    "id": "neovim.ex-command.colon_detach",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":detach",
+    "desc": "detach the current UI",
+    "doc_ref": "index.txt::detach"
+  },
+  {
+    "id": "neovim.ex-command.colon_diffupdate",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":dif[fupdate]",
+    "desc": "update 'diff' buffers",
+    "doc_ref": "index.txt::diffupdate"
+  },
+  {
+    "id": "neovim.ex-command.colon_diffget",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":diffg[et]",
+    "desc": "remove differences in current buffer",
+    "doc_ref": "index.txt::diffget"
+  },
+  {
+    "id": "neovim.ex-command.colon_diffoff",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":diffo[ff]",
+    "desc": "switch off diff mode",
+    "doc_ref": "index.txt::diffoff"
+  },
+  {
+    "id": "neovim.ex-command.colon_diffpatch",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":diffp[atch]",
+    "desc": "apply a patch and show differences",
+    "doc_ref": "index.txt::diffpatch"
+  },
+  {
+    "id": "neovim.ex-command.colon_diffput",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":diffpu[t]",
+    "desc": "remove differences in other buffer",
+    "doc_ref": "index.txt::diffput"
+  },
+  {
+    "id": "neovim.ex-command.colon_diffsplit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":diffs[plit]",
+    "desc": "show differences with another file",
+    "doc_ref": "index.txt::diffsplit"
+  },
+  {
+    "id": "neovim.ex-command.colon_diffthis",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":difft[his]",
+    "desc": "make current window a diff window",
+    "doc_ref": "index.txt::diffthis"
+  },
+  {
+    "id": "neovim.ex-command.colon_digraphs",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":dig[raphs]",
+    "desc": "show or enter digraphs",
+    "doc_ref": "index.txt::digraphs"
+  },
+  {
+    "id": "neovim.ex-command.colon_display",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":di[splay]",
+    "desc": "display registers",
+    "doc_ref": "index.txt::display"
+  },
+  {
+    "id": "neovim.ex-command.colon_djump",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":dj[ump]",
+    "desc": "jump to #define",
+    "doc_ref": "index.txt::djump"
+  },
+  {
+    "id": "neovim.ex-command.colon_dl",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":dl",
+    "desc": "short for |:delete| with the 'l' flag",
+    "doc_ref": "index.txt::dl"
+  },
+  {
+    "id": "neovim.ex-command.colon_dlist",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":dli[st]",
+    "desc": "list #defines",
+    "doc_ref": "index.txt::dlist"
+  },
+  {
+    "id": "neovim.ex-command.colon_doautocmd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":do[autocmd]",
+    "desc": "apply autocommands to current buffer",
+    "doc_ref": "index.txt::doautocmd"
+  },
+  {
+    "id": "neovim.ex-command.colon_doautoall",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":doautoa[ll]",
+    "desc": "apply autocommands for all loaded buffers",
+    "doc_ref": "index.txt::doautoall"
+  },
+  {
+    "id": "neovim.ex-command.colon_dp",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":d[elete]p",
+    "desc": "short for |:delete| with the 'p' flag",
+    "doc_ref": "index.txt::dp"
+  },
+  {
+    "id": "neovim.ex-command.colon_drop",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":dr[op]",
+    "desc": "jump to window editing file or edit file in",
+    "doc_ref": "index.txt::drop"
+  },
+  {
+    "id": "neovim.ex-command.colon_dsearch",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ds[earch]",
+    "desc": "list one #define",
+    "doc_ref": "index.txt::dsearch"
+  },
+  {
+    "id": "neovim.ex-command.colon_dsplit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":dsp[lit]",
+    "desc": "split window and jump to #define",
+    "doc_ref": "index.txt::dsplit"
+  },
+  {
+    "id": "neovim.ex-command.colon_edit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":e[dit]",
+    "desc": "edit a file",
+    "doc_ref": "index.txt::edit"
+  },
+  {
+    "id": "neovim.ex-command.colon_earlier",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ea[rlier]",
+    "desc": "go to older change, undo",
+    "doc_ref": "index.txt::earlier"
+  },
+  {
+    "id": "neovim.ex-command.colon_echo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ec[ho]",
+    "desc": "echoes the result of expressions",
+    "doc_ref": "index.txt::echo"
+  },
+  {
+    "id": "neovim.ex-command.colon_echoerr",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":echoe[rr]",
+    "desc": "like :echo, show like an error and use history",
+    "doc_ref": "index.txt::echoerr"
+  },
+  {
+    "id": "neovim.ex-command.colon_echohl",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":echoh[l]",
+    "desc": "set highlighting for echo commands",
+    "doc_ref": "index.txt::echohl"
+  },
+  {
+    "id": "neovim.ex-command.colon_echomsg",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":echom[sg]",
+    "desc": "same as :echo, put message in history",
+    "doc_ref": "index.txt::echomsg"
+  },
+  {
+    "id": "neovim.ex-command.colon_echon",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":echon",
+    "desc": "same as :echo, but without <EOL>",
+    "doc_ref": "index.txt::echon"
+  },
+  {
+    "id": "neovim.ex-command.colon_else",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":el[se]",
+    "desc": "part of an :if command",
+    "doc_ref": "index.txt::else"
+  },
+  {
+    "id": "neovim.ex-command.colon_elseif",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":elsei[f]",
+    "desc": "part of an :if command",
+    "doc_ref": "index.txt::elseif"
+  },
+  {
+    "id": "neovim.ex-command.colon_emenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":em[enu]",
+    "desc": "execute a menu by name",
+    "doc_ref": "index.txt::emenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_endif",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":en[dif]",
+    "desc": "end previous :if",
+    "doc_ref": "index.txt::endif"
+  },
+  {
+    "id": "neovim.ex-command.colon_endfor",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":endfo[r]",
+    "desc": "end previous :for",
+    "doc_ref": "index.txt::endfor"
+  },
+  {
+    "id": "neovim.ex-command.colon_endfunction",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":endf[unction]",
+    "desc": "end of a user function started with :function",
+    "doc_ref": "index.txt::endfunction"
+  },
+  {
+    "id": "neovim.ex-command.colon_endtry",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":endt[ry]",
+    "desc": "end previous :try",
+    "doc_ref": "index.txt::endtry"
+  },
+  {
+    "id": "neovim.ex-command.colon_endwhile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":endw[hile]",
+    "desc": "end previous :while",
+    "doc_ref": "index.txt::endwhile"
+  },
+  {
+    "id": "neovim.ex-command.colon_enew",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ene[w]",
+    "desc": "edit a new, unnamed buffer",
+    "doc_ref": "index.txt::enew"
+  },
+  {
+    "id": "neovim.ex-command.colon_eval",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ev[al]",
+    "desc": "evaluate an expression and discard the result",
+    "doc_ref": "index.txt::eval"
+  },
+  {
+    "id": "neovim.ex-command.colon_ex",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ex",
+    "desc": "same as \":edit\"",
+    "doc_ref": "index.txt::ex"
+  },
+  {
+    "id": "neovim.ex-command.colon_execute",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":exe[cute]",
+    "desc": "execute result of expressions",
+    "doc_ref": "index.txt::execute"
+  },
+  {
+    "id": "neovim.ex-command.colon_exit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":exi[t]",
+    "desc": "same as \":xit\"",
+    "doc_ref": "index.txt::exit"
+  },
+  {
+    "id": "neovim.ex-command.colon_exusage",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":exu[sage]",
+    "desc": "overview of Ex commands",
+    "doc_ref": "index.txt::exusage"
+  },
+  {
+    "id": "neovim.ex-command.colon_fclose",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":fc[lose]",
+    "desc": "close floating window",
+    "doc_ref": "index.txt::fclose"
+  },
+  {
+    "id": "neovim.ex-command.colon_file",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":f[ile]",
+    "desc": "show or set the current file name",
+    "doc_ref": "index.txt::file"
+  },
+  {
+    "id": "neovim.ex-command.colon_files",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":files",
+    "desc": "list all files in the buffer list",
+    "doc_ref": "index.txt::files"
+  },
+  {
+    "id": "neovim.ex-command.colon_filetype",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":filet[ype]",
+    "desc": "switch file type detection on/off",
+    "doc_ref": "index.txt::filetype"
+  },
+  {
+    "id": "neovim.ex-command.colon_filter",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":filt[er]",
+    "desc": "filter output of following command",
+    "doc_ref": "index.txt::filter"
+  },
+  {
+    "id": "neovim.ex-command.colon_find",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":fin[d]",
+    "desc": "find file in 'path' and edit it",
+    "doc_ref": "index.txt::find"
+  },
+  {
+    "id": "neovim.ex-command.colon_finally",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":fina[lly]",
+    "desc": "part of a :try command",
+    "doc_ref": "index.txt::finally"
+  },
+  {
+    "id": "neovim.ex-command.colon_finish",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":fini[sh]",
+    "desc": "quit sourcing a Vim script",
+    "doc_ref": "index.txt::finish"
+  },
+  {
+    "id": "neovim.ex-command.colon_first",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":fir[st]",
+    "desc": "go to the first file in the argument list",
+    "doc_ref": "index.txt::first"
+  },
+  {
+    "id": "neovim.ex-command.colon_fold",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":fo[ld]",
+    "desc": "create a fold",
+    "doc_ref": "index.txt::fold"
+  },
+  {
+    "id": "neovim.ex-command.colon_foldclose",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":foldc[lose]",
+    "desc": "close folds",
+    "doc_ref": "index.txt::foldclose"
+  },
+  {
+    "id": "neovim.ex-command.colon_folddoopen",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":foldd[oopen]",
+    "desc": "execute command on lines not in a closed fold",
+    "doc_ref": "index.txt::folddoopen"
+  },
+  {
+    "id": "neovim.ex-command.colon_folddoclosed",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":folddoc[losed]",
+    "desc": "execute command on lines in a closed fold",
+    "doc_ref": "index.txt::folddoclosed"
+  },
+  {
+    "id": "neovim.ex-command.colon_foldopen",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":foldo[pen]",
+    "desc": "open folds",
+    "doc_ref": "index.txt::foldopen"
+  },
+  {
+    "id": "neovim.ex-command.colon_for",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":for",
+    "desc": "for loop",
+    "doc_ref": "index.txt::for"
+  },
+  {
+    "id": "neovim.ex-command.colon_function",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":fu[nction]",
+    "desc": "define a user function",
+    "doc_ref": "index.txt::function"
+  },
+  {
+    "id": "neovim.ex-command.colon_global",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":g[lobal]",
+    "desc": "execute commands for matching lines",
+    "doc_ref": "index.txt::global"
+  },
+  {
+    "id": "neovim.ex-command.colon_goto",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":go[to]",
+    "desc": "go to byte in the buffer",
+    "doc_ref": "index.txt::goto"
+  },
+  {
+    "id": "neovim.ex-command.colon_grep",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":gr[ep]",
+    "desc": "run 'grepprg' and jump to first match",
+    "doc_ref": "index.txt::grep"
+  },
+  {
+    "id": "neovim.ex-command.colon_grepadd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":grepa[dd]",
+    "desc": "like :grep, but append to current list",
+    "doc_ref": "index.txt::grepadd"
+  },
+  {
+    "id": "neovim.ex-command.colon_gui",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":gu[i]",
+    "desc": "start the GUI",
+    "doc_ref": "index.txt::gui"
+  },
+  {
+    "id": "neovim.ex-command.colon_gvim",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":gv[im]",
+    "desc": "start the GUI",
+    "doc_ref": "index.txt::gvim"
+  },
+  {
+    "id": "neovim.ex-command.colon_help",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":h[elp]",
+    "desc": "open a help window",
+    "doc_ref": "index.txt::help"
+  },
+  {
+    "id": "neovim.ex-command.colon_helpclose",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":helpc[lose]",
+    "desc": "close one help window",
+    "doc_ref": "index.txt::helpclose"
+  },
+  {
+    "id": "neovim.ex-command.colon_helpgrep",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":helpg[rep]",
+    "desc": "like \":grep\" but searches help files",
+    "doc_ref": "index.txt::helpgrep"
+  },
+  {
+    "id": "neovim.ex-command.colon_helptags",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":helpt[ags]",
+    "desc": "generate help tags for a directory",
+    "doc_ref": "index.txt::helptags"
+  },
+  {
+    "id": "neovim.ex-command.colon_highlight",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":hi[ghlight]",
+    "desc": "specify highlighting methods",
+    "doc_ref": "index.txt::highlight"
+  },
+  {
+    "id": "neovim.ex-command.colon_hide",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":hid[e]",
+    "desc": "hide current buffer for a command",
+    "doc_ref": "index.txt::hide"
+  },
+  {
+    "id": "neovim.ex-command.colon_history",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":his[tory]",
+    "desc": "print a history list",
+    "doc_ref": "index.txt::history"
+  },
+  {
+    "id": "neovim.ex-command.colon_horizontal",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":hor[izontal]",
+    "desc": "following window command work horizontally",
+    "doc_ref": "index.txt::horizontal"
+  },
+  {
+    "id": "neovim.ex-command.colon_insert",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":i[nsert]",
+    "desc": "insert text",
+    "doc_ref": "index.txt::insert"
+  },
+  {
+    "id": "neovim.ex-command.colon_iabbrev",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ia[bbrev]",
+    "desc": "like \":abbrev\" but for Insert mode",
+    "doc_ref": "index.txt::iabbrev"
+  },
+  {
+    "id": "neovim.ex-command.colon_iabclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":iabc[lear]",
+    "desc": "like \":abclear\" but for Insert mode",
+    "doc_ref": "index.txt::iabclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_if",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":if",
+    "desc": "execute commands when condition met",
+    "doc_ref": "index.txt::if"
+  },
+  {
+    "id": "neovim.ex-command.colon_ijump",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ij[ump]",
+    "desc": "jump to definition of identifier",
+    "doc_ref": "index.txt::ijump"
+  },
+  {
+    "id": "neovim.ex-command.colon_ilist",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":il[ist]",
+    "desc": "list lines where identifier matches",
+    "doc_ref": "index.txt::ilist"
+  },
+  {
+    "id": "neovim.ex-command.colon_imap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":im[ap]",
+    "desc": "like \":map\" but for Insert mode",
+    "doc_ref": "index.txt::imap"
+  },
+  {
+    "id": "neovim.ex-command.colon_imapclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":imapc[lear]",
+    "desc": "like \":mapclear\" but for Insert mode",
+    "doc_ref": "index.txt::imapclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_imenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ime[nu]",
+    "desc": "add menu for Insert mode",
+    "doc_ref": "index.txt::imenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_inoremap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ino[remap]",
+    "desc": "like \":noremap\" but for Insert mode",
+    "doc_ref": "index.txt::inoremap"
+  },
+  {
+    "id": "neovim.ex-command.colon_inoreabbrev",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":inorea[bbrev]",
+    "desc": "like \":noreabbrev\" but for Insert mode",
+    "doc_ref": "index.txt::inoreabbrev"
+  },
+  {
+    "id": "neovim.ex-command.colon_inoremenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":inoreme[nu]",
+    "desc": "like \":noremenu\" but for Insert mode",
+    "doc_ref": "index.txt::inoremenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_intro",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":int[ro]",
+    "desc": "print the introductory message",
+    "doc_ref": "index.txt::intro"
+  },
+  {
+    "id": "neovim.ex-command.colon_iput",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ip[ut]",
+    "desc": "like |:put|, but adjust the indent to the",
+    "doc_ref": "index.txt::iput"
+  },
+  {
+    "id": "neovim.ex-command.colon_isearch",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":is[earch]",
+    "desc": "list one line where identifier matches",
+    "doc_ref": "index.txt::isearch"
+  },
+  {
+    "id": "neovim.ex-command.colon_isplit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":isp[lit]",
+    "desc": "split window and jump to definition of",
+    "doc_ref": "index.txt::isplit"
+  },
+  {
+    "id": "neovim.ex-command.colon_iunmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":iu[nmap]",
+    "desc": "like \":unmap\" but for Insert mode",
+    "doc_ref": "index.txt::iunmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_iunabbrev",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":iuna[bbrev]",
+    "desc": "like \":unabbrev\" but for Insert mode",
+    "doc_ref": "index.txt::iunabbrev"
+  },
+  {
+    "id": "neovim.ex-command.colon_iunmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":iunme[nu]",
+    "desc": "remove menu for Insert mode",
+    "doc_ref": "index.txt::iunmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_join",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":j[oin]",
+    "desc": "join lines",
+    "doc_ref": "index.txt::join"
+  },
+  {
+    "id": "neovim.ex-command.colon_jumps",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ju[mps]",
+    "desc": "print the jump list",
+    "doc_ref": "index.txt::jumps"
+  },
+  {
+    "id": "neovim.ex-command.colon_k",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":k",
+    "desc": "set a mark",
+    "doc_ref": "index.txt::k"
+  },
+  {
+    "id": "neovim.ex-command.colon_keepalt",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":keepa[lt]",
+    "desc": "following command keeps the alternate file",
+    "doc_ref": "index.txt::keepalt"
+  },
+  {
+    "id": "neovim.ex-command.colon_keepmarks",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":kee[pmarks]",
+    "desc": "following command keeps marks where they are",
+    "doc_ref": "index.txt::keepmarks"
+  },
+  {
+    "id": "neovim.ex-command.colon_keepjumps",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":keepj[umps]",
+    "desc": "following command keeps jumplist and marks",
+    "doc_ref": "index.txt::keepjumps"
+  },
+  {
+    "id": "neovim.ex-command.colon_keeppatterns",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":keepp[atterns]",
+    "desc": "following command keeps search pattern history",
+    "doc_ref": "index.txt::keeppatterns"
+  },
+  {
+    "id": "neovim.ex-command.colon_lnext",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lN[ext]",
+    "desc": "go to previous entry in location list",
+    "doc_ref": "index.txt::lNext"
+  },
+  {
+    "id": "neovim.ex-command.colon_lnfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lNf[ile]",
+    "desc": "go to last entry in previous file",
+    "doc_ref": "index.txt::lNfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_list",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":l[ist]",
+    "desc": "print lines",
+    "doc_ref": "index.txt::list"
+  },
+  {
+    "id": "neovim.ex-command.colon_labove",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lab[ove]",
+    "desc": "go to location above current line",
+    "doc_ref": "index.txt::labove"
+  },
+  {
+    "id": "neovim.ex-command.colon_laddexpr",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lad[dexpr]",
+    "desc": "add locations from expr",
+    "doc_ref": "index.txt::laddexpr"
+  },
+  {
+    "id": "neovim.ex-command.colon_laddbuffer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":laddb[uffer]",
+    "desc": "add locations from buffer",
+    "doc_ref": "index.txt::laddbuffer"
+  },
+  {
+    "id": "neovim.ex-command.colon_laddfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":laddf[ile]",
+    "desc": "add locations to current location list",
+    "doc_ref": "index.txt::laddfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_lafter",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":laf[ter]",
+    "desc": "go to location after current cursor",
+    "doc_ref": "index.txt::lafter"
+  },
+  {
+    "id": "neovim.ex-command.colon_last",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":la[st]",
+    "desc": "go to the last file in the argument list",
+    "doc_ref": "index.txt::last"
+  },
+  {
+    "id": "neovim.ex-command.colon_language",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lan[guage]",
+    "desc": "set the language (locale)",
+    "doc_ref": "index.txt::language"
+  },
+  {
+    "id": "neovim.ex-command.colon_later",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lat[er]",
+    "desc": "go to newer change, redo",
+    "doc_ref": "index.txt::later"
+  },
+  {
+    "id": "neovim.ex-command.colon_lbefore",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lbe[fore]",
+    "desc": "go to location before current cursor",
+    "doc_ref": "index.txt::lbefore"
+  },
+  {
+    "id": "neovim.ex-command.colon_lbelow",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lbel[ow]",
+    "desc": "go to location below current line",
+    "doc_ref": "index.txt::lbelow"
+  },
+  {
+    "id": "neovim.ex-command.colon_lbottom",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lbo[ttom]",
+    "desc": "scroll to the bottom of the location window",
+    "doc_ref": "index.txt::lbottom"
+  },
+  {
+    "id": "neovim.ex-command.colon_lbuffer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lb[uffer]",
+    "desc": "parse locations and jump to first location",
+    "doc_ref": "index.txt::lbuffer"
+  },
+  {
+    "id": "neovim.ex-command.colon_lcd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lc[d]",
+    "desc": "change directory locally",
+    "doc_ref": "index.txt::lcd"
+  },
+  {
+    "id": "neovim.ex-command.colon_lchdir",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lch[dir]",
+    "desc": "change directory locally",
+    "doc_ref": "index.txt::lchdir"
+  },
+  {
+    "id": "neovim.ex-command.colon_lclose",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lcl[ose]",
+    "desc": "close location window",
+    "doc_ref": "index.txt::lclose"
+  },
+  {
+    "id": "neovim.ex-command.colon_ldo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ld[o]",
+    "desc": "execute command in valid location list entries",
+    "doc_ref": "index.txt::ldo"
+  },
+  {
+    "id": "neovim.ex-command.colon_lfdo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lfd[o]",
+    "desc": "execute command in each file in location list",
+    "doc_ref": "index.txt::lfdo"
+  },
+  {
+    "id": "neovim.ex-command.colon_left",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":le[ft]",
+    "desc": "left align lines",
+    "doc_ref": "index.txt::left"
+  },
+  {
+    "id": "neovim.ex-command.colon_leftabove",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lefta[bove]",
+    "desc": "make split window appear left or above",
+    "doc_ref": "index.txt::leftabove"
+  },
+  {
+    "id": "neovim.ex-command.colon_let",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":let",
+    "desc": "assign a value to a variable or option",
+    "doc_ref": "index.txt::let"
+  },
+  {
+    "id": "neovim.ex-command.colon_lexpr",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lex[pr]",
+    "desc": "read locations from expr and jump to first",
+    "doc_ref": "index.txt::lexpr"
+  },
+  {
+    "id": "neovim.ex-command.colon_lfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lf[ile]",
+    "desc": "read file with locations and jump to first",
+    "doc_ref": "index.txt::lfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_lfirst",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lfir[st]",
+    "desc": "go to the specified location, default first one",
+    "doc_ref": "index.txt::lfirst"
+  },
+  {
+    "id": "neovim.ex-command.colon_lgetbuffer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lgetb[uffer]",
+    "desc": "get locations from buffer",
+    "doc_ref": "index.txt::lgetbuffer"
+  },
+  {
+    "id": "neovim.ex-command.colon_lgetexpr",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lgete[xpr]",
+    "desc": "get locations from expr",
+    "doc_ref": "index.txt::lgetexpr"
+  },
+  {
+    "id": "neovim.ex-command.colon_lgetfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lg[etfile]",
+    "desc": "read file with locations",
+    "doc_ref": "index.txt::lgetfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_lgrep",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lgr[ep]",
+    "desc": "run 'grepprg' and jump to first match",
+    "doc_ref": "index.txt::lgrep"
+  },
+  {
+    "id": "neovim.ex-command.colon_lgrepadd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lgrepa[dd]",
+    "desc": "like :grep, but append to current list",
+    "doc_ref": "index.txt::lgrepadd"
+  },
+  {
+    "id": "neovim.ex-command.colon_lhelpgrep",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lh[elpgrep]",
+    "desc": "like \":helpgrep\" but uses location list",
+    "doc_ref": "index.txt::lhelpgrep"
+  },
+  {
+    "id": "neovim.ex-command.colon_lhistory",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lhi[story]",
+    "desc": "list the location lists",
+    "doc_ref": "index.txt::lhistory"
+  },
+  {
+    "id": "neovim.ex-command.colon_ll",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ll",
+    "desc": "go to specific location",
+    "doc_ref": "index.txt::ll"
+  },
+  {
+    "id": "neovim.ex-command.colon_llast",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lla[st]",
+    "desc": "go to the specified location, default last one",
+    "doc_ref": "index.txt::llast"
+  },
+  {
+    "id": "neovim.ex-command.colon_llist",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lli[st]",
+    "desc": "list all locations",
+    "doc_ref": "index.txt::llist"
+  },
+  {
+    "id": "neovim.ex-command.colon_lmake",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lmak[e]",
+    "desc": "execute external command 'makeprg' and parse",
+    "doc_ref": "index.txt::lmake"
+  },
+  {
+    "id": "neovim.ex-command.colon_lmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lm[ap]",
+    "desc": "like \":map!\" but includes Lang-Arg mode",
+    "doc_ref": "index.txt::lmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_lmapclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lmapc[lear]",
+    "desc": "like \":mapclear!\" but includes Lang-Arg mode",
+    "doc_ref": "index.txt::lmapclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_lnext_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lne[xt]",
+    "desc": "go to next location",
+    "doc_ref": "index.txt::lnext"
+  },
+  {
+    "id": "neovim.ex-command.colon_lnewer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lnew[er]",
+    "desc": "go to newer location list",
+    "doc_ref": "index.txt::lnewer"
+  },
+  {
+    "id": "neovim.ex-command.colon_lnfile_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lnf[ile]",
+    "desc": "go to first location in next file",
+    "doc_ref": "index.txt::lnfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_lnoremap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ln[oremap]",
+    "desc": "like \":noremap!\" but includes Lang-Arg mode",
+    "doc_ref": "index.txt::lnoremap"
+  },
+  {
+    "id": "neovim.ex-command.colon_loadkeymap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":loadk[eymap]",
+    "desc": "load the following keymaps until EOF",
+    "doc_ref": "index.txt::loadkeymap"
+  },
+  {
+    "id": "neovim.ex-command.colon_loadview",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lo[adview]",
+    "desc": "load view for current window from a file",
+    "doc_ref": "index.txt::loadview"
+  },
+  {
+    "id": "neovim.ex-command.colon_lockmarks",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":loc[kmarks]",
+    "desc": "following command keeps marks where they are",
+    "doc_ref": "index.txt::lockmarks"
+  },
+  {
+    "id": "neovim.ex-command.colon_lockvar",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lockv[ar]",
+    "desc": "lock variables",
+    "doc_ref": "index.txt::lockvar"
+  },
+  {
+    "id": "neovim.ex-command.colon_log",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":log",
+    "desc": "view a log file",
+    "doc_ref": "index.txt::log"
+  },
+  {
+    "id": "neovim.ex-command.colon_lolder",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lol[der]",
+    "desc": "go to older location list",
+    "doc_ref": "index.txt::lolder"
+  },
+  {
+    "id": "neovim.ex-command.colon_lopen",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lop[en]",
+    "desc": "open location window",
+    "doc_ref": "index.txt::lopen"
+  },
+  {
+    "id": "neovim.ex-command.colon_lprevious",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lp[revious]",
+    "desc": "go to previous location",
+    "doc_ref": "index.txt::lprevious"
+  },
+  {
+    "id": "neovim.ex-command.colon_lpfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lpf[ile]",
+    "desc": "go to last location in previous file",
+    "doc_ref": "index.txt::lpfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_lrewind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lr[ewind]",
+    "desc": "go to the specified location, default first one",
+    "doc_ref": "index.txt::lrewind"
+  },
+  {
+    "id": "neovim.ex-command.colon_ls",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ls",
+    "desc": "list all buffers",
+    "doc_ref": "index.txt::ls"
+  },
+  {
+    "id": "neovim.ex-command.colon_lsp",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lsp",
+    "desc": "language server protocol",
+    "doc_ref": "index.txt::lsp"
+  },
+  {
+    "id": "neovim.ex-command.colon_ltag",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lt[ag]",
+    "desc": "jump to tag and add matching tags to the",
+    "doc_ref": "index.txt::ltag"
+  },
+  {
+    "id": "neovim.ex-command.colon_lunmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lu[nmap]",
+    "desc": "like \":unmap!\" but includes Lang-Arg mode",
+    "doc_ref": "index.txt::lunmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_lua",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lua",
+    "desc": "execute |Lua| command",
+    "doc_ref": "index.txt::lua"
+  },
+  {
+    "id": "neovim.ex-command.colon_luado",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":luad[o]",
+    "desc": "execute Lua command for each line",
+    "doc_ref": "index.txt::luado"
+  },
+  {
+    "id": "neovim.ex-command.colon_luafile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":luaf[ile]",
+    "desc": "execute |Lua| script file",
+    "doc_ref": "index.txt::luafile"
+  },
+  {
+    "id": "neovim.ex-command.colon_lvimgrep",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lv[imgrep]",
+    "desc": "search for pattern in files",
+    "doc_ref": "index.txt::lvimgrep"
+  },
+  {
+    "id": "neovim.ex-command.colon_lvimgrepadd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lvimgrepa[dd]",
+    "desc": "like :vimgrep, but append to current list",
+    "doc_ref": "index.txt::lvimgrepadd"
+  },
+  {
+    "id": "neovim.ex-command.colon_lwindow",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":lw[indow]",
+    "desc": "open or close location window",
+    "doc_ref": "index.txt::lwindow"
+  },
+  {
+    "id": "neovim.ex-command.colon_move",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":m[ove]",
+    "desc": "move lines",
+    "doc_ref": "index.txt::move"
+  },
+  {
+    "id": "neovim.ex-command.colon_mark",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ma[rk]",
+    "desc": "set a mark",
+    "doc_ref": "index.txt::mark"
+  },
+  {
+    "id": "neovim.ex-command.colon_make",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":mak[e]",
+    "desc": "execute external command 'makeprg' and parse",
+    "doc_ref": "index.txt::make"
+  },
+  {
+    "id": "neovim.ex-command.colon_map",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":map",
+    "desc": "show or enter a mapping",
+    "doc_ref": "index.txt::map"
+  },
+  {
+    "id": "neovim.ex-command.colon_mapclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":mapc[lear]",
+    "desc": "clear all mappings for Normal and Visual mode",
+    "doc_ref": "index.txt::mapclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_marks",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":marks",
+    "desc": "list all marks",
+    "doc_ref": "index.txt::marks"
+  },
+  {
+    "id": "neovim.ex-command.colon_match",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":mat[ch]",
+    "desc": "define a match to highlight",
+    "doc_ref": "index.txt::match"
+  },
+  {
+    "id": "neovim.ex-command.colon_menu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":me[nu]",
+    "desc": "enter a new menu item",
+    "doc_ref": "index.txt::menu"
+  },
+  {
+    "id": "neovim.ex-command.colon_menutranslate",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":menut[ranslate] add a menu translation item",
+    "desc": "",
+    "doc_ref": "index.txt::menutranslate"
+  },
+  {
+    "id": "neovim.ex-command.colon_messages",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":mes[sages]",
+    "desc": "view previously displayed messages",
+    "doc_ref": "index.txt::messages"
+  },
+  {
+    "id": "neovim.ex-command.colon_mkexrc",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":mk[exrc]",
+    "desc": "write current mappings and settings to a file",
+    "doc_ref": "index.txt::mkexrc"
+  },
+  {
+    "id": "neovim.ex-command.colon_mksession",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":mks[ession]",
+    "desc": "write session info to a file",
+    "doc_ref": "index.txt::mksession"
+  },
+  {
+    "id": "neovim.ex-command.colon_mkspell",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":mksp[ell]",
+    "desc": "produce .spl spell file",
+    "doc_ref": "index.txt::mkspell"
+  },
+  {
+    "id": "neovim.ex-command.colon_mkvimrc",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":mkv[imrc]",
+    "desc": "write current mappings and settings to a file",
+    "doc_ref": "index.txt::mkvimrc"
+  },
+  {
+    "id": "neovim.ex-command.colon_mkview",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":mkvie[w]",
+    "desc": "write view of current window to a file",
+    "doc_ref": "index.txt::mkview"
+  },
+  {
+    "id": "neovim.ex-command.colon_mode",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":mod[e]",
+    "desc": "show or change the screen mode",
+    "doc_ref": "index.txt::mode"
+  },
+  {
+    "id": "neovim.ex-command.colon_next_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":n[ext]",
+    "desc": "go to next file in the argument list",
+    "doc_ref": "index.txt::next"
+  },
+  {
+    "id": "neovim.ex-command.colon_new",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":new",
+    "desc": "create a new empty window",
+    "doc_ref": "index.txt::new"
+  },
+  {
+    "id": "neovim.ex-command.colon_nmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":nm[ap]",
+    "desc": "like \":map\" but for Normal mode",
+    "doc_ref": "index.txt::nmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_nmapclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":nmapc[lear]",
+    "desc": "clear all mappings for Normal mode",
+    "doc_ref": "index.txt::nmapclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_nmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":nme[nu]",
+    "desc": "add menu for Normal mode",
+    "doc_ref": "index.txt::nmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_nnoremap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":nn[oremap]",
+    "desc": "like \":noremap\" but for Normal mode",
+    "doc_ref": "index.txt::nnoremap"
+  },
+  {
+    "id": "neovim.ex-command.colon_nnoremenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":nnoreme[nu]",
+    "desc": "like \":noremenu\" but for Normal mode",
+    "doc_ref": "index.txt::nnoremenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_noautocmd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":noa[utocmd]",
+    "desc": "following commands don't trigger autocommands",
+    "doc_ref": "index.txt::noautocmd"
+  },
+  {
+    "id": "neovim.ex-command.colon_noremap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":no[remap]",
+    "desc": "enter a mapping that will not be remapped",
+    "doc_ref": "index.txt::noremap"
+  },
+  {
+    "id": "neovim.ex-command.colon_nohlsearch",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":noh[lsearch]",
+    "desc": "suspend 'hlsearch' highlighting",
+    "doc_ref": "index.txt::nohlsearch"
+  },
+  {
+    "id": "neovim.ex-command.colon_noreabbrev",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":norea[bbrev]",
+    "desc": "enter an abbreviation that will not be",
+    "doc_ref": "index.txt::noreabbrev"
+  },
+  {
+    "id": "neovim.ex-command.colon_noremenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":noreme[nu]",
+    "desc": "enter a menu that will not be remapped",
+    "doc_ref": "index.txt::noremenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_normal",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":norm[al]",
+    "desc": "execute Normal mode commands",
+    "doc_ref": "index.txt::normal"
+  },
+  {
+    "id": "neovim.ex-command.colon_noswapfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":nos[wapfile]",
+    "desc": "following commands don't create a swap file",
+    "doc_ref": "index.txt::noswapfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_number",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":nu[mber]",
+    "desc": "print lines with line number",
+    "doc_ref": "index.txt::number"
+  },
+  {
+    "id": "neovim.ex-command.colon_nunmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":nun[map]",
+    "desc": "like \":unmap\" but for Normal mode",
+    "doc_ref": "index.txt::nunmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_nunmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":nunme[nu]",
+    "desc": "remove menu for Normal mode",
+    "doc_ref": "index.txt::nunmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_oldfiles",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ol[dfiles]",
+    "desc": "list files that have marks in the |shada| file",
+    "doc_ref": "index.txt::oldfiles"
+  },
+  {
+    "id": "neovim.ex-command.colon_omap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":om[ap]",
+    "desc": "like \":map\" but for Operator-pending mode",
+    "doc_ref": "index.txt::omap"
+  },
+  {
+    "id": "neovim.ex-command.colon_omapclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":omapc[lear]",
+    "desc": "remove all mappings for Operator-pending mode",
+    "doc_ref": "index.txt::omapclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_omenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ome[nu]",
+    "desc": "add menu for Operator-pending mode",
+    "doc_ref": "index.txt::omenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_only",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":on[ly]",
+    "desc": "close all windows except the current one",
+    "doc_ref": "index.txt::only"
+  },
+  {
+    "id": "neovim.ex-command.colon_onoremap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ono[remap]",
+    "desc": "like \":noremap\" but for Operator-pending mode",
+    "doc_ref": "index.txt::onoremap"
+  },
+  {
+    "id": "neovim.ex-command.colon_onoremenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":onoreme[nu]",
+    "desc": "like \":noremenu\" but for Operator-pending mode",
+    "doc_ref": "index.txt::onoremenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_options",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":opt[ions]",
+    "desc": "open the options-window",
+    "doc_ref": "index.txt::options"
+  },
+  {
+    "id": "neovim.ex-command.colon_ounmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ou[nmap]",
+    "desc": "like \":unmap\" but for Operator-pending mode",
+    "doc_ref": "index.txt::ounmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_ounmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ounme[nu]",
+    "desc": "remove menu for Operator-pending mode",
+    "doc_ref": "index.txt::ounmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_packadd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pa[ckadd]",
+    "desc": "add a plugin from 'packpath'",
+    "doc_ref": "index.txt::packadd"
+  },
+  {
+    "id": "neovim.ex-command.colon_packdel",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":packd[el]",
+    "desc": "remove |vim.pack| plugins",
+    "doc_ref": "index.txt::packdel"
+  },
+  {
+    "id": "neovim.ex-command.colon_packloadall",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":packl[oadall]",
+    "desc": "load all packages under 'packpath'",
+    "doc_ref": "index.txt::packloadall"
+  },
+  {
+    "id": "neovim.ex-command.colon_packupdate",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":packu[pdate]",
+    "desc": "update |vim.pack| plugins",
+    "doc_ref": "index.txt::packupdate"
+  },
+  {
+    "id": "neovim.ex-command.colon_pbuffer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pb[uffer]",
+    "desc": "edit buffer in the preview window",
+    "doc_ref": "index.txt::pbuffer"
+  },
+  {
+    "id": "neovim.ex-command.colon_pclose",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pc[lose]",
+    "desc": "close preview window",
+    "doc_ref": "index.txt::pclose"
+  },
+  {
+    "id": "neovim.ex-command.colon_pedit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ped[it]",
+    "desc": "edit file in the preview window",
+    "doc_ref": "index.txt::pedit"
+  },
+  {
+    "id": "neovim.ex-command.colon_perl",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pe[rl]",
+    "desc": "execute perl command",
+    "doc_ref": "index.txt::perl"
+  },
+  {
+    "id": "neovim.ex-command.colon_perldo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":perld[o]",
+    "desc": "execute perl command for each line",
+    "doc_ref": "index.txt::perldo"
+  },
+  {
+    "id": "neovim.ex-command.colon_perlfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":perlf[ile]",
+    "desc": "execute perl script file",
+    "doc_ref": "index.txt::perlfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_print",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":p[rint]",
+    "desc": "print lines",
+    "doc_ref": "index.txt::print"
+  },
+  {
+    "id": "neovim.ex-command.colon_profdel",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":profd[el]",
+    "desc": "stop profiling a function or script",
+    "doc_ref": "index.txt::profdel"
+  },
+  {
+    "id": "neovim.ex-command.colon_profile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":prof[ile]",
+    "desc": "profiling functions and scripts",
+    "doc_ref": "index.txt::profile"
+  },
+  {
+    "id": "neovim.ex-command.colon_pop",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":po[p]",
+    "desc": "jump to older entry in tag stack",
+    "doc_ref": "index.txt::pop"
+  },
+  {
+    "id": "neovim.ex-command.colon_popup",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":popu[p]",
+    "desc": "popup a menu by name",
+    "doc_ref": "index.txt::popup"
+  },
+  {
+    "id": "neovim.ex-command.colon_ppop",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pp[op]",
+    "desc": "\":pop\" in preview window",
+    "doc_ref": "index.txt::ppop"
+  },
+  {
+    "id": "neovim.ex-command.colon_preserve",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pre[serve]",
+    "desc": "write all text to swap file",
+    "doc_ref": "index.txt::preserve"
+  },
+  {
+    "id": "neovim.ex-command.colon_previous",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":prev[ious]",
+    "desc": "go to previous file in argument list",
+    "doc_ref": "index.txt::previous"
+  },
+  {
+    "id": "neovim.ex-command.colon_psearch",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ps[earch]",
+    "desc": "like \":ijump\" but shows match in preview window",
+    "doc_ref": "index.txt::psearch"
+  },
+  {
+    "id": "neovim.ex-command.colon_ptag",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pt[ag]",
+    "desc": "show tag in preview window",
+    "doc_ref": "index.txt::ptag"
+  },
+  {
+    "id": "neovim.ex-command.colon_ptnext",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ptN[ext]",
+    "desc": "|:tNext| in preview window",
+    "doc_ref": "index.txt::ptNext"
+  },
+  {
+    "id": "neovim.ex-command.colon_ptfirst",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ptf[irst]",
+    "desc": "|:trewind| in preview window",
+    "doc_ref": "index.txt::ptfirst"
+  },
+  {
+    "id": "neovim.ex-command.colon_ptjump",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ptj[ump]",
+    "desc": "|:tjump| and show tag in preview window",
+    "doc_ref": "index.txt::ptjump"
+  },
+  {
+    "id": "neovim.ex-command.colon_ptlast",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ptl[ast]",
+    "desc": "|:tlast| in preview window",
+    "doc_ref": "index.txt::ptlast"
+  },
+  {
+    "id": "neovim.ex-command.colon_ptnext_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ptn[ext]",
+    "desc": "|:tnext| in preview window",
+    "doc_ref": "index.txt::ptnext"
+  },
+  {
+    "id": "neovim.ex-command.colon_ptprevious",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ptp[revious]",
+    "desc": "|:tprevious| in preview window",
+    "doc_ref": "index.txt::ptprevious"
+  },
+  {
+    "id": "neovim.ex-command.colon_ptrewind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ptr[ewind]",
+    "desc": "|:trewind| in preview window",
+    "doc_ref": "index.txt::ptrewind"
+  },
+  {
+    "id": "neovim.ex-command.colon_ptselect",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pts[elect]",
+    "desc": "|:tselect| and show tag in preview window",
+    "doc_ref": "index.txt::ptselect"
+  },
+  {
+    "id": "neovim.ex-command.colon_put",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pu[t]",
+    "desc": "insert contents of register in the text",
+    "doc_ref": "index.txt::put"
+  },
+  {
+    "id": "neovim.ex-command.colon_pwd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pw[d]",
+    "desc": "print current directory",
+    "doc_ref": "index.txt::pwd"
+  },
+  {
+    "id": "neovim.ex-command.colon_py3",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":py3",
+    "desc": "execute Python 3 command",
+    "doc_ref": "index.txt::py3"
+  },
+  {
+    "id": "neovim.ex-command.colon_python3",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":python3",
+    "desc": "same as :py3",
+    "doc_ref": "index.txt::python3"
+  },
+  {
+    "id": "neovim.ex-command.colon_py3do",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":py3d[o]",
+    "desc": "execute Python 3 command for each line",
+    "doc_ref": "index.txt::py3do"
+  },
+  {
+    "id": "neovim.ex-command.colon_py3file",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":py3f[ile]",
+    "desc": "execute Python 3 script file",
+    "doc_ref": "index.txt::py3file"
+  },
+  {
+    "id": "neovim.ex-command.colon_python",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":py[thon]",
+    "desc": "execute Python command",
+    "doc_ref": "index.txt::python"
+  },
+  {
+    "id": "neovim.ex-command.colon_pydo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pyd[o]",
+    "desc": "execute Python command for each line",
+    "doc_ref": "index.txt::pydo"
+  },
+  {
+    "id": "neovim.ex-command.colon_pyfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pyf[ile]",
+    "desc": "execute Python script file",
+    "doc_ref": "index.txt::pyfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_pyx",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pyx",
+    "desc": "execute |python_x| command",
+    "doc_ref": "index.txt::pyx"
+  },
+  {
+    "id": "neovim.ex-command.colon_pythonx",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pythonx",
+    "desc": "same as :pyx",
+    "doc_ref": "index.txt::pythonx"
+  },
+  {
+    "id": "neovim.ex-command.colon_pyxdo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pyxd[o]",
+    "desc": "execute |python_x| command for each line",
+    "doc_ref": "index.txt::pyxdo"
+  },
+  {
+    "id": "neovim.ex-command.colon_pyxfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":pyxf[ile]",
+    "desc": "execute |python_x| script file",
+    "doc_ref": "index.txt::pyxfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_quit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":q[uit]",
+    "desc": "quit current window (when one window quit Vim)",
+    "doc_ref": "index.txt::quit"
+  },
+  {
+    "id": "neovim.ex-command.colon_quitall",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":quita[ll]",
+    "desc": "quit Vim",
+    "doc_ref": "index.txt::quitall"
+  },
+  {
+    "id": "neovim.ex-command.colon_qall",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":qa[ll]",
+    "desc": "quit Vim",
+    "doc_ref": "index.txt::qall"
+  },
+  {
+    "id": "neovim.ex-command.colon_read",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":r[ead]",
+    "desc": "read file into the text",
+    "doc_ref": "index.txt::read"
+  },
+  {
+    "id": "neovim.ex-command.colon_recover",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":rec[over]",
+    "desc": "recover a file from a swap file",
+    "doc_ref": "index.txt::recover"
+  },
+  {
+    "id": "neovim.ex-command.colon_redo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":red[o]",
+    "desc": "redo one undone change",
+    "doc_ref": "index.txt::redo"
+  },
+  {
+    "id": "neovim.ex-command.colon_redir",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":redi[r]",
+    "desc": "redirect messages to a file or register",
+    "doc_ref": "index.txt::redir"
+  },
+  {
+    "id": "neovim.ex-command.colon_redraw",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":redr[aw]",
+    "desc": "force a redraw of the display",
+    "doc_ref": "index.txt::redraw"
+  },
+  {
+    "id": "neovim.ex-command.colon_redrawstatus",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":redraws[tatus]",
+    "desc": "force a redraw of the status line(s) and",
+    "doc_ref": "index.txt::redrawstatus"
+  },
+  {
+    "id": "neovim.ex-command.colon_redrawtabline",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":redrawt[abline]  force a redraw of the tabline",
+    "desc": "",
+    "doc_ref": "index.txt::redrawtabline"
+  },
+  {
+    "id": "neovim.ex-command.colon_registers",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":reg[isters]",
+    "desc": "display the contents of registers",
+    "doc_ref": "index.txt::registers"
+  },
+  {
+    "id": "neovim.ex-command.colon_resize",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":res[ize]",
+    "desc": "change current window height",
+    "doc_ref": "index.txt::resize"
+  },
+  {
+    "id": "neovim.ex-command.colon_restart",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":restart",
+    "desc": "restart the Nvim server",
+    "doc_ref": "index.txt::restart"
+  },
+  {
+    "id": "neovim.ex-command.colon_retab",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ret[ab]",
+    "desc": "change tab size",
+    "doc_ref": "index.txt::retab"
+  },
+  {
+    "id": "neovim.ex-command.colon_return",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":retu[rn]",
+    "desc": "return from a user function",
+    "doc_ref": "index.txt::return"
+  },
+  {
+    "id": "neovim.ex-command.colon_rewind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":rew[ind]",
+    "desc": "go to the first file in the argument list",
+    "doc_ref": "index.txt::rewind"
+  },
+  {
+    "id": "neovim.ex-command.colon_right",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ri[ght]",
+    "desc": "right align text",
+    "doc_ref": "index.txt::right"
+  },
+  {
+    "id": "neovim.ex-command.colon_rightbelow",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":rightb[elow]",
+    "desc": "make split window appear right or below",
+    "doc_ref": "index.txt::rightbelow"
+  },
+  {
+    "id": "neovim.ex-command.colon_rshada",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":rsh[ada]",
+    "desc": "read from |shada| file",
+    "doc_ref": "index.txt::rshada"
+  },
+  {
+    "id": "neovim.ex-command.colon_ruby",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":rub[y]",
+    "desc": "execute Ruby command",
+    "doc_ref": "index.txt::ruby"
+  },
+  {
+    "id": "neovim.ex-command.colon_rubydo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":rubyd[o]",
+    "desc": "execute Ruby command for each line",
+    "doc_ref": "index.txt::rubydo"
+  },
+  {
+    "id": "neovim.ex-command.colon_rubyfile",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":rubyf[ile]",
+    "desc": "execute Ruby script file",
+    "doc_ref": "index.txt::rubyfile"
+  },
+  {
+    "id": "neovim.ex-command.colon_rundo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":rund[o]",
+    "desc": "read undo information from a file",
+    "doc_ref": "index.txt::rundo"
+  },
+  {
+    "id": "neovim.ex-command.colon_runtime",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ru[ntime]",
+    "desc": "source vim scripts in 'runtimepath'",
+    "doc_ref": "index.txt::runtime"
+  },
+  {
+    "id": "neovim.ex-command.colon_substitute",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":s[ubstitute]",
+    "desc": "find and replace text",
+    "doc_ref": "index.txt::substitute"
+  },
+  {
+    "id": "neovim.ex-command.colon_snext",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sN[ext]",
+    "desc": "split window and go to previous file in",
+    "doc_ref": "index.txt::sNext"
+  },
+  {
+    "id": "neovim.ex-command.colon_sandbox",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":san[dbox]",
+    "desc": "execute a command in the sandbox",
+    "doc_ref": "index.txt::sandbox"
+  },
+  {
+    "id": "neovim.ex-command.colon_sargument",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sa[rgument]",
+    "desc": "split window and go to specific file in",
+    "doc_ref": "index.txt::sargument"
+  },
+  {
+    "id": "neovim.ex-command.colon_sall",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sal[l]",
+    "desc": "open a window for each file in argument list",
+    "doc_ref": "index.txt::sall"
+  },
+  {
+    "id": "neovim.ex-command.colon_saveas",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sav[eas]",
+    "desc": "save file under another name.",
+    "doc_ref": "index.txt::saveas"
+  },
+  {
+    "id": "neovim.ex-command.colon_sbuffer",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sb[uffer]",
+    "desc": "split window and go to specific file in the",
+    "doc_ref": "index.txt::sbuffer"
+  },
+  {
+    "id": "neovim.ex-command.colon_sbnext",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sbN[ext]",
+    "desc": "split window and go to previous file in the",
+    "doc_ref": "index.txt::sbNext"
+  },
+  {
+    "id": "neovim.ex-command.colon_sball",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sba[ll]",
+    "desc": "open a window for each file in the buffer list",
+    "doc_ref": "index.txt::sball"
+  },
+  {
+    "id": "neovim.ex-command.colon_sbfirst",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sbf[irst]",
+    "desc": "split window and go to first file in the",
+    "doc_ref": "index.txt::sbfirst"
+  },
+  {
+    "id": "neovim.ex-command.colon_sblast",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sbl[ast]",
+    "desc": "split window and go to last file in buffer",
+    "doc_ref": "index.txt::sblast"
+  },
+  {
+    "id": "neovim.ex-command.colon_sbmodified",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sbm[odified]",
+    "desc": "split window and go to modified file in the",
+    "doc_ref": "index.txt::sbmodified"
+  },
+  {
+    "id": "neovim.ex-command.colon_sbnext_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sbn[ext]",
+    "desc": "split window and go to next file in the buffer",
+    "doc_ref": "index.txt::sbnext"
+  },
+  {
+    "id": "neovim.ex-command.colon_sbprevious",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sbp[revious]",
+    "desc": "split window and go to previous file in the",
+    "doc_ref": "index.txt::sbprevious"
+  },
+  {
+    "id": "neovim.ex-command.colon_sbrewind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sbr[ewind]",
+    "desc": "split window and go to first file in the",
+    "doc_ref": "index.txt::sbrewind"
+  },
+  {
+    "id": "neovim.ex-command.colon_scriptnames",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":scr[iptnames]",
+    "desc": "list names of all sourced Vim scripts",
+    "doc_ref": "index.txt::scriptnames"
+  },
+  {
+    "id": "neovim.ex-command.colon_scriptencoding",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":scripte[ncoding]  encoding used in sourced Vim script",
+    "desc": "",
+    "doc_ref": "index.txt::scriptencoding"
+  },
+  {
+    "id": "neovim.ex-command.colon_set",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":se[t]",
+    "desc": "show or set options",
+    "doc_ref": "index.txt::set"
+  },
+  {
+    "id": "neovim.ex-command.colon_setfiletype",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":setf[iletype]",
+    "desc": "set 'filetype', unless it was set already",
+    "doc_ref": "index.txt::setfiletype"
+  },
+  {
+    "id": "neovim.ex-command.colon_setglobal",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":setg[lobal]",
+    "desc": "show global values of options",
+    "doc_ref": "index.txt::setglobal"
+  },
+  {
+    "id": "neovim.ex-command.colon_setlocal",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":setl[ocal]",
+    "desc": "show or set options locally",
+    "doc_ref": "index.txt::setlocal"
+  },
+  {
+    "id": "neovim.ex-command.colon_sfind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sf[ind]",
+    "desc": "split current window and edit file in 'path'",
+    "doc_ref": "index.txt::sfind"
+  },
+  {
+    "id": "neovim.ex-command.colon_sfirst",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sfir[st]",
+    "desc": "split window and go to first file in the",
+    "doc_ref": "index.txt::sfirst"
+  },
+  {
+    "id": "neovim.ex-command.colon_sign",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sig[n]",
+    "desc": "manipulate signs",
+    "doc_ref": "index.txt::sign"
+  },
+  {
+    "id": "neovim.ex-command.colon_silent",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sil[ent]",
+    "desc": "run a command silently",
+    "doc_ref": "index.txt::silent"
+  },
+  {
+    "id": "neovim.ex-command.colon_sleep",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sl[eep]",
+    "desc": "do nothing for a few seconds",
+    "doc_ref": "index.txt::sleep"
+  },
+  {
+    "id": "neovim.ex-command.colon_sleep_bang",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sl[eep]!",
+    "desc": "do nothing for a few seconds, without the",
+    "doc_ref": "index.txt::sleep!"
+  },
+  {
+    "id": "neovim.ex-command.colon_slast",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sla[st]",
+    "desc": "split window and go to last file in the",
+    "doc_ref": "index.txt::slast"
+  },
+  {
+    "id": "neovim.ex-command.colon_smagic",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sm[agic]",
+    "desc": ":substitute with 'magic'",
+    "doc_ref": "index.txt::smagic"
+  },
+  {
+    "id": "neovim.ex-command.colon_smap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":smap",
+    "desc": "like \":map\" but for Select mode",
+    "doc_ref": "index.txt::smap"
+  },
+  {
+    "id": "neovim.ex-command.colon_smapclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":smapc[lear]",
+    "desc": "remove all mappings for Select mode",
+    "doc_ref": "index.txt::smapclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_smenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sme[nu]",
+    "desc": "add menu for Select mode",
+    "doc_ref": "index.txt::smenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_snext_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sn[ext]",
+    "desc": "split window and go to next file in the",
+    "doc_ref": "index.txt::snext"
+  },
+  {
+    "id": "neovim.ex-command.colon_snomagic",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sno[magic]",
+    "desc": ":substitute with 'nomagic'",
+    "doc_ref": "index.txt::snomagic"
+  },
+  {
+    "id": "neovim.ex-command.colon_snoremap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":snor[emap]",
+    "desc": "like \":noremap\" but for Select mode",
+    "doc_ref": "index.txt::snoremap"
+  },
+  {
+    "id": "neovim.ex-command.colon_snoremenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":snoreme[nu]",
+    "desc": "like \":noremenu\" but for Select mode",
+    "doc_ref": "index.txt::snoremenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_sort",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sor[t]",
+    "desc": "sort lines",
+    "doc_ref": "index.txt::sort"
+  },
+  {
+    "id": "neovim.ex-command.colon_source",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":so[urce]",
+    "desc": "read Vim or Ex commands from a file",
+    "doc_ref": "index.txt::source"
+  },
+  {
+    "id": "neovim.ex-command.colon_spelldump",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":spelld[ump]",
+    "desc": "split window and fill with all correct words",
+    "doc_ref": "index.txt::spelldump"
+  },
+  {
+    "id": "neovim.ex-command.colon_spellgood",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":spe[llgood]",
+    "desc": "add good word for spelling",
+    "doc_ref": "index.txt::spellgood"
+  },
+  {
+    "id": "neovim.ex-command.colon_spellinfo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":spelli[nfo]",
+    "desc": "show info about loaded spell files",
+    "doc_ref": "index.txt::spellinfo"
+  },
+  {
+    "id": "neovim.ex-command.colon_spellrare",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":spellra[re]",
+    "desc": "add rare word for spelling",
+    "doc_ref": "index.txt::spellrare"
+  },
+  {
+    "id": "neovim.ex-command.colon_spellrepall",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":spellr[epall]",
+    "desc": "replace all bad words like last |z=|",
+    "doc_ref": "index.txt::spellrepall"
+  },
+  {
+    "id": "neovim.ex-command.colon_spellundo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":spellu[ndo]",
+    "desc": "remove good or bad word",
+    "doc_ref": "index.txt::spellundo"
+  },
+  {
+    "id": "neovim.ex-command.colon_spellwrong",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":spellw[rong]",
+    "desc": "add spelling mistake",
+    "doc_ref": "index.txt::spellwrong"
+  },
+  {
+    "id": "neovim.ex-command.colon_split",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sp[lit]",
+    "desc": "split current window",
+    "doc_ref": "index.txt::split"
+  },
+  {
+    "id": "neovim.ex-command.colon_sprevious",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":spr[evious]",
+    "desc": "split window and go to previous file in the",
+    "doc_ref": "index.txt::sprevious"
+  },
+  {
+    "id": "neovim.ex-command.colon_srewind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sre[wind]",
+    "desc": "split window and go to first file in the",
+    "doc_ref": "index.txt::srewind"
+  },
+  {
+    "id": "neovim.ex-command.colon_stop",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":st[op]",
+    "desc": "suspend the editor or escape to a shell",
+    "doc_ref": "index.txt::stop"
+  },
+  {
+    "id": "neovim.ex-command.colon_stag",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sta[g]",
+    "desc": "split window and jump to a tag",
+    "doc_ref": "index.txt::stag"
+  },
+  {
+    "id": "neovim.ex-command.colon_startinsert",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":star[tinsert]",
+    "desc": "start Insert mode",
+    "doc_ref": "index.txt::startinsert"
+  },
+  {
+    "id": "neovim.ex-command.colon_startgreplace",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":startg[replace] start Virtual Replace mode",
+    "desc": "",
+    "doc_ref": "index.txt::startgreplace"
+  },
+  {
+    "id": "neovim.ex-command.colon_startreplace",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":startr[eplace]",
+    "desc": "start Replace mode",
+    "doc_ref": "index.txt::startreplace"
+  },
+  {
+    "id": "neovim.ex-command.colon_stopinsert",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":stopi[nsert]",
+    "desc": "stop Insert mode",
+    "doc_ref": "index.txt::stopinsert"
+  },
+  {
+    "id": "neovim.ex-command.colon_stjump",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":stj[ump]",
+    "desc": "do \":tjump\" and split window",
+    "doc_ref": "index.txt::stjump"
+  },
+  {
+    "id": "neovim.ex-command.colon_stselect",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sts[elect]",
+    "desc": "do \":tselect\" and split window",
+    "doc_ref": "index.txt::stselect"
+  },
+  {
+    "id": "neovim.ex-command.colon_sunhide",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sun[hide]",
+    "desc": "same as \":unhide\"",
+    "doc_ref": "index.txt::sunhide"
+  },
+  {
+    "id": "neovim.ex-command.colon_sunmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sunm[ap]",
+    "desc": "like \":unmap\" but for Select mode",
+    "doc_ref": "index.txt::sunmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_sunmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sunme[nu]",
+    "desc": "remove menu for Select mode",
+    "doc_ref": "index.txt::sunmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_suspend",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sus[pend]",
+    "desc": "same as \":stop\"",
+    "doc_ref": "index.txt::suspend"
+  },
+  {
+    "id": "neovim.ex-command.colon_sview",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sv[iew]",
+    "desc": "split window and edit file read-only",
+    "doc_ref": "index.txt::sview"
+  },
+  {
+    "id": "neovim.ex-command.colon_swapname",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sw[apname]",
+    "desc": "show the name of the current swap file",
+    "doc_ref": "index.txt::swapname"
+  },
+  {
+    "id": "neovim.ex-command.colon_syntax",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sy[ntax]",
+    "desc": "syntax highlighting",
+    "doc_ref": "index.txt::syntax"
+  },
+  {
+    "id": "neovim.ex-command.colon_syntime",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":synti[me]",
+    "desc": "measure syntax highlighting speed",
+    "doc_ref": "index.txt::syntime"
+  },
+  {
+    "id": "neovim.ex-command.colon_syncbind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":sync[bind]",
+    "desc": "sync scroll binding",
+    "doc_ref": "index.txt::syncbind"
+  },
+  {
+    "id": "neovim.ex-command.colon_t",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":t",
+    "desc": "same as \":copy\"",
+    "doc_ref": "index.txt::t"
+  },
+  {
+    "id": "neovim.ex-command.colon_tnext",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tN[ext]",
+    "desc": "jump to previous matching tag",
+    "doc_ref": "index.txt::tNext"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabnext",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabN[ext]",
+    "desc": "go to previous tabpage",
+    "doc_ref": "index.txt::tabNext"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabclose",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabc[lose]",
+    "desc": "close current tabpage",
+    "doc_ref": "index.txt::tabclose"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabdo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabd[o]",
+    "desc": "execute command in each tabpage",
+    "doc_ref": "index.txt::tabdo"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabedit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabe[dit]",
+    "desc": "edit a file in a new tabpage",
+    "doc_ref": "index.txt::tabedit"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabfind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabf[ind]",
+    "desc": "find file in 'path', edit it in a new tabpage",
+    "doc_ref": "index.txt::tabfind"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabfirst",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabfir[st]",
+    "desc": "go to first tabpage",
+    "doc_ref": "index.txt::tabfirst"
+  },
+  {
+    "id": "neovim.ex-command.colon_tablast",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabl[ast]",
+    "desc": "go to last tabpage",
+    "doc_ref": "index.txt::tablast"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabmove",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabm[ove]",
+    "desc": "move tabpage to other position",
+    "doc_ref": "index.txt::tabmove"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabnew",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabnew",
+    "desc": "edit a file in a new tabpage",
+    "doc_ref": "index.txt::tabnew"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabnext_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabn[ext]",
+    "desc": "go to next tabpage",
+    "doc_ref": "index.txt::tabnext"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabonly",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabo[nly]",
+    "desc": "close all tabpages except the current one",
+    "doc_ref": "index.txt::tabonly"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabprevious",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabp[revious]",
+    "desc": "go to previous tabpage",
+    "doc_ref": "index.txt::tabprevious"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabrewind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabr[ewind]",
+    "desc": "go to first tabpage",
+    "doc_ref": "index.txt::tabrewind"
+  },
+  {
+    "id": "neovim.ex-command.colon_tabs",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tabs",
+    "desc": "list the tabpages and what they contain",
+    "doc_ref": "index.txt::tabs"
+  },
+  {
+    "id": "neovim.ex-command.colon_tab",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tab",
+    "desc": "create new tab when opening new window",
+    "doc_ref": "index.txt::tab"
+  },
+  {
+    "id": "neovim.ex-command.colon_tag",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ta[g]",
+    "desc": "jump to tag",
+    "doc_ref": "index.txt::tag"
+  },
+  {
+    "id": "neovim.ex-command.colon_tags",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tags",
+    "desc": "show the contents of the tag stack",
+    "doc_ref": "index.txt::tags"
+  },
+  {
+    "id": "neovim.ex-command.colon_tcd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tc[d]",
+    "desc": "change directory for tabpage",
+    "doc_ref": "index.txt::tcd"
+  },
+  {
+    "id": "neovim.ex-command.colon_tchdir",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tch[dir]",
+    "desc": "change directory for tabpage",
+    "doc_ref": "index.txt::tchdir"
+  },
+  {
+    "id": "neovim.ex-command.colon_terminal",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":te[rminal]",
+    "desc": "open a terminal buffer",
+    "doc_ref": "index.txt::terminal"
+  },
+  {
+    "id": "neovim.ex-command.colon_tfirst",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tf[irst]",
+    "desc": "jump to first matching tag",
+    "doc_ref": "index.txt::tfirst"
+  },
+  {
+    "id": "neovim.ex-command.colon_throw",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":th[row]",
+    "desc": "throw an exception",
+    "doc_ref": "index.txt::throw"
+  },
+  {
+    "id": "neovim.ex-command.colon_tjump",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tj[ump]",
+    "desc": "like \":tselect\", but jump directly when there",
+    "doc_ref": "index.txt::tjump"
+  },
+  {
+    "id": "neovim.ex-command.colon_tlast",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tl[ast]",
+    "desc": "jump to last matching tag",
+    "doc_ref": "index.txt::tlast"
+  },
+  {
+    "id": "neovim.ex-command.colon_tlmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tlm[enu]",
+    "desc": "add menu for |Terminal-mode|",
+    "doc_ref": "index.txt::tlmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_tlnoremenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tln[oremenu]",
+    "desc": "like \":noremenu\" but for |Terminal-mode|",
+    "doc_ref": "index.txt::tlnoremenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_tlunmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tlu[nmenu]",
+    "desc": "remove menu for |Terminal-mode|",
+    "doc_ref": "index.txt::tlunmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_tmapclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tmapc[lear]",
+    "desc": "remove all mappings for |Terminal-mode|",
+    "doc_ref": "index.txt::tmapclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_tmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tma[p]",
+    "desc": "like \":map\" but for |Terminal-mode|",
+    "doc_ref": "index.txt::tmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_tmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tm[enu]",
+    "desc": "define menu tooltip",
+    "doc_ref": "index.txt::tmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_tnext_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tn[ext]",
+    "desc": "jump to next matching tag",
+    "doc_ref": "index.txt::tnext"
+  },
+  {
+    "id": "neovim.ex-command.colon_tnoremap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tno[remap]",
+    "desc": "like \":noremap\" but for |Terminal-mode|",
+    "doc_ref": "index.txt::tnoremap"
+  },
+  {
+    "id": "neovim.ex-command.colon_topleft",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":to[pleft]",
+    "desc": "make split window appear at top or far left",
+    "doc_ref": "index.txt::topleft"
+  },
+  {
+    "id": "neovim.ex-command.colon_tprevious",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tp[revious]",
+    "desc": "jump to previous matching tag",
+    "doc_ref": "index.txt::tprevious"
+  },
+  {
+    "id": "neovim.ex-command.colon_trewind",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tr[ewind]",
+    "desc": "jump to first matching tag",
+    "doc_ref": "index.txt::trewind"
+  },
+  {
+    "id": "neovim.ex-command.colon_trust",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":trust",
+    "desc": "add or remove file from trust database",
+    "doc_ref": "index.txt::trust"
+  },
+  {
+    "id": "neovim.ex-command.colon_try",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":try",
+    "desc": "execute commands, abort on error or exception",
+    "doc_ref": "index.txt::try"
+  },
+  {
+    "id": "neovim.ex-command.colon_tselect",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ts[elect]",
+    "desc": "list matching tags and select one",
+    "doc_ref": "index.txt::tselect"
+  },
+  {
+    "id": "neovim.ex-command.colon_tunmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tunma[p]",
+    "desc": "like \":unmap\" but for |Terminal-mode|",
+    "doc_ref": "index.txt::tunmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_tunmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":tu[nmenu]",
+    "desc": "remove menu tooltip",
+    "doc_ref": "index.txt::tunmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_undo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":u[ndo]",
+    "desc": "undo last change(s)",
+    "doc_ref": "index.txt::undo"
+  },
+  {
+    "id": "neovim.ex-command.colon_undojoin",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":undoj[oin]",
+    "desc": "join next change with previous undo block",
+    "doc_ref": "index.txt::undojoin"
+  },
+  {
+    "id": "neovim.ex-command.colon_undolist",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":undol[ist]",
+    "desc": "list leafs of the undo tree",
+    "doc_ref": "index.txt::undolist"
+  },
+  {
+    "id": "neovim.ex-command.colon_unabbreviate",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":una[bbreviate]",
+    "desc": "remove abbreviation",
+    "doc_ref": "index.txt::unabbreviate"
+  },
+  {
+    "id": "neovim.ex-command.colon_unhide",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":unh[ide]",
+    "desc": "open a window for each loaded file in the",
+    "doc_ref": "index.txt::unhide"
+  },
+  {
+    "id": "neovim.ex-command.colon_uniq",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":uni[q]",
+    "desc": "uniq lines",
+    "doc_ref": "index.txt::uniq"
+  },
+  {
+    "id": "neovim.ex-command.colon_unlet",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":unl[et]",
+    "desc": "delete variable",
+    "doc_ref": "index.txt::unlet"
+  },
+  {
+    "id": "neovim.ex-command.colon_unlockvar",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":unlo[ckvar]",
+    "desc": "unlock variables",
+    "doc_ref": "index.txt::unlockvar"
+  },
+  {
+    "id": "neovim.ex-command.colon_unmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":unm[ap]",
+    "desc": "remove mapping",
+    "doc_ref": "index.txt::unmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_unmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":unme[nu]",
+    "desc": "remove menu",
+    "doc_ref": "index.txt::unmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_unsilent",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":uns[ilent]",
+    "desc": "run a command not silently",
+    "doc_ref": "index.txt::unsilent"
+  },
+  {
+    "id": "neovim.ex-command.colon_update",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":up[date]",
+    "desc": "write buffer if modified",
+    "doc_ref": "index.txt::update"
+  },
+  {
+    "id": "neovim.ex-command.colon_uptime",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":upt[ime]",
+    "desc": "show Nvim's uptime",
+    "doc_ref": "index.txt::uptime"
+  },
+  {
+    "id": "neovim.ex-command.colon_vglobal",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":v[global]",
+    "desc": "execute commands for not matching lines",
+    "doc_ref": "index.txt::vglobal"
+  },
+  {
+    "id": "neovim.ex-command.colon_version",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":ve[rsion]",
+    "desc": "print version number and other info",
+    "doc_ref": "index.txt::version"
+  },
+  {
+    "id": "neovim.ex-command.colon_verbose",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":verb[ose]",
+    "desc": "execute command with 'verbose' set",
+    "doc_ref": "index.txt::verbose"
+  },
+  {
+    "id": "neovim.ex-command.colon_vertical",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vert[ical]",
+    "desc": "make following command split vertically",
+    "doc_ref": "index.txt::vertical"
+  },
+  {
+    "id": "neovim.ex-command.colon_vimgrep",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vim[grep]",
+    "desc": "search for pattern in files",
+    "doc_ref": "index.txt::vimgrep"
+  },
+  {
+    "id": "neovim.ex-command.colon_vimgrepadd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vimgrepa[dd]",
+    "desc": "like :vimgrep, but append to current list",
+    "doc_ref": "index.txt::vimgrepadd"
+  },
+  {
+    "id": "neovim.ex-command.colon_visual",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vi[sual]",
+    "desc": "same as \":edit\", but turns off \"Ex\" mode",
+    "doc_ref": "index.txt::visual"
+  },
+  {
+    "id": "neovim.ex-command.colon_viusage",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":viu[sage]",
+    "desc": "overview of Normal mode commands",
+    "doc_ref": "index.txt::viusage"
+  },
+  {
+    "id": "neovim.ex-command.colon_view",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vie[w]",
+    "desc": "edit a file read-only",
+    "doc_ref": "index.txt::view"
+  },
+  {
+    "id": "neovim.ex-command.colon_vmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vm[ap]",
+    "desc": "like \":map\" but for Visual+Select mode",
+    "doc_ref": "index.txt::vmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_vmapclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vmapc[lear]",
+    "desc": "remove all mappings for Visual+Select mode",
+    "doc_ref": "index.txt::vmapclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_vmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vme[nu]",
+    "desc": "add menu for Visual+Select mode",
+    "doc_ref": "index.txt::vmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_vnew",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vne[w]",
+    "desc": "create a new empty window, vertically split",
+    "doc_ref": "index.txt::vnew"
+  },
+  {
+    "id": "neovim.ex-command.colon_vnoremap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vn[oremap]",
+    "desc": "like \":noremap\" but for Visual+Select mode",
+    "doc_ref": "index.txt::vnoremap"
+  },
+  {
+    "id": "neovim.ex-command.colon_vnoremenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vnoreme[nu]",
+    "desc": "like \":noremenu\" but for Visual+Select mode",
+    "doc_ref": "index.txt::vnoremenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_vsplit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vs[plit]",
+    "desc": "split current window vertically",
+    "doc_ref": "index.txt::vsplit"
+  },
+  {
+    "id": "neovim.ex-command.colon_vunmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vu[nmap]",
+    "desc": "like \":unmap\" but for Visual+Select mode",
+    "doc_ref": "index.txt::vunmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_vunmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":vunme[nu]",
+    "desc": "remove menu for Visual+Select mode",
+    "doc_ref": "index.txt::vunmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_windo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":wind[o]",
+    "desc": "execute command in each window",
+    "doc_ref": "index.txt::windo"
+  },
+  {
+    "id": "neovim.ex-command.colon_write",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":w[rite]",
+    "desc": "write to a file",
+    "doc_ref": "index.txt::write"
+  },
+  {
+    "id": "neovim.ex-command.colon_wnext",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":wN[ext]",
+    "desc": "write to a file and go to previous file in",
+    "doc_ref": "index.txt::wNext"
+  },
+  {
+    "id": "neovim.ex-command.colon_wall",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":wa[ll]",
+    "desc": "write all (changed) buffers",
+    "doc_ref": "index.txt::wall"
+  },
+  {
+    "id": "neovim.ex-command.colon_while",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":wh[ile]",
+    "desc": "execute loop for as long as condition met",
+    "doc_ref": "index.txt::while"
+  },
+  {
+    "id": "neovim.ex-command.colon_winsize",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":wi[nsize]",
+    "desc": "get or set window size (obsolete)",
+    "doc_ref": "index.txt::winsize"
+  },
+  {
+    "id": "neovim.ex-command.colon_wincmd",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":winc[md]",
+    "desc": "execute a Window (CTRL-W) command",
+    "doc_ref": "index.txt::wincmd"
+  },
+  {
+    "id": "neovim.ex-command.colon_winpos",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":winp[os]",
+    "desc": "get or set window position",
+    "doc_ref": "index.txt::winpos"
+  },
+  {
+    "id": "neovim.ex-command.colon_wnext_1",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":wn[ext]",
+    "desc": "write to a file and go to next file in",
+    "doc_ref": "index.txt::wnext"
+  },
+  {
+    "id": "neovim.ex-command.colon_wprevious",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":wp[revious]",
+    "desc": "write to a file and go to previous file in",
+    "doc_ref": "index.txt::wprevious"
+  },
+  {
+    "id": "neovim.ex-command.colon_wq",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":wq",
+    "desc": "write to a file and quit window or Vim",
+    "doc_ref": "index.txt::wq"
+  },
+  {
+    "id": "neovim.ex-command.colon_wqall",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":wqa[ll]",
+    "desc": "write all changed buffers and quit Vim",
+    "doc_ref": "index.txt::wqall"
+  },
+  {
+    "id": "neovim.ex-command.colon_wshada",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":wsh[ada]",
+    "desc": "write to ShaDa file",
+    "doc_ref": "index.txt::wshada"
+  },
+  {
+    "id": "neovim.ex-command.colon_wundo",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":wu[ndo]",
+    "desc": "write undo information to a file",
+    "doc_ref": "index.txt::wundo"
+  },
+  {
+    "id": "neovim.ex-command.colon_xit",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":x[it]",
+    "desc": "write if buffer changed and close window",
+    "doc_ref": "index.txt::xit"
+  },
+  {
+    "id": "neovim.ex-command.colon_xall",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":xa[ll]",
+    "desc": "same as \":wqall\"",
+    "doc_ref": "index.txt::xall"
+  },
+  {
+    "id": "neovim.ex-command.colon_xmapclear",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":xmapc[lear]",
+    "desc": "remove all mappings for Visual mode",
+    "doc_ref": "index.txt::xmapclear"
+  },
+  {
+    "id": "neovim.ex-command.colon_xmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":xm[ap]",
+    "desc": "like \":map\" but for Visual mode",
+    "doc_ref": "index.txt::xmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_xmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":xme[nu]",
+    "desc": "add menu for Visual mode",
+    "doc_ref": "index.txt::xmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_xnoremap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":xn[oremap]",
+    "desc": "like \":noremap\" but for Visual mode",
+    "doc_ref": "index.txt::xnoremap"
+  },
+  {
+    "id": "neovim.ex-command.colon_xnoremenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":xnoreme[nu]",
+    "desc": "like \":noremenu\" but for Visual mode",
+    "doc_ref": "index.txt::xnoremenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_xunmap",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":xu[nmap]",
+    "desc": "like \":unmap\" but for Visual mode",
+    "doc_ref": "index.txt::xunmap"
+  },
+  {
+    "id": "neovim.ex-command.colon_xunmenu",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":xunme[nu]",
+    "desc": "remove menu for Visual mode",
+    "doc_ref": "index.txt::xunmenu"
+  },
+  {
+    "id": "neovim.ex-command.colon_yank",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":y[ank]",
+    "desc": "yank lines into a register",
+    "doc_ref": "index.txt::yank"
+  },
+  {
+    "id": "neovim.ex-command.colon_z",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":z",
+    "desc": "print some lines",
+    "doc_ref": "index.txt::z"
+  },
+  {
+    "id": "neovim.ex-command.colon_tilde",
+    "source": "neovim",
+    "category": "ex-command",
+    "name": ":~",
+    "desc": "repeat last \":substitute\"",
+    "doc_ref": "index.txt::~"
+  }
+]

@@ -1,0 +1,682 @@
+[
+  {
+    "id": "neovim.visual-mode.ctrl_backslash_ctrl_n",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "CTRL-\\ CTRL-N",
+    "desc": "stop Visual mode",
+    "doc_ref": "index.txt:v_CTRL-\\_CTRL-N"
+  },
+  {
+    "id": "neovim.visual-mode.ctrl_backslash_ctrl_g",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "CTRL-\\ CTRL-G",
+    "desc": "go to Normal mode",
+    "doc_ref": "index.txt:v_CTRL-\\_CTRL-G"
+  },
+  {
+    "id": "neovim.visual-mode.ctrl_a",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "CTRL-A",
+    "desc": "add N to number in highlighted text",
+    "doc_ref": "index.txt:v_CTRL-A"
+  },
+  {
+    "id": "neovim.visual-mode.ctrl_c",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "CTRL-C",
+    "desc": "stop Visual mode",
+    "doc_ref": "index.txt:v_CTRL-C"
+  },
+  {
+    "id": "neovim.visual-mode.ctrl_g",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "CTRL-G",
+    "desc": "toggle between Visual mode and Select mode",
+    "doc_ref": "index.txt:v_CTRL-G"
+  },
+  {
+    "id": "neovim.visual-mode.lt_bs_gt",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "<BS>",
+    "desc": "Select mode: delete highlighted area",
+    "doc_ref": "index.txt:v_<BS>"
+  },
+  {
+    "id": "neovim.visual-mode.ctrl_h",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "CTRL-H",
+    "desc": "same as <BS>",
+    "doc_ref": "index.txt:v_CTRL-H"
+  },
+  {
+    "id": "neovim.visual-mode.ctrl_o",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "CTRL-O",
+    "desc": "switch from Select to Visual mode for one",
+    "doc_ref": "index.txt:v_CTRL-O"
+  },
+  {
+    "id": "neovim.visual-mode.ctrl_v",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "CTRL-V",
+    "desc": "make Visual mode blockwise or stop Visual",
+    "doc_ref": "index.txt:v_CTRL-V"
+  },
+  {
+    "id": "neovim.visual-mode.ctrl_x",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "CTRL-X",
+    "desc": "subtract N from number in highlighted text",
+    "doc_ref": "index.txt:v_CTRL-X"
+  },
+  {
+    "id": "neovim.visual-mode.lt_esc_gt",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "<Esc>",
+    "desc": "stop Visual mode",
+    "doc_ref": "index.txt:v_<Esc>"
+  },
+  {
+    "id": "neovim.visual-mode.ctrl_rbracket",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "CTRL-]",
+    "desc": "jump to highlighted tag",
+    "doc_ref": "index.txt:v_CTRL-]"
+  },
+  {
+    "id": "neovim.visual-mode.bang_lbrace_filter_rbrace",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "!{filter}",
+    "desc": "filter the highlighted lines through the",
+    "doc_ref": "index.txt:v_!"
+  },
+  {
+    "id": "neovim.visual-mode.colon",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": ":",
+    "desc": "start a command-line with the highlighted",
+    "doc_ref": "index.txt:v_:"
+  },
+  {
+    "id": "neovim.visual-mode.lt",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "<",
+    "desc": "shift the highlighted lines one",
+    "doc_ref": "index.txt:v_<"
+  },
+  {
+    "id": "neovim.visual-mode.eq",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "=",
+    "desc": "filter the highlighted lines through the",
+    "doc_ref": "index.txt:v_="
+  },
+  {
+    "id": "neovim.visual-mode.gt",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": ">",
+    "desc": "shift the highlighted lines one",
+    "doc_ref": "index.txt:v_>"
+  },
+  {
+    "id": "neovim.visual-mode.a",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "A",
+    "desc": "block mode: append same text in all lines,",
+    "doc_ref": "index.txt:v_b_A"
+  },
+  {
+    "id": "neovim.visual-mode.c",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "C",
+    "desc": "delete the highlighted lines and start",
+    "doc_ref": "index.txt:v_C"
+  },
+  {
+    "id": "neovim.visual-mode.d",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "D",
+    "desc": "delete the highlighted lines",
+    "doc_ref": "index.txt:v_D"
+  },
+  {
+    "id": "neovim.visual-mode.i",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "I",
+    "desc": "block mode: insert same text in all lines,",
+    "doc_ref": "index.txt:v_b_I"
+  },
+  {
+    "id": "neovim.visual-mode.j",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "J",
+    "desc": "join the highlighted lines",
+    "doc_ref": "index.txt:v_J"
+  },
+  {
+    "id": "neovim.visual-mode.k",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "K",
+    "desc": "run 'keywordprg' on the highlighted area",
+    "doc_ref": "index.txt:v_K"
+  },
+  {
+    "id": "neovim.visual-mode.o",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "O",
+    "desc": "move horizontally to other corner of area",
+    "doc_ref": "index.txt:v_O"
+  },
+  {
+    "id": "neovim.visual-mode.p",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "P",
+    "desc": "replace highlighted area with register",
+    "doc_ref": "index.txt:v_P"
+  },
+  {
+    "id": "neovim.visual-mode.r",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "R",
+    "desc": "delete the highlighted lines and start",
+    "doc_ref": "index.txt:v_R"
+  },
+  {
+    "id": "neovim.visual-mode.s",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "S",
+    "desc": "delete the highlighted lines and start",
+    "doc_ref": "index.txt:v_S"
+  },
+  {
+    "id": "neovim.visual-mode.u",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "U",
+    "desc": "make highlighted area uppercase",
+    "doc_ref": "index.txt:v_U"
+  },
+  {
+    "id": "neovim.visual-mode.v",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "V",
+    "desc": "make Visual mode linewise or stop Visual",
+    "doc_ref": "index.txt:v_V"
+  },
+  {
+    "id": "neovim.visual-mode.x",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "X",
+    "desc": "delete the highlighted lines",
+    "doc_ref": "index.txt:v_X"
+  },
+  {
+    "id": "neovim.visual-mode.y",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "Y",
+    "desc": "yank the highlighted lines",
+    "doc_ref": "index.txt:v_Y"
+  },
+  {
+    "id": "neovim.visual-mode.a_quote",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "a\"",
+    "desc": "extend highlighted area with a double",
+    "doc_ref": "index.txt:v_aquote"
+  },
+  {
+    "id": "neovim.visual-mode.a_apos",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "a'",
+    "desc": "extend highlighted area with a single",
+    "doc_ref": "index.txt:v_a'"
+  },
+  {
+    "id": "neovim.visual-mode.a_lparen",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "a(",
+    "desc": "same as ab",
+    "doc_ref": "index.txt:v_a("
+  },
+  {
+    "id": "neovim.visual-mode.a_rparen",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "a)",
+    "desc": "same as ab",
+    "doc_ref": "index.txt:v_a)"
+  },
+  {
+    "id": "neovim.visual-mode.a_lt",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "a<",
+    "desc": "extend highlighted area with a <> block",
+    "doc_ref": "index.txt:v_a<"
+  },
+  {
+    "id": "neovim.visual-mode.a_gt",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "a>",
+    "desc": "same as a<",
+    "doc_ref": "index.txt:v_a>"
+  },
+  {
+    "id": "neovim.visual-mode.ab",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "aB",
+    "desc": "extend highlighted area with a {} block",
+    "doc_ref": "index.txt:v_aB"
+  },
+  {
+    "id": "neovim.visual-mode.aw",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "aW",
+    "desc": "extend highlighted area with \"a WORD\"",
+    "doc_ref": "index.txt:v_aW"
+  },
+  {
+    "id": "neovim.visual-mode.a_lbracket",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "a[",
+    "desc": "extend highlighted area with a [] block",
+    "doc_ref": "index.txt:v_a["
+  },
+  {
+    "id": "neovim.visual-mode.a_rbracket",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "a]",
+    "desc": "same as a[",
+    "doc_ref": "index.txt:v_a]"
+  },
+  {
+    "id": "neovim.visual-mode.a_backtick",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "a`",
+    "desc": "extend highlighted area with a backtick",
+    "doc_ref": "index.txt:v_a`"
+  },
+  {
+    "id": "neovim.visual-mode.ab_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "ab",
+    "desc": "extend highlighted area with a () block",
+    "doc_ref": "index.txt:v_ab"
+  },
+  {
+    "id": "neovim.visual-mode.al",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "al",
+    "desc": "extend highlighted area to all lines",
+    "doc_ref": "index.txt:v_al"
+  },
+  {
+    "id": "neovim.visual-mode.ap",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "ap",
+    "desc": "extend highlighted area with a paragraph",
+    "doc_ref": "index.txt:v_ap"
+  },
+  {
+    "id": "neovim.visual-mode.as",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "as",
+    "desc": "extend highlighted area with a sentence",
+    "doc_ref": "index.txt:v_as"
+  },
+  {
+    "id": "neovim.visual-mode.at",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "at",
+    "desc": "extend highlighted area with a tag block",
+    "doc_ref": "index.txt:v_at"
+  },
+  {
+    "id": "neovim.visual-mode.aw_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "aw",
+    "desc": "extend highlighted area with \"a word\"",
+    "doc_ref": "index.txt:v_aw"
+  },
+  {
+    "id": "neovim.visual-mode.a_lbrace",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "a{",
+    "desc": "same as aB",
+    "doc_ref": "index.txt:v_a{"
+  },
+  {
+    "id": "neovim.visual-mode.a_rbrace",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "a}",
+    "desc": "same as aB",
+    "doc_ref": "index.txt:v_a}"
+  },
+  {
+    "id": "neovim.visual-mode.c_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "c",
+    "desc": "delete highlighted area and start insert",
+    "doc_ref": "index.txt:v_c"
+  },
+  {
+    "id": "neovim.visual-mode.d_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "d",
+    "desc": "delete highlighted area",
+    "doc_ref": "index.txt:v_d"
+  },
+  {
+    "id": "neovim.visual-mode.g_ctrl_a",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "g CTRL-A",
+    "desc": "add N to number in highlighted text",
+    "doc_ref": "index.txt:v_g_CTRL-A"
+  },
+  {
+    "id": "neovim.visual-mode.g_ctrl_x",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "g CTRL-X",
+    "desc": "subtract N from number in highlighted text",
+    "doc_ref": "index.txt:v_g_CTRL-X"
+  },
+  {
+    "id": "neovim.visual-mode.gj",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "gJ",
+    "desc": "join the highlighted lines without",
+    "doc_ref": "index.txt:v_gJ"
+  },
+  {
+    "id": "neovim.visual-mode.gq",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "gq",
+    "desc": "format the highlighted lines",
+    "doc_ref": "index.txt:v_gq"
+  },
+  {
+    "id": "neovim.visual-mode.gv",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "gv",
+    "desc": "exchange current and previous highlighted",
+    "doc_ref": "index.txt:v_gv"
+  },
+  {
+    "id": "neovim.visual-mode.i_quote",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "i\"",
+    "desc": "extend highlighted area with a double",
+    "doc_ref": "index.txt:v_iquote"
+  },
+  {
+    "id": "neovim.visual-mode.i_apos",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "i'",
+    "desc": "extend highlighted area with a single",
+    "doc_ref": "index.txt:v_i'"
+  },
+  {
+    "id": "neovim.visual-mode.i_lparen",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "i(",
+    "desc": "same as ib",
+    "doc_ref": "index.txt:v_i("
+  },
+  {
+    "id": "neovim.visual-mode.i_rparen",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "i)",
+    "desc": "same as ib",
+    "doc_ref": "index.txt:v_i)"
+  },
+  {
+    "id": "neovim.visual-mode.i_lt",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "i<",
+    "desc": "extend highlighted area with inner <> block",
+    "doc_ref": "index.txt:v_i<"
+  },
+  {
+    "id": "neovim.visual-mode.i_gt",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "i>",
+    "desc": "same as i<",
+    "doc_ref": "index.txt:v_i>"
+  },
+  {
+    "id": "neovim.visual-mode.ib",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "iB",
+    "desc": "extend highlighted area with inner {} block",
+    "doc_ref": "index.txt:v_iB"
+  },
+  {
+    "id": "neovim.visual-mode.iw",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "iW",
+    "desc": "extend highlighted area with \"inner WORD\"",
+    "doc_ref": "index.txt:v_iW"
+  },
+  {
+    "id": "neovim.visual-mode.i_lbracket",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "i[",
+    "desc": "extend highlighted area with inner [] block",
+    "doc_ref": "index.txt:v_i["
+  },
+  {
+    "id": "neovim.visual-mode.i_rbracket",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "i]",
+    "desc": "same as i[",
+    "doc_ref": "index.txt:v_i]"
+  },
+  {
+    "id": "neovim.visual-mode.i_backtick",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "i`",
+    "desc": "extend highlighted area with a backtick",
+    "doc_ref": "index.txt:v_i`"
+  },
+  {
+    "id": "neovim.visual-mode.ib_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "ib",
+    "desc": "extend highlighted area with inner () block",
+    "doc_ref": "index.txt:v_ib"
+  },
+  {
+    "id": "neovim.visual-mode.il",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "il",
+    "desc": "select inner line under cursor",
+    "doc_ref": "index.txt:v_il"
+  },
+  {
+    "id": "neovim.visual-mode.ip",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "ip",
+    "desc": "extend highlighted area with inner paragraph",
+    "doc_ref": "index.txt:v_ip"
+  },
+  {
+    "id": "neovim.visual-mode.is",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "is",
+    "desc": "extend highlighted area with inner sentence",
+    "doc_ref": "index.txt:v_is"
+  },
+  {
+    "id": "neovim.visual-mode.it",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "it",
+    "desc": "extend highlighted area with inner tag block",
+    "doc_ref": "index.txt:v_it"
+  },
+  {
+    "id": "neovim.visual-mode.iw_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "iw",
+    "desc": "extend highlighted area with \"inner word\"",
+    "doc_ref": "index.txt:v_iw"
+  },
+  {
+    "id": "neovim.visual-mode.i_lbrace",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "i{",
+    "desc": "same as iB",
+    "doc_ref": "index.txt:v_i{"
+  },
+  {
+    "id": "neovim.visual-mode.i_rbrace",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "i}",
+    "desc": "same as iB",
+    "doc_ref": "index.txt:v_i}"
+  },
+  {
+    "id": "neovim.visual-mode.o_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "o",
+    "desc": "move cursor to other corner of area",
+    "doc_ref": "index.txt:v_o"
+  },
+  {
+    "id": "neovim.visual-mode.p_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "p",
+    "desc": "replace highlighted area with register",
+    "doc_ref": "index.txt:v_p"
+  },
+  {
+    "id": "neovim.visual-mode.r_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "r",
+    "desc": "replace highlighted area with a character",
+    "doc_ref": "index.txt:v_r"
+  },
+  {
+    "id": "neovim.visual-mode.s_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "s",
+    "desc": "delete highlighted area and start insert",
+    "doc_ref": "index.txt:v_s"
+  },
+  {
+    "id": "neovim.visual-mode.u_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "u",
+    "desc": "make highlighted area lowercase",
+    "doc_ref": "index.txt:v_u"
+  },
+  {
+    "id": "neovim.visual-mode.v_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "v",
+    "desc": "make Visual mode charwise or stop",
+    "doc_ref": "index.txt:v_v"
+  },
+  {
+    "id": "neovim.visual-mode.x_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "x",
+    "desc": "delete the highlighted area",
+    "doc_ref": "index.txt:v_x"
+  },
+  {
+    "id": "neovim.visual-mode.y_1",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "y",
+    "desc": "yank the highlighted area",
+    "doc_ref": "index.txt:v_y"
+  },
+  {
+    "id": "neovim.visual-mode.tilde",
+    "source": "neovim",
+    "category": "visual-mode",
+    "name": "~",
+    "desc": "swap case for the highlighted area",
+    "doc_ref": "index.txt:v_~"
+  }
+]

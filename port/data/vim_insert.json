@@ -1,0 +1,786 @@
+[
+  {
+    "id": "neovim.insert-mode.ctrl_at",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-@",
+    "desc": "insert previously inserted text and stop",
+    "doc_ref": "index.txt:i_CTRL-@"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_a",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-A",
+    "desc": "insert previously inserted text",
+    "doc_ref": "index.txt:i_CTRL-A"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_c",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-C",
+    "desc": "quit insert mode, without checking for",
+    "doc_ref": "index.txt:i_CTRL-C"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_d",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-D",
+    "desc": "delete one shiftwidth of indent in the current",
+    "doc_ref": "index.txt:i_CTRL-D"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_e",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-E",
+    "desc": "insert the character which is below the cursor",
+    "doc_ref": "index.txt:i_CTRL-E"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_g_ctrl_j",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-G CTRL-J",
+    "desc": "line down, to column where inserting started",
+    "doc_ref": "index.txt:i_CTRL-G_j"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_g_j",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-G j",
+    "desc": "line down, to column where inserting started",
+    "doc_ref": "index.txt:i_CTRL-G_j"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_g_lt_down_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-G <Down>",
+    "desc": "line down, to column where inserting started",
+    "doc_ref": "index.txt:i_CTRL-G_j"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_g_ctrl_k",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-G CTRL-K",
+    "desc": "line up, to column where inserting started",
+    "doc_ref": "index.txt:i_CTRL-G_k"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_g_k",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-G k",
+    "desc": "line up, to column where inserting started",
+    "doc_ref": "index.txt:i_CTRL-G_k"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_g_lt_up_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-G <Up>",
+    "desc": "line up, to column where inserting started",
+    "doc_ref": "index.txt:i_CTRL-G_k"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_g_u",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-G u",
+    "desc": "start new undoable edit",
+    "doc_ref": "index.txt:i_CTRL-G_u"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_g_u_1",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-G U",
+    "desc": "don't break undo with next cursor movement",
+    "doc_ref": "index.txt:i_CTRL-G_U"
+  },
+  {
+    "id": "neovim.insert-mode.lt_bs_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<BS>",
+    "desc": "delete character before the cursor",
+    "doc_ref": "index.txt:i_<BS>"
+  },
+  {
+    "id": "neovim.insert-mode.lbrace_char1_rbrace_lt_bs_gt_lbrace_char2_rbrace",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "{char1}<BS>{char2}",
+    "desc": "enter digraph (only when 'digraph' option set)",
+    "doc_ref": "index.txt:i_digraph"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_h",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-H",
+    "desc": "same as <BS>",
+    "doc_ref": "index.txt:i_CTRL-H"
+  },
+  {
+    "id": "neovim.insert-mode.lt_tab_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<Tab>",
+    "desc": "insert a <Tab> character",
+    "doc_ref": "index.txt:i_<Tab>"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_i",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-I",
+    "desc": "same as <Tab>",
+    "doc_ref": "index.txt:i_CTRL-I"
+  },
+  {
+    "id": "neovim.insert-mode.lt_nl_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<NL>",
+    "desc": "same as <CR>",
+    "doc_ref": "index.txt:i_<NL>"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_j",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-J",
+    "desc": "same as <CR>",
+    "doc_ref": "index.txt:i_CTRL-J"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_k_lbrace_char1_rbrace_lbrace_char2_rbrace",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-K {char1} {char2}",
+    "desc": "enter digraph",
+    "doc_ref": "index.txt:i_CTRL-K"
+  },
+  {
+    "id": "neovim.insert-mode.lt_cr_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<CR>",
+    "desc": "begin new line",
+    "doc_ref": "index.txt:i_<CR>"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_m",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-M",
+    "desc": "same as <CR>",
+    "doc_ref": "index.txt:i_CTRL-M"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_n",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-N",
+    "desc": "find next match for keyword in front of the",
+    "doc_ref": "index.txt:i_CTRL-N"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_o",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-O",
+    "desc": "execute a single command and return to insert",
+    "doc_ref": "index.txt:i_CTRL-O"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_p",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-P",
+    "desc": "find previous match for keyword in front of",
+    "doc_ref": "index.txt:i_CTRL-P"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_q",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-Q",
+    "desc": "same as CTRL-V, unless used for terminal",
+    "doc_ref": "index.txt:i_CTRL-Q"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_shift_q_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-SHIFT-Q {char}",
+    "desc": "like CTRL-Q unless |tui-modifyOtherKeys| is active",
+    "doc_ref": "index.txt:i_CTRL-SHIFT-Q"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_r_lbrace_register_rbrace",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-R {register}",
+    "desc": "insert the contents of a register",
+    "doc_ref": "index.txt:i_CTRL-R"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_r_ctrl_r_lbrace_register_rbrace",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-R CTRL-R {register}",
+    "desc": "insert the contents of a register literally",
+    "doc_ref": "index.txt:i_CTRL-R_CTRL-R"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_r_ctrl_o_lbrace_register_rbrace",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-R CTRL-O {register}",
+    "desc": "insert the contents of a register literally",
+    "doc_ref": "index.txt:i_CTRL-R_CTRL-O"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_r_ctrl_p_lbrace_register_rbrace",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-R CTRL-P {register}",
+    "desc": "insert the contents of a register literally",
+    "doc_ref": "index.txt:i_CTRL-R_CTRL-P"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_t",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-T",
+    "desc": "insert one shiftwidth of indent in current",
+    "doc_ref": "index.txt:i_CTRL-T"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_u",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-U",
+    "desc": "delete all entered characters in the current",
+    "doc_ref": "index.txt:i_CTRL-U"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_v_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-V {char}",
+    "desc": "insert next non-digit literally",
+    "doc_ref": "index.txt:i_CTRL-V"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_shift_v_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-SHIFT-V {char}",
+    "desc": "like CTRL-V unless |tui-modifyOtherKeys| is active",
+    "doc_ref": "index.txt:i_CTRL-SHIFT-V"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_v_lbrace_number_rbrace_insert_three_digit_decimal_number_as_a_single",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-V {number} insert three digit decimal number as a single",
+    "desc": "byte.",
+    "doc_ref": "index.txt:i_CTRL-V_digit"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_w",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-W",
+    "desc": "delete word before the cursor",
+    "doc_ref": "index.txt:i_CTRL-W"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_lbrace_mode_rbrace",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X {mode}",
+    "desc": "enter CTRL-X sub mode, see |i_CTRL-X_index|",
+    "doc_ref": "index.txt:i_CTRL-X"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_y",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-Y",
+    "desc": "insert the character which is above the cursor",
+    "doc_ref": "index.txt:i_CTRL-Y"
+  },
+  {
+    "id": "neovim.insert-mode.lt_esc_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<Esc>",
+    "desc": "end insert mode",
+    "doc_ref": "index.txt:i_<Esc>"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_lbracket",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-[",
+    "desc": "same as <Esc>",
+    "doc_ref": "index.txt:i_CTRL-["
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_backslash_ctrl_n",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-\\ CTRL-N",
+    "desc": "go to Normal mode",
+    "doc_ref": "index.txt:i_CTRL-\\_CTRL-N"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_backslash_ctrl_g",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-\\ CTRL-G",
+    "desc": "go to Normal mode",
+    "doc_ref": "index.txt:i_CTRL-\\_CTRL-G"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_rbracket",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-]",
+    "desc": "trigger abbreviation",
+    "doc_ref": "index.txt:i_CTRL-]"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_caret",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-^",
+    "desc": "toggle use of |:lmap| mappings",
+    "doc_ref": "index.txt:i_CTRL-^"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-_",
+    "desc": "When 'allowrevins' set: toggle 'revins'",
+    "doc_ref": "index.txt:i_CTRL-_"
+  },
+  {
+    "id": "neovim.insert-mode.0_ctrl_d",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "0 CTRL-D",
+    "desc": "delete all indent in the current line",
+    "doc_ref": "index.txt:i_0_CTRL-D"
+  },
+  {
+    "id": "neovim.insert-mode.caret_ctrl_d",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "^ CTRL-D",
+    "desc": "delete all indent in the current line, restore",
+    "doc_ref": "index.txt:i_^_CTRL-D"
+  },
+  {
+    "id": "neovim.insert-mode.lt_del_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<Del>",
+    "desc": "delete character under the cursor",
+    "doc_ref": "index.txt:i_<Del>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_left_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<Left>",
+    "desc": "cursor one character left",
+    "doc_ref": "index.txt:i_<Left>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_s_left_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<S-Left>",
+    "desc": "cursor one word left",
+    "doc_ref": "index.txt:i_<S-Left>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_c_left_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<C-Left>",
+    "desc": "cursor one word left",
+    "doc_ref": "index.txt:i_<C-Left>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_right_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<Right>",
+    "desc": "cursor one character right",
+    "doc_ref": "index.txt:i_<Right>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_s_right_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<S-Right>",
+    "desc": "cursor one word right",
+    "doc_ref": "index.txt:i_<S-Right>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_c_right_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<C-Right>",
+    "desc": "cursor one word right",
+    "doc_ref": "index.txt:i_<C-Right>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_up_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<Up>",
+    "desc": "cursor one line up",
+    "doc_ref": "index.txt:i_<Up>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_s_up_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<S-Up>",
+    "desc": "same as <PageUp>",
+    "doc_ref": "index.txt:i_<S-Up>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_down_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<Down>",
+    "desc": "cursor one line down",
+    "doc_ref": "index.txt:i_<Down>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_s_down_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<S-Down>",
+    "desc": "same as <PageDown>",
+    "doc_ref": "index.txt:i_<S-Down>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_home_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<Home>",
+    "desc": "cursor to start of line",
+    "doc_ref": "index.txt:i_<Home>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_c_home_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<C-Home>",
+    "desc": "cursor to start of file",
+    "doc_ref": "index.txt:i_<C-Home>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_end_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<End>",
+    "desc": "cursor past end of line",
+    "doc_ref": "index.txt:i_<End>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_c_end_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<C-End>",
+    "desc": "cursor past end of file",
+    "doc_ref": "index.txt:i_<C-End>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_pageup_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<PageUp>",
+    "desc": "one screenful backward",
+    "doc_ref": "index.txt:i_<PageUp>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_pagedown_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<PageDown>",
+    "desc": "one screenful forward",
+    "doc_ref": "index.txt:i_<PageDown>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_f1_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<F1>",
+    "desc": "same as <Help>",
+    "doc_ref": "index.txt:i_<F1>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_help_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<Help>",
+    "desc": "stop insert mode and display help window",
+    "doc_ref": "index.txt:i_<Help>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_insert_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<Insert>",
+    "desc": "toggle Insert/Replace mode",
+    "doc_ref": "index.txt:i_<Insert>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_leftmouse_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<LeftMouse>",
+    "desc": "cursor at mouse click",
+    "doc_ref": "index.txt:i_<LeftMouse>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_scrollwheeldown_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<ScrollWheelDown>",
+    "desc": "move window three lines down",
+    "doc_ref": "index.txt:i_<ScrollWheelDown>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_s_scrollwheeldown_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<S-ScrollWheelDown>",
+    "desc": "move window one page down",
+    "doc_ref": "index.txt:i_<S-ScrollWheelDown>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_scrollwheelup_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<ScrollWheelUp>",
+    "desc": "move window three lines up",
+    "doc_ref": "index.txt:i_<ScrollWheelUp>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_s_scrollwheelup_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<S-ScrollWheelUp>",
+    "desc": "move window one page up",
+    "doc_ref": "index.txt:i_<S-ScrollWheelUp>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_scrollwheelleft_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<ScrollWheelLeft>",
+    "desc": "move window six columns left",
+    "doc_ref": "index.txt:i_<ScrollWheelLeft>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_s_scrollwheelleft_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<S-ScrollWheelLeft>",
+    "desc": "move window one page left",
+    "doc_ref": "index.txt:i_<S-ScrollWheelLeft>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_scrollwheelright_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<ScrollWheelRight>",
+    "desc": "move window six columns right",
+    "doc_ref": "index.txt:i_<ScrollWheelRight>"
+  },
+  {
+    "id": "neovim.insert-mode.lt_s_scrollwheelright_gt",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "<S-ScrollWheelRight>",
+    "desc": "move window one page right",
+    "doc_ref": "index.txt:i_<S-ScrollWheelRight>"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_d",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-D",
+    "desc": "complete defined identifiers",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-D"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_e",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-E",
+    "desc": "scroll up",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-E"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_f",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-F",
+    "desc": "complete file names",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-F"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_i",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-I",
+    "desc": "complete identifiers",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-I"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_k",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-K",
+    "desc": "complete identifiers from dictionary",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-K"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_l",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-L",
+    "desc": "complete whole lines",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-L"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_n",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-N",
+    "desc": "next completion",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-N"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_o",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-O",
+    "desc": "omni completion",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-O"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_p",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-P",
+    "desc": "previous completion",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-P"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_r",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-R",
+    "desc": "complete contents from registers",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-R"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_s",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-S",
+    "desc": "spelling suggestions",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-S"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_t",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-T",
+    "desc": "complete identifiers from thesaurus",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-T"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_y",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-Y",
+    "desc": "scroll down",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-Y"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_u",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-U",
+    "desc": "complete with 'completefunc'",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-U"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_v",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-V",
+    "desc": "complete like in : command line",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-V"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_z",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-Z",
+    "desc": "stop completion, text is unchanged",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-Z"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_ctrl_rbracket",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X CTRL-]",
+    "desc": "complete tags",
+    "doc_ref": "index.txt:i_CTRL-X_CTRL-]"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_x_s",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-X s",
+    "desc": "spelling suggestions",
+    "doc_ref": "index.txt:i_CTRL-X_s"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_e_1",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-E",
+    "desc": "stop completion and go back to original text",
+    "doc_ref": "index.txt:complete_CTRL-E"
+  },
+  {
+    "id": "neovim.insert-mode.ctrl_y_1",
+    "source": "neovim",
+    "category": "insert-mode",
+    "name": "CTRL-Y",
+    "desc": "accept selected match and stop completion",
+    "doc_ref": "index.txt:complete_CTRL-Y"
+  }
+]

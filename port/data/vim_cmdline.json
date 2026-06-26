@@ -1,0 +1,426 @@
+[
+  {
+    "id": "neovim.cmdline-editing.ctrl_a",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-A",
+    "desc": "do completion on the pattern in front of the",
+    "doc_ref": "index.txt:c_CTRL-A"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_b",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-B",
+    "desc": "cursor to begin of command-line",
+    "doc_ref": "index.txt:c_CTRL-B"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_c",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-C",
+    "desc": "same as <Esc>",
+    "doc_ref": "index.txt:c_CTRL-C"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_d",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-D",
+    "desc": "list completions that match the pattern in",
+    "doc_ref": "index.txt:c_CTRL-D"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_e",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-E",
+    "desc": "cursor to end of command-line",
+    "doc_ref": "index.txt:c_CTRL-E"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_g",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-G",
+    "desc": "next match when 'incsearch' is active",
+    "doc_ref": "index.txt:c_CTRL-G"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_bs_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<BS>",
+    "desc": "delete the character in front of the cursor",
+    "doc_ref": "index.txt:c_<BS>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lbrace_char1_rbrace_lt_bs_gt_lbrace_char2_rbrace",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "{char1} <BS> {char2}",
+    "desc": "enter digraph when 'digraph' is on",
+    "doc_ref": "index.txt:c_digraph"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_h",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-H",
+    "desc": "same as <BS>",
+    "doc_ref": "index.txt:c_CTRL-H"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_tab_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<Tab>",
+    "desc": "if 'wildchar' is <Tab>: Do completion on",
+    "doc_ref": "index.txt:c_<Tab>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_s_tab_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<S-Tab>",
+    "desc": "same as CTRL-P",
+    "doc_ref": "index.txt:c_<S-Tab>"
+  },
+  {
+    "id": "neovim.cmdline-editing.apos_wildchar_apos",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "'wildchar'",
+    "desc": "Do completion on the pattern in front of the",
+    "doc_ref": "index.txt:c_wildchar"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_i",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-I",
+    "desc": "same as <Tab>",
+    "doc_ref": "index.txt:c_CTRL-I"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_nl_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<NL>",
+    "desc": "same as <CR>",
+    "doc_ref": "index.txt:c_<NL>"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_j",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-J",
+    "desc": "same as <CR>",
+    "doc_ref": "index.txt:c_CTRL-J"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_k_lbrace_char1_rbrace_lbrace_char2_rbrace",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-K {char1} {char2}",
+    "desc": "enter digraph",
+    "doc_ref": "index.txt:c_CTRL-K"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_l",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-L",
+    "desc": "do completion on the pattern in front of the",
+    "doc_ref": "index.txt:c_CTRL-L"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_cr_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<CR>",
+    "desc": "execute entered command",
+    "doc_ref": "index.txt:c_<CR>"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_m",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-M",
+    "desc": "same as <CR>",
+    "doc_ref": "index.txt:c_CTRL-M"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_n",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-N",
+    "desc": "after using 'wildchar' with multiple matches:",
+    "doc_ref": "index.txt:c_CTRL-N"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_p",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-P",
+    "desc": "after using 'wildchar' with multiple matches:",
+    "doc_ref": "index.txt:c_CTRL-P"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_q",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-Q",
+    "desc": "same as CTRL-V, unless it's used for terminal",
+    "doc_ref": "index.txt:c_CTRL-Q"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_r_lbrace_regname_rbrace",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-R {regname}",
+    "desc": "insert the contents of a register or object",
+    "doc_ref": "index.txt:c_CTRL-R"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_r_ctrl_r_lbrace_regname_rbrace",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-R CTRL-R {regname}",
+    "desc": "",
+    "doc_ref": "index.txt:c_CTRL-R_CTRL-R"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_r_ctrl_o_lbrace_regname_rbrace",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-R CTRL-O {regname}",
+    "desc": "insert the contents of a register or object",
+    "doc_ref": "index.txt:c_CTRL-R_CTRL-O"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_t",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-T",
+    "desc": "previous match when 'incsearch' is active",
+    "doc_ref": "index.txt:c_CTRL-T"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_u",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-U",
+    "desc": "remove all characters between the cursor",
+    "doc_ref": "index.txt:c_CTRL-U"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_v",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-V",
+    "desc": "insert next non-digit literally, insert three",
+    "doc_ref": "index.txt:c_CTRL-V"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_w",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-W",
+    "desc": "delete the word in front of the cursor",
+    "doc_ref": "index.txt:c_CTRL-W"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_esc_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<Esc>",
+    "desc": "abandon command-line without executing it",
+    "doc_ref": "index.txt:c_<Esc>"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_lbracket",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-[",
+    "desc": "same as <Esc>",
+    "doc_ref": "index.txt:c_CTRL-["
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_backslash_ctrl_n",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-\\ CTRL-N",
+    "desc": "go to Normal mode, abandon command-line",
+    "doc_ref": "index.txt:c_CTRL-\\_CTRL-N"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_backslash_ctrl_g",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-\\ CTRL-G",
+    "desc": "go to Normal mode, abandon command-line",
+    "doc_ref": "index.txt:c_CTRL-\\_CTRL-G"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_backslash_e_lbrace_expr_rbrace_replace_the_command_line_with_the_result_of",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-\\ e {expr} replace the command line with the result of",
+    "desc": "{expr}",
+    "doc_ref": "index.txt:c_CTRL-\\_e"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_rbracket",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-]",
+    "desc": "trigger abbreviation",
+    "doc_ref": "index.txt:c_CTRL-]"
+  },
+  {
+    "id": "neovim.cmdline-editing.ctrl_caret",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "CTRL-^",
+    "desc": "toggle use of |:lmap| mappings",
+    "doc_ref": "index.txt:c_CTRL-^"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_del_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<Del>",
+    "desc": "delete the character under the cursor",
+    "doc_ref": "index.txt:c_<Del>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_left_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<Left>",
+    "desc": "cursor left",
+    "doc_ref": "index.txt:c_<Left>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_s_left_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<S-Left>",
+    "desc": "cursor one word left",
+    "doc_ref": "index.txt:c_<S-Left>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_c_left_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<C-Left>",
+    "desc": "cursor one word left",
+    "doc_ref": "index.txt:c_<C-Left>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_right_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<Right>",
+    "desc": "cursor right",
+    "doc_ref": "index.txt:c_<Right>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_s_right_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<S-Right>",
+    "desc": "cursor one word right",
+    "doc_ref": "index.txt:c_<S-Right>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_c_right_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<C-Right>",
+    "desc": "cursor one word right",
+    "doc_ref": "index.txt:c_<C-Right>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_up_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<Up>",
+    "desc": "recall previous command-line from history that",
+    "doc_ref": "index.txt:c_<Up>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_s_up_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<S-Up>",
+    "desc": "recall previous command-line from history",
+    "doc_ref": "index.txt:c_<S-Up>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_down_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<Down>",
+    "desc": "recall next command-line from history that",
+    "doc_ref": "index.txt:c_<Down>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_s_down_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<S-Down>",
+    "desc": "recall next command-line from history",
+    "doc_ref": "index.txt:c_<S-Down>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_home_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<Home>",
+    "desc": "cursor to start of command-line",
+    "doc_ref": "index.txt:c_<Home>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_end_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<End>",
+    "desc": "cursor to end of command-line",
+    "doc_ref": "index.txt:c_<End>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_pagedown_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<PageDown>",
+    "desc": "same as <S-Down>",
+    "doc_ref": "index.txt:c_<PageDown>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_pageup_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<PageUp>",
+    "desc": "same as <S-Up>",
+    "doc_ref": "index.txt:c_<PageUp>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_insert_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<Insert>",
+    "desc": "toggle insert/overstrike mode",
+    "doc_ref": "index.txt:c_<Insert>"
+  },
+  {
+    "id": "neovim.cmdline-editing.lt_leftmouse_gt",
+    "source": "neovim",
+    "category": "cmdline-editing",
+    "name": "<LeftMouse>",
+    "desc": "cursor at mouse click",
+    "doc_ref": "index.txt:c_<LeftMouse>"
+  }
+]

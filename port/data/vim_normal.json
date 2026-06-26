@@ -1,0 +1,3834 @@
+[
+  {
+    "id": "neovim.normal-mode.ctrl_a",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-A",
+    "desc": "add N to number at/after cursor",
+    "doc_ref": "index.txt:CTRL-A"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_b",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-B",
+    "desc": "scroll N screens Backwards",
+    "doc_ref": "index.txt:CTRL-B"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_c",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-C",
+    "desc": "interrupt current (search) command",
+    "doc_ref": "index.txt:CTRL-C"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_d",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-D",
+    "desc": "scroll Down N lines (default: half a screen)",
+    "doc_ref": "index.txt:CTRL-D"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_e",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-E",
+    "desc": "scroll N lines upwards (N lines Extra)",
+    "doc_ref": "index.txt:CTRL-E"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_f",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-F",
+    "desc": "scroll N screens Forward",
+    "doc_ref": "index.txt:CTRL-F"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_g",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-G",
+    "desc": "display current file name and position",
+    "doc_ref": "index.txt:CTRL-G"
+  },
+  {
+    "id": "neovim.normal-mode.lt_bs_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<BS>",
+    "desc": "same as \"h\"",
+    "doc_ref": "index.txt:<BS>"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_h",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-H",
+    "desc": "same as \"h\"",
+    "doc_ref": "index.txt:CTRL-H"
+  },
+  {
+    "id": "neovim.normal-mode.lt_tab_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<Tab>",
+    "desc": "go to N newer entry in jump list",
+    "doc_ref": "index.txt:<Tab>"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_i",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-I",
+    "desc": "same as <Tab>",
+    "doc_ref": "index.txt:CTRL-I"
+  },
+  {
+    "id": "neovim.normal-mode.lt_nl_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<NL>",
+    "desc": "same as \"j\"",
+    "doc_ref": "index.txt:<NL>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_s_nl_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<S-NL>",
+    "desc": "same as CTRL-F",
+    "doc_ref": "index.txt:<S-NL>"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_j",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-J",
+    "desc": "same as \"j\"",
+    "doc_ref": "index.txt:CTRL-J"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_l",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-L",
+    "desc": "redraw screen",
+    "doc_ref": "index.txt:CTRL-L"
+  },
+  {
+    "id": "neovim.normal-mode.lt_cr_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<CR>",
+    "desc": "cursor to the first CHAR N lines lower",
+    "doc_ref": "index.txt:<CR>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_s_cr_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<S-CR>",
+    "desc": "same as CTRL-F",
+    "doc_ref": "index.txt:<S-CR>"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_m",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-M",
+    "desc": "same as <CR>",
+    "doc_ref": "index.txt:CTRL-M"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_n",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-N",
+    "desc": "same as \"j\"",
+    "doc_ref": "index.txt:CTRL-N"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_o",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-O",
+    "desc": "go to N older entry in jump list",
+    "doc_ref": "index.txt:CTRL-O"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_p",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-P",
+    "desc": "same as \"k\"",
+    "doc_ref": "index.txt:CTRL-P"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_r",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-R",
+    "desc": "redo changes which were undone with 'u'",
+    "doc_ref": "index.txt:CTRL-R"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_t",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-T",
+    "desc": "jump to N older Tag in tag list",
+    "doc_ref": "index.txt:CTRL-T"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_u",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-U",
+    "desc": "scroll N lines Upwards (default: half a",
+    "doc_ref": "index.txt:CTRL-U"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_v",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-V",
+    "desc": "start blockwise Visual mode",
+    "doc_ref": "index.txt:CTRL-V"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W {char}",
+    "desc": "window commands, see |CTRL-W|",
+    "doc_ref": "index.txt:CTRL-W"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_x",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-X",
+    "desc": "subtract N from number at/after cursor",
+    "doc_ref": "index.txt:CTRL-X"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_y",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-Y",
+    "desc": "scroll N lines downwards",
+    "doc_ref": "index.txt:CTRL-Y"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_z",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-Z",
+    "desc": "suspend program (or start new shell)",
+    "doc_ref": "index.txt:CTRL-Z"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_backslash_ctrl_n",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-\\ CTRL-N",
+    "desc": "go to Normal mode (no-op)",
+    "doc_ref": "index.txt:CTRL-\\_CTRL-N"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_backslash_ctrl_g",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-\\ CTRL-G",
+    "desc": "go to Normal mode (no-op)",
+    "doc_ref": "index.txt:CTRL-\\_CTRL-G"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-]",
+    "desc": ":ta to ident under cursor",
+    "doc_ref": "index.txt:CTRL-]"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_caret",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-^",
+    "desc": "edit Nth alternate file (equivalent to",
+    "doc_ref": "index.txt:CTRL-^"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_lt_tab_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-<Tab>",
+    "desc": "same as `g<Tab>` : go to last accessed tab",
+    "doc_ref": "index.txt:CTRL-<Tab>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_space_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<Space>",
+    "desc": "same as \"l\"",
+    "doc_ref": "index.txt:<Space>"
+  },
+  {
+    "id": "neovim.normal-mode.bang_lbrace_motion_rbrace_lbrace_filter_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "!{motion}{filter}",
+    "desc": "filter Nmove text through the {filter}",
+    "doc_ref": "index.txt:!"
+  },
+  {
+    "id": "neovim.normal-mode.bang_bang_lbrace_filter_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "!!{filter}",
+    "desc": "filter N lines through the {filter} command",
+    "doc_ref": "index.txt:!!"
+  },
+  {
+    "id": "neovim.normal-mode.quote_lbrace_register_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "\"{register}",
+    "desc": "use {register} for next delete, yank or put",
+    "doc_ref": "index.txt:quote"
+  },
+  {
+    "id": "neovim.normal-mode.hash",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "#",
+    "desc": "search backward for the Nth occurrence of",
+    "doc_ref": "index.txt:#"
+  },
+  {
+    "id": "neovim.normal-mode.dollar",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "$",
+    "desc": "cursor to the end of Nth next line",
+    "doc_ref": "index.txt:$"
+  },
+  {
+    "id": "neovim.normal-mode.percent",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "%",
+    "desc": "find the next (curly/square) bracket on",
+    "doc_ref": "index.txt:%"
+  },
+  {
+    "id": "neovim.normal-mode.lbrace_count_rbrace_percent",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "{count}%",
+    "desc": "go to N percentage in the file",
+    "doc_ref": "index.txt:N%"
+  },
+  {
+    "id": "neovim.normal-mode.amp",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "&",
+    "desc": "repeat last :s",
+    "doc_ref": "index.txt:&"
+  },
+  {
+    "id": "neovim.normal-mode.apos_lbrace_a_za_z0_9_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "'{a-zA-Z0-9}",
+    "desc": "cursor to the first CHAR on the line with",
+    "doc_ref": "index.txt:'"
+  },
+  {
+    "id": "neovim.normal-mode.apos_apos",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "''",
+    "desc": "cursor to the first CHAR of the line where",
+    "doc_ref": "index.txt:''"
+  },
+  {
+    "id": "neovim.normal-mode.apos_lparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "'(",
+    "desc": "cursor to the first CHAR on the line of the",
+    "doc_ref": "index.txt:'("
+  },
+  {
+    "id": "neovim.normal-mode.apos_rparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "')",
+    "desc": "cursor to the first CHAR on the line of the",
+    "doc_ref": "index.txt:')"
+  },
+  {
+    "id": "neovim.normal-mode.apos_lt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "'<",
+    "desc": "cursor to the first CHAR of the line where",
+    "doc_ref": "index.txt:'<"
+  },
+  {
+    "id": "neovim.normal-mode.apos_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "'>",
+    "desc": "cursor to the first CHAR of the line where",
+    "doc_ref": "index.txt:'>"
+  },
+  {
+    "id": "neovim.normal-mode.apos_lbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "'[",
+    "desc": "cursor to the first CHAR on the line of the",
+    "doc_ref": "index.txt:'["
+  },
+  {
+    "id": "neovim.normal-mode.apos_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "']",
+    "desc": "cursor to the first CHAR on the line of the",
+    "doc_ref": "index.txt:']"
+  },
+  {
+    "id": "neovim.normal-mode.apos_lbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "'{",
+    "desc": "cursor to the first CHAR on the line of the",
+    "doc_ref": "index.txt:'{"
+  },
+  {
+    "id": "neovim.normal-mode.apos_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "'}",
+    "desc": "cursor to the first CHAR on the line of the",
+    "doc_ref": "index.txt:'}"
+  },
+  {
+    "id": "neovim.normal-mode.lparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "(",
+    "desc": "cursor N sentences backward",
+    "doc_ref": "index.txt:("
+  },
+  {
+    "id": "neovim.normal-mode.rparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": ")",
+    "desc": "cursor N sentences forward",
+    "doc_ref": "index.txt:)"
+  },
+  {
+    "id": "neovim.normal-mode.star",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "*",
+    "desc": "search forward for the Nth occurrence of",
+    "doc_ref": "index.txt:star"
+  },
+  {
+    "id": "neovim.normal-mode.plus",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "+",
+    "desc": "same as <CR>",
+    "doc_ref": "index.txt:+"
+  },
+  {
+    "id": "neovim.normal-mode.lt_s_plus_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<S-+>",
+    "desc": "same as CTRL-F",
+    "doc_ref": "index.txt:<S-Plus>"
+  },
+  {
+    "id": "neovim.normal-mode.comma",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": ",",
+    "desc": "repeat latest f, t, F or T in opposite",
+    "doc_ref": "index.txt:,"
+  },
+  {
+    "id": "neovim.normal-mode.x",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "-",
+    "desc": "cursor to the first CHAR N lines higher",
+    "doc_ref": "index.txt:-"
+  },
+  {
+    "id": "neovim.normal-mode.lt_s_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<S-->",
+    "desc": "same as CTRL-B",
+    "doc_ref": "index.txt:<S-Minus>"
+  },
+  {
+    "id": "neovim.normal-mode.dot",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": ".",
+    "desc": "repeat last change with count replaced with",
+    "doc_ref": "index.txt:."
+  },
+  {
+    "id": "neovim.normal-mode.slash_lbrace_pattern_rbrace_lt_cr_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "/{pattern}<CR>",
+    "desc": "search forward for the Nth occurrence of",
+    "doc_ref": "index.txt:/"
+  },
+  {
+    "id": "neovim.normal-mode.slash_lt_cr_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "/<CR>",
+    "desc": "search forward for {pattern} of last search",
+    "doc_ref": "index.txt:/<CR>"
+  },
+  {
+    "id": "neovim.normal-mode.0",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "0",
+    "desc": "cursor to the first char of the line",
+    "doc_ref": "index.txt:0"
+  },
+  {
+    "id": "neovim.normal-mode.1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "1",
+    "desc": "prepend to command to give a count",
+    "doc_ref": "index.txt:count"
+  },
+  {
+    "id": "neovim.normal-mode.2",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "2",
+    "desc": "\"",
+    "doc_ref": "index.txt:count"
+  },
+  {
+    "id": "neovim.normal-mode.3",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "3",
+    "desc": "\"",
+    "doc_ref": "index.txt:count"
+  },
+  {
+    "id": "neovim.normal-mode.4",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "4",
+    "desc": "\"",
+    "doc_ref": "index.txt:count"
+  },
+  {
+    "id": "neovim.normal-mode.5",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "5",
+    "desc": "\"",
+    "doc_ref": "index.txt:count"
+  },
+  {
+    "id": "neovim.normal-mode.6",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "6",
+    "desc": "\"",
+    "doc_ref": "index.txt:count"
+  },
+  {
+    "id": "neovim.normal-mode.7",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "7",
+    "desc": "\"",
+    "doc_ref": "index.txt:count"
+  },
+  {
+    "id": "neovim.normal-mode.8",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "8",
+    "desc": "\"",
+    "doc_ref": "index.txt:count"
+  },
+  {
+    "id": "neovim.normal-mode.9",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "9",
+    "desc": "\"",
+    "doc_ref": "index.txt:count"
+  },
+  {
+    "id": "neovim.normal-mode.colon",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": ":",
+    "desc": "start entering an Ex command",
+    "doc_ref": "index.txt::"
+  },
+  {
+    "id": "neovim.normal-mode.lbrace_count_rbrace_colon",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "{count}:",
+    "desc": "start entering an Ex command with range",
+    "doc_ref": "index.txt:N:"
+  },
+  {
+    "id": "neovim.normal-mode.semicolon",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": ";",
+    "desc": "repeat latest f, t, F or T N times",
+    "doc_ref": "index.txt:;"
+  },
+  {
+    "id": "neovim.normal-mode.lt_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<{motion}",
+    "desc": "shift Nmove lines one 'shiftwidth'",
+    "doc_ref": "index.txt:<"
+  },
+  {
+    "id": "neovim.normal-mode.lt_lt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<<",
+    "desc": "shift N lines one 'shiftwidth' leftwards",
+    "doc_ref": "index.txt:<<"
+  },
+  {
+    "id": "neovim.normal-mode.eq_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "={motion}",
+    "desc": "filter Nmove lines through \"indent\"",
+    "doc_ref": "index.txt:="
+  },
+  {
+    "id": "neovim.normal-mode.eq_eq",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "==",
+    "desc": "filter N lines through \"indent\"",
+    "doc_ref": "index.txt:=="
+  },
+  {
+    "id": "neovim.normal-mode.gt_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": ">{motion}",
+    "desc": "shift Nmove lines one 'shiftwidth'",
+    "doc_ref": "index.txt:>"
+  },
+  {
+    "id": "neovim.normal-mode.gt_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": ">>",
+    "desc": "shift N lines one 'shiftwidth' rightwards",
+    "doc_ref": "index.txt:>>"
+  },
+  {
+    "id": "neovim.normal-mode.question_lbrace_pattern_rbrace_lt_cr_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "?{pattern}<CR>",
+    "desc": "search backward for the Nth previous",
+    "doc_ref": "index.txt:?"
+  },
+  {
+    "id": "neovim.normal-mode.question_lt_cr_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "?<CR>",
+    "desc": "search backward for {pattern} of last search",
+    "doc_ref": "index.txt:?<CR>"
+  },
+  {
+    "id": "neovim.normal-mode.at_lbrace_a_z_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "@{a-z}",
+    "desc": "execute the contents of register {a-z}",
+    "doc_ref": "index.txt:@"
+  },
+  {
+    "id": "neovim.normal-mode.at_colon",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "@:",
+    "desc": "repeat the previous \":\" command N times",
+    "doc_ref": "index.txt:@:"
+  },
+  {
+    "id": "neovim.normal-mode.at_at",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "@@",
+    "desc": "repeat the previous @{a-z} N times",
+    "doc_ref": "index.txt:@@"
+  },
+  {
+    "id": "neovim.normal-mode.a",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "A",
+    "desc": "append text after the end of the line N times",
+    "doc_ref": "index.txt:A"
+  },
+  {
+    "id": "neovim.normal-mode.b",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "B",
+    "desc": "cursor N WORDS backward",
+    "doc_ref": "index.txt:B"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_c",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]C",
+    "desc": "change from the cursor position to the end",
+    "doc_ref": "index.txt:C"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_d",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]D",
+    "desc": "delete the characters under the cursor",
+    "doc_ref": "index.txt:D"
+  },
+  {
+    "id": "neovim.normal-mode.e",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "E",
+    "desc": "cursor forward to the end of WORD N",
+    "doc_ref": "index.txt:E"
+  },
+  {
+    "id": "neovim.normal-mode.f_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "F{char}",
+    "desc": "cursor to the Nth occurrence of {char} to",
+    "doc_ref": "index.txt:F"
+  },
+  {
+    "id": "neovim.normal-mode.g",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "G",
+    "desc": "cursor to line N, default last line",
+    "doc_ref": "index.txt:G"
+  },
+  {
+    "id": "neovim.normal-mode.h",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "H",
+    "desc": "cursor to line N from top of screen",
+    "doc_ref": "index.txt:H"
+  },
+  {
+    "id": "neovim.normal-mode.i",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "I",
+    "desc": "insert text before the first CHAR on the",
+    "doc_ref": "index.txt:I"
+  },
+  {
+    "id": "neovim.normal-mode.j",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "J",
+    "desc": "Join N lines; default is 2",
+    "doc_ref": "index.txt:J"
+  },
+  {
+    "id": "neovim.normal-mode.k",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "K",
+    "desc": "lookup Keyword under the cursor with",
+    "doc_ref": "index.txt:K"
+  },
+  {
+    "id": "neovim.normal-mode.l",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "L",
+    "desc": "cursor to line N from bottom of screen",
+    "doc_ref": "index.txt:L"
+  },
+  {
+    "id": "neovim.normal-mode.m",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "M",
+    "desc": "cursor to middle line of screen",
+    "doc_ref": "index.txt:M"
+  },
+  {
+    "id": "neovim.normal-mode.n",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "N",
+    "desc": "repeat the latest '/' or '?' N times in",
+    "doc_ref": "index.txt:N"
+  },
+  {
+    "id": "neovim.normal-mode.o",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "O",
+    "desc": "begin a new line above the cursor and",
+    "doc_ref": "index.txt:O"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_p",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]P",
+    "desc": "put the text [from register x] before the",
+    "doc_ref": "index.txt:P"
+  },
+  {
+    "id": "neovim.normal-mode.r",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "R",
+    "desc": "enter replace mode: overtype existing",
+    "doc_ref": "index.txt:R"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_s",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]S",
+    "desc": "delete N lines [into register x] and start",
+    "doc_ref": "index.txt:S"
+  },
+  {
+    "id": "neovim.normal-mode.t_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "T{char}",
+    "desc": "cursor till after Nth occurrence of {char}",
+    "doc_ref": "index.txt:T"
+  },
+  {
+    "id": "neovim.normal-mode.u",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "U",
+    "desc": "undo all latest changes on one line",
+    "doc_ref": "index.txt:U"
+  },
+  {
+    "id": "neovim.normal-mode.v",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "V",
+    "desc": "start linewise Visual mode",
+    "doc_ref": "index.txt:V"
+  },
+  {
+    "id": "neovim.normal-mode.w",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "W",
+    "desc": "cursor N WORDS forward",
+    "doc_ref": "index.txt:W"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_x",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]X",
+    "desc": "delete N characters before the cursor [into",
+    "doc_ref": "index.txt:X"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_y",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]Y",
+    "desc": "yank N lines [into register x]; synonym for",
+    "doc_ref": "index.txt:Y"
+  },
+  {
+    "id": "neovim.normal-mode.zz",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "ZZ",
+    "desc": "write if buffer changed and close window",
+    "doc_ref": "index.txt:ZZ"
+  },
+  {
+    "id": "neovim.normal-mode.zq",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "ZQ",
+    "desc": "close window without writing",
+    "doc_ref": "index.txt:ZQ"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[{char}",
+    "desc": "square bracket command (see |[| below)",
+    "doc_ref": "index.txt:["
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]{char}",
+    "desc": "square bracket command (see |]| below)",
+    "doc_ref": "index.txt:]"
+  },
+  {
+    "id": "neovim.normal-mode.caret",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "^",
+    "desc": "cursor to the first CHAR of the line",
+    "doc_ref": "index.txt:^"
+  },
+  {
+    "id": "neovim.normal-mode.x_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "_",
+    "desc": "cursor to the first CHAR N - 1 lines lower",
+    "doc_ref": "index.txt:_"
+  },
+  {
+    "id": "neovim.normal-mode.backtick_lbrace_a_za_z0_9_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "`{a-zA-Z0-9}",
+    "desc": "cursor to the mark {a-zA-Z0-9}",
+    "doc_ref": "index.txt:`"
+  },
+  {
+    "id": "neovim.normal-mode.backtick_lparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "`(",
+    "desc": "cursor to the start of the current sentence",
+    "doc_ref": "index.txt:`("
+  },
+  {
+    "id": "neovim.normal-mode.backtick_rparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "`)",
+    "desc": "cursor to the end of the current sentence",
+    "doc_ref": "index.txt:`)"
+  },
+  {
+    "id": "neovim.normal-mode.backtick_lt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "`<",
+    "desc": "cursor to the start of the highlighted area",
+    "doc_ref": "index.txt:`<"
+  },
+  {
+    "id": "neovim.normal-mode.backtick_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "`>",
+    "desc": "cursor to the end of the highlighted area",
+    "doc_ref": "index.txt:`>"
+  },
+  {
+    "id": "neovim.normal-mode.backtick_lbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "`[",
+    "desc": "cursor to the start of last operated text",
+    "doc_ref": "index.txt:`["
+  },
+  {
+    "id": "neovim.normal-mode.backtick_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "`]",
+    "desc": "cursor to the end of last operated text or",
+    "doc_ref": "index.txt:`]"
+  },
+  {
+    "id": "neovim.normal-mode.quote_backtick_backtick_quote",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "\"``\"",
+    "desc": "cursor to the position before latest jump",
+    "doc_ref": "index.txt:``"
+  },
+  {
+    "id": "neovim.normal-mode.backtick_lbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "`{",
+    "desc": "cursor to the start of the current paragraph",
+    "doc_ref": "index.txt:`{"
+  },
+  {
+    "id": "neovim.normal-mode.backtick_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "`}",
+    "desc": "cursor to the end of the current paragraph",
+    "doc_ref": "index.txt:`}"
+  },
+  {
+    "id": "neovim.normal-mode.a_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a",
+    "desc": "append text after the cursor N times",
+    "doc_ref": "index.txt:a"
+  },
+  {
+    "id": "neovim.normal-mode.b_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "b",
+    "desc": "cursor N words backward",
+    "doc_ref": "index.txt:b"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_c_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]c{motion}",
+    "desc": "delete Nmove text [into register x] and",
+    "doc_ref": "index.txt:c"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_cc",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]cc",
+    "desc": "delete N lines [into register x] and start",
+    "doc_ref": "index.txt:cc"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_d_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]d{motion}",
+    "desc": "delete Nmove text [into register x]",
+    "doc_ref": "index.txt:d"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_dd",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]dd",
+    "desc": "delete N lines [into register x]",
+    "doc_ref": "index.txt:dd"
+  },
+  {
+    "id": "neovim.normal-mode.do",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "do",
+    "desc": "same as \":diffget\"",
+    "doc_ref": "index.txt:do"
+  },
+  {
+    "id": "neovim.normal-mode.dp",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "dp",
+    "desc": "same as \":diffput\"",
+    "doc_ref": "index.txt:dp"
+  },
+  {
+    "id": "neovim.normal-mode.e_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "e",
+    "desc": "cursor forward to the end of word N",
+    "doc_ref": "index.txt:e"
+  },
+  {
+    "id": "neovim.normal-mode.f_lbrace_char_rbrace_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "f{char}",
+    "desc": "cursor to Nth occurrence of {char} to the",
+    "doc_ref": "index.txt:f"
+  },
+  {
+    "id": "neovim.normal-mode.g_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g{char}",
+    "desc": "extended commands, see |g| below",
+    "doc_ref": "index.txt:g"
+  },
+  {
+    "id": "neovim.normal-mode.h_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "h",
+    "desc": "cursor N chars to the left",
+    "doc_ref": "index.txt:h"
+  },
+  {
+    "id": "neovim.normal-mode.i_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i",
+    "desc": "insert text before the cursor N times",
+    "doc_ref": "index.txt:i"
+  },
+  {
+    "id": "neovim.normal-mode.j_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "j",
+    "desc": "cursor N lines downward",
+    "doc_ref": "index.txt:j"
+  },
+  {
+    "id": "neovim.normal-mode.k_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "k",
+    "desc": "cursor N lines upward",
+    "doc_ref": "index.txt:k"
+  },
+  {
+    "id": "neovim.normal-mode.l_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "l",
+    "desc": "cursor N chars to the right",
+    "doc_ref": "index.txt:l"
+  },
+  {
+    "id": "neovim.normal-mode.m_lbrace_a_za_z_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "m{A-Za-z}",
+    "desc": "set mark {A-Za-z} at cursor position",
+    "doc_ref": "index.txt:m"
+  },
+  {
+    "id": "neovim.normal-mode.n_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "n",
+    "desc": "repeat the latest '/' or '?' N times",
+    "doc_ref": "index.txt:n"
+  },
+  {
+    "id": "neovim.normal-mode.o_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "o",
+    "desc": "begin a new line below the cursor and",
+    "doc_ref": "index.txt:o"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_p_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]p",
+    "desc": "put the text [from register x] after the",
+    "doc_ref": "index.txt:p"
+  },
+  {
+    "id": "neovim.normal-mode.q_lbrace_0_9a_za_z_quote_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "q{0-9a-zA-Z\"}",
+    "desc": "record typed characters into named register",
+    "doc_ref": "index.txt:q"
+  },
+  {
+    "id": "neovim.normal-mode.q",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "q",
+    "desc": "(while recording) stops recording",
+    "doc_ref": "index.txt:q"
+  },
+  {
+    "id": "neovim.normal-mode.q_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "Q",
+    "desc": "replay last recorded register",
+    "doc_ref": "index.txt:Q"
+  },
+  {
+    "id": "neovim.normal-mode.q_colon",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "q:",
+    "desc": "edit : command-line in command-line window",
+    "doc_ref": "index.txt:q:"
+  },
+  {
+    "id": "neovim.normal-mode.q_slash",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "q/",
+    "desc": "edit / command-line in command-line window",
+    "doc_ref": "index.txt:q/"
+  },
+  {
+    "id": "neovim.normal-mode.q_question",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "q?",
+    "desc": "edit ? command-line in command-line window",
+    "doc_ref": "index.txt:q?"
+  },
+  {
+    "id": "neovim.normal-mode.r_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "r{char}",
+    "desc": "replace N chars with {char}",
+    "doc_ref": "index.txt:r"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_s_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]s",
+    "desc": "(substitute) delete N characters [into",
+    "doc_ref": "index.txt:s"
+  },
+  {
+    "id": "neovim.normal-mode.t_lbrace_char_rbrace_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "t{char}",
+    "desc": "cursor till before Nth occurrence of {char}",
+    "doc_ref": "index.txt:t"
+  },
+  {
+    "id": "neovim.normal-mode.u_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "u",
+    "desc": "undo changes",
+    "doc_ref": "index.txt:u"
+  },
+  {
+    "id": "neovim.normal-mode.v_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "v",
+    "desc": "start charwise Visual mode",
+    "doc_ref": "index.txt:v"
+  },
+  {
+    "id": "neovim.normal-mode.w_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "w",
+    "desc": "cursor N words forward",
+    "doc_ref": "index.txt:w"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_x_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]x",
+    "desc": "delete N characters under and after the",
+    "doc_ref": "index.txt:x"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_y_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]y{motion}",
+    "desc": "yank Nmove text [into register x]",
+    "doc_ref": "index.txt:y"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_yy",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]yy",
+    "desc": "yank N lines [into register x]",
+    "doc_ref": "index.txt:yy"
+  },
+  {
+    "id": "neovim.normal-mode.z_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "z{char}",
+    "desc": "commands starting with 'z', see |z| below",
+    "doc_ref": "index.txt:z"
+  },
+  {
+    "id": "neovim.normal-mode.lbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "{",
+    "desc": "cursor N paragraphs backward",
+    "doc_ref": "index.txt:{"
+  },
+  {
+    "id": "neovim.normal-mode.bar",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "|",
+    "desc": "cursor to column N",
+    "doc_ref": "index.txt:bar"
+  },
+  {
+    "id": "neovim.normal-mode.rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "}",
+    "desc": "cursor N paragraphs forward",
+    "doc_ref": "index.txt:}"
+  },
+  {
+    "id": "neovim.normal-mode.tilde",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "~",
+    "desc": "'tildeop' off: switch case of N characters",
+    "doc_ref": "index.txt:~"
+  },
+  {
+    "id": "neovim.normal-mode.tilde_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "~{motion}",
+    "desc": "'tildeop' on: switch case of Nmove text",
+    "doc_ref": "index.txt:~"
+  },
+  {
+    "id": "neovim.normal-mode.lt_c_end_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<C-End>",
+    "desc": "same as \"G\"",
+    "doc_ref": "index.txt:<C-End>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_c_home_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<C-Home>",
+    "desc": "same as \"gg\"",
+    "doc_ref": "index.txt:<C-Home>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_c_left_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<C-Left>",
+    "desc": "same as \"b\"",
+    "doc_ref": "index.txt:<C-Left>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_c_leftmouse_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<C-LeftMouse>",
+    "desc": "\":ta\" to the keyword at the mouse click",
+    "doc_ref": "index.txt:<C-LeftMouse>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_c_right_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<C-Right>",
+    "desc": "same as \"w\"",
+    "doc_ref": "index.txt:<C-Right>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_c_rightmouse_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<C-RightMouse>",
+    "desc": "same as \"CTRL-T\"",
+    "doc_ref": "index.txt:<C-RightMouse>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_c_tab_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<C-Tab>",
+    "desc": "same as \"g<Tab>\"",
+    "doc_ref": "index.txt:<C-Tab>"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_lt_del_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]<Del>",
+    "desc": "same as \"x\"",
+    "doc_ref": "index.txt:<Del>"
+  },
+  {
+    "id": "neovim.normal-mode.lbrace_count_rbrace_lt_del_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "{count}<Del>",
+    "desc": "remove the last digit from {count}",
+    "doc_ref": "index.txt:N<Del>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_down_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<Down>",
+    "desc": "same as \"j\"",
+    "doc_ref": "index.txt:<Down>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_end_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<End>",
+    "desc": "same as \"$\"",
+    "doc_ref": "index.txt:<End>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_f1_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<F1>",
+    "desc": "same as <Help>",
+    "doc_ref": "index.txt:<F1>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_help_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<Help>",
+    "desc": "open a help window",
+    "doc_ref": "index.txt:<Help>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_home_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<Home>",
+    "desc": "same as \"0\"",
+    "doc_ref": "index.txt:<Home>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_insert_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<Insert>",
+    "desc": "same as \"i\"",
+    "doc_ref": "index.txt:<Insert>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_left_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<Left>",
+    "desc": "same as \"h\"",
+    "doc_ref": "index.txt:<Left>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_leftmouse_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<LeftMouse>",
+    "desc": "move cursor to the mouse click position",
+    "doc_ref": "index.txt:<LeftMouse>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_middlemouse_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<MiddleMouse>",
+    "desc": "same as \"gP\" at the mouse click position",
+    "doc_ref": "index.txt:<MiddleMouse>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_pagedown_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<PageDown>",
+    "desc": "same as CTRL-F",
+    "doc_ref": "index.txt:<PageDown>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_pageup_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<PageUp>",
+    "desc": "same as CTRL-B",
+    "doc_ref": "index.txt:<PageUp>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_right_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<Right>",
+    "desc": "same as \"l\"",
+    "doc_ref": "index.txt:<Right>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_rightmouse_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<RightMouse>",
+    "desc": "start Visual mode, move cursor to the mouse",
+    "doc_ref": "index.txt:<RightMouse>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_s_down_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<S-Down>",
+    "desc": "same as CTRL-F",
+    "doc_ref": "index.txt:<S-Down>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_s_left_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<S-Left>",
+    "desc": "same as \"b\"",
+    "doc_ref": "index.txt:<S-Left>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_s_leftmouse_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<S-LeftMouse>",
+    "desc": "same as \"*\" at the mouse click position",
+    "doc_ref": "index.txt:<S-LeftMouse>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_s_right_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<S-Right>",
+    "desc": "same as \"w\"",
+    "doc_ref": "index.txt:<S-Right>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_s_rightmouse_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<S-RightMouse>",
+    "desc": "same as \"#\" at the mouse click position",
+    "doc_ref": "index.txt:<S-RightMouse>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_s_up_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<S-Up>",
+    "desc": "same as CTRL-B",
+    "doc_ref": "index.txt:<S-Up>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_undo_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<Undo>",
+    "desc": "same as \"u\"",
+    "doc_ref": "index.txt:<Undo>"
+  },
+  {
+    "id": "neovim.normal-mode.lt_up_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "<Up>",
+    "desc": "same as \"k\"",
+    "doc_ref": "index.txt:<Up>"
+  },
+  {
+    "id": "neovim.normal-mode.a_quote",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a\"",
+    "desc": "double quoted string",
+    "doc_ref": "index.txt:v_aquote"
+  },
+  {
+    "id": "neovim.normal-mode.a_apos",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a'",
+    "desc": "single quoted string",
+    "doc_ref": "index.txt:v_a'"
+  },
+  {
+    "id": "neovim.normal-mode.a_lparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a(",
+    "desc": "same as ab",
+    "doc_ref": "index.txt:v_a("
+  },
+  {
+    "id": "neovim.normal-mode.a_rparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a)",
+    "desc": "same as ab",
+    "doc_ref": "index.txt:v_a)"
+  },
+  {
+    "id": "neovim.normal-mode.a_lt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a<",
+    "desc": "\"a <>\" from '<' to the matching '>'",
+    "doc_ref": "index.txt:v_a<"
+  },
+  {
+    "id": "neovim.normal-mode.a_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a>",
+    "desc": "same as a<",
+    "doc_ref": "index.txt:v_a>"
+  },
+  {
+    "id": "neovim.normal-mode.ab",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "aB",
+    "desc": "\"a Block\" from `[{` to `]}` (with brackets)",
+    "doc_ref": "index.txt:v_aB"
+  },
+  {
+    "id": "neovim.normal-mode.aw",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "aW",
+    "desc": "\"a WORD\" (with white space)",
+    "doc_ref": "index.txt:v_aW"
+  },
+  {
+    "id": "neovim.normal-mode.a_lbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a[",
+    "desc": "\"a []\" from '[' to the matching ']'",
+    "doc_ref": "index.txt:v_a["
+  },
+  {
+    "id": "neovim.normal-mode.a_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a]",
+    "desc": "same as a[",
+    "doc_ref": "index.txt:v_a]"
+  },
+  {
+    "id": "neovim.normal-mode.a_backtick",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a`",
+    "desc": "string in backticks",
+    "doc_ref": "index.txt:v_a`"
+  },
+  {
+    "id": "neovim.normal-mode.ab_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "ab",
+    "desc": "\"a block\" from \"[(\" to \"])\" (with braces)",
+    "doc_ref": "index.txt:v_ab"
+  },
+  {
+    "id": "neovim.normal-mode.al",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "al",
+    "desc": "all lines (entire buffer)",
+    "doc_ref": "index.txt:v_al"
+  },
+  {
+    "id": "neovim.normal-mode.ap",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "ap",
+    "desc": "\"a paragraph\" (with white space)",
+    "doc_ref": "index.txt:v_ap"
+  },
+  {
+    "id": "neovim.normal-mode.as",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "as",
+    "desc": "\"a sentence\" (with white space)",
+    "doc_ref": "index.txt:v_as"
+  },
+  {
+    "id": "neovim.normal-mode.at",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "at",
+    "desc": "\"a tag block\" (with white space)",
+    "doc_ref": "index.txt:v_at"
+  },
+  {
+    "id": "neovim.normal-mode.aw_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "aw",
+    "desc": "\"a word\" (with white space)",
+    "doc_ref": "index.txt:v_aw"
+  },
+  {
+    "id": "neovim.normal-mode.a_lbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a{",
+    "desc": "same as aB",
+    "doc_ref": "index.txt:v_a{"
+  },
+  {
+    "id": "neovim.normal-mode.a_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "a}",
+    "desc": "same as aB",
+    "doc_ref": "index.txt:v_a}"
+  },
+  {
+    "id": "neovim.normal-mode.i_quote",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i\"",
+    "desc": "double quoted string without the quotes",
+    "doc_ref": "index.txt:v_iquote"
+  },
+  {
+    "id": "neovim.normal-mode.i_apos",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i'",
+    "desc": "single quoted string without the quotes",
+    "doc_ref": "index.txt:v_i'"
+  },
+  {
+    "id": "neovim.normal-mode.i_lparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i(",
+    "desc": "same as ib",
+    "doc_ref": "index.txt:v_i("
+  },
+  {
+    "id": "neovim.normal-mode.i_rparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i)",
+    "desc": "same as ib",
+    "doc_ref": "index.txt:v_i)"
+  },
+  {
+    "id": "neovim.normal-mode.i_lt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i<",
+    "desc": "\"inner <>\" from '<' to the matching '>'",
+    "doc_ref": "index.txt:v_i<"
+  },
+  {
+    "id": "neovim.normal-mode.i_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i>",
+    "desc": "same as i<",
+    "doc_ref": "index.txt:v_i>"
+  },
+  {
+    "id": "neovim.normal-mode.ib",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "iB",
+    "desc": "\"inner Block\" from `[{` and `]}`",
+    "doc_ref": "index.txt:v_iB"
+  },
+  {
+    "id": "neovim.normal-mode.iw",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "iW",
+    "desc": "\"inner WORD\"",
+    "doc_ref": "index.txt:v_iW"
+  },
+  {
+    "id": "neovim.normal-mode.i_lbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i[",
+    "desc": "\"inner []\" from '[' to the matching ']'",
+    "doc_ref": "index.txt:v_i["
+  },
+  {
+    "id": "neovim.normal-mode.i_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i]",
+    "desc": "same as i[",
+    "doc_ref": "index.txt:v_i]"
+  },
+  {
+    "id": "neovim.normal-mode.i_backtick",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i`",
+    "desc": "string in backticks without the backticks",
+    "doc_ref": "index.txt:v_i`"
+  },
+  {
+    "id": "neovim.normal-mode.ib_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "ib",
+    "desc": "\"inner block\" from \"[(\" to \"])\"",
+    "doc_ref": "index.txt:v_ib"
+  },
+  {
+    "id": "neovim.normal-mode.il",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "il",
+    "desc": "inner line (without surrounding whitespace)",
+    "doc_ref": "index.txt:v_il"
+  },
+  {
+    "id": "neovim.normal-mode.ip",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "ip",
+    "desc": "\"inner paragraph\"",
+    "doc_ref": "index.txt:v_ip"
+  },
+  {
+    "id": "neovim.normal-mode.is",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "is",
+    "desc": "\"inner sentence\"",
+    "doc_ref": "index.txt:v_is"
+  },
+  {
+    "id": "neovim.normal-mode.it",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "it",
+    "desc": "\"inner tag block\"",
+    "doc_ref": "index.txt:v_it"
+  },
+  {
+    "id": "neovim.normal-mode.iw_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "iw",
+    "desc": "\"inner word\"",
+    "doc_ref": "index.txt:v_iw"
+  },
+  {
+    "id": "neovim.normal-mode.i_lbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i{",
+    "desc": "same as iB",
+    "doc_ref": "index.txt:v_i{"
+  },
+  {
+    "id": "neovim.normal-mode.i_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "i}",
+    "desc": "same as iB",
+    "doc_ref": "index.txt:v_i}"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_b",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-B",
+    "desc": "same as \"CTRL-W b\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-B"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_c",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-C",
+    "desc": "no-op",
+    "doc_ref": "index.txt:CTRL-W_CTRL-C"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_d",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-D",
+    "desc": "same as \"CTRL-W d\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-D"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_f",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-F",
+    "desc": "same as \"CTRL-W f\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-F"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_h",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-H",
+    "desc": "same as \"CTRL-W h\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-H"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_i",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-I",
+    "desc": "same as \"CTRL-W i\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-I"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_j",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-J",
+    "desc": "same as \"CTRL-W j\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-J"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_k",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-K",
+    "desc": "same as \"CTRL-W k\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-K"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_l",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-L",
+    "desc": "same as \"CTRL-W l\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-L"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_n",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-N",
+    "desc": "same as \"CTRL-W n\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-N"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_o",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-O",
+    "desc": "same as \"CTRL-W o\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-O"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_p",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-P",
+    "desc": "same as \"CTRL-W p\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-P"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_q",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-Q",
+    "desc": "same as \"CTRL-W q\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-Q"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_r",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-R",
+    "desc": "same as \"CTRL-W r\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-R"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_s",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-S",
+    "desc": "same as \"CTRL-W s\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-S"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_t",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-T",
+    "desc": "same as \"CTRL-W t\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-T"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_v",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-V",
+    "desc": "same as \"CTRL-W v\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-V"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_w",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-W",
+    "desc": "same as \"CTRL-W w\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-W"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_x",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-X",
+    "desc": "same as \"CTRL-W x\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-X"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_z",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-Z",
+    "desc": "same as \"CTRL-W z\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-Z"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-]",
+    "desc": "same as \"CTRL-W ]\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-]"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl_caret",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-^",
+    "desc": "same as \"CTRL-W ^\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-^"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_ctrl",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W CTRL-_",
+    "desc": "same as \"CTRL-W _\"",
+    "doc_ref": "index.txt:CTRL-W_CTRL-_"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_plus",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W +",
+    "desc": "increase current window height N lines",
+    "doc_ref": "index.txt:CTRL-W_+"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W -",
+    "desc": "decrease current window height N lines",
+    "doc_ref": "index.txt:CTRL-W_-"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_lt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W <",
+    "desc": "decrease current window width N columns",
+    "doc_ref": "index.txt:CTRL-W_<"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_eq",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W =",
+    "desc": "make all windows the same height & width",
+    "doc_ref": "index.txt:CTRL-W_="
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W >",
+    "desc": "increase current window width N columns",
+    "doc_ref": "index.txt:CTRL-W_>"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_h",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W H",
+    "desc": "move current window to the far left",
+    "doc_ref": "index.txt:CTRL-W_H"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_j",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W J",
+    "desc": "move current window to the very bottom",
+    "doc_ref": "index.txt:CTRL-W_J"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_k",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W K",
+    "desc": "move current window to the very top",
+    "doc_ref": "index.txt:CTRL-W_K"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_l",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W L",
+    "desc": "move current window to the far right",
+    "doc_ref": "index.txt:CTRL-W_L"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_p",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W P",
+    "desc": "go to preview window",
+    "doc_ref": "index.txt:CTRL-W_P"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_r",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W R",
+    "desc": "rotate windows upwards N times",
+    "doc_ref": "index.txt:CTRL-W_R"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_s",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W S",
+    "desc": "same as \"CTRL-W s\"",
+    "doc_ref": "index.txt:CTRL-W_S"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_t",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W T",
+    "desc": "move current window to a new tabpage",
+    "doc_ref": "index.txt:CTRL-W_T"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_w",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W W",
+    "desc": "go to N previous window (wrap around)",
+    "doc_ref": "index.txt:CTRL-W_W"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W ]",
+    "desc": "split window and jump to tag under cursor",
+    "doc_ref": "index.txt:CTRL-W_]"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_caret",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W ^",
+    "desc": "split current window and edit alternate",
+    "doc_ref": "index.txt:CTRL-W_^"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W _",
+    "desc": "set current window height to N (default:",
+    "doc_ref": "index.txt:CTRL-W__"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_b",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W b",
+    "desc": "go to bottom window",
+    "doc_ref": "index.txt:CTRL-W_b"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_c",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W c",
+    "desc": "close current window (like |:close|)",
+    "doc_ref": "index.txt:CTRL-W_c"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_d",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W d",
+    "desc": "split window and jump to definition under",
+    "doc_ref": "index.txt:CTRL-W_d"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_f",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W f",
+    "desc": "split window and edit file name under the",
+    "doc_ref": "index.txt:CTRL-W_f"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_f_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W F",
+    "desc": "split window and edit file name under the",
+    "doc_ref": "index.txt:CTRL-W_F"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_g_ctrl_rbracket_split_window_and_do_bar_colon_tjump_bar_to_tag_under",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W g CTRL-]  split window and do |:tjump| to tag under",
+    "desc": "cursor",
+    "doc_ref": "index.txt:CTRL-W_g_CTRL-]"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_g_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W g ]",
+    "desc": "split window and do |:tselect| for tag",
+    "doc_ref": "index.txt:CTRL-W_g]"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_g_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W g }",
+    "desc": "do a |:ptjump| to the tag under the cursor",
+    "doc_ref": "index.txt:CTRL-W_g}"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_g_f",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W g f",
+    "desc": "edit file name under the cursor in a new",
+    "doc_ref": "index.txt:CTRL-W_gf"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_g_f_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W g F",
+    "desc": "edit file name under the cursor in a new",
+    "doc_ref": "index.txt:CTRL-W_gF"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_g_t",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W g t",
+    "desc": "same as `gt`: go to next tabpage",
+    "doc_ref": "index.txt:CTRL-W_gt"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_g_t_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W g T",
+    "desc": "same as `gT`: go to previous tabpage",
+    "doc_ref": "index.txt:CTRL-W_gT"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_g_lt_tab_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W g <Tab>",
+    "desc": "same as |g<Tab>|: go to last accessed tab",
+    "doc_ref": "index.txt:CTRL-W_g<Tab>"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_h_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W h",
+    "desc": "go to Nth left window (stop at first window)",
+    "doc_ref": "index.txt:CTRL-W_h"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_i",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W i",
+    "desc": "split window and jump to declaration of",
+    "doc_ref": "index.txt:CTRL-W_i"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_j_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W j",
+    "desc": "go N windows down (stop at last window)",
+    "doc_ref": "index.txt:CTRL-W_j"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_k_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W k",
+    "desc": "go N windows up (stop at first window)",
+    "doc_ref": "index.txt:CTRL-W_k"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_l_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W l",
+    "desc": "go to Nth right window (stop at last window)",
+    "doc_ref": "index.txt:CTRL-W_l"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_n",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W n",
+    "desc": "open new window, N lines high",
+    "doc_ref": "index.txt:CTRL-W_n"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_o",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W o",
+    "desc": "close all but current window (like |:only|)",
+    "doc_ref": "index.txt:CTRL-W_o"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_p_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W p",
+    "desc": "go to previous (last accessed) window",
+    "doc_ref": "index.txt:CTRL-W_p"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_q",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W q",
+    "desc": "quit current window (like |:quit|)",
+    "doc_ref": "index.txt:CTRL-W_q"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_r_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W r",
+    "desc": "rotate windows downwards N times",
+    "doc_ref": "index.txt:CTRL-W_r"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_s_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W s",
+    "desc": "split current window in two parts, new",
+    "doc_ref": "index.txt:CTRL-W_s"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_t_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W t",
+    "desc": "go to top window",
+    "doc_ref": "index.txt:CTRL-W_t"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_v",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W v",
+    "desc": "split current window vertically, new window",
+    "doc_ref": "index.txt:CTRL-W_v"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_w_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W w",
+    "desc": "go to N next window (wrap around)",
+    "doc_ref": "index.txt:CTRL-W_w"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_x",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W x",
+    "desc": "exchange current window with window N",
+    "doc_ref": "index.txt:CTRL-W_x"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_z",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W z",
+    "desc": "close preview window",
+    "doc_ref": "index.txt:CTRL-W_z"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_bar",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W |",
+    "desc": "set window width to N columns",
+    "doc_ref": "index.txt:CTRL-W_bar"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W }",
+    "desc": "show tag under cursor in preview window",
+    "doc_ref": "index.txt:CTRL-W_}"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_lt_down_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W <Down>",
+    "desc": "same as \"CTRL-W j\"",
+    "doc_ref": "index.txt:CTRL-W_<Down>"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_lt_up_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W <Up>",
+    "desc": "same as \"CTRL-W k\"",
+    "doc_ref": "index.txt:CTRL-W_<Up>"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_lt_left_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W <Left>",
+    "desc": "same as \"CTRL-W h\"",
+    "doc_ref": "index.txt:CTRL-W_<Left>"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_w_lt_right_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-W <Right>",
+    "desc": "same as \"CTRL-W l\"",
+    "doc_ref": "index.txt:CTRL-W_<Right>"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_ctrl_d",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[ CTRL-D",
+    "desc": "jump to first #define found in current and",
+    "doc_ref": "index.txt:[_CTRL-D"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_ctrl_i",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[ CTRL-I",
+    "desc": "jump to first line in current and included",
+    "doc_ref": "index.txt:[_CTRL-I"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_hash",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[#",
+    "desc": "cursor to N previous unmatched #if, #else",
+    "doc_ref": "index.txt:[#"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_apos",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "['",
+    "desc": "cursor to previous lowercase mark, on first",
+    "doc_ref": "index.txt:['"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_lparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[(",
+    "desc": "cursor N times back to unmatched '('",
+    "doc_ref": "index.txt:[("
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_star",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[*",
+    "desc": "same as \"[/\"",
+    "doc_ref": "index.txt:[star"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_backtick",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[`",
+    "desc": "cursor to previous lowercase mark",
+    "doc_ref": "index.txt:[`"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_slash",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[/",
+    "desc": "cursor to N previous start of a C comment",
+    "doc_ref": "index.txt:[/"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_d",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[D",
+    "desc": "list all defines found in current and",
+    "doc_ref": "index.txt:[D"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_i",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[I",
+    "desc": "list all lines found in current and",
+    "doc_ref": "index.txt:[I"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_p",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[P",
+    "desc": "same as \"[p\"",
+    "doc_ref": "index.txt:[P"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_lbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[[",
+    "desc": "cursor N sections backward",
+    "doc_ref": "index.txt:[["
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[]",
+    "desc": "cursor N SECTIONS backward",
+    "doc_ref": "index.txt:[]"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_c",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[c",
+    "desc": "cursor N times backwards to start of change",
+    "doc_ref": "index.txt:[c"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_d_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[d",
+    "desc": "show first #define found in current and",
+    "doc_ref": "index.txt:[d"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_f",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[f",
+    "desc": "same as \"gf\"",
+    "doc_ref": "index.txt:[f"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_i_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[i",
+    "desc": "show first line found in current and",
+    "doc_ref": "index.txt:[i"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_m",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[m",
+    "desc": "cursor N times back to start of member",
+    "doc_ref": "index.txt:[m"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_p_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[p",
+    "desc": "like \"P\", but adjust indent to current line",
+    "doc_ref": "index.txt:[p"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_s",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[s",
+    "desc": "move to the previous misspelled word",
+    "doc_ref": "index.txt:[s"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_z",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[z",
+    "desc": "move to start of open fold",
+    "doc_ref": "index.txt:[z"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_lbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[{",
+    "desc": "cursor N times back to unmatched '{'",
+    "doc_ref": "index.txt:[{"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_lt_middlemouse_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[<MiddleMouse>",
+    "desc": "same as \"[p\"",
+    "doc_ref": "index.txt:[<MiddleMouse>"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_ctrl_d",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "] CTRL-D",
+    "desc": "jump to first #define found in current and",
+    "doc_ref": "index.txt:]_CTRL-D"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_ctrl_i",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "] CTRL-I",
+    "desc": "jump to first line in current and included",
+    "doc_ref": "index.txt:]_CTRL-I"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_hash",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]#",
+    "desc": "cursor to N next unmatched #endif or #else",
+    "doc_ref": "index.txt:]#"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_apos",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]'",
+    "desc": "cursor to next lowercase mark, on first",
+    "doc_ref": "index.txt:]'"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_rparen",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "])",
+    "desc": "cursor N times forward to unmatched ')'",
+    "doc_ref": "index.txt:])"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_star",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]*",
+    "desc": "same as \"]/\"",
+    "doc_ref": "index.txt:]star"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_backtick",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]`",
+    "desc": "cursor to next lowercase mark",
+    "doc_ref": "index.txt:]`"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_slash",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]/",
+    "desc": "cursor to N next end of a C comment",
+    "doc_ref": "index.txt:]/"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_d",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]D",
+    "desc": "list all #defines found in current and",
+    "doc_ref": "index.txt:]D"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_i",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]I",
+    "desc": "list all lines found in current and",
+    "doc_ref": "index.txt:]I"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_p",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]P",
+    "desc": "same as \"[p\"",
+    "doc_ref": "index.txt:]P"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_lbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "][",
+    "desc": "cursor N SECTIONS forward",
+    "doc_ref": "index.txt:]["
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]]",
+    "desc": "cursor N sections forward",
+    "doc_ref": "index.txt:]]"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_c",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]c",
+    "desc": "cursor N times forward to start of change",
+    "doc_ref": "index.txt:]c"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_d_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]d",
+    "desc": "show first #define found in current and",
+    "doc_ref": "index.txt:]d"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_f",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]f",
+    "desc": "same as \"gf\"",
+    "doc_ref": "index.txt:]f"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_i_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]i",
+    "desc": "show first line found in current and",
+    "doc_ref": "index.txt:]i"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_m",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]m",
+    "desc": "cursor N times forward to end of member",
+    "doc_ref": "index.txt:]m"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_p_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]p",
+    "desc": "like \"p\", but adjust indent to current line",
+    "doc_ref": "index.txt:]p"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_s",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]s",
+    "desc": "move to next misspelled word",
+    "doc_ref": "index.txt:]s"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_z",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]z",
+    "desc": "move to end of open fold",
+    "doc_ref": "index.txt:]z"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]}",
+    "desc": "cursor N times forward to unmatched '}'",
+    "doc_ref": "index.txt:]}"
+  },
+  {
+    "id": "neovim.normal-mode.rbracket_lt_middlemouse_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "]<MiddleMouse>",
+    "desc": "same as \"]p\"",
+    "doc_ref": "index.txt:]<MiddleMouse>"
+  },
+  {
+    "id": "neovim.normal-mode.g_ctrl_g",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g CTRL-G",
+    "desc": "show information about current cursor",
+    "doc_ref": "index.txt:g_CTRL-G"
+  },
+  {
+    "id": "neovim.normal-mode.g_ctrl_h",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g CTRL-H",
+    "desc": "start Select block mode",
+    "doc_ref": "index.txt:g_CTRL-H"
+  },
+  {
+    "id": "neovim.normal-mode.g_ctrl_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g CTRL-]",
+    "desc": "|:tjump| to the tag under the cursor",
+    "doc_ref": "index.txt:g_CTRL-]"
+  },
+  {
+    "id": "neovim.normal-mode.g_hash",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g#",
+    "desc": "like \"#\", but without using \"\\<\" and \"\\>\"",
+    "doc_ref": "index.txt:g#"
+  },
+  {
+    "id": "neovim.normal-mode.g_dollar",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g$",
+    "desc": "when 'wrap' off go to rightmost character of",
+    "doc_ref": "index.txt:g$"
+  },
+  {
+    "id": "neovim.normal-mode.g_amp",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g&",
+    "desc": "repeat last \":s\" on all lines",
+    "doc_ref": "index.txt:g&"
+  },
+  {
+    "id": "neovim.normal-mode.g_apos_lbrace_mark_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g'{mark}",
+    "desc": "like |'| but without changing the jumplist",
+    "doc_ref": "index.txt:g'"
+  },
+  {
+    "id": "neovim.normal-mode.g_backtick_lbrace_mark_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g`{mark}",
+    "desc": "like |`| but without changing the jumplist",
+    "doc_ref": "index.txt:g`"
+  },
+  {
+    "id": "neovim.normal-mode.g_star",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g*",
+    "desc": "like \"*\", but without using \"\\<\" and \"\\>\"",
+    "doc_ref": "index.txt:gstar"
+  },
+  {
+    "id": "neovim.normal-mode.g_plus",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g+",
+    "desc": "go to newer text state N times",
+    "doc_ref": "index.txt:g+"
+  },
+  {
+    "id": "neovim.normal-mode.g_comma",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g,",
+    "desc": "go to N newer position in change list",
+    "doc_ref": "index.txt:g,"
+  },
+  {
+    "id": "neovim.normal-mode.g_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g-",
+    "desc": "go to older text state N times",
+    "doc_ref": "index.txt:g-"
+  },
+  {
+    "id": "neovim.normal-mode.g0",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g0",
+    "desc": "when 'wrap' off go to leftmost character of",
+    "doc_ref": "index.txt:g0"
+  },
+  {
+    "id": "neovim.normal-mode.g8",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g8",
+    "desc": "print hex value of bytes used in UTF-8",
+    "doc_ref": "index.txt:g8"
+  },
+  {
+    "id": "neovim.normal-mode.g_semicolon",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g;",
+    "desc": "go to N older position in change list",
+    "doc_ref": "index.txt:g;"
+  },
+  {
+    "id": "neovim.normal-mode.g_lt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g<",
+    "desc": "display previous command output",
+    "doc_ref": "index.txt:g<"
+  },
+  {
+    "id": "neovim.normal-mode.g_question",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g?",
+    "desc": "Rot13 encoding operator",
+    "doc_ref": "index.txt:g?"
+  },
+  {
+    "id": "neovim.normal-mode.g_question_question",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g??",
+    "desc": "Rot13 encode current line",
+    "doc_ref": "index.txt:g?g?"
+  },
+  {
+    "id": "neovim.normal-mode.g_question_g_question",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g?g?",
+    "desc": "Rot13 encode current line",
+    "doc_ref": "index.txt:g?g?"
+  },
+  {
+    "id": "neovim.normal-mode.gd",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gD",
+    "desc": "go to definition of word under the cursor",
+    "doc_ref": "index.txt:gD"
+  },
+  {
+    "id": "neovim.normal-mode.ge",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gE",
+    "desc": "go backwards to the end of the previous",
+    "doc_ref": "index.txt:gE"
+  },
+  {
+    "id": "neovim.normal-mode.gh",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gH",
+    "desc": "start Select line mode",
+    "doc_ref": "index.txt:gH"
+  },
+  {
+    "id": "neovim.normal-mode.gi",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gI",
+    "desc": "like \"I\", but always start in column 1",
+    "doc_ref": "index.txt:gI"
+  },
+  {
+    "id": "neovim.normal-mode.gj",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gJ",
+    "desc": "join lines without inserting space",
+    "doc_ref": "index.txt:gJ"
+  },
+  {
+    "id": "neovim.normal-mode.gn",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gN",
+    "desc": "1,2 find the previous match with the last used",
+    "doc_ref": "index.txt:gN"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_gp",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]gP",
+    "desc": "put the text [from register x] before the",
+    "doc_ref": "index.txt:gP"
+  },
+  {
+    "id": "neovim.normal-mode.gq",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gQ",
+    "desc": "switch to \"Ex\" mode with Vim editing",
+    "doc_ref": "index.txt:gQ"
+  },
+  {
+    "id": "neovim.normal-mode.gr",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gR",
+    "desc": "enter Virtual Replace mode",
+    "doc_ref": "index.txt:gR"
+  },
+  {
+    "id": "neovim.normal-mode.gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gT",
+    "desc": "go to the previous tabpage",
+    "doc_ref": "index.txt:gT"
+  },
+  {
+    "id": "neovim.normal-mode.gu_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gU{motion}",
+    "desc": "make Nmove text uppercase",
+    "doc_ref": "index.txt:gU"
+  },
+  {
+    "id": "neovim.normal-mode.gv",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gV",
+    "desc": "don't reselect the previous Visual area",
+    "doc_ref": "index.txt:gV"
+  },
+  {
+    "id": "neovim.normal-mode.g_rbracket",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g]",
+    "desc": ":tselect on the tag under the cursor",
+    "doc_ref": "index.txt:g]"
+  },
+  {
+    "id": "neovim.normal-mode.g_caret",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g^",
+    "desc": "when 'wrap' off go to leftmost non-white",
+    "doc_ref": "index.txt:g^"
+  },
+  {
+    "id": "neovim.normal-mode.g_2",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g_",
+    "desc": "cursor to the last CHAR N - 1 lines lower",
+    "doc_ref": "index.txt:g_"
+  },
+  {
+    "id": "neovim.normal-mode.ga",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "ga",
+    "desc": "print ascii value of character under the",
+    "doc_ref": "index.txt:ga"
+  },
+  {
+    "id": "neovim.normal-mode.gd_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gd",
+    "desc": "go to definition of word under the cursor",
+    "doc_ref": "index.txt:gd"
+  },
+  {
+    "id": "neovim.normal-mode.ge_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "ge",
+    "desc": "go backwards to the end of the previous",
+    "doc_ref": "index.txt:ge"
+  },
+  {
+    "id": "neovim.normal-mode.gf",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gf",
+    "desc": "start editing the file whose name is under",
+    "doc_ref": "index.txt:gf"
+  },
+  {
+    "id": "neovim.normal-mode.gf_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gF",
+    "desc": "start editing the file whose name is under",
+    "doc_ref": "index.txt:gF"
+  },
+  {
+    "id": "neovim.normal-mode.gg",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gg",
+    "desc": "cursor to line N, default first line",
+    "doc_ref": "index.txt:gg"
+  },
+  {
+    "id": "neovim.normal-mode.gh_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gh",
+    "desc": "start Select mode",
+    "doc_ref": "index.txt:gh"
+  },
+  {
+    "id": "neovim.normal-mode.gi_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gi",
+    "desc": "like \"i\", but first move to the |'^| mark",
+    "doc_ref": "index.txt:gi"
+  },
+  {
+    "id": "neovim.normal-mode.gj_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gj",
+    "desc": "like \"j\", but when 'wrap' on go N screen",
+    "doc_ref": "index.txt:gj"
+  },
+  {
+    "id": "neovim.normal-mode.gk",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gk",
+    "desc": "like \"k\", but when 'wrap' on go N screen",
+    "doc_ref": "index.txt:gk"
+  },
+  {
+    "id": "neovim.normal-mode.gm",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gm",
+    "desc": "go to character at middle of the screenline",
+    "doc_ref": "index.txt:gm"
+  },
+  {
+    "id": "neovim.normal-mode.gm_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gM",
+    "desc": "go to character at middle of the text line",
+    "doc_ref": "index.txt:gM"
+  },
+  {
+    "id": "neovim.normal-mode.gn_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gn",
+    "desc": "1,2 find the next match with the last used",
+    "doc_ref": "index.txt:gn"
+  },
+  {
+    "id": "neovim.normal-mode.go",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "go",
+    "desc": "cursor to byte N in the buffer",
+    "doc_ref": "index.txt:go"
+  },
+  {
+    "id": "neovim.normal-mode.lbracket_quote_x_rbracket_gp_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "[\"x]gp",
+    "desc": "put the text [from register x] after the",
+    "doc_ref": "index.txt:gp"
+  },
+  {
+    "id": "neovim.normal-mode.gq_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gq{motion}",
+    "desc": "format Nmove text",
+    "doc_ref": "index.txt:gq"
+  },
+  {
+    "id": "neovim.normal-mode.gr_lbrace_char_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gr{char}",
+    "desc": "virtual replace N chars with {char}",
+    "doc_ref": "index.txt:gr"
+  },
+  {
+    "id": "neovim.normal-mode.gs",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gs",
+    "desc": "go to sleep for N seconds (default 1)",
+    "doc_ref": "index.txt:gs"
+  },
+  {
+    "id": "neovim.normal-mode.gt_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gt",
+    "desc": "go to the next tabpage",
+    "doc_ref": "index.txt:gt"
+  },
+  {
+    "id": "neovim.normal-mode.gu_lbrace_motion_rbrace_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gu{motion}",
+    "desc": "make Nmove text lowercase",
+    "doc_ref": "index.txt:gu"
+  },
+  {
+    "id": "neovim.normal-mode.gv_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gv",
+    "desc": "reselect the previous Visual area",
+    "doc_ref": "index.txt:gv"
+  },
+  {
+    "id": "neovim.normal-mode.gw_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gw{motion}",
+    "desc": "format Nmove text and keep cursor",
+    "doc_ref": "index.txt:gw"
+  },
+  {
+    "id": "neovim.normal-mode.gx",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "gx",
+    "desc": "execute application for filepath at cursor",
+    "doc_ref": "index.txt:gx"
+  },
+  {
+    "id": "neovim.normal-mode.g_at_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g@{motion}",
+    "desc": "call 'operatorfunc'",
+    "doc_ref": "index.txt:g@"
+  },
+  {
+    "id": "neovim.normal-mode.g_tilde_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g~{motion}",
+    "desc": "swap case for Nmove text",
+    "doc_ref": "index.txt:g~"
+  },
+  {
+    "id": "neovim.normal-mode.g_lt_down_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g<Down>",
+    "desc": "same as \"gj\"",
+    "doc_ref": "index.txt:g<Down>"
+  },
+  {
+    "id": "neovim.normal-mode.g_lt_end_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g<End>",
+    "desc": "same as \"g$\" but go to the rightmost",
+    "doc_ref": "index.txt:g<End>"
+  },
+  {
+    "id": "neovim.normal-mode.g_lt_home_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g<Home>",
+    "desc": "same as \"g0\"",
+    "doc_ref": "index.txt:g<Home>"
+  },
+  {
+    "id": "neovim.normal-mode.g_lt_leftmouse_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g<LeftMouse>",
+    "desc": "same as <C-LeftMouse>",
+    "doc_ref": "index.txt:g<LeftMouse>"
+  },
+  {
+    "id": "neovim.normal-mode.g_lt_rightmouse_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g<RightMouse>",
+    "desc": "same as <C-RightMouse>",
+    "doc_ref": "index.txt:g<RightMouse>"
+  },
+  {
+    "id": "neovim.normal-mode.g_lt_tab_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g<Tab>",
+    "desc": "go to last accessed tabpage",
+    "doc_ref": "index.txt:g<Tab>"
+  },
+  {
+    "id": "neovim.normal-mode.g_lt_up_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "g<Up>",
+    "desc": "same as \"gk\"",
+    "doc_ref": "index.txt:g<Up>"
+  },
+  {
+    "id": "neovim.normal-mode.z_lt_cr_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "z<CR>",
+    "desc": "redraw, cursor line to top of window,",
+    "doc_ref": "index.txt:z<CR>"
+  },
+  {
+    "id": "neovim.normal-mode.z_lbrace_height_rbrace_lt_cr_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "z{height}<CR>",
+    "desc": "redraw, make window {height} lines high",
+    "doc_ref": "index.txt:zN<CR>"
+  },
+  {
+    "id": "neovim.normal-mode.z_plus",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "z+",
+    "desc": "cursor on line N (default line below",
+    "doc_ref": "index.txt:z+"
+  },
+  {
+    "id": "neovim.normal-mode.z",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "z-",
+    "desc": "redraw, cursor line at bottom of window,",
+    "doc_ref": "index.txt:z-"
+  },
+  {
+    "id": "neovim.normal-mode.z_dot",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "z.",
+    "desc": "redraw, cursor line to center of window,",
+    "doc_ref": "index.txt:z."
+  },
+  {
+    "id": "neovim.normal-mode.z_eq",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "z=",
+    "desc": "give spelling suggestions",
+    "doc_ref": "index.txt:z="
+  },
+  {
+    "id": "neovim.normal-mode.za",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zA",
+    "desc": "open a closed fold or close an open fold",
+    "doc_ref": "index.txt:zA"
+  },
+  {
+    "id": "neovim.normal-mode.zc",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zC",
+    "desc": "close folds recursively",
+    "doc_ref": "index.txt:zC"
+  },
+  {
+    "id": "neovim.normal-mode.zd",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zD",
+    "desc": "delete folds recursively",
+    "doc_ref": "index.txt:zD"
+  },
+  {
+    "id": "neovim.normal-mode.ze",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zE",
+    "desc": "eliminate all folds",
+    "doc_ref": "index.txt:zE"
+  },
+  {
+    "id": "neovim.normal-mode.zf",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zF",
+    "desc": "create a fold for N lines",
+    "doc_ref": "index.txt:zF"
+  },
+  {
+    "id": "neovim.normal-mode.zg",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zG",
+    "desc": "temporarily mark word as correctly spelled",
+    "doc_ref": "index.txt:zG"
+  },
+  {
+    "id": "neovim.normal-mode.zh",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zH",
+    "desc": "when 'wrap' off scroll half a screenwidth",
+    "doc_ref": "index.txt:zH"
+  },
+  {
+    "id": "neovim.normal-mode.zl",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zL",
+    "desc": "when 'wrap' off scroll half a screenwidth",
+    "doc_ref": "index.txt:zL"
+  },
+  {
+    "id": "neovim.normal-mode.zm",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zM",
+    "desc": "set 'foldlevel' to zero",
+    "doc_ref": "index.txt:zM"
+  },
+  {
+    "id": "neovim.normal-mode.zn",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zN",
+    "desc": "set 'foldenable'",
+    "doc_ref": "index.txt:zN"
+  },
+  {
+    "id": "neovim.normal-mode.zo",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zO",
+    "desc": "open folds recursively",
+    "doc_ref": "index.txt:zO"
+  },
+  {
+    "id": "neovim.normal-mode.zr",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zR",
+    "desc": "set 'foldlevel' to the deepest fold",
+    "doc_ref": "index.txt:zR"
+  },
+  {
+    "id": "neovim.normal-mode.zw",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zW",
+    "desc": "temporarily mark word as incorrectly spelled",
+    "doc_ref": "index.txt:zW"
+  },
+  {
+    "id": "neovim.normal-mode.zx",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zX",
+    "desc": "re-apply 'foldlevel'",
+    "doc_ref": "index.txt:zX"
+  },
+  {
+    "id": "neovim.normal-mode.z_caret",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "z^",
+    "desc": "cursor on line N (default line above",
+    "doc_ref": "index.txt:z^"
+  },
+  {
+    "id": "neovim.normal-mode.za_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "za",
+    "desc": "open a closed fold, close an open fold",
+    "doc_ref": "index.txt:za"
+  },
+  {
+    "id": "neovim.normal-mode.zb",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zb",
+    "desc": "redraw, cursor line at bottom of window",
+    "doc_ref": "index.txt:zb"
+  },
+  {
+    "id": "neovim.normal-mode.zc_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zc",
+    "desc": "close a fold",
+    "doc_ref": "index.txt:zc"
+  },
+  {
+    "id": "neovim.normal-mode.zd_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zd",
+    "desc": "delete a fold",
+    "doc_ref": "index.txt:zd"
+  },
+  {
+    "id": "neovim.normal-mode.ze_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "ze",
+    "desc": "when 'wrap' off scroll horizontally to",
+    "doc_ref": "index.txt:ze"
+  },
+  {
+    "id": "neovim.normal-mode.zf_lbrace_motion_rbrace",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zf{motion}",
+    "desc": "create a fold for Nmove text",
+    "doc_ref": "index.txt:zf"
+  },
+  {
+    "id": "neovim.normal-mode.zg_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zg",
+    "desc": "permanently mark word as correctly spelled",
+    "doc_ref": "index.txt:zg"
+  },
+  {
+    "id": "neovim.normal-mode.zh_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zh",
+    "desc": "when 'wrap' off scroll screen N characters",
+    "doc_ref": "index.txt:zh"
+  },
+  {
+    "id": "neovim.normal-mode.zi",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zi",
+    "desc": "toggle 'foldenable'",
+    "doc_ref": "index.txt:zi"
+  },
+  {
+    "id": "neovim.normal-mode.zj",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zj",
+    "desc": "move to the start of the next fold",
+    "doc_ref": "index.txt:zj"
+  },
+  {
+    "id": "neovim.normal-mode.zk",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zk",
+    "desc": "move to the end of the previous fold",
+    "doc_ref": "index.txt:zk"
+  },
+  {
+    "id": "neovim.normal-mode.zl_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zl",
+    "desc": "when 'wrap' off scroll screen N characters",
+    "doc_ref": "index.txt:zl"
+  },
+  {
+    "id": "neovim.normal-mode.zm_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zm",
+    "desc": "subtract one from 'foldlevel'",
+    "doc_ref": "index.txt:zm"
+  },
+  {
+    "id": "neovim.normal-mode.zn_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zn",
+    "desc": "reset 'foldenable'",
+    "doc_ref": "index.txt:zn"
+  },
+  {
+    "id": "neovim.normal-mode.zo_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zo",
+    "desc": "open fold",
+    "doc_ref": "index.txt:zo"
+  },
+  {
+    "id": "neovim.normal-mode.zp",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zp",
+    "desc": "paste in block-mode without trailing spaces",
+    "doc_ref": "index.txt:zp"
+  },
+  {
+    "id": "neovim.normal-mode.zp_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zP",
+    "desc": "paste in block-mode without trailing spaces",
+    "doc_ref": "index.txt:zP"
+  },
+  {
+    "id": "neovim.normal-mode.zr_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zr",
+    "desc": "add one to 'foldlevel'",
+    "doc_ref": "index.txt:zr"
+  },
+  {
+    "id": "neovim.normal-mode.zs",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zs",
+    "desc": "when 'wrap' off scroll horizontally to",
+    "doc_ref": "index.txt:zs"
+  },
+  {
+    "id": "neovim.normal-mode.zt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zt",
+    "desc": "redraw, cursor line at top of window",
+    "doc_ref": "index.txt:zt"
+  },
+  {
+    "id": "neovim.normal-mode.zuw",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zuw",
+    "desc": "undo |zw|",
+    "doc_ref": "index.txt:zuw"
+  },
+  {
+    "id": "neovim.normal-mode.zug",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zug",
+    "desc": "undo |zg|",
+    "doc_ref": "index.txt:zug"
+  },
+  {
+    "id": "neovim.normal-mode.zuw_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zuW",
+    "desc": "undo |zW|",
+    "doc_ref": "index.txt:zuW"
+  },
+  {
+    "id": "neovim.normal-mode.zug_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zuG",
+    "desc": "undo |zG|",
+    "doc_ref": "index.txt:zuG"
+  },
+  {
+    "id": "neovim.normal-mode.zv",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zv",
+    "desc": "open enough folds to view the cursor line",
+    "doc_ref": "index.txt:zv"
+  },
+  {
+    "id": "neovim.normal-mode.zw_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zw",
+    "desc": "permanently mark word as incorrectly spelled",
+    "doc_ref": "index.txt:zw"
+  },
+  {
+    "id": "neovim.normal-mode.zx_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zx",
+    "desc": "re-apply 'foldlevel' and do \"zv\"",
+    "doc_ref": "index.txt:zx"
+  },
+  {
+    "id": "neovim.normal-mode.zy",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zy",
+    "desc": "yank without trailing spaces",
+    "doc_ref": "index.txt:zy"
+  },
+  {
+    "id": "neovim.normal-mode.zz_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "zz",
+    "desc": "redraw, cursor line at center of window",
+    "doc_ref": "index.txt:zz"
+  },
+  {
+    "id": "neovim.normal-mode.z_lt_left_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "z<Left>",
+    "desc": "same as \"zh\"",
+    "doc_ref": "index.txt:z<Left>"
+  },
+  {
+    "id": "neovim.normal-mode.z_lt_right_gt",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "z<Right>",
+    "desc": "same as \"zl\"",
+    "doc_ref": "index.txt:z<Right>"
+  },
+  {
+    "id": "neovim.normal-mode.v_2",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "v",
+    "desc": "force operator to work charwise",
+    "doc_ref": "index.txt:o_v"
+  },
+  {
+    "id": "neovim.normal-mode.v_3",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "V",
+    "desc": "force operator to work linewise",
+    "doc_ref": "index.txt:o_V"
+  },
+  {
+    "id": "neovim.normal-mode.ctrl_v_1",
+    "source": "neovim",
+    "category": "normal-mode",
+    "name": "CTRL-V",
+    "desc": "force operator to work blockwise",
+    "doc_ref": "index.txt:o_CTRL-V"
+  }
+]

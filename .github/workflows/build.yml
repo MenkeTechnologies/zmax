@@ -133,3 +133,27 @@ jobs:
           git diff-files --quiet \
             || (echo "Run 'cargo xtask docgen', commit the changes and push again" \
             && exit 1)
+
+  port-report:
+    name: Port Report
+    runs-on: ubuntu-latest
+    if: github.repository == 'helix-editor/helix' || github.event_name != 'schedule'
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Regenerate port report
+        run: python3 scripts/gen_port_report.py | tee /tmp/port_report.out
+
+      - name: Fail on broken mappings
+        run: |
+          grep -q 'broken=0' /tmp/port_report.out \
+            || (echo "Port report has broken mappings — a mapping points at zemacs code that does not exist. Fix port/mapping.json." \
+            && exit 1)
+
+      - name: Check uncommitted port-report changes
+        run: |
+          git diff
+          git diff-files --quiet \
+            || (echo "Run 'python3 scripts/gen_port_report.py', commit the changes and push again" \
+            && exit 1)
