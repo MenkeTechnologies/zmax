@@ -1141,3 +1141,15 @@ async fn cycle_case_snake_to_camel() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn split_line_keeps_cursor() -> anyhow::Result<()> {
+    test((
+        "ab#[|c]#\n",
+        ":split-line<ret>",
+        "ab#[\n|]#c\n",
+    ))
+    .await?;
+
+    Ok(())
+}

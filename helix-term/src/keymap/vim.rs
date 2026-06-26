@@ -66,6 +66,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x i k", "Text",    ":change-case kebab"),                    // SPC x i k
     ("space x i p", "Text",    ":change-case pascal"),                   // PascalCase
     ("space x i i", "Text",    ":cycle-case"),                           // SPC x i i : cycle
+    ("space j n",   "Jump",    ":split-line"),                           // SPC j n : split line
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes
@@ -365,6 +366,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "j" => { "Jump"
                 "i" => symbol_picker,              // SPC j i
                 "j" => jumplist_picker,            // SPC j j
+                "0" => goto_line_start,            // SPC j 0
+                "$" => goto_line_end,              // SPC j $
+                "b" => jump_backward,              // SPC j b : back to prev location
             },
             "g" => { "Goto (LSP)"
                 "d" => goto_definition,

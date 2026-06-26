@@ -2160,6 +2160,30 @@
     "note": "spacemacs SPC SPC -> command_palette"
   },
   {
+    "spec_id": "spacemacs.keybinding.spc_j_0",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space j 0"
+    ],
+    "note": "spacemacs SPC j 0 -> goto_line_start"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_j",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space j $"
+    ],
+    "note": "spacemacs SPC j $ -> goto_line_end"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_j_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space j b"
+    ],
+    "note": "spacemacs SPC j b -> jump_backward"
+  },
+  {
     "spec_id": "spacemacs.keybinding.spc_j_j",
     "status": "ported",
     "evidence": [
@@ -2174,6 +2198,14 @@
       "key:normal:space j i"
     ],
     "note": "spacemacs SPC j i -> symbol_picker"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_j_n",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space j n"
+    ],
+    "note": "spacemacs SPC j n -> split-line"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_w_h",

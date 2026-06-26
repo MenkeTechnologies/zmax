@@ -2696,6 +2696,30 @@ fn cycle_case(
     })
 }
 
+fn split_line(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let line_ending = Tendril::from(doc.line_ending.as_str());
+    let slice = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+
+    // Insert a line ending at the cursor, pushing the rest of the line down,
+    // but keep the cursor where it was (emacs `split-line`).
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((cursor, cursor, Some(line_ending))));
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::point(cursor));
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 fn just_one_space(
     cx: &mut compositor::Context,
     _args: Args,
@@ -4419,6 +4443,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "split-line",
+        aliases: &[],
+        doc: "Split the current line at the cursor, keeping the cursor in place.",
+        fun: split_line,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
