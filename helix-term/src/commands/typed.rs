@@ -3001,6 +3001,134 @@ fn vglobal(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     global_command(cx, args, event, true)
 }
 
+/// Resolve a vim line address to a 1-based line number (0 = before the first
+/// line). Supports `N`, `.`, `$`, `.+N`, `.-N`, `$-N`, `+N`, `-N`.
+fn parse_line_address(addr: &str, current: usize, last: usize) -> anyhow::Result<usize> {
+    let a = addr.trim();
+    let rel = |base: usize, s: &str| -> anyhow::Result<usize> {
+        if s.is_empty() {
+            return Ok(base);
+        }
+        let n: isize = s.parse().map_err(|_| anyhow!("invalid address: {addr}"))?;
+        Ok((base as isize + n).max(0) as usize)
+    };
+    if a == "." {
+        Ok(current)
+    } else if a == "$" {
+        Ok(last)
+    } else if let Some(r) = a.strip_prefix('.') {
+        rel(current, r)
+    } else if let Some(r) = a.strip_prefix('$') {
+        rel(last, r)
+    } else if a.starts_with(['+', '-']) {
+        rel(current, a)
+    } else {
+        a.parse::<usize>()
+            .map_err(|_| anyhow!("invalid address: {addr}"))
+    }
+}
+
+/// Parse a vim move/copy command with no space: `m5`, `t.`, `co$`, `copy0`.
+/// Returns (is_copy, address).
+fn parse_vim_lineop(input: &str) -> Option<(bool, String)> {
+    let s = input.trim();
+    let is_addr = |c: char| c.is_ascii_digit() || matches!(c, '.' | '$' | '+' | '-');
+    if let Some(rest) = s.strip_prefix('m') {
+        if rest.chars().next().is_some_and(is_addr) {
+            return Some((false, rest.to_string()));
+        }
+    }
+    for pfx in ["copy", "co", "t"] {
+        if let Some(rest) = s.strip_prefix(pfx) {
+            if rest.chars().next().is_some_and(is_addr) {
+                return Some((true, rest.to_string()));
+            }
+        }
+    }
+    None
+}
+
+/// `:m{addr}` (move) / `:t{addr}` (copy): relocate or duplicate the current
+/// line to after line `addr`.
+fn do_move_copy(cx: &mut compositor::Context, is_copy: bool, addr: &str) -> anyhow::Result<()> {
+    let (view, doc) = current!(cx.editor);
+    let line_ending = doc.line_ending.as_str();
+    let slice = doc.text().slice(..);
+    let len = slice.len_chars();
+    let total_lines = slice.len_lines();
+    // Number of real lines (exclude the phantom trailing empty line).
+    let last = if len > 0 && slice.char(len - 1) == '\n' {
+        total_lines - 1
+    } else {
+        total_lines
+    };
+
+    let cur0 = slice.char_to_line(doc.selection(view.id).primary().cursor(slice));
+    let target1 = parse_line_address(addr, cur0 + 1, last)?.min(last);
+
+    let src_start = slice.line_to_char(cur0);
+    let src_end = if cur0 + 1 < total_lines {
+        slice.line_to_char(cur0 + 1)
+    } else {
+        len
+    };
+    let src_text: Tendril = slice.slice(src_start..src_end).chunks().collect();
+    let src_norm: Tendril = if src_text.ends_with('\n') {
+        src_text
+    } else {
+        format!("{src_text}{line_ending}").into()
+    };
+
+    // Insertion point = start of the line after the 1-based target line.
+    let insert_at = slice.line_to_char(target1.min(total_lines.saturating_sub(0)).min(last));
+
+    if !is_copy && insert_at >= src_start && insert_at <= src_end {
+        return Ok(()); // moving a line onto itself
+    }
+
+    let mut changes: Vec<(usize, usize, Option<Tendril>)> = Vec::new();
+    if !is_copy {
+        changes.push((src_start, src_end, None));
+    }
+    changes.push((insert_at, insert_at, Some(src_norm)));
+    changes.sort_by_key(|c| c.0);
+
+    let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+
+    // Put the cursor on the relocated/copied line.
+    let new_slice = doc.text().slice(..);
+    let landed = if !is_copy && insert_at > src_end {
+        insert_at - (src_end - src_start)
+    } else {
+        insert_at
+    };
+    let line = new_slice.char_to_line(landed.min(new_slice.len_chars()));
+    doc.set_selection(view.id, Selection::point(new_slice.line_to_char(line)));
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn line_op_command(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    is_copy: bool,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    do_move_copy(cx, is_copy, args[0].trim())
+}
+
+fn move_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    line_op_command(cx, args, event, false)
+}
+
+fn copy_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    line_op_command(cx, args, event, true)
+}
+
 fn substitute(
     cx: &mut compositor::Context,
     args: Args,
@@ -4779,6 +4907,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "move-lines",
+        aliases: &["m"],
+        doc: "Move the current line to after line {address}: :m{addr} (e.g. :m0, :m$, :m.+2).",
+        fun: move_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "copy-lines",
+        aliases: &["t", "co", "copy"],
+        doc: "Copy the current line to after line {address}: :t{addr} (e.g. :t0, :t$).",
+        fun: copy_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "global",
         aliases: &[],
         doc: "Run a command on matching lines: :g/pattern/d (delete). Also :g!/pat/d.",
@@ -5209,6 +5359,14 @@ fn execute_command_line(
             return Ok(());
         }
         return do_global(cx, invert, &pattern, &gcommand);
+    }
+
+    // vim-style move/copy lines: `:m5`, `:t.`, `:co$`.
+    if let Some((is_copy, addr)) = parse_vim_lineop(input) {
+        if event != PromptEvent::Validate {
+            return Ok(());
+        }
+        return do_move_copy(cx, is_copy, &addr);
     }
 
     match typed::TYPABLE_COMMAND_MAP.get(command) {

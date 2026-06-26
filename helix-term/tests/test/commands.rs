@@ -1288,3 +1288,21 @@ async fn vim_mark_tracks_edits() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn move_lines_to_bottom() -> anyhow::Result<()> {
+    test(("#[|a]#\nb\nc\n", ":m$<ret>", "b\nc\n#[a|]#\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn move_lines_to_top() -> anyhow::Result<()> {
+    test(("a\n#[|b]#\nc\n", ":m0<ret>", "#[b|]#\na\nc\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn copy_lines_to_top() -> anyhow::Result<()> {
+    test(("a\n#[|b]#\nc\n", ":t0<ret>", "#[b|]#\na\nb\nc\n")).await?;
+    Ok(())
+}

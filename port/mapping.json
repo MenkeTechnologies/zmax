@@ -2814,5 +2814,29 @@
       "key:normal:m"
     ],
     "note": "vim m{A-Za-z} named marks (set/jump, edit-tracked via map_pos)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_copy",
+    "status": "ported",
+    "evidence": [
+      "typable:copy-lines"
+    ],
+    "note": "vim :co[py] via :t{addr} (move/copy lines)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_move",
+    "status": "ported",
+    "evidence": [
+      "typable:move-lines"
+    ],
+    "note": "vim :m[ove] via :m{addr} (move/copy lines)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_t",
+    "status": "ported",
+    "evidence": [
+      "typable:copy-lines"
+    ],
+    "note": "vim :t via :t{addr} (move/copy lines)"
   }
 ]
