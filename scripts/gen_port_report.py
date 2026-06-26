@@ -137,9 +137,9 @@ def parse_keymap():
 
 
 def _split_keys(keyspec):
-    """`"g" | "down"` -> ['g', 'down']; strips quotes."""
-    keys = re.findall(r'"([^"]*)"', keyspec)
-    return keys
+    """`"g" | "down"` -> ['g', 'down']; strips quotes, unescapes `\\"`/`\\\\`."""
+    raw = re.findall(r'"((?:[^"\\]|\\.)*)"', keyspec)
+    return [k.replace('\\"', '"').replace("\\\\", "\\") for k in raw]
 
 
 def _walk_keymap(body, prefix, out):
@@ -148,7 +148,9 @@ def _walk_keymap(body, prefix, out):
     n = len(body)
     while i < n:
         # Find next quoted-key spec followed by =>.
-        m = re.compile(r'((?:"[^"]*"\s*\|\s*)*"[^"]*")\s*=>').search(body, i)
+        m = re.compile(
+            r'((?:"(?:[^"\\]|\\.)*"\s*\|\s*)*"(?:[^"\\]|\\.)*")\s*=>'
+        ).search(body, i)
         if not m:
             break
         keys = _split_keys(m.group(1))
