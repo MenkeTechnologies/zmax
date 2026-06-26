@@ -58,6 +58,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x t c", "Text",    ":transpose-chars"),                      // SPC x t c
     ("space x t l", "Text",    ":move-line-up"),                         // SPC x t l : transpose lines
     ("space x t w", "Text",    ":transpose-words"),                      // SPC x t w
+    ("space x l u", "Text",    ":uniquify-lines"),                       // SPC x l u
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes

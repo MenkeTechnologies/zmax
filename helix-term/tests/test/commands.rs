@@ -1069,3 +1069,15 @@ async fn transpose_words_noop_single_word() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn uniquify_lines_removes_duplicates() -> anyhow::Result<()> {
+    test((
+        "#[|a]#\nb\na\nc\nb\n",
+        ":uniquify-lines<ret>",
+        "#[|a]#\nb\nc\n",
+    ))
+    .await?;
+
+    Ok(())
+}

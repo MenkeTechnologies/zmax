@@ -2558,6 +2558,50 @@ fn transpose_chars(
     Ok(())
 }
 
+fn uniquify_lines(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let len = slice.len_chars();
+
+    let mut seen = std::collections::HashSet::new();
+    let mut changes = Vec::new();
+    for line in 0..total {
+        let start = slice.line_to_char(line);
+        let end = if line + 1 < total {
+            slice.line_to_char(line + 1)
+        } else {
+            len
+        };
+        if start == end {
+            continue; // phantom trailing empty line
+        }
+        let content_end = line_ending::line_end_char_index(&slice, line);
+        let key: String = slice.slice(start..content_end).chunks().collect();
+        if !seen.insert(key) {
+            // Duplicate of an earlier line — delete it entirely.
+            changes.push((start, end, None));
+        }
+    }
+
+    if changes.is_empty() {
+        return Ok(());
+    }
+
+    let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 fn transpose_words(
     cx: &mut compositor::Context,
     _args: Args,
@@ -4120,6 +4164,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Move the current line up by one (drag up).",
         fun: move_line_up,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "uniquify-lines",
+        aliases: &["uniq"],
+        doc: "Delete duplicate lines, keeping the first occurrence.",
+        fun: uniquify_lines,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

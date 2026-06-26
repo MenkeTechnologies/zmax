@@ -2392,6 +2392,14 @@
     "note": "spacemacs SPC x l s -> sort"
   },
   {
+    "spec_id": "spacemacs.keybinding.spc_x_l_u",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x l u"
+    ],
+    "note": "spacemacs SPC x l u -> uniquify-lines"
+  },
+  {
     "spec_id": "spacemacs.keybinding.spc_x_t_c",
     "status": "ported",
     "evidence": [
