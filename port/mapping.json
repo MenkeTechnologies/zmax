@@ -2392,6 +2392,22 @@
     "note": "spacemacs SPC x l s -> sort"
   },
   {
+    "spec_id": "spacemacs.keybinding.spc_x_t_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x t c"
+    ],
+    "note": "spacemacs SPC x t c -> transpose-chars"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_t_l",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x t l"
+    ],
+    "note": "spacemacs SPC x t l -> move-line-up"
+  },
+  {
     "spec_id": "spacemacs.keybinding.spc_x_u",
     "status": "ported",
     "evidence": [

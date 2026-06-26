@@ -2514,6 +2514,50 @@ fn move_line_up(
     Ok(())
 }
 
+fn transpose_chars(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let len = slice.len_chars();
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+
+    // Choose the adjacent pair (i, i+1) to swap. At end of buffer, transpose the
+    // final two characters (emacs C-t behaviour).
+    let i = if cursor == 0 {
+        return Ok(());
+    } else if cursor >= len {
+        if len < 2 {
+            return Ok(());
+        }
+        len - 2
+    } else {
+        cursor - 1
+    };
+
+    let a = slice.char(i);
+    let b = slice.char(i + 1);
+    // Don't transpose across line boundaries.
+    if a == '\n' || b == '\n' {
+        return Ok(());
+    }
+
+    let swapped: Tendril = format!("{b}{a}").into();
+    let transaction = Transaction::change(doc.text(), std::iter::once((i, i + 2, Some(swapped))));
+    doc.apply(&transaction, view.id);
+    // Emacs moves point forward past the transposed pair.
+    let new_cursor = (i + 2).min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::point(new_cursor));
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 fn duplicate_line(
     cx: &mut compositor::Context,
     _args: Args,
@@ -4013,6 +4057,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Move the current line up by one (drag up).",
         fun: move_line_up,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transpose-chars",
+        aliases: &[],
+        doc: "Transpose the two characters around the cursor.",
+        fun: transpose_chars,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
