@@ -51,6 +51,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t a",   "Toggles", ":toggle auto-completion"),               // auto-complete
     ("space t h h", "Toggles", ":toggle cursorline"),                    // highlight line
     ("space t w",   "Toggles", ":toggle whitespace.render all none"),    // whitespace
+    ("space x d w", "Text",    ":delete-trailing-whitespace"),           // SPC x d w
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes

@@ -2425,6 +2425,42 @@ fn language(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
     Ok(())
 }
 
+fn delete_trailing_whitespace(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+
+    // For each line, delete the run of spaces/tabs before the line ending.
+    let mut changes = Vec::new();
+    for line in 0..slice.len_lines() {
+        let start = slice.line_to_char(line);
+        let end = line_ending::line_end_char_index(&slice, line);
+        let mut ws = end;
+        while ws > start && matches!(slice.char(ws - 1), ' ' | '\t') {
+            ws -= 1;
+        }
+        if ws < end {
+            changes.push((ws, end, None));
+        }
+    }
+
+    if changes.is_empty() {
+        return Ok(());
+    }
+
+    let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 fn sort(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -3832,6 +3868,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::setting]),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "delete-trailing-whitespace",
+        aliases: &["dtw"],
+        doc: "Delete trailing whitespace from every line in the buffer.",
+        fun: delete_trailing_whitespace,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

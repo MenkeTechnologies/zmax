@@ -2352,6 +2352,14 @@
     "note": "spacemacs SPC x a a -> align_selections"
   },
   {
+    "spec_id": "spacemacs.keybinding.spc_x_d_w",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x d w"
+    ],
+    "note": "spacemacs SPC x d w -> delete-trailing-whitespace"
+  },
+  {
     "spec_id": "spacemacs.keybinding.spc_x_l_s",
     "status": "ported",
     "evidence": [

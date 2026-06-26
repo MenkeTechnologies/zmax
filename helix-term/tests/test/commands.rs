@@ -949,3 +949,15 @@ async fn align_selections_with_varying_columns() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn delete_trailing_whitespace_removes_eol_spaces() -> anyhow::Result<()> {
+    test((
+        "#[|h]#ello   \nworld\t\nkept\n",
+        ":delete-trailing-whitespace<ret>",
+        "#[|h]#ello\nworld\nkept\n",
+    ))
+    .await?;
+
+    Ok(())
+}
