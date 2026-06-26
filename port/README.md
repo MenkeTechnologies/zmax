@@ -38,8 +38,9 @@ generator is built to make faking the number structurally impossible:
 
 1. **The numerator is re-parsed from source every run.** The set of zemacs
    static commands, typable `:` commands, and default keybindings is extracted
-   from `helix-term/src/commands.rs`, `commands/typed.rs`, and
-   `keymap/default.rs` at generation time. There is no cached count to edit.
+   from `helix-term/src/commands.rs`, `commands/typed.rs`, and the active
+   default keymap `keymap/vim.rs` at generation time. There is no cached count
+   to edit.
 2. **Every mapping evidence token must resolve to real zemacs code.** Evidence
    is `static:<cmd>`, `typable:<name>`, or `key:<mode>:<chord>`. A token that
    does not resolve to a parsed command/binding is a **broken mapping**: it is

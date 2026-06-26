@@ -1,5 +1,6 @@
 pub mod default;
 pub mod macros;
+pub mod vim;
 
 pub use crate::commands::MappableCommand;
 pub use default::default;
@@ -358,7 +359,8 @@ impl Keymaps {
 
 impl Default for Keymaps {
     fn default() -> Self {
-        Self::new(Box::new(ArcSwap::new(Arc::new(default()))))
+        // zemacs ships the vim keymap as the default (see keymap/vim.rs).
+        Self::new(Box::new(ArcSwap::new(Arc::new(vim::default()))))
     }
 }
 
@@ -502,16 +504,15 @@ mod tests {
     fn aliased_modes_are_same_in_default_keymap() {
         let keymaps = Keymaps::default().map();
         let root = keymaps.get(&Mode::Normal).unwrap();
+        // The two ways to reach the window menu must stay identical.
         assert_eq!(
             root.search(&[key!(' '), key!('w')]).unwrap(),
             root.search(&["C-w".parse::<KeyEvent>().unwrap()]).unwrap(),
             "Mismatch for window mode on `Space-w` and `Ctrl-w`"
         );
-        assert_eq!(
-            root.search(&[key!('z')]).unwrap(),
-            root.search(&[key!('Z')]).unwrap(),
-            "Mismatch for view mode on `z` and `Z`"
-        );
+        // Note: zemacs ships the vim keymap, which intentionally does NOT alias
+        // `z` and `Z` (vim reserves `Z` for `ZZ`/`ZQ`), so the Helix `z`==`Z`
+        // view-mode invariant does not apply here.
     }
 
     #[test]

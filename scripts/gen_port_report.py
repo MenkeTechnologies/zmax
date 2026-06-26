@@ -87,7 +87,9 @@ def parse_keymap():
     chord is a space-joined key sequence, e.g. "g g". Aliases (``"x" | "y"``)
     each get an entry. Submaps (``"g" => { ... }``) recurse with a key prefix.
     """
-    path = os.path.join(HELIX_TERM, "keymap", "default.rs")
+    # zemacs ships the vim keymap as the default (keymap/vim.rs), so the report
+    # measures the keymap users actually get.
+    path = os.path.join(HELIX_TERM, "keymap", "vim.rs")
     src = open(path, encoding="utf-8").read()
     result = defaultdict(dict)
 
