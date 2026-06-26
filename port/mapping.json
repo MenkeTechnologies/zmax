@@ -2368,6 +2368,14 @@
     "note": "spacemacs SPC x d w -> delete-trailing-whitespace"
   },
   {
+    "spec_id": "spacemacs.keybinding.spc_x_d_spc",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x d space"
+    ],
+    "note": "spacemacs SPC x d SPC -> just-one-space"
+  },
+  {
     "spec_id": "spacemacs.keybinding.spc_x_j",
     "status": "ported",
     "evidence": [

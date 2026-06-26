@@ -2558,6 +2558,42 @@ fn transpose_chars(
     Ok(())
 }
 
+fn just_one_space(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let len = slice.len_chars();
+    let cursor = doc.selection(view.id).primary().cursor(slice).min(len);
+
+    // Expand over the run of spaces/tabs surrounding the cursor (not newlines).
+    let mut start = cursor;
+    while start > 0 && matches!(slice.char(start - 1), ' ' | '\t') {
+        start -= 1;
+    }
+    let mut end = cursor;
+    while end < len && matches!(slice.char(end), ' ' | '\t') {
+        end += 1;
+    }
+
+    // Replace the run with exactly one space (emacs `just-one-space`). When
+    // there is no surrounding whitespace, insert a single space at the cursor.
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((start, end, Some(Tendril::from(" ")))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::point((start + 1).min(doc.text().len_chars())));
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 fn delete_blank_lines(
     cx: &mut compositor::Context,
     _args: Args,
@@ -4220,6 +4256,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Move the current line up by one (drag up).",
         fun: move_line_up,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "just-one-space",
+        aliases: &[],
+        doc: "Collapse spaces and tabs around the cursor to a single space.",
+        fun: just_one_space,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

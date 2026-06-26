@@ -1093,3 +1093,15 @@ async fn delete_blank_lines_collapses_runs() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn just_one_space_collapses_run() -> anyhow::Result<()> {
+    test((
+        "a #[| ]# b\n",
+        ":just-one-space<ret>",
+        "a #[b|]#\n",
+    ))
+    .await?;
+
+    Ok(())
+}
