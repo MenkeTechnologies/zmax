@@ -2920,163 +2920,163 @@
     "note": "vim g& repeat last :s on whole file"
   },
   {
+    "spec_id": "neovim.option.relativenumber",
+    "status": "ported",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set relativenumber' works via vim-compatible :set alias layer"
+  },
+  {
+    "spec_id": "neovim.option.wrap",
+    "status": "ported",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set wrap' works via vim-compatible :set alias layer"
+  },
+  {
+    "spec_id": "neovim.option.smartcase",
+    "status": "ported",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set smartcase' works via vim-compatible :set alias layer"
+  },
+  {
+    "spec_id": "neovim.option.wrapscan",
+    "status": "ported",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set wrapscan' works via vim-compatible :set alias layer"
+  },
+  {
+    "spec_id": "neovim.option.textwidth",
+    "status": "ported",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set textwidth' works via vim-compatible :set alias layer"
+  },
+  {
+    "spec_id": "neovim.option.termguicolors",
+    "status": "ported",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set termguicolors' works via vim-compatible :set alias layer"
+  },
+  {
+    "spec_id": "neovim.option.list",
+    "status": "ported",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set list' works via vim-compatible :set alias layer"
+  },
+  {
     "spec_id": "neovim.option.cursorline",
     "status": "ported",
     "evidence": [
-      "typable:set-option"
+      "typable:set"
     ],
-    "note": "vim ':set cursorline' works (same helix config key)"
+    "note": "vim ':set cursorline' works via vim-compatible :set alias layer"
   },
   {
     "spec_id": "neovim.option.cursorcolumn",
     "status": "ported",
     "evidence": [
-      "typable:set-option"
+      "typable:set"
     ],
-    "note": "vim ':set cursorcolumn' works (same helix config key)"
+    "note": "vim ':set cursorcolumn' works via vim-compatible :set alias layer"
   },
   {
     "spec_id": "neovim.option.scrolloff",
     "status": "ported",
     "evidence": [
-      "typable:set-option"
+      "typable:set"
     ],
-    "note": "vim ':set scrolloff' works (same helix config key)"
+    "note": "vim ':set scrolloff' works via vim-compatible :set alias layer"
   },
   {
     "spec_id": "neovim.option.number",
     "status": "partial",
     "evidence": [
-      "typable:set-option"
+      "typable:set"
     ],
-    "note": "vim 'number' configurable via :set line-number (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.relativenumber",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'relativenumber' configurable via :set line-number (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.wrap",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'wrap' configurable via :set soft-wrap.enable (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.smartcase",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'smartcase' configurable via :set search.smart-case (different key/value syntax)"
+    "note": "vim ':set number' partially works (off-state/value/semantic caveat)"
   },
   {
     "spec_id": "neovim.option.ignorecase",
     "status": "partial",
     "evidence": [
-      "typable:set-option"
+      "typable:set"
     ],
-    "note": "vim 'ignorecase' configurable via :set search.smart-case (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.wrapscan",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'wrapscan' configurable via :set search.wrap-around (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.textwidth",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'textwidth' configurable via :set text-width (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.termguicolors",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'termguicolors' configurable via :set true-color (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.list",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'list' configurable via :set whitespace.render (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.mouse",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'mouse' configurable via :set mouse (bool, not a/n/v) (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.colorcolumn",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'colorcolumn' configurable via :set rulers (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.shiftwidth",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'shiftwidth' configurable via :set indent (per-language) (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.tabstop",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'tabstop' configurable via :set tab-width (different key/value syntax)"
-  },
-  {
-    "spec_id": "neovim.option.expandtab",
-    "status": "partial",
-    "evidence": [
-      "typable:set-option"
-    ],
-    "note": "vim 'expandtab' configurable via :set indent-style (different key/value syntax)"
+    "note": "vim ':set ignorecase' partially works (off-state/value/semantic caveat)"
   },
   {
     "spec_id": "neovim.option.linebreak",
     "status": "partial",
     "evidence": [
-      "typable:set-option"
+      "typable:set"
     ],
-    "note": "vim 'linebreak' configurable via :set soft-wrap (different key/value syntax)"
+    "note": "vim ':set linebreak' partially works (off-state/value/semantic caveat)"
+  },
+  {
+    "spec_id": "neovim.option.mouse",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set mouse' partially works (off-state/value/semantic caveat)"
+  },
+  {
+    "spec_id": "neovim.option.colorcolumn",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set colorcolumn' partially works (off-state/value/semantic caveat)"
+  },
+  {
+    "spec_id": "neovim.option.shiftwidth",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set shiftwidth' partially works (off-state/value/semantic caveat)"
+  },
+  {
+    "spec_id": "neovim.option.tabstop",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set tabstop' partially works (off-state/value/semantic caveat)"
+  },
+  {
+    "spec_id": "neovim.option.expandtab",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim ':set expandtab' partially works (off-state/value/semantic caveat)"
   },
   {
     "spec_id": "neovim.option.wildmenu",
     "status": "partial",
     "evidence": [
-      "typable:set-option"
+      "typable:set"
     ],
-    "note": "vim 'wildmenu' configurable via :set completion menu (different key/value syntax)"
+    "note": "vim ':set wildmenu' partially works (off-state/value/semantic caveat)"
   },
   {
     "spec_id": "neovim.option.incsearch",
     "status": "partial",
     "evidence": [
-      "typable:set-option"
+      "typable:set"
     ],
-    "note": "vim 'incsearch' configurable via :set always-on incremental search (different key/value syntax)"
+    "note": "vim ':set incsearch' partially works (off-state/value/semantic caveat)"
   }
 ]

@@ -2268,6 +2268,162 @@ fn get_option(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
 
 /// Change config at runtime. Access nested values by dot syntax, for
 /// example to disable smart case search, use `:set search.smart-case false`.
+/// How a vim option maps onto a helix config value.
+#[derive(Clone, Copy)]
+enum VimOptKind {
+    Bool,
+    /// String enum: the value used when the option is set / unset.
+    Enum(&'static str, Option<&'static str>),
+    Num,
+}
+
+/// vim option (and abbreviations) -> (helix config key, kind).
+#[rustfmt::skip]
+const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
+    (&["number", "nu"],            "line-number",        VimOptKind::Enum("absolute", None)),
+    (&["relativenumber", "rnu"],   "line-number",        VimOptKind::Enum("relative", Some("absolute"))),
+    (&["wrap"],                    "soft-wrap.enable",   VimOptKind::Bool),
+    (&["linebreak", "lbr"],        "soft-wrap.enable",   VimOptKind::Bool),
+    (&["ignorecase", "ic"],        "search.smart-case",  VimOptKind::Bool),
+    (&["smartcase", "scs"],        "search.smart-case",  VimOptKind::Bool),
+    (&["wrapscan", "ws"],          "search.wrap-around", VimOptKind::Bool),
+    (&["cursorline", "cul"],       "cursorline",         VimOptKind::Bool),
+    (&["cursorcolumn", "cuc"],     "cursorcolumn",       VimOptKind::Bool),
+    (&["scrolloff", "so"],         "scrolloff",          VimOptKind::Num),
+    (&["textwidth", "tw"],         "text-width",         VimOptKind::Num),
+    (&["termguicolors", "tgc"],    "true-color",         VimOptKind::Bool),
+    (&["mouse"],                   "mouse",              VimOptKind::Bool),
+    (&["list"],                    "whitespace.render",  VimOptKind::Enum("all", Some("none"))),
+];
+
+fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {
+    VIM_OPTIONS
+        .iter()
+        .find(|(names, _, _)| names.contains(&name))
+        .map(|(_, key, kind)| (*key, *kind))
+}
+
+/// Parse a vim `:set` token. Returns (negated, toggle, name, value).
+/// Forms: `opt`, `noopt`, `opt!`, `invopt`, `opt=val`, `opt:val`.
+fn parse_set_token(tok: &str) -> (bool, bool, &str, Option<&str>) {
+    let mut t = tok;
+    let mut toggle = false;
+    if let Some(rest) = t.strip_suffix('!') {
+        t = rest;
+        toggle = true;
+    }
+    if let Some(rest) = t.strip_prefix("inv") {
+        // Only treat `inv` as a prefix when it leaves a known option name.
+        if lookup_vim_option(rest).is_some() {
+            return (false, true, rest, None);
+        }
+    }
+    if let Some((name, val)) = t.split_once(['=', ':']) {
+        return (false, toggle, name, Some(val));
+    }
+    if let Some(rest) = t.strip_prefix("no") {
+        if lookup_vim_option(rest).is_some() {
+            return (true, toggle, rest, None);
+        }
+    }
+    (false, toggle, t, None)
+}
+
+/// Translate a parsed vim option into (helix key, JSON value). `current_bool`
+/// resolves the current value for toggles. Returns None for unknown options.
+fn translate_vim_option(
+    tok: &str,
+    current_bool: impl FnOnce(&str) -> bool,
+) -> Option<anyhow::Result<(String, Value)>> {
+    let (neg, toggle, name, value) = parse_set_token(tok);
+    let (hkey, kind) = lookup_vim_option(name)?;
+    let result = (|| -> anyhow::Result<(String, Value)> {
+        let json = match kind {
+            VimOptKind::Bool => {
+                let v = if toggle {
+                    !current_bool(hkey)
+                } else if let Some(val) = value {
+                    val.parse().map_err(|_| anyhow!("expected bool for {name}"))?
+                } else {
+                    !neg
+                };
+                Value::Bool(v)
+            }
+            VimOptKind::Enum(on, off) => {
+                let s = if neg {
+                    off.ok_or_else(|| anyhow!("'{name}' cannot be turned off"))?
+                } else {
+                    value.unwrap_or(on)
+                };
+                Value::String(s.to_string())
+            }
+            VimOptKind::Num => {
+                let val = value.ok_or_else(|| anyhow!("'{name}' needs a value (e.g. {name}=4)"))?;
+                let n: i64 = val.parse().map_err(|_| anyhow!("expected number for {name}"))?;
+                Value::Number(n.into())
+            }
+        };
+        Ok((hkey.to_string(), json))
+    })();
+    Some(result)
+}
+
+fn apply_config_value(
+    cx: &mut compositor::Context,
+    helix_key: &str,
+    new_value: Value,
+) -> anyhow::Result<()> {
+    let mut config = serde_json::json!(&cx.editor.config().deref());
+    let pointer = format!("/{}", helix_key.replace('.', "/"));
+    let slot = config
+        .pointer_mut(&pointer)
+        .ok_or_else(|| anyhow!("Unknown key `{helix_key}`"))?;
+    *slot = new_value;
+    let config = serde_json::from_value(config).map_err(|e| anyhow!("{e}"))?;
+    cx.editor.config_events.0.send(ConfigEvent::Update(config))?;
+    Ok(())
+}
+
+/// `:set` with vim-compatible syntax (`:set nu`, `:set nowrap`, `:set tw=80`,
+/// `:set cursorline`), falling back to native `:set key value`.
+fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = (0..args.len()).map(|i| args[i].to_string()).collect();
+
+    // Native two-token form `:set <helix-key> <value>` when the key resolves.
+    if tokens.len() == 2 {
+        let cfg = serde_json::json!(&cx.editor.config().deref());
+        let pointer = format!("/{}", tokens[0].replace('.', "/"));
+        if let Some(slot) = cfg.pointer(&pointer) {
+            let new_value = if slot.is_string() {
+                Value::String(tokens[1].clone())
+            } else {
+                tokens[1]
+                    .parse()
+                    .map_err(|_| anyhow!("Could not parse `{}`", tokens[1]))?
+            };
+            return apply_config_value(cx, &tokens[0], new_value);
+        }
+    }
+
+    for tok in &tokens {
+        let current_bool = |key: &str| -> bool {
+            let cfg = serde_json::json!(&cx.editor.config().deref());
+            cfg.pointer(&format!("/{}", key.replace('.', "/")))
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+        };
+        match translate_vim_option(tok, current_bool) {
+            Some(Ok((hkey, val))) => apply_config_value(cx, &hkey, val)?,
+            Some(Err(e)) => return Err(e),
+            None => return Err(anyhow!("Unknown option `{tok}`")),
+        }
+    }
+    Ok(())
+}
+
 fn set_option(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -4853,6 +5009,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "set",
+        aliases: &["se"],
+        doc: "Set options with vim syntax (:set nu, :set nowrap, :set tw=80, :set cursorline) or native :set key value.",
+        fun: vim_set,
+        completer: CommandCompleter::positional(&[completers::setting]),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "lsp-stop",
         aliases: &[],
         doc: "Stops the given language servers, or all language servers that are used by the current file if no arguments are supplied",
@@ -5008,8 +5175,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "set-option",
-        aliases: &["set"],
-        doc: "Set a config option at runtime.\nFor example to disable smart case search, use `:set search.smart-case false`.",
+        aliases: &[],
+        doc: "Set a config option at runtime.\nFor example to disable smart case search, use `:set-option search.smart-case false`.",
         fun: set_option,
         // TODO: Add support for completion of the options value(s), when appropriate.
         completer: CommandCompleter::positional(&[completers::setting]),
@@ -6074,4 +6241,40 @@ fn exclude_workspace(
     cx.editor.workspace_trust.exclude(&workspace);
     cx.editor.config_events.0.send(ConfigEvent::Refresh)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod vim_set_tests {
+    use super::*;
+
+    #[test]
+    fn parse_set_tokens() {
+        assert_eq!(parse_set_token("nu"), (false, false, "nu", None));
+        assert_eq!(parse_set_token("nonumber"), (true, false, "number", None));
+        assert_eq!(parse_set_token("tw=80"), (false, false, "tw", Some("80")));
+        assert_eq!(parse_set_token("wrap!"), (false, true, "wrap", None));
+        assert_eq!(parse_set_token("invwrap"), (false, true, "wrap", None));
+    }
+
+    fn tr(tok: &str, cur: bool) -> (String, Value) {
+        translate_vim_option(tok, |_| cur).unwrap().unwrap()
+    }
+
+    #[test]
+    fn translate_options() {
+        assert_eq!(tr("nu", false), ("line-number".into(), Value::String("absolute".into())));
+        assert_eq!(tr("rnu", false), ("line-number".into(), Value::String("relative".into())));
+        assert_eq!(
+            tr("norelativenumber", false),
+            ("line-number".into(), Value::String("absolute".into()))
+        );
+        assert_eq!(tr("tw=80", false), ("text-width".into(), Value::Number(80.into())));
+        assert_eq!(tr("nowrap", false), ("soft-wrap.enable".into(), Value::Bool(false)));
+        assert_eq!(tr("wrap", false), ("soft-wrap.enable".into(), Value::Bool(true)));
+        // toggle from current=false -> true
+        assert_eq!(tr("cursorline!", false), ("cursorline".into(), Value::Bool(true)));
+        assert_eq!(tr("scrolloff=5", false), ("scrolloff".into(), Value::Number(5.into())));
+        // unknown option -> None
+        assert!(translate_vim_option("definitelynotanoption", |_| false).is_none());
+    }
 }
