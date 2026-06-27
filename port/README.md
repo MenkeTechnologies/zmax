@@ -14,6 +14,7 @@ toward the union of those three editors; this report tracks that build-out.
 | `../scripts/gen_port_report.py` | Generator. Re-derives the numerator from zemacs source on every run, applies the mapping, writes the report. |
 | `../docs/port_report.html` | Standalone styled report (browser preview). |
 | `../docs/port_report.md` | Markdown report. |
+| `../docs/keybinding_report.{html,md}` | Focused report: keybinding coverage only (vim/emacs/spacemacs key-press surface). |
 | `../book/src/generated/port-report.md` | Same markdown, wired into the mdBook so it publishes to gh-pages. |
 
 ## Denominator sources (cited, parsed — not invented)

@@ -37,6 +37,12 @@ detail) are in the generated report — never hardcoded here, so they cannot go
 stale: [`docs/port_report.md`](docs/port_report.md) (styled HTML:
 `docs/port_report.html`).
 
+For the **keybinding surface specifically** (vim/neovim normal/visual/insert
+keys, the Emacs Key Index, and the Spacemacs `SPC` tree — excluding
+ex-commands, options, functions and `M-x`), see the focused
+[`docs/keybinding_report.md`](docs/keybinding_report.md) (styled HTML:
+`docs/keybinding_report.html`).
+
 The numerator is re-derived from zemacs source on every run; the only curated
 artifact is `port/mapping.json`, and every mapping must point at a real zemacs
 command — a mapping to non-existent code is flagged as broken, not counted. See

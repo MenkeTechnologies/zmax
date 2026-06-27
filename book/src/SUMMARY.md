@@ -36,3 +36,4 @@
   - [Adding tags queries](./guides/tags.md)
   - [Adding rainbow bracket queries](./guides/rainbow_bracket_queries.md)
 - [Port report](./generated/port-report.md)
+- [Keybinding coverage](./generated/keybinding-report.md)
