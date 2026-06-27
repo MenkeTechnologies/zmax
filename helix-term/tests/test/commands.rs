@@ -1511,6 +1511,20 @@ async fn vim_sentence_motions() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn vim_sentence_textobject() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(helix_term::config::Config {
+            keys: helix_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        // dis deletes the sentence under the cursor ("Two.") leaving the space.
+        ("One. T#[w|]#o. Three.\n", "dis", "One. #[ |]#Three.\n"),
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn vim_visual_linewise_delete() -> anyhow::Result<()> {
     test_with_config(
         AppBuilder::new().with_config(helix_term::config::Config {

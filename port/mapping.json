@@ -1033,11 +1033,11 @@
   },
   {
     "spec_id": "neovim.visual-mode.as",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:select:a"
     ],
-    "note": "textobject via select-mode a base"
+    "note": "vim visual as: extend the selection by a sentence incl. trailing whitespace (textobject_sentence)"
   },
   {
     "spec_id": "neovim.visual-mode.at",
@@ -1185,11 +1185,11 @@
   },
   {
     "spec_id": "neovim.visual-mode.is",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:select:i"
     ],
-    "note": "textobject via select-mode i base"
+    "note": "vim visual is: extend the selection by the inner sentence (textobject_sentence)"
   },
   {
     "spec_id": "neovim.visual-mode.it",
@@ -2561,11 +2561,11 @@
   },
   {
     "spec_id": "neovim.normal-mode.as",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:d a"
     ],
-    "note": "vim as: helix maps the object char differently (block-letter/tag/sentence)"
+    "note": "vim as: a sentence incl. trailing whitespace (textobject_sentence); das/cas/yas"
   },
   {
     "spec_id": "neovim.normal-mode.at",
@@ -2697,11 +2697,11 @@
   },
   {
     "spec_id": "neovim.normal-mode.is",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:d i"
     ],
-    "note": "vim is: helix maps the object char differently (block-letter/tag/sentence)"
+    "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
   },
   {
     "spec_id": "neovim.normal-mode.it",

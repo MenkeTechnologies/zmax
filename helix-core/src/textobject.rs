@@ -198,6 +198,52 @@ pub fn textobject_paragraph(
     Range::new(anchor, head)
 }
 
+/// Text object for a vim sentence (`is` / `as`). `Inside` selects the sentence
+/// text; `Around` also includes the trailing whitespace up to the next
+/// sentence, matching vim's `as`.
+pub fn textobject_sentence(
+    slice: RopeSlice,
+    range: Range,
+    textobject: TextObject,
+    _count: usize,
+) -> Range {
+    let len = slice.len_chars();
+    if len == 0 {
+        return range;
+    }
+    let pos = range.cursor(slice);
+
+    // Start of the sentence containing the cursor: the greatest sentence
+    // boundary at or before `pos`, bounded to this paragraph.
+    let mut start = crate::movement::current_paragraph_start(slice, pos);
+    let mut i = start;
+    while i < len {
+        let nb = crate::movement::next_sentence_boundary(slice, i);
+        if nb > i && nb <= pos {
+            start = nb;
+            i = nb;
+        } else {
+            break;
+        }
+    }
+
+    // `as` runs to the start of the next sentence (trailing whitespace included).
+    let end_around = crate::movement::next_sentence_boundary(slice, start).min(len);
+    let end = match textobject {
+        TextObject::Around => end_around,
+        TextObject::Inside => {
+            // `is` trims the trailing whitespace.
+            let mut e = end_around;
+            while e > start && matches!(slice.char(e - 1), ' ' | '\t' | '\n' | '\r') {
+                e -= 1;
+            }
+            e
+        }
+        TextObject::Movement => return range,
+    };
+    Range::new(start, end)
+}
+
 pub fn textobject_pair_surround(
     syntax: Option<&Syntax>,
     slice: RopeSlice,
@@ -444,6 +490,22 @@ mod test {
             let actual = crate::test::plain(s.as_ref(), &selection);
             assert_eq!(actual, expected, "\nbefore: `{:?}`", before);
         }
+    }
+
+    #[test]
+    fn test_textobject_sentence() {
+        // Inside: select just the sentence text (no trailing space).
+        let text = Rope::from("One. Two. Three.");
+        let s = text.slice(..);
+        // cursor in "Two" (index 6)
+        let inside = textobject_sentence(s, Range::point(6), TextObject::Inside, 1);
+        assert_eq!(s.slice(inside.from()..inside.to()), "Two.");
+        // Around: include the trailing whitespace up to the next sentence.
+        let around = textobject_sentence(s, Range::point(6), TextObject::Around, 1);
+        assert_eq!(s.slice(around.from()..around.to()), "Two. ");
+        // First sentence, inside.
+        let first = textobject_sentence(s, Range::point(1), TextObject::Inside, 1);
+        assert_eq!(s.slice(first.from()..first.to()), "One.");
     }
 
     #[test]

@@ -6546,6 +6546,7 @@ fn select_textobject_then(
                         'e' => textobject_treesitter("entry", range),
                         'x' => textobject_treesitter("xml-element", range),
                         'p' => textobject::textobject_paragraph(text, range, objtype, count),
+                        's' => textobject::textobject_sentence(text, range, objtype, count),
                         'm' => textobject::textobject_pair_surround_closest(
                             doc.syntax(),
                             text,
