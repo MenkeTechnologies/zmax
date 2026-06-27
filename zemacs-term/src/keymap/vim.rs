@@ -135,7 +135,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "$" | "end"  => goto_line_end,
         "|"          => goto_column,
         "G"          => goto_last_line,
-        "%"          => match_brackets,
+        "%"          => match_brackets_or_goto_percent,
 
         // --- marks ----------------------------------------------------------
         "m"  => set_mark,        // m{a-z} set mark
@@ -581,7 +581,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "^"          => extend_to_first_nonwhitespace,
         "$" | "end"  => extend_to_line_end,
         "G"          => extend_to_last_line,
-        "%"          => match_brackets,
+        "%"          => match_brackets_or_goto_percent,
         "{"          => goto_prev_paragraph,
         "}"          => goto_next_paragraph,
         "("          => move_sentence_backward,
@@ -711,7 +711,10 @@ mod tests {
             cmd_name(resolve(n, "^").unwrap()),
             Some("goto_first_nonwhitespace")
         );
-        assert_eq!(cmd_name(resolve(n, "%").unwrap()), Some("match_brackets"));
+        assert_eq!(
+            cmd_name(resolve(n, "%").unwrap()),
+            Some("match_brackets_or_goto_percent")
+        );
         assert_eq!(cmd_name(resolve(n, "G").unwrap()), Some("goto_last_line"));
         assert_eq!(cmd_name(resolve(n, "H").unwrap()), Some("goto_window_top"));
         assert_eq!(cmd_name(resolve(n, "x").unwrap()), Some("delete_selection"));

@@ -1488,6 +1488,24 @@ async fn vim_dot_repeat_insert() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn vim_goto_percent() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(zemacs_term::config::Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        // 10 lines; 50% -> line ((50*10+99)/100)=5 (1-based) -> 0-based line 4 ("e").
+        (
+            "#[a|]#\nb\nc\nd\ne\nf\ng\nh\ni\nj\n",
+            "50%",
+            "a\nb\nc\nd\n#[e|]#\nf\ng\nh\ni\nj\n",
+        ),
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn vim_sentence_motions() -> anyhow::Result<()> {
     test_with_config(
         AppBuilder::new().with_config(zemacs_term::config::Config {

@@ -561,6 +561,7 @@ impl MappableCommand {
         scroll_up, "Scroll view up",
         scroll_down, "Scroll view down",
         match_brackets, "Goto matching bracket",
+        match_brackets_or_goto_percent, "Goto matching bracket, or {count} percent through the file",
         surround_add, "Surround add",
         surround_replace, "Surround replace",
         surround_delete, "Surround delete",
@@ -6087,6 +6088,43 @@ fn select_all_children(cx: &mut Context) {
     };
 
     cx.editor.apply_motion(motion);
+}
+
+// vim `%`: with no count, match the bracket under the cursor; with a count,
+// `{count}%` jumps to {count} percent through the file, on the first non-blank.
+fn match_brackets_or_goto_percent(cx: &mut Context) {
+    let Some(count) = cx.count else {
+        match_brackets(cx);
+        return;
+    };
+    let is_select = cx.editor.mode == Mode::Select;
+    {
+        let (view, doc) = current!(cx.editor);
+        push_jump(view, doc);
+        let text = doc.text().slice(..);
+        // Effective line count excludes a phantom trailing empty line so the
+        // percentage matches vim's "number-of-lines".
+        let lines = if text.line(text.len_lines() - 1).len_chars() == 0 {
+            text.len_lines().saturating_sub(1)
+        } else {
+            text.len_lines()
+        };
+        // vim formula: ({count} * number-of-lines + 99) / 100
+        let line = (count
+            .get()
+            .saturating_mul(lines)
+            .saturating_add(99)
+            / 100)
+            .saturating_sub(1)
+            .min(lines.saturating_sub(1));
+        let pos = text.line_to_char(line);
+        let selection = doc
+            .selection(view.id)
+            .clone()
+            .transform(|range| range.put_cursor(text, pos, is_select));
+        doc.set_selection(view.id, selection);
+    }
+    goto_first_nonwhitespace(cx);
 }
 
 fn match_brackets(cx: &mut Context) {

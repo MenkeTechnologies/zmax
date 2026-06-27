@@ -3750,5 +3750,13 @@
       "key:normal:)"
     ],
     "note": "vim ): cursor N sentences forward (move_sentence_forward); faithful vim sentence boundaries (.!? + closers + ws, blank line)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbrace_count_rbrace_percent",
+    "status": "ported",
+    "evidence": [
+      "key:normal:%"
+    ],
+    "note": "vim {count}%: jump to {count} percent through the file, first non-blank (match_brackets_or_goto_percent; %% with no count still matches brackets)"
   }
 ]
