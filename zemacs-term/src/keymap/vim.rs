@@ -68,6 +68,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x i i", "Text",    ":cycle-case"),                           // SPC x i i : cycle
     ("space j n",   "Jump",    ":split-line"),                           // SPC j n : split line
     ("space b s",   "Buffers", ":new"),                                  // SPC b s : scratch buffer
+    ("space h t",   "Help",    ":tutor"),                                // SPC h t : start the tutor
+    ("space q a",   "Quit",    ":quit-all"),                             // SPC q a : quit all
+    ("space q w",   "Quit",    ":write-quit"),                           // SPC q w : write & quit window
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes
@@ -421,6 +424,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "L" => swap_view_right,           // C-w L: move window to the far right
             "R" => rotate_view_reverse,       // C-w R: rotate windows upwards
             "x" | "C-x" => transpose_view,    // C-w x: exchange current window with next
+            "/" => vsplit,                    // spacemacs SPC w / : split vertically
+            "-" => hsplit,                    // spacemacs SPC w - : split horizontally
+            "c" => wclose,                    // spacemacs SPC w c : close window
+            "m" => wonly,                     // spacemacs SPC w m : maximize (only)
         },
 
         // --- scrolling / jumps ---------------------------------------------
@@ -495,6 +502,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "L" => swap_view_right,
                 "R" => rotate_view_reverse,
                 "x" | "C-x" => transpose_view,
+                "/" => vsplit,
+                "-" => hsplit,
+                "c" => wclose,
+                "m" => wonly,
             },
             "s" => { "Search"
                 "s" => global_search,              // SPC s s
@@ -560,6 +571,16 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             },
             "r" => { "Resume / registers"
                 "l" => last_picker,                // SPC r l : resume picker
+            },
+            "a" => { "Applications"
+                "d" => file_explorer,              // SPC a d : dired (file manager)
+                "r" => file_explorer,              // SPC a r : ranger (file browser)
+                "f" => file_explorer,              // SPC a f : file tree
+            },
+            "h" => { "Help"
+                "k" => command_palette,            // SPC h k : describe key / commands
+                "?" => command_palette,            // SPC h ? : list bindings
+                "c" => command_palette,            // SPC h c : describe command
             },
         },
     });

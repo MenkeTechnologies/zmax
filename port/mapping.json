@@ -3766,5 +3766,37 @@
       "key:normal:R"
     ],
     "note": "vim R: Replace mode (overtype). Typed chars overwrite existing ones, append at EOL. Partial: backspace does not yet restore the original overtyped characters (vim's restore-on-backspace)."
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_k",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space h k"
+    ],
+    "note": "spacemacs SPC h k: bound in the SPC leader (command_palette)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_t",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space h t"
+    ],
+    "note": "spacemacs SPC h t: bound in the SPC leader (tutor)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_m",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w m"
+    ],
+    "note": "spacemacs SPC w m: bound in the SPC leader (wonly)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_x",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w x"
+    ],
+    "note": "spacemacs SPC w x: bound in the SPC leader (transpose_view)"
   }
 ]
