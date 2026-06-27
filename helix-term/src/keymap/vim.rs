@@ -325,6 +325,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "y" => goto_type_definition,
             "r" => goto_reference,
             "i" => goto_implementation,
+            "v" => reselect_visual,            // gv reselect last visual area
             "f" => goto_file,
             "a" => goto_last_accessed_file,
             "m" => goto_last_modified_file,
@@ -556,7 +557,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-x" => decrement,
 
         ":" => command_mode,
-        "esc" => [collapse_selection, normal_mode],
+        "esc" => [save_visual_selection, collapse_selection, normal_mode],
     });
 
     // Insert mode: vim-style editing keys.

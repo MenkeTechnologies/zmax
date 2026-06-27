@@ -591,6 +591,8 @@ impl MappableCommand {
         repeat_substitute_global, "Repeat last :substitute on whole file (g&)",
         vim_record_macro, "Record macro into register (q{reg})",
         vim_replay_macro, "Replay macro from register (@{reg})",
+        save_visual_selection, "Save the visual selection (for gv)",
+        reselect_visual, "Reselect the last visual area (gv)",
         goto_next_function, "Goto next function",
         goto_prev_function, "Goto previous function",
         goto_next_class, "Goto next type definition",
@@ -1847,6 +1849,23 @@ fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
         }
     });
     cx.editor.autoinfo = Some(Info::new("Goto mark", &[("a-z", "mark name")]));
+}
+
+// vim `gv`: reselect the last visual (select-mode) area. The selection is saved
+// when leaving select mode and restored (clamped to the current text) here.
+fn save_visual_selection(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let selection = doc.selection(view.id).clone();
+    doc.set_last_visual(selection);
+}
+
+fn reselect_visual(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    if let Some(selection) = doc.last_visual().cloned() {
+        let selection = selection.ensure_invariants(doc.text().slice(..));
+        doc.set_selection(view.id, selection);
+    }
+    cx.editor.mode = Mode::Select;
 }
 
 // vim macros: `q{reg}` starts recording into a register (and `q` again stops);

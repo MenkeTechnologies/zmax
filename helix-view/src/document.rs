@@ -158,6 +158,8 @@ pub struct Document {
     /// vim named marks (a-z etc.) -> char position. Remapped through edits in
     /// `apply_impl`, so a mark follows its text as the buffer changes.
     pub(crate) marks: HashMap<char, usize>,
+    /// The last visual (select-mode) selection, for vim `gv` (reselect).
+    pub(crate) last_visual: Option<Selection>,
     /// Set to `true` when the document is updated, reset to `false` on the next inlay hints
     /// update from the LSP
     pub inlay_hints_oudated: bool,
@@ -771,6 +773,7 @@ impl Document {
             document_highlights: HashMap::new(),
             code_action_hints: HashSet::new(),
             marks: HashMap::new(),
+            last_visual: None,
             color_swatches: None,
             document_links: Vec::new(),
             color_swatch_controller: TaskController::new(),
@@ -1684,6 +1687,16 @@ impl Document {
     /// Get a vim named mark's char position, clamped to the current text length.
     pub fn mark(&self, mark: char) -> Option<usize> {
         self.marks.get(&mark).map(|&pos| pos.min(self.text.len_chars()))
+    }
+
+    /// Record the last visual (select-mode) selection for vim `gv`.
+    pub fn set_last_visual(&mut self, selection: Selection) {
+        self.last_visual = Some(selection);
+    }
+
+    /// The last visual selection, for vim `gv` (reselect).
+    pub fn last_visual(&self) -> Option<&Selection> {
+        self.last_visual.as_ref()
     }
 
     /// Apply a [`Transaction`] to the [`Document`] to change its text.

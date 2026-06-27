@@ -3358,5 +3358,13 @@
       "key:normal:z ."
     ],
     "note": "vim z. -> align_view_center"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gv_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g v"
+    ],
+    "note": "vim gv reselect last visual area (edit-clamped)"
   }
 ]

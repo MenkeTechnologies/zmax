@@ -1445,3 +1445,17 @@ async fn vim_macro_record_replay() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_gv_reselect() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(helix_term::config::Config {
+            keys: helix_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        // v + ll selects 3 chars, esc saves, 0 moves to start, gv reselects them.
+        ("#[|a]#bcde\n", "vll<esc>0gv", "#[abc|]#de\n"),
+    )
+    .await?;
+    Ok(())
+}
