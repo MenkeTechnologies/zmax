@@ -593,6 +593,8 @@ impl MappableCommand {
         vim_replay_macro, "Replay macro from register (@{reg})",
         save_visual_selection, "Save the visual selection (for gv)",
         reselect_visual, "Reselect the last visual area (gv)",
+        mark_insert_exit, "Record the insert-exit position (for gi)",
+        insert_at_last_insert, "Insert at the last insert position (gi)",
         goto_next_function, "Goto next function",
         goto_prev_function, "Goto previous function",
         goto_next_class, "Goto next type definition",
@@ -1849,6 +1851,22 @@ fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
         }
     });
     cx.editor.autoinfo = Some(Info::new("Goto mark", &[("a-z", "mark name")]));
+}
+
+// vim `gi`: re-enter insert mode at the position where insert mode was last
+// left (the `^` mark). The mark is edit-tracked like any other.
+fn mark_insert_exit(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    doc.set_mark('^', pos);
+}
+
+fn insert_at_last_insert(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    if let Some(pos) = doc.mark('^') {
+        doc.set_selection(view.id, Selection::point(pos));
+    }
+    insert_mode(cx);
 }
 
 // vim `gv`: reselect the last visual (select-mode) area. The selection is saved

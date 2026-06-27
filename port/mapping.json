@@ -3382,5 +3382,13 @@
       "key:normal:z ret"
     ],
     "note": "vim z<CR> -> align_view_top"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gi_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g i"
+    ],
+    "note": "vim gi insert at last-insert position (^ mark)"
   }
 ]

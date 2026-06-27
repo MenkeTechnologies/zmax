@@ -1459,3 +1459,16 @@ async fn vim_gv_reselect() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_gi_insert_at_last() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(helix_term::config::Config {
+            keys: helix_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        ("#[|a]#bc\n", "iX<esc>llgiY<esc>", "XY#[|a]#bc\n"),
+    )
+    .await?;
+    Ok(())
+}

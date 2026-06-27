@@ -325,7 +325,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "D" => goto_declaration,
             "y" => goto_type_definition,
             "r" => goto_reference,
-            "i" => goto_implementation,
+            "i" => insert_at_last_insert,      // gi insert at last insert position
             "v" => reselect_visual,            // gv reselect last visual area
             "f" => goto_file,
             "a" => goto_last_accessed_file,
@@ -564,8 +564,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
     // Insert mode: vim-style editing keys.
     let insert = keymap!({ "Insert mode"
-        "esc" => normal_mode,
-        "C-c" => normal_mode,
+        "esc" => [mark_insert_exit, normal_mode],
+        "C-c" => [mark_insert_exit, normal_mode],
 
         "backspace" | "C-h" => delete_char_backward,
         "del"               => delete_char_forward,
