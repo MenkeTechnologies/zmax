@@ -75,6 +75,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space b x",   "Buffers", ":buffer-close"),                         // SPC b x : kill buffer & window
     ("space b e",   "Buffers", ":reload"),                              // SPC b e : revert/erase to disk
     ("space p k",   "Project", ":buffer-close-all"),                    // SPC p k : kill all project buffers
+    ("space t l",   "Toggles", ":toggle soft-wrap.enable"),            // SPC t l : truncate/wrap lines
+    ("space t V",   "Toggles", ":toggle line-number absolute relative"), // SPC t V : visual line numbers
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes
@@ -597,6 +599,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             },
             "r" => { "Resume / registers"
                 "l" => last_picker,                // SPC r l : resume picker
+                "e" => select_register,            // SPC r e : registers
+                "r" => select_register,            // SPC r r : show register
+                "y" => select_register,            // SPC r y : kill ring
             },
             "a" => { "Applications"
                 "d" => file_explorer,              // SPC a d : dired (file manager)

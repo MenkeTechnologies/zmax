@@ -4030,5 +4030,45 @@
       "key:normal:space p t"
     ],
     "note": "spacemacs SPC p t: SPC leader -> file_explorer (approximate)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_l",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space t l"
+    ],
+    "note": "spacemacs SPC t l: SPC leader -> toggle soft-wrap.enable"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_v",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space t V"
+    ],
+    "note": "spacemacs SPC t V: SPC leader -> toggle line-number absolute relative"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_r_e",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space r e"
+    ],
+    "note": "spacemacs SPC r e: SPC leader -> select_register (approximate)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_r_r",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space r r"
+    ],
+    "note": "spacemacs SPC r r: SPC leader -> select_register (approximate)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_r_y",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space r y"
+    ],
+    "note": "spacemacs SPC r y: SPC leader -> select_register (approximate)"
   }
 ]
