@@ -2894,5 +2894,13 @@
       "typable:yank-lines"
     ],
     "note": "vim :y[ank] line op"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_put",
+    "status": "ported",
+    "evidence": [
+      "typable:put"
+    ],
+    "note": "vim :put register paste as lines"
   }
 ]

@@ -1337,3 +1337,9 @@ async fn ex_delete_line() -> anyhow::Result<()> {
     test(("#[|a]#bc\ndef\n", ":d<ret>", "#[d|]#ef\n")).await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ex_yank_put_line() -> anyhow::Result<()> {
+    test(("#[|a]#\nb\n", ":y<ret>:put<ret>", "a\n#[a|]#\nb\n")).await?;
+    Ok(())
+}

@@ -3230,6 +3230,57 @@ fn yank_lines(
     Ok(())
 }
 
+fn put_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let reg = args
+        .first()
+        .and_then(|a| a.trim().chars().next())
+        .unwrap_or('"');
+
+    let content: String = {
+        match cx.editor.registers.read(reg, cx.editor) {
+            Some(values) => values.collect::<Vec<_>>().join(""),
+            None => return Ok(()),
+        }
+    };
+    if content.is_empty() {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let line_ending = doc.line_ending.as_str();
+    let slice = doc.text().slice(..);
+    let len = slice.len_chars();
+    let total = slice.len_lines();
+    let cur = slice.char_to_line(doc.selection(view.id).primary().cursor(slice));
+    let insert_at = if cur + 1 < total {
+        slice.line_to_char(cur + 1)
+    } else {
+        len
+    };
+
+    // Ensure the put text forms whole line(s) below the current line.
+    let mut text = content;
+    if !text.ends_with('\n') {
+        text.push_str(line_ending);
+    }
+    if insert_at == len && len > 0 && slice.char(len - 1) != '\n' {
+        text.insert_str(0, line_ending);
+    }
+
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((insert_at, insert_at, Some(Tendril::from(text.as_str())))));
+    doc.apply(&transaction, view.id);
+    // Place the cursor at the start of the first put line.
+    let new_slice = doc.text().slice(..);
+    let line = new_slice.char_to_line(insert_at.min(new_slice.len_chars()));
+    doc.set_selection(view.id, Selection::point(new_slice.line_to_char(line)));
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 fn yank_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     yank_lines(cx, args, event, false)
 }
@@ -5013,6 +5064,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
+    },
+    TypableCommand {
+        name: "put",
+        aliases: &["pu"],
+        doc: "Put (paste) a register's contents as new line(s) below the cursor (vim :put).",
+        fun: put_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "delete-lines",
