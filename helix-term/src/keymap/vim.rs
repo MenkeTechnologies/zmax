@@ -344,8 +344,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             // ga (print char ascii/unicode value) is bound via VIM_TYPABLE to
             // :character-info — vim's ga, not helix's goto-last-accessed-file.
             "m" => goto_last_modified_file,
-            "n" => goto_next_buffer,
-            "p" => goto_previous_buffer,
+            "n" => search_next,                // gn: select the next search match
+            "N" => search_prev,                // gN: select the previous search match
             "." => goto_last_modification,
         },
 
@@ -368,6 +368,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "c" => goto_prev_change,      // [c back to start of prev change (diff hunk)
             "f" => goto_file,             // [f same as gf: open file under cursor
             "m" => goto_prev_function,    // [m back to start of member/function
+            "b" => goto_previous_buffer,  // [b previous buffer (unimpaired-style)
             "/" => goto_prev_comment,     // [/ previous comment
         },
         "]" => { "Next"
@@ -377,6 +378,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "c" => goto_next_change,      // ]c forward to start of next change (diff hunk)
             "f" => goto_file,             // ]f same as gf: open file under cursor
             "m" => goto_next_function,    // ]m forward to next member/function
+            "b" => goto_next_buffer,      // ]b next buffer (unimpaired-style)
             "/" => goto_next_comment,     // ]/ next comment
         },
 
@@ -718,6 +720,28 @@ mod tests {
         assert_eq!(
             cmd_name(resolve(n, "C-w left").unwrap()),
             Some("jump_view_left")
+        );
+    }
+
+    #[test]
+    fn vim_g_prefix_is_vim_not_helix() {
+        let km = default();
+        let n = &km[&Mode::Normal];
+        // ge/gn/gN carry vim meaning, not the helix bindings they collided with.
+        assert_eq!(
+            cmd_name(resolve(n, "g e").unwrap()),
+            Some("move_prev_word_end")
+        );
+        assert_eq!(cmd_name(resolve(n, "g n").unwrap()), Some("search_next"));
+        assert_eq!(cmd_name(resolve(n, "g N").unwrap()), Some("search_prev"));
+        // buffer nav relocated to unimpaired-style [b / ]b.
+        assert_eq!(
+            cmd_name(resolve(n, "] b").unwrap()),
+            Some("goto_next_buffer")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "[ b").unwrap()),
+            Some("goto_previous_buffer")
         );
     }
 

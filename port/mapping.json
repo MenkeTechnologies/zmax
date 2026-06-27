@@ -3694,5 +3694,21 @@
       "key:normal:g a"
     ],
     "note": "vim ga: print the ascii/unicode value of the character under the cursor (bound to :character-info)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gn",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g n"
+    ],
+    "note": "vim gn: select the next match of the last search pattern (search_next). Partial: vim's operator-pending cgn/dgn combos approximate via the selection."
+  },
+  {
+    "spec_id": "neovim.normal-mode.gN",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g N"
+    ],
+    "note": "vim gN: select the previous match of the last search pattern (search_prev). Partial: cgN/dgN approximate via the selection."
   }
 ]
