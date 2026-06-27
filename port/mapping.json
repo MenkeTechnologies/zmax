@@ -3302,5 +3302,61 @@
       "key:normal:Q"
     ],
     "note": "vim Q macro replay_macro"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_dollar",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g $"
+    ],
+    "note": "vim g$ -> goto_line_end"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g0",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g 0"
+    ],
+    "note": "vim g0 -> goto_line_start"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gi",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g I"
+    ],
+    "note": "vim gI -> insert_at_line_start"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_caret",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g ^"
+    ],
+    "note": "vim g^ -> goto_first_nonwhitespace"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_2",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g _"
+    ],
+    "note": "vim g_ -> goto_line_end"
+  },
+  {
+    "spec_id": "neovim.normal-mode.z",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z -"
+    ],
+    "note": "vim z- -> align_view_bottom"
+  },
+  {
+    "spec_id": "neovim.normal-mode.z_dot",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z ."
+    ],
+    "note": "vim z. -> align_view_center"
   }
 ]

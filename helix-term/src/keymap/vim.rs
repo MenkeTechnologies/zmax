@@ -315,6 +315,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "k" => move_line_up,
             "h" => goto_line_start,
             "l" => goto_line_end,
+            "0" => goto_line_start,            // g0 leftmost (screen line)
+            "$" => goto_line_end,              // g$ rightmost (screen line)
+            "^" => goto_first_nonwhitespace,   // g^ first non-blank (screen line)
+            "_" => goto_line_end,              // g_ last non-blank (approx)
+            "I" => insert_at_line_start,       // gI insert at column 1
             "d" => goto_definition,
             "D" => goto_declaration,
             "y" => goto_type_definition,
@@ -334,6 +339,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "t" => align_view_top,
             "b" => align_view_bottom,
             "c" => align_view_center,
+            "." => [align_view_center, goto_first_nonwhitespace], // z. center + first non-blank
+            "-" => [align_view_bottom, goto_first_nonwhitespace], // z- bottom + first non-blank
         },
 
         // --- bracket submaps (vim unimpaired-ish) --------------------------
