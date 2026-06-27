@@ -8,7 +8,7 @@ use ropey::Rope;
 use std::{ops::Range, path::PathBuf, process::Command};
 
 #[test]
-fn test_treesitter_indent_rust_helix() {
+fn test_treesitter_indent_rust_zemacs() {
     // We pin a specific git revision to prevent unrelated changes from causing the indent tests to fail.
     // Ideally, someone updates this once in a while and fixes any errors that occur.
     let rev = "af382768cdaf89ff547dbd8f644a1bddd90e7c8f";
