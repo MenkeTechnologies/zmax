@@ -1472,3 +1472,17 @@ async fn vim_gi_insert_at_last() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_dot_repeat_insert() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(helix_term::config::Config {
+            keys: helix_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        // i X <esc> inserts X; l moves right; . repeats the insert.
+        ("#[|a]#bc\n", "iX<esc>l.", "XaX#[|b]#c\n"),
+    )
+    .await?;
+    Ok(())
+}

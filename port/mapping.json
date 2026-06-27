@@ -3390,5 +3390,13 @@
       "key:normal:g i"
     ],
     "note": "vim gi insert at last-insert position (^ mark)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.dot",
+    "status": "partial",
+    "evidence": [
+      "key:normal:."
+    ],
+    "note": "vim . repeat-last-change (helix last_insert replay): insert-class changes (i/a/o/c + text) work; pure operator+motion repeat (dd, dw) is approximate"
   }
 ]
