@@ -285,6 +285,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             },
 
             "g" => goto_file_start,
+            "&" => repeat_substitute_global,   // g& repeat last :s whole file
             "e" => goto_last_line,
             "j" => move_line_down,
             "k" => move_line_up,

@@ -3237,7 +3237,12 @@ fn yank_lines(
     Ok(())
 }
 
-fn put_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn put_lines_impl(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    above: bool,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3262,7 +3267,9 @@ fn put_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     let len = slice.len_chars();
     let total = slice.len_lines();
     let cur = slice.char_to_line(doc.selection(view.id).primary().cursor(slice));
-    let insert_at = if cur + 1 < total {
+    let insert_at = if above {
+        slice.line_to_char(cur)
+    } else if cur + 1 < total {
         slice.line_to_char(cur + 1)
     } else {
         len
@@ -3286,6 +3293,13 @@ fn put_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     doc.set_selection(view.id, Selection::point(new_slice.line_to_char(line)));
     doc.append_changes_to_history(view);
     Ok(())
+}
+
+fn put_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    put_lines_impl(cx, args, event, false)
+}
+fn put_lines_above(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    put_lines_impl(cx, args, event, true)
 }
 
 fn yank_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -5077,6 +5091,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["pu"],
         doc: "Put (paste) a register's contents as new line(s) below the cursor (vim :put).",
         fun: put_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "put!",
+        aliases: &["pu!"],
+        doc: "Put (paste) a register's contents as new line(s) above the cursor (vim :put!).",
+        fun: put_lines_above,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },

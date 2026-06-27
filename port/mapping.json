@@ -2910,5 +2910,13 @@
       "key:normal:&"
     ],
     "note": "vim & repeat last :s on current line"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_amp",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g &"
+    ],
+    "note": "vim g& repeat last :s on whole file"
   }
 ]
