@@ -1393,3 +1393,21 @@ async fn ex_retab_tabs_to_spaces() -> anyhow::Result<()> {
     test(("#[|\t]#ab\n", ":retab<ret>", "#[|    ]#ab\n")).await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ex_left_align() -> anyhow::Result<()> {
+    test(("    #[|a]#b\n", ":left 2<ret>", "  #[|a]#b\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ex_center_align() -> anyhow::Result<()> {
+    test(("#[|a]#b\n", ":center 6<ret>", "  #[|a]#b\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ex_right_align() -> anyhow::Result<()> {
+    test(("#[|a]#b\n", ":right 5<ret>", "   #[|a]#b\n")).await?;
+    Ok(())
+}

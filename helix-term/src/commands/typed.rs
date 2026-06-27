@@ -3518,6 +3518,76 @@ fn join_lines(
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+enum AlignMode {
+    Left,
+    Right,
+    Center,
+}
+
+fn align_lines(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    mode: AlignMode,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let arg: Option<usize> = args.first().and_then(|a| a.trim().parse().ok());
+    let width = arg.unwrap_or(80);
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let (first, last) = primary_line_range(doc, view.id);
+
+    let mut changes = Vec::new();
+    for line in first..=last {
+        let lstart = slice.line_to_char(line);
+        let lend = line_ending::line_end_char_index(&slice, line);
+        let mut fnw = lstart;
+        while fnw < lend && matches!(slice.char(fnw), ' ' | '\t') {
+            fnw += 1;
+        }
+        if fnw == lend {
+            continue; // blank line
+        }
+        let mut lnw = lend;
+        while lnw > fnw && matches!(slice.char(lnw - 1), ' ' | '\t') {
+            lnw -= 1;
+        }
+        let content_len = lnw - fnw;
+        let pad = match mode {
+            AlignMode::Left => arg.unwrap_or(0),
+            AlignMode::Right => width.saturating_sub(content_len),
+            AlignMode::Center => width.saturating_sub(content_len) / 2,
+        };
+        // Replace leading whitespace with `pad` spaces; strip trailing whitespace.
+        changes.push((lstart, fnw, Some(Tendril::from(" ".repeat(pad).as_str()))));
+        if lnw < lend {
+            changes.push((lnw, lend, None));
+        }
+    }
+    if changes.is_empty() {
+        return Ok(());
+    }
+    changes.sort_by_key(|c| c.0);
+    let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn left_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    align_lines(cx, args, event, AlignMode::Left)
+}
+fn right_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    align_lines(cx, args, event, AlignMode::Right)
+}
+fn center_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    align_lines(cx, args, event, AlignMode::Center)
+}
+
 fn retab(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -5343,6 +5413,30 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
+    },
+    TypableCommand {
+        name: "left",
+        aliases: &["le"],
+        doc: "Left-align line(s), setting leading indent to {n} (default 0) — vim :left.",
+        fun: left_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "right",
+        aliases: &["ri"],
+        doc: "Right-align line(s) to width {n} (default 80) — vim :right.",
+        fun: right_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "center",
+        aliases: &["ce"],
+        doc: "Center line(s) within width {n} (default 80) — vim :center.",
+        fun: center_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "retab",

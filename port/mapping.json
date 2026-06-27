@@ -3094,5 +3094,29 @@
       "typable:retab"
     ],
     "note": "vim :retab (tabs->spaces; tabstop-arg/spaces->tabs not supported)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_center",
+    "status": "ported",
+    "evidence": [
+      "typable:center"
+    ],
+    "note": "vim :center align lines"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_left",
+    "status": "ported",
+    "evidence": [
+      "typable:left"
+    ],
+    "note": "vim :left align lines"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_right",
+    "status": "ported",
+    "evidence": [
+      "typable:right"
+    ],
+    "note": "vim :right align lines"
   }
 ]
