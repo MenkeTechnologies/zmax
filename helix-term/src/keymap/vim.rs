@@ -363,7 +363,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "[" => goto_prev_paragraph,
             "d" => goto_prev_diag,
             "g" => goto_prev_change,
-            "f" => goto_prev_function,
+            "c" => goto_prev_change,      // [c back to start of prev change (diff hunk)
+            "f" => goto_file,             // [f same as gf: open file under cursor
             "m" => goto_prev_function,    // [m back to start of member/function
             "/" => goto_prev_comment,     // [/ previous comment
         },
@@ -371,7 +372,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "]" => goto_next_paragraph,
             "d" => goto_next_diag,
             "g" => goto_next_change,
-            "f" => goto_next_function,
+            "c" => goto_next_change,      // ]c forward to start of next change (diff hunk)
+            "f" => goto_file,             // ]f same as gf: open file under cursor
             "m" => goto_next_function,    // ]m forward to next member/function
             "/" => goto_next_comment,     // ]/ next comment
         },

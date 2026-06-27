@@ -3654,5 +3654,37 @@
       "key:normal:C-w right"
     ],
     "note": "vim CTRL-W <Right>: go to window right (jump_view_right)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:[ c"
+    ],
+    "note": "vim [c: go back to start of previous change/diff hunk (goto_prev_change)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:[ f"
+    ],
+    "note": "vim [f: same as gf: open the file under the cursor (goto_file)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:] c"
+    ],
+    "note": "vim ]c: go forward to start of next change/diff hunk (goto_next_change)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:] f"
+    ],
+    "note": "vim ]f: same as gf: open the file under the cursor (goto_file)"
   }
 ]
