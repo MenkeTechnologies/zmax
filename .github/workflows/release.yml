@@ -21,16 +21,22 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
-    # Per-target failures are tolerated so the release + tap ship from
-    # whichever targets built; the formula's emit() skips missing ones.
+    # Per-target failures are tolerated (continue-on-error) so the release + tap
+    # ship from whichever targets built; the formula's emit() skips missing ones.
+    continue-on-error: ${{ matrix.allow_failure || false }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: macos-13            # native intel runner (no cross-compile)
+          # Intel macOS runners (macos-13) are scarce/deprecated and queue
+          # indefinitely, so cross-compile x86_64 on the arm runner. clang's
+          # universal SDK + cc -arch x86_64 handles the grammars. allow_failure
+          # keeps a cross hiccup from blocking the whole release.
+          - os: macos-latest
             target: x86_64-apple-darwin
+            allow_failure: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-24.04-arm
