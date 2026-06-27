@@ -1418,3 +1418,16 @@ async fn ex_undo_redo() -> anyhow::Result<()> {
     test(("#[|a]#\nb\n", ":d<ret>:undo<ret>", "#[|a]#\nb\n")).await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_plus_first_nonblank() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(helix_term::config::Config {
+            keys: helix_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        ("#[|a]#\n  bc\n", "+", "a\n  #[b|]#c\n"),
+    )
+    .await?;
+    Ok(())
+}

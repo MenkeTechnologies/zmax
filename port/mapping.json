@@ -360,14 +360,6 @@
     "note": "open line above"
   },
   {
-    "spec_id": "neovim.normal-mode.v_3",
-    "status": "ported",
-    "evidence": [
-      "key:normal:V"
-    ],
-    "note": "linewise select"
-  },
-  {
     "spec_id": "neovim.normal-mode.w",
     "status": "ported",
     "evidence": [
@@ -454,14 +446,6 @@
       "key:normal:u"
     ],
     "note": "undo"
-  },
-  {
-    "spec_id": "neovim.normal-mode.v_2",
-    "status": "ported",
-    "evidence": [
-      "key:normal:v"
-    ],
-    "note": "select/visual mode"
   },
   {
     "spec_id": "neovim.normal-mode.w_1",
@@ -3142,5 +3126,85 @@
       "typable:undo"
     ],
     "note": "vim :u[ndo] -> :undo (:u abbrev taken by helix)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.hash",
+    "status": "ported",
+    "evidence": [
+      "key:normal:#"
+    ],
+    "note": "vim # -> search_selection_detect_word_boundaries"
+  },
+  {
+    "spec_id": "neovim.normal-mode.plus",
+    "status": "ported",
+    "evidence": [
+      "key:normal:+"
+    ],
+    "note": "vim + -> move_visual_line_down"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lt_cr_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:ret"
+    ],
+    "note": "vim <CR> -> move_visual_line_down"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lt_nl_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:ret"
+    ],
+    "note": "vim <NL> -> move_visual_line_down"
+  },
+  {
+    "spec_id": "neovim.normal-mode.x",
+    "status": "ported",
+    "evidence": [
+      "key:normal:-"
+    ],
+    "note": "vim - -> move_visual_line_up"
+  },
+  {
+    "spec_id": "neovim.normal-mode.x_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:_"
+    ],
+    "note": "vim _ -> goto_first_nonwhitespace"
+  },
+  {
+    "spec_id": "neovim.normal-mode.k",
+    "status": "ported",
+    "evidence": [
+      "key:normal:K"
+    ],
+    "note": "vim K -> hover"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_semicolon",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g ;"
+    ],
+    "note": "vim g; -> goto_last_modification"
+  },
+  {
+    "spec_id": "neovim.normal-mode.v_2",
+    "status": "ported",
+    "evidence": [
+      "key:normal:v"
+    ],
+    "note": "vim v -> select_mode"
+  },
+  {
+    "spec_id": "neovim.normal-mode.v_3",
+    "status": "ported",
+    "evidence": [
+      "key:normal:V"
+    ],
+    "note": "vim V -> extend_to_line_bounds"
   }
 ]

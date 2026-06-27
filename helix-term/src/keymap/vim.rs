@@ -160,6 +160,15 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "n" => search_next,
         "N" => search_prev,
         "*" => [search_selection_detect_word_boundaries, search_next],
+        "#" => [search_selection_detect_word_boundaries, search_prev], // backward word search
+
+        // --- line motions to first non-blank ------------------------------
+        "+" | "ret" => [move_visual_line_down, goto_first_nonwhitespace],
+        "-"         => [move_visual_line_up, goto_first_nonwhitespace],
+        "_"         => goto_first_nonwhitespace,
+
+        // --- misc ----------------------------------------------------------
+        "K" => hover,   // keyword lookup (LSP hover)
 
         // --- insert entry ---------------------------------------------------
         "i" => insert_mode,
@@ -286,6 +295,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
             "g" => goto_file_start,
             "&" => repeat_substitute_global,   // g& repeat last :s whole file
+            ";" => goto_last_modification,     // g; goto last change position
             "e" => goto_last_line,
             "j" => move_line_down,
             "k" => move_line_up,
