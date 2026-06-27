@@ -4049,26 +4049,26 @@
   },
   {
     "spec_id": "spacemacs.keybinding.spc_r_e",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:space r e"
     ],
-    "note": "spacemacs SPC r e: SPC leader -> select_register (approximate)"
+    "note": "spacemacs SPC r e: browse registers in a picker (register_picker)"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_r_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:space r r"
     ],
-    "note": "spacemacs SPC r r: SPC leader -> select_register (approximate)"
+    "note": "spacemacs SPC r r: show registers + paste chosen (register_picker)"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_r_y",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:space r y"
     ],
-    "note": "spacemacs SPC r y: SPC leader -> select_register (approximate)"
+    "note": "spacemacs SPC r y: kill-ring browser (register_picker)"
   }
 ]

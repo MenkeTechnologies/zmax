@@ -410,6 +410,7 @@ impl MappableCommand {
         code_action, "Perform code action",
         buffer_picker, "Open buffer picker",
         jumplist_picker, "Open jumplist picker",
+        register_picker, "Browse registers and paste the chosen one",
         symbol_picker, "Open symbol picker",
         syntax_symbol_picker, "Open symbol picker from syntax information",
         lsp_or_syntax_symbol_picker, "Open symbol picker from LSP or syntax information",
@@ -5376,6 +5377,43 @@ fn paste_after(cx: &mut Context) {
         cx.count(),
     );
     exit_select_mode(cx);
+}
+
+/// Browse the written registers (named registers + yank ring) in a picker and
+/// paste the chosen one after the cursor. Backs spacemacs `SPC r r/e/y`.
+fn register_picker(cx: &mut Context) {
+    struct RegMeta {
+        name: char,
+        preview: String,
+    }
+
+    let items: Vec<RegMeta> = cx
+        .editor
+        .registers
+        .written()
+        .into_iter()
+        .filter_map(|name| {
+            let preview = cx
+                .editor
+                .registers
+                .read(name, cx.editor)?
+                .map(|v| v.into_owned())
+                .collect::<Vec<_>>()
+                .join(" ⏎ ")
+                .replace('\n', "⏎");
+            (!preview.is_empty()).then_some(RegMeta { name, preview })
+        })
+        .collect();
+
+    let columns = [
+        ui::PickerColumn::new("reg", |m: &RegMeta, _: &()| m.name.to_string().into()),
+        ui::PickerColumn::new("contents", |m: &RegMeta, _: &()| m.preview.as_str().into()),
+    ];
+
+    let picker = Picker::new(columns, 1, items, (), |cx, meta, _action| {
+        paste(cx.editor, meta.name, Paste::After, 1);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 fn paste_before(cx: &mut Context) {

@@ -599,9 +599,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             },
             "r" => { "Resume / registers"
                 "l" => last_picker,                // SPC r l : resume picker
-                "e" => select_register,            // SPC r e : registers
-                "r" => select_register,            // SPC r r : show register
-                "y" => select_register,            // SPC r y : kill ring
+                "e" => register_picker,            // SPC r e : registers
+                "r" => register_picker,            // SPC r r : show registers
+                "y" => register_picker,            // SPC r y : kill ring
             },
             "a" => { "Applications"
                 "d" => file_explorer,              // SPC a d : dired (file manager)

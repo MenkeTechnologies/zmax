@@ -40,6 +40,14 @@ impl Registers {
         }
     }
 
+    /// Names of the registers that currently hold written values, sorted.
+    /// Excludes the special read-only registers (`.`, `%`, `#`, `_`).
+    pub fn written(&self) -> Vec<char> {
+        let mut names: Vec<char> = self.inner.keys().copied().collect();
+        names.sort_unstable();
+        names
+    }
+
     pub fn read<'a>(&'a self, name: char, editor: &'a Editor) -> Option<RegisterValues<'a>> {
         match name {
             '_' => Some(RegisterValues::new(iter::empty())),

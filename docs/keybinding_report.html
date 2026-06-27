@@ -6,15 +6,15 @@
 <p class=muted>The keybinding subset of the <a href='port_report.html'>port report</a>. Counts only the key-press surface — vim/neovim normal/visual/insert/cmdline keys, the GNU Emacs Key Index, and the Spacemacs <code>SPC</code> tree. <b>ported</b> = the same key does the equivalent thing in zemacs.</p>
 <div class=kpi>
 <div class=card><b>2254</b>cited keybindings</div>
-<div class=card><b class=ported>333</b>ported (14.8%)</div>
-<div class=card><b class=partial>81</b>partial (3.6%)</div>
+<div class=card><b class=ported>336</b>ported (14.9%)</div>
+<div class=card><b class=partial>78</b>partial (3.5%)</div>
 <div class=card><b class=absent>1840</b>absent</div>
 </div>
 <h2>By source</h2><table>
 <tr><th>Source</th><th>Keybindings</th><th>Ported</th><th>Partial</th><th>Progress</th></tr>
 <tr><td>emacs</td><td class=n>1124</td><td class='n ported'>0</td><td class='n partial'>0</td><td><div class="bar"><div class="fill" style="width:0.0%"></div><span>0.0%</span></div></td></tr>
 <tr><td>neovim</td><td class=n>715</td><td class='n ported'>228</td><td class='n partial'>74</td><td><div class="bar"><div class="fill" style="width:31.9%"></div><span>31.9%</span></div></td></tr>
-<tr><td>spacemacs</td><td class=n>415</td><td class='n ported'>105</td><td class='n partial'>7</td><td><div class="bar"><div class="fill" style="width:25.3%"></div><span>25.3%</span></div></td></tr>
+<tr><td>spacemacs</td><td class=n>415</td><td class='n ported'>108</td><td class='n partial'>4</td><td><div class="bar"><div class="fill" style="width:26.0%"></div><span>26.0%</span></div></td></tr>
 </table>
 <h2>By source / category</h2><table>
 <tr><th>Source</th><th>Category</th><th>Keybindings</th><th>Ported</th><th>Partial</th><th>Progress</th></tr>
@@ -23,7 +23,7 @@
 <tr><td>neovim</td><td>insert-mode</td><td class=n>98</td><td class='n ported'>20</td><td class='n partial'>0</td><td><div class="bar"><div class="fill" style="width:20.4%"></div><span>20.4%</span></div></td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td class=n>479</td><td class='n ported'>177</td><td class='n partial'>36</td><td><div class="bar"><div class="fill" style="width:37.0%"></div><span>37.0%</span></div></td></tr>
 <tr><td>neovim</td><td>visual-mode</td><td class=n>85</td><td class='n ported'>31</td><td class='n partial'>38</td><td><div class="bar"><div class="fill" style="width:36.5%"></div><span>36.5%</span></div></td></tr>
-<tr><td>spacemacs</td><td>keybinding</td><td class=n>415</td><td class='n ported'>105</td><td class='n partial'>7</td><td><div class="bar"><div class="fill" style="width:25.3%"></div><span>25.3%</span></div></td></tr>
+<tr><td>spacemacs</td><td>keybinding</td><td class=n>415</td><td class='n ported'>108</td><td class='n partial'>4</td><td><div class="bar"><div class="fill" style="width:26.0%"></div><span>26.0%</span></div></td></tr>
 </table>
 <p class=muted>Emacs is 0% because zemacs is a modal (vim) editor — Emacs default chords (<code>C-x C-f</code>, …) are intentionally not bound; the commands they invoke are tracked under the port report's emacs <code>command</code> category.</p>
 <h2>Keybinding detail</h2>
@@ -1881,7 +1881,7 @@
 <tr><td>gv</td><td class=absent>absent</td><td class=muted>index.txt:v_gv</td></tr>
 <tr><td>v</td><td class=absent>absent</td><td class=muted>index.txt:v_v</td></tr>
 </table></details>
-<details><summary>spacemacs / keybinding <span class=muted>(415 keys · <span class=ported>105 ported</span> · <span class=partial>7 partial</span>)</span></summary>
+<details><summary>spacemacs / keybinding <span class=muted>(415 keys · <span class=ported>108 ported</span> · <span class=partial>4 partial</span>)</span></summary>
 <table><tr><th>Key</th><th>Status</th><th>Source ref</th></tr>
 <tr><td>SPC ;</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC SPC</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
@@ -1928,7 +1928,10 @@
 <tr><td>SPC p r</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC q q</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC q s</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
+<tr><td>SPC r e</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC r l</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
+<tr><td>SPC r r</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
+<tr><td>SPC r y</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC s a a</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC s a b</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC s a d</td><td class=ported>ported</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
@@ -1992,9 +1995,6 @@
 <tr><td>SPC p d</td><td class=partial>partial</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC p k</td><td class=partial>partial</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC p t</td><td class=partial>partial</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
-<tr><td>SPC r e</td><td class=partial>partial</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
-<tr><td>SPC r r</td><td class=partial>partial</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
-<tr><td>SPC r y</td><td class=partial>partial</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC 1</td><td class=absent>absent</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC 2</td><td class=absent>absent</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
 <tr><td>SPC 3</td><td class=absent>absent</td><td class=muted>https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org</td></tr>
