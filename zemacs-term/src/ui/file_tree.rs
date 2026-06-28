@@ -92,6 +92,39 @@ impl FileTree {
         }
     }
 
+    /// Mouse click on the visible list row `list_row` (0-based, below the header):
+    /// select it, then toggle a directory or open a file.
+    pub fn click_row(&mut self, list_row: usize) -> TreeAction {
+        let idx = self.scroll + list_row;
+        if idx >= self.rows.len() {
+            return TreeAction::None;
+        }
+        self.selected = idx;
+        let row = &self.rows[idx];
+        if row.is_dir {
+            if self.expanded.contains(&row.path) {
+                self.expanded.remove(&row.path);
+            } else {
+                self.expanded.insert(row.path.clone());
+            }
+            self.rebuild();
+            TreeAction::None
+        } else {
+            TreeAction::Open(row.path.clone())
+        }
+    }
+
+    /// Move the selection one row (mouse wheel).
+    pub fn scroll_sel(&mut self, down: bool) {
+        if down {
+            if self.selected + 1 < self.rows.len() {
+                self.selected += 1;
+            }
+        } else {
+            self.selected = self.selected.saturating_sub(1);
+        }
+    }
+
     pub fn handle_key(&mut self, key: KeyEvent) -> TreeAction {
         match key.code {
             KeyCode::Char('j') | KeyCode::Down => {
@@ -135,25 +168,14 @@ impl FileTree {
         }
     }
 
-    pub fn render(&mut self, area: Rect, surface: &mut Surface, theme: &Theme, focused: bool) {
+    /// Render just the tree rows into `area` (the Ide draws the drawer header above this).
+    pub fn render(&mut self, area: Rect, surface: &mut Surface, theme: &Theme) {
         surface.clear_with(area, theme.get("ui.background"));
         if area.width == 0 || area.height == 0 {
             return;
         }
 
-        // header
-        let header_style = if focused {
-            theme.get("ui.text.focus")
-        } else {
-            theme.get("comment")
-        };
-        surface.set_stringn(area.x, area.y, " PROJECT", area.width as usize, header_style);
-
-        let list_y = area.y + 1;
-        let height = area.height.saturating_sub(1) as usize;
-        if height == 0 {
-            return;
-        }
+        let height = area.height as usize;
 
         // keep selection in view
         if self.selected < self.scroll {
@@ -172,7 +194,7 @@ impl FileTree {
                 break;
             }
             let row = &self.rows[idx];
-            let y = list_y + i as u16;
+            let y = area.y + i as u16;
             if idx == self.selected {
                 surface.set_style(Rect::new(area.x, y, area.width, 1), sel);
             }

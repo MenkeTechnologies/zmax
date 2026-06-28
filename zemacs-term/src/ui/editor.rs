@@ -55,13 +55,14 @@ pub struct EditorView {
     recording_insert_change: bool,
     /// Guard set while replaying a change for `.`, so the replay isn't re-recorded.
     replaying: bool,
-    /// IDE file-tree sidebar (toggle with F2); None when hidden.
-    sidebar: Option<FileTree>,
-    /// Whether keystrokes are routed to the sidebar instead of the editor.
-    sidebar_focused: bool,
+    /// IDE workbench (file tree + structure + problems + error stripe). None until opened.
+    ide: Option<Ide>,
+    /// Tab strip hit regions `(x_start, x_end, doc)` and its row, for click-to-switch.
+    bufferline_tabs: Vec<(u16, u16, zemacs_view::DocumentId)>,
+    bufferline_y: u16,
 }
 
-use super::file_tree::{FileTree, TreeAction};
+use super::ide::{Ide, IdeAction};
 
 #[derive(Debug, Clone)]
 pub enum InsertEvent {
@@ -88,55 +89,46 @@ impl EditorView {
             change_buf: Vec::new(),
             recording_insert_change: false,
             replaying: false,
-            sidebar: None,
-            sidebar_focused: false,
+            ide: None,
+            bufferline_tabs: Vec::new(),
+            bufferline_y: 0,
         }
     }
 
-    /// Boot the IDE workbench: show the file-tree sidebar but keep the editor focused
-    /// (the `zemacs --ide` entry point).
+    /// Boot the IDE workbench, editor focused (the `zemacs --ide` entry point).
     pub fn open_sidebar(&mut self) {
-        if self.sidebar.is_none() {
-            let root = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-            self.sidebar = Some(FileTree::new(root));
-        }
-        self.sidebar_focused = false;
+        self.ide.get_or_insert_with(Ide::new).focus_editor();
     }
 
-    /// Toggle the IDE file-tree sidebar: hidden→shown+focused, shown+focused→hidden,
-    /// shown+unfocused→focused.
-    fn toggle_sidebar(&mut self) {
-        match (self.sidebar.is_some(), self.sidebar_focused) {
-            (false, _) => {
-                let root =
-                    std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-                self.sidebar = Some(FileTree::new(root));
-                self.sidebar_focused = true;
-            }
-            (true, true) => {
-                self.sidebar = None;
-                self.sidebar_focused = false;
-            }
-            (true, false) => self.sidebar_focused = true,
-        }
-    }
-
-    /// Render the sidebar (if any) into a left strip; return the remaining area for the editor.
+    /// Render the workbench (if any) into its regions; return the editor's remaining area.
     fn render_sidebar(
         &mut self,
         area: Rect,
         surface: &mut Surface,
         cx: &mut crate::compositor::Context,
     ) -> Rect {
-        let Some(tree) = self.sidebar.as_mut() else {
-            return area;
-        };
-        let w = 32u16.min(area.width.saturating_sub(24));
-        if w == 0 {
-            return area;
+        match self.ide.as_mut() {
+            Some(ide) => ide.render(area, surface, cx),
+            None => area,
         }
-        tree.render(area.with_width(w), surface, &cx.editor.theme, self.sidebar_focused);
-        area.clip_left(w)
+    }
+
+    /// Apply a workbench action: open a file, or jump to a symbol/diagnostic.
+    fn apply_ide_action(&mut self, action: IdeAction, context: &mut crate::compositor::Context) {
+        match action {
+            IdeAction::None => {}
+            IdeAction::OpenFile(path) => {
+                let _ = context
+                    .editor
+                    .open(&path, zemacs_view::editor::Action::Replace);
+            }
+            IdeAction::Goto { from, to } => {
+                let scrolloff = context.editor.config().scrolloff;
+                let (view, doc) = current!(context.editor);
+                doc.set_selection(view.id, super::ide::goto_selection(from, to));
+                view.ensure_cursor_in_view(doc, scrolloff);
+            }
+        }
     }
 
     pub fn spinners_mut(&mut self) -> &mut ProgressSpinners {
@@ -729,7 +721,12 @@ impl EditorView {
     }
 
     /// Render bufferline at the top
-    pub fn render_bufferline(editor: &Editor, viewport: Rect, surface: &mut Surface) {
+    /// Renders the tab strip and returns each tab's `(x_start, x_end, doc)` for click hit-testing.
+    pub fn render_bufferline(
+        editor: &Editor,
+        viewport: Rect,
+        surface: &mut Surface,
+    ) -> Vec<(u16, u16, zemacs_view::DocumentId)> {
         let scratch = PathBuf::from(SCRATCH_BUFFER_NAME); // default filename to use for scratch buffer
         surface.clear_with(
             viewport,
@@ -750,6 +747,7 @@ impl EditorView {
             .unwrap_or_else(|| editor.theme.get("ui.statusline.inactive"));
 
         let mut x = viewport.x;
+        let mut tabs = Vec::new();
         let current_doc = view!(editor).doc;
 
         for doc in editor.documents() {
@@ -771,14 +769,17 @@ impl EditorView {
             let used_width = viewport.x.saturating_sub(x);
             let rem_width = surface.area.width.saturating_sub(used_width);
 
+            let start = x;
             x = surface
                 .set_stringn(x, viewport.y, &text, rem_width as usize, style)
                 .0;
+            tabs.push((start, x, doc.id()));
 
             if x >= surface.area.right() {
                 break;
             }
         }
+        tabs
     }
 
     pub fn render_gutter<'d>(
@@ -1532,26 +1533,43 @@ impl Component for EditorView {
         event: &Event,
         context: &mut crate::compositor::Context,
     ) -> EventResult {
-        // IDE sidebar (file tree): F2 toggles; when focused, keys drive the tree.
+        // IDE workbench: F2 toggles; focused panels capture keys; clicks in a panel route here.
         if let Event::Key(key) = event {
             if key.code == KeyCode::F(2) && key.modifiers.is_empty() {
-                self.toggle_sidebar();
+                self.ide.get_or_insert_with(Ide::new).toggle();
                 return EventResult::Consumed(None);
             }
-            if self.sidebar_focused {
-                if let Some(tree) = self.sidebar.as_mut() {
-                    match tree.handle_key(*key) {
-                        TreeAction::Open(path) => {
-                            self.sidebar_focused = false;
-                            let _ = context
-                                .editor
-                                .open(&path, zemacs_view::editor::Action::Replace);
-                        }
-                        TreeAction::Close => self.sidebar_focused = false,
-                        TreeAction::None => {}
-                    }
+            if self.ide.as_ref().is_some_and(Ide::capturing) {
+                let action = self.ide.as_mut().unwrap().handle_key(*key);
+                self.apply_ide_action(action, context);
+                return EventResult::Consumed(None);
+            }
+        }
+        if let Event::Mouse(me) = event {
+            // Click a tab in the bufferline to switch buffers.
+            if matches!(me.kind, MouseEventKind::Down(MouseButton::Left)) && me.row == self.bufferline_y {
+                if let Some(&(_, _, doc_id)) = self
+                    .bufferline_tabs
+                    .iter()
+                    .find(|(a, b, _)| me.column >= *a && me.column < *b)
+                {
+                    context
+                        .editor
+                        .switch(doc_id, zemacs_view::editor::Action::Replace);
                     return EventResult::Consumed(None);
                 }
+            }
+            if self
+                .ide
+                .as_ref()
+                .is_some_and(|ide| ide.visible() && ide.hit(me.column, me.row))
+            {
+                let text = doc!(context.editor).text().clone();
+                let action = self.ide.as_mut().unwrap().handle_mouse(me, |line| {
+                    text.line_to_char(line.min(text.len_lines().saturating_sub(1)))
+                });
+                self.apply_ide_action(action, context);
+                return EventResult::Consumed(None);
             }
         }
 
@@ -1767,7 +1785,8 @@ impl Component for EditorView {
         let use_bufferline = match config.bufferline {
             BufferLine::Always => true,
             BufferLine::Multiple if cx.editor.documents.len() > 1 => true,
-            _ => false,
+            // Always show the top tab bar while the IDE workbench is open.
+            _ => self.ide.as_ref().is_some_and(Ide::visible),
         };
 
         // -1 for commandline and -1 for bufferline
@@ -1780,7 +1799,10 @@ impl Component for EditorView {
         cx.editor.resize(editor_area);
 
         if use_bufferline {
-            Self::render_bufferline(cx.editor, area.with_height(1), surface);
+            self.bufferline_tabs = Self::render_bufferline(cx.editor, area.with_height(1), surface);
+            self.bufferline_y = area.y;
+        } else {
+            self.bufferline_tabs.clear();
         }
 
         for (view, is_focused) in cx.editor.tree.views() {
@@ -1877,7 +1899,7 @@ impl Component for EditorView {
     }
 
     fn cursor(&self, _area: Rect, editor: &Editor) -> (Option<Position>, CursorKind) {
-        if self.sidebar_focused {
+        if self.ide.as_ref().is_some_and(Ide::capturing) {
             return (None, CursorKind::Hidden);
         }
         match editor.cursor() {
