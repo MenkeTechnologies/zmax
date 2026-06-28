@@ -160,6 +160,10 @@ pub struct Document {
     pub(crate) marks: HashMap<char, usize>,
     /// The last visual (select-mode) selection, for vim `gv` (reselect).
     pub(crate) last_visual: Option<Selection>,
+    /// Manual code folds (vim `zf`/`za`/...). Stored per document; a closed fold
+    /// hides its inner lines from rendering and line-wise motion. Threaded into
+    /// rendering via [`Document::text_format`]. See [`zemacs_core::fold`].
+    pub(crate) folds: zemacs_core::fold::Folds,
     /// Set to `true` when the document is updated, reset to `false` on the next inlay hints
     /// update from the LSP
     pub inlay_hints_oudated: bool,
@@ -774,6 +778,7 @@ impl Document {
             code_action_hints: HashSet::new(),
             marks: HashMap::new(),
             last_visual: None,
+            folds: zemacs_core::fold::Folds::default(),
             color_swatches: None,
             document_links: Vec::new(),
             color_swatch_controller: TaskController::new(),
@@ -1958,6 +1963,16 @@ impl Document {
         self.version
     }
 
+    /// Manual code folds for this document.
+    pub fn folds(&self) -> &zemacs_core::fold::Folds {
+        &self.folds
+    }
+
+    /// Mutable access to this document's folds (vim `zf`/`za`/...).
+    pub fn folds_mut(&mut self) -> &mut zemacs_core::fold::Folds {
+        &mut self.folds
+    }
+
     pub fn word_completion_enabled(&self) -> bool {
         self.language_config()
             .and_then(|lang_config| lang_config.word_completion.and_then(|c| c.enable))
@@ -2432,6 +2447,7 @@ impl Document {
             wrap_indicator_highlight: theme
                 .and_then(|theme| theme.find_highlight("ui.virtual.wrap")),
             soft_wrap_at_text_width,
+            folded: self.folds.closed_ranges(),
         }
     }
 

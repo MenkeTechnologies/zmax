@@ -290,11 +290,18 @@ pub fn temp_file_with_contents<S: AsRef<str>>(
     Ok(temp_file)
 }
 
-/// Generates a config with defaults more suitable for integration tests
+/// Generates a config with defaults more suitable for integration tests.
+///
+/// The shipped default keymap is now vim (`keymap::default` re-exports
+/// `keymap::vim::default`), but the bulk of this integration corpus was written
+/// against the Helix selection-first keymap and drives the engine through those
+/// keys (e.g. `x` = extend line, multi-cursor `s`). Pin the harness to that
+/// Helix keymap so those tests keep validating the engine; vim-specific tests
+/// opt into the vim keymap explicitly via `AppBuilder::with_config`.
 pub fn test_config() -> Config {
     Config {
         editor: test_editor_config(),
-        keys: zemacs_term::keymap::default(),
+        keys: zemacs_term::keymap::default::default(),
         ..Default::default()
     }
 }

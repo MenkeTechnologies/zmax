@@ -563,6 +563,16 @@ impl MappableCommand {
         align_view_bottom, "Align view bottom",
         scroll_up, "Scroll view up",
         scroll_down, "Scroll view down",
+        fold_create, "Create a fold over the selection (zf)",
+        fold_toggle, "Toggle fold under cursor (za)",
+        fold_open, "Open fold under cursor (zo)",
+        fold_close, "Close fold under cursor (zc)",
+        fold_open_all, "Open all folds (zR)",
+        fold_close_all, "Close all folds (zM)",
+        fold_delete, "Delete fold under cursor (zd)",
+        fold_delete_all, "Delete all folds (zE)",
+        fold_next, "Move to next fold (zj)",
+        fold_prev, "Move to previous fold (zk)",
         match_brackets, "Goto matching bracket",
         match_brackets_or_goto_percent, "Goto matching bracket, or {count} percent through the file",
         surround_add, "Surround add",
@@ -6484,6 +6494,111 @@ fn align_view_middle(cx: &mut Context) {
         .col
         .saturating_sub((view.inner_area(doc).width as usize) / 2);
     doc.set_view_offset(view.id, offset);
+}
+
+// --- code folding (vim z* family) --------------------------------------------
+// Folds live on the document (`Document::folds`). A closed fold hides its inner
+// lines from rendering and line-wise motion — the ranges flow into the
+// `DocumentFormatter` via `Document::text_format`. See `zemacs_core::fold`.
+// After a fold change we snap the cursor out of any freshly hidden region.
+
+/// Document line the primary cursor sits on.
+fn fold_cursor_line(view: &View, doc: &Document) -> usize {
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    text.char_to_line(cursor)
+}
+
+/// Move the primary cursor to the first char of `line` (clamped).
+fn fold_goto_line(view: &View, doc: &mut Document, line: usize) {
+    let last = doc.text().len_lines().saturating_sub(1);
+    let line = line.min(last);
+    let pos = doc.text().line_to_char(line);
+    let sel = Selection::point(pos);
+    doc.set_selection(view.id, sel);
+}
+
+/// If the cursor ended up on a hidden line, pull it to the fold's visible header.
+fn fold_snap_cursor(view: &mut View, doc: &mut Document) {
+    let line = fold_cursor_line(view, doc);
+    let anchor = doc.folds().visible_anchor(line);
+    if anchor != line {
+        fold_goto_line(view, doc, anchor);
+    }
+}
+
+fn fold_create(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let start = text.char_to_line(range.from());
+    // last line touched by the selection (exclusive `to` maps back one char)
+    let end = text.char_to_line(range.to().saturating_sub(1).max(range.from()));
+    let last = doc.text().len_lines().saturating_sub(1);
+    doc.folds_mut().create(start, end);
+    doc.folds_mut().clamp(last);
+    fold_goto_line(view, doc, start);
+    cx.editor.set_status(format!("created fold {}-{}", start + 1, end + 1));
+}
+
+fn fold_toggle(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let line = fold_cursor_line(view, doc);
+    doc.folds_mut().toggle(line);
+    fold_snap_cursor(view, doc);
+}
+
+fn fold_open(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let line = fold_cursor_line(view, doc);
+    doc.folds_mut().open(line);
+}
+
+fn fold_close(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let line = fold_cursor_line(view, doc);
+    doc.folds_mut().close(line);
+    fold_snap_cursor(view, doc);
+}
+
+fn fold_open_all(cx: &mut Context) {
+    let (_view, doc) = current!(cx.editor);
+    doc.folds_mut().open_all();
+}
+
+fn fold_close_all(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    doc.folds_mut().close_all();
+    fold_snap_cursor(view, doc);
+}
+
+fn fold_delete(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let line = fold_cursor_line(view, doc);
+    doc.folds_mut().delete(line);
+}
+
+fn fold_delete_all(cx: &mut Context) {
+    let (_view, doc) = current!(cx.editor);
+    doc.folds_mut().clear();
+}
+
+fn fold_next(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let line = fold_cursor_line(view, doc);
+    let next = doc.folds().next_fold_start(line);
+    if let Some(line) = next {
+        fold_goto_line(view, doc, line);
+    }
+}
+
+fn fold_prev(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let line = fold_cursor_line(view, doc);
+    if let Some(prev) = doc.folds().prev_fold_end(line) {
+        let target = doc.folds().visible_anchor(prev);
+        fold_goto_line(view, doc, target);
+    }
 }
 
 fn scroll_up(cx: &mut Context) {

@@ -20,7 +20,7 @@ use zemacs_core::{
     syntax::{self, OverlayHighlights},
     text_annotations::TextAnnotations,
     unicode::width::UnicodeWidthStr,
-    visual_offset_from_block, Change, Position, Range, Selection, Transaction,
+    visual_offset_from_block, Change, Position, Range, Selection,
 };
 use zemacs_view::{
     annotations::diagnostics::DiagnosticFilter,
@@ -44,6 +44,17 @@ pub struct EditorView {
     spinners: ProgressSpinners,
     /// Tracks if the terminal window is focused by reaction to terminal focus events
     terminal_focused: bool,
+    /// vim dot-repeat (`.`): the key sequence of the last buffer-changing command
+    /// in normal/select mode, including any insert session that followed it.
+    last_change: Vec<KeyEvent>,
+    /// Keys accumulated for the in-progress command; promoted to `last_change`
+    /// once the command modifies the buffer (or after the insert session it began).
+    change_buf: Vec<KeyEvent>,
+    /// True while recording an insert session that began as a change, so the typed
+    /// keys join the change recording.
+    recording_insert_change: bool,
+    /// Guard set while replaying a change for `.`, so the replay isn't re-recorded.
+    replaying: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +78,10 @@ impl EditorView {
             completion: None,
             spinners: ProgressSpinners::default(),
             terminal_focused: true,
+            last_change: Vec::new(),
+            change_buf: Vec::new(),
+            recording_insert_change: false,
+            replaying: false,
         }
     }
 
@@ -1010,6 +1025,40 @@ impl EditorView {
         }
     }
 
+    /// Whether `key` would be consumed as a count prefix in `mode` (mirrors the
+    /// count arms of `command_mode`). Such keys are excluded from the recorded
+    /// change so `.` repeats the command, not its count.
+    fn is_count_key(&self, mode: Mode, count: Option<NonZeroUsize>, key: KeyEvent) -> bool {
+        match (key, count) {
+            (key!('0'..='9'), Some(_)) => true,
+            (key!('1'..='9'), None) => !self.keymaps.contains_key(mode, key),
+            _ => false,
+        }
+    }
+
+    /// Replay the last recorded change `count` times for vim dot-repeat (`.`).
+    /// Routes each recorded key by the current mode, so an insert session inside
+    /// the change (e.g. `cwfoo<Esc>`) replays correctly.
+    fn replay_last_change(&mut self, cx: &mut commands::Context, count: usize) {
+        if self.last_change.is_empty() {
+            return;
+        }
+        let keys = self.last_change.clone();
+        self.replaying = true;
+        for _ in 0..count {
+            for &key in &keys {
+                match cx.editor.mode() {
+                    Mode::Insert => {
+                        self.insert_mode(cx, key);
+                        self.last_insert.1.push(InsertEvent::Key(key));
+                    }
+                    m => self.command_mode(m, cx, key),
+                }
+            }
+        }
+        self.replaying = false;
+    }
+
     fn command_mode(&mut self, mode: Mode, cxt: &mut commands::Context, event: KeyEvent) {
         match (event, cxt.editor.count) {
             // If the count is already started and the input is a number, always continue the count.
@@ -1026,53 +1075,14 @@ impl EditorView {
                 let i = i.to_digit(10).unwrap() as usize;
                 cxt.editor.count = NonZeroUsize::new(i);
             }
-            // special handling for repeat operator
+            // vim dot-repeat: replay the keys of the last buffer-changing command.
+            // Unlike the old insert-only repeat, this replays the whole change
+            // (operator + motion + any insert session), so `dd`, `x`, `dw`, `p`,
+            // `cwfoo<Esc>`, etc. all repeat. `{count}.` repeats `count` times.
             (key!('.'), _) if self.keymaps.pending().is_empty() => {
-                for _ in 0..cxt.editor.count.map_or(1, NonZeroUsize::into) {
-                    // first execute whatever put us into insert mode
-                    self.last_insert.0.execute(cxt);
-                    let mut last_savepoint = None;
-                    let mut last_request_savepoint = None;
-                    // then replay the inputs
-                    for key in self.last_insert.1.clone() {
-                        match key {
-                            InsertEvent::Key(key) => self.insert_mode(cxt, key),
-                            InsertEvent::CompletionApply {
-                                trigger_offset,
-                                changes,
-                            } => {
-                                let (view, doc) = current!(cxt.editor);
-
-                                if let Some(last_savepoint) = last_savepoint.as_deref() {
-                                    doc.restore(view, last_savepoint, true);
-                                }
-
-                                let text = doc.text().slice(..);
-                                let cursor = doc.selection(view.id).primary().cursor(text);
-
-                                let shift_position = |pos: usize| -> usize {
-                                    (pos + cursor).saturating_sub(trigger_offset)
-                                };
-
-                                let tx = Transaction::change(
-                                    doc.text(),
-                                    changes.iter().cloned().map(|(start, end, t)| {
-                                        (shift_position(start), shift_position(end), t)
-                                    }),
-                                );
-                                doc.apply(&tx, view.id);
-                            }
-                            InsertEvent::TriggerCompletion => {
-                                last_savepoint = take(&mut last_request_savepoint);
-                            }
-                            InsertEvent::RequestCompletion => {
-                                let (view, doc) = current!(cxt.editor);
-                                last_request_savepoint = Some(doc.savepoint(view));
-                            }
-                        }
-                    }
-                }
+                let count = cxt.editor.count.map_or(1, NonZeroUsize::into);
                 cxt.editor.count = None;
+                self.replay_last_change(cxt, count);
             }
             _ => {
                 // set the count
@@ -1545,9 +1555,46 @@ impl Component for EditorView {
 
                                 // record last_insert key
                                 self.last_insert.1.push(InsertEvent::Key(key));
+
+                                // vim dot-repeat: keep the insert session as part of
+                                // the change being recorded, and finalize once we
+                                // leave insert mode (e.g. <Esc>).
+                                if self.recording_insert_change && !self.replaying {
+                                    self.change_buf.push(key);
+                                    if cx.editor.mode() != Mode::Insert {
+                                        self.last_change = take(&mut self.change_buf);
+                                        self.recording_insert_change = false;
+                                    }
+                                }
                             }
                         }
-                        mode => self.command_mode(mode, &mut cx, key),
+                        mode => {
+                            // vim dot-repeat: record the keys that make up a change.
+                            if !self.replaying && key != key!('.') {
+                                let at_boundary = self.keymaps.pending().is_empty()
+                                    && !self.recording_insert_change;
+                                if at_boundary {
+                                    self.change_buf.clear();
+                                }
+                                if !self.is_count_key(mode, cx.editor.count, key) {
+                                    self.change_buf.push(key);
+                                }
+                            }
+                            let pre_version = doc!(cx.editor).version();
+
+                            self.command_mode(mode, &mut cx, key);
+
+                            if !self.replaying && key != key!('.') {
+                                if cx.editor.mode() == Mode::Insert {
+                                    // entered insert (i/a/o/cw/...) — keep recording
+                                    // through the insert session.
+                                    self.recording_insert_change = true;
+                                } else if doc!(cx.editor).version() != pre_version {
+                                    // a normal/select-mode change (dd, x, p, J, >>, ...)
+                                    self.last_change = self.change_buf.clone();
+                                }
+                            }
+                        }
                     }
                 }
 

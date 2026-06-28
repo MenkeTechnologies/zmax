@@ -555,7 +555,12 @@ async fn test_jump_undo_redo() -> anyhow::Result<()> {
     use zemacs_term::keymap;
     use zemacs_view::document::Mode;
 
-    let mut config = Config::default();
+    // This test drives Helix undo/redo keys (`u`/`U`), so pin the Helix keymap
+    // (the shipped default is now vim, where `U` is not redo).
+    let mut config = Config {
+        keys: keymap::default::default(),
+        ..Default::default()
+    };
     config.keys.insert(
         Mode::Insert,
         keymap!({"Insert Mode"

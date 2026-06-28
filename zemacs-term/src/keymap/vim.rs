@@ -389,16 +389,36 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "." => goto_last_modification,
         },
 
-        // --- z submap (view) -----------------------------------------------
+        // --- z submap (view + folds) ---------------------------------------
         "z" => { "View"
             "z" => align_view_center,
             "t" => align_view_top,
             "b" => align_view_bottom,
-            // NB: vim zc closes a fold; zemacs has no fold engine, so it stays
-            // unbound rather than aliasing to a non-vim action (was align center).
             "." => [align_view_center, goto_first_nonwhitespace], // z. center + first non-blank
             "-" => [align_view_bottom, goto_first_nonwhitespace], // z- bottom + first non-blank
             "ret" => [align_view_top, goto_first_nonwhitespace],  // z<CR> top + first non-blank
+
+            // folds (vim z* family)
+            "a" => fold_toggle,       // za toggle fold under cursor
+            "o" => fold_open,         // zo open fold
+            "O" => fold_open,         // zO open folds recursively (approx: open at cursor)
+            "c" => fold_close,        // zc close fold
+            "C" => fold_close,        // zC close folds recursively (approx)
+            "v" => fold_open,         // zv view cursor: open enough folds to see it
+            "R" => fold_open_all,     // zR open all folds
+            "M" => fold_close_all,    // zM close all folds
+            "d" => fold_delete,       // zd delete fold under cursor
+            "E" => fold_delete_all,   // zE eliminate all folds
+            "j" => fold_next,         // zj move to next fold
+            "k" => fold_prev,         // zk move to previous fold
+            // zf{motion}: create a fold over the motion (vim operator)
+            "f" => { "Create fold"
+                "j" => [extend_line_below, extend_to_line_bounds, fold_create],
+                "k" => [extend_line_up, extend_to_line_bounds, fold_create],
+                "G" => [extend_to_last_line, fold_create],
+                "}" => [goto_next_paragraph, fold_create],
+                "f" => [extend_to_line_bounds, fold_create],
+            },
         },
 
         // --- bracket submaps (vim unimpaired-ish) --------------------------
@@ -773,6 +793,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "D" | "X" => [extend_to_line_bounds, delete_selection, normal_mode],
         "Y"       => [extend_to_line_bounds, yank, collapse_selection, normal_mode],
         "C" | "S" | "R" => [extend_to_line_bounds, change_selection],
+
+        // zf: create a fold over the highlighted lines (vim visual zf)
+        "z" => { "Fold"
+            "f" => [fold_create, normal_mode],
+        },
 
         // gq / gw: reformat the highlighted lines (LSP formatter)
         "g" => { "Goto"

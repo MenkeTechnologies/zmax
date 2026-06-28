@@ -13,6 +13,7 @@ impl TextFormat {
             // use a prime number to allow lining up too often with repeat
             viewport_width: 17,
             soft_wrap_at_text_width: false,
+            folded: Vec::new(),
         }
     }
 }
@@ -43,6 +44,34 @@ impl<'t> DocumentFormatter<'t> {
 
         res
     }
+}
+
+fn folded_text(text: &str, folded: Vec<(usize, usize)>) -> String {
+    let mut fmt = TextFormat::new_test(false);
+    fmt.folded = folded;
+    let annotations = TextAnnotations::default();
+    let res = DocumentFormatter::new_at_prev_checkpoint(text.into(), &fmt, &annotations, 0)
+        .collect_to_str();
+    res
+}
+
+#[test]
+fn fold_hides_inner_lines() {
+    let text = "line0\nline1\nline2\nline3\n";
+    // No fold: every line is present.
+    let unfolded = folded_text(text, vec![]);
+    assert!(unfolded.contains("line1") && unfolded.contains("line2"));
+
+    // Closed fold over lines 0..=2: the header (line0) stays, lines 1 and 2 are
+    // hidden, line3 follows immediately. `collect_to_str` also asserts visual
+    // rows increment by exactly 1, so hidden lines must not occupy rows.
+    let folded = folded_text(text, vec![(0, 2)]);
+    assert!(folded.contains("line0"), "fold header stays: {folded:?}");
+    assert!(!folded.contains("line1"), "folded line hidden: {folded:?}");
+    assert!(!folded.contains("line2"), "folded line hidden: {folded:?}");
+    assert!(folded.contains("line3"), "line after fold shows: {folded:?}");
+    // line0 and line3 are on adjacent visual rows (exactly one row break).
+    assert_eq!(folded.matches('\n').count(), 2, "rows: {folded:?}");
 }
 
 fn softwrap_text(text: &str) -> String {

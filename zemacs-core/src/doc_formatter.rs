@@ -151,6 +151,11 @@ pub struct TextFormat {
     pub wrap_indicator_highlight: Option<Highlight>,
     pub viewport_width: u16,
     pub soft_wrap_at_text_width: bool,
+    /// Closed code folds as inclusive `(start_line, end_line)` ranges. Lines
+    /// strictly after `start_line` and up to `end_line` are hidden: the
+    /// formatter skips them so they neither render nor occupy visual rows.
+    /// Empty in the common case (no folds) — zero overhead.
+    pub folded: Vec<(usize, usize)>,
 }
 
 // test implementation is basically only used for testing or when softwrap is always disabled
@@ -165,6 +170,7 @@ impl Default for TextFormat {
             viewport_width: 17,
             wrap_indicator_highlight: None,
             soft_wrap_at_text_width: false,
+            folded: Vec::new(),
         }
     }
 }
@@ -174,6 +180,9 @@ pub struct DocumentFormatter<'t> {
     text_fmt: &'t TextFormat,
     annotations: &'t TextAnnotations<'t>,
 
+    /// The full text being formatted, kept so folded line ranges can be skipped
+    /// by re-slicing the grapheme iterator past them.
+    text: RopeSlice<'t>,
     /// The visual position at the end of the last yielded word boundary
     visual_pos: Position,
     graphemes: RopeGraphemes<'t>,
@@ -219,6 +228,7 @@ impl<'t> DocumentFormatter<'t> {
         DocumentFormatter {
             text_fmt,
             annotations,
+            text,
             visual_pos: Position { row: 0, col: 0 },
             graphemes: text.slice(block_char_idx..).graphemes(),
             char_pos: block_char_idx,
@@ -419,6 +429,42 @@ impl<'t> DocumentFormatter<'t> {
         }
     }
 
+    /// Skip past any closed code fold whose body contains the current line, so
+    /// folded lines are neither rendered nor counted as visual rows. Only lines
+    /// strictly after a fold's first line are hidden (the first stays visible).
+    /// Called at line boundaries; jumps the grapheme iterator to the first line
+    /// after the fold without touching `visual_pos`.
+    fn skip_folded_lines(&mut self) {
+        if self.text_fmt.folded.is_empty() {
+            return;
+        }
+        loop {
+            let Some(&(_, end)) = self
+                .text_fmt
+                .folded
+                .iter()
+                .find(|&&(start, end)| start < self.line_pos && self.line_pos <= end)
+            else {
+                return;
+            };
+            let target = (end + 1).min(self.text.len_lines());
+            if target <= self.line_pos {
+                return;
+            }
+            let char_idx = self.text.line_to_char(target);
+            self.char_pos = char_idx;
+            self.line_pos = target;
+            self.graphemes = self.text.slice(char_idx..).graphemes();
+            self.annotations.reset_pos(char_idx);
+            self.inline_annotation_graphemes = None;
+            // a line boundary is a word boundary, so the soft-wrap word buffer is
+            // already drained here; clear any lookahead to stay consistent.
+            self.peeked_grapheme = None;
+            self.word_buf.clear();
+            self.word_i = 0;
+        }
+    }
+
     /// returns the char index at the end of the last yielded grapheme
     pub fn next_char_pos(&self) -> usize {
         self.char_pos
@@ -470,6 +516,7 @@ impl<'t> Iterator for DocumentFormatter<'t> {
             self.visual_pos.col = 0;
             if !grapheme.is_virtual() {
                 self.line_pos += 1;
+                self.skip_folded_lines();
             }
         } else {
             self.visual_pos.col += grapheme.width();
