@@ -55,7 +55,13 @@ pub struct EditorView {
     recording_insert_change: bool,
     /// Guard set while replaying a change for `.`, so the replay isn't re-recorded.
     replaying: bool,
+    /// IDE file-tree sidebar (toggle with F2); None when hidden.
+    sidebar: Option<FileTree>,
+    /// Whether keystrokes are routed to the sidebar instead of the editor.
+    sidebar_focused: bool,
 }
+
+use super::file_tree::{FileTree, TreeAction};
 
 #[derive(Debug, Clone)]
 pub enum InsertEvent {
@@ -82,7 +88,55 @@ impl EditorView {
             change_buf: Vec::new(),
             recording_insert_change: false,
             replaying: false,
+            sidebar: None,
+            sidebar_focused: false,
         }
+    }
+
+    /// Boot the IDE workbench: show the file-tree sidebar but keep the editor focused
+    /// (the `zemacs --ide` entry point).
+    pub fn open_sidebar(&mut self) {
+        if self.sidebar.is_none() {
+            let root = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+            self.sidebar = Some(FileTree::new(root));
+        }
+        self.sidebar_focused = false;
+    }
+
+    /// Toggle the IDE file-tree sidebar: hidden→shown+focused, shown+focused→hidden,
+    /// shown+unfocused→focused.
+    fn toggle_sidebar(&mut self) {
+        match (self.sidebar.is_some(), self.sidebar_focused) {
+            (false, _) => {
+                let root =
+                    std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+                self.sidebar = Some(FileTree::new(root));
+                self.sidebar_focused = true;
+            }
+            (true, true) => {
+                self.sidebar = None;
+                self.sidebar_focused = false;
+            }
+            (true, false) => self.sidebar_focused = true,
+        }
+    }
+
+    /// Render the sidebar (if any) into a left strip; return the remaining area for the editor.
+    fn render_sidebar(
+        &mut self,
+        area: Rect,
+        surface: &mut Surface,
+        cx: &mut crate::compositor::Context,
+    ) -> Rect {
+        let Some(tree) = self.sidebar.as_mut() else {
+            return area;
+        };
+        let w = 32u16.min(area.width.saturating_sub(24));
+        if w == 0 {
+            return area;
+        }
+        tree.render(area.with_width(w), surface, &cx.editor.theme, self.sidebar_focused);
+        area.clip_left(w)
     }
 
     pub fn spinners_mut(&mut self) -> &mut ProgressSpinners {
@@ -1478,6 +1532,29 @@ impl Component for EditorView {
         event: &Event,
         context: &mut crate::compositor::Context,
     ) -> EventResult {
+        // IDE sidebar (file tree): F2 toggles; when focused, keys drive the tree.
+        if let Event::Key(key) = event {
+            if key.code == KeyCode::F(2) && key.modifiers.is_empty() {
+                self.toggle_sidebar();
+                return EventResult::Consumed(None);
+            }
+            if self.sidebar_focused {
+                if let Some(tree) = self.sidebar.as_mut() {
+                    match tree.handle_key(*key) {
+                        TreeAction::Open(path) => {
+                            self.sidebar_focused = false;
+                            let _ = context
+                                .editor
+                                .open(&path, zemacs_view::editor::Action::Replace);
+                        }
+                        TreeAction::Close => self.sidebar_focused = false,
+                        TreeAction::None => {}
+                    }
+                    return EventResult::Consumed(None);
+                }
+            }
+        }
+
         let mut cx = commands::Context {
             editor: context.editor,
             count: None,
@@ -1679,6 +1756,8 @@ impl Component for EditorView {
     }
 
     fn render(&mut self, area: Rect, surface: &mut Surface, cx: &mut Context) {
+        // IDE file-tree sidebar reserves a left strip; the editor uses what remains.
+        let area = self.render_sidebar(area, surface, cx);
         // clear with background color
         surface.set_style(area, cx.editor.theme.get("ui.background"));
         let config = cx.editor.config();
@@ -1798,6 +1877,9 @@ impl Component for EditorView {
     }
 
     fn cursor(&self, _area: Rect, editor: &Editor) -> (Option<Position>, CursorKind) {
+        if self.sidebar_focused {
+            return (None, CursorKind::Hidden);
+        }
         match editor.cursor() {
             // all block cursors are drawn manually
             (pos, CursorKind::Block) => {

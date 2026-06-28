@@ -11,6 +11,8 @@ pub struct Args {
     pub health: bool,
     pub health_arg: Option<String>,
     pub load_tutor: bool,
+    /// Boot with the IDE workbench open (file-tree sidebar, etc.).
+    pub ide: bool,
     pub fetch_grammars: bool,
     pub build_grammars: bool,
     pub strict: bool,
@@ -50,6 +52,7 @@ impl Args {
                 "--help" => args.display_help = true,
                 "--strict" => args.strict = true,
                 "--tutor" => args.load_tutor = true,
+                "--ide" => args.ide = true,
                 "--vsplit" => match args.split {
                     Some(_) => anyhow::bail!("can only set a split once of a specific type"),
                     None => args.split = Some(Layout::Vertical),

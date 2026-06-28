@@ -136,8 +136,11 @@ impl Application {
         let keys = Box::new(Map::new(Arc::clone(&config), |config: &Config| {
             &config.keys
         }));
-        let editor_view = Box::new(ui::EditorView::new(Keymaps::new(keys)));
-        compositor.push(editor_view);
+        let mut editor_view = ui::EditorView::new(Keymaps::new(keys));
+        if args.ide {
+            editor_view.open_sidebar();
+        }
+        compositor.push(Box::new(editor_view));
 
         let jobs = Jobs::new();
 
