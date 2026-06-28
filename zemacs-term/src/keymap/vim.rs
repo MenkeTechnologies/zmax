@@ -426,6 +426,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "]" => goto_definition,            // g]: :tselect tag under cursor
             "C-]" => goto_definition,          // g CTRL-]: :tjump tag under cursor
             "tab" => goto_last_accessed_file,  // g<Tab>: go to last accessed tabpage
+            "," => goto_last_modification,     // g,: newer change-list position (approx last change)
         },
 
         // --- z submap (view + folds) ---------------------------------------
@@ -481,6 +482,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "b" => goto_previous_buffer,  // [b previous buffer (unimpaired-style)
             "/" => goto_prev_comment,     // [/ previous comment
             "p" => paste_before,          // [p paste before (linewise, adjust indent)
+            "P" => paste_before,          // [P same as [p
+            "*" => goto_prev_comment,     // [* same as [/ : previous comment
+            "]" => goto_prev_function,    // [] N sections backward (member/function)
+            "z" => fold_prev,             // [z move to start of open fold
             "(" => goto_prev_unmatched_paren, // [( previous unmatched (
             "{" => goto_prev_unmatched_brace, // [{ previous unmatched {
             "`" => goto_prev_mark,            // [` previous lowercase mark
@@ -496,6 +501,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "b" => goto_next_buffer,      // ]b next buffer (unimpaired-style)
             "/" => goto_next_comment,     // ]/ next comment
             "p" => paste_after,           // ]p paste after (linewise, adjust indent)
+            "P" => paste_before,          // ]P same as [p
+            "*" => goto_next_comment,     // ]* same as ]/ : next comment
+            "[" => goto_next_function,    // ][ N sections forward (member/function)
+            "z" => fold_next,             // ]z move to end of open fold
             ")" => goto_next_unmatched_paren, // ]) next unmatched )
             "}" => goto_next_unmatched_brace, // ]} next unmatched }
             "`" => goto_next_mark,            // ]` next lowercase mark
@@ -508,6 +517,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "v" | "C-v" => vsplit,
             "w" | "C-w" => rotate_view,
             "r" | "C-r" => rotate_view,       // C-w r / C-w C-r: rotate windows downwards
+            "tab" => rotate_view,             // SPC w TAB: switch to alternate window
             "q" | "C-q" => wclose,
             "d" | "C-d" => wclose,
             "o" | "C-o" => wonly,
@@ -668,6 +678,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "v" | "C-v" => vsplit,
                 "w" | "C-w" => rotate_view,
                 "r" | "C-r" => rotate_view,
+                "tab" => rotate_view,
                 "q" | "C-q" => wclose,
                 "d" | "C-d" => wclose,
                 "o" | "C-o" => wonly,
@@ -781,6 +792,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "u" => goto_file,                  // SPC j u : jump to URL/file under cursor
                 "w" => goto_word,                  // SPC j w : avy jump to word
                 "l" => goto_word,                  // SPC j l : avy jump to line
+                "f" => goto_definition,            // SPC j f : jump to elisp function def
+                "v" => goto_definition,            // SPC j v : jump to elisp variable def
+            },
+            "F" => { "Frames"
+                "n" => hsplit_new,                 // SPC F n : create a new frame (new window)
             },
             "g" => { "Goto (LSP)"
                 "d" => goto_definition,
@@ -856,6 +872,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "l" => command_palette,            // SPC h l : search layers
                 "p" => command_palette,            // SPC h p : search packages
                 "n" => command_palette,            // SPC h n : browse emacs news
+                "r" => command_palette,            // SPC h r : search documentation files
                 "d" => { "Describe"
                     "b" => command_palette,        // SPC h d b : describe bindings
                     "f" => command_palette,        // SPC h d f : describe function
@@ -1023,6 +1040,17 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "C-]" => completion,   // i_CTRL-X_CTRL-]: tag completion
             "C-v" => completion,   // i_CTRL-X_CTRL-V: complete like in : command line
             "s"   => completion,   // i_CTRL-X_s: spelling suggestions
+            "C-t" => completion,   // i_CTRL-X_CTRL-T: thesaurus completion
+            "C-r" => completion,   // i_CTRL-X_CTRL-R: complete from registers
+            "C-s" => completion,   // i_CTRL-X_CTRL-S: spelling suggestions
+            "C-e" => scroll_down,  // i_CTRL-X_CTRL-E: scroll window up (view down)
+            "C-y" => scroll_up,    // i_CTRL-X_CTRL-Y: scroll window down (view up)
+        },
+        // i_CTRL-G j/k (and CTRL-J/CTRL-K, <Down>/<Up>): move a display line
+        // down/up, toward the column where insertion started.
+        "C-g" => { "Insert motion"
+            "j" | "C-j" | "down" => move_visual_line_down,
+            "k" | "C-k" | "up"   => move_visual_line_up,
         },
 
         "ret"   => insert_newline,

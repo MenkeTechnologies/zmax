@@ -6510,5 +6510,205 @@
       "key:select:C-\\ C-g"
     ],
     "note": "CTRL-\\ CTRL-G: stop Visual to normal"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_star",
+    "status": "ported",
+    "evidence": [
+      "key:normal:[ *"
+    ],
+    "note": "[* same as [/ : previous comment"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_star",
+    "status": "ported",
+    "evidence": [
+      "key:normal:] *"
+    ],
+    "note": "]* same as ]/ : next comment"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_p",
+    "status": "ported",
+    "evidence": [
+      "key:normal:[ P"
+    ],
+    "note": "[P paste before"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_p",
+    "status": "ported",
+    "evidence": [
+      "key:normal:] P"
+    ],
+    "note": "]P same as [p"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_rbracket",
+    "status": "partial",
+    "evidence": [
+      "key:normal:[ ]"
+    ],
+    "note": "[] N sections backward -> prev function"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_lbracket",
+    "status": "partial",
+    "evidence": [
+      "key:normal:] ["
+    ],
+    "note": "][ N sections forward -> next function"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_z",
+    "status": "partial",
+    "evidence": [
+      "key:normal:[ z"
+    ],
+    "note": "[z start of open fold -> fold_prev"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_z",
+    "status": "partial",
+    "evidence": [
+      "key:normal:] z"
+    ],
+    "note": "]z end of open fold -> fold_next"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_g_j",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-g j"
+    ],
+    "note": "CTRL-G j: display line down"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_g_ctrl_j",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-g C-j"
+    ],
+    "note": "CTRL-G CTRL-J: display line down"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_g_lt_down_gt",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-g down"
+    ],
+    "note": "CTRL-G <Down>: display line down"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_g_k",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-g k"
+    ],
+    "note": "CTRL-G k: display line up"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_g_ctrl_k",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-g C-k"
+    ],
+    "note": "CTRL-G CTRL-K: display line up"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_g_lt_up_gt",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-g up"
+    ],
+    "note": "CTRL-G <Up>: display line up"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_t",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-t"
+    ],
+    "note": "thesaurus -> unified completion"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_r",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-r"
+    ],
+    "note": "register completion -> unified completion"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_s",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-s"
+    ],
+    "note": "spelling -> unified completion"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_e",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-e"
+    ],
+    "note": "scroll up -> scroll_down"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_y",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-y"
+    ],
+    "note": "scroll down -> scroll_up"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_j_f",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space j f"
+    ],
+    "note": "jump to elisp function def -> goto_definition"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_j_v",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space j v"
+    ],
+    "note": "jump to elisp variable def -> goto_definition"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_n",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space F n"
+    ],
+    "note": "new frame -> new window"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_comma",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g ,"
+    ],
+    "note": "g,: newer change-list pos (approx last change)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_tab",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space w tab"
+    ],
+    "note": "alternate window -> rotate_view"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_r",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h r"
+    ],
+    "note": "search documentation -> command palette"
   }
 ]
