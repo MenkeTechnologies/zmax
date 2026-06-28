@@ -6910,5 +6910,205 @@
       "key:normal:S-minus"
     ],
     "note": "<S--> = CTRL-B page up"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_e_y",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space e y"
+    ],
+    "note": "copy error at point -> :yank-diagnostic"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_e_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f e R"
+    ],
+    "note": "resync dotfile -> :config-reload"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_e_e",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space f e e"
+    ],
+    "note": "open env file -> :config-open"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_e_c_e",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space f e C-e"
+    ],
+    "note": "reinit env -> :config-reload"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_c_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f C d"
+    ],
+    "note": "unix->dos -> :line-ending crlf"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_c_u",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f C u"
+    ],
+    "note": "dos->unix -> :line-ending lf"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_x",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space x x"
+    ],
+    "note": "quickrun -> :run-shell-command"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_c_s_l",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space t C-S-l"
+    ],
+    "note": "visual line nav -> :toggle soft-wrap"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h ."
+    ],
+    "note": "search dotfile vars -> command palette"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_vert",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space w |"
+    ],
+    "note": "maximize window -> wonly"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gq",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g Q"
+    ],
+    "note": "gQ: Ex mode -> command line"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_s",
+    "status": "partial",
+    "evidence": [
+      "key:normal:S"
+    ],
+    "note": "[\"x]S: change lines (S, register via \")"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_lt_del_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:del"
+    ],
+    "note": "[\"x]<Del>: delete char (= x)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.tilde_lbrace_motion_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:normal:~"
+    ],
+    "note": "~{motion}: switch case (charwise approx)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_b_n_n",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space b N n"
+    ],
+    "note": "new buffer current window -> :new"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_b_n_h",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space b N h"
+    ],
+    "note": "new buffer window left -> hsplit_new"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_b_n_j",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space b N j"
+    ],
+    "note": "new buffer window below -> hsplit_new"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_b_n_k",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space b N k"
+    ],
+    "note": "new buffer window above -> hsplit_new"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_b_n_l",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space b N l"
+    ],
+    "note": "new buffer window right -> hsplit_new"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_b_n_i",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space b N i"
+    ],
+    "note": "indirect buffer -> :new"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_b_n_c_i",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space b N C-i"
+    ],
+    "note": "indirect buffer -> :new"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_u_spc_w_d",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space u space w d"
+    ],
+    "note": "delete window+buffer -> wclose"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_u_spc_w_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space u space w 1"
+    ],
+    "note": "single-window layout -> wonly"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_u_spc_b_d",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space u space b d"
+    ],
+    "note": "kill buffer+window -> :buffer-close"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_u_spc_b_m",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space u space b m"
+    ],
+    "note": "kill other buffers -> :buffer-close-others"
   }
 ]

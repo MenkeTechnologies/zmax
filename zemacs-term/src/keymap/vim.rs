@@ -38,7 +38,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space b d", "Buffers", ":buffer-close"),     // SPC b d : kill buffer
     ("space b D", "Buffers", ":buffer-close-others"), // SPC b C-d / others
     ("space b R", "Buffers", ":reload"),           // SPC b R : revert
-    ("space b N", "Buffers", ":new"),              // SPC b N : new buffer
+    ("space b N n", "Buffers", ":new"),            // SPC b N n : new buffer, current window
+    ("space b N i", "Buffers", ":new"),            // SPC b N i : indirect buffer (approx new)
+    ("space b N C-i", "Buffers", ":new"),          // SPC b N C-i : indirect buffer (approx new)
     ("space q q", "Quit",    ":quit-all"),         // SPC q q : quit
     ("space q Q", "Quit",    ":quit-all!"),        // SPC q Q : force quit
     ("space q s", "Quit",    ":write-quit-all"),   // SPC q s : save and quit
@@ -86,9 +88,19 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t h i", "Toggles", ":toggle indent-guides.render"),        // SPC t h i : highlight indentation
     ("space t C-i", "Toggles", ":toggle indent-guides.render"),        // SPC t C-i : global indent guide
     ("space t h c", "Toggles", ":toggle cursorcolumn"),                // SPC t h c : highlight current column
+    ("space t C-S-l", "Toggles", ":toggle soft-wrap.enable"),          // SPC t C-S-l : visual line navigation
     ("space h d c", "Help",    ":character-info"),                     // SPC h d c : describe char under point
     ("space p e",   "Project", ":config-open"),                       // SPC p e : edit dir-locals/config
     ("space f e i", "Files",   ":config-open"),                       // SPC f e i : open init/config
+    ("space f e e", "Files",   ":config-open"),                       // SPC f e e : open env/config
+    ("space f e R", "Files",   ":config-reload"),                     // SPC f e R : resync the dotfile
+    ("space f e C-e", "Files",  ":config-reload"),                    // SPC f e C-e : reinit env
+    ("space f C d", "Files",   ":line-ending crlf"),                  // SPC f C d : unix -> dos line endings
+    ("space f C u", "Files",   ":line-ending lf"),                    // SPC f C u : dos -> unix line endings
+    ("space e y",   "Errors",  ":yank-diagnostic"),                   // SPC e y : copy error at point
+    ("space x x",   "Text",    ":run-shell-command"),                 // SPC x x : quickrun (run a command)
+    ("space u space b d", "Universal", ":buffer-close"),              // SPC u SPC b d : kill buffer + window
+    ("space u space b m", "Universal", ":buffer-close-others"),       // SPC u SPC b m : kill other buffers
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes
@@ -221,6 +233,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
         // --- single-key edits ----------------------------------------------
         "x" => delete_selection,            // delete char under cursor
+        "del" => delete_selection,          // <Del> = x (delete char under cursor)
         "X" => delete_char_backward,        // delete char before cursor
         "D" => [extend_to_line_end, delete_selection],
         "C" => [extend_to_line_end, change_selection],
@@ -430,6 +443,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "C-]" => goto_definition,          // g CTRL-]: :tjump tag under cursor
             "tab" => goto_last_accessed_file,  // g<Tab>: go to last accessed tabpage
             "," => goto_last_modification,     // g,: newer change-list position (approx last change)
+            "Q" => command_mode,               // gQ: Ex mode -> open command line
         },
 
         // --- z submap (view + folds) ---------------------------------------
@@ -567,6 +581,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "m" => wonly,                     // spacemacs SPC w m : maximize (only)
             "S" => hsplit,                    // spacemacs SPC w S / vim C-w S : split & focus
             "V" => vsplit,                    // spacemacs SPC w V : vsplit & focus
+            "|" => wonly,                     // spacemacs SPC w | : maximize window (only)
         },
 
         // --- scrolling / jumps ---------------------------------------------
@@ -678,6 +693,13 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "p" => goto_previous_buffer,       // SPC b p
                 "m" => changed_file_picker,        // SPC b m
                 "W" => buffer_picker,              // SPC b W : go to buffer (workspace/window)
+                "N" => { "New buffer"
+                    "h" => hsplit_new,             // SPC b N h : new buffer in window left
+                    "j" => hsplit_new,             // SPC b N j : new buffer in window below
+                    "k" => hsplit_new,             // SPC b N k : new buffer in window above
+                    "l" => hsplit_new,             // SPC b N l : new buffer in window right
+                    // SPC b N n / i / C-i -> :new via typable table
+                },
                 "Y" => [select_all, yank_to_clipboard, collapse_selection], // SPC b Y
             },
             // Kept identical to the `C-w` window submap (see aliased-modes test).
@@ -730,6 +752,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "m" => wonly,
                 "S" => hsplit,
                 "V" => vsplit,
+                "|" => wonly,
             },
             "s" => { "Search"
                 "s" => global_search,              // SPC s s
@@ -892,6 +915,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "p" => command_palette,            // SPC h p : search packages
                 "n" => command_palette,            // SPC h n : browse emacs news
                 "r" => command_palette,            // SPC h r : search documentation files
+                "." => command_palette,            // SPC h . : search dotfile variables
                 "i" => command_palette,            // SPC h i : search info pages
                 "m" => command_palette,            // SPC h m : search man pages
                 "d" => { "Describe"
@@ -915,6 +939,17 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 },
                 "h" => { "Help"
                     "h" => hover,                  // SPC m h h : describe thing at point
+                },
+            },
+            // SPC u : universal-argument prefix. Only the window-layout variants
+            // that map to a real command are bound; buffer variants are added via
+            // the typable table (SPC u SPC b d / b m).
+            "u" => { "Universal arg"
+                "space" => { "C-u"
+                    "w" => { "Windows"
+                        "d" => wclose,             // SPC u SPC w d : delete window + buffer
+                        "1" => wonly,              // SPC u SPC w 1 : single-window layout (force)
+                    },
                 },
             },
         },
