@@ -7886,5 +7886,29 @@
       "typable:set"
     ],
     "note": "vim option -> :set file-picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lchdir",
+    "status": "partial",
+    "evidence": [
+      "typable:cd"
+    ],
+    "note": "local cd -> :cd"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tcd",
+    "status": "partial",
+    "evidence": [
+      "typable:cd"
+    ],
+    "note": "tab cd -> :cd"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_bang_bang",
+    "status": "partial",
+    "evidence": [
+      "typable:run-shell-command"
+    ],
+    "note": ":!! repeat last shell -> :run-shell-command"
   }
 ]
