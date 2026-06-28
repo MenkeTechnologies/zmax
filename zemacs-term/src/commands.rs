@@ -355,6 +355,7 @@ impl MappableCommand {
         extend_till_prev_char, "Extend till previous occurrence of char",
         extend_prev_char, "Extend to previous occurrence of char",
         repeat_last_motion, "Repeat last motion",
+        repeat_find_char_reverse, "Repeat last find in opposite direction (,)",
         replace, "Replace with new char",
         switch_case, "Switch (toggle) case",
         switch_to_uppercase, "Switch to uppercase",
@@ -580,6 +581,10 @@ impl MappableCommand {
         goto_prev_unmatched_brace, "Goto previous unmatched { ([{)",
         goto_next_unmatched_paren, "Goto next unmatched ) (])",
         goto_next_unmatched_brace, "Goto next unmatched } (]})",
+        goto_prev_mark, "Goto previous lowercase mark ([`)",
+        goto_next_mark, "Goto next lowercase mark (]`)",
+        goto_prev_mark_line, "Goto previous lowercase mark, line start (['])",
+        goto_next_mark_line, "Goto next lowercase mark, line start (]')",
         match_brackets, "Goto matching bracket",
         match_brackets_or_goto_percent, "Goto matching bracket, or {count} percent through the file",
         surround_add, "Surround add",
@@ -1206,6 +1211,47 @@ fn goto_next_unmatched_paren(cx: &mut Context) {
 }
 fn goto_next_unmatched_brace(cx: &mut Context) {
     goto_unmatched_bracket(cx, '{', '}', true);
+}
+
+// vim `[`` ` `` / `]`` ` `` (and the `['` / `]'` line variants): jump to the
+// previous / next lowercase mark relative to the cursor.
+fn goto_adjacent_mark(cx: &mut Context, forward: bool, to_line_start: bool) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let marks = doc.lowercase_mark_positions();
+    let target = if forward {
+        marks.into_iter().filter(|&p| p > cursor).min()
+    } else {
+        marks.into_iter().filter(|&p| p < cursor).max()
+    };
+    let Some(mut pos) = target else {
+        cx.editor.set_error("No mark in that direction");
+        return;
+    };
+    if to_line_start {
+        let line = text.char_to_line(pos);
+        pos = text
+            .line(line)
+            .first_non_whitespace_char()
+            .map(|p| p + text.line_to_char(line))
+            .unwrap_or_else(|| text.line_to_char(line));
+    }
+    push_jump(view, doc);
+    doc.set_selection(view.id, Selection::point(pos));
+}
+
+fn goto_prev_mark(cx: &mut Context) {
+    goto_adjacent_mark(cx, false, false);
+}
+fn goto_next_mark(cx: &mut Context) {
+    goto_adjacent_mark(cx, true, false);
+}
+fn goto_prev_mark_line(cx: &mut Context) {
+    goto_adjacent_mark(cx, false, true);
+}
+fn goto_next_mark_line(cx: &mut Context) {
+    goto_adjacent_mark(cx, true, true);
 }
 
 fn trim_selections(cx: &mut Context) {
@@ -1928,6 +1974,8 @@ fn find_char_then(
             KeyCode::Char(ch) => Some(ch),
             _ => None,
         } {
+            // remember this find so `,` can repeat it in the opposite direction
+            cx.editor.last_find = Some((ch, inclusive, matches!(direction, Direction::Forward)));
             Box::new(move |editor: &mut Editor| {
                 let (view, doc) = current!(editor);
                 let text = doc.text().slice(..);
@@ -2183,6 +2231,58 @@ fn extend_prev_char(cx: &mut Context) {
 
 fn repeat_last_motion(cx: &mut Context) {
     cx.editor.repeat_last_motion(cx.count())
+}
+
+// Run a find-char selection with explicit params (no interactive key wait).
+// Shared by `,` reverse find-repeat below.
+fn apply_find_char(
+    editor: &mut Editor,
+    ch: char,
+    inclusive: bool,
+    direction: Direction,
+    extend: bool,
+    count: usize,
+) {
+    let (view, doc) = current!(editor);
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let cursor_anchor = range.cursor(text);
+        let cursor_head = next_grapheme_boundary(text, cursor_anchor);
+        let search_start_pos = match (inclusive, direction) {
+            (true, Direction::Forward) => cursor_head,
+            (true, Direction::Backward) => cursor_anchor,
+            (false, Direction::Forward) => cursor_head + 1,
+            (false, Direction::Backward) => cursor_anchor.saturating_sub(1),
+        };
+        search::find_nth_char(count, text, ch, search_start_pos, direction)
+            .map(|pos| match (inclusive, direction) {
+                (true, _) => pos,
+                (false, Direction::Forward) => pos - 1,
+                (false, Direction::Backward) => pos + 1,
+            })
+            .map_or(range, |pos| {
+                // `,` is a standalone motion: extend in visual, else a clean
+                // 1-wide cursor at the target (don't drag a selection across).
+                range.put_cursor(text, pos, extend)
+            })
+    });
+    doc.set_selection(view.id, selection);
+}
+
+// vim `,`: repeat the last f/t/F/T find in the OPPOSITE direction.
+fn repeat_find_char_reverse(cx: &mut Context) {
+    let count = cx.count();
+    let Some((ch, inclusive, forward)) = cx.editor.last_find else {
+        return;
+    };
+    // reverse the original direction
+    let direction = if forward {
+        Direction::Backward
+    } else {
+        Direction::Forward
+    };
+    let extend = cx.editor.mode == Mode::Select;
+    apply_find_char(cx.editor, ch, inclusive, direction, extend, count);
 }
 
 fn replace(cx: &mut Context) {

@@ -611,7 +611,7 @@
     "spec_id": "neovim.normal-mode.gt_gt",
     "status": "ported",
     "evidence": [
-      "key:normal:>"
+      "key:normal:> >"
     ],
     "note": "indent line"
   },
@@ -619,7 +619,7 @@
     "spec_id": "neovim.normal-mode.lt_lt",
     "status": "ported",
     "evidence": [
-      "key:normal:<"
+      "key:normal:< <"
     ],
     "note": "unindent line"
   },
@@ -627,7 +627,7 @@
     "spec_id": "neovim.normal-mode.gt_lbrace_motion_rbrace",
     "status": "partial",
     "evidence": [
-      "key:normal:>"
+      "key:normal:> j"
     ],
     "note": "indent operator: applies to selection"
   },
@@ -635,7 +635,7 @@
     "spec_id": "neovim.normal-mode.lt_lbrace_motion_rbrace",
     "status": "partial",
     "evidence": [
-      "key:normal:<"
+      "key:normal:< j"
     ],
     "note": "unindent operator: applies to selection"
   },
@@ -5478,5 +5478,53 @@
       "static:goto_mark_line"
     ],
     "note": "'>"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_backtick",
+    "status": "ported",
+    "evidence": [
+      "key:normal:[ `"
+    ],
+    "note": "[`"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_apos",
+    "status": "ported",
+    "evidence": [
+      "key:normal:[ '"
+    ],
+    "note": "['"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_backtick",
+    "status": "ported",
+    "evidence": [
+      "key:normal:] `"
+    ],
+    "note": "]`"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_apos",
+    "status": "ported",
+    "evidence": [
+      "key:normal:] '"
+    ],
+    "note": "]'"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_caret",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-^"
+    ],
+    "note": "CTRL-^"
+  },
+  {
+    "spec_id": "neovim.normal-mode.comma",
+    "status": "ported",
+    "evidence": [
+      "key:normal:,"
+    ],
+    "note": ", reverse find"
   }
 ]

@@ -50,6 +50,35 @@ async fn backtick_visual_start_mark() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn indent_operator_double() -> anyhow::Result<()> {
+    // >> indents the current line by one shiftwidth (4 spaces here).
+    test_with_config(vim(), ("#[f|]#oo\nbar\n", "<gt><gt>", "\t#[f|]#oo\nbar\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn indent_operator_with_motion() -> anyhow::Result<()> {
+    // >j indents the current line and the next.
+    test_with_config(vim(), ("#[f|]#oo\nbar\nbaz\n", "<gt>j", "\t#[f|]#oo\n\tbar\nbaz\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn comma_repeats_find_reversed() -> anyhow::Result<()> {
+    // fx jumps forward to 2nd-no, to first 'x'; ; would go forward again, but
+    // , reverses. Here: at 'a', fx -> first x (idx2); fx again -> idx4; , -> back to idx2.
+    test_with_config(vim(), ("#[a|]#xbxcx", "fxfx,", "a#[x|]#bxcx")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn bracket_next_lowercase_mark() -> anyhow::Result<()> {
+    // set mark 'a' on the 'c', return to start, then ]` jumps forward to mark 'a'.
+    test_with_config(vim(), ("ab#[c|]#de", "ma0]`", "ab#[c|]#de")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn bracket_next_unmatched_brace() -> anyhow::Result<()> {
     // cursor before the inner pair; ]} jumps to the enclosing unmatched '}'.
     test_with_config(vim(), ("{a#[b|]#{c}d}", "]}", "{ab{c}d#[}|]#")).await?;

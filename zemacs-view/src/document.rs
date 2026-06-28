@@ -1694,6 +1694,17 @@ impl Document {
         self.marks.get(&mark).map(|&pos| pos.min(self.text.len_chars()))
     }
 
+    /// Char positions of all lowercase (`a`-`z`) marks, for `['`/`]'`/`` [` ``/`` ]` ``
+    /// (jump to previous/next lowercase mark). Clamped to the text length.
+    pub fn lowercase_mark_positions(&self) -> Vec<usize> {
+        let len = self.text.len_chars();
+        self.marks
+            .iter()
+            .filter(|(c, _)| c.is_ascii_lowercase())
+            .map(|(_, &pos)| pos.min(len))
+            .collect()
+    }
+
     /// Record the last visual (select-mode) selection for vim `gv`.
     pub fn set_last_visual(&mut self, selection: Selection) {
         self.last_visual = Some(selection);

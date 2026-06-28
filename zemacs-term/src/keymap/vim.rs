@@ -286,9 +286,25 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "T" => yank_till_char_backward,   // yT<c>
         },
 
-        // --- indent operators ----------------------------------------------
-        ">" => indent,
-        "<" => unindent,
+        // --- indent operators (vim >>, <<, >{motion}, <{motion}) -----------
+        ">" => { "Indent"
+            ">" => indent,                       // >> indent current line
+            "j" => [extend_to_line_bounds, extend_line_below, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "k" => [extend_to_line_bounds, extend_line_up, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "G" => [extend_to_last_line, indent, collapse_selection],
+            "g" => { "Indent to top"
+                "g" => [extend_to_file_start, indent, collapse_selection],
+            },
+        },
+        "<" => { "Unindent"
+            "<" => unindent,                       // << unindent current line
+            "j" => [extend_to_line_bounds, extend_line_below, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "k" => [extend_to_line_bounds, extend_line_up, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "G" => [extend_to_last_line, unindent, collapse_selection],
+            "g" => { "Unindent to top"
+                "g" => [extend_to_file_start, unindent, collapse_selection],
+            },
+        },
 
         // --- filter operator (vim !{motion}{cmd}, !!{cmd}) -----------------
         // vim `!` is always linewise: it selects the lines covered by the
@@ -436,6 +452,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "p" => paste_before,          // [p paste before (linewise, adjust indent)
             "(" => goto_prev_unmatched_paren, // [( previous unmatched (
             "{" => goto_prev_unmatched_brace, // [{ previous unmatched {
+            "`" => goto_prev_mark,            // [` previous lowercase mark
+            "'" => goto_prev_mark_line,       // ['  previous lowercase mark (line)
         },
         "]" => { "Next"
             "]" => goto_next_paragraph,
@@ -449,6 +467,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "p" => paste_after,           // ]p paste after (linewise, adjust indent)
             ")" => goto_next_unmatched_paren, // ]) next unmatched )
             "}" => goto_next_unmatched_brace, // ]} next unmatched }
+            "`" => goto_next_mark,            // ]` next lowercase mark
+            "'" => goto_next_mark_line,       // ]'  next lowercase mark (line)
         },
 
         // --- window commands (C-w) -----------------------------------------
@@ -508,6 +528,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "S-up"    => page_up,            // <S-Up> = CTRL-B
         "ins"     => insert_mode,        // <Insert> = i
         "C-]"     => goto_definition,    // CTRL-] = :ta (jump to tag)
+        "C-^"     => goto_last_accessed_file, // CTRL-^ = edit alternate file
 
         // --- emacs/readline keys (Meta space is free in the vim keymap) -----
         "A-x"     => command_palette,     // M-x
@@ -548,7 +569,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // that map to a real zemacs static command are present; spacemacs
         // bindings needing a typable (`:w` save, `:q` quit, `:bd`) are not yet
         // expressible in the keymap macro and remain tracked as absent.
-        "," => keep_primary_selection,
+        "," => repeat_find_char_reverse,   // vim , : repeat last f/t/F/T reversed
         "space" => { "Leader (spacemacs SPC)"
             "space" => command_palette,            // SPC SPC : M-x
             "tab"   => goto_last_accessed_file,    // SPC TAB : alternate buffer
@@ -771,6 +792,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "t" => extend_till_char,
         "T" => extend_till_prev_char,
         ";" => repeat_last_motion,
+        "," => repeat_find_char_reverse,
 
         "i" => select_textobject_inner,
         "a" => select_textobject_around,
