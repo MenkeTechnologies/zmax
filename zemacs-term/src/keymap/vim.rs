@@ -89,6 +89,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t C-i", "Toggles", ":toggle indent-guides.render"),        // SPC t C-i : global indent guide
     ("space t h c", "Toggles", ":toggle cursorcolumn"),                // SPC t h c : highlight current column
     ("space t C-S-l", "Toggles", ":toggle soft-wrap.enable"),          // SPC t C-S-l : visual line navigation
+    ("space t K", "Toggles", ":toggle auto-info"),                     // SPC t K : which-key (auto-info) mode
     ("space h d c", "Help",    ":character-info"),                     // SPC h d c : describe char under point
     ("space p e",   "Project", ":config-open"),                       // SPC p e : edit dir-locals/config
     ("space f e i", "Files",   ":config-open"),                       // SPC f e i : open init/config
@@ -474,6 +475,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "m" => fold_close_all,    // zm fold more (decrease foldlevel)
             "r" => fold_open_all,     // zr fold reduce (increase foldlevel)
             "n" => fold_open_all,     // zn foldenable off (show all text)
+            "N" => fold_close_all,    // zN set foldenable (close to foldlevel, approx)
+            "X" => fold_open_all,     // zX re-apply foldlevel (approx open all)
             "F" => [extend_to_line_bounds, fold_create], // zF create a fold for N lines
             "p" => paste_after,       // zp block paste without trailing spaces (approx)
             "P" => paste_before,      // zP block paste without trailing spaces (approx)
@@ -558,7 +561,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "F" => goto_file_hsplit,          // C-w F: split + edit file (with line number)
             "]" | "C-]" => goto_definition,   // C-w ] / C-w C-]: jump to tag/definition (no split)
             "^" | "C-^" => goto_last_accessed_file, // C-w ^ / C-w C-^: edit alternate file
-            "i" => goto_declaration,          // C-w i: split + jump to declaration (no split)
+            "i" | "C-i" => goto_declaration,  // C-w i / C-w C-i: split + jump to declaration (no split)
             "p" | "C-p" => rotate_view,       // C-w p: go to previous (last accessed) window
             "t" | "C-t" => jump_view_up,      // C-w t: go to top window
             "b" | "C-b" => jump_view_down,    // C-w b: go to bottom window
@@ -582,6 +585,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "S" => hsplit,                    // spacemacs SPC w S / vim C-w S : split & focus
             "V" => vsplit,                    // spacemacs SPC w V : vsplit & focus
             "|" => wonly,                     // spacemacs SPC w | : maximize window (only)
+            "1" => wonly,                     // SPC w 1 : single-window layout
+            "2" => vsplit,                    // SPC w 2 : two-window layout (split)
+            "3" => vsplit,                    // SPC w 3 : three-window layout (split)
+            "4" => vsplit,                    // SPC w 4 : four-window layout (split)
         },
 
         // --- scrolling / jumps ---------------------------------------------
@@ -730,7 +737,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "F" => goto_file_hsplit,
                 "]" | "C-]" => goto_definition,
                 "^" | "C-^" => goto_last_accessed_file,
-                "i" => goto_declaration,
+                "i" | "C-i" => goto_declaration,
                 "p" | "C-p" => rotate_view,
                 "t" | "C-t" => jump_view_up,
                 "b" | "C-b" => jump_view_down,
@@ -753,6 +760,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "S" => hsplit,
                 "V" => vsplit,
                 "|" => wonly,
+                "1" => wonly,
+                "2" => vsplit,
+                "3" => vsplit,
+                "4" => vsplit,
             },
             "s" => { "Search"
                 "s" => global_search,              // SPC s s
@@ -949,6 +960,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "w" => { "Windows"
                         "d" => wclose,             // SPC u SPC w d : delete window + buffer
                         "1" => wonly,              // SPC u SPC w 1 : single-window layout (force)
+                        "2" => vsplit,             // SPC u SPC w 2 : two-window layout (force)
+                        "3" => vsplit,             // SPC u SPC w 3 : three-window layout (force)
+                        "4" => vsplit,             // SPC u SPC w 4 : four-window layout (force)
                     },
                 },
             },

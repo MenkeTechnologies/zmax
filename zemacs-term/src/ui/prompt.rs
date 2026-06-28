@@ -730,6 +730,11 @@ impl Component for Prompt {
                 self.change_completion_selection(CompletionDirection::Backward);
                 (self.callback_fn)(cx, &self.line, PromptEvent::Update)
             }
+            ctrl!('l') => {
+                // c_CTRL-L: do completion on the pattern in front of the cursor.
+                self.change_completion_selection(CompletionDirection::Forward);
+                (self.callback_fn)(cx, &self.line, PromptEvent::Update)
+            }
             ctrl!('q') => self.exit_selection(),
             ctrl!('r') => {
                 self.completion = cx

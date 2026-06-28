@@ -7110,5 +7110,141 @@
       "key:normal:space u space b m"
     ],
     "note": "kill other buffers -> :buffer-close-others"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_k",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space t K"
+    ],
+    "note": "which-key mode -> :toggle auto-info"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.apos_wildchar_apos",
+    "status": "ported",
+    "evidence": [
+      "key:command:tab"
+    ],
+    "note": "wildchar completion = <Tab>"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.lt_nl_gt",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-j"
+    ],
+    "note": "<NL> = <CR> (execute)"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_l",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-l"
+    ],
+    "note": "c_CTRL-L: do completion"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_s",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x s"
+    ],
+    "note": "i_CTRL-X_s spelling -> completion"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_ctrl_i",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w C-i"
+    ],
+    "note": "CTRL-W CTRL-I = CTRL-W i (declaration)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zn",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z N"
+    ],
+    "note": "zN set foldenable -> fold_close_all"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zx",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z X"
+    ],
+    "note": "zX re-apply foldlevel -> fold_open_all"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbrace_count_rbrace_colon",
+    "status": "partial",
+    "evidence": [
+      "key:normal::"
+    ],
+    "note": "{count}: Ex command -> command mode"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lt_s_nl_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:S-ret"
+    ],
+    "note": "<S-NL> = CTRL-F (page down, = <S-CR>)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space w 1"
+    ],
+    "note": "1-window layout -> wonly"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_2",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space w 2"
+    ],
+    "note": "2-window layout -> vsplit"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_3",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space w 3"
+    ],
+    "note": "3-window layout -> vsplit"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_4",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space w 4"
+    ],
+    "note": "4-window layout -> vsplit"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_u_spc_w_2",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space u space w 2"
+    ],
+    "note": "2-window layout (force) -> vsplit"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_u_spc_w_3",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space u space w 3"
+    ],
+    "note": "3-window layout (force) -> vsplit"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_u_spc_w_4",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space u space w 4"
+    ],
+    "note": "4-window layout (force) -> vsplit"
   }
 ]
