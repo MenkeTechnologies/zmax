@@ -967,6 +967,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "c" => run_config_manager,         // SPC R c : manage run/debug configurations
                 "e" => run_config_manager,         // SPC R e : edit configurations
             },
+            "S" => settings_page,                  // SPC S : Preferences → Settings tab
+            "," => preferences,                    // SPC , : open the unified Preferences window
             "p" => { "Project"
                 "f" => file_picker,                // SPC p f
                 "p" => file_picker,                // SPC p p

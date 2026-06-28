@@ -91,13 +91,6 @@ impl RunConfigPanel {
     }
 
     fn handle_mouse(&mut self, col: u16, row: u16, kind: MouseEventKind) -> EventResult {
-        let _ = std::fs::write(
-            "/tmp/rcdebug.txt",
-            format!(
-                "kind={kind:?} col={col} row={row}\nfields={:?}\nlist={:?}\n",
-                self.field_hits, self.list_hits
-            ),
-        );
         if !matches!(kind, MouseEventKind::Down(MouseButton::Left)) {
             return EventResult::Consumed(None);
         }
