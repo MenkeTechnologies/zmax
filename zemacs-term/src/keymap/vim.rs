@@ -92,6 +92,10 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t K", "Toggles", ":toggle auto-info"),                     // SPC t K : which-key (auto-info) mode
     ("space t p", "Toggles", ":toggle auto-pairs"),                    // SPC t p : smartparens (auto-pairs)
     ("space t C-p", "Toggles", ":toggle auto-pairs"),                  // SPC t C-p : global smartparens
+    ("space T s", "Themes", ":theme"),                                 // SPC T s : select theme
+    ("space T n", "Themes", ":theme"),                                 // SPC T n : next theme (picker)
+    ("space T p", "Themes", ":theme"),                                 // SPC T p : previous theme (picker)
+    ("space h T v", "Help", ":tutor"),                                 // SPC h T v : evil tutor
     ("space h d c", "Help",    ":character-info"),                     // SPC h d c : describe char under point
     ("space p e",   "Project", ":config-open"),                       // SPC p e : edit dir-locals/config
     ("space f e i", "Files",   ":config-open"),                       // SPC f e i : open init/config

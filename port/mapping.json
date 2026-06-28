@@ -7910,5 +7910,37 @@
       "typable:run-shell-command"
     ],
     "note": ":!! repeat last shell -> :run-shell-command"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_tU_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space T s"
+    ],
+    "note": "SPC T s -> space T s"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_tU_n",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space T n"
+    ],
+    "note": "SPC T n -> space T n"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_tU_p",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space T p"
+    ],
+    "note": "SPC T p -> space T p"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_tU_v",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space h T v"
+    ],
+    "note": "SPC h T v -> space h T v"
   }
 ]
