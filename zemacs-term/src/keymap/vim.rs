@@ -284,6 +284,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "0" => [collapse_selection, extend_to_line_start, delete_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, delete_selection],
             "G" => [collapse_selection, extend_to_last_line, delete_selection],
+            "g" => { "Delete to top"
+                "g" => [collapse_selection, extend_to_file_start, delete_selection], // dgg
+            },
             "%" => [match_brackets, delete_selection],
             "i" => delete_textobject_inner,   // diw, di(, dip, ...
             "a" => delete_textobject_around,  // daw, da(, ...
@@ -403,6 +406,20 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "$" => [collapse_selection, extend_to_line_end, switch_case, collapse_selection],
                 "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_case, collapse_selection],
             },
+            // g?{motion} / g?? / g?g?: ROT13-encode text (vim operator).
+            "?" => { "Rot13"
+                "?" => [extend_to_line_bounds, rot13, collapse_selection],          // g?? current line
+                "j" => [extend_to_line_bounds, extend_line_below, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
+                "k" => [extend_to_line_bounds, extend_line_up, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
+                "w" => [collapse_selection, extend_next_word_start, rot13, collapse_selection],
+                "e" => [collapse_selection, extend_next_word_end, rot13, collapse_selection],
+                "b" => [collapse_selection, extend_prev_word_start, rot13, collapse_selection],
+                "$" => [collapse_selection, extend_to_line_end, rot13, collapse_selection],
+                "G" => [extend_to_last_line, rot13, collapse_selection],
+                "g" => { "Rot13 line"
+                    "?" => [extend_to_line_bounds, rot13, collapse_selection],      // g?g? current line
+                },
+            },
             // gq{motion} / gw{motion}: reformat text. zemacs reformats via the
             // LSP formatter (vim uses formatprg/textwidth) — partial but same intent.
             "q" => { "Format"
@@ -443,7 +460,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "x" => goto_file,                 // gx: open file/URL under cursor (goto_file opens URLs externally)
             // ga (print char ascii/unicode value) is bound via VIM_TYPABLE to
             // :character-info — vim's ga, not zemacs's goto-last-accessed-file.
-            "m" => goto_last_modified_file,
+            "m" => goto_line_middle,          // gm: go to middle of the screen line (vim, not last-modified)
+            "C-g" => file_info,               // g CTRL-G: show file name + cursor position
             "t" => goto_next_buffer,           // gt: next tabpage -> next buffer
             "T" => goto_previous_buffer,       // gT: previous tabpage -> previous buffer
             "p" => paste_after,                // gp: paste after (vim leaves cursor after)
@@ -478,6 +496,17 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "ret" => [align_view_top, goto_first_nonwhitespace],  // z<CR> top + first non-blank
             "+" => page_down,         // z+ cursor on line below window (approx page down)
             "^" => page_up,           // z^ cursor on line above window (approx page up)
+
+            // horizontal scroll (vim 'nowrap' z h / z l / z H / z L)
+            "h" => scroll_column_left,         // zh scroll left one column
+            "l" => scroll_column_right,        // zl scroll right one column
+            "left"  => scroll_column_left,     // z<Left> = zh
+            "right" => scroll_column_right,    // z<Right> = zl
+            "H" => scroll_half_column_left,    // zH scroll left half a screen
+            "L" => scroll_half_column_right,   // zL scroll right half a screen
+            "e" => scroll_half_column_left,    // ze scroll so cursor is near the right edge (approx)
+            "s" => scroll_half_column_right,   // zs scroll so cursor is near the left edge (approx)
+            "x" => fold_open,                  // zx re-apply foldlevel and open enough to see cursor (approx)
 
             // folds (vim z* family)
             "a" => fold_toggle,       // za toggle fold under cursor
@@ -529,6 +558,13 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "*" => goto_prev_comment,     // [* same as [/ : previous comment
             "]" => goto_prev_function,    // [] N sections backward (member/function)
             "z" => fold_prev,             // [z move to start of open fold
+            // word-under-cursor / #define navigation (vim [i [I [d [D [CTRL-I [CTRL-D).
+            // Approximated with a current-buffer word search (vim also scans included files).
+            "i"   => [search_selection_detect_word_boundaries, search_prev], // [i: prev line containing the word
+            "I"   => [search_selection_detect_word_boundaries, search_prev], // [I: list occurrences (approx: jump prev)
+            "D"   => [search_selection_detect_word_boundaries, search_prev], // [D: list #defines (approx)
+            "C-i" => [search_selection_detect_word_boundaries, search_prev], // [CTRL-I: word in included files (approx)
+            "C-d" => goto_declaration,        // [CTRL-D: jump to first #define (approx: declaration)
             "(" => goto_prev_unmatched_paren, // [( previous unmatched (
             "{" => goto_prev_unmatched_brace, // [{ previous unmatched {
             "`" => goto_prev_mark,            // [` previous lowercase mark
@@ -548,6 +584,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "*" => goto_next_comment,     // ]* same as ]/ : next comment
             "[" => goto_next_function,    // ][ N sections forward (member/function)
             "z" => fold_next,             // ]z move to end of open fold
+            // word-under-cursor / #define navigation (vim ]i ]I ]d ]D ]CTRL-I ]CTRL-D).
+            "i"   => [search_selection_detect_word_boundaries, search_next], // ]i: next line containing the word
+            "I"   => [search_selection_detect_word_boundaries, search_next], // ]I: list occurrences (approx: jump next)
+            "D"   => [search_selection_detect_word_boundaries, search_next], // ]D: list #defines (approx)
+            "C-i" => [search_selection_detect_word_boundaries, search_next], // ]CTRL-I: word in included files (approx)
+            "C-d" => goto_definition,         // ]CTRL-D: jump to first #define (approx: definition)
             ")" => goto_next_unmatched_paren, // ]) next unmatched )
             "}" => goto_next_unmatched_brace, // ]} next unmatched }
             "`" => goto_next_mark,            // ]` next lowercase mark
@@ -577,6 +619,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "K" => swap_view_up,              // C-w K: move window to the very top
             "L" => swap_view_right,           // C-w L: move window to the far right
             "R" => rotate_view_reverse,       // C-w R: rotate windows upwards
+            ">" => resize_view_wider,         // C-w >: increase window width N columns
+            "<" => resize_view_narrower,      // C-w <: decrease window width N columns
             "x" | "C-x" => transpose_view,    // C-w x: exchange current window with next
             "f" | "C-f" => goto_file_hsplit,  // C-w f / C-w C-f: split + edit file under cursor
             "F" => goto_file_hsplit,          // C-w F: split + edit file (with line number)
@@ -600,7 +644,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             },
             "n" | "C-n" => hsplit_new,        // C-w n: open new window
             "/" => vsplit,                    // spacemacs SPC w / : split vertically
-            "-" => hsplit,                    // spacemacs SPC w - : split horizontally
+            // vim window height resize (horizontal split stays on s / C-s)
+            "+" => resize_view_taller,        // C-w +: increase window height N lines
+            "-" => resize_view_shorter,       // C-w -: decrease window height N lines
+            "=" => resize_view_equalize,      // C-w =: make all windows equal size
             "c" => wclose,                    // spacemacs SPC w c : close window
             "m" => wonly,                     // spacemacs SPC w m : maximize (only)
             "S" => hsplit,                    // spacemacs SPC w S / vim C-w S : split & focus
@@ -671,7 +718,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-w"     => yank,                // M-w kill-ring-save (copy)
         "A-v"     => page_up,             // M-v scroll-down
         "C-space" => select_mode,         // C-SPC set-mark
-        "C-g"     => collapse_selection,  // C-g keyboard-quit
+        "C-g"     => file_info,           // vim CTRL-G: show file name + position (Esc still collapses)
         "C-l"     => align_view_center,   // C-l recenter
         "C-s"     => search,              // C-s isearch-forward
         "C-/"     => undo,                // C-/ undo
@@ -680,6 +727,13 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-m"     => goto_first_nonwhitespace, // M-m back-to-indentation
         "A-q"     => format_selections,   // M-q fill/reformat (approx)
         "A-^"     => join_selections,     // M-^ join to previous line (approx)
+
+        // vim CTRL-C / CTRL-\ CTRL-N / CTRL-\ CTRL-G: ensure/return to Normal mode.
+        "C-c"     => normal_mode,
+        "C-\\" => { "Normal"
+            "C-n" => normal_mode,            // CTRL-\ CTRL-N: go to Normal mode
+            "C-g" => normal_mode,            // CTRL-\ CTRL-G: go to Normal mode
+        },
 
         // --- = reindent operator (vim ==, ={motion}) -----------------------
         "=" => { "Indent"
@@ -790,6 +844,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "K" => swap_view_up,
                 "L" => swap_view_right,
                 "R" => rotate_view_reverse,
+                ">" => resize_view_wider,         // C-w >: increase window width N columns
+                "<" => resize_view_narrower,      // C-w <: decrease window width N columns
                 "x" | "C-x" => transpose_view,
                 "f" | "C-f" => goto_file_hsplit,
                 "F" => goto_file_hsplit,
@@ -812,7 +868,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 },
                 "n" | "C-n" => hsplit_new,
                 "/" => vsplit,
-                "-" => hsplit,
+                "+" => resize_view_taller,
+                "-" => resize_view_shorter,
+                "=" => resize_view_equalize,
                 "c" => wclose,
                 "m" => wonly,
                 "S" => hsplit,
@@ -1208,7 +1266,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-backspace"       => delete_word_backward,
         "A-d"               => delete_word_forward,
         "C-u"               => kill_to_line_start,
-        "C-k"               => kill_to_line_end,
+        "C-k"               => insert_digraph,   // vim i_CTRL-K: enter a digraph (was emacs kill-to-eol)
 
         // indent the current line (vim i_CTRL-T / i_CTRL-D)
         "C-t"   => indent,
@@ -1247,6 +1305,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-g" => { "Insert motion"
             "j" | "C-j" | "down" => move_visual_line_down,
             "k" | "C-k" | "up"   => move_visual_line_up,
+            "u" => commit_undo_checkpoint,   // i_CTRL-G_u: break undo so the next edit is a separate change
+            "U" => commit_undo_checkpoint,   // i_CTRL-G_U: (approx) don't break undo on next cursor move
         },
 
         "ret"   => insert_newline,
@@ -1254,8 +1314,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "tab"   => insert_tab,
 
         "C-r"   => insert_register,
-        "C-a"   => insert_at_line_start,
-        "C-e"   => insert_at_line_end,
+        "C-e"   => copy_char_below,         // vim i_CTRL-E: insert the character below the cursor
+        "C-y"   => copy_char_above,         // vim i_CTRL-Y: insert the character above the cursor
+        "ins"   => replace_mode,           // <Insert>: switch to Replace (overtype) mode
 
         "up"    => move_visual_line_up,
         "down"  => move_visual_line_down,
@@ -1275,7 +1336,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // emacs/readline editing keys in insert mode
         "C-f"     => move_char_right,      // C-f forward-char
         "C-b"     => move_char_left,       // C-b backward-char
-        "C-v"     => page_down,            // C-v scroll-up
+        "C-v"     => insert_char_interactive, // vim i_CTRL-V: insert the next key literally
         "A-f"     => move_next_word_start, // M-f forward-word
         "A-b"     => move_prev_word_start, // M-b backward-word
         "A-v"     => page_up,              // M-v scroll-down
@@ -1517,13 +1578,19 @@ mod tests {
         assert_eq!(cmd_name(resolve(n, "A-x").unwrap()), Some("command_palette"));
         assert_eq!(cmd_name(resolve(n, "A-f").unwrap()), Some("move_next_word_start"));
         assert_eq!(cmd_name(resolve(n, "A-<").unwrap()), Some("goto_file_start"));
-        assert_eq!(cmd_name(resolve(n, "C-g").unwrap()), Some("collapse_selection"));
+        // vim CTRL-G (file info) wins over the emacs keyboard-quit on C-g; Esc still collapses.
+        assert_eq!(cmd_name(resolve(n, "C-g").unwrap()), Some("file_info"));
         assert_eq!(cmd_name(resolve(n, "C-l").unwrap()), Some("align_view_center"));
-        // readline motion in insert mode (C-f/C-b, M-f/M-b)
+        // readline motion in insert mode that does NOT clash with a vim insert key
+        // (vim leaves C-f/C-b/M-f free in insert) stays emacs.
         assert_eq!(cmd_name(resolve(i, "C-f").unwrap()), Some("move_char_right"));
         assert_eq!(cmd_name(resolve(i, "C-b").unwrap()), Some("move_char_left"));
         assert_eq!(cmd_name(resolve(i, "A-f").unwrap()), Some("move_next_word_start"));
-        assert_eq!(cmd_name(resolve(i, "C-a").unwrap()), Some("insert_at_line_start"));
+        // vim insert keys win where they conflict with the old emacs bindings.
+        assert_eq!(cmd_name(resolve(i, "C-e").unwrap()), Some("copy_char_below"));
+        assert_eq!(cmd_name(resolve(i, "C-y").unwrap()), Some("copy_char_above"));
+        assert_eq!(cmd_name(resolve(i, "C-k").unwrap()), Some("insert_digraph"));
+        assert_eq!(cmd_name(resolve(i, "C-v").unwrap()), Some("insert_char_interactive"));
     }
 
     #[test]

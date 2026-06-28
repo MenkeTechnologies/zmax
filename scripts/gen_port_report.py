@@ -291,11 +291,25 @@ def load_mapping():
 # --------------------------------------------------------------------------
 # Resolution.
 # --------------------------------------------------------------------------
+def parse_builtins():
+    """Engine-level vim behaviours that are real but not expressible as a keymap
+    entry (so they cannot use `key:` evidence). Each is verified against actual
+    source so the catalogue stays honest-by-construction."""
+    builtins = set()
+    ed = open(os.path.join(ROOT, "zemacs-term/src/ui/editor.rs"), encoding="utf-8").read()
+    if "is_count_key" in ed:
+        # numeric count prefix (1-9 …) consumed before a command, and {count}<Del>
+        # editing it back, are handled by the count machinery in EditorView.
+        builtins.add("count")
+    return builtins
+
+
 def resolve(zemacs):
     """zemacs = dict of parsed source sets. Returns per-item status + broken list."""
     statics = zemacs["statics"]
     typables = zemacs["typables"]
     keymap = zemacs["keymap"]
+    builtins = zemacs.get("builtins", parse_builtins())
 
     def evidence_ok(tok):
         kind, _, rest = tok.partition(":")
@@ -306,6 +320,8 @@ def resolve(zemacs):
         if kind == "key":
             mode, _, chord = rest.partition(":")
             return chord in keymap.get(mode, {})
+        if kind == "builtin":
+            return rest in builtins
         return False
 
     mapping = load_mapping()
@@ -339,6 +355,7 @@ def build():
         "statics": set(parse_static_commands().keys()),
         "typables": parse_typable_commands(),
         "keymap": parse_keymap(),
+        "builtins": parse_builtins(),
     }
     items = load_inventories()
     by_id, broken = resolve(zemacs)

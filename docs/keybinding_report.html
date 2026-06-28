@@ -6,33 +6,32 @@
 <p class=muted>The keybinding subset of the <a href='port_report.html'>port report</a>. Counts only the key-press surface — vim/neovim normal/visual/insert/cmdline keys, the GNU Emacs Key Index, and the Spacemacs <code>SPC</code> tree. <b>ported</b> = the same key does the equivalent thing in zemacs.</p>
 <div class=kpi>
 <div class=card><b>2541</b>cited keybindings</div>
-<div class=card><b class=ported>627</b>ported (24.7%)</div>
-<div class=card><b class=partial>292</b>partial (11.5%)</div>
-<div class=card><b class=absent>1622</b>absent</div>
+<div class=card><b class=ported>665</b>ported (26.2%)</div>
+<div class=card><b class=partial>321</b>partial (12.6%)</div>
+<div class=card><b class=absent>1555</b>absent</div>
 </div>
 <h2>By source</h2><table>
 <tr><th>Source</th><th>Keybindings</th><th>Ported</th><th>Partial</th><th>Progress</th></tr>
-<tr><td>emacs</td><td class=n>1124</td><td class='n ported'>28</td><td class='n partial'>2</td><td><div class="bar"><div class="fill" style="width:2.5%"></div><span>2.5%</span></div></td></tr>
-<tr><td>neovim</td><td class=n>715</td><td class='n ported'>393</td><td class='n partial'>156</td><td><div class="bar"><div class="fill" style="width:55.0%"></div><span>55.0%</span></div></td></tr>
+<tr><td>emacs</td><td class=n>1124</td><td class='n ported'>27</td><td class='n partial'>2</td><td><div class="bar"><div class="fill" style="width:2.4%"></div><span>2.4%</span></div></td></tr>
+<tr><td>neovim</td><td class=n>715</td><td class='n ported'>432</td><td class='n partial'>185</td><td><div class="bar"><div class="fill" style="width:60.4%"></div><span>60.4%</span></div></td></tr>
 <tr><td>spacemacs</td><td class=n>702</td><td class='n ported'>206</td><td class='n partial'>134</td><td><div class="bar"><div class="fill" style="width:29.3%"></div><span>29.3%</span></div></td></tr>
 </table>
 <h2>By source / category</h2><table>
 <tr><th>Source</th><th>Category</th><th>Keybindings</th><th>Ported</th><th>Partial</th><th>Progress</th></tr>
-<tr><td>emacs</td><td>keybinding</td><td class=n>1124</td><td class='n ported'>28</td><td class='n partial'>2</td><td><div class="bar"><div class="fill" style="width:2.5%"></div><span>2.5%</span></div></td></tr>
+<tr><td>emacs</td><td>keybinding</td><td class=n>1124</td><td class='n ported'>27</td><td class='n partial'>2</td><td><div class="bar"><div class="fill" style="width:2.4%"></div><span>2.4%</span></div></td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td class=n>53</td><td class='n ported'>34</td><td class='n partial'>1</td><td><div class="bar"><div class="fill" style="width:64.2%"></div><span>64.2%</span></div></td></tr>
-<tr><td>neovim</td><td>insert-mode</td><td class=n>98</td><td class='n ported'>41</td><td class='n partial'>20</td><td><div class="bar"><div class="fill" style="width:41.8%"></div><span>41.8%</span></div></td></tr>
-<tr><td>neovim</td><td>normal-mode</td><td class=n>479</td><td class='n ported'>277</td><td class='n partial'>93</td><td><div class="bar"><div class="fill" style="width:57.8%"></div><span>57.8%</span></div></td></tr>
+<tr><td>neovim</td><td>insert-mode</td><td class=n>98</td><td class='n ported'>45</td><td class='n partial'>24</td><td><div class="bar"><div class="fill" style="width:45.9%"></div><span>45.9%</span></div></td></tr>
+<tr><td>neovim</td><td>normal-mode</td><td class=n>479</td><td class='n ported'>312</td><td class='n partial'>118</td><td><div class="bar"><div class="fill" style="width:65.1%"></div><span>65.1%</span></div></td></tr>
 <tr><td>neovim</td><td>visual-mode</td><td class=n>85</td><td class='n ported'>41</td><td class='n partial'>42</td><td><div class="bar"><div class="fill" style="width:48.2%"></div><span>48.2%</span></div></td></tr>
 <tr><td>spacemacs</td><td>keybinding</td><td class=n>702</td><td class='n ported'>206</td><td class='n partial'>134</td><td><div class="bar"><div class="fill" style="width:29.3%"></div><span>29.3%</span></div></td></tr>
 </table>
 <p class=muted>Emacs is 0% because zemacs is a modal (vim) editor — Emacs default chords (<code>C-x C-f</code>, …) are intentionally not bound; the commands they invoke are tracked under the port report's emacs <code>command</code> category.</p>
 <h2>Keybinding detail</h2>
-<details><summary>emacs / keybinding <span class=muted>(1124 keys · <span class=ported>28 ported</span> · <span class=partial>2 partial</span>)</span></summary>
+<details><summary>emacs / keybinding <span class=muted>(1124 keys · <span class=ported>27 ported</span> · <span class=partial>2 partial</span>)</span></summary>
 <table><tr><th>Key</th><th>Status</th><th>Source ref</th></tr>
 <tr><td>C-/</td><td class=ported>ported</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Undo.html#index-C_002d_002f</td></tr>
 <tr><td>C-SPC</td><td class=ported>ported</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Setting-Mark.html#index-C_002dSPC</td></tr>
 <tr><td>C-_</td><td class=ported>ported</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Undo.html#index-C_002d_005f</td></tr>
-<tr><td>C-a</td><td class=ported>ported</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Moving-Point.html#index-C_002da</td></tr>
 <tr><td>C-b</td><td class=ported>ported</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Moving-Point.html#index-C_002db</td></tr>
 <tr><td>C-e</td><td class=ported>ported</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Moving-Point.html#index-C_002de</td></tr>
 <tr><td>C-f</td><td class=ported>ported</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Moving-Point.html#index-C_002df</td></tr>
@@ -211,6 +210,7 @@
 <tr><td>C-]</td><td class=absent>absent</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Quitting.html#index-C_002d_005d</td></tr>
 <tr><td>C-^ (Incremental Search)</td><td class=absent>absent</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Special-Isearch.html#index-C_002d_005e-_0028Incremental-Search_0029</td></tr>
 <tr><td>C-_ (Dired)</td><td class=absent>absent</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Marks-vs-Flags.html#index-C_002d_005f-_0028Dired_0029</td></tr>
+<tr><td>C-a</td><td class=absent>absent</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Moving-Point.html#index-C_002da</td></tr>
 <tr><td>C-a (Calendar mode)</td><td class=absent>absent</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Move-to-Beginning-or-End.html#index-C_002da-_0028Calendar-mode_0029</td></tr>
 <tr><td>C-b (Calendar mode)</td><td class=absent>absent</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Calendar-Unit-Motion.html#index-C_002db-_0028Calendar-mode_0029</td></tr>
 <tr><td>C-b, when using input methods</td><td class=absent>absent</td><td class=muted>https://www.gnu.org/software/emacs/manual/html_node/emacs/Input-Methods.html#index-C_002db_002c-when-using-input-methods</td></tr>
@@ -1210,7 +1210,7 @@
 <tr><td>CTRL-^</td><td class=absent>absent</td><td class=muted>index.txt:c_CTRL-^</td></tr>
 <tr><td>{char1} &lt;BS&gt; {char2}</td><td class=absent>absent</td><td class=muted>index.txt:c_digraph</td></tr>
 </table></details>
-<details><summary>neovim / insert-mode <span class=muted>(98 keys · <span class=ported>41 ported</span> · <span class=partial>20 partial</span>)</span></summary>
+<details><summary>neovim / insert-mode <span class=muted>(98 keys · <span class=ported>45 ported</span> · <span class=partial>24 partial</span>)</span></summary>
 <table><tr><th>Key</th><th>Status</th><th>Source ref</th></tr>
 <tr><td>&lt;BS&gt;</td><td class=ported>ported</td><td class=muted>index.txt:i_<BS></td></tr>
 <tr><td>&lt;C-End&gt;</td><td class=ported>ported</td><td class=muted>index.txt:i_<C-End></td></tr>
@@ -1236,9 +1236,12 @@
 <tr><td>&lt;Up&gt;</td><td class=ported>ported</td><td class=muted>index.txt:i_<Up></td></tr>
 <tr><td>CTRL-C</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-C</td></tr>
 <tr><td>CTRL-D</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-D</td></tr>
+<tr><td>CTRL-E</td><td class=ported>ported</td><td class=muted>index.txt:complete_CTRL-E</td></tr>
+<tr><td>CTRL-G u</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-G_u</td></tr>
 <tr><td>CTRL-H</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-H</td></tr>
 <tr><td>CTRL-I</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-I</td></tr>
 <tr><td>CTRL-J</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-J</td></tr>
+<tr><td>CTRL-K {char1} {char2}</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-K</td></tr>
 <tr><td>CTRL-M</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-M</td></tr>
 <tr><td>CTRL-N</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-N</td></tr>
 <tr><td>CTRL-P</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-P</td></tr>
@@ -1250,16 +1253,20 @@
 <tr><td>CTRL-X CTRL-N</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-X_CTRL-N</td></tr>
 <tr><td>CTRL-X CTRL-O</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-X_CTRL-O</td></tr>
 <tr><td>CTRL-X CTRL-P</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-X_CTRL-P</td></tr>
+<tr><td>CTRL-Y</td><td class=ported>ported</td><td class=muted>index.txt:complete_CTRL-Y</td></tr>
 <tr><td>CTRL-[</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-[</td></tr>
 <tr><td>CTRL-\ CTRL-G</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-\_CTRL-G</td></tr>
 <tr><td>CTRL-\ CTRL-N</td><td class=ported>ported</td><td class=muted>index.txt:i_CTRL-\_CTRL-N</td></tr>
 <tr><td>&lt;F1&gt;</td><td class=partial>partial</td><td class=muted>index.txt:i_<F1></td></tr>
+<tr><td>&lt;Insert&gt;</td><td class=partial>partial</td><td class=muted>index.txt:i_<Insert></td></tr>
 <tr><td>CTRL-G &lt;Down&gt;</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-G_j</td></tr>
 <tr><td>CTRL-G &lt;Up&gt;</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-G_k</td></tr>
 <tr><td>CTRL-G CTRL-J</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-G_j</td></tr>
 <tr><td>CTRL-G CTRL-K</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-G_k</td></tr>
+<tr><td>CTRL-G U</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-G_U</td></tr>
 <tr><td>CTRL-G j</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-G_j</td></tr>
 <tr><td>CTRL-G k</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-G_k</td></tr>
+<tr><td>CTRL-V {char}</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-V</td></tr>
 <tr><td>CTRL-X CTRL-D</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-X_CTRL-D</td></tr>
 <tr><td>CTRL-X CTRL-E</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-X_CTRL-E</td></tr>
 <tr><td>CTRL-X CTRL-F</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-X_CTRL-F</td></tr>
@@ -1273,9 +1280,9 @@
 <tr><td>CTRL-X CTRL-Y</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-X_CTRL-Y</td></tr>
 <tr><td>CTRL-X CTRL-]</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-X_CTRL-]</td></tr>
 <tr><td>CTRL-X s</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-X_s</td></tr>
+<tr><td>CTRL-X {mode}</td><td class=partial>partial</td><td class=muted>index.txt:i_CTRL-X</td></tr>
 <tr><td>0 CTRL-D</td><td class=absent>absent</td><td class=muted>index.txt:i_0_CTRL-D</td></tr>
 <tr><td>&lt;Help&gt;</td><td class=absent>absent</td><td class=muted>index.txt:i_<Help></td></tr>
-<tr><td>&lt;Insert&gt;</td><td class=absent>absent</td><td class=muted>index.txt:i_<Insert></td></tr>
 <tr><td>&lt;LeftMouse&gt;</td><td class=absent>absent</td><td class=muted>index.txt:i_<LeftMouse></td></tr>
 <tr><td>&lt;S-ScrollWheelDown&gt;</td><td class=absent>absent</td><td class=muted>index.txt:i_<S-ScrollWheelDown></td></tr>
 <tr><td>&lt;S-ScrollWheelLeft&gt;</td><td class=absent>absent</td><td class=muted>index.txt:i_<S-ScrollWheelLeft></td></tr>
@@ -1288,10 +1295,6 @@
 <tr><td>CTRL-@</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-@</td></tr>
 <tr><td>CTRL-A</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-A</td></tr>
 <tr><td>CTRL-E</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-E</td></tr>
-<tr><td>CTRL-E</td><td class=absent>absent</td><td class=muted>index.txt:complete_CTRL-E</td></tr>
-<tr><td>CTRL-G U</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-G_U</td></tr>
-<tr><td>CTRL-G u</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-G_u</td></tr>
-<tr><td>CTRL-K {char1} {char2}</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-K</td></tr>
 <tr><td>CTRL-O</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-O</td></tr>
 <tr><td>CTRL-Q</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-Q</td></tr>
 <tr><td>CTRL-R CTRL-O {register}</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-R_CTRL-O</td></tr>
@@ -1299,19 +1302,16 @@
 <tr><td>CTRL-R CTRL-R {register}</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-R_CTRL-R</td></tr>
 <tr><td>CTRL-SHIFT-Q {char}</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-SHIFT-Q</td></tr>
 <tr><td>CTRL-SHIFT-V {char}</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-SHIFT-V</td></tr>
-<tr><td>CTRL-V {char}</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-V</td></tr>
 <tr><td>CTRL-V {number} insert three digit decimal number as a single</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-V_digit</td></tr>
 <tr><td>CTRL-X CTRL-Z</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-X_CTRL-Z</td></tr>
-<tr><td>CTRL-X {mode}</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-X</td></tr>
 <tr><td>CTRL-Y</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-Y</td></tr>
-<tr><td>CTRL-Y</td><td class=absent>absent</td><td class=muted>index.txt:complete_CTRL-Y</td></tr>
 <tr><td>CTRL-]</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-]</td></tr>
 <tr><td>CTRL-^</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-^</td></tr>
 <tr><td>CTRL-_</td><td class=absent>absent</td><td class=muted>index.txt:i_CTRL-_</td></tr>
 <tr><td>^ CTRL-D</td><td class=absent>absent</td><td class=muted>index.txt:i_^_CTRL-D</td></tr>
 <tr><td>{char1}&lt;BS&gt;{char2}</td><td class=absent>absent</td><td class=muted>index.txt:i_digraph</td></tr>
 </table></details>
-<details><summary>neovim / normal-mode <span class=muted>(479 keys · <span class=ported>277 ported</span> · <span class=partial>93 partial</span>)</span></summary>
+<details><summary>neovim / normal-mode <span class=muted>(479 keys · <span class=ported>312 ported</span> · <span class=partial>118 partial</span>)</span></summary>
 <table><tr><th>Key</th><th>Status</th><th>Source ref</th></tr>
 <tr><td>!!{filter}</td><td class=ported>ported</td><td class=muted>index.txt:!!</td></tr>
 <tr><td>!{motion}{filter}</td><td class=ported>ported</td><td class=muted>index.txt:!</td></tr>
@@ -1323,8 +1323,11 @@
 <tr><td>&amp;</td><td class=ported>ported</td><td class=muted>index.txt:&</td></tr>
 <tr><td>'&lt;</td><td class=ported>ported</td><td class=muted>index.txt:'<</td></tr>
 <tr><td>'&gt;</td><td class=ported>ported</td><td class=muted>index.txt:'></td></tr>
+<tr><td>'[</td><td class=ported>ported</td><td class=muted>index.txt:'[</td></tr>
+<tr><td>']</td><td class=ported>ported</td><td class=muted>index.txt:']</td></tr>
 <tr><td>'{</td><td class=ported>ported</td><td class=muted>index.txt:'{</td></tr>
 <tr><td>'{a-zA-Z0-9}</td><td class=ported>ported</td><td class=muted>index.txt:'</td></tr>
+<tr><td>'}</td><td class=ported>ported</td><td class=muted>index.txt:'}</td></tr>
 <tr><td>(</td><td class=ported>ported</td><td class=muted>index.txt:(</td></tr>
 <tr><td>)</td><td class=ported>ported</td><td class=muted>index.txt:)</td></tr>
 <tr><td>*</td><td class=ported>ported</td><td class=muted>index.txt:star</td></tr>
@@ -1333,6 +1336,15 @@
 <tr><td>-</td><td class=ported>ported</td><td class=muted>index.txt:-</td></tr>
 <tr><td>/{pattern}&lt;CR&gt;</td><td class=ported>ported</td><td class=muted>index.txt:/</td></tr>
 <tr><td>0</td><td class=ported>ported</td><td class=muted>index.txt:0</td></tr>
+<tr><td>1</td><td class=ported>ported</td><td class=muted>index.txt:count</td></tr>
+<tr><td>2</td><td class=ported>ported</td><td class=muted>index.txt:count</td></tr>
+<tr><td>3</td><td class=ported>ported</td><td class=muted>index.txt:count</td></tr>
+<tr><td>4</td><td class=ported>ported</td><td class=muted>index.txt:count</td></tr>
+<tr><td>5</td><td class=ported>ported</td><td class=muted>index.txt:count</td></tr>
+<tr><td>6</td><td class=ported>ported</td><td class=muted>index.txt:count</td></tr>
+<tr><td>7</td><td class=ported>ported</td><td class=muted>index.txt:count</td></tr>
+<tr><td>8</td><td class=ported>ported</td><td class=muted>index.txt:count</td></tr>
+<tr><td>9</td><td class=ported>ported</td><td class=muted>index.txt:count</td></tr>
 <tr><td>:</td><td class=ported>ported</td><td class=muted>index.txt::</td></tr>
 <tr><td>;</td><td class=ported>ported</td><td class=muted>index.txt:;</td></tr>
 <tr><td>&lt;&lt;</td><td class=ported>ported</td><td class=muted>index.txt:<<</td></tr>
@@ -1341,6 +1353,7 @@
 <tr><td>&lt;C-Home&gt;</td><td class=ported>ported</td><td class=muted>index.txt:<C-Home></td></tr>
 <tr><td>&lt;C-Left&gt;</td><td class=ported>ported</td><td class=muted>index.txt:<C-Left></td></tr>
 <tr><td>&lt;C-Right&gt;</td><td class=ported>ported</td><td class=muted>index.txt:<C-Right></td></tr>
+<tr><td>&lt;C-Tab&gt;</td><td class=ported>ported</td><td class=muted>index.txt:<C-Tab></td></tr>
 <tr><td>&lt;CR&gt;</td><td class=ported>ported</td><td class=muted>index.txt:<CR></td></tr>
 <tr><td>&lt;Down&gt;</td><td class=ported>ported</td><td class=muted>index.txt:<Down></td></tr>
 <tr><td>&lt;End&gt;</td><td class=ported>ported</td><td class=muted>index.txt:<End></td></tr>
@@ -1372,9 +1385,11 @@
 <tr><td>B</td><td class=ported>ported</td><td class=muted>index.txt:B</td></tr>
 <tr><td>CTRL-A</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-A</td></tr>
 <tr><td>CTRL-B</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-B</td></tr>
+<tr><td>CTRL-C</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-C</td></tr>
 <tr><td>CTRL-D</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-D</td></tr>
 <tr><td>CTRL-E</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-E</td></tr>
 <tr><td>CTRL-F</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-F</td></tr>
+<tr><td>CTRL-G</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-G</td></tr>
 <tr><td>CTRL-H</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-H</td></tr>
 <tr><td>CTRL-I</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-I</td></tr>
 <tr><td>CTRL-J</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-J</td></tr>
@@ -1385,10 +1400,15 @@
 <tr><td>CTRL-R</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-R</td></tr>
 <tr><td>CTRL-U</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-U</td></tr>
 <tr><td>CTRL-V</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-V</td></tr>
+<tr><td>CTRL-W +</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_+</td></tr>
+<tr><td>CTRL-W -</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_-</td></tr>
+<tr><td>CTRL-W &lt;</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_<</td></tr>
 <tr><td>CTRL-W &lt;Down&gt;</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_<Down></td></tr>
 <tr><td>CTRL-W &lt;Left&gt;</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_<Left></td></tr>
 <tr><td>CTRL-W &lt;Right&gt;</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_<Right></td></tr>
 <tr><td>CTRL-W &lt;Up&gt;</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_<Up></td></tr>
+<tr><td>CTRL-W =</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_=</td></tr>
+<tr><td>CTRL-W &gt;</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_></td></tr>
 <tr><td>CTRL-W CTRL-D</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_CTRL-D</td></tr>
 <tr><td>CTRL-W CTRL-F</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_CTRL-F</td></tr>
 <tr><td>CTRL-W CTRL-H</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-W_CTRL-H</td></tr>
@@ -1429,6 +1449,8 @@
 <tr><td>CTRL-X</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-X</td></tr>
 <tr><td>CTRL-Y</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-Y</td></tr>
 <tr><td>CTRL-Z</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-Z</td></tr>
+<tr><td>CTRL-\ CTRL-G</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-\_CTRL-G</td></tr>
+<tr><td>CTRL-\ CTRL-N</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-\_CTRL-N</td></tr>
 <tr><td>CTRL-]</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-]</td></tr>
 <tr><td>CTRL-^</td><td class=ported>ported</td><td class=muted>index.txt:CTRL-^</td></tr>
 <tr><td>E</td><td class=ported>ported</td><td class=muted>index.txt:E</td></tr>
@@ -1482,8 +1504,11 @@
 <tr><td>^</td><td class=ported>ported</td><td class=muted>index.txt:^</td></tr>
 <tr><td>`&lt;</td><td class=ported>ported</td><td class=muted>index.txt:`<</td></tr>
 <tr><td>`&gt;</td><td class=ported>ported</td><td class=muted>index.txt:`></td></tr>
+<tr><td>`[</td><td class=ported>ported</td><td class=muted>index.txt:`[</td></tr>
+<tr><td>`]</td><td class=ported>ported</td><td class=muted>index.txt:`]</td></tr>
 <tr><td>`{</td><td class=ported>ported</td><td class=muted>index.txt:`{</td></tr>
 <tr><td>`{a-zA-Z0-9}</td><td class=ported>ported</td><td class=muted>index.txt:`</td></tr>
+<tr><td>`}</td><td class=ported>ported</td><td class=muted>index.txt:`}</td></tr>
 <tr><td>a</td><td class=ported>ported</td><td class=muted>index.txt:a</td></tr>
 <tr><td>a"</td><td class=ported>ported</td><td class=muted>index.txt:v_aquote</td></tr>
 <tr><td>a'</td><td class=ported>ported</td><td class=muted>index.txt:v_a'</td></tr>
@@ -1503,6 +1528,7 @@
 <tr><td>b</td><td class=ported>ported</td><td class=muted>index.txt:b</td></tr>
 <tr><td>e</td><td class=ported>ported</td><td class=muted>index.txt:e</td></tr>
 <tr><td>f{char}</td><td class=ported>ported</td><td class=muted>index.txt:f</td></tr>
+<tr><td>g CTRL-G</td><td class=ported>ported</td><td class=muted>index.txt:g_CTRL-G</td></tr>
 <tr><td>g#</td><td class=ported>ported</td><td class=muted>index.txt:g#</td></tr>
 <tr><td>g$</td><td class=ported>ported</td><td class=muted>index.txt:g$</td></tr>
 <tr><td>g&amp;</td><td class=ported>ported</td><td class=muted>index.txt:g&</td></tr>
@@ -1515,6 +1541,8 @@
 <tr><td>g&lt;End&gt;</td><td class=ported>ported</td><td class=muted>index.txt:g<End></td></tr>
 <tr><td>g&lt;Home&gt;</td><td class=ported>ported</td><td class=muted>index.txt:g<Home></td></tr>
 <tr><td>g&lt;Up&gt;</td><td class=ported>ported</td><td class=muted>index.txt:g<Up></td></tr>
+<tr><td>g??</td><td class=ported>ported</td><td class=muted>index.txt:g?g?</td></tr>
+<tr><td>g?g?</td><td class=ported>ported</td><td class=muted>index.txt:g?g?</td></tr>
 <tr><td>gD</td><td class=ported>ported</td><td class=muted>index.txt:gD</td></tr>
 <tr><td>gE</td><td class=ported>ported</td><td class=muted>index.txt:gE</td></tr>
 <tr><td>gH</td><td class=ported>ported</td><td class=muted>index.txt:gH</td></tr>
@@ -1532,6 +1560,7 @@
 <tr><td>gi</td><td class=ported>ported</td><td class=muted>index.txt:gi</td></tr>
 <tr><td>gj</td><td class=ported>ported</td><td class=muted>index.txt:gj</td></tr>
 <tr><td>gk</td><td class=ported>ported</td><td class=muted>index.txt:gk</td></tr>
+<tr><td>gm</td><td class=ported>ported</td><td class=muted>index.txt:gm</td></tr>
 <tr><td>gn</td><td class=ported>ported</td><td class=muted>index.txt:gn</td></tr>
 <tr><td>go</td><td class=ported>ported</td><td class=muted>index.txt:go</td></tr>
 <tr><td>gt</td><td class=ported>ported</td><td class=muted>index.txt:gt</td></tr>
@@ -1570,9 +1599,13 @@
 <tr><td>z-</td><td class=ported>ported</td><td class=muted>index.txt:z-</td></tr>
 <tr><td>z.</td><td class=ported>ported</td><td class=muted>index.txt:z.</td></tr>
 <tr><td>z&lt;CR&gt;</td><td class=ported>ported</td><td class=muted>index.txt:z<CR></td></tr>
+<tr><td>z&lt;Left&gt;</td><td class=ported>ported</td><td class=muted>index.txt:z<Left></td></tr>
+<tr><td>z&lt;Right&gt;</td><td class=ported>ported</td><td class=muted>index.txt:z<Right></td></tr>
 <tr><td>zA</td><td class=ported>ported</td><td class=muted>index.txt:zA</td></tr>
 <tr><td>zE</td><td class=ported>ported</td><td class=muted>index.txt:zE</td></tr>
 <tr><td>zF</td><td class=ported>ported</td><td class=muted>index.txt:zF</td></tr>
+<tr><td>zH</td><td class=ported>ported</td><td class=muted>index.txt:zH</td></tr>
+<tr><td>zL</td><td class=ported>ported</td><td class=muted>index.txt:zL</td></tr>
 <tr><td>zM</td><td class=ported>ported</td><td class=muted>index.txt:zM</td></tr>
 <tr><td>zR</td><td class=ported>ported</td><td class=muted>index.txt:zR</td></tr>
 <tr><td>za</td><td class=ported>ported</td><td class=muted>index.txt:za</td></tr>
@@ -1580,8 +1613,10 @@
 <tr><td>zc</td><td class=ported>ported</td><td class=muted>index.txt:zc</td></tr>
 <tr><td>zd</td><td class=ported>ported</td><td class=muted>index.txt:zd</td></tr>
 <tr><td>zf{motion}</td><td class=ported>ported</td><td class=muted>index.txt:zf</td></tr>
+<tr><td>zh</td><td class=ported>ported</td><td class=muted>index.txt:zh</td></tr>
 <tr><td>zj</td><td class=ported>ported</td><td class=muted>index.txt:zj</td></tr>
 <tr><td>zk</td><td class=ported>ported</td><td class=muted>index.txt:zk</td></tr>
+<tr><td>zl</td><td class=ported>ported</td><td class=muted>index.txt:zl</td></tr>
 <tr><td>zo</td><td class=ported>ported</td><td class=muted>index.txt:zo</td></tr>
 <tr><td>zt</td><td class=ported>ported</td><td class=muted>index.txt:zt</td></tr>
 <tr><td>zz</td><td class=ported>ported</td><td class=muted>index.txt:zz</td></tr>
@@ -1590,6 +1625,8 @@
 <tr><td>|</td><td class=ported>ported</td><td class=muted>index.txt:bar</td></tr>
 <tr><td>}</td><td class=ported>ported</td><td class=muted>index.txt:}</td></tr>
 <tr><td>~</td><td class=ported>ported</td><td class=muted>index.txt:~</td></tr>
+<tr><td>'(</td><td class=partial>partial</td><td class=muted>index.txt:'(</td></tr>
+<tr><td>')</td><td class=partial>partial</td><td class=muted>index.txt:')</td></tr>
 <tr><td>.</td><td class=partial>partial</td><td class=muted>index.txt:.</td></tr>
 <tr><td>/&lt;CR&gt;</td><td class=partial>partial</td><td class=muted>index.txt:/<CR></td></tr>
 <tr><td>&lt;F1&gt;</td><td class=partial>partial</td><td class=muted>index.txt:<F1></td></tr>
@@ -1608,6 +1645,7 @@
 <tr><td>CTRL-W W</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W_W</td></tr>
 <tr><td>CTRL-W ]</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W_]</td></tr>
 <tr><td>CTRL-W ^</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W_^</td></tr>
+<tr><td>CTRL-W _</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W__</td></tr>
 <tr><td>CTRL-W b</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W_b</td></tr>
 <tr><td>CTRL-W c</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W_c</td></tr>
 <tr><td>CTRL-W g &lt;Tab&gt;</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W_g<Tab></td></tr>
@@ -1619,9 +1657,12 @@
 <tr><td>CTRL-W i</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W_i</td></tr>
 <tr><td>CTRL-W p</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W_p</td></tr>
 <tr><td>CTRL-W t</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W_t</td></tr>
+<tr><td>CTRL-W |</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W_bar</td></tr>
 <tr><td>CTRL-W }</td><td class=partial>partial</td><td class=muted>index.txt:CTRL-W_}</td></tr>
 <tr><td>R</td><td class=partial>partial</td><td class=muted>index.txt:R</td></tr>
 <tr><td>U</td><td class=partial>partial</td><td class=muted>index.txt:U</td></tr>
+<tr><td>[ CTRL-D</td><td class=partial>partial</td><td class=muted>index.txt:[_CTRL-D</td></tr>
+<tr><td>[ CTRL-I</td><td class=partial>partial</td><td class=muted>index.txt:[_CTRL-I</td></tr>
 <tr><td>["x]C</td><td class=partial>partial</td><td class=muted>index.txt:C</td></tr>
 <tr><td>["x]D</td><td class=partial>partial</td><td class=muted>index.txt:D</td></tr>
 <tr><td>["x]S</td><td class=partial>partial</td><td class=muted>index.txt:S</td></tr>
@@ -1630,15 +1671,27 @@
 <tr><td>["x]d{motion}</td><td class=partial>partial</td><td class=muted>index.txt:d</td></tr>
 <tr><td>["x]s</td><td class=partial>partial</td><td class=muted>index.txt:s</td></tr>
 <tr><td>["x]y{motion}</td><td class=partial>partial</td><td class=muted>index.txt:y</td></tr>
+<tr><td>[D</td><td class=partial>partial</td><td class=muted>index.txt:[D</td></tr>
+<tr><td>[I</td><td class=partial>partial</td><td class=muted>index.txt:[I</td></tr>
 <tr><td>[[</td><td class=partial>partial</td><td class=muted>index.txt:[[</td></tr>
 <tr><td>[]</td><td class=partial>partial</td><td class=muted>index.txt:[]</td></tr>
+<tr><td>[i</td><td class=partial>partial</td><td class=muted>index.txt:[i</td></tr>
 <tr><td>[m</td><td class=partial>partial</td><td class=muted>index.txt:[m</td></tr>
 <tr><td>[z</td><td class=partial>partial</td><td class=muted>index.txt:[z</td></tr>
+<tr><td>[{char}</td><td class=partial>partial</td><td class=muted>index.txt:[</td></tr>
+<tr><td>] CTRL-D</td><td class=partial>partial</td><td class=muted>index.txt:]_CTRL-D</td></tr>
+<tr><td>] CTRL-I</td><td class=partial>partial</td><td class=muted>index.txt:]_CTRL-I</td></tr>
+<tr><td>]D</td><td class=partial>partial</td><td class=muted>index.txt:]D</td></tr>
+<tr><td>]I</td><td class=partial>partial</td><td class=muted>index.txt:]I</td></tr>
 <tr><td>][</td><td class=partial>partial</td><td class=muted>index.txt:][</td></tr>
 <tr><td>]]</td><td class=partial>partial</td><td class=muted>index.txt:]]</td></tr>
+<tr><td>]i</td><td class=partial>partial</td><td class=muted>index.txt:]i</td></tr>
 <tr><td>]m</td><td class=partial>partial</td><td class=muted>index.txt:]m</td></tr>
 <tr><td>]z</td><td class=partial>partial</td><td class=muted>index.txt:]z</td></tr>
+<tr><td>]{char}</td><td class=partial>partial</td><td class=muted>index.txt:]</td></tr>
 <tr><td>_</td><td class=partial>partial</td><td class=muted>index.txt:_</td></tr>
+<tr><td>`(</td><td class=partial>partial</td><td class=muted>index.txt:`(</td></tr>
+<tr><td>`)</td><td class=partial>partial</td><td class=muted>index.txt:`)</td></tr>
 <tr><td>aB</td><td class=partial>partial</td><td class=muted>index.txt:v_aB</td></tr>
 <tr><td>ab</td><td class=partial>partial</td><td class=muted>index.txt:v_ab</td></tr>
 <tr><td>al</td><td class=partial>partial</td><td class=muted>index.txt:v_al</td></tr>
@@ -1649,6 +1702,7 @@
 <tr><td>g,</td><td class=partial>partial</td><td class=muted>index.txt:g,</td></tr>
 <tr><td>g8</td><td class=partial>partial</td><td class=muted>index.txt:g8</td></tr>
 <tr><td>g&lt;Tab&gt;</td><td class=partial>partial</td><td class=muted>index.txt:g<Tab></td></tr>
+<tr><td>g?</td><td class=partial>partial</td><td class=muted>index.txt:g?</td></tr>
 <tr><td>gF</td><td class=partial>partial</td><td class=muted>index.txt:gF</td></tr>
 <tr><td>gN</td><td class=partial>partial</td><td class=muted>index.txt:gN</td></tr>
 <tr><td>gQ</td><td class=partial>partial</td><td class=muted>index.txt:gQ</td></tr>
@@ -1661,6 +1715,7 @@
 <tr><td>gu{motion}</td><td class=partial>partial</td><td class=muted>index.txt:gu</td></tr>
 <tr><td>gw{motion}</td><td class=partial>partial</td><td class=muted>index.txt:gw</td></tr>
 <tr><td>gx</td><td class=partial>partial</td><td class=muted>index.txt:gx</td></tr>
+<tr><td>g{char}</td><td class=partial>partial</td><td class=muted>index.txt:g</td></tr>
 <tr><td>g~{motion}</td><td class=partial>partial</td><td class=muted>index.txt:g~</td></tr>
 <tr><td>iB</td><td class=partial>partial</td><td class=muted>index.txt:v_iB</td></tr>
 <tr><td>ib</td><td class=partial>partial</td><td class=muted>index.txt:v_ib</td></tr>
@@ -1674,33 +1729,23 @@
 <tr><td>zP</td><td class=partial>partial</td><td class=muted>index.txt:zP</td></tr>
 <tr><td>zX</td><td class=partial>partial</td><td class=muted>index.txt:zX</td></tr>
 <tr><td>z^</td><td class=partial>partial</td><td class=muted>index.txt:z^</td></tr>
+<tr><td>ze</td><td class=partial>partial</td><td class=muted>index.txt:ze</td></tr>
 <tr><td>zi</td><td class=partial>partial</td><td class=muted>index.txt:zi</td></tr>
 <tr><td>zm</td><td class=partial>partial</td><td class=muted>index.txt:zm</td></tr>
 <tr><td>zn</td><td class=partial>partial</td><td class=muted>index.txt:zn</td></tr>
 <tr><td>zp</td><td class=partial>partial</td><td class=muted>index.txt:zp</td></tr>
 <tr><td>zr</td><td class=partial>partial</td><td class=muted>index.txt:zr</td></tr>
+<tr><td>zs</td><td class=partial>partial</td><td class=muted>index.txt:zs</td></tr>
 <tr><td>zv</td><td class=partial>partial</td><td class=muted>index.txt:zv</td></tr>
+<tr><td>zx</td><td class=partial>partial</td><td class=muted>index.txt:zx</td></tr>
 <tr><td>zy</td><td class=partial>partial</td><td class=muted>index.txt:zy</td></tr>
+<tr><td>z{char}</td><td class=partial>partial</td><td class=muted>index.txt:z</td></tr>
 <tr><td>{count}:</td><td class=partial>partial</td><td class=muted>index.txt:N:</td></tr>
+<tr><td>{count}&lt;Del&gt;</td><td class=partial>partial</td><td class=muted>index.txt:N<Del></td></tr>
 <tr><td>~{motion}</td><td class=partial>partial</td><td class=muted>index.txt:~</td></tr>
 <tr><td>''</td><td class=absent>absent</td><td class=muted>index.txt:''</td></tr>
-<tr><td>'(</td><td class=absent>absent</td><td class=muted>index.txt:'(</td></tr>
-<tr><td>')</td><td class=absent>absent</td><td class=muted>index.txt:')</td></tr>
-<tr><td>'[</td><td class=absent>absent</td><td class=muted>index.txt:'[</td></tr>
-<tr><td>']</td><td class=absent>absent</td><td class=muted>index.txt:']</td></tr>
-<tr><td>'}</td><td class=absent>absent</td><td class=muted>index.txt:'}</td></tr>
-<tr><td>1</td><td class=absent>absent</td><td class=muted>index.txt:count</td></tr>
-<tr><td>2</td><td class=absent>absent</td><td class=muted>index.txt:count</td></tr>
-<tr><td>3</td><td class=absent>absent</td><td class=muted>index.txt:count</td></tr>
-<tr><td>4</td><td class=absent>absent</td><td class=muted>index.txt:count</td></tr>
-<tr><td>5</td><td class=absent>absent</td><td class=muted>index.txt:count</td></tr>
-<tr><td>6</td><td class=absent>absent</td><td class=muted>index.txt:count</td></tr>
-<tr><td>7</td><td class=absent>absent</td><td class=muted>index.txt:count</td></tr>
-<tr><td>8</td><td class=absent>absent</td><td class=muted>index.txt:count</td></tr>
-<tr><td>9</td><td class=absent>absent</td><td class=muted>index.txt:count</td></tr>
 <tr><td>&lt;C-LeftMouse&gt;</td><td class=absent>absent</td><td class=muted>index.txt:<C-LeftMouse></td></tr>
 <tr><td>&lt;C-RightMouse&gt;</td><td class=absent>absent</td><td class=muted>index.txt:<C-RightMouse></td></tr>
-<tr><td>&lt;C-Tab&gt;</td><td class=absent>absent</td><td class=muted>index.txt:<C-Tab></td></tr>
 <tr><td>&lt;Help&gt;</td><td class=absent>absent</td><td class=muted>index.txt:<Help></td></tr>
 <tr><td>&lt;LeftMouse&gt;</td><td class=absent>absent</td><td class=muted>index.txt:<LeftMouse></td></tr>
 <tr><td>&lt;MiddleMouse&gt;</td><td class=absent>absent</td><td class=muted>index.txt:<MiddleMouse></td></tr>
@@ -1709,89 +1754,44 @@
 <tr><td>&lt;S-RightMouse&gt;</td><td class=absent>absent</td><td class=muted>index.txt:<S-RightMouse></td></tr>
 <tr><td>&lt;Space&gt;</td><td class=absent>absent</td><td class=muted>index.txt:<Space></td></tr>
 <tr><td>@:</td><td class=absent>absent</td><td class=muted>index.txt:@:</td></tr>
-<tr><td>CTRL-C</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-C</td></tr>
-<tr><td>CTRL-G</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-G</td></tr>
-<tr><td>CTRL-W +</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_+</td></tr>
-<tr><td>CTRL-W -</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_-</td></tr>
-<tr><td>CTRL-W &lt;</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_<</td></tr>
-<tr><td>CTRL-W =</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_=</td></tr>
-<tr><td>CTRL-W &gt;</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_></td></tr>
 <tr><td>CTRL-W CTRL-C</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_CTRL-C</td></tr>
 <tr><td>CTRL-W CTRL-Z</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_CTRL-Z</td></tr>
 <tr><td>CTRL-W CTRL-_</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_CTRL-_</td></tr>
 <tr><td>CTRL-W P</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_P</td></tr>
 <tr><td>CTRL-W T</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_T</td></tr>
-<tr><td>CTRL-W _</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W__</td></tr>
 <tr><td>CTRL-W d</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_d</td></tr>
 <tr><td>CTRL-W z</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_z</td></tr>
 <tr><td>CTRL-W {char}</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W</td></tr>
-<tr><td>CTRL-W |</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-W_bar</td></tr>
-<tr><td>CTRL-\ CTRL-G</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-\_CTRL-G</td></tr>
-<tr><td>CTRL-\ CTRL-N</td><td class=absent>absent</td><td class=muted>index.txt:CTRL-\_CTRL-N</td></tr>
-<tr><td>[ CTRL-D</td><td class=absent>absent</td><td class=muted>index.txt:[_CTRL-D</td></tr>
-<tr><td>[ CTRL-I</td><td class=absent>absent</td><td class=muted>index.txt:[_CTRL-I</td></tr>
 <tr><td>[#</td><td class=absent>absent</td><td class=muted>index.txt:[#</td></tr>
 <tr><td>[&lt;MiddleMouse&gt;</td><td class=absent>absent</td><td class=muted>index.txt:[<MiddleMouse></td></tr>
-<tr><td>[D</td><td class=absent>absent</td><td class=muted>index.txt:[D</td></tr>
-<tr><td>[I</td><td class=absent>absent</td><td class=muted>index.txt:[I</td></tr>
 <tr><td>[d</td><td class=absent>absent</td><td class=muted>index.txt:[d</td></tr>
-<tr><td>[i</td><td class=absent>absent</td><td class=muted>index.txt:[i</td></tr>
 <tr><td>[s</td><td class=absent>absent</td><td class=muted>index.txt:[s</td></tr>
-<tr><td>[{char}</td><td class=absent>absent</td><td class=muted>index.txt:[</td></tr>
-<tr><td>] CTRL-D</td><td class=absent>absent</td><td class=muted>index.txt:]_CTRL-D</td></tr>
-<tr><td>] CTRL-I</td><td class=absent>absent</td><td class=muted>index.txt:]_CTRL-I</td></tr>
 <tr><td>]#</td><td class=absent>absent</td><td class=muted>index.txt:]#</td></tr>
 <tr><td>]&lt;MiddleMouse&gt;</td><td class=absent>absent</td><td class=muted>index.txt:]<MiddleMouse></td></tr>
-<tr><td>]D</td><td class=absent>absent</td><td class=muted>index.txt:]D</td></tr>
-<tr><td>]I</td><td class=absent>absent</td><td class=muted>index.txt:]I</td></tr>
 <tr><td>]d</td><td class=absent>absent</td><td class=muted>index.txt:]d</td></tr>
-<tr><td>]i</td><td class=absent>absent</td><td class=muted>index.txt:]i</td></tr>
 <tr><td>]s</td><td class=absent>absent</td><td class=muted>index.txt:]s</td></tr>
-<tr><td>]{char}</td><td class=absent>absent</td><td class=muted>index.txt:]</td></tr>
-<tr><td>`(</td><td class=absent>absent</td><td class=muted>index.txt:`(</td></tr>
-<tr><td>`)</td><td class=absent>absent</td><td class=muted>index.txt:`)</td></tr>
-<tr><td>`[</td><td class=absent>absent</td><td class=muted>index.txt:`[</td></tr>
-<tr><td>`]</td><td class=absent>absent</td><td class=muted>index.txt:`]</td></tr>
-<tr><td>`}</td><td class=absent>absent</td><td class=muted>index.txt:`}</td></tr>
 <tr><td>do</td><td class=absent>absent</td><td class=muted>index.txt:do</td></tr>
 <tr><td>dp</td><td class=absent>absent</td><td class=muted>index.txt:dp</td></tr>
-<tr><td>g CTRL-G</td><td class=absent>absent</td><td class=muted>index.txt:g_CTRL-G</td></tr>
 <tr><td>g&lt;</td><td class=absent>absent</td><td class=muted>index.txt:g<</td></tr>
 <tr><td>g&lt;LeftMouse&gt;</td><td class=absent>absent</td><td class=muted>index.txt:g<LeftMouse></td></tr>
 <tr><td>g&lt;RightMouse&gt;</td><td class=absent>absent</td><td class=muted>index.txt:g<RightMouse></td></tr>
-<tr><td>g?</td><td class=absent>absent</td><td class=muted>index.txt:g?</td></tr>
-<tr><td>g??</td><td class=absent>absent</td><td class=muted>index.txt:g?g?</td></tr>
-<tr><td>g?g?</td><td class=absent>absent</td><td class=muted>index.txt:g?g?</td></tr>
 <tr><td>g@{motion}</td><td class=absent>absent</td><td class=muted>index.txt:g@</td></tr>
 <tr><td>gV</td><td class=absent>absent</td><td class=muted>index.txt:gV</td></tr>
-<tr><td>gm</td><td class=absent>absent</td><td class=muted>index.txt:gm</td></tr>
 <tr><td>gr{char}</td><td class=absent>absent</td><td class=muted>index.txt:gr</td></tr>
 <tr><td>gs</td><td class=absent>absent</td><td class=muted>index.txt:gs</td></tr>
-<tr><td>g{char}</td><td class=absent>absent</td><td class=muted>index.txt:g</td></tr>
 <tr><td>q/</td><td class=absent>absent</td><td class=muted>index.txt:q/</td></tr>
 <tr><td>q:</td><td class=absent>absent</td><td class=muted>index.txt:q:</td></tr>
 <tr><td>q?</td><td class=absent>absent</td><td class=muted>index.txt:q?</td></tr>
-<tr><td>z&lt;Left&gt;</td><td class=absent>absent</td><td class=muted>index.txt:z<Left></td></tr>
-<tr><td>z&lt;Right&gt;</td><td class=absent>absent</td><td class=muted>index.txt:z<Right></td></tr>
 <tr><td>z=</td><td class=absent>absent</td><td class=muted>index.txt:z=</td></tr>
 <tr><td>zG</td><td class=absent>absent</td><td class=muted>index.txt:zG</td></tr>
-<tr><td>zH</td><td class=absent>absent</td><td class=muted>index.txt:zH</td></tr>
-<tr><td>zL</td><td class=absent>absent</td><td class=muted>index.txt:zL</td></tr>
 <tr><td>zW</td><td class=absent>absent</td><td class=muted>index.txt:zW</td></tr>
-<tr><td>ze</td><td class=absent>absent</td><td class=muted>index.txt:ze</td></tr>
 <tr><td>zg</td><td class=absent>absent</td><td class=muted>index.txt:zg</td></tr>
-<tr><td>zh</td><td class=absent>absent</td><td class=muted>index.txt:zh</td></tr>
-<tr><td>zl</td><td class=absent>absent</td><td class=muted>index.txt:zl</td></tr>
-<tr><td>zs</td><td class=absent>absent</td><td class=muted>index.txt:zs</td></tr>
 <tr><td>zuG</td><td class=absent>absent</td><td class=muted>index.txt:zuG</td></tr>
 <tr><td>zuW</td><td class=absent>absent</td><td class=muted>index.txt:zuW</td></tr>
 <tr><td>zug</td><td class=absent>absent</td><td class=muted>index.txt:zug</td></tr>
 <tr><td>zuw</td><td class=absent>absent</td><td class=muted>index.txt:zuw</td></tr>
 <tr><td>zw</td><td class=absent>absent</td><td class=muted>index.txt:zw</td></tr>
-<tr><td>zx</td><td class=absent>absent</td><td class=muted>index.txt:zx</td></tr>
-<tr><td>z{char}</td><td class=absent>absent</td><td class=muted>index.txt:z</td></tr>
 <tr><td>z{height}&lt;CR&gt;</td><td class=absent>absent</td><td class=muted>index.txt:zN<CR></td></tr>
-<tr><td>{count}&lt;Del&gt;</td><td class=absent>absent</td><td class=muted>index.txt:N<Del></td></tr>
 </table></details>
 <details><summary>neovim / visual-mode <span class=muted>(85 keys · <span class=ported>41 ported</span> · <span class=partial>42 partial</span>)</span></summary>
 <table><tr><th>Key</th><th>Status</th><th>Source ref</th></tr>

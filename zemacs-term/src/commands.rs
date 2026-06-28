@@ -569,6 +569,20 @@ impl MappableCommand {
         align_view_bottom, "Align view bottom",
         scroll_up, "Scroll view up",
         scroll_down, "Scroll view down",
+        scroll_column_left, "Scroll view left one column (zh)",
+        scroll_column_right, "Scroll view right one column (zl)",
+        scroll_half_column_left, "Scroll view left half a screen (zH)",
+        scroll_half_column_right, "Scroll view right half a screen (zL)",
+        resize_view_wider, "Make current window wider (CTRL-W >)",
+        resize_view_narrower, "Make current window narrower (CTRL-W <)",
+        resize_view_taller, "Make current window taller (CTRL-W +)",
+        resize_view_shorter, "Make current window shorter (CTRL-W -)",
+        resize_view_equalize, "Make all windows equal size (CTRL-W =)",
+        rot13, "ROT13-encode the selection (g?)",
+        insert_digraph, "Insert a digraph by two-character mnemonic (CTRL-K)",
+        copy_char_below, "Insert the character below the cursor (i_CTRL-E)",
+        copy_char_above, "Insert the character above the cursor (i_CTRL-Y)",
+        file_info, "Show file name and cursor position (CTRL-G)",
         fold_create, "Create a fold over the selection (zf)",
         fold_toggle, "Toggle fold under cursor (za)",
         fold_open, "Open fold under cursor (zo)",
@@ -2140,7 +2154,23 @@ fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
             let (view, doc) = current!(cx.editor);
-            let Some(mut pos) = doc.mark(ch) else {
+            // Most marks are looked up directly; vim's structural marks that aren't
+            // stored (paragraph `{`/`}`, sentence `(`/`)` — approximated by paragraph)
+            // are computed from the current cursor on the fly.
+            let computed = doc.mark(ch).or_else(|| {
+                let text = doc.text().slice(..);
+                let range = doc.selection(view.id).primary();
+                match ch {
+                    '}' | ')' => {
+                        Some(zemacs_core::movement::move_next_paragraph(text, range, 1, Movement::Move).cursor(text))
+                    }
+                    '{' | '(' => {
+                        Some(zemacs_core::movement::move_prev_paragraph(text, range, 1, Movement::Move).cursor(text))
+                    }
+                    _ => None,
+                }
+            });
+            let Some(mut pos) = computed else {
                 cx.editor.set_error(format!("Mark '{ch}' not set"));
                 return;
             };
@@ -2600,6 +2630,22 @@ fn switch_to_uppercase(cx: &mut Context) {
 fn switch_to_lowercase(cx: &mut Context) {
     switch_case_impl(cx, |string| {
         string.chunks().map(|chunk| chunk.to_lowercase()).collect()
+    });
+}
+
+// vim `g?` ROT13: rotate every ASCII letter 13 places, leave everything else
+// untouched. The operator/line variants are wired in the keymap; this performs
+// the transform over the current selection.
+fn rot13(cx: &mut Context) {
+    switch_case_impl(cx, |string| {
+        string
+            .chars()
+            .map(|ch| match ch {
+                'a'..='z' => (((ch as u8 - b'a' + 13) % 26) + b'a') as char,
+                'A'..='Z' => (((ch as u8 - b'A' + 13) % 26) + b'A') as char,
+                _ => ch,
+            })
+            .collect()
     });
 }
 
@@ -6984,6 +7030,195 @@ fn align_view_middle(cx: &mut Context) {
         .col
         .saturating_sub((view.inner_area(doc).width as usize) / 2);
     doc.set_view_offset(view.id, offset);
+}
+
+// --- horizontal scroll (vim z h / z l / z H / z L) ---------------------------
+fn scroll_column_impl(cx: &mut Context, cols: usize, right: bool) {
+    let (view, doc) = current!(cx.editor);
+    let mut offset = doc.view_offset(view.id);
+    offset.horizontal_offset = if right {
+        offset.horizontal_offset.saturating_add(cols)
+    } else {
+        offset.horizontal_offset.saturating_sub(cols)
+    };
+    doc.set_view_offset(view.id, offset);
+}
+
+fn scroll_column_right(cx: &mut Context) {
+    let n = cx.count();
+    scroll_column_impl(cx, n, true);
+}
+
+fn scroll_column_left(cx: &mut Context) {
+    let n = cx.count();
+    scroll_column_impl(cx, n, false);
+}
+
+fn scroll_half_column_right(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let half = (view.inner_area(doc).width as usize / 2).max(1);
+    scroll_column_impl(cx, half, true);
+}
+
+fn scroll_half_column_left(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let half = (view.inner_area(doc).width as usize / 2).max(1);
+    scroll_column_impl(cx, half, false);
+}
+
+// --- window width resize (vim CTRL-W < / CTRL-W > / CTRL-W |) -----------------
+fn resize_view_wider(cx: &mut Context) {
+    let delta = cx.count() as i16;
+    let view = cx.editor.tree.focus;
+    cx.editor.tree.resize_horizontal(view, delta);
+}
+
+fn resize_view_narrower(cx: &mut Context) {
+    let delta = cx.count() as i16;
+    let view = cx.editor.tree.focus;
+    cx.editor.tree.resize_horizontal(view, -delta);
+}
+
+fn resize_view_taller(cx: &mut Context) {
+    let delta = cx.count() as i16;
+    let view = cx.editor.tree.focus;
+    cx.editor.tree.resize_vertical(view, delta);
+}
+
+fn resize_view_shorter(cx: &mut Context) {
+    let delta = cx.count() as i16;
+    let view = cx.editor.tree.focus;
+    cx.editor.tree.resize_vertical(view, -delta);
+}
+
+fn resize_view_equalize(cx: &mut Context) {
+    cx.editor.tree.equalize();
+}
+
+// --- digraphs (vim i_CTRL-K {char1}{char2}) ----------------------------------
+// A practical subset of vim's RFC-1345 digraph table: accented Latin letters,
+// common punctuation/symbols, currency, fractions, Greek, and arrows. Typed as
+// two characters after CTRL-K.
+#[rustfmt::skip]
+const DIGRAPHS: &[(char, char, char)] = &[
+    // grave / acute / circumflex / tilde / diaeresis / ring — lowercase
+    ('a','!','à'),('a','\'','á'),('a','>','â'),('a','?','ã'),('a',':','ä'),('a','a','å'),('a','e','æ'),
+    ('e','!','è'),('e','\'','é'),('e','>','ê'),('e',':','ë'),
+    ('i','!','ì'),('i','\'','í'),('i','>','î'),('i',':','ï'),
+    ('o','!','ò'),('o','\'','ó'),('o','>','ô'),('o','?','õ'),('o',':','ö'),('o','/','ø'),
+    ('u','!','ù'),('u','\'','ú'),('u','>','û'),('u',':','ü'),
+    ('n','?','ñ'),('c',',','ç'),('y','\'','ý'),('y',':','ÿ'),('s','s','ß'),
+    // uppercase
+    ('A','!','À'),('A','\'','Á'),('A','>','Â'),('A','?','Ã'),('A',':','Ä'),('A','A','Å'),('A','E','Æ'),
+    ('E','!','È'),('E','\'','É'),('E','>','Ê'),('E',':','Ë'),
+    ('I','!','Ì'),('I','\'','Í'),('I','>','Î'),('I',':','Ï'),
+    ('O','!','Ò'),('O','\'','Ó'),('O','>','Ô'),('O','?','Õ'),('O',':','Ö'),('O','/','Ø'),
+    ('U','!','Ù'),('U','\'','Ú'),('U','>','Û'),('U',':','Ü'),
+    ('N','?','Ñ'),('C',',','Ç'),('Y','\'','Ý'),
+    // punctuation / symbols
+    ('C','o','©'),('R','g','®'),('T','M','™'),('D','G','°'),('+','-','±'),('M','y','µ'),
+    ('S','E','§'),('P','I','¶'),('P','d','£'),('Y','e','¥'),('C','t','¢'),('E','u','€'),
+    ('*','X','×'),('-',':','÷'),('1','4','¼'),('1','2','½'),('3','4','¾'),
+    ('<','<','«'),('>','>','»'),('?','I','¿'),('!','I','¡'),('o','o','°'),
+    ('\'','6','‘'),('\'','9','’'),('"','6','“'),('"','9','”'),('-','N','–'),('-','M','—'),
+    ('R','T','√'),('0','0','∞'),('!','=','≠'),('=','<','≤'),('=','>','≥'),
+    // arrows
+    ('-','>','→'),('<','-','←'),('-','!','↑'),('-','v','↓'),('=','>','⇒'),
+    // greek (lower)
+    ('a','*','α'),('b','*','β'),('g','*','γ'),('d','*','δ'),('e','*','ε'),('z','*','ζ'),
+    ('y','*','η'),('h','*','θ'),('i','*','ι'),('k','*','κ'),('l','*','λ'),('m','*','μ'),
+    ('n','*','ν'),('c','*','ξ'),('p','*','π'),('r','*','ρ'),('s','*','σ'),('t','*','τ'),
+    ('u','*','υ'),('f','*','φ'),('x','*','χ'),('q','*','ψ'),('w','*','ω'),
+    // greek (upper)
+    ('D','*','Δ'),('H','*','Θ'),('L','*','Λ'),('C','*','Ξ'),('P','*','Π'),('S','*','Σ'),
+    ('F','*','Φ'),('Q','*','Ψ'),('W','*','Ω'),('G','*','Γ'),
+];
+
+fn digraph_lookup(a: char, b: char) -> Option<char> {
+    DIGRAPHS
+        .iter()
+        .find(|(x, y, _)| (*x == a && *y == b) || (*x == b && *y == a))
+        .map(|(_, _, c)| *c)
+}
+
+// vim i_CTRL-E / i_CTRL-Y: insert the character that is directly below / above
+// the cursor (same column on the adjacent line).
+fn copy_char_from_adjacent_line(cx: &mut Context, below: bool) {
+    let ch = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let pos = doc.selection(view.id).primary().cursor(text.slice(..));
+        let line = text.char_to_line(pos);
+        let col = pos - text.line_to_char(line);
+        let target = if below {
+            line + 1
+        } else if line == 0 {
+            return;
+        } else {
+            line - 1
+        };
+        if target >= text.len_lines() {
+            return;
+        }
+        let tstart = text.line_to_char(target);
+        let tline = text.line(target);
+        let mut len = tline.len_chars();
+        if len > 0 && tline.get_char(len - 1) == Some('\n') {
+            len -= 1;
+        }
+        if col >= len {
+            return;
+        }
+        text.char(tstart + col)
+    };
+    insert::insert_char(cx, ch);
+}
+
+// vim CTRL-G / g CTRL-G: print the current file name and cursor position.
+fn file_info(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let pos = doc.selection(view.id).primary().cursor(text.slice(..));
+    let line = text.char_to_line(pos) + 1;
+    let total = text.len_lines();
+    let col = pos - text.line_to_char(line - 1) + 1;
+    let name = doc
+        .path()
+        .and_then(|p| p.file_name())
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "[No Name]".to_string());
+    let modified = if doc.is_modified() { " [Modified]" } else { "" };
+    let pct = if total > 1 { (line - 1) * 100 / (total - 1) } else { 0 };
+    cx.editor.set_status(format!(
+        "\"{name}\"{modified} line {line} of {total} col {col} --{pct}%--"
+    ));
+}
+
+fn copy_char_below(cx: &mut Context) {
+    copy_char_from_adjacent_line(cx, true);
+}
+
+fn copy_char_above(cx: &mut Context) {
+    copy_char_from_adjacent_line(cx, false);
+}
+
+fn insert_digraph(cx: &mut Context) {
+    cx.editor
+        .autoinfo
+        .replace(Info::new("Digraph", &[("{c1}{c2}", "two-character mnemonic")]));
+    cx.on_next_key(move |cx, ev1| {
+        cx.editor.autoinfo = None;
+        let Some(c1) = ev1.char() else { return };
+        cx.on_next_key(move |cx, ev2| {
+            let Some(c2) = ev2.char() else { return };
+            match digraph_lookup(c1, c2) {
+                Some(ch) => insert::insert_char(cx, ch),
+                None => cx
+                    .editor
+                    .set_error(format!("E1393: digraph '{c1}{c2}' not found")),
+            }
+        });
+    });
 }
 
 // --- code folding (vim z* family) --------------------------------------------

@@ -465,6 +465,14 @@ impl Tree {
         }
     }
 
+    /// Height of a node's current laid-out area (view or container).
+    fn node_height(&self, id: ViewId) -> u16 {
+        match &self.nodes[id].content {
+            Content::View(view) => view.area.height,
+            Content::Container(container) => container.area.height,
+        }
+    }
+
     /// If `(col, row)` falls on a vertical divider between two side-by-side views,
     /// return the view immediately to its left (whose right edge can be dragged).
     pub fn split_divider_at(&self, col: u16, row: u16) -> Option<ViewId> {
@@ -523,6 +531,59 @@ impl Tree {
         }
         self.recalculate();
         true
+    }
+
+    /// Resize the given view's height by `delta` rows, borrowing from the next
+    /// sibling in a horizontally-laid-out (stacked) container. Mirror of
+    /// `resize_horizontal` for the vertical axis (vim CTRL-W + / CTRL-W -).
+    pub fn resize_vertical(&mut self, view: ViewId, delta: i16) -> bool {
+        if delta == 0 {
+            return false;
+        }
+        let parent = self.nodes[view].parent;
+        let (layout, children) = match &self.nodes[parent].content {
+            Content::Container(c) => (c.layout, c.children.clone()),
+            Content::View(_) => return false,
+        };
+        if layout != Layout::Horizontal {
+            return false;
+        }
+        let Some(idx) = children.iter().position(|c| *c == view) else {
+            return false;
+        };
+        if idx + 1 >= children.len() {
+            return false;
+        }
+
+        const MIN: f32 = 2.0;
+        let mut heights: Vec<f32> = children
+            .iter()
+            .map(|c| self.node_height(*c) as f32)
+            .collect();
+
+        let new_top = (heights[idx] + delta as f32).max(MIN);
+        let applied = new_top - heights[idx];
+        let new_bottom = heights[idx + 1] - applied;
+        if new_bottom < MIN {
+            return false;
+        }
+        heights[idx] = new_top;
+        heights[idx + 1] = new_bottom;
+
+        for (child, height) in children.iter().zip(heights) {
+            self.nodes[*child].weight = height;
+        }
+        self.recalculate();
+        true
+    }
+
+    /// Reset every view's size weight to equal (vim CTRL-W =).
+    pub fn equalize(&mut self) {
+        let ids: Vec<ViewId> = self.nodes.iter().map(|(id, _)| id).collect();
+        for id in ids {
+            self.nodes[id].weight = 1.0;
+        }
+        self.recalculate();
     }
 
     pub fn traverse(&self) -> Traverse<'_> {

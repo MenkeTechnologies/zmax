@@ -997,6 +997,14 @@ impl Ide {
     }
 
     fn refresh(&mut self, cx: &mut crate::compositor::Context) {
+        // The focused tree node is not guaranteed to be a View — e.g. transiently
+        // during startup/session-restore, or after a buffer that failed to open.
+        // All the work below dereferences the current view (`doc!`, jumplist, etc.),
+        // so bail out rather than panic in `tree.get(focus)` when there isn't one.
+        if cx.editor.tree.try_get(cx.editor.tree.focus).is_none() {
+            return;
+        }
+
         // LOTR (Lord Of The Registers): live snapshot of every register.
         self.registers = cx
             .editor
@@ -1138,10 +1146,13 @@ impl Ide {
             }
         }
 
-        // Jumplist of the focused view — only while its tab is open.
-        if self.bottom_tab == BottomTab::Jumplist {
+        // Jumplist of the focused view. Rebuilt every refresh (not just while the tab is
+        // open) so the JUMPS tab label can show an always-current count. `focus` is not
+        // guaranteed to be a View (e.g. at startup, or while a non-editor pane is focused),
+        // so resolve it fallibly and skip rather than panic.
+        if let Some(focused_view) = cx.editor.tree.try_get(cx.editor.tree.focus) {
             self.jumplist_rows.clear();
-            let focused_doc = cx.editor.tree.get(cx.editor.tree.focus).doc;
+            let focused_doc = focused_view.doc;
             for (view, focused) in cx.editor.tree.views() {
                 if !focused {
                     continue;
@@ -1167,10 +1178,10 @@ impl Ide {
             }
         }
 
-        // Recently opened files — only while its tab is open.
-        if self.bottom_tab == BottomTab::Recent {
-            self.recent_rows = crate::recent_files::load();
-        }
+        // Recently opened files. Loaded every refresh (the store is a small file and
+        // rendering is event-driven, not a constant tick) so the RECENT tab label can
+        // show an always-current count.
+        self.recent_rows = crate::recent_files::load();
     }
 
     fn render_structure(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme) {
@@ -1346,14 +1357,14 @@ impl Ide {
         x += mw + 1;
 
         // Jumplist tab
-        let jlabel = " JUMPS ".to_string();
+        let jlabel = format!(" JUMPS {} ", self.jumplist_rows.len());
         let jw = jlabel.chars().count() as u16;
         surface.set_stringn(x, area.y, &jlabel, area.width as usize, if self.bottom_tab == BottomTab::Jumplist { on } else { off });
         self.bottom_hits.push((x, x + jw, BottomHit::TabJumplist));
         x += jw + 1;
 
         // Recent files tab
-        let nlabel = " RECENT ".to_string();
+        let nlabel = format!(" RECENT {} ", self.recent_rows.len());
         let nw = nlabel.chars().count() as u16;
         surface.set_stringn(x, area.y, &nlabel, area.width as usize, if self.bottom_tab == BottomTab::Recent { on } else { off });
         self.bottom_hits.push((x, x + nw, BottomHit::TabRecent));

@@ -1130,15 +1130,18 @@ impl EditorView {
                 execute_command(command);
             }
             KeymapResult::Pending(node) => {
-                // Suppress the which-key popup for prefix keys listed in `auto-info-exclude`,
-                // matched on the first key of the pending sequence (e.g. "g"/"y"/"z"/"space").
+                // Decide whether to show the which-key popup, matched on the first key of the
+                // pending sequence (e.g. "g"/"y"/"z"/">"/"space").
+                let config = cxt.editor.config();
                 let suppressed = self.keymaps.pending().first().is_some_and(|key| {
                     let key = key.to_string();
-                    cxt.editor
-                        .config()
-                        .auto_info_exclude
-                        .iter()
-                        .any(|excluded| excluded == &key)
+                    if config.auto_info_leader_only {
+                        // Only the leader (space) popup is shown; every other prefix
+                        // (c, d, g, z, >, ci, di, ...) is suppressed.
+                        key != "space"
+                    } else {
+                        config.auto_info_exclude.iter().any(|excluded| excluded == &key)
+                    }
                 });
                 cxt.editor.autoinfo = if suppressed {
                     None
@@ -1789,7 +1792,14 @@ impl Component for EditorView {
                                     self.change_buf.push(key);
                                 }
                             }
-                            let pre_version = doc!(cx.editor).version();
+                            // `None` when there is no current view (e.g. the editor
+                            // started with only a picker open). Resolved fallibly so a
+                            // command that closes the last view below can't panic here.
+                            let pre_version = cx
+                                .editor
+                                .tree
+                                .try_get(cx.editor.tree.focus)
+                                .map(|_| doc!(cx.editor).version());
 
                             self.command_mode(mode, &mut cx, key);
 
@@ -1798,9 +1808,19 @@ impl Component for EditorView {
                                     // entered insert (i/a/o/cw/...) — keep recording
                                     // through the insert session.
                                     self.recording_insert_change = true;
-                                } else if doc!(cx.editor).version() != pre_version {
-                                    // a normal/select-mode change (dd, x, p, J, >>, ...)
-                                    self.last_change = self.change_buf.clone();
+                                } else if let Some(pre) = pre_version {
+                                    // The command may have closed the view (`:q`, ZZ, a
+                                    // misparsed terminal sequence, …); only inspect the
+                                    // post-state document when one still exists.
+                                    let post_version = cx
+                                        .editor
+                                        .tree
+                                        .try_get(cx.editor.tree.focus)
+                                        .map(|_| doc!(cx.editor).version());
+                                    if post_version.is_some_and(|post| post != pre) {
+                                        // a normal/select-mode change (dd, x, p, J, >>, ...)
+                                        self.last_change = self.change_buf.clone();
+                                    }
                                 }
                             }
                         }

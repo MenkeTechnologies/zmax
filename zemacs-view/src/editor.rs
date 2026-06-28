@@ -2091,7 +2091,16 @@ impl Editor {
                 return;
             }
             Action::Load => {
-                let view_id = view!(self).id;
+                // Load into the current view — but on the very first open (e.g. restoring
+                // a session into a fresh editor) there is no view yet. Create one instead
+                // of dereferencing a nonexistent focus (which panicked in `tree.get`).
+                let view_id = match self.tree.try_get(self.tree.focus) {
+                    Some(view) => view.id,
+                    None => {
+                        let view = View::new(id, self.config().gutters.clone());
+                        self.tree.split(view, Layout::Vertical)
+                    }
+                };
                 let doc = doc_mut!(self, &id);
                 doc.ensure_view_init(view_id);
                 doc.mark_as_focused();

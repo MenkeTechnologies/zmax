@@ -241,17 +241,31 @@ impl Application {
             if restored {
                 let data = appdata.as_ref().unwrap();
                 for file in &data.open_files {
-                    let _ = editor.open(std::path::Path::new(file), Action::Load);
+                    // Only reopen regular files; a persisted path that is now a directory,
+                    // deleted, or a special file must not be loaded as a buffer.
+                    let path = std::path::Path::new(file);
+                    if path.is_file() {
+                        let _ = editor.open(path, Action::Load);
+                    }
                 }
                 if let Some(focused) = &data.focused_file {
-                    if let Ok(doc_id) = editor.open(std::path::Path::new(focused), Action::Replace) {
-                        let view_id = editor.tree.focus;
-                        if let Some(pos) = data.cursor {
-                            let doc = doc_mut!(editor, &doc_id);
-                            let pos = pos.min(doc.text().len_chars());
-                            doc.set_selection(view_id, Selection::point(pos));
+                    let focused_path = std::path::Path::new(focused);
+                    if focused_path.is_file() {
+                        if let Ok(doc_id) = editor.open(focused_path, Action::Replace) {
+                            let view_id = editor.tree.focus;
+                            if let Some(pos) = data.cursor {
+                                let doc = doc_mut!(editor, &doc_id);
+                                let pos = pos.min(doc.text().len_chars());
+                                doc.set_selection(view_id, Selection::point(pos));
+                            }
                         }
                     }
+                }
+                // If every persisted path failed to open (deleted, now a directory,
+                // an irregular/binary file, …) the tree can be left without a focused
+                // View, which would panic the first render. Guarantee a scratch buffer.
+                if editor.tree.try_get(editor.tree.focus).is_none() {
+                    editor.new_file(Action::VerticalSplit);
                 }
             } else {
                 editor.new_file(Action::VerticalSplit);

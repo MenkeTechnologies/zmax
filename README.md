@@ -7,6 +7,14 @@
 ╚══════╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝
 ```
 
+[![Build](https://github.com/MenkeTechnologies/zemacs/actions/workflows/build.yml/badge.svg)](https://github.com/MenkeTechnologies/zemacs/actions/workflows/build.yml)
+![Rust](https://img.shields.io/badge/Rust-2021-05d9e8?style=flat-square)
+![license](https://img.shields.io/badge/license-MPL--2.0-39ff14?style=flat-square)
+[![docs](https://img.shields.io/badge/docs-online-9b5de5?style=flat-square)](https://menketechnologies.github.io/zemacs/)
+![status](https://img.shields.io/badge/status-early-ff2a6d?style=flat-square)
+
+### `[A MODAL EDITOR ON THE HELIX ENGINE // VIM KEYS · EMACS · SPACEMACS]`
+
 # zemacs
 
 A modal text editor in Rust, forked from [Helix](https://github.com/helix-editor/helix).
