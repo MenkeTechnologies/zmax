@@ -108,6 +108,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x x",   "Text",    ":run-shell-command"),                 // SPC x x : quickrun (run a command)
     ("space u space b d", "Universal", ":buffer-close"),              // SPC u SPC b d : kill buffer + window
     ("space u space b m", "Universal", ":buffer-close-others"),       // SPC u SPC b m : kill other buffers
+    ("space b . d", "Buffers", ":buffer-close"),                     // SPC b . d : kill current buffer
+    ("space b . x", "Buffers", ":buffer-close"),                     // SPC b . x : kill buffer and window
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes
@@ -595,6 +597,15 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "2" => vsplit,                    // SPC w 2 : two-window layout (split)
             "3" => vsplit,                    // SPC w 3 : three-window layout (split)
             "4" => vsplit,                    // SPC w 4 : four-window layout (split)
+            "_" => wonly,                     // SPC w _ : maximize window horizontally
+            "D" => wclose,                    // SPC w D : delete another window
+            "M" => transpose_view,            // SPC w M : swap windows
+            "." => { "Window transient"
+                "h" => jump_view_left,        // SPC w . h : go to window left
+                "j" => jump_view_down,        // SPC w . j : go to window below
+                "k" => jump_view_up,          // SPC w . k : go to window above
+                "l" => jump_view_right,       // SPC w . l : go to window right
+            },
         },
 
         // --- scrolling / jumps ---------------------------------------------
@@ -701,6 +712,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "l" => yank_file_path_with_line,  // SPC f y l : copy path:line
                     "c" => yank_file_path_with_line_col, // SPC f y c : copy path:line:col
                     "d" => yank_file_dir,             // SPC f y d : copy directory
+                    "N" => yank_file_name,            // SPC f y N : copy file name (no ext, approx)
+                    "C" => yank_file_path,            // SPC f y C : copy path relative to project
+                    "D" => yank_file_dir,             // SPC f y D : copy directory relative to project
+                    "L" => yank_file_path_with_line,  // SPC f y L : copy path:line relative
+                    "Y" => yank_file_path,            // SPC f y Y : copy full file path
                 },
             },
             "b" => { "Buffers"
@@ -716,6 +732,16 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "l" => hsplit_new,             // SPC b N l : new buffer in window right
                     // SPC b N n / i / C-i -> :new via typable table
                 },
+                "." => { "Buffer transient"
+                    "n" => goto_next_buffer,       // SPC b . n : next buffer
+                    "N" => goto_previous_buffer,   // SPC b . N : previous buffer
+                    "p" => goto_previous_buffer,   // SPC b . p : previous buffer
+                    "b" => buffer_picker,          // SPC b . b : list buffers
+                    "z" => align_view_center,      // SPC b . z : recenter buffer in window
+                    "o" => rotate_view,            // SPC b . o : focus other window
+                    // SPC b . d / x -> :buffer-close via typable table
+                },
+                "P" => [select_all, replace_with_yanked], // SPC b P : paste-replace buffer
                 "Y" => [select_all, yank_to_clipboard, collapse_selection], // SPC b Y
             },
             // Kept identical to the `C-w` window submap (see aliased-modes test).
@@ -773,6 +799,15 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "2" => vsplit,
                 "3" => vsplit,
                 "4" => vsplit,
+                "_" => wonly,
+                "D" => wclose,
+                "M" => transpose_view,
+                "." => { "Window transient"
+                    "h" => jump_view_left,
+                    "j" => jump_view_down,
+                    "k" => jump_view_up,
+                    "l" => jump_view_right,
+                },
             },
             "s" => { "Search"
                 "s" => global_search,              // SPC s s
@@ -839,6 +874,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "t" => toggle_comments,            // SPC c t : comment to line
                 "y" => [yank, toggle_comments],    // SPC c y : comment and yank
                 "d" => wclose,                     // SPC c d : close compilation window
+                "L" => toggle_line_comments,       // SPC c L : invert/toggle comment lines
+                "T" => toggle_comments,            // SPC c T : invert comment to line
+                "Y" => [yank, toggle_comments],    // SPC c Y : invert comment and yank
             },
             "j" => { "Jump"
                 "i" => symbol_picker,              // SPC j i
@@ -858,6 +896,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "=" => format_selections,          // SPC j = : format region/buffer
                 "+" => format_selections,          // SPC j + : format region/buffer (alt)
                 "(" => goto_prev_unmatched_paren,  // SPC j ( : jump to first unbalanced paren
+                "D" => file_explorer_in_current_buffer_directory, // SPC j D : current directory listing
+                "U" => goto_file,                  // SPC j U : select URL and follow
             },
             "F" => { "Frames"
                 "n" => hsplit_new,                 // SPC F n : create a new frame (new window)
