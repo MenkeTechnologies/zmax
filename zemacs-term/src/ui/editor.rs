@@ -198,6 +198,19 @@ impl EditorView {
                     ))
                 }
             }
+            IdeAction::ShowContextMenu {
+                path,
+                is_dir,
+                row,
+                col,
+            } => Some(Box::new(
+                move |compositor: &mut crate::compositor::Compositor,
+                      _cx: &mut crate::compositor::Context| {
+                    compositor.push(Box::new(super::ide::file_context_menu(
+                        path, is_dir, row, col,
+                    )));
+                },
+            )),
         }
     }
 

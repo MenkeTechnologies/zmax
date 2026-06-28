@@ -416,6 +416,7 @@ impl MappableCommand {
         buffer_picker, "Open buffer picker",
         jumplist_picker, "Open jumplist picker",
         register_picker, "Browse registers and paste the chosen one",
+        theme_picker, "Open fuzzy theme picker with live preview",
         wrap_sexp, "Wrap the selection in parentheses",
         symbol_picker, "Open symbol picker",
         syntax_symbol_picker, "Open symbol picker from syntax information",
@@ -5870,6 +5871,43 @@ fn register_picker(cx: &mut Context) {
     let picker = Picker::new(columns, 1, items, (), |cx, meta, _action| {
         paste(cx.editor, meta.name, Paste::After, 1);
     });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Fuzzy theme picker with live preview, like vim/fzf.vim `:Colors`. Bound to `SPC T c`.
+/// Moving the highlight previews the theme live; Enter commits, Esc reverts.
+fn theme_picker(cx: &mut Context) {
+    let current = cx.editor.theme.name().to_string();
+    let themes = crate::commands::typed::all_theme_names();
+    let initial = themes.iter().position(|n| n == &current).unwrap_or(0) as u32;
+
+    let columns = [ui::PickerColumn::new(
+        "theme",
+        |name: &String, _: &()| name.as_str().into(),
+    )];
+
+    let picker = Picker::new(columns, 0, themes, (), |cx, name: &String, _action| {
+        match cx.editor.theme_loader.load(name) {
+            Ok(theme) => {
+                if let Err(err) = cx.editor.set_theme(theme) {
+                    cx.editor.set_error(format!("failed to set theme '{name}': {err}"));
+                }
+            }
+            Err(err) => cx.editor.set_error(format!("failed to load theme '{name}': {err}")),
+        }
+    })
+    .with_initial_cursor(initial)
+    .with_on_highlight(|cx, name: Option<&String>| {
+        if let Some(name) = name {
+            if let Ok(theme) = cx.editor.theme_loader.load(name) {
+                let _ = cx.editor.set_theme_preview(theme);
+            }
+        }
+    })
+    .with_on_abort(|cx| {
+        let _ = cx.editor.unset_theme_preview();
+    });
+
     cx.push_layer(Box::new(overlaid(picker)));
 }
 

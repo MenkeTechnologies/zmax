@@ -98,6 +98,13 @@ impl FileTree {
         }
     }
 
+    /// The (path, is_dir) at a visible list row, without changing selection or
+    /// expand state. Used by the right-click context menu.
+    pub fn path_at_row(&self, list_row: usize) -> Option<(std::path::PathBuf, bool)> {
+        let idx = self.scroll + list_row;
+        self.rows.get(idx).map(|r| (r.path.clone(), r.is_dir))
+    }
+
     /// Mouse click on the visible list row `list_row` (0-based, below the header):
     /// select it, then toggle a directory or open a file.
     pub fn click_row(&mut self, list_row: usize) -> TreeAction {
