@@ -6310,5 +6310,205 @@
       "key:normal:space t C-i"
     ],
     "note": "global indent guide -> :toggle indent-guides"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_hash",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g #"
+    ],
+    "note": "g#: search word backward (no boundaries)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_star",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g *"
+    ],
+    "note": "g*: search word forward (no boundaries)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_lt_down_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g down"
+    ],
+    "note": "g<Down> = gj"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_lt_up_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g up"
+    ],
+    "note": "g<Up> = gk"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_lt_home_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g home"
+    ],
+    "note": "g<Home> = g0"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_lt_end_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g end"
+    ],
+    "note": "g<End> = g$"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gh",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g H"
+    ],
+    "note": "gH: start linewise Select mode"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_ctrl_h",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g C-h"
+    ],
+    "note": "g CTRL-H: blockwise Select (emulated)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_rbracket",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g ]"
+    ],
+    "note": "g]: :tselect tag -> goto_definition"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_ctrl_rbracket",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g C-]"
+    ],
+    "note": "g CTRL-]: :tjump -> goto_definition"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_lt_tab_gt",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g tab"
+    ],
+    "note": "g<Tab>: last accessed tab -> alt file"
+  },
+  {
+    "spec_id": "neovim.normal-mode.za",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z A"
+    ],
+    "note": "zA: toggle fold (recursive approx)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zf",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z F"
+    ],
+    "note": "zF: create a fold for N lines"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zd",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z D"
+    ],
+    "note": "zD: delete folds recursively (approx)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zi",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z i"
+    ],
+    "note": "zi: toggle foldenable (approx)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zm_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z m"
+    ],
+    "note": "zm: fold more (close all approx)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zr_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z r"
+    ],
+    "note": "zr: fold reduce (open all approx)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zn_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z n"
+    ],
+    "note": "zn: foldenable off (open all approx)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zp",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z p"
+    ],
+    "note": "zp: block paste (approx paste_after)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zp_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z P"
+    ],
+    "note": "zP: block paste (approx paste_before)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zy",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z y"
+    ],
+    "note": "zy: yank without trailing spaces (approx)"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_backslash_ctrl_n",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-\\ C-n"
+    ],
+    "note": "CTRL-\\ CTRL-N: leave insert to normal"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_backslash_ctrl_g",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-\\ C-g"
+    ],
+    "note": "CTRL-\\ CTRL-G: leave insert to normal"
+  },
+  {
+    "spec_id": "neovim.visual-mode.ctrl_backslash_ctrl_n",
+    "status": "ported",
+    "evidence": [
+      "key:select:C-\\ C-n"
+    ],
+    "note": "CTRL-\\ CTRL-N: stop Visual to normal"
+  },
+  {
+    "spec_id": "neovim.visual-mode.ctrl_backslash_ctrl_g",
+    "status": "ported",
+    "evidence": [
+      "key:select:C-\\ C-g"
+    ],
+    "note": "CTRL-\\ CTRL-G: stop Visual to normal"
   }
 ]

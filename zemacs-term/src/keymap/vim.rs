@@ -415,6 +415,17 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "." => goto_last_modification,
             "'" => goto_mark_line,             // g'{mark}: like ' but keep jumplist
             "`" => goto_mark,                  // g`{mark}: like ` but keep jumplist
+            "down" => move_line_down,          // g<Down>: like gj (display line down)
+            "up"   => move_line_up,            // g<Up>: like gk (display line up)
+            "home" => goto_line_start,         // g<Home>: like g0
+            "end"  => goto_line_end,           // g<End>: like g$
+            "#" => [search_selection, search_prev], // g#: search word backward (no \<\> bounds)
+            "*" => [search_selection, search_next], // g*: search word forward (no \<\> bounds)
+            "H" => [extend_to_line_bounds, select_mode], // gH: start linewise Select mode
+            "C-h" => select_mode,              // g CTRL-H: start blockwise Select mode (emulated)
+            "]" => goto_definition,            // g]: :tselect tag under cursor
+            "C-]" => goto_definition,          // g CTRL-]: :tjump tag under cursor
+            "tab" => goto_last_accessed_file,  // g<Tab>: go to last accessed tabpage
         },
 
         // --- z submap (view + folds) ---------------------------------------
@@ -436,7 +447,17 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "R" => fold_open_all,     // zR open all folds
             "M" => fold_close_all,    // zM close all folds
             "d" => fold_delete,       // zd delete fold under cursor
+            "D" => fold_delete,       // zD delete folds recursively (approx: at cursor)
             "E" => fold_delete_all,   // zE eliminate all folds
+            "A" => fold_toggle,       // zA toggle fold recursively (approx: at cursor)
+            "i" => fold_toggle,       // zi toggle foldenable (approx: fold at cursor)
+            "m" => fold_close_all,    // zm fold more (decrease foldlevel)
+            "r" => fold_open_all,     // zr fold reduce (increase foldlevel)
+            "n" => fold_open_all,     // zn foldenable off (show all text)
+            "F" => [extend_to_line_bounds, fold_create], // zF create a fold for N lines
+            "p" => paste_after,       // zp block paste without trailing spaces (approx)
+            "P" => paste_before,      // zP block paste without trailing spaces (approx)
+            "y" => [yank, collapse_selection], // zy yank without trailing spaces (approx)
             "j" => fold_next,         // zj move to next fold
             "k" => fold_prev,         // zk move to previous fold
             // zf{motion}: create a fold over the motion (vim operator)
@@ -949,6 +970,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
         ":" => command_mode,
         "C-c" => [save_visual_selection, collapse_selection, normal_mode], // stop Visual mode
+        // CTRL-\ CTRL-N / CTRL-\ CTRL-G: stop Visual mode, go to Normal mode
+        "C-\\" => { "To normal"
+            "C-n" => [save_visual_selection, collapse_selection, normal_mode],
+            "C-g" => [save_visual_selection, collapse_selection, normal_mode],
+        },
         "esc" => [save_visual_selection, collapse_selection, normal_mode],
     });
 
@@ -957,6 +983,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "esc" => [mark_insert_exit, normal_mode],
         "C-c" => [mark_insert_exit, normal_mode],
         "C-[" => [mark_insert_exit, normal_mode],   // CTRL-[ = <Esc>
+        // CTRL-\ CTRL-N / CTRL-\ CTRL-G: leave insert for Normal mode
+        "C-\\" => { "To normal"
+            "C-n" => [mark_insert_exit, normal_mode],
+            "C-g" => [mark_insert_exit, normal_mode],
+        },
 
         "backspace" | "C-h" => delete_char_backward,
         "del"               => delete_char_forward,
