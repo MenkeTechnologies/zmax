@@ -605,6 +605,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "j" => jump_view_down,        // SPC w . j : go to window below
                 "k" => jump_view_up,          // SPC w . k : go to window above
                 "l" => jump_view_right,       // SPC w . l : go to window right
+                "/" => vsplit,                // SPC w . / : vertical split
+                "-" => hsplit,                // SPC w . - : horizontal split
+                "d" => wclose,                // SPC w . d : delete window
+                "D" => wonly,                 // SPC w . D : delete other windows
+                "o" => rotate_view,           // SPC w . o : cycle windows
+                "z" => align_view_center,     // SPC w . z : recenter
             },
         },
 
@@ -807,6 +813,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "j" => jump_view_down,
                     "k" => jump_view_up,
                     "l" => jump_view_right,
+                    "/" => vsplit,
+                    "-" => hsplit,
+                    "d" => wclose,
+                    "D" => wonly,
+                    "o" => rotate_view,
+                    "z" => align_view_center,
                 },
             },
             "s" => { "Search"
@@ -821,25 +833,35 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "`" => jump_backward,              // SPC s ` : back to pre-jump location
                 "P" => global_search,              // SPC s P : search in a project
                 "d" => global_search,              // SPC s d : search current directory
+                "D" => global_search,              // SPC s D : search current directory (alt tool)
                 "B" => global_search,              // SPC s B : search all open buffers
+                "F" => global_search,              // SPC s F : search files in a directory
                 "l" => last_picker,                // SPC s l : resume last search
                 "H" => search_next,                // SPC s H : go to last search occurrence
-                // ag / grep / ack search families all map to project-wide search.
+                // ag / grep / ack / rg families all map to project-wide search;
+                // uppercase variants are the "with default input" forms.
                 "a" => { "ag"
                     "a" => global_search, "b" => global_search, "d" => global_search,
                     "f" => global_search, "p" => global_search,
+                    "A" => global_search, "B" => global_search, "D" => global_search,
+                    "F" => global_search, "P" => global_search,
                 },
                 "g" => { "grep"
                     "g" => global_search, "b" => global_search, "f" => global_search,
                     "d" => global_search, "p" => global_search,
+                    "G" => global_search, "B" => global_search, "F" => global_search,
                 },
                 "k" => { "ack"
                     "b" => global_search, "d" => global_search,
                     "f" => global_search, "p" => global_search,
+                    "B" => global_search, "D" => global_search,
+                    "F" => global_search, "P" => global_search,
                 },
                 "r" => { "rg"
                     "r" => global_search, "b" => global_search, "f" => global_search,
                     "d" => global_search, "p" => global_search,
+                    "R" => global_search, "B" => global_search, "F" => global_search,
+                    "D" => global_search, "P" => global_search,
                 },
             },
             "p" => { "Project"
