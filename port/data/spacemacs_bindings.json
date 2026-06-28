@@ -3702,5 +3702,1917 @@
   "name": "SPC h T v",
   "desc": "access evil-tutor lessons",
   "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_a_c",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC a c",
+  "desc": "calc-dispatch",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_a_t_r_r",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC a t r r",
+  "desc": "launch ranger / dirvish full layout",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+tools/ranger/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_a_t_r_d",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC a t r d",
+  "desc": "deer / dirvish single column",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+tools/ranger/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_o_c",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC o c",
+  "desc": "example user binding: run org mode capture (SPC o is reserved for user)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f D",
+  "desc": "delete a file and the associated buffer without confirmation",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_fU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f F",
+  "desc": "try to open the file under point",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_jU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f J",
+  "desc": "open a junk file, in mode determined by the file extension (defaulting to fundamental mode)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_lU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f L",
+  "desc": "Locate a file (using locate)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_sU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f S",
+  "desc": "save all files",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_r_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f r",
+  "desc": "open a recent file",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_y_nU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f y N",
+  "desc": "show and copy current file name without extension in the minibuffer",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_y_cU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f y C",
+  "desc": "show and copy current file path relative to the project root with line and column number",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_y_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f y D",
+  "desc": "show and copy current directory path relative to the project root",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_y_lU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f y L",
+  "desc": "show and copy current file path relative to the project root with line number",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_y_yU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f y Y",
+  "desc": "show and copy current file path relative to the project root",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_e_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f e D",
+  "desc": "open ediff buffer of ~/.spacemacs and dotspacemacs-template.el",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_e_eU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f e E",
+  "desc": "reload the environment variables by executing dotspacemacs/user-env",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_f_e_iU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC f e I",
+  "desc": "open the early-init.el",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b D",
+  "desc": "kill a visible buffer using ace-window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_cU_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b C-D",
+  "desc": "kill buffers using a regular expression",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_hU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b H",
+  "desc": "open or select the *Help* buffer",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_mU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b M",
+  "desc": "kill all buffers matching the regexp",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_pU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b P",
+  "desc": "copy clipboard and replace buffer (useful when pasting from a browser)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_w_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b w",
+  "desc": "toggle read-only (writable state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_nU_iU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b N I",
+  "desc": "create an indirect buffer that is clone of currently opened buffer, and open it in other window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_1xx9",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . 1..9",
+  "desc": "move current buffer to nth window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_cU_1xxcU_9",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . C-1..C-9",
+  "desc": "switch focus to nth window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_mU_1xxmU_9",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . M-1..M-9",
+  "desc": "swap current buffer with nth window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_b",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . b",
+  "desc": "list all buffers with helm/ivy (avoid useless buffers)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_d",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . d",
+  "desc": "kill current buffer (transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_cU_d",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . C-d",
+  "desc": "bury current buffer",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_n",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . n",
+  "desc": "go to next buffer (avoid useless buffers)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_nU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . N",
+  "desc": "go to previous buffer (avoid useless buffers)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_p",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . p",
+  "desc": "go to previous buffer (avoid useless buffers)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_o",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . o",
+  "desc": "switch focus to other window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_x",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . x",
+  "desc": "kill buffer and window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_z",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . z",
+  "desc": "recenter buffer in window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_b_x_q",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC b . q",
+  "desc": "quit transient state",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w _",
+  "desc": "maximize window horizontally",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_3",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w |",
+  "desc": "maximize window vertically",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_c_cU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w c C",
+  "desc": "toggle visual distraction free mode",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w D",
+  "desc": "delete another window using ace-window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_fU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w F",
+  "desc": "create new frame",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_hU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w H",
+  "desc": "move window to the left",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_jU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w J",
+  "desc": "move window to the bottom",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_kU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w K",
+  "desc": "move window to the top",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_lU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w L",
+  "desc": "move window to the right",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_mU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w M",
+  "desc": "swap windows using ace-window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_rU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w R",
+  "desc": "rotate windows backward",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_s_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w s",
+  "desc": "horizontal split",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_5",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w -",
+  "desc": "horizontal split",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_v_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w v",
+  "desc": "vertical split",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_slash",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w /",
+  "desc": "vertical split",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_wU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w W",
+  "desc": "select window using ace-window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_4",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w [",
+  "desc": "shrink window horizontally (enter transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_5",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w ]",
+  "desc": "enlarge window horizontally (enter transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_6",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w {",
+  "desc": "shrink window vertically (enter transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_7",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w }",
+  "desc": "enlarge window vertically (enter transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_8",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w .",
+  "desc": "initiate window transient state",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_0xx9",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . 0..9",
+  "desc": "go to window number n",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_slash",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . /",
+  "desc": "vertical split (transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_9",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . -",
+  "desc": "horizontal split (transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_x",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . |",
+  "desc": "maximize window vertically (transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_x_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . _",
+  "desc": "maximize window horizontally (transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_x_3",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . [",
+  "desc": "shrink window horizontally (transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_x_4",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . ]",
+  "desc": "enlarge window horizontally (transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_x_5",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . {",
+  "desc": "shrink window vertically (transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_x_6",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . }",
+  "desc": "enlarge window vertically (transient state)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_d",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . d",
+  "desc": "delete window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . D",
+  "desc": "delete other windows",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_g",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . g",
+  "desc": "toggle golden-ratio on and off",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_h",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . h",
+  "desc": "go to window on the left",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_j",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . j",
+  "desc": "go to window below",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_k",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . k",
+  "desc": "go to window above",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_l",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . l",
+  "desc": "go to window on the right",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_hU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . H",
+  "desc": "move window to the left",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_jU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . J",
+  "desc": "move window to the bottom",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_kU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . K",
+  "desc": "move bottom to the top",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_lU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . L",
+  "desc": "move window to the right",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_m",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . m",
+  "desc": "toggle maximization of current window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_o",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . o",
+  "desc": "focus other frame",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_a",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . a",
+  "desc": "call ace window mode",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_r",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . r",
+  "desc": "rotate windows forward",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_rU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . R",
+  "desc": "rotate windows backward",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_s",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . s",
+  "desc": "horizontal split",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_sU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . S",
+  "desc": "horizontal split and focus new window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_u",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . u",
+  "desc": "undo window layout (used to effectively undo a closed window)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_uU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . U",
+  "desc": "redo window layout",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_v",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . v",
+  "desc": "vertical split",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_vU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . V",
+  "desc": "vertical split and focus new window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_w",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . w",
+  "desc": "focus other window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_w_x_x_7",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC w . x",
+  "desc": "delete window and kill buffer",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_0xx9",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l 0..9",
+  "desc": "switch to nth layout",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_cU_0xxcU_9",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l C-0..C-9",
+  "desc": "switch to nth layout and keep the transient state active",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_tUaUbU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l TAB",
+  "desc": "switch to the latest layout",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_a",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l a",
+  "desc": "add a buffer to the current layout",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_aU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l A",
+  "desc": "add all the buffers from another layout in the current one",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_b",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l b",
+  "desc": "select a buffer in the current layout",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_d",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l d",
+  "desc": "delete the current layout and keep its buffers",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l D",
+  "desc": "delete the other layouts and keep their buffers",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_h",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l h",
+  "desc": "go to default layout",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_l",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l l",
+  "desc": "select/create a layout",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_n",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l n",
+  "desc": "next layout in list",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_cU_l",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l C-l",
+  "desc": "next layout in list",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_nU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l N",
+  "desc": "previous layout in list",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_p",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l p",
+  "desc": "previous layout in list",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_cU_h",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l C-h",
+  "desc": "previous layout in list",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_r",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l r",
+  "desc": "remove current buffer from layout",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_rU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l R",
+  "desc": "rename current layout",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_t",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l t",
+  "desc": "display a buffer without adding it to the current layout",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_x",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l x",
+  "desc": "kill current layout with its buffers",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_xU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l X",
+  "desc": "kill other layouts with their buffers",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_w_0xx9",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l w 0..9",
+  "desc": "switch to nth workspace",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_w_cU_0xxcU_9",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l w C-0..C-9",
+  "desc": "switch to nth workspace and keep the transient state active",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_w_tUaUbU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l w TAB",
+  "desc": "switch to last active workspace",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_w_d",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l w d",
+  "desc": "close current workspace",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_w_n",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l w n",
+  "desc": "switch to next workspace",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_w_l",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l w l",
+  "desc": "switch to next workspace",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_w_nU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l w N",
+  "desc": "switch to previous workspace",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_w_p",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l w p",
+  "desc": "switch to previous workspace",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_w_h",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l w h",
+  "desc": "switch to previous workspace",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_l_w_w",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC l w w",
+  "desc": "switch to tagged workspace",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_l",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s l",
+  "desc": "resume search buffer (completion or converted search buffer)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_sU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s S",
+  "desc": "search current file with the first found tool with default input",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_a_aU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s a A",
+  "desc": "search current file with ag with default input",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_g_gU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s g G",
+  "desc": "search current file with grep with default input",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_r_rU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s r R",
+  "desc": "search current file with rg with default input",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_bU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s B",
+  "desc": "search all open buffers with the first found tool with default input",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_a_bU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s a B",
+  "desc": "search all open buffers with ag with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_g_bU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s g B",
+  "desc": "search all open buffers with grep with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_k_bU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s k B",
+  "desc": "search all open buffers with ack with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_r_bU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s r B",
+  "desc": "search all open buffers with rg with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_fU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s F",
+  "desc": "search files in an arbitrary directory with the first found tool with default input",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_a_fU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s a F",
+  "desc": "search files in an arbitrary directory with ag with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_g_fU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s g F",
+  "desc": "search files in an arbitrary directory with grep with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_k_fU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s k F",
+  "desc": "search files in an arbitrary directory with ack with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_r_fU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s r F",
+  "desc": "search files in an arbitrary directory with rg with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_d",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s d",
+  "desc": "search current directory with the first found tool",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s D",
+  "desc": "search current directory with the first found tool with default input",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_a_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s a D",
+  "desc": "search current directory with ag with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_k_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s k D",
+  "desc": "search current directory with ack with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_r_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s r D",
+  "desc": "search current directory with rg with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_pU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s P",
+  "desc": "search in a project with the first found tool with default input",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_a_pU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s a P",
+  "desc": "search in a project with ag with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_k_pU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s k P",
+  "desc": "search in a project with ack with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_r_pU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s r P",
+  "desc": "search in a project with rg with default text",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_c",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s c",
+  "desc": "clear persistent search highlighting",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_hU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s H",
+  "desc": "go to the last searched occurrence of the last highlighted symbol",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_s_j",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC s j",
+  "desc": "list all the symbols of a buffer by semantic",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_j_x",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC j (",
+  "desc": "jump to first unbalanced parentheses",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_j_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC j D",
+  "desc": "jump to a listing of the current directory (other window)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_j_iU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC j I",
+  "desc": "jump to a definition in any buffer (imenu)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_j_uU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC j U",
+  "desc": "select a URL in the current buffer and follow it",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_j_sU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC j S",
+  "desc": "split a quoted string or s-expression, insert a new line and auto-indent",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_j_x_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC j =",
+  "desc": "format the marked region or entire buffer",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_j_x_3",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC j +",
+  "desc": "format the marked region or entire buffer also cleanup whitespace",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_n_x",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC n +",
+  "desc": "increase the number under point by one and initiate transient state",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_n_x_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC n =",
+  "desc": "increase the number under point by one and initiate transient state",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_n",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC n -",
+  "desc": "decrease the number under point by one and initiate transient state",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_n_x_3",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC n _",
+  "desc": "decrease the number under point by one and initiate transient state",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_n_fU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC n F",
+  "desc": "narrow to the current function in an indirect buffer",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_n_pU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC n P",
+  "desc": "narrow to the visible page in an indirect buffer",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_n_rU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC n R",
+  "desc": "narrow to the selected text in an indirect buffer",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_r_s",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC r s",
+  "desc": "resume search buffer (completion or converted search buffer)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_c_lU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC c L",
+  "desc": "invert comment lines",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_c_pU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC c P",
+  "desc": "invert comment paragraphs",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_c_tU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC c T",
+  "desc": "invert comment to line",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_c_yU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC c Y",
+  "desc": "invert comment and yank",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_c_cU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC c C",
+  "desc": "compile",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_x",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a (",
+  "desc": "align region at (",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_x_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a )",
+  "desc": "align region at )",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_x_3",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a [",
+  "desc": "align region at [",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_x_4",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a ]",
+  "desc": "align region at ]",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_x_5",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a {",
+  "desc": "align region at {",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_x_6",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a }",
+  "desc": "align region at }",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_x_7",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a ,",
+  "desc": "align region at ,",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_x_8",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a .",
+  "desc": "align region at . (for numeric tables)",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_x_9",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a :",
+  "desc": "align region at :",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_semi",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a ;",
+  "desc": "align region at ;",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_x_10",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a =",
+  "desc": "align region at =",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_lU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a L",
+  "desc": "right-align with evil-lion",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_a_x_11",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x a \u00a6",
+  "desc": "align region at \u00a6",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_aU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x A",
+  "desc": "open all visible links",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_g_tU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x g T",
+  "desc": "reverse source and target languages",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_i_cU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x i C",
+  "desc": "change symbol style to UpperCamelCase",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_i_x",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x i _",
+  "desc": "change symbol style to under_score",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_i_uU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x i U",
+  "desc": "change symbol style to UP_CASE",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_oU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x O",
+  "desc": "use avy to select multiple links in the frame and open them",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_uU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x U",
+  "desc": "set the selected text to upper case",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_yU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x Y",
+  "desc": "use avy to copy multiple links in the frame",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_r_apos",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x r '",
+  "desc": "generate strings given by a regexp given this list is finite",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_r_e_apos",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x r e '",
+  "desc": "generate strings from Emacs Lisp regexp",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_x_r_p_apos",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC x r p '",
+  "desc": "generate strings from PCRE regexp",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_lU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k L",
+  "desc": "go forward to next sexp",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_hU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k H",
+  "desc": "go backward to previous sexp",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_x",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k %",
+  "desc": "go to other paren of the same pair",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_sU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k S",
+  "desc": "slurp backward",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_bU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k B",
+  "desc": "barf backward",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_jU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k J",
+  "desc": "join sexp",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_bt_s",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k ` s",
+  "desc": "hybrid slurp forward",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_bt_t",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k ` t",
+  "desc": "hybrid transpose",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_x_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k (",
+  "desc": "insert sexp before current one",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_x_3",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k )",
+  "desc": "insert sexp after current one",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_dUs",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k Ds",
+  "desc": "delete symbol backward",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_dUw",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k Dw",
+  "desc": "delete word backward",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_dUx",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k Dx",
+  "desc": "delete sexp backward",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_eU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k E",
+  "desc": "splice, killing backward",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_wU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k W",
+  "desc": "unwrap sexp",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_bt_k",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k ` k",
+  "desc": "hybrid delete sexp",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_x_4",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k :",
+  "desc": "ex command",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_i_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k i",
+  "desc": "switch to insert state",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_iU_xinsertx",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k I (insert)",
+  "desc": "switch to insert state at beginning of current line",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_vU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k V",
+  "desc": "switch to visual state and begin line-wise selection",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_u_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k u",
+  "desc": "undo",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_p_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k p",
+  "desc": "paste after",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_k_pU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC k P",
+  "desc": "paste before",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_star",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC *",
+  "desc": "search with the first found tool with default input",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_slash",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC /",
+  "desc": "search in project with the best search tool available",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_u",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC u",
+  "desc": "universal argument",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_u_spc_w_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC u SPC w D",
+  "desc": "delete another window and its current buffer using ace-window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_u_spc_b_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC u SPC b D",
+  "desc": "kill a visible buffer and its window using ace-window",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_q_qU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC q Q",
+  "desc": "Quit Emacs and kill the server, lose all unsaved changes",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_q_tU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC q T",
+  "desc": "Restart Emacs and debug with --adv-timers",
+  "doc_ref": "https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_c",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m c",
+  "desc": "commit changes with the entered message (git commit buffer)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_x",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m ,",
+  "desc": "commit changes with the entered message (git commit buffer)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_a",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m a",
+  "desc": "discard message and abort the commit (git commit buffer)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_k",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m k",
+  "desc": "discard message and abort the commit (git commit buffer)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_b",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m b",
+  "desc": "browse topic (open in web browser) (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_cU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m C",
+  "desc": "checkout pull request (not for issues) (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_d",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m d",
+  "desc": "toggle draft pull request (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_dU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m D",
+  "desc": "delete comment under cursor (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_e_2",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m e",
+  "desc": "edit topic body (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_m",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m m",
+  "desc": "edit topic marks (mark is an unshared label) (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_mU",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m M",
+  "desc": "create mark to use with topics (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_n",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m n",
+  "desc": "edit personal note (adds to top of topic) (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_r",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m r",
+  "desc": "edit list of people to review an existing topic (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_s",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m s",
+  "desc": "change topic state (open, closed, draft, etc.) (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_t",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m t",
+  "desc": "edit topic title (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
+ },
+ {
+  "id": "spacemacs.keybinding.spc_m_u",
+  "source": "spacemacs",
+  "category": "keybinding",
+  "name": "SPC m u",
+  "desc": "copy URL of topic (add to kill ring) (forge)",
+  "doc_ref": "https://raw.githubusercontent.com/syl20bnr/spacemacs/develop/layers/+source-control/git/README.org"
  }
 ]

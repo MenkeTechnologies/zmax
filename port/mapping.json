@@ -7942,5 +7942,189 @@
       "key:normal:space h T v"
     ],
     "note": "SPC h T v -> space h T v"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_sU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f S"
+    ],
+    "note": "SPC f S (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_r_2",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f r"
+    ],
+    "note": "SPC f r (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_b_dU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space b D"
+    ],
+    "note": "SPC b D (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_x_3",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w |"
+    ],
+    "note": "SPC w | (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_fU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w F"
+    ],
+    "note": "SPC w F (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_hU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w H"
+    ],
+    "note": "SPC w H (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_jU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w J"
+    ],
+    "note": "SPC w J (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_kU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w K"
+    ],
+    "note": "SPC w K (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_lU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w L"
+    ],
+    "note": "SPC w L (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_rU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w R"
+    ],
+    "note": "SPC w R (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_s_2",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w s"
+    ],
+    "note": "SPC w s (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_5",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w -"
+    ],
+    "note": "SPC w - (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_v_2",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w v"
+    ],
+    "note": "SPC w v (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_slash",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w /"
+    ],
+    "note": "SPC w / (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_wU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w W"
+    ],
+    "note": "SPC w W (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_x_5",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w ]"
+    ],
+    "note": "SPC w ] (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_x_7",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w }"
+    ],
+    "note": "SPC w } (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_l_a",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space l a"
+    ],
+    "note": "SPC l a (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_l_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space l r"
+    ],
+    "note": "SPC l r (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_s_sU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space s S"
+    ],
+    "note": "SPC s S (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_s_j",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space s j"
+    ],
+    "note": "SPC s j (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_slash",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space /"
+    ],
+    "note": "SPC / (already bound)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_q_qU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space q Q"
+    ],
+    "note": "SPC q Q (already bound)"
   }
 ]
