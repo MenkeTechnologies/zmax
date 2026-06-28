@@ -5710,5 +5710,205 @@
       "key:normal:space x c"
     ],
     "note": "SPC x c"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_ctrl_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w C-r"
+    ],
+    "note": "rotate windows (same as C-w r)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w f"
+    ],
+    "note": "split + edit file under cursor"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_ctrl_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w C-f"
+    ],
+    "note": "split + edit file under cursor"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_rbracket",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w ]"
+    ],
+    "note": "jump to tag/definition (no split)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_ctrl_rbracket",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w C-]"
+    ],
+    "note": "jump to tag/definition (no split)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_caret",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w ^"
+    ],
+    "note": "edit alternate file (no split)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_ctrl_caret",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w C-^"
+    ],
+    "note": "edit alternate file (no split)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.v",
+    "status": "ported",
+    "evidence": [
+      "key:normal:V"
+    ],
+    "note": "linewise Visual mode"
+  },
+  {
+    "spec_id": "neovim.normal-mode.v_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:v"
+    ],
+    "note": "charwise Visual mode"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_v",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-v"
+    ],
+    "note": "blockwise Visual (multi-cursor emulation)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_l",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-l"
+    ],
+    "note": "recenter view (approx redraw)"
+  },
+  {
+    "spec_id": "neovim.visual-mode.gv",
+    "status": "ported",
+    "evidence": [
+      "key:select:g v"
+    ],
+    "note": "reselect previous highlighted area"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.lt_s_left_gt",
+    "status": "ported",
+    "evidence": [
+      "key:command:S-left"
+    ],
+    "note": "cursor one word left"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.lt_s_right_gt",
+    "status": "ported",
+    "evidence": [
+      "key:command:S-right"
+    ],
+    "note": "cursor one word right"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.lt_s_up_gt",
+    "status": "ported",
+    "evidence": [
+      "key:command:S-up"
+    ],
+    "note": "recall previous history entry"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.lt_s_down_gt",
+    "status": "ported",
+    "evidence": [
+      "key:command:S-down"
+    ],
+    "note": "recall next history entry"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.lt_pageup_gt",
+    "status": "ported",
+    "evidence": [
+      "key:command:pageup"
+    ],
+    "note": "recall previous history entry"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.lt_pagedown_gt",
+    "status": "ported",
+    "evidence": [
+      "key:command:pagedown"
+    ],
+    "note": "recall next history entry"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_j",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-j"
+    ],
+    "note": "execute command line (same as CR)"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_f",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-f"
+    ],
+    "note": "file-name completion -> unified completion"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_l",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-l"
+    ],
+    "note": "whole-line completion -> unified completion"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_k",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-k"
+    ],
+    "note": "dictionary completion -> unified completion"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_d",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-d"
+    ],
+    "note": "defined-id completion -> unified completion"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_u",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-u"
+    ],
+    "note": "completefunc -> unified completion"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_rbracket",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-]"
+    ],
+    "note": "tag completion -> unified completion"
   }
 ]

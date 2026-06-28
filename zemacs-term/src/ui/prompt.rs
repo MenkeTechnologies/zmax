@@ -628,8 +628,8 @@ impl Component for Prompt {
                 (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
                 return close_fn;
             }
-            alt!('b') | ctrl!(Left) => self.move_cursor(Movement::BackwardWord(1)),
-            alt!('f') | ctrl!(Right) => self.move_cursor(Movement::ForwardWord(1)),
+            alt!('b') | ctrl!(Left) | shift!(Left) => self.move_cursor(Movement::BackwardWord(1)),
+            alt!('f') | ctrl!(Right) | shift!(Right) => self.move_cursor(Movement::ForwardWord(1)),
             ctrl!('b') | key!(Left) => self.move_cursor(Movement::BackwardChar(1)),
             ctrl!('f') | key!(Right) => self.move_cursor(Movement::ForwardChar(1)),
             ctrl!('e') | key!(End) => self.move_end(),
@@ -676,7 +676,7 @@ impl Component for Prompt {
                     (self.callback_fn)(cx, &self.line, PromptEvent::Update);
                 }
             }
-            key!(Enter) => {
+            key!(Enter) | ctrl!('j') => {
                 if self.selection.is_some() && self.line.ends_with(std::path::MAIN_SEPARATOR) {
                     self.recalculate_completion(cx.editor);
                 } else {
@@ -708,12 +708,12 @@ impl Component for Prompt {
                     return close_fn;
                 }
             }
-            ctrl!('p') | key!(Up) => {
+            ctrl!('p') | key!(Up) | shift!(Up) | key!(PageUp) => {
                 if let Some(register) = self.history_register {
                     self.change_history(cx, register, CompletionDirection::Backward);
                 }
             }
-            ctrl!('n') | key!(Down) => {
+            ctrl!('n') | key!(Down) | shift!(Down) | key!(PageDown) => {
                 if let Some(register) = self.history_register {
                     self.change_history(cx, register, CompletionDirection::Forward);
                 }

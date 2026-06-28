@@ -481,7 +481,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "s" | "C-s" => hsplit,
             "v" | "C-v" => vsplit,
             "w" | "C-w" => rotate_view,
-            "r" => rotate_view,
+            "r" | "C-r" => rotate_view,       // C-w r / C-w C-r: rotate windows downwards
             "q" | "C-q" => wclose,
             "d" | "C-d" => wclose,
             "o" | "C-o" => wonly,
@@ -499,6 +499,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "L" => swap_view_right,           // C-w L: move window to the far right
             "R" => rotate_view_reverse,       // C-w R: rotate windows upwards
             "x" | "C-x" => transpose_view,    // C-w x: exchange current window with next
+            "f" | "C-f" => goto_file_hsplit,  // C-w f / C-w C-f: split + edit file under cursor
+            "]" | "C-]" => goto_definition,   // C-w ] / C-w C-]: jump to tag/definition (no split)
+            "^" | "C-^" => goto_last_accessed_file, // C-w ^ / C-w C-^: edit alternate file
             "n" | "C-n" => hsplit_new,        // C-w n: open new window
             "/" => vsplit,                    // spacemacs SPC w / : split vertically
             "-" => hsplit,                    // spacemacs SPC w - : split horizontally
@@ -614,7 +617,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "s" | "C-s" => hsplit,
                 "v" | "C-v" => vsplit,
                 "w" | "C-w" => rotate_view,
-                "r" => rotate_view,
+                "r" | "C-r" => rotate_view,
                 "q" | "C-q" => wclose,
                 "d" | "C-d" => wclose,
                 "o" | "C-o" => wonly,
@@ -632,6 +635,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "L" => swap_view_right,
                 "R" => rotate_view_reverse,
                 "x" | "C-x" => transpose_view,
+                "f" | "C-f" => goto_file_hsplit,
+                "]" | "C-]" => goto_definition,
+                "^" | "C-^" => goto_last_accessed_file,
                 "n" | "C-n" => hsplit_new,
                 "/" => vsplit,
                 "-" => hsplit,
@@ -857,6 +863,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "g" => { "Goto"
             "q" => [format_selections, normal_mode],
             "w" => [format_selections, normal_mode],
+            "v" => reselect_visual,                  // gv: reselect previous highlighted area
             "J" => [join_selections, normal_mode],   // gJ: join lines, no space (approx)
             "C-a" => increment,                      // g CTRL-A: increment in selection
             "C-x" => decrement,                      // g CTRL-X: decrement in selection
@@ -904,6 +911,16 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "C-n" => completion,   // keyword completion, forward
             "C-p" => completion,   // keyword completion, backward
             "C-i" => completion,   // identifier completion
+            // The remaining vim CTRL-X completion sub-modes (file names, whole
+            // lines, dictionary, defined identifiers, completefunc, tags) all
+            // route to zemacs's single LSP+word completion — same trigger, the
+            // candidate source differs, so these are tracked as partial.
+            "C-f" => completion,   // i_CTRL-X_CTRL-F: file-name completion
+            "C-l" => completion,   // i_CTRL-X_CTRL-L: whole-line completion
+            "C-k" => completion,   // i_CTRL-X_CTRL-K: dictionary completion
+            "C-d" => completion,   // i_CTRL-X_CTRL-D: defined-identifier completion
+            "C-u" => completion,   // i_CTRL-X_CTRL-U: 'completefunc' completion
+            "C-]" => completion,   // i_CTRL-X_CTRL-]: tag completion
         },
 
         "ret"   => insert_newline,
