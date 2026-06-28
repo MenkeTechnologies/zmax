@@ -364,6 +364,11 @@ pub struct Config {
     pub continue_comments: bool,
     /// Whether to display infoboxes. Defaults to true.
     pub auto_info: bool,
+    /// Keymap prefix keys whose auto-info (which-key) popup is suppressed, matched against the
+    /// first key of the pending sequence (e.g. "g", "y", "z", "space"). Silences individual
+    /// prefix menus while leaving `auto-info` on for the rest. Defaults to ["g", "y", "z"];
+    /// set to [] to show every popup, or add "space" to also silence the leader menu.
+    pub auto_info_exclude: Vec<String>,
     pub file_picker: FilePickerConfig,
     pub file_explorer: FileExplorerConfig,
     /// Configuration of the statusline elements
@@ -1201,6 +1206,7 @@ impl Default for Config {
             preview_completion_insert: true,
             completion_trigger_len: 2,
             auto_info: true,
+            auto_info_exclude: vec!["g".into(), "y".into(), "z".into()],
             file_picker: FilePickerConfig::default(),
             file_explorer: FileExplorerConfig::default(),
             statusline: StatusLineConfig::default(),

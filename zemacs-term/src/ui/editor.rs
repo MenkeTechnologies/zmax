@@ -985,7 +985,23 @@ impl EditorView {
             KeymapResult::Matched(command) => {
                 execute_command(command);
             }
-            KeymapResult::Pending(node) => cxt.editor.autoinfo = Some(node.infobox()),
+            KeymapResult::Pending(node) => {
+                // Suppress the which-key popup for prefix keys listed in `auto-info-exclude`,
+                // matched on the first key of the pending sequence (e.g. "g"/"y"/"z"/"space").
+                let suppressed = self.keymaps.pending().first().is_some_and(|key| {
+                    let key = key.to_string();
+                    cxt.editor
+                        .config()
+                        .auto_info_exclude
+                        .iter()
+                        .any(|excluded| excluded == &key)
+                });
+                cxt.editor.autoinfo = if suppressed {
+                    None
+                } else {
+                    Some(node.infobox())
+                };
+            }
             KeymapResult::MatchedSequence(commands) => {
                 for command in commands {
                     execute_command(command);
