@@ -85,7 +85,10 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t V",   "Toggles", ":toggle line-number absolute relative"), // SPC t V : visual line numbers
     ("space t h i", "Toggles", ":toggle indent-guides.render"),        // SPC t h i : highlight indentation
     ("space t C-i", "Toggles", ":toggle indent-guides.render"),        // SPC t C-i : global indent guide
+    ("space t h c", "Toggles", ":toggle cursorcolumn"),                // SPC t h c : highlight current column
     ("space h d c", "Help",    ":character-info"),                     // SPC h d c : describe char under point
+    ("space p e",   "Project", ":config-open"),                       // SPC p e : edit dir-locals/config
+    ("space f e i", "Files",   ":config-open"),                       // SPC f e i : open init/config
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes
@@ -437,6 +440,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "." => [align_view_center, goto_first_nonwhitespace], // z. center + first non-blank
             "-" => [align_view_bottom, goto_first_nonwhitespace], // z- bottom + first non-blank
             "ret" => [align_view_top, goto_first_nonwhitespace],  // z<CR> top + first non-blank
+            "+" => page_down,         // z+ cursor on line below window (approx page down)
+            "^" => page_up,           // z^ cursor on line above window (approx page up)
 
             // folds (vim z* family)
             "a" => fold_toggle,       // za toggle fold under cursor
@@ -591,6 +596,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-]"     => goto_definition,    // CTRL-] = :ta (jump to tag)
         "C-^"     => goto_last_accessed_file, // CTRL-^ = edit alternate file
         "S-ret"   => page_down,          // <S-CR> = CTRL-F (page down)
+        "S-+"     => page_down,          // <S-+> = CTRL-F (page down)
+        "S-minus" => page_up,            // <S--> = CTRL-B (page up)
+        "U"       => undo,               // U: undo latest changes on one line (approx: undo)
         "C-t"     => jump_backward,      // CTRL-T = pop tag stack (≈ jump back)
         "C-tab"   => goto_last_accessed_file, // CTRL-<Tab> = go to last accessed tab
 
@@ -762,6 +770,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "d" => file_explorer,              // SPC p d : find directory
                 "g" => symbol_picker,              // SPC p g : find tags
                 "o" => global_search,              // SPC p o : multi-occur
+                "a" => goto_next_test,             // SPC p a : toggle implementation/test
             },
             "e" => { "Errors"
                 "l" => diagnostics_picker,             // SPC e l
@@ -769,6 +778,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "n" => goto_next_diag,                 // SPC e n
                 "p" => goto_prev_diag,                 // SPC e p
                 "f" => goto_first_diag,                // SPC e f
+                "h" => command_palette,                // SPC e h : describe checker
+                "v" => command_palette,                // SPC e v : verify checker setup
                 "." => goto_last_diag,
             },
             "c" => { "Comments"
@@ -779,6 +790,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "h" => toggle_comments,            // SPC c h : hide/show comments (toggle)
                 "t" => toggle_comments,            // SPC c t : comment to line
                 "y" => [yank, toggle_comments],    // SPC c y : comment and yank
+                "d" => wclose,                     // SPC c d : close compilation window
             },
             "j" => { "Jump"
                 "i" => symbol_picker,              // SPC j i
@@ -819,6 +831,13 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "o" => goto_file,                  // SPC x o : open link in frame (avy)
                 "w" => { "Words"
                     "c" => count_selection,        // SPC x w c : count occurrences per word
+                },
+                "j" => { "Justify"
+                    "l" => format_selections,      // SPC x j l : justify left (reflow)
+                    "c" => format_selections,      // SPC x j c : justify center (reflow)
+                    "f" => format_selections,      // SPC x j f : justify full (reflow)
+                    "r" => format_selections,      // SPC x j r : justify right (reflow)
+                    "n" => format_selections,      // SPC x j n : justify none (reflow)
                 },
                 "tab" => indent,                   // SPC x TAB : indent region
                 "a" => { "Align"
@@ -873,12 +892,20 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "p" => command_palette,            // SPC h p : search packages
                 "n" => command_palette,            // SPC h n : browse emacs news
                 "r" => command_palette,            // SPC h r : search documentation files
+                "i" => command_palette,            // SPC h i : search info pages
+                "m" => command_palette,            // SPC h m : search man pages
                 "d" => { "Describe"
                     "b" => command_palette,        // SPC h d b : describe bindings
                     "f" => command_palette,        // SPC h d f : describe function
                     "k" => command_palette,        // SPC h d k : describe key
                     "v" => command_palette,        // SPC h d v : describe variable
                     "m" => command_palette,        // SPC h d m : describe modes
+                    "a" => hover,                  // SPC h d a : describe expression under point
+                    "p" => command_palette,        // SPC h d p : describe package
+                    "t" => command_palette,        // SPC h d t : describe text properties
+                    "x" => command_palette,        // SPC h d x : describe ex-command
+                    "l" => command_palette,        // SPC h d l : copy last keys
+                    "s" => command_palette,        // SPC h d s : copy system info
                     // SPC h d c (describe char) -> :character-info via typable table
                 },
             },

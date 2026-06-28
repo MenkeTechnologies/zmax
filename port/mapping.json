@@ -6710,5 +6710,205 @@
       "key:normal:space h r"
     ],
     "note": "search documentation -> command palette"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_h_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space t h c"
+    ],
+    "note": "highlight current column -> :toggle cursorcolumn"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_j_l",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space x j l"
+    ],
+    "note": "justify left -> format_selections"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_j_c",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space x j c"
+    ],
+    "note": "justify center -> format_selections"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_j_f",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space x j f"
+    ],
+    "note": "justify full -> format_selections"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_j_r",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space x j r"
+    ],
+    "note": "justify right -> format_selections"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_j_n",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space x j n"
+    ],
+    "note": "justify none -> format_selections"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_d_a",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h d a"
+    ],
+    "note": "describe expression -> hover"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_d_p",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h d p"
+    ],
+    "note": "describe package -> command palette"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_d_t",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h d t"
+    ],
+    "note": "describe text props -> command palette"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_d_x",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h d x"
+    ],
+    "note": "describe ex-command -> command palette"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_d_l",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h d l"
+    ],
+    "note": "copy last keys -> command palette"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_d_s",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h d s"
+    ],
+    "note": "copy system info -> command palette"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_i",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h i"
+    ],
+    "note": "search info -> command palette"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_m",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h m"
+    ],
+    "note": "search man -> command palette"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_e_h",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space e h"
+    ],
+    "note": "describe checker -> command palette"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_e_v",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space e v"
+    ],
+    "note": "verify checker -> command palette"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_c_d",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space c d"
+    ],
+    "note": "close compilation window -> wclose"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_p_a",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space p a"
+    ],
+    "note": "toggle impl/test -> goto_next_test"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_p_e",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space p e"
+    ],
+    "note": "edit dir-locals -> :config-open"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_e_i",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space f e i"
+    ],
+    "note": "open init -> :config-open"
+  },
+  {
+    "spec_id": "neovim.normal-mode.u",
+    "status": "partial",
+    "evidence": [
+      "key:normal:U"
+    ],
+    "note": "U: undo changes on one line (approx undo)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.z_plus",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z +"
+    ],
+    "note": "z+: line below window (approx page down)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.z_caret",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z ^"
+    ],
+    "note": "z^: line above window (approx page up)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lt_s_plus_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:S-+"
+    ],
+    "note": "<S-+> = CTRL-F page down"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lt_s_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:S-minus"
+    ],
+    "note": "<S--> = CTRL-B page up"
   }
 ]
