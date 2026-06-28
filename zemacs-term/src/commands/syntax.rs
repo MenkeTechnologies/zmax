@@ -179,6 +179,31 @@ fn tags_iter<'a>(
     })
 }
 
+/// Owned document outline item for the IDE Structure panel.
+pub(crate) struct OutlineItem {
+    pub kind: String,
+    pub name: String,
+    pub start: usize,
+    pub end: usize,
+}
+
+/// Collect the current document's syntax symbols (functions, types, …) as owned data for
+/// the IDE Structure outline. Empty when the buffer has no syntax tree or tags query.
+pub(crate) fn document_outline(doc: &zemacs_view::Document, loader: &Loader) -> Vec<OutlineItem> {
+    let Some(syntax) = doc.syntax() else {
+        return Vec::new();
+    };
+    let text = doc.text().slice(..);
+    tags_iter(syntax, loader, text, UriOrDocumentId::Id(doc.id()), None)
+        .map(|t| OutlineItem {
+            kind: t.kind.as_str().to_string(),
+            name: t.name,
+            start: t.start,
+            end: t.end,
+        })
+        .collect()
+}
+
 pub fn syntax_symbol_picker(cx: &mut Context) {
     let doc = doc!(cx.editor);
     let Some(syntax) = doc.syntax() else {
