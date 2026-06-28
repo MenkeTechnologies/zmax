@@ -207,11 +207,9 @@ impl EditorView {
                 self.run_active(context);
                 None
             }
-            IdeAction::RunConfigManager => {
-                Some(Box::new(|compositor, _cx| {
-                    compositor.push(Box::new(crate::ui::run_config::RunConfigPanel::new()));
-                }))
-            }
+            IdeAction::RunConfigManager => Some(Box::new(|compositor, _cx| {
+                compositor.push(Box::new(crate::ui::preferences::PreferencesPanel::new(3)));
+            })),
             IdeAction::Debug => {
                 // Launch a DAP session (shows the debug-template picker).
                 let mut cx = commands::Context {

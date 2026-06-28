@@ -590,8 +590,10 @@ impl MappableCommand {
         copy_char_below, "Insert the character below the cursor (i_CTRL-E)",
         copy_char_above, "Insert the character above the cursor (i_CTRL-Y)",
         file_info, "Show file name and cursor position (CTRL-G)",
+        preferences, "Open the unified Preferences window",
         run_config_manager, "Manage run/debug configurations",
         run_active_config, "Run the active run configuration",
+        settings_page, "Open the settings page (config.toml editor)",
         goto_next_spell_error, "Move to the next misspelled word (]s)",
         goto_prev_spell_error, "Move to the previous misspelled word ([s)",
         spell_add_good, "Mark word under cursor as correctly spelled (zg)",
@@ -7608,9 +7610,19 @@ fn spell_suggest(cx: &mut Context) {
     });
 }
 
-/// Open the JetBrains-style Run/Debug Configurations manager (CRUD over named configs).
+/// Open the unified Preferences window (tabs: Settings, Keymap, Color Scheme, Run Configs).
+fn preferences(cx: &mut Context) {
+    cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(0)));
+}
+
+/// Open Preferences on the Run/Debug Configurations tab.
 fn run_config_manager(cx: &mut Context) {
-    cx.push_layer(Box::new(crate::ui::run_config::RunConfigPanel::new()));
+    cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(3)));
+}
+
+/// Open Preferences on the Settings tab (config.toml editor).
+fn settings_page(cx: &mut Context) {
+    cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(0)));
 }
 
 /// Run the active named run configuration (or auto-detect when none is set).
