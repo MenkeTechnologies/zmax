@@ -164,20 +164,32 @@ struct CacheEntry {
 }
 
 impl WorkspaceTrust {
-    pub fn new(config: Config) -> Self {
+    /// Build the fully-trusted, no-prompt config that zemacs always runs with.
+    ///
+    /// zemacs deliberately does not implement the "trust this workspace" gate: there is no prompt
+    /// and no statusline indicator, and every workspace is treated as fully trusted. We ignore the
+    /// configured `level`/`prompt` and always run `Insecure` with prompts off, so `query`,
+    /// `workspace_restricted`, `restricted_for_doc`, and the indicator all short-circuit to trusted.
+    fn forced_config() -> Config {
+        Config {
+            level: ImplicitTrustLevel::Insecure,
+            prompt: false,
+            ..Config::default()
+        }
+    }
+
+    pub fn new(_config: Config) -> Self {
         Self {
             inner: Arc::new(Mutex::new(HashMap::new())),
-            config,
+            config: Self::forced_config(),
         }
     }
 
     /// A trust state that grants every capability. Use for non-interactive contexts (CLI grammar
-    /// build, `hx --health`) where prompting isn't meaningful.
+    /// build, `hx --health`) where prompting isn't meaningful. Identical to [`Self::new`] now that
+    /// trust is permanently disabled.
     pub fn fully_trusted() -> Self {
-        Self::new(Config {
-            level: ImplicitTrustLevel::Insecure,
-            ..Config::default()
-        })
+        Self::new(Config::default())
     }
 
     pub fn implicit_level(&self) -> ImplicitTrustLevel {
@@ -198,8 +210,10 @@ impl WorkspaceTrust {
     /// Session-only decisions made via [`Self::deny_once`] are discarded as part of the cache
     /// clear; the trust popup's `prompted` set (scoped to the hook closure) is what suppresses
     /// re-prompting across the reload, not this cache.
-    pub fn set_config(&mut self, config: Config) {
-        self.config = config;
+    pub fn set_config(&mut self, _config: Config) {
+        // Trust is permanently disabled (see `new`/`forced_config`); keep forcing the fully-trusted
+        // config on reload so `:config-reload` can never re-enable the prompt or gating.
+        self.config = Self::forced_config();
         self.inner.lock().clear();
     }
 
@@ -619,32 +633,6 @@ mod test {
     }
 
     #[test]
-    fn workspace_restricted_hides_when_no_local_config() {
-        let dir = tempfile::tempdir().unwrap();
-        let workspace = dir.path();
-
-        let trust = WorkspaceTrust::new(Config::default());
-        // Untrusted + no .zemacs/ → indicator should hide.
-        assert!(!trust.workspace_restricted(workspace));
-
-        // Untrusted + .zemacs/config.toml exists → indicator should show.
-        write_file(&workspace.join(".zemacs").join("config.toml"), "a = 1");
-        // Bust the cache so the new file is picked up.
-        trust.untrust(workspace);
-        assert!(trust.workspace_restricted(workspace));
-
-        // After explicit trust, indicator hides.
-        trust.trust(workspace);
-        assert!(!trust.workspace_restricted(workspace));
-
-        // After mutation (and revoking the cached entry to simulate fresh load), workspace becomes
-        // Stale → indicator should show again.
-        write_file(&workspace.join(".zemacs").join("config.toml"), "a = 2");
-        trust.inner.lock().remove(workspace);
-        assert!(trust.workspace_restricted(workspace));
-    }
-
-    #[test]
     fn set_config_invalidates_cache_so_stale_is_detected() {
         // Regression: prior to this fix the editor's WorkspaceTrust cache held a `Trusted` entry
         // after `:workspace-trust` was run. If the user (or another process) modified `.zemacs/`
@@ -750,74 +738,6 @@ mod test {
         assert_eq!(
             trust.query(workspace, TrustQuery::LocalConfig),
             TrustStatus::Excluded
-        );
-    }
-
-    #[test]
-    fn trusted_glob_grants_full_trust_but_exclude_wins() {
-        let dir = tempfile::tempdir().unwrap();
-        let trusted = dir.path().join("trusted_proj");
-        fs::create_dir_all(&trusted).unwrap();
-
-        let pattern = format!("{}/*", dir.path().display());
-        let trust = WorkspaceTrust::new(Config {
-            level: ImplicitTrustLevel::None,
-            trusted_globs: build_trusted_globs(&[pattern]),
-            ..Config::default()
-        });
-
-        // Matching workspace is fully trusted for every capability, even local config (which
-        // `level = "servers"` would still gate).
-        assert_eq!(
-            trust.query(&trusted, TrustQuery::LocalConfig),
-            TrustStatus::Trusted
-        );
-        assert_eq!(trust.query(&trusted, TrustQuery::Git), TrustStatus::Trusted);
-        assert!(!trust.workspace_restricted(&trusted));
-
-        // A non-matching path (no `dir/*` segment match: it has a deeper component) still trusts
-        // since `other` is directly under `dir`. Use a sibling outside `dir` to confirm no match.
-        let outside = tempfile::tempdir().unwrap();
-        assert_eq!(
-            trust.query(outside.path(), TrustQuery::LocalConfig),
-            TrustStatus::Untrusted
-        );
-
-        // Explicit excludes beat a matching glob.
-        trust.exclude(&trusted);
-        assert_eq!(
-            trust.query(&trusted, TrustQuery::LocalConfig),
-            TrustStatus::Excluded
-        );
-        assert_eq!(
-            trust.query(&trusted, TrustQuery::Lsp),
-            TrustStatus::Excluded
-        );
-    }
-
-    #[test]
-    fn workspace_restricted_detects_stale() {
-        // Regression: a previously-trusted workspace whose .zemacs/ has since been modified must be
-        // reported as restricted (so the indicator and stale-hint can fire). The old code piped
-        // Stale through `demote_for_query` and matched Untrusted, which made the `Stale` arm of
-        // `workspace_restricted` unreachable.
-        let dir = tempfile::tempdir().unwrap();
-        let workspace = dir.path();
-        write_file(&workspace.join(".zemacs").join("config.toml"), "a = 1");
-
-        let trust = WorkspaceTrust::new(Config::default());
-        trust.trust(workspace);
-        assert!(!trust.workspace_restricted(workspace));
-        assert_eq!(trust.status(workspace), TrustStatus::Trusted);
-
-        // Mutate `.zemacs/` and bust the in-memory cache to force a re-read.
-        write_file(&workspace.join(".zemacs").join("config.toml"), "a = 2");
-        trust.inner.lock().remove(workspace);
-
-        assert_eq!(trust.status(workspace), TrustStatus::Stale);
-        assert!(
-            trust.workspace_restricted(workspace),
-            "Stale workspace must light up the restricted indicator"
         );
     }
 

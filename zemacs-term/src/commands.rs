@@ -585,6 +585,12 @@ impl MappableCommand {
         goto_next_mark, "Goto next lowercase mark (]`)",
         goto_prev_mark_line, "Goto previous lowercase mark, line start (['])",
         goto_next_mark_line, "Goto next lowercase mark, line start (]')",
+        yank_file_path, "Yank current file path to clipboard",
+        yank_file_name, "Yank current file name to clipboard",
+        yank_file_path_with_line, "Yank current file path:line to clipboard",
+        yank_file_path_with_line_col, "Yank current file path:line:col to clipboard",
+        yank_file_dir, "Yank current file's directory to clipboard",
+        count_selection, "Count chars/words/lines in selection",
         match_brackets, "Goto matching bracket",
         match_brackets_or_goto_percent, "Goto matching bracket, or {count} percent through the file",
         surround_add, "Surround add",
@@ -1252,6 +1258,93 @@ fn goto_prev_mark_line(cx: &mut Context) {
 }
 fn goto_next_mark_line(cx: &mut Context) {
     goto_adjacent_mark(cx, true, true);
+}
+
+// spacemacs `SPC f y y` / `y n` / `y l`: copy the current file's path / name /
+// path-with-line into the clipboard register.
+#[derive(Clone, Copy)]
+enum FilePathKind {
+    Full,
+    Name,
+    WithLine,
+    WithLineCol,
+    Dir,
+}
+
+/// Pure path formatter for the yank-file-path commands (unit tested).
+fn format_file_path(path: &std::path::Path, kind: FilePathKind, line: usize, col: usize) -> String {
+    match kind {
+        FilePathKind::Full => path.display().to_string(),
+        FilePathKind::Name => path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        FilePathKind::WithLine => format!("{}:{}", path.display(), line),
+        FilePathKind::WithLineCol => format!("{}:{}:{}", path.display(), line, col),
+        FilePathKind::Dir => path
+            .parent()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default(),
+    }
+}
+
+fn yank_file_path_kind(cx: &mut Context, kind: FilePathKind) {
+    let formatted = {
+        let (view, doc) = current!(cx.editor);
+        doc.path().map(|path| {
+            let text = doc.text().slice(..);
+            let cursor = doc.selection(view.id).primary().cursor(text);
+            let line = text.char_to_line(cursor);
+            let col = cursor - text.line_to_char(line) + 1;
+            format_file_path(path, kind, line + 1, col)
+        })
+    };
+    match formatted {
+        Some(s) => {
+            let _ = cx.editor.registers.write('+', vec![s.clone()]);
+            cx.editor.set_status(format!("Yanked to clipboard: {s}"));
+        }
+        None => cx.editor.set_error("buffer has no file path"),
+    }
+}
+
+fn yank_file_path(cx: &mut Context) {
+    yank_file_path_kind(cx, FilePathKind::Full);
+}
+fn yank_file_name(cx: &mut Context) {
+    yank_file_path_kind(cx, FilePathKind::Name);
+}
+fn yank_file_path_with_line(cx: &mut Context) {
+    yank_file_path_kind(cx, FilePathKind::WithLine);
+}
+fn yank_file_path_with_line_col(cx: &mut Context) {
+    yank_file_path_kind(cx, FilePathKind::WithLineCol);
+}
+fn yank_file_dir(cx: &mut Context) {
+    yank_file_path_kind(cx, FilePathKind::Dir);
+}
+
+// spacemacs `SPC x c`: count characters / words / lines in the selection.
+/// Pure counter over a string slice (unit tested).
+fn count_region(s: &str) -> (usize, usize, usize) {
+    let chars = s.chars().count();
+    let words = s.split_whitespace().count();
+    // lines spanned: number of newlines + 1 (a non-empty region covers >=1 line)
+    let lines = if s.is_empty() {
+        0
+    } else {
+        s.matches('\n').count() + 1
+    };
+    (chars, words, lines)
+}
+
+fn count_selection(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let s = doc.selection(view.id).primary().slice(text).to_string();
+    let (chars, words, lines) = count_region(&s);
+    cx.editor
+        .set_status(format!("{lines} lines, {words} words, {chars} chars"));
 }
 
 fn trim_selections(cx: &mut Context) {
@@ -7959,5 +8052,35 @@ fn lsp_or_syntax_workspace_symbol_picker(cx: &mut Context) {
         lsp::workspace_symbol_picker(cx);
     } else {
         syntax_workspace_symbol_picker(cx);
+    }
+}
+
+#[cfg(test)]
+mod path_yank_tests {
+    use super::{format_file_path, FilePathKind};
+    use std::path::Path;
+
+    #[test]
+    fn file_path_formats() {
+        let p = Path::new("/home/u/proj/src/main.rs");
+        assert_eq!(format_file_path(p, FilePathKind::Full, 7, 3), "/home/u/proj/src/main.rs");
+        assert_eq!(format_file_path(p, FilePathKind::Name, 7, 3), "main.rs");
+        assert_eq!(
+            format_file_path(p, FilePathKind::WithLine, 7, 3),
+            "/home/u/proj/src/main.rs:7"
+        );
+        assert_eq!(
+            format_file_path(p, FilePathKind::WithLineCol, 7, 3),
+            "/home/u/proj/src/main.rs:7:3"
+        );
+        assert_eq!(format_file_path(p, FilePathKind::Dir, 7, 3), "/home/u/proj/src");
+    }
+
+    #[test]
+    fn count_region_counts() {
+        use super::count_region;
+        assert_eq!(count_region(""), (0, 0, 0));
+        assert_eq!(count_region("hello world"), (11, 2, 1));
+        assert_eq!(count_region("a b\nc d\n"), (8, 4, 3));
     }
 }

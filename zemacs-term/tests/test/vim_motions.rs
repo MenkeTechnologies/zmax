@@ -50,6 +50,13 @@ async fn backtick_visual_start_mark() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn emacs_meta_m_back_to_indentation() -> anyhow::Result<()> {
+    // M-m moves to the first non-blank char of the line.
+    test_with_config(vim(), ("#[ |]# ab", "<A-m>", "  #[a|]#b")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn indent_operator_double() -> anyhow::Result<()> {
     // >> indents the current line by one shiftwidth (4 spaces here).
     test_with_config(vim(), ("#[f|]#oo\nbar\n", "<gt><gt>", "\t#[f|]#oo\nbar\n")).await?;

@@ -5526,5 +5526,189 @@
       "key:normal:,"
     ],
     "note": ", reverse find"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_semi",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-;"
+    ],
+    "note": "M-;"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_m",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-m"
+    ],
+    "note": "M-m"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_slash",
+    "status": "ported",
+    "evidence": [
+      "key:insert:A-/"
+    ],
+    "note": "M-/"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_q_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:A-q"
+    ],
+    "note": "M-q"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_caret",
+    "status": "partial",
+    "evidence": [
+      "key:normal:A-^"
+    ],
+    "note": "M-^"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_k_ds",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space k d s"
+    ],
+    "note": "SPC k ds"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_k_dw",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space k d w"
+    ],
+    "note": "SPC k dw"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_k_dx",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space k d x"
+    ],
+    "note": "SPC k dx"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_n_n",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space t n n"
+    ],
+    "note": "SPC t n n"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_c_w",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space t C-w"
+    ],
+    "note": "SPC t C-w"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_o",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-x C-o"
+    ],
+    "note": "CTRL-X CTRL-O"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_n",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-x C-n"
+    ],
+    "note": "CTRL-X CTRL-N"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_p",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-x C-p"
+    ],
+    "note": "CTRL-X CTRL-P"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_i",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-x C-i"
+    ],
+    "note": "CTRL-X CTRL-I"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g -"
+    ],
+    "note": "g-"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_plus",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g +"
+    ],
+    "note": "g+"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gr",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g R"
+    ],
+    "note": "gR"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_y_y",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f y y"
+    ],
+    "note": "SPC f y y"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_y_n",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f y n"
+    ],
+    "note": "SPC f y n"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_y_l",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f y l"
+    ],
+    "note": "SPC f y l"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_y_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f y c"
+    ],
+    "note": "SPC f y c"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_y_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f y d"
+    ],
+    "note": "SPC f y d"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x c"
+    ],
+    "note": "SPC x c"
   }
 ]

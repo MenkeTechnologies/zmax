@@ -47,6 +47,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     // SPC t toggles -> existing :toggle substrate (config options).
     ("space t n r", "Toggles", ":toggle line-number absolute relative"), // relative nums
     ("space t n a", "Toggles", ":toggle line-number relative absolute"), // absolute nums
+    ("space t n n", "Toggles", ":toggle line-number absolute relative"), // SPC t n n : toggle line numbers
+    ("space t C-w", "Toggles", ":toggle whitespace.render all none"),    // SPC t C-w : global whitespace
     ("space t i",   "Toggles", ":toggle indent-guides.render"),          // indent guides
     ("space t a",   "Toggles", ":toggle auto-completion"),               // auto-complete
     ("space t h h", "Toggles", ":toggle cursorline"),                    // highlight line
@@ -115,6 +117,8 @@ const VIM_TYPABLE: &[(&str, &str, &str)] = &[
     ("g J", "Goto", ":join!"),        // gJ: join lines without a space
     ("g a", "Ascii", ":character-info"), // ga: print value of char under cursor
     ("g 8", "Ascii", ":character-info"), // g8: print hex value of char under cursor
+    ("g -", "Undo", ":earlier"),      // g-: go to older text state (undo-tree)
+    ("g +", "Undo", ":later"),        // g+: go to newer text state (undo-tree)
 ];
 
 fn add_spacemacs_typables(normal: &mut KeyTrie) {
@@ -392,6 +396,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "y" => goto_type_definition,
             "r" => goto_reference,
             "i" => insert_at_last_insert,      // gi insert at last insert position
+            "R" => replace_mode,               // gR virtual replace ≈ replace mode
             "v" => reselect_visual,            // gv reselect last visual area
             "f" => goto_file,
             "x" => goto_file,                 // gx: open file/URL under cursor (goto_file opens URLs externally)
@@ -545,6 +550,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-s"     => search,              // C-s isearch-forward
         "C-/"     => undo,                // C-/ undo
         "C-_"     => undo,                // C-_ undo
+        "A-;"     => toggle_comments,     // M-; comment-dwim
+        "A-m"     => goto_first_nonwhitespace, // M-m back-to-indentation
+        "A-q"     => format_selections,   // M-q fill/reformat (approx)
+        "A-^"     => join_selections,     // M-^ join to previous line (approx)
 
         // --- = reindent operator (vim ==, ={motion}) -----------------------
         "=" => { "Indent"
@@ -585,6 +594,13 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "t" => file_explorer,                          // SPC f t
                 "d" => file_explorer_in_current_buffer_directory, // SPC f d
                 "j" => file_explorer_in_current_buffer_directory, // SPC f j : dired
+                "y" => { "Yank path"
+                    "y" => yank_file_path,            // SPC f y y : copy file path
+                    "n" => yank_file_name,            // SPC f y n : copy file name
+                    "l" => yank_file_path_with_line,  // SPC f y l : copy path:line
+                    "c" => yank_file_path_with_line_col, // SPC f y c : copy path:line:col
+                    "d" => yank_file_dir,             // SPC f y d : copy directory
+                },
             },
             "b" => { "Buffers"
                 "b" => buffer_picker,              // SPC b b
@@ -704,6 +720,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             },
             "v" => expand_selection,               // SPC v : expand region
             "x" => { "Text"
+                "c" => count_selection,            // SPC x c : count chars/words/lines
                 "u" => switch_to_lowercase,        // SPC x u : lowercase
                 "tab" => indent,                   // SPC x TAB : indent region
                 "a" => { "Align"
@@ -880,6 +897,14 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // keyword/omni completion (vim i_CTRL-N / i_CTRL-P)
         "C-n"   => completion,
         "C-p"   => completion,
+        // CTRL-X completion sub-mode: the keyword/identifier/omni variants all
+        // map to zemacs's single (LSP + word) completion.
+        "C-x" => { "Complete"
+            "C-o" => completion,   // omni completion (LSP)
+            "C-n" => completion,   // keyword completion, forward
+            "C-p" => completion,   // keyword completion, backward
+            "C-i" => completion,   // identifier completion
+        },
 
         "ret"   => insert_newline,
         "C-j"   => insert_newline,
@@ -913,6 +938,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-v"     => page_up,              // M-v scroll-down
         "A-<"     => goto_file_start,      // M-< beginning of buffer
         "A->"     => goto_file_end,        // M-> end of buffer
+        "A-/"     => completion,           // M-/ dynamic abbrev / completion
         "C-/"     => undo,                 // C-/ undo
         "C-_"     => undo,                 // C-_ undo
 
