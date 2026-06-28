@@ -1387,12 +1387,22 @@ impl Application {
                 data.open_files.push(path.to_string_lossy().into_owned());
             }
         }
+        // On quit the last view may already be closed, leaving `tree.focus`
+        // pointing at the root container — so resolve the focused view safely
+        // instead of `current_ref!`, which would panic.
+        if let Some((view_id, doc_id)) = self
+            .editor
+            .tree
+            .try_get(self.editor.tree.focus)
+            .map(|view| (view.id, view.doc))
         {
-            let (view, doc) = current_ref!(self.editor);
-            if let Some(path) = doc.path() {
-                data.focused_file = Some(path.to_string_lossy().into_owned());
+            if let Some(doc) = self.editor.documents.get(&doc_id) {
+                if let Some(path) = doc.path() {
+                    data.focused_file = Some(path.to_string_lossy().into_owned());
+                }
+                data.cursor =
+                    Some(doc.selection(view_id).primary().cursor(doc.text().slice(..)));
             }
-            data.cursor = Some(doc.selection(view.id).primary().cursor(doc.text().slice(..)));
         }
         if let Some(layout) = self
             .compositor

@@ -5897,6 +5897,12 @@ fn theme_picker(cx: &mut Context) {
         }
     })
     .with_initial_cursor(initial)
+    // Show the current buffer in the preview pane so you see real code re-themed
+    // live as you move through the list (and the picker no longer hides everything).
+    .with_preview(|editor, _name: &String| {
+        let doc_id = editor.tree.try_get(editor.tree.focus)?.doc;
+        Some((doc_id.into(), None))
+    })
     .with_on_highlight(|cx, name: Option<&String>| {
         if let Some(name) = name {
             if let Ok(theme) = cx.editor.theme_loader.load(name) {
