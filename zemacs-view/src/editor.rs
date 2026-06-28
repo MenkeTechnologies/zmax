@@ -714,10 +714,16 @@ impl Default for StatusLineConfig {
             center: vec![],
             right: vec![
                 E::Diagnostics,
+                // airline-style warnings (only show when there's something to warn about)
+                E::TrailingWhitespace,
+                E::MixedIndent,
                 E::Selections,
                 E::Register,
-                E::Position,
+                E::FileType,
                 E::FileEncoding,
+                E::FileFormatIcon,
+                E::Position,
+                E::PositionPercentage,
             ],
             separator: String::from("│"),
             mode: ModeConfig::default(),
@@ -819,6 +825,17 @@ pub enum StatusLineElement {
 
     /// Indicator for when code actions are available
     CodeActionHint,
+
+    /// vim-airline style warning showing the count of lines with trailing
+    /// whitespace, e.g. `≥123 trailing`. Hidden when there is none.
+    TrailingWhitespace,
+
+    /// vim-airline style warning shown when a file mixes tabs and spaces for
+    /// indentation, e.g. `mixed-indent[12]`. Hidden when indentation is clean.
+    MixedIndent,
+
+    /// The file line ending shown with a nerd-font OS icon (LF/CRLF/CR).
+    FileFormatIcon,
 }
 
 // Cursor shape is read and used on every rendered frame and so needs

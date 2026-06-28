@@ -69,6 +69,8 @@ enum BottomTab {
     Registers,
     Todo,
     Marks,
+    Jumplist,
+    Recent,
 }
 
 #[derive(Clone, Copy)]
@@ -79,6 +81,8 @@ enum BottomHit {
     TabRegisters,
     TabTodo,
     TabMarks,
+    TabJumplist,
+    TabRecent,
     Rerun,
     Stop,
 }
@@ -122,6 +126,8 @@ pub struct Ide {
     fold_project: bool,
     fold_structure: bool,
     fold_problems: bool,
+    /// Whether the right-hand minimap stripe is collapsed to a thin handle.
+    fold_minimap: bool,
     left_width: u16,
     left_collapsed: bool,
     resizing_left: bool,
@@ -142,6 +148,10 @@ pub struct Ide {
     registers: Vec<(char, String)>,
     todos: Vec<(usize, String)>,
     marks_list: Vec<(usize, String)>,
+    /// Jumplist entries: (path if in another doc else None, char pos, label).
+    jumplist_rows: Vec<(Option<PathBuf>, usize, String)>,
+    /// Recently opened files (newest first).
+    recent_rows: Vec<PathBuf>,
     bottom_tab: BottomTab,
     bottom_hits: Vec<(u16, u16, BottomHit)>,
     bottom_header_y: u16,
@@ -191,6 +201,8 @@ fn empty_rect() -> Rect {
 impl Ide {
     pub fn new() -> Self {
         let root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        // Watch the project root so the tree live-updates on external changes.
+        crate::file_watcher::spawn(root.clone());
         Self {
             project: FileTree::new(root),
             focus: Focus::Project,
@@ -198,6 +210,7 @@ impl Ide {
             fold_project: false,
             fold_structure: false,
             fold_problems: false,
+            fold_minimap: false,
             left_width: LEFT_W,
             left_collapsed: false,
             resizing_left: false,
@@ -216,6 +229,8 @@ impl Ide {
             registers: Vec::new(),
             todos: Vec::new(),
             marks_list: Vec::new(),
+            jumplist_rows: Vec::new(),
+            recent_rows: Vec::new(),
             bottom_tab: BottomTab::Problems,
             bottom_hits: Vec::new(),
             bottom_header_y: 0,
@@ -249,6 +264,12 @@ impl Ide {
             git_last: None,
             run_total_vis: 0,
         }
+    }
+
+    /// Re-read the project file tree from disk. Called by the filesystem watcher
+    /// when files change outside the editor.
+    pub fn refresh_tree(&mut self) {
+        self.project.refresh();
     }
 
     /// True while a panel (not the editor) holds focus — editor cursor hidden, keys routed here.
@@ -499,6 +520,8 @@ impl Ide {
                         Some(BottomHit::TabRegisters) => self.bottom_tab = BottomTab::Registers,
                         Some(BottomHit::TabTodo) => self.bottom_tab = BottomTab::Todo,
                         Some(BottomHit::TabMarks) => self.bottom_tab = BottomTab::Marks,
+                        Some(BottomHit::TabJumplist) => self.bottom_tab = BottomTab::Jumplist,
+                        Some(BottomHit::TabRecent) => self.bottom_tab = BottomTab::Recent,
                         Some(BottomHit::Stop) => {
                             if let Some(r) = &self.run {
                                 crate::ui::run::stop(r);
@@ -569,6 +592,38 @@ impl Ide {
                 }
                 if in_rect(&self.problems_rect, col, row)
                     && row > self.problems_rect.y
+                    && self.bottom_tab == BottomTab::Jumplist
+                {
+                    let idx = (row - self.problems_rect.y - 1) as usize;
+                    if let Some((target, pos, _)) = self.jumplist_rows.get(idx) {
+                        match target {
+                            // Entry in another document: open it.
+                            Some(path) if path.is_file() => {
+                                self.focus = Focus::Editor;
+                                return IdeAction::OpenFile(path.clone());
+                            }
+                            // Entry in the focused document: jump to it.
+                            None => return IdeAction::Goto { from: *pos, to: *pos },
+                            _ => {}
+                        }
+                    }
+                    return IdeAction::None;
+                }
+                if in_rect(&self.problems_rect, col, row)
+                    && row > self.problems_rect.y
+                    && self.bottom_tab == BottomTab::Recent
+                {
+                    let idx = (row - self.problems_rect.y - 1) as usize;
+                    if let Some(path) = self.recent_rows.get(idx) {
+                        if path.is_file() {
+                            self.focus = Focus::Editor;
+                            return IdeAction::OpenFile(path.clone());
+                        }
+                    }
+                    return IdeAction::None;
+                }
+                if in_rect(&self.problems_rect, col, row)
+                    && row > self.problems_rect.y
                     && self.bottom_tab == BottomTab::Problems
                 {
                     self.focus = Focus::Problems;
@@ -580,6 +635,17 @@ impl Ide {
                     }
                 }
                 if in_rect(&self.stripe_rect, col, row) && self.stripe_rect.height > 0 {
+                    // Collapsed handle → expand.
+                    if self.fold_minimap {
+                        self.fold_minimap = false;
+                        return IdeAction::None;
+                    }
+                    // Top-right chevron → collapse.
+                    let chevron_x = self.stripe_rect.x + self.stripe_rect.width.saturating_sub(1);
+                    if row == self.stripe_rect.y && col == chevron_x {
+                        self.fold_minimap = true;
+                        return IdeAction::None;
+                    }
                     let frac = (row - self.stripe_rect.y) as f32 / self.stripe_rect.height as f32;
                     let line = ((frac * self.total_lines as f32) as usize).min(self.total_lines.saturating_sub(1));
                     let pos = line_to_char(line);
@@ -694,8 +760,11 @@ impl Ide {
             self.seam_x = u16::MAX;
         }
 
-        // right minimap pane
-        if rest.width > STRIPE_W + 30 {
+        // right minimap pane (collapses to a 1-col handle when folded)
+        if self.fold_minimap && rest.width > 4 {
+            self.stripe_rect = Rect::new(rest.x + rest.width - 1, rest.y, 1, rest.height);
+            rest = Rect::new(rest.x, rest.y, rest.width - 1, rest.height);
+        } else if !self.fold_minimap && rest.width > STRIPE_W + 30 {
             self.stripe_rect = Rect::new(rest.x + rest.width - STRIPE_W, rest.y, STRIPE_W, rest.height);
             rest = Rect::new(rest.x, rest.y, rest.width - STRIPE_W, rest.height);
         } else {
@@ -741,7 +810,19 @@ impl Ide {
             self.render_bottom(surface, theme);
         }
         if self.stripe_rect.height > 0 {
-            self.render_stripe(surface, theme);
+            if self.fold_minimap {
+                // Collapsed: a thin clickable handle ("‹" = click to expand).
+                let st = theme.get("ui.window");
+                for y in self.stripe_rect.y..self.stripe_rect.y + self.stripe_rect.height {
+                    surface.set_stringn(self.stripe_rect.x, y, "‹", 1, st);
+                }
+            } else {
+                self.render_stripe(surface, theme);
+                // Fold chevron at the top-right corner ("›" = click to collapse).
+                let chevron = theme.get("comment");
+                let cx_col = self.stripe_rect.x + self.stripe_rect.width.saturating_sub(1);
+                surface.set_stringn(cx_col, self.stripe_rect.y, "›", 1, chevron);
+            }
         }
 
         // visible drag handle: a horizontal divider line above the bottom drawer
@@ -1033,6 +1114,40 @@ impl Ide {
                 self.git_last = Some(std::time::Instant::now());
             }
         }
+
+        // Jumplist of the focused view — only while its tab is open.
+        if self.bottom_tab == BottomTab::Jumplist {
+            self.jumplist_rows.clear();
+            let focused_doc = cx.editor.tree.get(cx.editor.tree.focus).doc;
+            for (view, focused) in cx.editor.tree.views() {
+                if !focused {
+                    continue;
+                }
+                for (doc_id, sel) in view.jumps.iter().rev() {
+                    if let Some(doc) = cx.editor.documents.get(doc_id) {
+                        let text = doc.text().slice(..);
+                        let pos = sel.primary().cursor(text);
+                        let line = text.char_to_line(pos) + 1;
+                        let name = doc
+                            .path()
+                            .and_then(|p| p.file_name())
+                            .map(|s| s.to_string_lossy().into_owned())
+                            .unwrap_or_else(|| "[scratch]".to_string());
+                        let target = if *doc_id == focused_doc {
+                            None
+                        } else {
+                            doc.path().map(|p| p.to_path_buf())
+                        };
+                        self.jumplist_rows.push((target, pos, format!("{name}:{line}")));
+                    }
+                }
+            }
+        }
+
+        // Recently opened files — only while its tab is open.
+        if self.bottom_tab == BottomTab::Recent {
+            self.recent_rows = crate::recent_files::load();
+        }
     }
 
     fn render_structure(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme) {
@@ -1205,7 +1320,21 @@ impl Ide {
         let mw = mlabel.chars().count() as u16;
         surface.set_stringn(x, area.y, &mlabel, area.width as usize, if self.bottom_tab == BottomTab::Marks { on } else { off });
         self.bottom_hits.push((x, x + mw, BottomHit::TabMarks));
-        x += mw + 2;
+        x += mw + 1;
+
+        // Jumplist tab
+        let jlabel = " JUMPS ".to_string();
+        let jw = jlabel.chars().count() as u16;
+        surface.set_stringn(x, area.y, &jlabel, area.width as usize, if self.bottom_tab == BottomTab::Jumplist { on } else { off });
+        self.bottom_hits.push((x, x + jw, BottomHit::TabJumplist));
+        x += jw + 1;
+
+        // Recent files tab
+        let nlabel = " RECENT ".to_string();
+        let nw = nlabel.chars().count() as u16;
+        surface.set_stringn(x, area.y, &nlabel, area.width as usize, if self.bottom_tab == BottomTab::Recent { on } else { off });
+        self.bottom_hits.push((x, x + nw, BottomHit::TabRecent));
+        x += nw + 2;
 
         // run controls + status
         let run_info = self.run.as_ref().map(|r| {
@@ -1239,6 +1368,60 @@ impl Ide {
             BottomTab::Registers => self.render_registers_body(surface, theme, body),
             BottomTab::Todo => self.render_todo_body(surface, theme, body),
             BottomTab::Marks => self.render_marks_body(surface, theme, body),
+            BottomTab::Jumplist => self.render_jumplist_body(surface, theme, body),
+            BottomTab::Recent => self.render_recent_body(surface, theme, body),
+        }
+    }
+
+    fn render_jumplist_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
+        let height = body.height as usize;
+        if height == 0 {
+            return;
+        }
+        if self.jumplist_rows.is_empty() {
+            surface.set_stringn(body.x, body.y, "  no jumps", body.width as usize, theme.get("comment"));
+            return;
+        }
+        let mark = theme.get("function");
+        let base = theme.get("ui.text");
+        for (i, (_, _, label)) in self.jumplist_rows.iter().enumerate() {
+            if i >= height {
+                break;
+            }
+            let y = body.y + i as u16;
+            surface.set_stringn(body.x, y, " ↪", body.width as usize, mark);
+            surface.set_stringn(body.x + 3, y, label, body.width.saturating_sub(3) as usize, base);
+        }
+    }
+
+    fn render_recent_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
+        let height = body.height as usize;
+        if height == 0 {
+            return;
+        }
+        if self.recent_rows.is_empty() {
+            surface.set_stringn(body.x, body.y, "  no recent files", body.width as usize, theme.get("comment"));
+            return;
+        }
+        let base = theme.get("ui.text");
+        let dim = theme.get("comment");
+        for (i, path) in self.recent_rows.iter().enumerate() {
+            if i >= height {
+                break;
+            }
+            let y = body.y + i as u16;
+            let name = path
+                .file_name()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            let glyph = crate::ui::icons::file_icon(&name);
+            let label = format!(" {glyph} {name}");
+            let (nx, _) = surface.set_stringn(body.x, y, &label, body.width as usize, base);
+            // trailing dimmed parent directory
+            if let Some(parent) = path.parent().map(|p| p.to_string_lossy().into_owned()) {
+                let rem = body.width.saturating_sub(nx - body.x) as usize;
+                surface.set_stringn(nx + 1, y, &format!("· {parent}"), rem, dim);
+            }
         }
     }
 

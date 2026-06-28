@@ -16,6 +16,28 @@ use tui::buffer::Buffer as Surface;
 
 use crate::ui::text_decorations::DecorationManager;
 
+/// Map a control byte to a safe, single-width Unicode "control picture" glyph so
+/// it can be displayed without corrupting the terminal. Returns `None` for normal
+/// (printable) graphemes, which should be rendered as-is.
+///
+/// - C0 controls (NUL..US, 0x00–0x1F) → U+2400+code (␀..␟)
+/// - DEL (0x7F) → U+2421 (␡)
+/// - C1 controls (0x80–0x9F) and other controls → U+FFFD (�)
+fn control_picture(g: &str) -> Option<char> {
+    let mut chars = g.chars();
+    let c = chars.next()?;
+    // Only single-char graphemes can be control characters.
+    if chars.next().is_some() || !c.is_control() {
+        return None;
+    }
+    let code = c as u32;
+    Some(match code {
+        0x7F => '\u{2421}',
+        c0 if c0 < 0x20 => char::from_u32(0x2400 + c0).unwrap_or('\u{FFFD}'),
+        _ => '\u{FFFD}',
+    })
+}
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct LinePos {
     /// Indicates whether the given visual line
@@ -291,13 +313,22 @@ impl<'a> TextRenderer<'a> {
             style = style.patch(self.whitespace_style);
         }
 
+        let mut control_buf = String::new();
         let grapheme = match grapheme {
             Grapheme::Tab { width } => {
                 let grapheme_tab_width = char_to_byte_idx(&self.virtual_tab, width);
                 &self.virtual_tab[..grapheme_tab_width]
             }
             Grapheme::Other { ref g } if g == "\u{00A0}" => " ",
-            Grapheme::Other { ref g } => g,
+            Grapheme::Other { ref g } => {
+                let s: &str = if let Some(picture) = control_picture(g) {
+                    control_buf.push(picture);
+                    &control_buf
+                } else {
+                    g
+                };
+                s
+            }
             Grapheme::Newline => " ",
         };
 
@@ -344,6 +375,9 @@ impl<'a> TextRenderer<'a> {
         } else {
             &self.tab
         };
+        // Holds a safe replacement glyph for a control byte, if any; declared here
+        // so the `&str` borrow lives until the surface write below.
+        let mut control_buf = String::new();
         let grapheme = match grapheme.raw {
             Grapheme::Tab { width } => {
                 is_tab = true;
@@ -354,7 +388,18 @@ impl<'a> TextRenderer<'a> {
             Grapheme::Other { ref g } if g == " " && !grapheme.source.is_eof() => space,
             Grapheme::Other { ref g } if g == "\u{00A0}" => nbsp,
             Grapheme::Other { ref g } if g == "\u{202F}" => nnbsp,
-            Grapheme::Other { ref g } => g,
+            Grapheme::Other { ref g } => {
+                // Never emit raw control bytes (NUL, ESC, BEL, ...) — they corrupt
+                // the terminal when opening binary files like `.zwc`. Map them to a
+                // single-width Unicode "control picture" so layout stays aligned.
+                let s: &str = if let Some(picture) = control_picture(g) {
+                    control_buf.push(picture);
+                    &control_buf
+                } else {
+                    g
+                };
+                s
+            }
             Grapheme::Newline => &self.newline,
         };
 

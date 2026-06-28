@@ -420,7 +420,9 @@ impl Tree {
                         let height = if i == len - 1 {
                             (area.y + area.height).saturating_sub(child_y)
                         } else {
-                            (area.height as f32 * (weights[i] / total)).round() as u16
+                            // floor (truncate) so the last child absorbs the remainder,
+                            // matching the original equal-split behaviour.
+                            (area.height as f32 * (weights[i] / total)) as u16
                         };
                         let child_area = Rect::new(area.x, child_y, area.width, height);
                         child_y = child_y.saturating_add(height);
@@ -439,7 +441,9 @@ impl Tree {
                         let width = if i == len - 1 {
                             (area.x + area.width).saturating_sub(child_x)
                         } else {
-                            (used_area as f32 * (weights[i] / total)).round() as u16
+                            // floor (truncate) so the last child absorbs the remainder,
+                            // matching the original equal-split behaviour.
+                            (used_area as f32 * (weights[i] / total)) as u16
                         };
                         let child_area = Rect::new(child_x, area.y, width, area.height);
                         child_x = child_x.saturating_add(width);
