@@ -410,6 +410,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "n" => search_next,                // gn: select the next search match
             "N" => search_prev,                // gN: select the previous search match
             "." => goto_last_modification,
+            "'" => goto_mark_line,             // g'{mark}: like ' but keep jumplist
+            "`" => goto_mark,                  // g`{mark}: like ` but keep jumplist
         },
 
         // --- z submap (view + folds) ---------------------------------------
@@ -500,8 +502,25 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "R" => rotate_view_reverse,       // C-w R: rotate windows upwards
             "x" | "C-x" => transpose_view,    // C-w x: exchange current window with next
             "f" | "C-f" => goto_file_hsplit,  // C-w f / C-w C-f: split + edit file under cursor
+            "F" => goto_file_hsplit,          // C-w F: split + edit file (with line number)
             "]" | "C-]" => goto_definition,   // C-w ] / C-w C-]: jump to tag/definition (no split)
             "^" | "C-^" => goto_last_accessed_file, // C-w ^ / C-w C-^: edit alternate file
+            "i" => goto_declaration,          // C-w i: split + jump to declaration (no split)
+            "p" | "C-p" => rotate_view,       // C-w p: go to previous (last accessed) window
+            "t" | "C-t" => jump_view_up,      // C-w t: go to top window
+            "b" | "C-b" => jump_view_down,    // C-w b: go to bottom window
+            "W" => rotate_view_reverse,       // C-w W: go to previous window (wrap)
+            "}" => hover,                     // C-w }: show tag under cursor in preview (hover)
+            // CTRL-W g ...: tab/file/tag variants (vim's window-goto sub-prefix)
+            "g" => { "Window goto"
+                "t" => goto_next_buffer,      // C-w g t: next tabpage -> next buffer
+                "T" => goto_previous_buffer,  // C-w g T: prev tabpage -> previous buffer
+                "f" => goto_file,             // C-w g f: edit file under cursor (new tab approx)
+                "F" => goto_file,             // C-w g F: edit file under cursor (new tab approx)
+                "]" | "C-]" => goto_definition, // C-w g ] / g C-]: tag jump (:tselect/:tjump)
+                "}" => hover,                 // C-w g }: preview tag under cursor
+                "tab" => goto_last_accessed_file, // C-w g <Tab>: last accessed tab -> alt file
+            },
             "n" | "C-n" => hsplit_new,        // C-w n: open new window
             "/" => vsplit,                    // spacemacs SPC w / : split vertically
             "-" => hsplit,                    // spacemacs SPC w - : split horizontally
@@ -537,6 +556,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "ins"     => insert_mode,        // <Insert> = i
         "C-]"     => goto_definition,    // CTRL-] = :ta (jump to tag)
         "C-^"     => goto_last_accessed_file, // CTRL-^ = edit alternate file
+        "S-ret"   => page_down,          // <S-CR> = CTRL-F (page down)
+        "C-t"     => jump_backward,      // CTRL-T = pop tag stack (≈ jump back)
+        "C-tab"   => goto_last_accessed_file, // CTRL-<Tab> = go to last accessed tab
 
         // --- emacs/readline keys (Meta space is free in the vim keymap) -----
         "A-x"     => command_palette,     // M-x
@@ -636,8 +658,24 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "R" => rotate_view_reverse,
                 "x" | "C-x" => transpose_view,
                 "f" | "C-f" => goto_file_hsplit,
+                "F" => goto_file_hsplit,
                 "]" | "C-]" => goto_definition,
                 "^" | "C-^" => goto_last_accessed_file,
+                "i" => goto_declaration,
+                "p" | "C-p" => rotate_view,
+                "t" | "C-t" => jump_view_up,
+                "b" | "C-b" => jump_view_down,
+                "W" => rotate_view_reverse,
+                "}" => hover,
+                "g" => { "Window goto"
+                    "t" => goto_next_buffer,
+                    "T" => goto_previous_buffer,
+                    "f" => goto_file,
+                    "F" => goto_file,
+                    "]" | "C-]" => goto_definition,
+                    "}" => hover,
+                    "tab" => goto_last_accessed_file,
+                },
                 "n" | "C-n" => hsplit_new,
                 "/" => vsplit,
                 "-" => hsplit,
@@ -709,6 +747,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "c" => goto_last_change,           // SPC j c : go to last change
                 "k" => [move_visual_line_down, indent], // SPC j k : next line + indent
                 "u" => goto_file,                  // SPC j u : jump to URL/file under cursor
+                "w" => goto_word,                  // SPC j w : avy jump to word
             },
             "g" => { "Goto (LSP)"
                 "d" => goto_definition,
@@ -921,6 +960,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "C-d" => completion,   // i_CTRL-X_CTRL-D: defined-identifier completion
             "C-u" => completion,   // i_CTRL-X_CTRL-U: 'completefunc' completion
             "C-]" => completion,   // i_CTRL-X_CTRL-]: tag completion
+            "C-v" => completion,   // i_CTRL-X_CTRL-V: complete like in : command line
+            "s"   => completion,   // i_CTRL-X_s: spelling suggestions
         },
 
         "ret"   => insert_newline,

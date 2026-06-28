@@ -5910,5 +5910,205 @@
       "key:insert:C-x C-]"
     ],
     "note": "tag completion -> unified completion"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_f_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w F"
+    ],
+    "note": "split + edit file under cursor"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_g_t",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w g t"
+    ],
+    "note": "next tabpage -> next buffer"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_g_t_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w g T"
+    ],
+    "note": "prev tabpage -> previous buffer"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_g_f",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w g f"
+    ],
+    "note": "edit file under cursor (current win)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_g_f_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w g F"
+    ],
+    "note": "edit file under cursor (current win)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_g_rbracket",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w g ]"
+    ],
+    "note": "tag jump (no split)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_g_ctrl_rbracket_split_window_and_do_bar_colon_tjump_bar_to_tag_under",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w g C-]"
+    ],
+    "note": "tag jump (no split)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_g_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w g }"
+    ],
+    "note": "preview tag (hover)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_g_lt_tab_gt",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w g tab"
+    ],
+    "note": "last accessed tab -> alt file"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_i",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w i"
+    ],
+    "note": "jump to declaration (no split)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_p_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w p"
+    ],
+    "note": "previous/last window (rotate)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_ctrl_p",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w C-p"
+    ],
+    "note": "previous/last window (rotate)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_t_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w t"
+    ],
+    "note": "top window (jump up)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_ctrl_t",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w C-t"
+    ],
+    "note": "top window (jump up)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_b",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w b"
+    ],
+    "note": "bottom window (jump down)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_ctrl_b",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w C-b"
+    ],
+    "note": "bottom window (jump down)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_w",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w W"
+    ],
+    "note": "previous window wrap (rotate reverse)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w }"
+    ],
+    "note": "show tag in preview (hover)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lt_s_cr_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:S-ret"
+    ],
+    "note": "<S-CR> = CTRL-F page down"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_t",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-t"
+    ],
+    "note": "pop tag stack (jump back)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_lt_tab_gt",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-tab"
+    ],
+    "note": "go to last accessed tab"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_apos_lbrace_mark_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g '"
+    ],
+    "note": "g'{mark}: goto mark line (jumplist differs)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_backtick_lbrace_mark_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g `"
+    ],
+    "note": "g`{mark}: goto mark (jumplist differs)"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_v",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-x C-v"
+    ],
+    "note": "cmdline-style completion -> unified completion"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_j_w",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space j w"
+    ],
+    "note": "avy jump to word -> goto_word"
   }
 ]
