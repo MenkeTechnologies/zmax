@@ -94,6 +94,13 @@ pub enum IdeAction {
     /// Run/debug toolbar actions that need editor/compositor access.
     RunStart,
     Debug,
+    /// Right-click on a file-tree entry: show a CRUD context menu at (row, col).
+    ShowContextMenu {
+        path: PathBuf,
+        is_dir: bool,
+        row: u16,
+        col: u16,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -650,6 +657,22 @@ impl Ide {
                     let line = ((frac * self.total_lines as f32) as usize).min(self.total_lines.saturating_sub(1));
                     let pos = line_to_char(line);
                     return IdeAction::Goto { from: pos, to: pos };
+                }
+                IdeAction::None
+            }
+            MouseEventKind::Down(MouseButton::Right) => {
+                // Right-click on a file-tree entry → CRUD context menu.
+                if in_rect(&self.project_rect, col, row) && row > self.project_rect.y {
+                    let lr = (row - self.project_rect.y - 1) as usize;
+                    if let Some((path, is_dir)) = self.project.path_at_row(lr) {
+                        self.focus = Focus::Project;
+                        return IdeAction::ShowContextMenu {
+                            path,
+                            is_dir,
+                            row,
+                            col,
+                        };
+                    }
                 }
                 IdeAction::None
             }
@@ -1765,6 +1788,142 @@ fn sev_mark(sev: Severity, theme: &zemacs_view::Theme) -> (&'static str, zemacs_
 /// Build via `Selection::single` so callers can apply a goto in one place.
 pub fn goto_selection(from: usize, to: usize) -> Selection {
     Selection::single(from, to)
+}
+
+// ---- right-click file-tree context menu (CRUD) ----
+
+#[derive(Clone, Copy, PartialEq)]
+enum FileActionKind {
+    NewFile,
+    NewFolder,
+    Rename,
+    Delete,
+    CopyPath,
+}
+
+pub struct ContextAction {
+    label: &'static str,
+    kind: FileActionKind,
+}
+
+impl crate::ui::menu::Item for ContextAction {
+    type Data = ();
+    fn format(&self, _: &()) -> crate::ui::menu::Row<'_> {
+        crate::ui::menu::Row::new(vec![crate::ui::menu::Cell::from(self.label)])
+    }
+}
+
+/// Rebuild the file tree on the main thread (from a background callback context).
+fn refresh_tree_async() {
+    crate::job::dispatch_blocking(|_editor, compositor| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.refresh_file_tree();
+        }
+    });
+}
+
+/// Build the right-click CRUD context menu for a file-tree entry at (row, col).
+pub fn file_context_menu(
+    path: PathBuf,
+    is_dir: bool,
+    row: u16,
+    col: u16,
+) -> crate::ui::popup::Popup<crate::ui::menu::Menu<ContextAction>> {
+    use crate::ui::menu::Menu;
+    use crate::ui::PromptEvent;
+
+    let mut items = Vec::new();
+    if is_dir {
+        items.push(ContextAction { label: "New File", kind: FileActionKind::NewFile });
+        items.push(ContextAction { label: "New Folder", kind: FileActionKind::NewFolder });
+    }
+    items.push(ContextAction { label: "Rename", kind: FileActionKind::Rename });
+    items.push(ContextAction { label: "Delete", kind: FileActionKind::Delete });
+    items.push(ContextAction { label: "Copy Path", kind: FileActionKind::CopyPath });
+
+    let menu = Menu::new(items, (), move |editor, item, event| {
+        if !matches!(event, PromptEvent::Validate) {
+            return;
+        }
+        let Some(item) = item else { return };
+        let path = path.clone();
+        match item.kind {
+            FileActionKind::CopyPath => {
+                let s = path.to_string_lossy().to_string();
+                let _ = editor.registers.push('"', s.clone());
+                editor.set_status(format!("yanked path: {s}"));
+            }
+            FileActionKind::Delete => {
+                let res = if is_dir {
+                    std::fs::remove_dir_all(&path)
+                } else {
+                    std::fs::remove_file(&path)
+                };
+                match res {
+                    Ok(()) => editor.set_status(format!("deleted {}", path.display())),
+                    Err(e) => editor.set_error(format!("delete failed: {e}")),
+                }
+                refresh_tree_async();
+            }
+            kind => {
+                // New File / New Folder / Rename need a name prompt, which requires
+                // compositor access — hop onto the main loop to push it.
+                crate::job::dispatch_blocking(move |_editor, compositor| {
+                    compositor.push(Box::new(name_prompt(kind, path.clone(), is_dir)));
+                });
+            }
+        }
+    });
+
+    crate::ui::popup::Popup::new("file-context-menu", menu)
+        .position(Some(zemacs_core::Position::new(row as usize, col as usize)))
+        .auto_close(true)
+}
+
+/// Prompt for a name, then create/rename the target and refresh the tree.
+fn name_prompt(kind: FileActionKind, target: PathBuf, _is_dir: bool) -> crate::ui::Prompt {
+    use crate::ui::PromptEvent;
+    let label: std::borrow::Cow<'static, str> = match kind {
+        FileActionKind::NewFile => "New file: ".into(),
+        FileActionKind::NewFolder => "New folder: ".into(),
+        FileActionKind::Rename => "Rename to: ".into(),
+        _ => "".into(),
+    };
+    crate::ui::Prompt::new(
+        label,
+        None,
+        |_editor, _input| Vec::new(),
+        move |cx, input, event| {
+            if !matches!(event, PromptEvent::Validate) || input.trim().is_empty() {
+                return;
+            }
+            let input = input.trim();
+            let result = match kind {
+                FileActionKind::NewFile => {
+                    let p = target.join(input);
+                    std::fs::File::create(&p).map(|_| p)
+                }
+                FileActionKind::NewFolder => {
+                    let p = target.join(input);
+                    std::fs::create_dir_all(&p).map(|_| p)
+                }
+                FileActionKind::Rename => {
+                    let parent = target
+                        .parent()
+                        .map(|p| p.to_path_buf())
+                        .unwrap_or_else(|| std::path::PathBuf::from("."));
+                    let np = parent.join(input);
+                    std::fs::rename(&target, &np).map(|_| np)
+                }
+                _ => return,
+            };
+            match result {
+                Ok(p) => cx.editor.set_status(format!("created {}", p.display())),
+                Err(e) => cx.editor.set_error(format!("failed: {e}")),
+            }
+            refresh_tree_async();
+        },
+    )
 }
 
 /// Current git branch for `start`: walk up to a `.git`, read `HEAD`. Returns the short branch name

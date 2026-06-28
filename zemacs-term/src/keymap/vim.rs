@@ -104,12 +104,10 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t K", "Toggles", ":toggle auto-info"),                     // SPC t K : which-key (auto-info) mode
     ("space t p", "Toggles", ":toggle auto-pairs"),                    // SPC t p : smartparens (auto-pairs)
     ("space t C-p", "Toggles", ":toggle auto-pairs"),                  // SPC t C-p : global smartparens
-    ("space T c", "Themes", "theme_picker"),                           // SPC T c : fzf theme picker w/ live preview (:Colors)
+    // SPC T c (theme_picker) is a static command, bound in the macro keymap below.
     ("space T s", "Themes", ":theme"),                                 // SPC T s : select theme
     ("space T n", "Themes", ":theme-next"),                            // SPC T n : next theme
     ("space T p", "Themes", ":theme-prev"),                            // SPC T p : previous theme
-    ("space T n", "Themes", ":theme"),                                 // SPC T n : next theme (picker)
-    ("space T p", "Themes", ":theme"),                                 // SPC T p : previous theme (picker)
     ("space h T v", "Help", ":tutor"),                                 // SPC h T v : evil tutor
     ("space h d c", "Help",    ":character-info"),                     // SPC h d c : describe char under point
     ("space p e",   "Project", ":config-open"),                       // SPC p e : edit dir-locals/config
@@ -715,6 +713,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "?"     => command_palette,            // SPC ?   : commands
             "'"     => last_picker,                // SPC '   : resume picker
             ";"     => toggle_comments,            // SPC ;   : comment operator
+
+            "T" => { "Themes"
+                "c" => theme_picker,               // SPC T c : fzf theme picker w/ live preview (:Colors)
+            },
 
             "f" => { "Files"
                 "f" => file_picker,                            // SPC f f
