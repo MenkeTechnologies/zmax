@@ -119,9 +119,12 @@ pub fn runtime_file(rel_path: impl AsRef<Path>) -> PathBuf {
 
 pub fn config_dir() -> PathBuf {
     // TODO: allow env var override
+    // zemacs keeps all of its config under a single dotted home directory
+    // (`~/.zemacs`) rather than the XDG config location, so config.toml,
+    // languages.toml and the `runtime/` overlay all live together.
     let strategy = choose_base_strategy().expect("Unable to find the config directory!");
-    let mut path = strategy.config_dir();
-    path.push("zemacs");
+    let mut path = strategy.home_dir().to_path_buf();
+    path.push(".zemacs");
     path
 }
 

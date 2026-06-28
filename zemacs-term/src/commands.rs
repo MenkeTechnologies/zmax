@@ -573,6 +573,13 @@ impl MappableCommand {
         fold_delete_all, "Delete all folds (zE)",
         fold_next, "Move to next fold (zj)",
         fold_prev, "Move to previous fold (zk)",
+        goto_line_last_nonblank, "Goto last non-blank on line (g_)",
+        goto_line_middle, "Goto middle of text line (gM)",
+        goto_byte, "Goto byte {count} in buffer (go)",
+        goto_prev_unmatched_paren, "Goto previous unmatched ( ([()",
+        goto_prev_unmatched_brace, "Goto previous unmatched { ([{)",
+        goto_next_unmatched_paren, "Goto next unmatched ) (])",
+        goto_next_unmatched_brace, "Goto next unmatched } (]})",
         match_brackets, "Goto matching bracket",
         match_brackets_or_goto_percent, "Goto matching bracket, or {count} percent through the file",
         surround_add, "Surround add",
@@ -1069,6 +1076,136 @@ fn goto_first_nonwhitespace_impl(view: &mut View, doc: &mut Document, movement: 
         }
     });
     doc.set_selection(view.id, selection);
+}
+
+// vim `g_`: to the last non-blank character of the line.
+fn goto_line_last_nonblank(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let extend = cx.editor.mode == Mode::Select;
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let line = range.cursor_line(text);
+        let start = text.line_to_char(line);
+        let end = line_end_char_index(&text, line);
+        // scan back from the line end to the last non-whitespace grapheme
+        let mut pos = end;
+        while pos > start {
+            let prev = graphemes::prev_grapheme_boundary(text, pos);
+            if text.slice(prev..pos).chars().any(|c| !c.is_whitespace()) {
+                pos = prev;
+                break;
+            }
+            pos = prev;
+        }
+        range.put_cursor(text, pos, extend)
+    });
+    doc.set_selection(view.id, selection);
+}
+
+// vim `gM`: to the character at the middle of the text line (by length).
+fn goto_line_middle(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let extend = cx.editor.mode == Mode::Select;
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let line = range.cursor_line(text);
+        let start = text.line_to_char(line);
+        let end = line_end_char_index(&text, line);
+        let pos = start + (end - start) / 2;
+        range.put_cursor(text, pos, extend)
+    });
+    doc.set_selection(view.id, selection);
+}
+
+// vim `go`: to byte {count} in the buffer (1-based; default 1).
+fn goto_byte(cx: &mut Context) {
+    let byte = cx.count().saturating_sub(1);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let byte = byte.min(text.len_bytes());
+    let char_idx = text.byte_to_char(byte);
+    let extend = cx.editor.mode == Mode::Select;
+    let selection = doc
+        .selection(view.id)
+        .clone()
+        .transform(|range| range.put_cursor(text, char_idx, extend));
+    doc.set_selection(view.id, selection);
+}
+
+// vim `[(` `[{` `])` `]}`: jump to the {count}th previous/next *unmatched*
+// bracket of the given pair, honoring nesting. Plaintext scan (no syntax needed).
+fn find_unmatched_bracket(
+    text: RopeSlice,
+    cursor: usize,
+    open: char,
+    close: char,
+    forward: bool,
+    count: usize,
+) -> Option<usize> {
+    let mut depth = 0i32;
+    let mut remaining = count.max(1);
+    if forward {
+        for i in (cursor + 1)..text.len_chars() {
+            let ch = text.char(i);
+            if ch == open {
+                depth += 1;
+            } else if ch == close {
+                if depth == 0 {
+                    remaining -= 1;
+                    if remaining == 0 {
+                        return Some(i);
+                    }
+                } else {
+                    depth -= 1;
+                }
+            }
+        }
+    } else {
+        for i in (0..cursor).rev() {
+            let ch = text.char(i);
+            if ch == close {
+                depth += 1;
+            } else if ch == open {
+                if depth == 0 {
+                    remaining -= 1;
+                    if remaining == 0 {
+                        return Some(i);
+                    }
+                } else {
+                    depth -= 1;
+                }
+            }
+        }
+    }
+    None
+}
+
+fn goto_unmatched_bracket(cx: &mut Context, open: char, close: char, forward: bool) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let extend = cx.editor.mode == Mode::Select;
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let cursor = range.cursor(text);
+        match find_unmatched_bracket(text, cursor, open, close, forward, count) {
+            Some(pos) => range.put_cursor(text, pos, extend),
+            None => range,
+        }
+    });
+    doc.set_selection(view.id, selection);
+}
+
+fn goto_prev_unmatched_paren(cx: &mut Context) {
+    goto_unmatched_bracket(cx, '(', ')', false);
+}
+fn goto_prev_unmatched_brace(cx: &mut Context) {
+    goto_unmatched_bracket(cx, '{', '}', false);
+}
+fn goto_next_unmatched_paren(cx: &mut Context) {
+    goto_unmatched_bracket(cx, '(', ')', true);
+}
+fn goto_next_unmatched_brace(cx: &mut Context) {
+    goto_unmatched_bracket(cx, '{', '}', true);
 }
 
 fn trim_selections(cx: &mut Context) {
@@ -1898,7 +2035,14 @@ fn insert_at_last_insert(cx: &mut Context) {
 fn save_visual_selection(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id).clone();
+    // record the `<` / `>` marks (start / end of the last visual area) so
+    // `` `< `` / `` `> `` (and the `'<` / `'>` line variants) jump there.
+    let prim = selection.primary();
+    let from = prim.from();
+    let to = prim.to().saturating_sub(1).max(from);
     doc.set_last_visual(selection);
+    doc.set_mark('<', from);
+    doc.set_mark('>', to);
 }
 
 fn reselect_visual(cx: &mut Context) {

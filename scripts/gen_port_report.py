@@ -52,6 +52,36 @@ KEYBIND_CATS = {
 # --------------------------------------------------------------------------
 # Numerator: parse the real zemacs source.
 # --------------------------------------------------------------------------
+def _match_delim(src, i, open_ch, close_ch):
+    """From index `i` (just past an opening `open_ch`, nesting depth 1), return the
+    index just past its matching `close_ch`. Skips Rust string literals and `//`
+    line comments so delimiter characters that appear as *keys* (e.g. the `"}"` /
+    `"{"` / `")"` keys in the keymap) or inside comments don't miscount. This is
+    what lets the parser handle real keymap content like vim's `zf}` fold key."""
+    n = len(src)
+    depth = 1
+    while i < n and depth:
+        ch = src[i]
+        if ch == '"':
+            i += 1
+            while i < n and src[i] != '"':
+                if src[i] == "\\":
+                    i += 1
+                i += 1
+            i += 1
+            continue
+        if ch == "/" and i + 1 < n and src[i + 1] == "/":
+            while i < n and src[i] != "\n":
+                i += 1
+            continue
+        if ch == open_ch:
+            depth += 1
+        elif ch == close_ch:
+            depth -= 1
+        i += 1
+    return i
+
+
 def parse_static_commands():
     """Return {name: doc} for every entry in the static_commands! invocation."""
     path = os.path.join(ZEMACS_TERM, "commands.rs")
@@ -61,16 +91,8 @@ def parse_static_commands():
     if not m:
         sys.exit("FATAL: static_commands! invocation not found in commands.rs")
     start = m.end()
-    # Walk to the matching close paren.
-    depth = 1
-    i = start
-    while i < len(src) and depth:
-        c = src[i]
-        if c == "(":
-            depth += 1
-        elif c == ")":
-            depth -= 1
-        i += 1
+    # Walk to the matching close paren (string/comment-aware).
+    i = _match_delim(src, start, "(", ")")
     block = src[start : i - 1]
     cmds = {}
     for cm in re.finditer(r'^\s*([a-z][a-z0-9_]+)\s*,\s*"([^"]*)"', block, re.M):
@@ -106,14 +128,7 @@ def parse_keymap():
 
     def brace_body(open_idx):
         """open_idx points just past the opening `{`; return (body, end_idx)."""
-        depth = 1
-        i = open_idx
-        while i < len(src) and depth:
-            if src[i] == "{":
-                depth += 1
-            elif src[i] == "}":
-                depth -= 1
-            i += 1
+        i = _match_delim(src, open_idx, "{", "}")
         return src[open_idx : i - 1], i
 
     # Process keymap constructs in source order so clone() sees its source map
@@ -190,14 +205,7 @@ def parse_prompt_keymap():
     # one we want) handles keys. Pick the balanced block that contains key macros.
     body = ""
     for m in re.finditer(r"\bmatch\s+event\s*\{", src):
-        depth = 1
-        i = m.end()
-        while i < len(src) and depth:
-            if src[i] == "{":
-                depth += 1
-            elif src[i] == "}":
-                depth -= 1
-            i += 1
+        i = _match_delim(src, m.end(), "{", "}")
         candidate = src[m.end() : i - 1]
         if "ctrl!(" in candidate or "key!(" in candidate:
             body = candidate
@@ -238,15 +246,8 @@ def _walk_keymap(body, prefix, out):
         while j < n and body[j].isspace():
             j += 1
         if j < n and body[j] == "{":
-            # Submap: find matching brace, recurse.
-            depth = 1
-            k = j + 1
-            while k < n and depth:
-                if body[k] == "{":
-                    depth += 1
-                elif body[k] == "}":
-                    depth -= 1
-                k += 1
+            # Submap: find matching brace (string/comment-aware), recurse.
+            k = _match_delim(body, j + 1, "{", "}")
             inner = body[j + 1 : k - 1]
             # First token inside is the label string "Label"; the walker's
             # regex needs a `=>` so the bare label is naturally ignored.

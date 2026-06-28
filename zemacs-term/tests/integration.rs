@@ -21,4 +21,5 @@ mod test {
     mod dot_repeat;
     mod movement;
     mod splits;
+    mod vim_motions;
 }

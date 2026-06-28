@@ -5270,5 +5270,213 @@
       "typable:character-info"
     ],
     "note": ":as[cii]"
+  },
+  {
+    "spec_id": "neovim.normal-mode.za_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z a"
+    ],
+    "note": "za"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zo_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z o"
+    ],
+    "note": "zo"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zc_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z c"
+    ],
+    "note": "zc"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zr",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z R"
+    ],
+    "note": "zR"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zm",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z M"
+    ],
+    "note": "zM"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zd_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z d"
+    ],
+    "note": "zd"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ze",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z E"
+    ],
+    "note": "zE"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zj",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z j"
+    ],
+    "note": "zj"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zk",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z k"
+    ],
+    "note": "zk"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zf_lbrace_motion_rbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z f j"
+    ],
+    "note": "zf{motion}"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zo",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z O"
+    ],
+    "note": "zO"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zc",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z C"
+    ],
+    "note": "zC"
+  },
+  {
+    "spec_id": "neovim.normal-mode.zv",
+    "status": "partial",
+    "evidence": [
+      "key:normal:z v"
+    ],
+    "note": "zv"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_m_g_g",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space m g g"
+    ],
+    "note": "SPC m g g"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_m_h_h",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space m h h"
+    ],
+    "note": "SPC m h h"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space s `"
+    ],
+    "note": "SPC s `"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gm_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g M"
+    ],
+    "note": "gM"
+  },
+  {
+    "spec_id": "neovim.normal-mode.go",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g o"
+    ],
+    "note": "go"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_lparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:[ ("
+    ],
+    "note": "[("
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_lbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:[ {"
+    ],
+    "note": "[{"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:] )"
+    ],
+    "note": "])"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_rbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:] }"
+    ],
+    "note": "]}"
+  },
+  {
+    "spec_id": "neovim.normal-mode.backtick_lt",
+    "status": "ported",
+    "evidence": [
+      "static:goto_mark"
+    ],
+    "note": "`<"
+  },
+  {
+    "spec_id": "neovim.normal-mode.backtick_gt",
+    "status": "ported",
+    "evidence": [
+      "static:goto_mark"
+    ],
+    "note": "`>"
+  },
+  {
+    "spec_id": "neovim.normal-mode.apos_lt",
+    "status": "ported",
+    "evidence": [
+      "static:goto_mark_line"
+    ],
+    "note": "'<"
+  },
+  {
+    "spec_id": "neovim.normal-mode.apos_gt",
+    "status": "ported",
+    "evidence": [
+      "static:goto_mark_line"
+    ],
+    "note": "'>"
   }
 ]

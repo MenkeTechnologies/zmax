@@ -367,7 +367,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "0" => goto_line_start,            // g0 leftmost (screen line)
             "$" => goto_line_end,              // g$ rightmost (screen line)
             "^" => goto_first_nonwhitespace,   // g^ first non-blank (screen line)
-            "_" => goto_line_end,              // g_ last non-blank (approx)
+            "_" => goto_line_last_nonblank,    // g_ last non-blank char of line
+            "M" => goto_line_middle,           // gM middle of the text line
+            "o" => goto_byte,                  // go to byte {count} in buffer
             "I" => insert_at_line_start,       // gI insert at column 1
             "d" => goto_definition,
             "D" => goto_declaration,
@@ -432,6 +434,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "b" => goto_previous_buffer,  // [b previous buffer (unimpaired-style)
             "/" => goto_prev_comment,     // [/ previous comment
             "p" => paste_before,          // [p paste before (linewise, adjust indent)
+            "(" => goto_prev_unmatched_paren, // [( previous unmatched (
+            "{" => goto_prev_unmatched_brace, // [{ previous unmatched {
         },
         "]" => { "Next"
             "]" => goto_next_paragraph,
@@ -443,6 +447,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "b" => goto_next_buffer,      // ]b next buffer (unimpaired-style)
             "/" => goto_next_comment,     // ]/ next comment
             "p" => paste_after,           // ]p paste after (linewise, adjust indent)
+            ")" => goto_next_unmatched_paren, // ]) next unmatched )
+            "}" => goto_next_unmatched_brace, // ]} next unmatched }
         },
 
         // --- window commands (C-w) -----------------------------------------
@@ -606,6 +612,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "e" => select_references_to_symbol_under_cursor, // SPC s e : edit occurrences
                 "h" => select_references_to_symbol_under_cursor, // SPC s h : highlight symbol
                 "S" => workspace_symbol_picker,
+                "`" => jump_backward,              // SPC s ` : back to pre-jump location
                 // ag / grep / ack search families all map to project-wide search.
                 "a" => { "ag"
                     "a" => global_search, "b" => global_search, "d" => global_search,
@@ -723,6 +730,14 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "k" => command_palette,            // SPC h k : describe key / commands
                 "?" => command_palette,            // SPC h ? : list bindings
                 "c" => command_palette,            // SPC h c : describe command
+            },
+            "m" => { "Major mode"
+                "g" => { "Goto"
+                    "g" => goto_definition,        // SPC m g g : go to definition
+                },
+                "h" => { "Help"
+                    "h" => hover,                  // SPC m h h : describe thing at point
+                },
             },
         },
     });
