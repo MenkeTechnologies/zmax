@@ -136,9 +136,14 @@ impl Application {
         let keys = Box::new(Map::new(Arc::clone(&config), |config: &Config| {
             &config.keys
         }));
+        // Session persistence: restore drawer layout / reopen tabs from a previous session.
+        let appdata = crate::appdata::load();
         let mut editor_view = ui::EditorView::new(Keymaps::new(keys));
         if args.ide {
             editor_view.open_sidebar();
+        }
+        if let Some(data) = &appdata {
+            editor_view.restore_ide(&data.ide);
         }
         compositor.push(Box::new(editor_view));
 
@@ -228,11 +233,33 @@ impl Application {
                 editor.new_file(Action::VerticalSplit);
             }
         } else if stdin().is_terminal() || cfg!(feature = "integration") {
-            editor.new_file(Action::VerticalSplit);
-            // Startify-style start screen over the empty scratch buffer. Skipped under
-            // the integration-test feature so headless runs keep the bare buffer.
-            #[cfg(not(feature = "integration"))]
-            compositor.push(Box::new(ui::Startify::new()));
+            // Restore the previous session's open tabs + cursor, if any; else a scratch + startify.
+            let restored = appdata
+                .as_ref()
+                .map(|d| !d.open_files.is_empty())
+                .unwrap_or(false);
+            if restored {
+                let data = appdata.as_ref().unwrap();
+                for file in &data.open_files {
+                    let _ = editor.open(std::path::Path::new(file), Action::Load);
+                }
+                if let Some(focused) = &data.focused_file {
+                    if let Ok(doc_id) = editor.open(std::path::Path::new(focused), Action::Replace) {
+                        let view_id = editor.tree.focus;
+                        if let Some(pos) = data.cursor {
+                            let doc = doc_mut!(editor, &doc_id);
+                            let pos = pos.min(doc.text().len_chars());
+                            doc.set_selection(view_id, Selection::point(pos));
+                        }
+                    }
+                }
+            } else {
+                editor.new_file(Action::VerticalSplit);
+                // Startify-style start screen over the empty scratch buffer. Skipped under
+                // the integration-test feature so headless runs keep the bare buffer.
+                #[cfg(not(feature = "integration"))]
+                compositor.push(Box::new(ui::Startify::new()));
+            }
         } else {
             editor
                 .new_file_from_stdin(Action::VerticalSplit)
@@ -1335,6 +1362,8 @@ impl Application {
 
         self.event_loop(input_stream).await;
 
+        self.save_appdata();
+
         let close_errs = self.close().await;
 
         self.restore_term()?;
@@ -1345,6 +1374,34 @@ impl Application {
         }
 
         Ok(self.editor.exit_code)
+    }
+
+    /// Persist the session (theme, open tabs, focused file + cursor, drawer layout) to appdata.toml.
+    fn save_appdata(&mut self) {
+        let mut data = crate::appdata::AppData {
+            theme: Some(self.editor.theme.name().to_string()),
+            ..Default::default()
+        };
+        for doc in self.editor.documents() {
+            if let Some(path) = doc.path() {
+                data.open_files.push(path.to_string_lossy().into_owned());
+            }
+        }
+        {
+            let (view, doc) = current_ref!(self.editor);
+            if let Some(path) = doc.path() {
+                data.focused_file = Some(path.to_string_lossy().into_owned());
+            }
+            data.cursor = Some(doc.selection(view.id).primary().cursor(doc.text().slice(..)));
+        }
+        if let Some(layout) = self
+            .compositor
+            .find::<crate::ui::EditorView>()
+            .and_then(|ev| ev.ide_layout())
+        {
+            data.ide = layout;
+        }
+        crate::appdata::save(&data);
     }
 
     pub async fn close(&mut self) -> Vec<anyhow::Error> {

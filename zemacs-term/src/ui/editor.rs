@@ -100,6 +100,25 @@ impl EditorView {
         self.ide.get_or_insert_with(Ide::new).focus_editor();
     }
 
+    /// Attach a running command to the IDE Run tool window (opens + focuses it).
+    pub fn set_run(&mut self, run: crate::ui::run::Run) {
+        self.ide.get_or_insert_with(Ide::new).set_run(run);
+    }
+
+    /// Snapshot the IDE workbench layout for persistence (None if never opened).
+    pub fn ide_layout(&self) -> Option<crate::appdata::IdeLayout> {
+        self.ide.as_ref().map(Ide::layout)
+    }
+
+    /// Restore a persisted IDE layout (only opens the workbench if it was open).
+    pub fn restore_ide(&mut self, layout: &crate::appdata::IdeLayout) {
+        if layout.open {
+            let ide = self.ide.get_or_insert_with(Ide::new);
+            ide.apply_layout(layout);
+            ide.focus_editor();
+        }
+    }
+
     /// Render the workbench (if any) into its regions; return the editor's remaining area.
     fn render_sidebar(
         &mut self,
@@ -113,20 +132,60 @@ impl EditorView {
         }
     }
 
-    /// Apply a workbench action: open a file, or jump to a symbol/diagnostic.
-    fn apply_ide_action(&mut self, action: IdeAction, context: &mut crate::compositor::Context) {
+    /// Apply a workbench action: open a file, jump to a symbol/diagnostic, or run/debug.
+    /// Returns a compositor callback when the action needs to push UI (e.g. the debug picker).
+    fn apply_ide_action(
+        &mut self,
+        action: IdeAction,
+        context: &mut crate::compositor::Context,
+    ) -> Option<crate::compositor::Callback> {
         match action {
-            IdeAction::None => {}
+            IdeAction::None => None,
             IdeAction::OpenFile(path) => {
                 let _ = context
                     .editor
                     .open(&path, zemacs_view::editor::Action::Replace);
+                None
             }
             IdeAction::Goto { from, to } => {
                 let scrolloff = context.editor.config().scrolloff;
                 let (view, doc) = current!(context.editor);
                 doc.set_selection(view.id, super::ide::goto_selection(from, to));
                 view.ensure_cursor_in_view(doc, scrolloff);
+                None
+            }
+            IdeAction::RunStart => {
+                let path = doc!(context.editor).path().map(|p| p.to_path_buf());
+                let (cmd, cwd) = crate::ui::run::smart_command(path.as_deref());
+                let shell = context.editor.config().shell.clone();
+                let run = crate::ui::run::spawn(cmd, shell, cwd);
+                self.ide.get_or_insert_with(Ide::new).set_run(run);
+                None
+            }
+            IdeAction::Debug => {
+                // Launch a DAP session (shows the debug-template picker).
+                let mut cx = commands::Context {
+                    editor: context.editor,
+                    count: None,
+                    register: None,
+                    callback: Vec::new(),
+                    on_next_key_callback: None,
+                    jobs: context.jobs,
+                };
+                crate::commands::dap::dap_launch(&mut cx);
+                let callbacks = cx.callback;
+                if callbacks.is_empty() {
+                    None
+                } else {
+                    Some(Box::new(
+                        move |compositor: &mut crate::compositor::Compositor,
+                              cx: &mut crate::compositor::Context| {
+                            for cb in callbacks {
+                                cb(compositor, cx);
+                            }
+                        },
+                    ))
+                }
             }
         }
     }
@@ -1539,10 +1598,19 @@ impl Component for EditorView {
                 self.ide.get_or_insert_with(Ide::new).toggle();
                 return EventResult::Consumed(None);
             }
+            // Run the current file (Cmd+R → F5) / Debug (Cmd+D → F6), regardless of panel focus.
+            if key.code == KeyCode::F(5) && key.modifiers.is_empty() {
+                let cb = self.apply_ide_action(IdeAction::RunStart, context);
+                return EventResult::Consumed(cb);
+            }
+            if key.code == KeyCode::F(6) && key.modifiers.is_empty() {
+                let cb = self.apply_ide_action(IdeAction::Debug, context);
+                return EventResult::Consumed(cb);
+            }
             if self.ide.as_ref().is_some_and(Ide::capturing) {
                 let action = self.ide.as_mut().unwrap().handle_key(*key);
-                self.apply_ide_action(action, context);
-                return EventResult::Consumed(None);
+                let cb = self.apply_ide_action(action, context);
+                return EventResult::Consumed(cb);
             }
         }
         if let Event::Mouse(me) = event {
@@ -1568,8 +1636,8 @@ impl Component for EditorView {
                 let action = self.ide.as_mut().unwrap().handle_mouse(me, |line| {
                     text.line_to_char(line.min(text.len_lines().saturating_sub(1)))
                 });
-                self.apply_ide_action(action, context);
-                return EventResult::Consumed(None);
+                let cb = self.apply_ide_action(action, context);
+                return EventResult::Consumed(cb);
             }
         }
 

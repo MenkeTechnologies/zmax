@@ -33,6 +33,7 @@ impl GutterType {
             GutterType::Spacer => padding(editor, doc, view, theme, is_focused),
             GutterType::Diff => diff(editor, doc, view, theme, is_focused),
             GutterType::CodeActionHint => code_action_hint(editor, doc, view, theme, is_focused),
+            GutterType::Marks => marks(editor, doc, view, theme, is_focused),
         }
     }
 
@@ -43,6 +44,7 @@ impl GutterType {
             GutterType::Spacer => 1,
             GutterType::Diff => 1,
             GutterType::CodeActionHint => 1,
+            GutterType::Marks => 1,
         }
     }
 }
@@ -84,6 +86,66 @@ pub fn diagnostic<'doc>(
                     Some(Severity::Info) => info,
                     Some(Severity::Hint) => hint,
                 }
+            })
+        },
+    )
+}
+
+/// Markology: render the full vim mark set in the gutter, one char per line.
+///
+/// Stored marks (`a`-`z`, `A`-`Z`, `^`, `<`, `>`, and the auto-tracked `.`/`[`/`]`) come from the
+/// document; the cursor-relative marks (`(`/`)` sentence, `{`/`}` paragraph) and `'` (last jump)
+/// are computed live here, matching vim's `:help marks`.
+pub fn marks<'doc>(
+    _editor: &'doc Editor,
+    doc: &'doc Document,
+    view: &View,
+    theme: &Theme,
+    _is_focused: bool,
+) -> GutterFn<'doc> {
+    use std::collections::HashMap;
+    use zemacs_core::textobject::{self, TextObject};
+
+    let style = theme
+        .try_get("ui.gutter.marks")
+        .unwrap_or_else(|| theme.get("constant"));
+    let text = doc.text();
+    let slice = text.slice(..);
+    let len = text.len_chars();
+    let mut by_line: HashMap<usize, char> = HashMap::new();
+    // Explicit marks set last keep priority (named marks beat computed sentence/paragraph).
+    let mut put = |line: usize, ch: char| {
+        by_line.insert(line, ch);
+    };
+
+    // Cursor-relative computed marks (lowest priority — inserted first).
+    let range = doc.selection(view.id).primary();
+    let sent = textobject::textobject_sentence(slice, range, TextObject::Around, 1);
+    put(slice.char_to_line(sent.from().min(len)), '(');
+    put(slice.char_to_line(sent.to().saturating_sub(1).min(len)), ')');
+    let para = textobject::textobject_paragraph(slice, range, TextObject::Around, 1);
+    put(slice.char_to_line(para.from().min(len)), '{');
+    put(slice.char_to_line(para.to().saturating_sub(1).min(len)), '}');
+
+    // `'` / `` ` `` — position before the most recent jump in this buffer.
+    let doc_id = doc.id();
+    if let Some((_, sel)) = view.jumps.iter().filter(|(id, _)| *id == doc_id).last() {
+        put(text.char_to_line(sel.primary().cursor(slice).min(len)), '\'');
+    }
+
+    // Stored marks (named + ^ < > . [ ]) — highest priority.
+    for (ch, pos) in doc.marks_iter() {
+        put(text.char_to_line(pos.min(len)), ch);
+    }
+
+    Box::new(
+        move |line: usize, _selected: bool, first_visual_line: bool, out: &mut String| {
+            if !first_visual_line {
+                return None;
+            }
+            by_line.get(&line).map(|&ch| {
+                write!(out, "{ch}").ok();
+                style
             })
         },
     )

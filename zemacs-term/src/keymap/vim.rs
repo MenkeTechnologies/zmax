@@ -93,6 +93,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t p", "Toggles", ":toggle auto-pairs"),                    // SPC t p : smartparens (auto-pairs)
     ("space t C-p", "Toggles", ":toggle auto-pairs"),                  // SPC t C-p : global smartparens
     ("space T s", "Themes", ":theme"),                                 // SPC T s : select theme
+    ("space T n", "Themes", ":theme-next"),                            // SPC T n : next theme
+    ("space T p", "Themes", ":theme-prev"),                            // SPC T p : previous theme
     ("space T n", "Themes", ":theme"),                                 // SPC T n : next theme (picker)
     ("space T p", "Themes", ":theme"),                                 // SPC T p : previous theme (picker)
     ("space h T v", "Help", ":tutor"),                                 // SPC h T v : evil tutor
@@ -247,8 +249,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "D" => [extend_to_line_end, delete_selection],
         "C" => [extend_to_line_end, change_selection],
         "Y" => [extend_to_line_bounds, yank, collapse_selection],
-        "s" => change_selection,            // substitute char
-        "S" => [extend_to_line_bounds, change_selection],
+        "s" => sneak_or_substitute_char,    // vim-sneak (editor.vim-sneak=true) else substitute char
+        "S" => sneak_or_substitute_line,    // vim-sneak backward, else substitute line
         "r" => replace,
         "R" => replace_mode,                // enter Replace mode (overtype)
         "J" => join_selections,
@@ -1142,6 +1144,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
         // gq / gw: reformat the highlighted lines (LSP formatter)
         "g" => { "Goto"
+            "g" => extend_to_file_start,             // vgg: extend selection to first line
+            "e" => extend_to_last_line,              // ge: extend to last line
+            "h" => extend_to_first_nonwhitespace,    // extend to first non-blank
+            "l" | "$" => extend_to_line_end,         // extend to line end
             "q" => [format_selections, normal_mode],
             "w" => [format_selections, normal_mode],
             "v" => reselect_visual,                  // gv: reselect previous highlighted area

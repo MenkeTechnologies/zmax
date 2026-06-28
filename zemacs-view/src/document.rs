@@ -1512,6 +1512,37 @@ impl Document {
             *pos = transaction.changes().map_pos(*pos, Assoc::After);
         }
 
+        // vim auto-marks: `.` = position of the last change, `[`/`]` = start/end of the
+        // changed text (computed in the new-text coordinate space).
+        {
+            use zemacs_core::Operation;
+            let mut pos = 0usize;
+            let mut start: Option<usize> = None;
+            let mut end = 0usize;
+            for op in changes.changes() {
+                match op {
+                    Operation::Retain(n) => pos += n,
+                    Operation::Insert(s) => {
+                        start.get_or_insert(pos);
+                        pos += s.chars().count();
+                        end = pos;
+                    }
+                    Operation::Delete(_) => {
+                        start.get_or_insert(pos);
+                        end = end.max(pos);
+                    }
+                }
+            }
+            if let Some(start) = start {
+                let len = self.text.len_chars();
+                let s = start.min(len);
+                let e = end.min(len);
+                self.marks.insert('.', s);
+                self.marks.insert('[', s);
+                self.marks.insert(']', e.saturating_sub(1).max(s));
+            }
+        }
+
         // generate revert to savepoint
         if !self.savepoints.is_empty() {
             let revert = transaction.invert(&old_doc);
@@ -1687,6 +1718,12 @@ impl Document {
     /// Set a vim named mark to a char position.
     pub fn set_mark(&mut self, mark: char, pos: usize) {
         self.marks.insert(mark, pos);
+    }
+
+    /// Iterate all set marks as `(mark_char, char_position)` (for the markology gutter).
+    pub fn marks_iter(&self) -> impl Iterator<Item = (char, usize)> + '_ {
+        let len = self.text.len_chars();
+        self.marks.iter().map(move |(&c, &p)| (c, p.min(len)))
     }
 
     /// Get a vim named mark's char position, clamped to the current text length.

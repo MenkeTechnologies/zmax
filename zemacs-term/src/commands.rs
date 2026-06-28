@@ -352,6 +352,10 @@ impl MappableCommand {
         extend_next_char, "Extend to next occurrence of char",
         till_prev_char, "Move till previous occurrence of char",
         find_prev_char, "Move to previous occurrence of char",
+        sneak_forward, "Sneak: jump forward to a two-character sequence",
+        sneak_backward, "Sneak: jump backward to a two-character sequence",
+        sneak_or_substitute_char, "Sneak forward, or substitute char when vim-sneak is off",
+        sneak_or_substitute_line, "Sneak backward, or substitute line when vim-sneak is off",
         extend_till_prev_char, "Extend till previous occurrence of char",
         extend_prev_char, "Extend to previous occurrence of char",
         repeat_last_motion, "Repeat last motion",
@@ -2316,6 +2320,105 @@ fn find_prev_char(cx: &mut Context) {
 
 fn extend_till_prev_char(cx: &mut Context) {
     find_char(cx, Direction::Backward, false, true)
+}
+
+fn sneak_char(event: KeyEvent) -> Option<char> {
+    match event.code {
+        KeyCode::Char(ch) => Some(ch),
+        KeyCode::Enter => Some('\n'),
+        KeyCode::Tab => Some('\t'),
+        _ => None,
+    }
+}
+
+/// vim-sneak: read two characters, then jump the cursor to the next/previous
+/// occurrence of that pair.
+fn sneak(cx: &mut Context, direction: Direction) {
+    cx.on_next_key(move |cx, ev1| {
+        let Some(c1) = sneak_char(ev1) else { return };
+        cx.on_next_key(move |cx, ev2| {
+            let Some(c2) = sneak_char(ev2) else { return };
+            sneak_jump(cx, c1, c2, direction);
+        });
+    });
+}
+
+fn sneak_jump(cx: &mut Context, c1: char, c2: char, direction: Direction) {
+    let target = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        match direction {
+            Direction::Forward => {
+                let start = (cursor + 1).min(text.len_chars());
+                let mut prev: Option<char> = None;
+                let mut pos = start;
+                let mut found = None;
+                for c in text.chars_at(start) {
+                    if prev == Some(c1) && c == c2 {
+                        found = Some(pos - 1);
+                        break;
+                    }
+                    prev = Some(c);
+                    pos += 1;
+                }
+                found
+            }
+            Direction::Backward => {
+                let mut prev: Option<char> = None;
+                let mut pos = 0usize;
+                let mut last = None;
+                for c in text.chars() {
+                    if pos > cursor {
+                        break;
+                    }
+                    if prev == Some(c1) && c == c2 && pos >= 1 && (pos - 1) < cursor {
+                        last = Some(pos - 1);
+                    }
+                    prev = Some(c);
+                    pos += 1;
+                }
+                last
+            }
+        }
+    };
+
+    match target {
+        Some(idx) => {
+            let scrolloff = cx.editor.config().scrolloff;
+            let (view, doc) = current!(cx.editor);
+            doc.set_selection(view.id, Selection::point(idx));
+            view.ensure_cursor_in_view(doc, scrolloff);
+        }
+        None => cx.editor.set_status(format!("sneak: '{c1}{c2}' not found")),
+    }
+}
+
+fn sneak_forward(cx: &mut Context) {
+    sneak(cx, Direction::Forward)
+}
+
+fn sneak_backward(cx: &mut Context) {
+    sneak(cx, Direction::Backward)
+}
+
+/// `s`: vim-sneak forward when `editor.vim-sneak` is on, else vim substitute-char.
+fn sneak_or_substitute_char(cx: &mut Context) {
+    if cx.editor.config().vim_sneak {
+        sneak_forward(cx);
+    } else {
+        change_selection(cx);
+    }
+}
+
+/// `S`: vim-sneak backward when `editor.vim-sneak` is on, else vim substitute-line.
+fn sneak_or_substitute_line(cx: &mut Context) {
+    if cx.editor.config().vim_sneak {
+        sneak_backward(cx);
+    } else {
+        extend_to_line_bounds(cx);
+        change_selection(cx);
+    }
 }
 
 fn extend_prev_char(cx: &mut Context) {
@@ -5432,14 +5535,20 @@ fn yank_to_primary_clipboard(cx: &mut Context) {
 
 fn yank_impl(editor: &mut Editor, register: char) {
     let (view, doc) = current!(editor);
-    let text = doc.text().slice(..);
-
-    let values: Vec<String> = doc
-        .selection(view.id)
-        .fragments(text)
-        .map(Cow::into_owned)
-        .collect();
+    let (from, to, values) = {
+        let text = doc.text().slice(..);
+        let primary = doc.selection(view.id).primary();
+        let values: Vec<String> = doc
+            .selection(view.id)
+            .fragments(text)
+            .map(Cow::into_owned)
+            .collect();
+        (primary.from(), primary.to(), values)
+    };
     let selections = values.len();
+    // vim: yanking sets the `[`/`]` marks to the start/end of the yanked text.
+    doc.set_mark('[', from);
+    doc.set_mark(']', to.saturating_sub(1).max(from));
 
     match editor.registers.write(register, values) {
         Ok(_) => editor.set_status(format!(
@@ -6891,9 +7000,50 @@ fn fold_open(cx: &mut Context) {
     doc.folds_mut().open(line);
 }
 
+fn line_has_marker(doc: &Document, line: usize, pat: &str) -> bool {
+    doc.text().line(line).chars().collect::<String>().contains(pat)
+}
+
+/// vim marker folding: the `{{{`…`}}}` region enclosing `cursor_line`, if any.
+/// Simple (non-nested) scan — the nearest `{{{` at/above and the next `}}}` below.
+fn marker_fold_region(doc: &Document, cursor_line: usize) -> Option<(usize, usize)> {
+    let total = doc.text().len_lines();
+    if total == 0 {
+        return None;
+    }
+    let from = cursor_line.min(total - 1);
+    let mut start = None;
+    for l in (0..=from).rev() {
+        if line_has_marker(doc, l, "{{{") {
+            start = Some(l);
+            break;
+        }
+        // a `}}}` above the cursor with no `{{{` first means we're not inside a region
+        if l != from && line_has_marker(doc, l, "}}}") {
+            break;
+        }
+    }
+    let start = start?;
+    let mut end = None;
+    for l in start..total {
+        if line_has_marker(doc, l, "}}}") {
+            end = Some(l);
+            break;
+        }
+    }
+    let end = end?;
+    (end > start).then_some((start, end))
+}
+
 fn fold_close(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let line = fold_cursor_line(view, doc);
+    // vim marker folding: if the cursor sits in a `{{{ }}}` region, create the fold first.
+    if let Some((start, end)) = marker_fold_region(doc, line) {
+        let last = doc.text().len_lines().saturating_sub(1);
+        doc.folds_mut().create(start, end);
+        doc.folds_mut().clamp(last);
+    }
     doc.folds_mut().close(line);
     fold_snap_cursor(view, doc);
 }

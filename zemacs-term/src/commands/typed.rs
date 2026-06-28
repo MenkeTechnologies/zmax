@@ -1138,6 +1138,87 @@ fn theme(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
     Ok(())
 }
 
+/// All available theme names (config dir + runtime dirs + the two built-ins), sorted/deduped.
+fn all_theme_names() -> Vec<String> {
+    let mut names =
+        zemacs_view::theme::Loader::read_names(&zemacs_loader::config_dir().join("themes"));
+    for rt_dir in zemacs_loader::runtime_dirs() {
+        names.extend(zemacs_view::theme::Loader::read_names(&rt_dir.join("themes")));
+    }
+    names.push("default".to_string());
+    names.push("base16_default".to_string());
+    names.sort();
+    names.dedup();
+    names
+}
+
+fn cycle_theme(cx: &mut compositor::Context, delta: isize) -> anyhow::Result<()> {
+    let names = all_theme_names();
+    if names.is_empty() {
+        return Ok(());
+    }
+    let current = cx.editor.theme.name();
+    let idx = names.iter().position(|n| n == current).unwrap_or(0) as isize;
+    let next = (idx + delta).rem_euclid(names.len() as isize) as usize;
+    let name = names[next].clone();
+    let theme = cx
+        .editor
+        .theme_loader
+        .load(&name)
+        .map_err(|err| anyhow::anyhow!("Could not load theme '{name}': {err}"))?;
+    cx.editor.set_theme(theme)?;
+    cx.editor.set_status(format!("theme: {name}"));
+    Ok(())
+}
+
+fn theme_next(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cycle_theme(cx, 1)
+}
+
+fn theme_prev(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cycle_theme(cx, -1)
+}
+
+fn run_command(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = doc!(cx.editor).path().map(|p| p.to_path_buf());
+    let (default_cmd, cwd) = crate::ui::run::smart_command(path.as_deref());
+    let cmd = if args.is_empty() {
+        default_cmd
+    } else {
+        args.join(" ")
+    };
+    let shell = cx.editor.config().shell.clone();
+    let run = crate::ui::run::spawn(cmd, shell, cwd);
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                view.set_run(run);
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+fn registers(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    // vim `:registers`: show the contents of every register (named, numbered, and specials).
+    let info = zemacs_view::info::Info::from_registers("Registers", &cx.editor.registers);
+    cx.editor.autoinfo = Some(info);
+    Ok(())
+}
+
 fn yank_main_selection_to_clipboard(
     cx: &mut compositor::Context,
     _args: Args,
@@ -4918,6 +4999,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::theme]),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "theme-next",
+        aliases: &[],
+        doc: "Switch to the next theme (alphabetical).",
+        fun: theme_next,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "theme-prev",
+        aliases: &[],
+        doc: "Switch to the previous theme (alphabetical).",
+        fun: theme_prev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "run",
+        aliases: &["r!"],
+        doc: "Run a command in the IDE Run tool window (defaults to `cargo run`).",
+        fun: run_command,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "registers",
+        aliases: &["reg", "display"],
+        doc: "Show the contents of all registers.",
+        fun: registers,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

@@ -1087,16 +1087,18 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
         };
 
         match key_event {
-            shift!(Tab) | key!(Up) | ctrl!('p') => {
+            // fzf-style: ctrl-k/j move one line, ctrl-p/n page. Readline keys (ctrl-a/e/w/u/d)
+            // are intentionally left for the prompt below — do NOT alias them here.
+            shift!(Tab) | key!(Up) | ctrl!('k') => {
                 self.move_by(1, Direction::Backward);
             }
-            key!(Tab) | key!(Down) | ctrl!('n') => {
+            key!(Tab) | key!(Down) | ctrl!('j') => {
                 self.move_by(1, Direction::Forward);
             }
-            key!(PageDown) | ctrl!('d') => {
+            key!(PageDown) | ctrl!('n') => {
                 self.page_down();
             }
-            key!(PageUp) | ctrl!('u') => {
+            key!(PageUp) | ctrl!('p') => {
                 self.page_up();
             }
             key!(Home) => {

@@ -11,6 +11,8 @@ pub mod overlay;
 pub mod picker;
 pub mod popup;
 pub mod prompt;
+pub mod rat;
+pub mod run;
 mod select;
 mod spinner;
 pub mod startify;

@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate zemacs_view;
 
+pub mod appdata;
 pub mod application;
 pub mod args;
 pub mod commands;

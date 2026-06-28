@@ -100,6 +100,7 @@ impl Default for GutterConfig {
         Self {
             layout: vec![
                 GutterType::Diagnostics,
+                GutterType::Marks,
                 GutterType::Spacer,
                 GutterType::LineNumbers,
                 GutterType::Spacer,
@@ -369,6 +370,9 @@ pub struct Config {
     /// prefix menus while leaving `auto-info` on for the rest. Defaults to ["g", "y", "z"];
     /// set to [] to show every popup, or add "space" to also silence the leader menu.
     pub auto_info_exclude: Vec<String>,
+    /// When true, vim-sneak overrides `s`/`S` (jump to a two-character sequence). When false,
+    /// `s`/`S` keep vim's substitute-char / substitute-line. Defaults to true.
+    pub vim_sneak: bool,
     pub file_picker: FilePickerConfig,
     pub file_explorer: FileExplorerConfig,
     /// Configuration of the statusline elements
@@ -914,6 +918,8 @@ pub enum GutterType {
     Diff,
     /// Indicator for when code actions are available
     CodeActionHint,
+    /// Show vim marks (markology) in the gutter
+    Marks,
 }
 
 impl std::str::FromStr for GutterType {
@@ -926,6 +932,7 @@ impl std::str::FromStr for GutterType {
             "line-numbers" => Ok(Self::LineNumbers),
             "diff" => Ok(Self::Diff),
             "code-action-hint" => Ok(Self::CodeActionHint),
+            "marks" => Ok(Self::Marks),
             _ => anyhow::bail!(
                 "Gutter type can only be `diagnostics`, `spacer`, `line-numbers` or `diff`."
             ),
@@ -1206,7 +1213,8 @@ impl Default for Config {
             preview_completion_insert: true,
             completion_trigger_len: 2,
             auto_info: true,
-            auto_info_exclude: vec!["g".into(), "y".into(), "z".into()],
+            auto_info_exclude: vec!["g".into(), "y".into(), "z".into(), "d".into()],
+            vim_sneak: true,
             file_picker: FilePickerConfig::default(),
             file_explorer: FileExplorerConfig::default(),
             statusline: StatusLineConfig::default(),
@@ -1962,6 +1970,23 @@ impl Editor {
 
         if !matches!(action, Action::Load) {
             self.enter_normal_mode();
+        }
+
+        // vim `"` mark: remember the cursor position when leaving the current buffer.
+        // Guarded: on the very first open there is no current view yet.
+        if self.tree.try_get(self.tree.focus).is_some() {
+            let leave = {
+                let (view, doc) = current_ref!(self);
+                (
+                    doc.id(),
+                    doc.selection(view.id).primary().cursor(doc.text().slice(..)),
+                )
+            };
+            if leave.0 != id {
+                if let Some(doc) = self.documents.get_mut(&leave.0) {
+                    doc.set_mark('"', leave.1);
+                }
+            }
         }
 
         let focust_lost = match action {

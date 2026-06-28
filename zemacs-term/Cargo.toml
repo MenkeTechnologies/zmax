@@ -55,6 +55,9 @@ once_cell = "1.21"
 
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "io-util", "io-std", "time", "process", "macros", "fs", "parking_lot"] }
 tui = { path = "../zemacs-tui", package = "zemacs-tui", default-features = false, features = ["termina", "crossterm"] }
+# ratatui widgets (List/Table/Scrollbar/Block) rendered offscreen and blitted onto the tui Surface
+# via ui::rat — backend-less, so it doesn't pull a second terminal backend.
+ratatui = { version = "0.29", default-features = false }
 termina = { workspace = true, features = ["event-stream"] }
 signal-hook = "0.4"
 tokio-stream = "0.1"
