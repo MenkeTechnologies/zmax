@@ -158,7 +158,101 @@ where
         zemacs_view::editor::StatusLineElement::Register => render_register,
         zemacs_view::editor::StatusLineElement::CurrentWorkingDirectory => render_cwd,
         zemacs_view::editor::StatusLineElement::CodeActionHint => render_code_action_hint,
+        zemacs_view::editor::StatusLineElement::TrailingWhitespace => render_trailing_whitespace,
+        zemacs_view::editor::StatusLineElement::MixedIndent => render_mixed_indent,
+        zemacs_view::editor::StatusLineElement::FileFormatIcon => render_file_format_icon,
     }
+}
+
+/// Number of leading lines to scan for the airline-style whitespace/indent
+/// warnings, bounding per-frame cost on very large files.
+const STATUSLINE_SCAN_LIMIT: usize = 5000;
+
+/// vim-airline style trailing-whitespace warning. Shows the first offending line
+/// number, e.g. ` trailing[42] `, and renders nothing when the file is clean.
+fn render_trailing_whitespace<'a, F>(context: &mut RenderContext<'a>, write: F)
+where
+    F: Fn(&mut RenderContext<'a>, Span<'a>) + Copy,
+{
+    let text = context.doc.text();
+    let mut first: Option<usize> = None;
+    for (i, line) in text.lines().take(STATUSLINE_SCAN_LIMIT).enumerate() {
+        // Last non-line-ending char of the line.
+        let mut last = None;
+        for ch in line.chars() {
+            if ch != '\n' && ch != '\r' {
+                last = Some(ch);
+            }
+        }
+        if matches!(last, Some(' ') | Some('\t')) {
+            first = Some(i + 1);
+            break;
+        }
+    }
+    if let Some(line) = first {
+        let style = context.editor.theme.get("warning");
+        write(context, Span::styled(format!(" trailing[{line}] "), style));
+    }
+}
+
+/// vim-airline style mixed-indentation warning. Flags files that mix tabs and
+/// spaces for indentation (or have space-before-tab), showing the first offending
+/// line where detectable, e.g. ` mixed-indent[12] `.
+fn render_mixed_indent<'a, F>(context: &mut RenderContext<'a>, write: F)
+where
+    F: Fn(&mut RenderContext<'a>, Span<'a>) + Copy,
+{
+    let text = context.doc.text();
+    let mut saw_tab_indent = false;
+    let mut saw_space_indent = false;
+    let mut first_space_before_tab: Option<usize> = None;
+    for (i, line) in text.lines().take(STATUSLINE_SCAN_LIMIT).enumerate() {
+        let mut seen_space = false;
+        let mut leading_tab = false;
+        let mut leading_space = false;
+        for ch in line.chars() {
+            match ch {
+                ' ' => {
+                    seen_space = true;
+                    leading_space = true;
+                }
+                '\t' => {
+                    if seen_space && first_space_before_tab.is_none() {
+                        first_space_before_tab = Some(i + 1);
+                    }
+                    leading_tab = true;
+                }
+                _ => break,
+            }
+        }
+        saw_tab_indent |= leading_tab;
+        saw_space_indent |= leading_space;
+    }
+
+    let mixed = first_space_before_tab.is_some() || (saw_tab_indent && saw_space_indent);
+    if mixed {
+        let style = context.editor.theme.get("warning");
+        let label = match first_space_before_tab {
+            Some(line) => format!(" mixed-indent[{line}] "),
+            None => " mixed-indent ".to_string(),
+        };
+        write(context, Span::styled(label, style));
+    }
+}
+
+/// The file's line ending shown with a nerd-font OS icon (Linux/Windows/Apple).
+fn render_file_format_icon<'a, F>(context: &mut RenderContext<'a>, write: F)
+where
+    F: Fn(&mut RenderContext<'a>, Span<'a>) + Copy,
+{
+    use zemacs_core::LineEnding::*;
+    let (icon, label) = match context.doc.line_ending {
+        Crlf => ("\u{f17a}", "CRLF"), // nf-fa-windows
+        LF => ("\u{f17c}", "LF"),     // nf-fa-linux
+        #[cfg(feature = "unicode-lines")]
+        _ => ("\u{f059}", "?"), // nf-fa-question_circle
+    };
+    write(context, format!(" {icon} {label} ").into());
 }
 
 fn render_mode<'a, F>(context: &mut RenderContext<'a>, write: F)

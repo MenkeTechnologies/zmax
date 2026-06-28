@@ -68,6 +68,12 @@ impl FileTree {
         entries
     }
 
+    /// Re-read the directory tree from disk (preserving expand/selection state).
+    /// Called by the filesystem watcher when files change on disk.
+    pub fn refresh(&mut self) {
+        self.rebuild();
+    }
+
     fn rebuild(&mut self) {
         fn walk(dir: &Path, depth: usize, expanded: &HashSet<PathBuf>, out: &mut Vec<Row>) {
             for (path, name, is_dir) in FileTree::read_dir_sorted(dir) {
@@ -199,16 +205,15 @@ impl FileTree {
                 surface.set_style(Rect::new(area.x, y, area.width, 1), sel);
             }
             let indent = "  ".repeat(row.depth);
-            let icon = if row.is_dir {
-                if row.expanded {
-                    "▾ "
-                } else {
-                    "▸ "
-                }
+            // Disclosure triangle + nerd-font filetype/folder glyph.
+            let text = if row.is_dir {
+                let arrow = if row.expanded { '▾' } else { '▸' };
+                let folder = crate::ui::icons::folder_icon(row.expanded);
+                format!("{indent}{arrow} {folder} {}", row.name)
             } else {
-                "  "
+                let glyph = crate::ui::icons::file_icon(&row.name);
+                format!("{indent}  {glyph} {}", row.name)
             };
-            let text = format!("{indent}{icon}{}", row.name);
             let style = if row.is_dir { dir_style } else { base };
             surface.set_stringn(area.x, y, &text, area.width as usize, style);
         }

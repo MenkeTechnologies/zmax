@@ -60,6 +60,9 @@ pub struct EditorView {
     /// Tab strip hit regions `(x_start, x_end, doc)` and its row, for click-to-switch.
     bufferline_tabs: Vec<(u16, u16, zemacs_view::DocumentId)>,
     bufferline_y: u16,
+    /// Active pane-divider drag: the view whose right edge is being dragged, and
+    /// the last mouse column seen, so we can apply incremental resize deltas.
+    resize_drag: Option<(zemacs_view::ViewId, u16)>,
 }
 
 use super::ide::{Ide, IdeAction};
@@ -92,6 +95,14 @@ impl EditorView {
             ide: None,
             bufferline_tabs: Vec::new(),
             bufferline_y: 0,
+            resize_drag: None,
+        }
+    }
+
+    /// Refresh the IDE file tree from disk (invoked by the filesystem watcher).
+    pub fn refresh_file_tree(&mut self) {
+        if let Some(ide) = &mut self.ide {
+            ide.refresh_tree();
         }
     }
 
@@ -824,7 +835,13 @@ impl EditorView {
                 bufferline_inactive
             };
 
-            let text = format!(" {}{} ", fname, if doc.is_modified() { "[+]" } else { "" });
+            let glyph = super::icons::file_icon(fname);
+            let text = format!(
+                " {} {}{} ",
+                glyph,
+                fname,
+                if doc.is_modified() { "[+]" } else { "" }
+            );
             let used_width = viewport.x.saturating_sub(x);
             let rem_width = surface.area.width.saturating_sub(used_width);
 
