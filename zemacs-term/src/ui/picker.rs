@@ -269,6 +269,12 @@ pub struct Picker<T: 'static + Send + Sync, D: 'static> {
     /// An event handler for syntax highlighting the currently previewed file.
     preview_highlight_handler: Sender<Arc<Path>>,
     dynamic_query_handler: Option<Sender<DynamicQueryChange>>,
+    /// Live-preview hook: invoked when the highlighted item changes.
+    on_highlight: Option<HighlightCallback<T>>,
+    /// Invoked when the picker is aborted (Esc), to revert any live preview.
+    on_abort: Option<AbortCallback>,
+    /// Tracks the last highlighted (cursor, query) so `on_highlight` only fires on change.
+    last_highlight: Option<(u32, Arc<str>)>,
 }
 
 impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
@@ -394,6 +400,40 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             file_fn: None,
             preview_highlight_handler: PreviewHighlightHandler::<T, D>::default().spawn(),
             dynamic_query_handler: None,
+            on_highlight: None,
+            on_abort: None,
+            last_highlight: None,
+        }
+    }
+
+    /// Register a live-preview callback fired whenever the highlighted item changes.
+    pub fn with_on_highlight(
+        mut self,
+        on_highlight: impl Fn(&mut Context, Option<&T>) + 'static,
+    ) -> Self {
+        self.on_highlight = Some(Box::new(on_highlight));
+        self
+    }
+
+    /// Register a callback fired when the picker is aborted (Esc), used to revert a preview.
+    pub fn with_on_abort(mut self, on_abort: impl Fn(&mut Context) + 'static) -> Self {
+        self.on_abort = Some(Box::new(on_abort));
+        self
+    }
+
+    /// If the highlighted item changed since the last render, fire `on_highlight`.
+    fn update_highlight(&mut self, cx: &mut Context) {
+        if self.on_highlight.is_none() {
+            return;
+        }
+        let sig = (self.cursor, self.primary_query());
+        if self.last_highlight.as_ref() == Some(&sig) {
+            return;
+        }
+        self.last_highlight = Some(sig);
+        let item = self.selection();
+        if let Some(on_highlight) = self.on_highlight.as_ref() {
+            on_highlight(cx, item);
         }
     }
 
@@ -641,17 +681,25 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                             if is_binary {
                                 return Ok(CachedPreview::Binary);
                             }
-                            let mut doc = Document::open(
+                            // Binary files are now rejected by Document::open
+                            let mut doc = match Document::open(
                                 &path,
                                 None,
                                 false,
                                 editor.config.clone(),
                                 editor.syn_loader.clone(),
-                            )
-                            .or(Err(std::io::Error::new(
-                                std::io::ErrorKind::NotFound,
-                                "Cannot open document",
-                            )))?;
+                            ) {
+                                Ok(doc) => doc,
+                                Err(zemacs_view::DocumentOpenError::BinaryFile) => {
+                                    return Ok(CachedPreview::Binary);
+                                }
+                                Err(_) => {
+                                    return Err(std::io::Error::new(
+                                        std::io::ErrorKind::NotFound,
+                                        "Cannot open document",
+                                    ));
+                                }
+                            };
                             let loader = editor.syn_loader.load();
                             if let Some(language_config) = doc.detect_language_config(&loader) {
                                 doc.language = Some(language_config);
@@ -1032,6 +1080,9 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
         // |         | |         |
         // +---------+ +---------+
 
+        // Fire the live-preview hook (e.g. theme preview) when the highlight moves.
+        self.update_highlight(cx);
+
         let render_preview =
             self.show_preview && self.file_fn.is_some() && area.width > MIN_AREA_WIDTH_FOR_PREVIEW;
 
@@ -1107,7 +1158,12 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
             key!(End) => {
                 self.to_end();
             }
-            key!(Esc) | ctrl!('c') => return close_fn(self),
+            key!(Esc) | ctrl!('c') => {
+                if let Some(on_abort) = self.on_abort.as_ref() {
+                    on_abort(ctx);
+                }
+                return close_fn(self);
+            }
             alt!(Enter) => {
                 if let Some(option) = self.selection() {
                     (self.callback_fn)(ctx, option, self.default_action);
@@ -1207,3 +1263,8 @@ impl<T: 'static + Send + Sync, D> Drop for Picker<T, D> {
 }
 
 type PickerCallback<T> = Box<dyn Fn(&mut Context, &T, Action)>;
+/// Called whenever the highlighted item changes (for live preview, e.g. themes).
+type HighlightCallback<T> = Box<dyn Fn(&mut Context, Option<&T>)>;
+/// Called when the picker is dismissed without a selection (Esc), to undo any
+/// live preview side effects.
+type AbortCallback = Box<dyn Fn(&mut Context)>;

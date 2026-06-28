@@ -104,6 +104,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t K", "Toggles", ":toggle auto-info"),                     // SPC t K : which-key (auto-info) mode
     ("space t p", "Toggles", ":toggle auto-pairs"),                    // SPC t p : smartparens (auto-pairs)
     ("space t C-p", "Toggles", ":toggle auto-pairs"),                  // SPC t C-p : global smartparens
+    ("space T c", "Themes", "theme_picker"),                           // SPC T c : fzf theme picker w/ live preview (:Colors)
     ("space T s", "Themes", ":theme"),                                 // SPC T s : select theme
     ("space T n", "Themes", ":theme-next"),                            // SPC T n : next theme
     ("space T p", "Themes", ":theme-prev"),                            // SPC T p : previous theme

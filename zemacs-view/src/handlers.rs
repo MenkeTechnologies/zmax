@@ -13,6 +13,8 @@ pub mod word_index;
 
 #[derive(Debug)]
 pub enum AutoSaveEvent {
+    /// Save immediately (next idle tick) — used for save-on-every-change.
+    SaveNow,
     DocumentChanged { save_after: u64 },
     LeftInsertMode,
 }

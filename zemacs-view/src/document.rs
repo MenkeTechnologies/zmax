@@ -134,6 +134,8 @@ pub struct SavePoint {
 pub enum DocumentOpenError {
     #[error("path must be a regular file, symlink, or directory")]
     IrregularFile,
+    #[error("cannot open binary file - use a binary viewer instead")]
+    BinaryFile,
     #[error(transparent)]
     IoError(#[from] io::Error),
 }
@@ -222,6 +224,8 @@ pub struct Document {
     pub focused_at: std::time::Instant,
 
     pub readonly: bool,
+
+    pub is_binary: bool,
 
     pub previous_diagnostic_ids: HashMap<LanguageServerId, String>,
 
@@ -773,6 +777,7 @@ impl Document {
             version_control_head: None,
             focused_at: std::time::Instant::now(),
             readonly: false,
+            is_binary: false,
             jump_labels: HashMap::new(),
             document_highlights: HashMap::new(),
             code_action_hints: HashSet::new(),
@@ -803,6 +808,27 @@ impl Document {
     // TODO: async fn?
     /// Create a new document from `path`. Encoding is auto-detected, but it can be manually
     /// overwritten with the `encoding` parameter.
+    fn is_binary_file(path: &Path) -> Result<bool, io::Error> {
+        use std::fs::File;
+        use std::io::Read;
+        
+        let mut file = File::open(path)?;
+        let mut buf = [0u8; 1024];
+        let n = file.read(&mut buf)?;
+        
+        // Check for byte order marks (text encodings)
+        const BOMS: &[&[u8]] = &[
+            &[0xEF, 0xBB, 0xBF],       // UTF-8
+            &[0x00, 0x00, 0xFE, 0xFF], // UTF-32BE
+            &[0xFF, 0xFE, 0x00, 0x00], // UTF-32LE
+            &[0xFE, 0xFF],             // UTF-16BE
+            &[0xFF, 0xFE],             // UTF-16LE
+        ];
+        
+        let has_bom = BOMS.iter().any(|bom| buf[..n].starts_with(bom));
+        Ok(!has_bom && (buf[..n].contains(&0) || buf[..n].starts_with(b"%PDF") || buf[..n].starts_with(&[0x89, 0x50, 0x4E, 0x47])))
+    }
+
     pub fn open(
         path: &Path,
         mut encoding: Option<&'static Encoding>,
@@ -813,6 +839,12 @@ impl Document {
         // If the path is not a regular file (e.g.: /dev/random) it should not be opened.
         if path.metadata().is_ok_and(|metadata| !metadata.is_file()) {
             return Err(DocumentOpenError::IrregularFile);
+        }
+        
+        // Check if file is binary before attempting to decode it
+        if path.exists() && Self::is_binary_file(path)? {
+            log::warn!("Refusing to open binary file: {}", path.display());
+            return Err(DocumentOpenError::BinaryFile);
         }
 
         let editor_config = if config.load().editor_config {
