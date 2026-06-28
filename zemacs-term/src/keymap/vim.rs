@@ -85,6 +85,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space g c b", "Git",     ":conflict-both"),                        // SPC g c b : keep both
     ("] x",         "Git",     ":conflict-next"),                        // next conflict
     ("[ x",         "Git",     ":conflict-prev"),                        // previous conflict
+    ("space g f l", "Git",     "git_file_log_picker"),                   // SPC g f l : commits log for current file (:BCommits)
+    ("space g L",   "Git",     "git_repo_log_picker"),                   // SPC g L : repo commit log (:Commits)
     ("space f e d", "Files",   ":config-open"),                          // SPC f e d : open dotfile/config
     ("space q f",   "Quit",    ":quit"),                                 // SPC q f : kill frame
     ("space b s",   "Buffers", ":new"),                                  // SPC b s : scratch buffer
@@ -508,6 +510,19 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "s" => scroll_half_column_right,   // zs scroll so cursor is near the left edge (approx)
             "x" => fold_open,                  // zx re-apply foldlevel and open enough to see cursor (approx)
 
+            // spell checking (vim z= / zg / zw / zG / zW / zug …)
+            "=" => spell_suggest,              // z= spelling suggestions for word under cursor
+            "g" => spell_add_good,             // zg mark word as correctly spelled
+            "w" => spell_add_bad,              // zw mark word as misspelled
+            "G" => spell_add_good,             // zG temporarily good (approx: persisted)
+            "W" => spell_add_bad,              // zW temporarily bad (approx)
+            "u" => { "Undo spell"
+                "g" => spell_undo,             // zug undo zg
+                "w" => spell_undo,             // zuw undo zw
+                "G" => spell_undo,             // zuG undo zG
+                "W" => spell_undo,             // zuW undo zW
+            },
+
             // folds (vim z* family)
             "a" => fold_toggle,       // za toggle fold under cursor
             "o" => fold_open,         // zo open fold
@@ -565,6 +580,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "D"   => [search_selection_detect_word_boundaries, search_prev], // [D: list #defines (approx)
             "C-i" => [search_selection_detect_word_boundaries, search_prev], // [CTRL-I: word in included files (approx)
             "C-d" => goto_declaration,        // [CTRL-D: jump to first #define (approx: declaration)
+            "s" => goto_prev_spell_error,     // [s: previous misspelled word
             "(" => goto_prev_unmatched_paren, // [( previous unmatched (
             "{" => goto_prev_unmatched_brace, // [{ previous unmatched {
             "`" => goto_prev_mark,            // [` previous lowercase mark
@@ -590,6 +606,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "D"   => [search_selection_detect_word_boundaries, search_next], // ]D: list #defines (approx)
             "C-i" => [search_selection_detect_word_boundaries, search_next], // ]CTRL-I: word in included files (approx)
             "C-d" => goto_definition,         // ]CTRL-D: jump to first #define (approx: definition)
+            "s" => goto_next_spell_error,     // ]s: next misspelled word
             ")" => goto_next_unmatched_paren, // ]) next unmatched )
             "}" => goto_next_unmatched_brace, // ]} next unmatched }
             "`" => goto_next_mark,            // ]` next lowercase mark
@@ -779,6 +796,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "o" => goto_file,                              // SPC f o : open with external program
                 "F" => goto_file,                              // SPC f F : open file under point
                 "L" => file_picker,                            // SPC f L : locate a file
+                "b" => marks_picker,                           // SPC f b : go to file bookmarks (marks)
                 "r" => goto_last_modified_file,                // SPC f r
                 "t" => file_explorer,                          // SPC f t
                 "d" => file_explorer_in_current_buffer_directory, // SPC f d
@@ -795,6 +813,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "L" => yank_file_path_with_line,  // SPC f y L : copy path:line relative
                     "Y" => yank_file_path,            // SPC f y Y : copy full file path
                 },
+            },
+            "i" => { "Insert"
+                "u" => unicode_picker,             // SPC i u : search unicode chars and insert (helm-unicode)
             },
             "b" => { "Buffers"
                 "b" => buffer_picker,              // SPC b b
@@ -912,6 +933,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "B" => global_search,              // SPC s B : search all open buffers
                 "F" => global_search,              // SPC s F : search files in a directory
                 "l" => last_picker,                // SPC s l : resume last search
+                "L" => buffer_line_picker,         // SPC s L : fuzzy lines in current buffer (:BLines)
                 "H" => search_next,                // SPC s H : go to last search occurrence
                 // ag / grep / ack / rg families all map to project-wide search;
                 // uppercase variants are the "with default input" forms.
@@ -938,6 +960,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "R" => global_search, "B" => global_search, "F" => global_search,
                     "D" => global_search, "P" => global_search,
                 },
+            },
+            "R" => { "Run"
+                "r" => run_active_config,          // SPC R r : run the active configuration
+                "R" => run_active_config,          // SPC R R : run
+                "c" => run_config_manager,         // SPC R c : manage run/debug configurations
+                "e" => run_config_manager,         // SPC R e : edit configurations
             },
             "p" => { "Project"
                 "f" => file_picker,                // SPC p f
@@ -1060,8 +1088,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "l" => last_picker,                // SPC r l : resume picker
                 "e" => register_picker,            // SPC r e : registers
                 "r" => register_picker,            // SPC r r : show registers
-                "m" => register_picker,            // SPC r m : show marks register
+                "m" => marks_picker,               // SPC r m : pick a mark and jump (:Marks)
                 "y" => register_picker,            // SPC r y : kill ring
+                ":" => command_history_picker,     // SPC r : : command-line history (:History:)
+                "/" => search_history_picker,      // SPC r / : search history (:History/)
             },
             "a" => { "Applications"
                 "d" => file_explorer,              // SPC a d : dired (file manager)
@@ -1337,6 +1367,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-f"     => move_char_right,      // C-f forward-char
         "C-b"     => move_char_left,       // C-b backward-char
         "C-v"     => insert_char_interactive, // vim i_CTRL-V: insert the next key literally
+        "C-q"     => insert_char_interactive, // vim i_CTRL-Q: same as CTRL-V (insert next key literally)
         "A-f"     => move_next_word_start, // M-f forward-word
         "A-b"     => move_prev_word_start, // M-b backward-word
         "A-v"     => page_up,              // M-v scroll-down
@@ -1498,9 +1529,11 @@ mod tests {
                 cmd.parse::<MappableCommand>().expect("valid command"),
             );
             assert_eq!(leaf, &expected, "wrong command for {chord_str}");
+            // Entries are mostly typable `:cmd`s, but `add_command` also accepts
+            // bare static command names (e.g. `git_file_log_picker`), so allow both.
             assert!(
-                matches!(leaf, KeyTrie::MappableCommand(MappableCommand::Typable { .. })),
-                "{chord_str} should be a typable command"
+                matches!(leaf, KeyTrie::MappableCommand(_)),
+                "{chord_str} should map to a command"
             );
         }
     }

@@ -14,6 +14,8 @@ pub mod job;
 pub mod keymap;
 pub mod logging;
 pub mod recent_files;
+pub mod run_config;
+pub mod spell;
 pub mod ui;
 
 #[cfg(not(windows))]

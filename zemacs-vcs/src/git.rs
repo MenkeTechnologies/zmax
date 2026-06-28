@@ -220,6 +220,76 @@ fn status(repo: &Repository, f: impl Fn(Result<FileChange>) -> bool) -> Result<(
 }
 
 /// Finds the object that contains the contents of a file at a specific commit.
+use crate::CommitInfo;
+
+/// Walk HEAD's ancestry, newest first, invoking `f` for each commit as it is
+/// discovered (so a picker can stream results from a background thread). When
+/// `file` is `Some`, keep only commits whose version of that file differs from
+/// the first parent (`:BCommits`); otherwise emit every commit (`:Commits`).
+/// Stops after `limit` emitted commits, or when `f` returns `false`.
+pub fn file_commits(
+    repo_dir: &Path,
+    file: Option<&Path>,
+    trust_full: bool,
+    limit: usize,
+    f: impl Fn(Result<CommitInfo>) -> bool,
+) -> Result<()> {
+    let repo = open_repo(repo_dir, trust_full)
+        .context("failed to open git repo")?
+        .to_thread_local();
+    let head = repo.head_commit()?;
+    let file = file.map(gix::path::realpath).transpose()?;
+
+    let mut emitted = 0;
+    for info in repo.rev_walk(Some(head.id)).all()? {
+        let commit = match info.map_err(anyhow::Error::from).and_then(|info| {
+            info.object().map_err(anyhow::Error::from)
+        }) {
+            Ok(commit) => commit,
+            Err(err) => {
+                if !f(Err(err)) {
+                    break;
+                }
+                continue;
+            }
+        };
+
+        if let Some(ref path) = file {
+            let this = find_file_in_commit(&repo, &commit, path).ok();
+            let parent = commit
+                .parent_ids()
+                .next()
+                .and_then(|id| repo.find_commit(id.detach()).ok())
+                .and_then(|p| find_file_in_commit(&repo, &p, path).ok());
+            // unchanged in this commit (same blob as parent, or absent in both)
+            if this == parent {
+                continue;
+            }
+        }
+
+        let summary = commit
+            .message_raw()
+            .ok()
+            .and_then(|m| m.lines().next().map(|l| String::from_utf8_lossy(l).into_owned()))
+            .unwrap_or_default();
+        let author = commit
+            .author()
+            .map(|a| a.name.to_string())
+            .unwrap_or_default();
+
+        let keep_going = f(Ok(CommitInfo {
+            id: commit.id.to_hex_with_len(8).to_string(),
+            summary,
+            author,
+        }));
+        emitted += 1;
+        if !keep_going || emitted >= limit {
+            break;
+        }
+    }
+    Ok(())
+}
+
 fn find_file_in_commit(repo: &Repository, commit: &Commit, file: &Path) -> Result<ObjectId> {
     let repo_dir = repo.workdir().context("repo has no worktree")?;
     let rel_path = file.strip_prefix(repo_dir)?;

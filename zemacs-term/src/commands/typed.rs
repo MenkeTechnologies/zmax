@@ -6541,6 +6541,31 @@ pub(super) fn execute_command(
 }
 
 #[allow(clippy::unnecessary_unwrap)]
+/// vim `@:`: re-run the most recently executed command-line (`:` history).
+/// Run a command line (without the leading `:`) from a picker/job callback that
+/// already holds a `compositor::Context`. Used by `command_history_picker`.
+pub(super) fn run_command_line(cx: &mut compositor::Context, line: &str) {
+    if let Err(err) = execute_command_line(cx, line, PromptEvent::Validate) {
+        cx.editor.set_error(err.to_string());
+    }
+}
+
+pub(super) fn repeat_last_command_line(cx: &mut Context) {
+    let last = cx.editor.registers.first(':', cx.editor).map(|c| c.into_owned());
+    let Some(cmd) = last else {
+        cx.editor.set_error("No previous command-line");
+        return;
+    };
+    let mut cx = compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    if let Err(err) = execute_command_line(&mut cx, &cmd, PromptEvent::Validate) {
+        cx.editor.set_error(err.to_string());
+    }
+}
+
 pub(super) fn command_mode(cx: &mut Context) {
     let mut prompt = Prompt::new(
         ":".into(),

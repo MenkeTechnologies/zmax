@@ -20,6 +20,13 @@ mod status;
 
 pub use status::FileChange;
 
+/// A single commit for the `:Commits` / `:BCommits` log pickers.
+pub struct CommitInfo {
+    pub id: String,
+    pub summary: String,
+    pub author: String,
+}
+
 /// Contains all active diff providers. Diff providers are compiled in via features. Currently
 /// only `git` is supported.
 #[derive(Clone)]
@@ -74,6 +81,35 @@ impl DiffProviderRegistry {
                 .providers
                 .iter()
                 .find_map(|provider| provider.for_each_changed_file(&cwd, trust_full, &f).ok())
+                .is_none()
+            {
+                f(Err(anyhow!("no diff provider returns success")));
+            }
+        });
+    }
+
+    /// Fire-and-forget commit-log iteration on a background task. Streams commits
+    /// for a single file (`:BCommits`, `file = Some`) or the whole repository
+    /// (`:Commits`, `file = None`), newest first, capped at `limit`. `f` is
+    /// invoked per commit and may return `false` to stop early.
+    pub fn for_each_commit(
+        self,
+        repo_dir: PathBuf,
+        file: Option<PathBuf>,
+        trust_full: bool,
+        limit: usize,
+        f: impl Fn(Result<CommitInfo>) -> bool + Send + 'static,
+    ) {
+        tokio::task::spawn_blocking(move || {
+            let file = file.as_deref();
+            if self
+                .providers
+                .iter()
+                .find_map(|provider| {
+                    provider
+                        .file_commits(&repo_dir, file, trust_full, limit, &f)
+                        .ok()
+                })
                 .is_none()
             {
                 f(Err(anyhow!("no diff provider returns success")));
@@ -136,6 +172,21 @@ impl DiffProvider {
         match self {
             #[cfg(feature = "git")]
             Self::Git => git::for_each_changed_file(cwd, trust_full, f),
+            Self::None => bail!("No diff support compiled in"),
+        }
+    }
+
+    fn file_commits(
+        &self,
+        repo_dir: &Path,
+        file: Option<&Path>,
+        trust_full: bool,
+        limit: usize,
+        f: &dyn Fn(Result<CommitInfo>) -> bool,
+    ) -> Result<()> {
+        match self {
+            #[cfg(feature = "git")]
+            Self::Git => git::file_commits(repo_dir, file, trust_full, limit, f),
             Self::None => bail!("No diff support compiled in"),
         }
     }

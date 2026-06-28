@@ -94,6 +94,8 @@ pub enum IdeAction {
     /// Run/debug toolbar actions that need editor/compositor access.
     RunStart,
     Debug,
+    /// Open the Run/Debug Configurations manager.
+    RunConfigManager,
     /// Right-click on a file-tree entry: show a CRUD context menu at (row, col).
     ShowContextMenu {
         path: PathBuf,
@@ -109,6 +111,7 @@ enum ToolHit {
     Stop,
     Rerun,
     Debug,
+    Configs,
 }
 
 struct OutlineRow {
@@ -142,6 +145,8 @@ pub struct Ide {
     left_rail_rect: Rect,
     bottom_height: u16,
     resizing_bottom: bool,
+    /// True while the user is dragging the minimap to fold it (like the left drawer seam).
+    resizing_stripe: bool,
 
     structure: Vec<OutlineRow>,
     structure_sel: usize,
@@ -225,6 +230,7 @@ impl Ide {
             left_rail_rect: empty_rect(),
             bottom_height: BOTTOM_H,
             resizing_bottom: false,
+            resizing_stripe: false,
             structure: Vec::new(),
             structure_sel: 0,
             structure_state: ratatui::widgets::ListState::default(),
@@ -465,6 +471,7 @@ impl Ide {
                         .map(|&(_, _, h)| h);
                     return match hit {
                         Some(ToolHit::Run) => IdeAction::RunStart,
+                        Some(ToolHit::Configs) => IdeAction::RunConfigManager,
                         Some(ToolHit::Debug) => IdeAction::Debug,
                         Some(ToolHit::Stop) => {
                             if let Some(r) = &self.run {
@@ -647,10 +654,15 @@ impl Ide {
                         self.fold_minimap = false;
                         return IdeAction::None;
                     }
+                    // Arm a drag-to-fold: dragging the minimap toward its right edge folds
+                    // it, just like dragging the left drawer's seam shut. A plain click
+                    // (no drag) still navigates below.
+                    self.resizing_stripe = true;
                     // Top-right chevron → collapse.
                     let chevron_x = self.stripe_rect.x + self.stripe_rect.width.saturating_sub(1);
                     if row == self.stripe_rect.y && col == chevron_x {
                         self.fold_minimap = true;
+                        self.resizing_stripe = false;
                         return IdeAction::None;
                     }
                     let frac = (row - self.stripe_rect.y) as f32 / self.stripe_rect.height as f32;
@@ -724,9 +736,20 @@ impl Ide {
                 self.bottom_height = panel_bottom.saturating_sub(row + 1).clamp(3, 40);
                 IdeAction::None
             }
+            MouseEventKind::Drag(MouseButton::Left) if self.resizing_stripe => {
+                // Dragging the minimap past its half-way point (toward the right edge)
+                // folds it to the thin handle, mirroring the left drawer's collapse.
+                let half = self.stripe_rect.x + self.stripe_rect.width / 2;
+                if col >= half {
+                    self.fold_minimap = true;
+                    self.resizing_stripe = false;
+                }
+                IdeAction::None
+            }
             MouseEventKind::Up(MouseButton::Left) => {
                 self.resizing_left = false;
                 self.resizing_bottom = false;
+                self.resizing_stripe = false;
                 IdeAction::None
             }
             _ => IdeAction::None,
@@ -1272,13 +1295,14 @@ impl Ide {
         self.toolbar_hits.clear();
         self.toolbar_y = area.y;
 
-        // run config label on the LEFT
-        let cfg = self
-            .run
-            .as_ref()
-            .map(|r| r.lock().unwrap().cmd.clone())
-            .unwrap_or_else(|| "cargo run".to_string());
-        surface.set_stringn(area.x + 1, area.y, &format!("[{cfg}]"), area.width as usize, theme.get("comment"));
+        // active run-config selector on the LEFT (click to open the manager)
+        let cfg = crate::run_config::active()
+            .map(|c| if c.name.is_empty() { c.command } else { c.name })
+            .or_else(|| self.run.as_ref().map(|r| r.lock().unwrap().cmd.clone()))
+            .unwrap_or_else(|| "Edit Configurations…".to_string());
+        let label = format!(" ⚙ {cfg} ▾ ");
+        let (lx, _) = surface.set_stringn(area.x, area.y, &label, area.width as usize, theme.get("function"));
+        self.toolbar_hits.push((area.x, lx, ToolHit::Configs));
 
         // run/debug buttons RIGHT-aligned
         let buttons: [(&str, _, ToolHit); 4] = [

@@ -145,6 +145,44 @@ impl EditorView {
 
     /// Apply a workbench action: open a file, jump to a symbol/diagnostic, or run/debug.
     /// Returns a compositor callback when the action needs to push UI (e.g. the debug picker).
+    /// Run the active named configuration (or auto-detect a command when none is set).
+    /// Shared by the Run toolbar button, the run keybinding, and the config manager.
+    pub fn run_active(&mut self, context: &mut crate::compositor::Context) {
+        let (cmd, cwd) = match crate::run_config::active() {
+            Some(c) if !c.command.trim().is_empty() => {
+                let env_prefix: String = c
+                    .env
+                    .lines()
+                    .map(str::trim)
+                    .filter(|l| !l.is_empty() && l.contains('='))
+                    .map(|l| format!("{l} "))
+                    .collect();
+                (
+                    format!("{env_prefix}{}", c.command),
+                    crate::run_config::resolve_dir(&c.dir),
+                )
+            }
+            _ => {
+                let path = doc!(context.editor).path().map(|p| p.to_path_buf());
+                crate::ui::run::smart_command(path.as_deref())
+            }
+        };
+        self.start_run(context, cmd, cwd);
+    }
+
+    /// Spawn `cmd` in `cwd` and show it in the Run tool window. Shared by the Run
+    /// toolbar button, the active run-configuration, and the run-config manager.
+    pub fn start_run(
+        &mut self,
+        context: &mut crate::compositor::Context,
+        cmd: String,
+        cwd: std::path::PathBuf,
+    ) {
+        let shell = context.editor.config().shell.clone();
+        let run = crate::ui::run::spawn(cmd, shell, cwd);
+        self.ide.get_or_insert_with(Ide::new).set_run(run);
+    }
+
     fn apply_ide_action(
         &mut self,
         action: IdeAction,
@@ -166,12 +204,13 @@ impl EditorView {
                 None
             }
             IdeAction::RunStart => {
-                let path = doc!(context.editor).path().map(|p| p.to_path_buf());
-                let (cmd, cwd) = crate::ui::run::smart_command(path.as_deref());
-                let shell = context.editor.config().shell.clone();
-                let run = crate::ui::run::spawn(cmd, shell, cwd);
-                self.ide.get_or_insert_with(Ide::new).set_run(run);
+                self.run_active(context);
                 None
+            }
+            IdeAction::RunConfigManager => {
+                Some(Box::new(|compositor, _cx| {
+                    compositor.push(Box::new(crate::ui::run_config::RunConfigPanel::new()));
+                }))
             }
             IdeAction::Debug => {
                 // Launch a DAP session (shows the debug-template picker).

@@ -10,7 +10,7 @@ use zemacs_stdx::{
     path::{self, find_paths},
     rope::{self, RopeSliceExt},
 };
-use zemacs_vcs::{FileChange, Hunk};
+use zemacs_vcs::{CommitInfo, FileChange, Hunk};
 pub use lsp::*;
 pub use syntax::*;
 use tui::{
@@ -416,6 +416,13 @@ impl MappableCommand {
         buffer_picker, "Open buffer picker",
         jumplist_picker, "Open jumplist picker",
         register_picker, "Browse registers and paste the chosen one",
+        marks_picker, "Fuzzy-pick a vim mark and jump to it (:Marks)",
+        buffer_line_picker, "Fuzzy-search lines in the current buffer (:BLines)",
+        command_history_picker, "Fuzzy-pick and run a past command line (:History:)",
+        search_history_picker, "Fuzzy-pick and re-run a past search (:History/)",
+        unicode_picker, "Fuzzy-pick a character/digraph and insert it (helm-unicode)",
+        git_file_log_picker, "Commit log for the current file (:BCommits)",
+        git_repo_log_picker, "Commit log for the whole repo (:Commits)",
         theme_picker, "Open fuzzy theme picker with live preview",
         wrap_sexp, "Wrap the selection in parentheses",
         symbol_picker, "Open symbol picker",
@@ -583,6 +590,14 @@ impl MappableCommand {
         copy_char_below, "Insert the character below the cursor (i_CTRL-E)",
         copy_char_above, "Insert the character above the cursor (i_CTRL-Y)",
         file_info, "Show file name and cursor position (CTRL-G)",
+        run_config_manager, "Manage run/debug configurations",
+        run_active_config, "Run the active run configuration",
+        goto_next_spell_error, "Move to the next misspelled word (]s)",
+        goto_prev_spell_error, "Move to the previous misspelled word ([s)",
+        spell_add_good, "Mark word under cursor as correctly spelled (zg)",
+        spell_add_bad, "Mark word under cursor as misspelled (zw)",
+        spell_undo, "Undo a zg/zw for the word under cursor (zug)",
+        spell_suggest, "Show spelling suggestions for the word under cursor (z=)",
         fold_create, "Create a fold over the selection (zf)",
         fold_toggle, "Toggle fold under cursor (za)",
         fold_open, "Open fold under cursor (zo)",
@@ -2249,10 +2264,15 @@ fn vim_record_macro(cx: &mut Context) {
 }
 
 fn vim_replay_macro(cx: &mut Context) {
-    cx.editor.autoinfo = Some(Info::new("Replay macro", &[("a-z0-9@\"", "register")]));
+    cx.editor.autoinfo = Some(Info::new("Replay macro", &[("a-z0-9@\":", "register")]));
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
+            // vim `@:` re-runs the last command-line rather than replaying a register.
+            if ch == ':' {
+                typed::repeat_last_command_line(cx);
+                return;
+            }
             cx.register = Some(ch);
             replay_macro(cx);
         }
@@ -5920,6 +5940,287 @@ fn register_picker(cx: &mut Context) {
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
+/// fzf.vim `:Marks` / spacemacs `SPC r m` (helm-mark-ring): fuzzy-pick a vim
+/// named mark in the current buffer and jump to it. Marks are stored per-document
+/// (`m{a-z}` sets them, plus the auto-marks `.`/`[`/`]`/`^`/`<`/`>`).
+fn marks_picker(cx: &mut Context) {
+    struct MarkMeta {
+        mark: char,
+        doc_id: DocumentId,
+        pos: usize,
+        line: usize,
+        text: String,
+    }
+
+    let (_, doc) = current_ref!(cx.editor);
+    let doc_id = doc.id();
+    let text = doc.text().slice(..);
+    let len = text.len_chars();
+
+    let mut items: Vec<MarkMeta> = doc
+        .marks_iter()
+        .map(|(mark, pos)| {
+            let pos = pos.min(len);
+            let line = text.char_to_line(pos);
+            let contents = text.line(line).to_string();
+            MarkMeta {
+                mark,
+                doc_id,
+                pos,
+                line,
+                text: contents.trim_end().to_string(),
+            }
+        })
+        .collect();
+    // letters first, then the structural/auto marks, for a stable, vim-like order
+    items.sort_by_key(|m| (!m.mark.is_ascii_alphabetic(), m.mark));
+
+    if items.is_empty() {
+        cx.editor.set_status("No marks set");
+        return;
+    }
+
+    let columns = [
+        ui::PickerColumn::new("mark", |m: &MarkMeta, _: &()| m.mark.to_string().into()),
+        ui::PickerColumn::new("line", |m: &MarkMeta, _: &()| (m.line + 1).to_string().into()),
+        ui::PickerColumn::new("text", |m: &MarkMeta, _: &()| m.text.as_str().into()),
+    ];
+
+    let picker = Picker::new(columns, 2, items, (), |cx, meta, _action| {
+        let (view, doc) = current!(cx.editor);
+        push_jump(view, doc);
+        let pos = meta.pos.min(doc.text().len_chars());
+        doc.set_selection(view.id, Selection::point(pos));
+    })
+    .with_preview(|_editor, meta| Some((meta.doc_id.into(), Some((meta.line, meta.line)))));
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// fzf.vim `:BLines`: fuzzy-search every line of the current buffer and jump to
+/// the chosen one. (Project-wide line search is `SPC s s` / `global_search`.)
+fn buffer_line_picker(cx: &mut Context) {
+    struct LineMeta {
+        doc_id: DocumentId,
+        line: usize,
+        pos: usize,
+        text: String,
+    }
+
+    let (_, doc) = current_ref!(cx.editor);
+    let doc_id = doc.id();
+    let text = doc.text().slice(..);
+
+    let items: Vec<LineMeta> = text
+        .lines()
+        .enumerate()
+        .map(|(line, slice)| LineMeta {
+            doc_id,
+            line,
+            pos: text.line_to_char(line),
+            text: slice.to_string().trim_end().to_string(),
+        })
+        .collect();
+
+    let columns = [
+        ui::PickerColumn::new("line", |m: &LineMeta, _: &()| (m.line + 1).to_string().into()),
+        ui::PickerColumn::new("text", |m: &LineMeta, _: &()| m.text.as_str().into()),
+    ];
+
+    let picker = Picker::new(columns, 1, items, (), |cx, meta, _action| {
+        let (view, doc) = current!(cx.editor);
+        push_jump(view, doc);
+        let pos = meta.pos.min(doc.text().len_chars());
+        doc.set_selection(view.id, Selection::point(pos));
+        let config = cx.editor.config();
+        let (view, doc) = current!(cx.editor);
+        view.ensure_cursor_in_view_center(doc, config.scrolloff);
+    })
+    .with_preview(|_editor, meta| Some((meta.doc_id.into(), Some((meta.line, meta.line)))));
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// fzf.vim `:History:` : fuzzy-pick a past command line (`:` register history)
+/// and execute it.
+fn command_history_picker(cx: &mut Context) {
+    let mut items: Vec<String> = cx
+        .editor
+        .registers
+        .read(':', cx.editor)
+        .map(|values| values.map(|v| v.into_owned()).collect())
+        .unwrap_or_default();
+    items.reverse(); // most-recent first
+
+    if items.is_empty() {
+        cx.editor.set_status("No command-line history");
+        return;
+    }
+
+    let columns = [ui::PickerColumn::new("command", |cmd: &String, _: &()| {
+        cmd.as_str().into()
+    })];
+
+    let picker = Picker::new(columns, 0, items, (), |cx, cmd, _action| {
+        crate::commands::typed::run_command_line(cx, cmd);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// fzf.vim `:History/` : fuzzy-pick a past search pattern (`/` register history)
+/// and re-run the search.
+fn search_history_picker(cx: &mut Context) {
+    let mut items: Vec<String> = cx
+        .editor
+        .registers
+        .read('/', cx.editor)
+        .map(|values| values.map(|v| v.into_owned()).collect())
+        .unwrap_or_default();
+    items.reverse(); // most-recent first
+
+    if items.is_empty() {
+        cx.editor.set_status("No search history");
+        return;
+    }
+
+    let columns = [ui::PickerColumn::new("pattern", |p: &String, _: &()| {
+        p.as_str().into()
+    })];
+
+    let picker = Picker::new(columns, 0, items, (), |cx, query, _action| {
+        let _ = cx.editor.registers.write('/', vec![query.clone()]);
+        cx.editor.registers.last_search_register = '/';
+        let config = cx.editor.config();
+        let case_insensitive =
+            config.search.smart_case && !query.chars().any(char::is_uppercase);
+        let wrap_around = config.search.wrap_around;
+        let scrolloff = config.scrolloff;
+        let is_crlf = doc!(cx.editor).line_ending == LineEnding::Crlf;
+        if let Ok(regex) = rope::RegexBuilder::new()
+            .syntax(
+                rope::Config::new()
+                    .case_insensitive(case_insensitive)
+                    .multi_line(true)
+                    .crlf(is_crlf),
+            )
+            .build(query)
+        {
+            search_impl(
+                cx.editor,
+                &regex,
+                Movement::Move,
+                Direction::Forward,
+                scrolloff,
+                wrap_around,
+                true,
+            );
+        } else {
+            cx.editor.set_error(format!("Invalid regex: {query}"));
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// fzf.vim `:BCommits` (current file) / `:Commits` (whole repo), and spacemacs
+/// `SPC g f l` (commits log for current file): fuzzy-pick a commit from history.
+/// Enter copies the commit hash to the clipboard (there is no commit-diff viewer yet).
+fn git_log_picker(cx: &mut Context, current_file_only: bool) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("Current buffer has no path");
+        return;
+    };
+    let Some(repo_dir) = path.parent().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("File has no parent directory");
+        return;
+    };
+
+    let trust_full = cx
+        .editor
+        .workspace_trust
+        .query(
+            &zemacs_loader::find_workspace_in(&repo_dir).0,
+            zemacs_loader::workspace_trust::TrustQuery::Git,
+        )
+        .is_trusted();
+
+    let file_arg = current_file_only.then(|| path.clone());
+
+    let columns = [
+        ui::PickerColumn::new("hash", |c: &CommitInfo, _: &()| c.id.as_str().into()),
+        ui::PickerColumn::new("summary", |c: &CommitInfo, _: &()| c.summary.as_str().into()),
+        ui::PickerColumn::new("author", |c: &CommitInfo, _: &()| c.author.as_str().into()),
+    ];
+
+    let picker = Picker::new(columns, 1, [], (), |cx, commit, _action| {
+        let _ = cx.editor.registers.write('+', vec![commit.id.clone()]);
+        cx.editor
+            .set_status(format!("Copied commit {} to clipboard", commit.id));
+    });
+    let injector = picker.injector();
+
+    // Walk history on a background thread, streaming commits into the picker.
+    cx.editor.diff_providers.clone().for_each_commit(
+        repo_dir,
+        file_arg,
+        trust_full,
+        256,
+        move |commit| match commit {
+            Ok(commit) => injector.push(commit).is_ok(),
+            Err(err) => {
+                status::report_blocking(err);
+                true
+            }
+        },
+    );
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// fzf.vim `:BCommits` / spacemacs `SPC g f l`: commit log for the current file.
+fn git_file_log_picker(cx: &mut Context) {
+    git_log_picker(cx, true);
+}
+
+/// fzf.vim `:Commits`: commit log for the whole repository.
+fn git_repo_log_picker(cx: &mut Context) {
+    git_log_picker(cx, false);
+}
+
+/// spacemacs `SPC i u` (helm-unicode): fuzzy-pick a character from the digraph
+/// table by its mnemonic / glyph and insert it at the cursor.
+fn unicode_picker(cx: &mut Context) {
+    struct CharMeta {
+        ch: char,
+        mnemonic: String,
+    }
+
+    let items: Vec<CharMeta> = DIGRAPHS
+        .iter()
+        .map(|&(a, b, ch)| CharMeta {
+            ch,
+            mnemonic: format!("{a}{b}"),
+        })
+        .collect();
+
+    let columns = [
+        ui::PickerColumn::new("char", |m: &CharMeta, _: &()| m.ch.to_string().into()),
+        ui::PickerColumn::new("mnemonic", |m: &CharMeta, _: &()| m.mnemonic.as_str().into()),
+        ui::PickerColumn::new("code", |m: &CharMeta, _: &()| {
+            format!("U+{:04X}", m.ch as u32).into()
+        }),
+    ];
+
+    let picker = Picker::new(columns, 1, items, (), |cx, meta, _action| {
+        let mut ctx = Context {
+            register: None,
+            count: None,
+            editor: cx.editor,
+            callback: Vec::new(),
+            on_next_key_callback: None,
+            jobs: cx.jobs,
+        };
+        insert::insert_char(&mut ctx, meta.ch);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 /// Fuzzy theme picker with live preview, like vim/fzf.vim `:Colors`. Bound to `SPC T c`.
 /// Moving the highlight previews the theme live; Enter commits, Esc reverts.
 fn theme_picker(cx: &mut Context) {
@@ -7172,6 +7473,153 @@ fn copy_char_from_adjacent_line(cx: &mut Context, below: bool) {
         text.char(tstart + col)
     };
     insert::insert_char(cx, ch);
+}
+
+// --- spell checking (vim z= / zg / zw / [s / ]s) -----------------------------
+/// Alphabetic-run word ranges across the whole buffer.
+fn spell_word_ranges(text: RopeSlice) -> Vec<(usize, usize)> {
+    let len = text.len_chars();
+    let mut ranges = Vec::new();
+    let mut i = 0;
+    while i < len {
+        if text.char(i).is_alphabetic() {
+            let start = i;
+            while i < len && text.char(i).is_alphabetic() {
+                i += 1;
+            }
+            ranges.push((start, i));
+        } else {
+            i += 1;
+        }
+    }
+    ranges
+}
+
+/// The word range + text under the cursor (ranges are sorted by position).
+fn spell_word_at(text: RopeSlice, pos: usize) -> Option<(usize, usize, String)> {
+    for (s, e) in spell_word_ranges(text) {
+        if pos >= s && pos < e {
+            return Some((s, e, text.slice(s..e).chars().collect()));
+        }
+        if s > pos {
+            break;
+        }
+    }
+    None
+}
+
+fn goto_spell_error(cx: &mut Context, forward: bool) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let pos = doc.selection(view.id).primary().cursor(text);
+    let ranges = spell_word_ranges(text);
+    let misspelled: Vec<(usize, usize)> = ranges
+        .into_iter()
+        .filter(|&(s, e)| crate::spell::is_misspelled(&text.slice(s..e).chars().collect::<String>()))
+        .collect();
+    if misspelled.is_empty() {
+        cx.editor.set_status("No misspelled words");
+        return;
+    }
+    let target = if forward {
+        misspelled
+            .iter()
+            .find(|&&(s, _)| s > pos)
+            .or_else(|| misspelled.first())
+    } else {
+        misspelled
+            .iter()
+            .rev()
+            .find(|&&(s, _)| s < pos)
+            .or_else(|| misspelled.last())
+    };
+    if let Some(&(s, _)) = target {
+        push_jump(view, doc);
+        doc.set_selection(view.id, Selection::point(s));
+    }
+}
+
+fn goto_next_spell_error(cx: &mut Context) {
+    goto_spell_error(cx, true);
+}
+fn goto_prev_spell_error(cx: &mut Context) {
+    goto_spell_error(cx, false);
+}
+
+fn spell_word_under_cursor(cx: &mut Context) -> Option<(usize, usize, String)> {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let pos = doc.selection(view.id).primary().cursor(text);
+    spell_word_at(text, pos)
+}
+
+fn spell_add_good(cx: &mut Context) {
+    if let Some((_, _, w)) = spell_word_under_cursor(cx) {
+        crate::spell::add_good(&w);
+        cx.editor.set_status(format!("Added '{w}' to spellfile (good)"));
+    }
+}
+fn spell_add_bad(cx: &mut Context) {
+    if let Some((_, _, w)) = spell_word_under_cursor(cx) {
+        crate::spell::add_bad(&w);
+        cx.editor.set_status(format!("Marked '{w}' as misspelled"));
+    }
+}
+fn spell_undo(cx: &mut Context) {
+    if let Some((_, _, w)) = spell_word_under_cursor(cx) {
+        crate::spell::remove_user(&w);
+        cx.editor.set_status(format!("Removed '{w}' from spellfile"));
+    }
+}
+
+/// vim `z=`: show numbered suggestions for the word under the cursor; the next
+/// digit key replaces the word with that suggestion.
+fn spell_suggest(cx: &mut Context) {
+    let Some((start, end, word)) = spell_word_under_cursor(cx) else {
+        return;
+    };
+    let suggestions: Vec<String> = crate::spell::suggest(&word).into_iter().take(9).collect();
+    if suggestions.is_empty() {
+        cx.editor.set_status(format!("No suggestions for '{word}'"));
+        return;
+    }
+    let rows: Vec<(String, String)> = suggestions
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (format!("{}", i + 1), s.clone()))
+        .collect();
+    cx.editor.autoinfo = Some(Info::new(format!("Change \"{word}\" to"), &rows));
+    cx.on_next_key(move |cx, ev| {
+        cx.editor.autoinfo = None;
+        let Some(d) = ev.char().and_then(|c| c.to_digit(10)) else {
+            return;
+        };
+        let idx = d as usize;
+        if idx == 0 || idx > suggestions.len() {
+            return;
+        }
+        let repl = suggestions[idx - 1].clone();
+        let (view, doc) = current!(cx.editor);
+        let tx = Transaction::change(
+            doc.text(),
+            [(start, end, Some(repl.as_str().into()))].into_iter(),
+        );
+        doc.apply(&tx, view.id);
+    });
+}
+
+/// Open the JetBrains-style Run/Debug Configurations manager (CRUD over named configs).
+fn run_config_manager(cx: &mut Context) {
+    cx.push_layer(Box::new(crate::ui::run_config::RunConfigPanel::new()));
+}
+
+/// Run the active named run configuration (or auto-detect when none is set).
+fn run_active_config(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.run_active(cx);
+        }
+    }));
 }
 
 // vim CTRL-G / g CTRL-G: print the current file name and cursor position.

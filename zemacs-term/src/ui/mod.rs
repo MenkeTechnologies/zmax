@@ -14,6 +14,7 @@ pub mod popup;
 pub mod prompt;
 pub mod rat;
 pub mod run;
+pub mod run_config;
 mod select;
 mod spinner;
 pub mod startify;

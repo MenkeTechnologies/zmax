@@ -6241,11 +6241,11 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_r_m",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space r m"
   ],
-  "note": "marks register -> register picker"
+  "note": "marks register -> marks picker (jump to mark)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_c_t",
@@ -9278,5 +9278,325 @@
    "key:normal:z x"
   ],
   "note": "re-apply 'foldlevel' and do \"zv\""
+ },
+ {
+  "spec_id": "neovim.normal-mode.ctrl_w_lbrace_char_rbrace",
+  "status": "partial",
+  "evidence": [
+   "key:normal:C-w w"
+  ],
+  "note": "window commands, see |CTRL-W|"
+ },
+ {
+  "spec_id": "neovim.normal-mode.z_eq",
+  "status": "ported",
+  "evidence": [
+   "key:normal:z ="
+  ],
+  "note": "give spelling suggestions"
+ },
+ {
+  "spec_id": "neovim.normal-mode.zg_1",
+  "status": "ported",
+  "evidence": [
+   "key:normal:z g"
+  ],
+  "note": "permanently mark word as correctly spelled"
+ },
+ {
+  "spec_id": "neovim.normal-mode.zw_1",
+  "status": "ported",
+  "evidence": [
+   "key:normal:z w"
+  ],
+  "note": "permanently mark word as incorrectly spelled"
+ },
+ {
+  "spec_id": "neovim.normal-mode.zg",
+  "status": "partial",
+  "evidence": [
+   "key:normal:z G"
+  ],
+  "note": "temporarily mark word as correctly spelled"
+ },
+ {
+  "spec_id": "neovim.normal-mode.zw",
+  "status": "partial",
+  "evidence": [
+   "key:normal:z W"
+  ],
+  "note": "temporarily mark word as incorrectly spelled"
+ },
+ {
+  "spec_id": "neovim.normal-mode.zug",
+  "status": "ported",
+  "evidence": [
+   "key:normal:z u g"
+  ],
+  "note": "undo |zg|"
+ },
+ {
+  "spec_id": "neovim.normal-mode.zuw",
+  "status": "ported",
+  "evidence": [
+   "key:normal:z u w"
+  ],
+  "note": "undo |zw|"
+ },
+ {
+  "spec_id": "neovim.normal-mode.zug_1",
+  "status": "partial",
+  "evidence": [
+   "key:normal:z u G"
+  ],
+  "note": "undo |zG|"
+ },
+ {
+  "spec_id": "neovim.normal-mode.zuw_1",
+  "status": "partial",
+  "evidence": [
+   "key:normal:z u W"
+  ],
+  "note": "undo |zW|"
+ },
+ {
+  "spec_id": "neovim.normal-mode.lbracket_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:[ s"
+  ],
+  "note": "move to the previous misspelled word"
+ },
+ {
+  "spec_id": "neovim.normal-mode.rbracket_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:] s"
+  ],
+  "note": "move to next misspelled word"
+ },
+ {
+  "spec_id": "neovim.normal-mode.at_colon",
+  "status": "partial",
+  "evidence": [
+   "key:normal:@"
+  ],
+  "note": "repeat the previous \":\" command N times"
+ },
+ {
+  "spec_id": "neovim.insert-mode.ctrl_q",
+  "status": "ported",
+  "evidence": [
+   "key:insert:C-q"
+  ],
+  "note": "same as CTRL-V, unless used for terminal"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_f_b",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space f b"
+  ],
+  "note": "file bookmarks -> marks picker"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_u",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i u"
+  ],
+  "note": "helm-unicode -> unicode/digraph picker"
+ },
+ {
+  "spec_id": "fzf.command.files",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space f f"
+  ],
+  "note": ":Files -> file_picker"
+ },
+ {
+  "spec_id": "fzf.command.gfiles",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space f f"
+  ],
+  "note": "file_picker is not git-ls-files aware"
+ },
+ {
+  "spec_id": "fzf.command.gfiles_status",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b m"
+  ],
+  "note": ":GFiles? -> changed_file_picker"
+ },
+ {
+  "spec_id": "fzf.command.buffers",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b b"
+  ],
+  "note": ":Buffers -> buffer_picker"
+ },
+ {
+  "spec_id": "fzf.command.colors",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space T c"
+  ],
+  "note": ":Colors -> theme_picker (live preview)"
+ },
+ {
+  "spec_id": "fzf.command.ag",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space s a a"
+  ],
+  "note": ":Ag -> global_search"
+ },
+ {
+  "spec_id": "fzf.command.rg",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space s r r"
+  ],
+  "note": ":Rg -> global_search"
+ },
+ {
+  "spec_id": "fzf.command.rg_reload",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space s r r"
+  ],
+  "note": "global_search; no per-keystroke reload toggle"
+ },
+ {
+  "spec_id": "fzf.command.lines",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space s B"
+  ],
+  "note": "search all open buffers (regex, not a fuzzy line picker)"
+ },
+ {
+  "spec_id": "fzf.command.blines",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space s L"
+  ],
+  "note": ":BLines -> buffer_line_picker"
+ },
+ {
+  "spec_id": "fzf.command.tags",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space s S"
+  ],
+  "note": ":Tags -> workspace_symbol_picker"
+ },
+ {
+  "spec_id": "fzf.command.btags",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space s j"
+  ],
+  "note": ":BTags -> symbol_picker"
+ },
+ {
+  "spec_id": "fzf.command.marks",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space r m"
+  ],
+  "note": ":Marks -> marks_picker"
+ },
+ {
+  "spec_id": "fzf.command.jumps",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space j j"
+  ],
+  "note": ":Jumps -> jumplist_picker"
+ },
+ {
+  "spec_id": "fzf.command.locate",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space f L"
+  ],
+  "note": ":Locate -> file_picker"
+ },
+ {
+  "spec_id": "fzf.command.history",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space f r"
+  ],
+  "note": "goto_last_modified_file, not a full MRU picker"
+ },
+ {
+  "spec_id": "fzf.command.history_cmd",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space r :"
+  ],
+  "note": ":History: -> command_history_picker"
+ },
+ {
+  "spec_id": "fzf.command.history_search",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space r /"
+  ],
+  "note": ":History/ -> search_history_picker"
+ },
+ {
+  "spec_id": "fzf.command.commands",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space ?"
+  ],
+  "note": ":Commands -> command_palette"
+ },
+ {
+  "spec_id": "fzf.command.maps",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space h ?"
+  ],
+  "note": "command_palette lists bindings (no dedicated maps picker)"
+ },
+ {
+  "spec_id": "fzf.command.bcommits",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g f l"
+  ],
+  "note": ":BCommits -> git_file_log_picker"
+ },
+ {
+  "spec_id": "fzf.command.commits",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g L"
+  ],
+  "note": ":Commits -> git_repo_log_picker"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_f_l",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g f l"
+  ],
+  "note": "commits log for current file -> git_file_log_picker"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_lU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g L"
+  ],
+  "note": "magit-repolist -> repo commit log picker"
  }
 ]

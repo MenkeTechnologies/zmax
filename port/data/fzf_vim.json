@@ -1,0 +1,210 @@
+[
+ {
+  "id": "fzf.command.files",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Files",
+  "desc": "Files (respecting .gitignore via $FZF_DEFAULT_COMMAND)",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.gfiles",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":GFiles",
+  "desc": "Git files (git ls-files)",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.gfiles_status",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":GFiles?",
+  "desc": "Git files (git status)",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.buffers",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Buffers",
+  "desc": "Open buffers",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.colors",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Colors",
+  "desc": "Color schemes",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.ag",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Ag",
+  "desc": "ag search result (ALT-A to select all, ALT-D to deselect all)",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.rg",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Rg",
+  "desc": "rg search result",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.rg_reload",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":RG",
+  "desc": "rg search result; reload on every keystroke",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.lines",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Lines",
+  "desc": "Lines in loaded buffers",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.blines",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":BLines",
+  "desc": "Lines in the current buffer",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.tags",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Tags",
+  "desc": "Tags in the project (ctags -R)",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.btags",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":BTags",
+  "desc": "Tags in the current buffer",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.marks",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Marks",
+  "desc": "Marks",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.jumps",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Jumps",
+  "desc": "Jumps",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.windows",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Windows",
+  "desc": "Windows",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.locate",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Locate",
+  "desc": "locate command output",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.history",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":History",
+  "desc": "v:oldfiles and open buffers (MRU)",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.history_cmd",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":History:",
+  "desc": "Command history",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.history_search",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":History/",
+  "desc": "Search history",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.snippets",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Snippets",
+  "desc": "Snippets (UltiSnips)",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.commits",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Commits",
+  "desc": "Git commits (requires fugitive.vim)",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.bcommits",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":BCommits",
+  "desc": "Git commits for the current buffer / visual range",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.commands",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Commands",
+  "desc": "Commands",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.maps",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Maps",
+  "desc": "Normal mode mappings",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.helptags",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Helptags",
+  "desc": "Help tags",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ },
+ {
+  "id": "fzf.command.filetypes",
+  "source": "fzf.vim",
+  "category": "command",
+  "name": ":Filetypes",
+  "desc": "File types",
+  "doc_ref": "https://github.com/junegunn/fzf.vim#commands"
+ }
+]
