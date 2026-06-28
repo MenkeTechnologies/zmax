@@ -21,6 +21,10 @@ pub struct Tree {
 pub struct Node {
     parent: ViewId,
     content: Content,
+    /// Relative size weight within the parent container. Siblings split the
+    /// container in proportion to their weights. Defaults to 1.0 (equal split);
+    /// dragging a pane divider rewrites the two neighbours' weights.
+    weight: f32,
 }
 
 #[derive(Debug)]
@@ -34,6 +38,7 @@ impl Node {
         Self {
             parent: ViewId::default(),
             content: Content::Container(Box::new(Container::new(layout))),
+            weight: 1.0,
         }
     }
 
@@ -41,6 +46,7 @@ impl Node {
         Self {
             parent: ViewId::default(),
             content: Content::View(Box::new(view)),
+            weight: 1.0,
         }
     }
 }
@@ -368,77 +374,151 @@ impl Tree {
         // b) node is container, calculate areas for each child and push them on the stack
 
         while let Some((key, area)) = self.stack.pop() {
-            let node = &mut self.nodes[key];
-
-            match &mut node.content {
+            // First record this node's own area, then (for containers) gather the
+            // layout + children so sibling weights can be read without holding a
+            // mutable borrow of `self.nodes`.
+            let layout_children = match &mut self.nodes[key].content {
                 Content::View(view) => {
-                    // debug!!("setting view area {:?}", area);
                     view.area = area;
-                } // TODO: call f()
+                    None
+                }
                 Content::Container(container) => {
-                    // debug!!("setting container area {:?}", area);
                     container.area = area;
+                    Some((container.layout, container.children.clone()))
+                }
+            };
 
-                    match container.layout {
-                        Layout::Horizontal => {
-                            let len = container.children.len();
+            let Some((layout, children)) = layout_children else {
+                continue;
+            };
 
-                            let height = area.height / len as u16;
+            let len = children.len();
+            if len == 0 {
+                continue;
+            }
 
-                            let mut child_y = area.y;
+            // Per-child size weights (default 1.0 → equal split). Total is clamped
+            // away from zero so a degenerate all-zero set still divides evenly.
+            let weights: Vec<f32> = children
+                .iter()
+                .map(|child| self.nodes[*child].weight.max(0.0))
+                .collect();
+            let total: f32 = {
+                let sum: f32 = weights.iter().sum();
+                if sum > f32::EPSILON {
+                    sum
+                } else {
+                    len as f32
+                }
+            };
 
-                            for (i, child) in container.children.iter().enumerate() {
-                                let mut area = Rect::new(
-                                    container.area.x,
-                                    child_y,
-                                    container.area.width,
-                                    height,
-                                );
-                                child_y += height;
+            match layout {
+                Layout::Horizontal => {
+                    let mut child_y = area.y;
+                    for (i, child) in children.iter().enumerate() {
+                        // The last child absorbs any rounding remainder.
+                        let height = if i == len - 1 {
+                            (area.y + area.height).saturating_sub(child_y)
+                        } else {
+                            (area.height as f32 * (weights[i] / total)).round() as u16
+                        };
+                        let child_area = Rect::new(area.x, child_y, area.width, height);
+                        child_y = child_y.saturating_add(height);
+                        self.stack.push((*child, child_area));
+                    }
+                }
+                Layout::Vertical => {
+                    let len_u16 = len as u16;
+                    let inner_gap = 1u16;
+                    let total_gap = inner_gap * len_u16.saturating_sub(2);
+                    let used_area = area.width.saturating_sub(total_gap);
 
-                                // last child takes the remaining width because we can get uneven
-                                // space from rounding
-                                if i == len - 1 {
-                                    area.height = container.area.y + container.area.height - area.y;
-                                }
-
-                                self.stack.push((*child, area));
-                            }
+                    let mut child_x = area.x;
+                    for (i, child) in children.iter().enumerate() {
+                        // The last child absorbs rounding + gap remainder.
+                        let width = if i == len - 1 {
+                            (area.x + area.width).saturating_sub(child_x)
+                        } else {
+                            (used_area as f32 * (weights[i] / total)).round() as u16
+                        };
+                        let child_area = Rect::new(child_x, area.y, width, area.height);
+                        child_x = child_x.saturating_add(width);
+                        if i != len - 1 {
+                            child_x = child_x.saturating_add(inner_gap);
                         }
-                        Layout::Vertical => {
-                            let len = container.children.len();
-                            let len_u16 = len as u16;
-
-                            let inner_gap = 1u16;
-                            let total_gap = inner_gap * len_u16.saturating_sub(2);
-
-                            let used_area = area.width.saturating_sub(total_gap);
-                            let width = used_area / len_u16;
-
-                            let mut child_x = area.x;
-
-                            for (i, child) in container.children.iter().enumerate() {
-                                let mut area = Rect::new(
-                                    child_x,
-                                    container.area.y,
-                                    width,
-                                    container.area.height,
-                                );
-                                child_x += width + inner_gap;
-
-                                // last child takes the remaining width because we can get uneven
-                                // space from rounding
-                                if i == len - 1 {
-                                    area.width = container.area.x + container.area.width - area.x;
-                                }
-
-                                self.stack.push((*child, area));
-                            }
-                        }
+                        self.stack.push((*child, child_area));
                     }
                 }
             }
         }
+    }
+
+    /// Width of a node's current laid-out area (view or container).
+    fn node_width(&self, id: ViewId) -> u16 {
+        match &self.nodes[id].content {
+            Content::View(view) => view.area.width,
+            Content::Container(container) => container.area.width,
+        }
+    }
+
+    /// If `(col, row)` falls on a vertical divider between two side-by-side views,
+    /// return the view immediately to its left (whose right edge can be dragged).
+    pub fn split_divider_at(&self, col: u16, row: u16) -> Option<ViewId> {
+        self.views()
+            .map(|(view, _)| view)
+            .find(|view| {
+                let a = view.area;
+                col == a.right()
+                    && row >= a.y
+                    && row < a.y + a.height
+                    && a.right() < self.area.x + self.area.width
+            })
+            .map(|view| view.id)
+    }
+
+    /// Drag the vertical divider on the right edge of `view` by `delta` columns
+    /// (positive grows `view`, shrinking its right neighbour). Pins every sibling
+    /// to its current width first so only the dragged divider moves. Returns true
+    /// if the layout changed.
+    pub fn resize_horizontal(&mut self, view: ViewId, delta: i16) -> bool {
+        if delta == 0 {
+            return false;
+        }
+        let parent = self.nodes[view].parent;
+        let (layout, children) = match &self.nodes[parent].content {
+            Content::Container(c) => (c.layout, c.children.clone()),
+            Content::View(_) => return false,
+        };
+        if layout != Layout::Vertical {
+            return false;
+        }
+        let Some(idx) = children.iter().position(|c| *c == view) else {
+            return false;
+        };
+        if idx + 1 >= children.len() {
+            return false;
+        }
+
+        const MIN: f32 = 3.0;
+        let mut widths: Vec<f32> = children
+            .iter()
+            .map(|c| self.node_width(*c) as f32)
+            .collect();
+
+        let new_left = (widths[idx] + delta as f32).max(MIN);
+        let applied = new_left - widths[idx];
+        let new_right = widths[idx + 1] - applied;
+        if new_right < MIN {
+            return false;
+        }
+        widths[idx] = new_left;
+        widths[idx + 1] = new_right;
+
+        for (child, width) in children.iter().zip(widths) {
+            self.nodes[*child].weight = width;
+        }
+        self.recalculate();
+        true
     }
 
     pub fn traverse(&self) -> Traverse<'_> {

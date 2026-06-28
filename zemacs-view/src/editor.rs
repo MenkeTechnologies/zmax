@@ -369,7 +369,13 @@ pub struct Config {
     /// first key of the pending sequence (e.g. "g", "y", "z", "space"). Silences individual
     /// prefix menus while leaving `auto-info` on for the rest. Defaults to ["g", "y", "z"];
     /// set to [] to show every popup, or add "space" to also silence the leader menu.
+    /// Note: only consulted when `auto-info-leader-only` is false.
     pub auto_info_exclude: Vec<String>,
+    /// When true, only the leader (space) which-key popup is shown; popups for every other
+    /// prefix (c, d, g, z, >, ci, di, ca, da, ...) are suppressed because they are too
+    /// distracting. Set to false to show which-key for all prefixes (subject to
+    /// `auto-info-exclude`). Defaults to true.
+    pub auto_info_leader_only: bool,
     /// When true, vim-sneak overrides `s`/`S` (jump to a two-character sequence). When false,
     /// `s`/`S` keep vim's substitute-char / substitute-line. Defaults to true.
     pub vim_sneak: bool,
@@ -1022,15 +1028,33 @@ impl WhitespaceRender {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct AutoSave {
+    /// Auto save immediately on every modification (JetBrains-style), with no
+    /// delay. Defaults to enabled. Undo history is not fragmented by these saves.
+    #[serde(default = "default_true")]
+    pub on_change: bool,
     /// Auto save after a delay in milliseconds. Defaults to disabled.
     #[serde(default)]
     pub after_delay: AutoSaveAfterDelay,
-    /// Auto save on focus lost. Defaults to false.
-    #[serde(default)]
+    /// Auto save on focus lost. Defaults to enabled.
+    #[serde(default = "default_true")]
     pub focus_lost: bool,
+}
+
+impl Default for AutoSave {
+    fn default() -> Self {
+        Self {
+            on_change: true,
+            after_delay: AutoSaveAfterDelay::default(),
+            focus_lost: true,
+        }
+    }
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -1069,9 +1093,12 @@ where
     }
 
     match AutoSaveToml::deserialize(deserializer)? {
-        AutoSaveToml::EnableFocusLost(focus_lost) => Ok(AutoSave {
-            focus_lost,
-            ..Default::default()
+        // `auto-save = true` enables both immediate on-change saving and
+        // save-on-focus-lost; `auto-save = false` disables everything.
+        AutoSaveToml::EnableFocusLost(enable) => Ok(AutoSave {
+            on_change: enable,
+            focus_lost: enable,
+            after_delay: AutoSaveAfterDelay::default(),
         }),
         AutoSaveToml::AutoSave(auto_save) => Ok(auto_save),
     }
@@ -1214,6 +1241,7 @@ impl Default for Config {
             completion_trigger_len: 2,
             auto_info: true,
             auto_info_exclude: vec!["g".into(), "y".into(), "z".into(), "d".into()],
+            auto_info_leader_only: true,
             vim_sneak: true,
             file_picker: FilePickerConfig::default(),
             file_explorer: FileExplorerConfig::default(),

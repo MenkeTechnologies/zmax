@@ -1,10 +1,4 @@
-use std::{
-    sync::{
-        atomic::{self, AtomicBool},
-        Arc,
-    },
-    time::Duration,
-};
+use std::{path::PathBuf, time::Duration};
 
 use anyhow::Ok;
 use arc_swap::access::Access;
@@ -14,26 +8,18 @@ use zemacs_view::{
     document::Mode,
     events::DocumentDidChange,
     handlers::{AutoSaveEvent, Handlers},
-    Editor,
+    DocumentId, Editor,
 };
 use tokio::time::Instant;
 
-use crate::{
-    commands, compositor,
-    events::OnModeSwitch,
-    job::{self, Jobs},
-};
+use crate::{events::OnModeSwitch, job};
 
-#[derive(Debug)]
-pub(super) struct AutoSaveHandler {
-    save_pending: Arc<AtomicBool>,
-}
+#[derive(Debug, Default)]
+pub(super) struct AutoSaveHandler;
 
 impl AutoSaveHandler {
     pub fn new() -> AutoSaveHandler {
-        AutoSaveHandler {
-            save_pending: Default::default(),
-        }
+        AutoSaveHandler
     }
 }
 
@@ -46,64 +32,64 @@ impl zemacs_event::AsyncHook for AutoSaveHandler {
         existing_debounce: Option<tokio::time::Instant>,
     ) -> Option<Instant> {
         match event {
+            // JetBrains-style: save as soon as the editor goes idle for an
+            // instant. Coalesces bursts (e.g. a paste or held key) into a
+            // single save instead of one write per keystroke, but with no
+            // user-perceptible delay.
+            Self::Event::SaveNow => Some(Instant::now()),
             Self::Event::DocumentChanged { save_after } => {
                 Some(Instant::now() + Duration::from_millis(save_after))
             }
             Self::Event::LeftInsertMode => {
+                // If a change is already pending, let its debounce run down;
+                // otherwise flush any outstanding changes immediately.
                 if existing_debounce.is_some() {
-                    // If the change happened more recently than the debounce, let the
-                    // debounce run down before saving.
                     existing_debounce
                 } else {
-                    // Otherwise if there is a save pending, save immediately.
-                    if self.save_pending.load(atomic::Ordering::Relaxed) {
-                        self.finish_debounce();
-                    }
-                    None
+                    Some(Instant::now())
                 }
             }
         }
     }
 
     fn finish_debounce(&mut self) {
-        let save_pending = self.save_pending.clone();
-        job::dispatch_blocking(move |editor, _| {
-            if editor.mode() == Mode::Insert {
-                // Avoid saving while in insert mode since this mixes up
-                // the modification indicator and prevents future saves.
-                save_pending.store(true, atomic::Ordering::Relaxed);
-            } else {
-                request_auto_save(editor);
-                save_pending.store(false, atomic::Ordering::Relaxed);
-            }
-        })
+        job::dispatch_blocking(move |editor, _| save_changed_docs(editor));
     }
 }
 
-fn request_auto_save(editor: &mut Editor) {
-    let context = &mut compositor::Context {
-        editor,
-        scroll: Some(0),
-        jobs: &mut Jobs::new(),
-    };
+/// Save every modified, on-disk document immediately.
+///
+/// Unlike the `:write-all` command path, this does **not** commit the
+/// in-flight insert-mode changeset to history, so autosaving while typing
+/// never fragments the undo history (the original reason Helix deferred
+/// autosave until leaving insert mode). It also skips formatting / code
+/// actions so the cursor and buffer are never disturbed mid-edit.
+fn save_changed_docs(editor: &mut Editor) {
+    let to_save: Vec<DocumentId> = editor
+        .documents
+        .values()
+        .filter(|doc| doc.path().is_some() && doc.is_modified())
+        .map(|doc| doc.id())
+        .collect();
 
-    let options = commands::WriteAllOptions {
-        force: false,
-        write_scratch: false,
-        auto_format: false,
-        code_actions: false,
-    };
-
-    if let Err(e) = commands::typed::write_all_impl(context, options) {
-        context.editor.set_error(format!("{}", e));
+    for doc_id in to_save {
+        if let Err(err) = editor.save::<PathBuf>(doc_id, None, false) {
+            editor.set_error(format!("autosave failed: {err}"));
+        }
     }
 }
 
 pub(super) fn register_hooks(handlers: &Handlers) {
     let tx = handlers.auto_save.clone();
     register_hook!(move |event: &mut DocumentDidChange<'_>| {
+        // Ignore programmatic/ghost edits (e.g. inline completion previews).
+        if event.ghost_transaction {
+            return Ok(());
+        }
         let config = event.doc.config.load();
-        if config.auto_save.after_delay.enable {
+        if config.auto_save.on_change {
+            send_blocking(&tx, AutoSaveEvent::SaveNow);
+        } else if config.auto_save.after_delay.enable {
             send_blocking(
                 &tx,
                 AutoSaveEvent::DocumentChanged {
@@ -117,7 +103,10 @@ pub(super) fn register_hooks(handlers: &Handlers) {
     let tx = handlers.auto_save.clone();
     register_hook!(move |event: &mut OnModeSwitch<'_, '_>| {
         if event.old_mode == Mode::Insert {
-            send_blocking(&tx, AutoSaveEvent::LeftInsertMode)
+            let config = event.cx.editor.config();
+            if config.auto_save.on_change || config.auto_save.after_delay.enable {
+                send_blocking(&tx, AutoSaveEvent::LeftInsertMode);
+            }
         }
         Ok(())
     });

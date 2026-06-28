@@ -1139,7 +1139,7 @@ fn theme(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
 }
 
 /// All available theme names (config dir + runtime dirs + the two built-ins), sorted/deduped.
-fn all_theme_names() -> Vec<String> {
+pub(crate) fn all_theme_names() -> Vec<String> {
     let mut names =
         zemacs_view::theme::Loader::read_names(&zemacs_loader::config_dir().join("themes"));
     for rt_dir in zemacs_loader::runtime_dirs() {
