@@ -226,6 +226,10 @@ impl Application {
             }
         } else if stdin().is_terminal() || cfg!(feature = "integration") {
             editor.new_file(Action::VerticalSplit);
+            // Startify-style start screen over the empty scratch buffer. Skipped under
+            // the integration-test feature so headless runs keep the bare buffer.
+            #[cfg(not(feature = "integration"))]
+            compositor.push(Box::new(ui::Startify::new()));
         } else {
             editor
                 .new_file_from_stdin(Action::VerticalSplit)
