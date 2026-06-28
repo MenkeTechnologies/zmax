@@ -6017,6 +6017,15 @@ fn execute_command_line(
         return do_indent(cx, trimmed.starts_with('<'));
     }
 
+    // vim-style shell escape: `:!cmd` with the bang directly followed by the command
+    // (no space). `:! cmd` already works via the `!` alias, but the no-space form
+    // tokenizes as a single unknown command (`!cmd`), so route any line starting with
+    // `!` to run-shell-command with the remainder as the command.
+    if let Some(shell_cmd) = trimmed.strip_prefix('!') {
+        let cmd = TYPABLE_COMMAND_MAP.get("run-shell-command").unwrap();
+        return execute_command(cx, cmd, shell_cmd, event);
+    }
+
     match typed::TYPABLE_COMMAND_MAP.get(command) {
         Some(cmd) => execute_command(cx, cmd, rest, event),
         None if event == PromptEvent::Validate => Err(anyhow!("no such command: '{command}'")),
