@@ -171,7 +171,7 @@
 | llvm | ✓ | ✓ | ✓ |  |  |  |
 | llvm-mir | ✓ | ✓ | ✓ |  |  |  |
 | llvm-mir-yaml | ✓ |  | ✓ |  |  |  |
-| log | ✓ |  |  |  |  |  |
+| log |  |  |  |  |  |  |
 | lpf | ✓ |  |  |  |  |  |
 | lua | ✓ | ✓ | ✓ | ✓ | ✓ | `lua-language-server` |
 | lua-format-string | ✓ |  |  |  |  |  |
