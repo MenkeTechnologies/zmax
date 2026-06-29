@@ -4589,6 +4589,25 @@ fn elisp_eval(
     Ok(())
 }
 
+/// `:vim <code>` / `:viml` — evaluate Vimscript against the editor via the
+/// embedded vimlrs interpreter. Captured `:echo` output and the trailing
+/// expression value are shown on the status line.
+fn viml_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = args.join(" ");
+    if code.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::eval_viml(cx, &code) {
+        Ok(result) if result.trim().is_empty() => cx.editor.set_status("ok"),
+        Ok(result) => cx.editor.set_status(result),
+        Err(err) => cx.editor.set_error(format!("viml: {err}")),
+    }
+    Ok(())
+}
+
 fn reset_diff_change(
     cx: &mut compositor::Context,
     _args: Args,
@@ -4888,13 +4907,15 @@ pub const SHELL_SIGNATURE: Signature = Signature {
     ..Signature::DEFAULT
 };
 
-// `:elisp <code>` takes the entire remainder verbatim (one raw positional) so
-// string literals and whitespace inside the code survive parsing.
+// Script commands (`:elisp`, `:vim`) take the entire remainder verbatim (one
+// raw positional) so string literals and whitespace inside the code survive.
 pub const ELISP_SIGNATURE: Signature = Signature {
     positionals: (1, Some(1)),
     raw_after: Some(0),
     ..Signature::DEFAULT
 };
+
+pub const VIML_SIGNATURE: Signature = ELISP_SIGNATURE;
 
 pub const SHELL_COMPLETER: CommandCompleter = CommandCompleter::positional(&[
     // Command name
@@ -6401,6 +6422,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: elisp_eval,
         completer: CommandCompleter::none(),
         signature: ELISP_SIGNATURE,
+    },
+    TypableCommand {
+        name: "vim",
+        aliases: &["viml", "vimscript"],
+        doc: "Evaluate a Vimscript (VimL) expression via the embedded vimlrs interpreter.",
+        fun: viml_eval,
+        completer: CommandCompleter::none(),
+        signature: VIML_SIGNATURE,
     },
     TypableCommand {
         name: "reset-diff-change",

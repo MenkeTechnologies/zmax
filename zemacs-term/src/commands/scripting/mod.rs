@@ -24,6 +24,7 @@ use crate::compositor;
 use crate::ui::prompt::PromptEvent;
 
 pub mod elisp;
+pub mod viml;
 
 thread_local! {
     /// Type-erased pointer to the `compositor::Context` of the in-flight eval.
@@ -187,18 +188,36 @@ pub fn eval_elisp(cx: &mut compositor::Context, src: &str) -> Result<String, Str
     Ok(elisprs::print(&value, true))
 }
 
-/// Load `~/.zemacs/init.el` if present (best-effort; errors go to the status
-/// line). Called once at startup after the editor is constructed.
-pub fn load_init_scripts(cx: &mut compositor::Context) {
-    let init_el = zemacs_loader::config_dir().join("init.el");
-    if !init_el.exists() {
-        return;
-    }
+/// Evaluate a VimL source string against the live editor. Returns captured
+/// `:echo` output plus the trailing expression value. Globals/functions persist
+/// across calls (vimlrs thread-local state). Runs synchronously.
+pub fn eval_viml(cx: &mut compositor::Context, src: &str) -> Result<String, String> {
+    // Install the context now so editor builtins work as soon as vimlrs grows a
+    // host hook; today's eval-only path simply doesn't touch it.
     let _guard = CxGuard::new(cx);
-    elisp::ensure_builtins();
-    if let Err(e) = elisprs::eval_file(&init_el.to_string_lossy()) {
-        cx.editor
-            .set_error(format!("init.el: {e}"));
+    viml::eval(src)
+}
+
+/// Load embedded-scripting init files if present (best-effort; errors go to the
+/// status line). Called once at startup after the editor is constructed.
+pub fn load_init_scripts(cx: &mut compositor::Context) {
+    let dir = zemacs_loader::config_dir();
+
+    let init_el = dir.join("init.el");
+    if init_el.exists() {
+        let _guard = CxGuard::new(cx);
+        elisp::ensure_builtins();
+        if let Err(e) = elisprs::eval_file(&init_el.to_string_lossy()) {
+            cx.editor.set_error(format!("init.el: {e}"));
+        }
+    }
+
+    let init_vim = dir.join("init.vim");
+    if init_vim.exists() {
+        let _guard = CxGuard::new(cx);
+        if let Err(e) = vimlrs::fusevm_bridge::eval_file(&init_vim) {
+            cx.editor.set_error(format!("init.vim: {}", e.0));
+        }
     }
 }
 
@@ -217,5 +236,19 @@ mod tests {
     fn api_without_context_errors() {
         assert!(super::api_message("hi").is_err());
         assert!(super::api_point().is_err());
+    }
+
+    /// The embedded vimlrs interpreter links, evaluates, and captures `:echo`.
+    #[test]
+    fn viml_eval_and_echo() {
+        assert_eq!(super::viml::eval("3 + 4").unwrap(), "7");
+        assert_eq!(super::viml::eval("echo 'hi'").unwrap(), "hi");
+    }
+
+    /// VimL globals persist across separate eval calls (thread-local state).
+    #[test]
+    fn viml_state_persists() {
+        super::viml::eval("let g:zz = 41").unwrap();
+        assert_eq!(super::viml::eval("g:zz + 1").unwrap(), "42");
     }
 }
