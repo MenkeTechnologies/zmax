@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-71233b28.js";
+            window.path_to_searchindex_js = "searchindex-776f573b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-c0d3b1d1.js"></script>
@@ -219,7 +219,7 @@ The tarball contents include an <code>hx</code> binary and a <code>runtime</code
 To set up Zemacs:</p>
 <ol>
 <li>Add the <code>hx</code> binary to your system’s <code>$PATH</code> to allow it to be used from the command line.</li>
-<li>Copy the <code>runtime</code> directory to a location that <code>hx</code> searches for runtime files. A typical location on Linux/macOS is <code>~/.config/zemacs/runtime</code>.</li>
+<li>Copy the <code>runtime</code> directory to a location that <code>hx</code> searches for runtime files. A typical location on Linux/macOS is <code>~/.zemacs/runtime</code>.</li>
 </ol>
 <p>To see the runtime directories that <code>hx</code> searches, run <code>hx --health</code>. If necessary, you can override the default runtime location by setting the <code>ZEMACS_RUNTIME</code> environment variable.</p>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -445,7 +445,7 @@ your <code>~/.bashrc</code> or equivalent:</p>
 <pre><code class="language-sh">export ZEMACS_RUNTIME=~/src/zemacs/runtime
 </code></pre>
 <p>Or, create a symbolic link:</p>
-<pre><code class="language-sh">ln -Tsf $PWD/runtime ~/.config/zemacs/runtime
+<pre><code class="language-sh">ln -Tsf $PWD/runtime ~/.zemacs/runtime
 </code></pre>
 <h4 id="windows-1"><a class="header" href="#windows-1">Windows</a></h4>
 <p>Either set the <code>ZEMACS_RUNTIME</code> environment variable to point to the runtime files using the Windows setting (search for
@@ -501,7 +501,7 @@ script could follow are:</p>
 <li><code>cp target/opt/hx $BUILD_DIR/usr/bin/hx</code></li>
 </ol>
 <p>This way the resulting <code>hx</code> binary will always look for its runtime directory in
-<code>/usr/lib/zemacs/runtime</code> if the user has no custom runtime in <code>~/.config/zemacs</code>
+<code>/usr/lib/zemacs/runtime</code> if the user has no custom runtime in <code>~/.zemacs</code>
 or <code>ZEMACS_RUNTIME</code>.</p>
 <h3 id="validating-the-installation"><a class="header" href="#validating-the-installation">Validating the installation</a></h3>
 <p>To make sure everything is set up as expected you should run the Zemacs health
@@ -3189,11 +3189,14 @@ insert = "bar"
 </div>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="configuration-2"><a class="header" href="#configuration-2">Configuration</a></h1>
-<p>To override global configuration parameters, create a <code>config.toml</code> file located in your config directory:</p>
+<p>Zemacs keeps all of its configuration under a single dotted home directory:</p>
 <ul>
-<li>Linux and Mac: <code>~/.config/zemacs/config.toml</code></li>
-<li>Windows: <code>%AppData%\zemacs\config.toml</code></li>
+<li>Linux and Mac: <code>~/.zemacs/config.toml</code></li>
+<li>Windows: <code>%USERPROFILE%\.zemacs\config.toml</code></li>
 </ul>
+<p>On first run, if this file does not exist, Zemacs writes a default starter
+<code>config.toml</code> there for you to edit. Override global configuration parameters by
+editing it.</p>
 <blockquote>
 <p>💡 You can easily open the config file by typing <code>:config-open</code> within Zemacs normal mode.</p>
 </blockquote>
@@ -3450,7 +3453,7 @@ not visible in the Zemacs file picker and global search.</p>
 <p>Ignore files can be placed locally as <code>.ignore</code> or put in your home directory as <code>~/.ignore</code>. They support the usual ignore and negative ignore (unignore) rules used in <code>.gitignore</code> files.</p>
 <p>Additionally, you can use Zemacs-specific ignore files by creating a local <code>.zemacs/ignore</code> file in the current workspace or a global <code>ignore</code> file located in your Zemacs config directory:</p>
 <ul>
-<li>Linux and Mac: <code>~/.config/zemacs/ignore</code></li>
+<li>Linux and Mac: <code>~/.zemacs/ignore</code></li>
 <li>Windows: <code>%AppData%\zemacs\ignore</code></li>
 </ul>
 <p>Example:</p>
@@ -3808,7 +3811,7 @@ light = "catppuccin_latte"
 # fallback = "catppuccin_frappe"
 </code></pre>
 <h2 id="creating-a-theme"><a class="header" href="#creating-a-theme">Creating a theme</a></h2>
-<p>Create a file with the name of your theme as the file name (i.e <code>mytheme.toml</code>) and place it in your <code>themes</code> directory (i.e <code>~/.config/zemacs/themes</code> or <code>%AppData%\zemacs\themes</code> on Windows). The directory might have to be created beforehand.</p>
+<p>Create a file with the name of your theme as the file name (i.e <code>mytheme.toml</code>) and place it in your <code>themes</code> directory (i.e <code>~/.zemacs/themes</code> or <code>%AppData%\zemacs\themes</code> on Windows). The directory might have to be created beforehand.</p>
 <blockquote>
 <p>💡 The names “default” and “base16_default” are reserved for built-in themes
 and cannot be overridden by user-defined themes.</p>
@@ -4302,7 +4305,7 @@ command sequences are executed. Modifier keys (e.g. Alt+o) can be used
 like <code>"&lt;A-o&gt;"</code>, e.g. <code>"@miw&lt;A-o&gt;"</code></li>
 </ul>
 <p>To remap keys, create a <code>config.toml</code> file in your <code>zemacs</code> configuration
-directory (default <code>~/.config/zemacs</code> on Linux systems) with a structure like
+directory (default <code>~/.zemacs</code> on Linux systems) with a structure like
 this:</p>
 <blockquote>
 <p>💡 To set a modifier + key as a keymap, type <code>A-X = ...</code> or  <code>C-X = ...</code> for Alt + X or Ctrl + X. Combine with Shift using a dash, e.g. <code>C-S-esc</code>.
@@ -4311,7 +4314,7 @@ Within macros, wrap them in <code>&lt;&gt;</code>, e.g. <code>&lt;A-X&gt;</code>
 <pre><code class="language-toml"># At most one section each of 'keys.normal', 'keys.insert' and 'keys.select'
 [keys.normal]
 C-s = ":w" # Maps Ctrl-s to the typable command :w which is an alias for :write (save file)
-C-o = ":open ~/.config/zemacs/config.toml" # Maps Ctrl-o to opening of the zemacs config file
+C-o = ":open ~/.zemacs/config.toml" # Maps Ctrl-o to opening of the zemacs config file
 a = "move_char_left" # Maps the 'a' key to the move_char_left command
 w = "move_line_up" # Maps the 'w' key move_line_up
 "C-S-esc" = "extend_line" # Maps Ctrl-Shift-Escape to extend_line
@@ -4889,7 +4892,7 @@ More information on how to write queries can be found in the <a href="https://tr
 documentation</a>.</p>
 <p>Query files should be placed in <code>runtime/queries/{language}/textobjects.scm</code>
 when contributing to Zemacs. Note that to test the query files locally you should put
-them under your local runtime directory (<code>~/.config/zemacs/runtime</code> on Linux
+them under your local runtime directory (<code>~/.zemacs/runtime</code> on Linux
 for example).</p>
 <p>The following <a href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/2-operators.html#capturing-nodes">captures</a> are recognized:</p>
 <div class="table-wrapper">
@@ -5397,7 +5400,7 @@ be analyzed a language must have a tree-sitter grammar and a <code>tags.scm</cod
 file which pattern matches interesting nodes from syntax trees.</p>
 <p>Query files should be placed in <code>runtime/queries/{language}/tags.scm</code>
 when contributing to Zemacs. You may place these under your local runtime
-directory (<code>~/.config/zemacs/runtime</code> in Linux for example) for the sake of
+directory (<code>~/.zemacs/runtime</code> in Linux for example) for the sake of
 testing.</p>
 <h2 id="captures-1"><a class="header" href="#captures-1">Captures</a></h2>
 <h3 id="definition"><a class="header" href="#definition"><code>@definition.*</code></a></h3>
