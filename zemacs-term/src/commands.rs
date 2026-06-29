@@ -338,6 +338,14 @@ impl MappableCommand {
         move_prev_sub_word_start, "Move to start of previous sub word",
         move_next_sub_word_end, "Move to end of next sub word",
         move_prev_sub_word_end, "Move to end of previous sub word",
+        vim_move_next_word_start, "Move to start of next word (vim caret)",
+        vim_move_prev_word_start, "Move to start of previous word (vim caret)",
+        vim_move_next_word_end, "Move to end of next word (vim caret)",
+        vim_move_prev_word_end, "Move to end of previous word (vim caret)",
+        vim_move_next_long_word_start, "Move to start of next long word (vim caret)",
+        vim_move_prev_long_word_start, "Move to start of previous long word (vim caret)",
+        vim_move_next_long_word_end, "Move to end of next long word (vim caret)",
+        vim_move_prev_long_word_end, "Move to end of previous long word (vim caret)",
         move_parent_node_end, "Move to end of the parent node",
         move_parent_node_start, "Move to beginning of the parent node",
         extend_next_word_start, "Extend to start of next word",
@@ -1866,6 +1874,72 @@ where
         .clone()
         .transform(|range| move_fn(text, range, count));
     doc.set_selection(view.id, selection);
+}
+
+/// vim normal-mode word motion (`w`/`b`/`e`/`ge` and their long-word forms).
+///
+/// The underlying motions are Helix's selection-based ones: they return a range
+/// whose head is one past the target on the side away from the cursor, and Helix
+/// then renders the block cursor at `range.cursor()` — `head - 1` for a forward
+/// range, `head` for a backward one. That is off-by-one from vim for word-START
+/// motions (`w`/`W` must land *on* the next word's first char) and word-END
+/// motions (`ge`/`gE` must land *on* the previous word's last char).
+///
+/// vim's caret is always the motion's target character: `head` for a START
+/// target, the grapheme just before `head` for an END target — independent of
+/// travel direction. Collapse to that point so vim motions land exactly like
+/// vim. (`b`/`e` already happen to match; applying the rule uniformly leaves
+/// them unchanged.)
+fn move_word_vim_impl<F>(cx: &mut Context, move_fn: F, end_target: bool)
+where
+    F: Fn(RopeSlice, Range, usize) -> Range,
+{
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let moved = move_fn(text, range, count);
+        let caret = if end_target {
+            graphemes::prev_grapheme_boundary(text, moved.head)
+        } else {
+            moved.head
+        };
+        Range::point(caret)
+    });
+    doc.set_selection(view.id, selection);
+}
+
+fn vim_move_next_word_start(cx: &mut Context) {
+    move_word_vim_impl(cx, movement::move_next_word_start, false)
+}
+
+fn vim_move_prev_word_start(cx: &mut Context) {
+    move_word_vim_impl(cx, movement::move_prev_word_start, false)
+}
+
+fn vim_move_next_word_end(cx: &mut Context) {
+    move_word_vim_impl(cx, movement::move_next_word_end, true)
+}
+
+fn vim_move_prev_word_end(cx: &mut Context) {
+    move_word_vim_impl(cx, movement::move_prev_word_end, true)
+}
+
+fn vim_move_next_long_word_start(cx: &mut Context) {
+    move_word_vim_impl(cx, movement::move_next_long_word_start, false)
+}
+
+fn vim_move_prev_long_word_start(cx: &mut Context) {
+    move_word_vim_impl(cx, movement::move_prev_long_word_start, false)
+}
+
+fn vim_move_next_long_word_end(cx: &mut Context) {
+    move_word_vim_impl(cx, movement::move_next_long_word_end, true)
+}
+
+fn vim_move_prev_long_word_end(cx: &mut Context) {
+    move_word_vim_impl(cx, movement::move_prev_long_word_end, true)
 }
 
 fn move_next_word_start(cx: &mut Context) {

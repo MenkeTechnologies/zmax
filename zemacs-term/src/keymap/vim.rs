@@ -184,12 +184,14 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "backspace"   => move_char_left,
 
         // --- word motions ---------------------------------------------------
-        "w" => move_next_word_start,
-        "b" => move_prev_word_start,
-        "e" => move_next_word_end,
-        "W" => move_next_long_word_start,
-        "B" => move_prev_long_word_start,
-        "E" => move_next_long_word_end,
+        // vim caret semantics: land *on* the target char, not Helix's
+        // off-by-one block-cursor position. See `move_word_vim_impl`.
+        "w" => vim_move_next_word_start,
+        "b" => vim_move_prev_word_start,
+        "e" => vim_move_next_word_end,
+        "W" => vim_move_next_long_word_start,
+        "B" => vim_move_prev_long_word_start,
+        "E" => vim_move_next_long_word_end,
 
         // --- line / column motions -----------------------------------------
         "0" | "home" => goto_line_start,
@@ -440,8 +442,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "g" => goto_file_start,
             "&" => repeat_substitute_global,   // g& repeat last :s whole file
             ";" => goto_last_modification,     // g; goto last change position
-            "E" => move_prev_long_word_end,    // gE back to end of previous WORD
-            "e" => move_prev_word_end,         // ge back to end of previous word
+            "E" => vim_move_prev_long_word_end, // gE back to end of previous WORD
+            "e" => vim_move_prev_word_end,      // ge back to end of previous word
             "j" => move_line_down,
             "k" => move_line_up,
             "h" => select_mode,                // gh: start Select mode (vim); g0/g^ cover line start

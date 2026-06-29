@@ -32,6 +32,38 @@ async fn go_goes_to_byte_count() -> anyhow::Result<()> {
     Ok(())
 }
 
+// Word motions must land the caret ON the target char like vim, not one short of
+// it (Helix block-cursor semantics). Text "foo bar baz":
+// f0 o1 o2 ' '3 b4 a5 r6 ' '7 b8 a9 z10.
+#[tokio::test(flavor = "multi_thread")]
+async fn w_lands_on_next_word_first_char() -> anyhow::Result<()> {
+    // vim `w`: onto 'b' of "bar", not the space before it.
+    test_with_config(vim(), ("#[f|]#oo bar baz", "w", "foo #[b|]#ar baz")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn e_lands_on_word_last_char() -> anyhow::Result<()> {
+    // vim `e`: onto last char of "foo".
+    test_with_config(vim(), ("#[f|]#oo bar baz", "e", "fo#[o|]# bar baz")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn b_lands_on_prev_word_first_char() -> anyhow::Result<()> {
+    // vim `b` from the start of "baz": onto 'b' of "bar".
+    test_with_config(vim(), ("foo bar #[b|]#az", "b", "foo #[b|]#ar baz")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ge_lands_on_prev_word_last_char() -> anyhow::Result<()> {
+    // vim `ge` from the start of "baz": onto 'r', the last char of "bar", not the
+    // space after it.
+    test_with_config(vim(), ("foo bar #[b|]#az", "ge", "foo ba#[r|]# baz")).await?;
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn bracket_prev_unmatched_paren() -> anyhow::Result<()> {
     // cursor inside the inner pair; [( jumps to the enclosing unmatched '('.
