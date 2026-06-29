@@ -87,13 +87,18 @@ jobs:
           cache-key: build
 
       - name: Run cargo fmt
-        # `cargo fmt --all` descends into local path dependencies, which would
-        # try to format the vendored scripting submodules under vendor/. Format
-        # only this workspace's members instead (derived so it tracks members).
+        # Format with the stable toolchain (what rust-toolchain.toml declares and
+        # developers run), not the MSRV pin — rustfmt output drifts between
+        # versions, so checking with a different rustfmt than devs use is a false
+        # negative. Also: `cargo fmt --all` descends into local path dependencies,
+        # which would try to format the vendored scripting submodules under
+        # vendor/; format only this workspace's members instead (derived so it
+        # tracks the member list automatically).
         run: |
+          rustup toolchain install stable --component rustfmt --profile minimal
           members=$(cargo metadata --format-version 1 --no-deps \
             | python3 -c "import sys,json;print(' '.join('-p '+p['name'] for p in json.load(sys.stdin)['packages']))")
-          cargo fmt $members --check
+          cargo +stable fmt $members --check
 
       - name: Run cargo clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
