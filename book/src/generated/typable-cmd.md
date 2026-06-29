@@ -1,5 +1,6 @@
 | Name | Description |
 | --- | --- |
+| `:terminal`, `:term` | Open an integrated terminal (PTY shell) running $SHELL. |
 | `:exit`, `:x`, `:xit` | Write changes to disk if the buffer is modified and then quit. Accepts an optional path (:exit some/path.txt). |
 | `:exit!`, `:x!`, `:xit!` | Force write changes to disk, creating necessary subdirectories, if the buffer is modified and then quit. Accepts an optional path (:exit! some/path.txt). |
 | `:quit`, `:q` | Close the current view. |
@@ -294,6 +295,7 @@
 | `:reflow` | Hard-wrap the current selection of lines to a given width. |
 | `:tree-sitter-subtree`, `:ts-subtree` | Display the smallest tree-sitter subtree that spans the primary selection, primarily for debugging queries. |
 | `:config-reload` | Refresh user config. |
+| `:keymap` | Switch the active keymap preset: vim, helix, or emacs. |
 | `:config-open` | Open the user config.toml file. |
 | `:config-open-workspace` | Open the workspace config.toml file. |
 | `:log-open` | Open the zemacs log file. |

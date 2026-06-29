@@ -17352,7 +17352,7 @@ fn set_keymap(
     let name = args
         .first()
         .ok_or_else(|| anyhow::anyhow!("usage: :keymap <{}>", crate::keymap::PRESETS.join("|")))?;
-    if !crate::keymap::PRESETS.iter().any(|p| *p == name) {
+    if !crate::keymap::PRESETS.contains(&name) {
         bail!(
             "unknown keymap `{name}` (expected one of: {})",
             crate::keymap::PRESETS.join(", ")

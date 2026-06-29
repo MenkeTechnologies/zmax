@@ -15,18 +15,26 @@
 | `extend_visual_line_down` | Extend down | select: `` j ``, `` <down> `` |
 | `copy_selection_on_next_line` | Copy selection on next line | select: `` <C-v> `` |
 | `copy_selection_on_prev_line` | Copy selection on previous line |  |
-| `move_next_word_start` | Move to start of next word | normal: `` w ``, `` <A-f> ``, `` <C-right> ``, `` <S-right> ``, insert: `` <A-f> ``, `` <C-right> ``, `` <S-right> `` |
-| `move_prev_word_start` | Move to start of previous word | normal: `` b ``, `` <A-b> ``, `` <C-left> ``, `` <S-left> ``, insert: `` <A-b> ``, `` <C-left> ``, `` <S-left> `` |
-| `move_next_word_end` | Move to end of next word | normal: `` e `` |
-| `move_prev_word_end` | Move to end of previous word | normal: `` ge `` |
-| `move_next_long_word_start` | Move to start of next long word | normal: `` W `` |
-| `move_prev_long_word_start` | Move to start of previous long word | normal: `` B `` |
-| `move_next_long_word_end` | Move to end of next long word | normal: `` E `` |
-| `move_prev_long_word_end` | Move to end of previous long word | normal: `` gE `` |
+| `move_next_word_start` | Move to start of next word | normal: `` <A-f> ``, `` <C-right> ``, `` <S-right> ``, insert: `` <A-f> ``, `` <C-right> ``, `` <S-right> `` |
+| `move_prev_word_start` | Move to start of previous word | normal: `` <A-b> ``, `` <C-left> ``, `` <S-left> ``, insert: `` <A-b> ``, `` <C-left> ``, `` <S-left> `` |
+| `move_next_word_end` | Move to end of next word |  |
+| `move_prev_word_end` | Move to end of previous word |  |
+| `move_next_long_word_start` | Move to start of next long word |  |
+| `move_prev_long_word_start` | Move to start of previous long word |  |
+| `move_next_long_word_end` | Move to end of next long word |  |
+| `move_prev_long_word_end` | Move to end of previous long word |  |
 | `move_next_sub_word_start` | Move to start of next sub word |  |
 | `move_prev_sub_word_start` | Move to start of previous sub word |  |
 | `move_next_sub_word_end` | Move to end of next sub word |  |
 | `move_prev_sub_word_end` | Move to end of previous sub word |  |
+| `vim_move_next_word_start` | Move to start of next word (vim caret) | normal: `` w `` |
+| `vim_move_prev_word_start` | Move to start of previous word (vim caret) | normal: `` b `` |
+| `vim_move_next_word_end` | Move to end of next word (vim caret) | normal: `` e `` |
+| `vim_move_prev_word_end` | Move to end of previous word (vim caret) | normal: `` ge `` |
+| `vim_move_next_long_word_start` | Move to start of next long word (vim caret) | normal: `` W `` |
+| `vim_move_prev_long_word_start` | Move to start of previous long word (vim caret) | normal: `` B `` |
+| `vim_move_next_long_word_end` | Move to end of next long word (vim caret) | normal: `` E `` |
+| `vim_move_prev_long_word_end` | Move to end of previous long word (vim caret) | normal: `` gE `` |
 | `move_parent_node_end` | Move to end of the parent node | normal: `` <space>k$ `` |
 | `move_parent_node_start` | Move to beginning of the parent node | normal: `` <space>k0 `` |
 | `extend_next_word_start` | Extend to start of next word | select: `` w `` |
