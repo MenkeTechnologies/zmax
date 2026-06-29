@@ -257,10 +257,18 @@ impl Application {
             }
         } else if stdin().is_terminal() || cfg!(feature = "integration") {
             // Restore the previous session's open tabs + cursor, if any; else a scratch + startify.
-            let restored = appdata
-                .as_ref()
-                .map(|d| !d.open_files.is_empty())
-                .unwrap_or(false);
+            //
+            // Never restore a persisted session under the integration-test feature: tests
+            // launch with no files and expect a clean, path-less scratch buffer. Reopening
+            // the developer's real `appdata.toml` session (it points at whatever files they
+            // last had open) would otherwise leak those buffers/paths into the test editor
+            // and break assertions about the document text, path, and buffer count. On a
+            // clean machine `appdata` is empty and this is a no-op anyway.
+            let restored = !cfg!(feature = "integration")
+                && appdata
+                    .as_ref()
+                    .map(|d| !d.open_files.is_empty())
+                    .unwrap_or(false);
             if restored {
                 let data = appdata.as_ref().unwrap();
                 for file in &data.open_files {
