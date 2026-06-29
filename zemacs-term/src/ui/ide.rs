@@ -720,12 +720,19 @@ impl Ide {
             fold_structure: self.fold_structure,
             fold_problems: self.fold_problems,
             fold_minimap: self.fold_minimap,
+            bottom_height: self.bottom_height,
+            bottom_zoom: self.bottom_zoom,
+            bottom_splits: self.bottom_splits,
+            bottom_mid_folded: self.bottom_mid_folded,
         }
     }
 
     /// Restore a persisted drawer layout.
+    /// Restore the persisted geometry/fold state. Does NOT touch `visible` — the
+    /// caller decides whether the workbench is shown (so opening it on demand via
+    /// `:ide` still shows it even if it was closed when last saved, while startup
+    /// restore gates on the persisted `open` flag).
     pub fn apply_layout(&mut self, l: &crate::appdata::IdeLayout) {
-        self.visible = l.open;
         self.left_width = if l.left_width >= 14 {
             l.left_width
         } else {
@@ -736,6 +743,18 @@ impl Ide {
         self.fold_structure = l.fold_structure;
         self.fold_problems = l.fold_problems;
         self.fold_minimap = l.fold_minimap;
+        if l.bottom_height > 0 {
+            self.bottom_height = l.bottom_height;
+        }
+        self.bottom_zoom = l.bottom_zoom;
+        // Keep the dividers ordered and within bounds; fall back to defaults.
+        if l.bottom_splits[0] > 0
+            && l.bottom_splits[0] < l.bottom_splits[1]
+            && l.bottom_splits[1] < 100
+        {
+            self.bottom_splits = l.bottom_splits;
+        }
+        self.bottom_mid_folded = l.bottom_mid_folded;
     }
 
     /// F2: toggle the whole workbench (and focus the tree when showing).
@@ -4619,6 +4638,32 @@ mod parse_tests {
         assert_eq!(parse_percent("temperature 250% off"), None);
         assert_eq!(parse_percent("no percentage here"), None);
         assert_eq!(parse_percent("just a % sign"), None);
+    }
+
+    // Regression: the IDE layout must survive a save (`layout`) → restore
+    // (`apply_layout`) round-trip, so reopening the workbench (e.g. via `:ide`)
+    // brings back the user's drawer widths, folds, and collapse/hide state.
+    #[test]
+    fn ide_layout_round_trips() {
+        let mut ide = super::Ide::new();
+        ide.left_width = 42;
+        ide.left_collapsed = true;
+        ide.fold_minimap = true;
+        ide.bottom_height = 17;
+        ide.bottom_splits = [25, 70];
+        ide.bottom_mid_folded = true;
+        ide.bottom_zoom = true;
+        let saved = ide.layout();
+
+        let mut restored = super::Ide::new();
+        restored.apply_layout(&saved);
+        assert_eq!(restored.left_width, 42);
+        assert!(restored.left_collapsed);
+        assert!(restored.fold_minimap);
+        assert_eq!(restored.bottom_height, 17);
+        assert_eq!(restored.bottom_splits, [25, 70]);
+        assert!(restored.bottom_mid_folded);
+        assert!(restored.bottom_zoom);
     }
 
     #[test]
