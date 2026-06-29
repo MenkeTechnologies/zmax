@@ -1,29 +1,39 @@
-//! Side-by-side diff viewer (slice 1 of a JetBrains-style diff/merge tool).
+//! Interactive 3-pane merge viewer (slice 2 of a JetBrains-style diff/merge
+//! tool, built on the slice-1 side-by-side alignment).
 //!
-//! A read-only, full-screen overlay [`Component`] that shows the focused
-//! buffer's git diff with the file's `HEAD` version on the **left** and the
-//! current working-tree buffer on the **right**, vertically aligned line by
-//! line. Opened with the `:diff` typable command.
+//! A full-screen overlay [`Component`] that shows the focused buffer's git diff
+//! as three vertically-aligned panes: the file's `HEAD` version on the
+//! **left**, a live **Result** in the **center**, and the current working-tree
+//! buffer on the **right**. Opened with the `:diff` typable command.
 //!
 //! The alignment is computed once up front from a line-level [`imara_diff`]
 //! diff between the two texts (see [`align`]). Each [`DiffRow`] pairs an
 //! optional left line with an optional right line; changed regions pair old
-//! lines against new lines and pad the shorter side with blank rows so both
-//! panes stay in lock-step as you scroll. This is the foundation for a later
-//! 3-pane merge view: the alignment model and scroll-sync already generalise.
+//! lines against new lines and pad the shorter side with blank rows so all
+//! panes stay in lock-step as you scroll.
+//!
+//! Contiguous runs of changed rows become [`Block`]s, each with a
+//! [`Resolution`] (`Left` = take HEAD, `Right` = keep working tree). The
+//! center Result pane is recomputed every frame from the per-block
+//! resolutions. `Enter` writes the resolved text back into the document as a
+//! single undoable transaction.
 //!
 //! Keys: `j`/`k`/arrows scroll a row, PageUp/PageDown (`ctrl-d`/`ctrl-u`) a
-//! screenful, `g`/`G` jump to top/bottom, `n`/`p` jump between change blocks,
-//! `q`/`Esc` close. Mouse wheel scrolls too.
+//! screenful, `g`/`G` jump to top/bottom, `n`/`p` move the selected block,
+//! `,`/`[`/`h` take HEAD, `.`/`]`/`l` take working, `L`/`R` resolve all,
+//! `Enter`/`a` apply, `q`/`Esc` cancel. Mouse wheel scrolls too.
+
+use std::ops::Range;
 
 use imara_diff::{sources::lines, Algorithm, Diff, InternedInput};
 
 use tui::buffer::Buffer as Surface;
 use zemacs_view::graphics::{Rect, Style};
 use zemacs_view::input::MouseEventKind;
+use zemacs_view::DocumentId;
 
 use crate::{
-    compositor::{Component, Compositor, Context, Event, EventResult},
+    compositor::{Callback, Component, Compositor, Context, Event, EventResult},
     ctrl, key,
 };
 
@@ -148,17 +158,108 @@ fn change_blocks(rows: &[DiffRow]) -> Vec<usize> {
     blocks
 }
 
-/// The full-screen side-by-side diff overlay.
+/// Which side a change block resolves to in the Result.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Resolution {
+    /// Take the HEAD (left) side — reverts the hunk.
+    Left,
+    /// Keep the working-tree (right) side — the default.
+    Right,
+}
+
+/// A contiguous run of changed rows together with its chosen resolution.
+#[derive(Clone, Debug)]
+struct Block {
+    /// Half-open range of row indices (into `DiffView::rows`) the block covers.
+    rows: Range<usize>,
+    /// Which side this block contributes to the Result.
+    resolution: Resolution,
+}
+
+/// Turn the aligned rows into change blocks (contiguous runs of non-unchanged
+/// rows), each defaulting to [`Resolution::Right`] so the Result initially
+/// equals the working tree. Pure — built on [`change_blocks`].
+fn compute_blocks(rows: &[DiffRow]) -> Vec<Block> {
+    change_blocks(rows)
+        .into_iter()
+        .map(|start| {
+            let mut end = start;
+            while end < rows.len() && rows[end].kind != RowKind::Unchanged {
+                end += 1;
+            }
+            Block {
+                rows: start..end,
+                resolution: Resolution::Right,
+            }
+        })
+        .collect()
+}
+
+/// Compute the resolved Result text from the alignment + per-block
+/// resolutions. Pure (no editor state) so it can be unit-tested.
+///
+/// Walks `rows` in order: unchanged rows emit their (identical) line; rows
+/// inside a block emit the chosen side's *actual* line and skip padded blanks
+/// (`None`). Each emitted line is newline-terminated.
+fn result_text(
+    rows: &[DiffRow],
+    blocks: &[Block],
+    base_lines: &[String],
+    doc_lines: &[String],
+) -> String {
+    // Per-row resolution, `None` for unchanged rows outside any block.
+    let mut row_res: Vec<Option<Resolution>> = vec![None; rows.len()];
+    for block in blocks {
+        for i in block.rows.clone() {
+            row_res[i] = Some(block.resolution);
+        }
+    }
+
+    let mut out = String::new();
+    for (i, row) in rows.iter().enumerate() {
+        match row_res[i] {
+            // Unchanged: both sides hold the same line; use the working tree.
+            None => {
+                if let Some(r) = row.right.and_then(|r| doc_lines.get(r)) {
+                    out.push_str(r);
+                    out.push('\n');
+                } else if let Some(l) = row.left.and_then(|l| base_lines.get(l)) {
+                    out.push_str(l);
+                    out.push('\n');
+                }
+            }
+            Some(Resolution::Left) => {
+                if let Some(l) = row.left.and_then(|l| base_lines.get(l)) {
+                    out.push_str(l);
+                    out.push('\n');
+                }
+            }
+            Some(Resolution::Right) => {
+                if let Some(r) = row.right.and_then(|r| doc_lines.get(r)) {
+                    out.push_str(r);
+                    out.push('\n');
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The full-screen interactive 3-pane merge overlay.
 pub struct DiffView {
     /// Display name of the file being diffed (shown in the header).
     file_name: String,
+    /// Document the resolved Result is written back into on Apply.
+    doc_id: DocumentId,
     /// HEAD lines (left pane), trailing newline stripped.
     base_lines: Vec<String>,
     /// Working-tree lines (right pane), trailing newline stripped.
     doc_lines: Vec<String>,
     rows: Vec<DiffRow>,
-    /// Starting row index of each change block, for `n`/`p` navigation.
-    blocks: Vec<usize>,
+    /// Change blocks with their (mutable) per-block resolution.
+    blocks: Vec<Block>,
+    /// Index into `blocks` of the currently-focused block.
+    selected: usize,
     /// Index of the top visible row.
     scroll: usize,
     /// Number of body rows visible in the last render (for page scrolling).
@@ -167,15 +268,18 @@ pub struct DiffView {
 
 impl DiffView {
     /// Construct a viewer from the HEAD text and the current buffer text.
-    pub fn new(file_name: String, base: &str, doc: &str) -> Self {
+    /// `doc_id` is the document the resolved Result is applied to.
+    pub fn new(file_name: String, doc_id: DocumentId, base: &str, doc: &str) -> Self {
         let rows = align(base, doc);
-        let blocks = change_blocks(&rows);
+        let blocks = compute_blocks(&rows);
         DiffView {
             file_name,
+            doc_id,
             base_lines: split_lines(base),
             doc_lines: split_lines(doc),
             rows,
             blocks,
+            selected: 0,
             scroll: 0,
             viewport: 1,
         }
@@ -184,6 +288,14 @@ impl DiffView {
     /// True when the two texts are identical (nothing to show).
     pub fn is_unchanged(&self) -> bool {
         self.blocks.is_empty()
+    }
+
+    /// Number of blocks resolved away from the default (`Right`), for the header.
+    fn resolved_count(&self) -> usize {
+        self.blocks
+            .iter()
+            .filter(|b| b.resolution == Resolution::Left)
+            .count()
     }
 
     fn max_scroll(&self) -> usize {
@@ -195,18 +307,55 @@ impl DiffView {
         self.scroll = next.clamp(0, self.max_scroll() as isize) as usize;
     }
 
-    /// Scroll so the next change block below the viewport is at the top.
-    fn next_change(&mut self) {
-        if let Some(&start) = self.blocks.iter().find(|&&b| b > self.scroll) {
-            self.scroll = start.min(self.max_scroll());
+    /// Scroll so the selected block is within the viewport.
+    fn scroll_to_selected(&mut self) {
+        if let Some(block) = self.blocks.get(self.selected) {
+            let start = block.rows.start;
+            if start < self.scroll {
+                self.scroll = start;
+            } else if start >= self.scroll + self.viewport {
+                self.scroll = start.saturating_sub(self.viewport.saturating_sub(1));
+            }
+            self.scroll = self.scroll.min(self.max_scroll());
         }
     }
 
-    /// Scroll so the previous change block above the viewport is at the top.
-    fn prev_change(&mut self) {
-        if let Some(&start) = self.blocks.iter().rev().find(|&&b| b < self.scroll) {
-            self.scroll = start.min(self.max_scroll());
+    /// Focus the next change block and scroll it into view.
+    fn next_change(&mut self) {
+        if self.selected + 1 < self.blocks.len() {
+            self.selected += 1;
         }
+        self.scroll_to_selected();
+    }
+
+    /// Focus the previous change block and scroll it into view.
+    fn prev_change(&mut self) {
+        self.selected = self.selected.saturating_sub(1);
+        self.scroll_to_selected();
+    }
+
+    /// Set the selected block's resolution.
+    fn resolve_selected(&mut self, resolution: Resolution) {
+        if let Some(block) = self.blocks.get_mut(self.selected) {
+            block.resolution = resolution;
+        }
+    }
+
+    /// Set every block's resolution.
+    fn resolve_all(&mut self, resolution: Resolution) {
+        for block in &mut self.blocks {
+            block.resolution = resolution;
+        }
+    }
+
+    /// The block index owning row `i`, if any (for render highlighting).
+    fn block_at(&self, i: usize) -> Option<usize> {
+        self.blocks.iter().position(|b| b.rows.contains(&i))
+    }
+
+    /// Build the resolved Result text from the current resolutions.
+    fn result_text(&self) -> String {
+        result_text(&self.rows, &self.blocks, &self.base_lines, &self.doc_lines)
     }
 }
 
@@ -232,6 +381,23 @@ impl Component for DiffView {
         let page = self.viewport.max(1) as isize;
         match key {
             key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
+            // Apply: write the resolved Result back into the document, then close.
+            key!(Enter) | key!('a') => {
+                let result = self.result_text();
+                let doc_id = self.doc_id;
+                let apply: Callback = Box::new(move |compositor: &mut Compositor, cx| {
+                    let (view, doc) = current!(cx.editor);
+                    if doc.id() == doc_id {
+                        let new_text = zemacs_core::Rope::from(result.as_str());
+                        let transaction =
+                            zemacs_core::diff::compare_ropes(&doc.text().clone(), &new_text);
+                        doc.apply(&transaction, view.id);
+                        doc.append_changes_to_history(view);
+                    }
+                    compositor.pop();
+                });
+                return EventResult::Consumed(Some(apply));
+            }
             key!('j') | key!(Down) => self.scroll_by(1),
             key!('k') | key!(Up) => self.scroll_by(-1),
             key!(PageDown) | ctrl!('d') | ctrl!('f') => self.scroll_by(page),
@@ -240,6 +406,12 @@ impl Component for DiffView {
             key!('G') | key!(End) => self.scroll = self.max_scroll(),
             key!('n') => self.next_change(),
             key!('p') => self.prev_change(),
+            // Resolve the selected block.
+            key!(',') | key!('[') | key!('h') => self.resolve_selected(Resolution::Left),
+            key!('.') | key!(']') | key!('l') => self.resolve_selected(Resolution::Right),
+            // Resolve all blocks one way.
+            key!('L') => self.resolve_all(Resolution::Left),
+            key!('R') => self.resolve_all(Resolution::Right),
             _ => {}
         }
         // Stay modal: never let keys leak to the editor behind us.
@@ -266,29 +438,43 @@ impl Component for DiffView {
         }
 
         // ── Layout ──────────────────────────────────────────────────────────
-        // Two header rows, then the body. A 1-column separator splits the panes.
+        // Two header rows, then the body. Three panes split into thirds with two
+        // 1-column separators between them.
         let header_h = 2u16;
         let body_y = area.y + header_h;
         let body_h = area.height.saturating_sub(header_h);
         self.viewport = body_h as usize;
 
-        let pane_w = area.width.saturating_sub(1) / 2;
-        let sep_x = area.x + pane_w;
-        let right_x = sep_x + 1;
-        let right_w = area.width.saturating_sub(pane_w + 1);
+        // (width - 2 separators) / 3, with any remainder going to the panes
+        // earlier so the total exactly fills the area.
+        let avail = area.width.saturating_sub(2);
+        let third = avail / 3;
+        let left_w = third + (avail % 3).min(1);
+        let center_w = third + (avail % 3).saturating_sub(1).min(1);
+        let right_w = avail - left_w - center_w;
+
+        let left_x = area.x;
+        let sep1_x = left_x + left_w;
+        let center_x = sep1_x + 1;
+        let sep2_x = center_x + center_w;
+        let right_x = sep2_x + 1;
 
         // Gutter width: enough digits for the largest line number, plus a space.
         let max_no = self.base_lines.len().max(self.doc_lines.len()).max(1);
         let digits = ((max_no as f64).log10().floor() as usize) + 1;
         let gutter = (digits + 1) as u16;
+        // Center gutter is two wider: a select marker + a direction arrow.
+        let center_gutter = gutter + 2;
 
         // ── Header ──────────────────────────────────────────────────────────
         let changes = self.blocks.len();
+        let resolved = self.resolved_count();
         let header = format!(
-            " {}  —  {} change{}",
+            " {}  —  {} change{} · {} resolved",
             self.file_name,
             changes,
-            if changes == 1 { "" } else { "s" }
+            if changes == 1 { "" } else { "s" },
+            resolved,
         );
         let title_style = theme.get("ui.text.focus");
         surface.set_stringn(
@@ -298,8 +484,10 @@ impl Component for DiffView {
             area.width as usize,
             to_zstyle_bold(title_style),
         );
-        // Column labels on the second header row.
-        surface.set_stringn(area.x, area.y + 1, " HEAD", pane_w as usize, linenr_style);
+        // Key hint + column labels on the second header row.
+        let hint = ", take HEAD   . take working   n/p nav   Enter apply   q cancel";
+        surface.set_stringn(left_x, area.y + 1, " HEAD", left_w as usize, linenr_style);
+        surface.set_stringn(center_x, area.y + 1, " Result", center_w as usize, linenr_style);
         surface.set_stringn(
             right_x,
             area.y + 1,
@@ -307,9 +495,20 @@ impl Component for DiffView {
             right_w as usize,
             linenr_style,
         );
-        // Separator down the full height.
+        // Separators down the full height.
         for y in area.y..area.y + area.height {
-            surface.set_string(sep_x, y, "\u{2502}", sep_style);
+            surface.set_string(sep1_x, y, "\u{2502}", sep_style);
+            surface.set_string(sep2_x, y, "\u{2502}", sep_style);
+        }
+        // Overlay the key hint dimly on the right of the title row if it fits.
+        if (header.len() + hint.len() + 3) < area.width as usize {
+            surface.set_stringn(
+                area.x + area.width - hint.len() as u16 - 1,
+                area.y,
+                hint,
+                hint.len(),
+                linenr_style,
+            );
         }
 
         if body_h == 0 {
@@ -325,12 +524,21 @@ impl Component for DiffView {
             minus: minus_style,
             delta: delta_style,
         };
-        let left_inner = pane_w.saturating_sub(gutter) as usize;
+        let selected_style = theme.get("ui.selection");
+        let left_inner = left_w.saturating_sub(gutter) as usize;
+        let center_inner = center_w.saturating_sub(center_gutter) as usize;
         let right_inner = right_w.saturating_sub(gutter) as usize;
 
         let mut left_lines = Vec::with_capacity(body_h as usize);
+        let mut center_lines = Vec::with_capacity(body_h as usize);
         let mut right_lines = Vec::with_capacity(body_h as usize);
-        for row in self.rows.iter().skip(self.scroll).take(body_h as usize) {
+        for (offset, row) in self
+            .rows
+            .iter()
+            .enumerate()
+            .skip(self.scroll)
+            .take(body_h as usize)
+        {
             left_lines.push(pane_line(
                 row.left,
                 &self.base_lines,
@@ -349,16 +557,34 @@ impl Component for DiffView {
                 right_inner,
                 &style,
             ));
+            // Center Result line, recomputed live from the resolutions.
+            let block = self.block_at(offset);
+            let resolution = block.map(|b| self.blocks[b].resolution);
+            let selected = block == Some(self.selected);
+            center_lines.push(result_line(
+                row,
+                resolution,
+                selected,
+                &self.base_lines,
+                &self.doc_lines,
+                gutter as usize,
+                center_inner,
+                &style,
+                selected_style,
+            ));
         }
         // Pad the tail so the background fills the whole body.
         while left_lines.len() < body_h as usize {
             left_lines.push(Line::default());
+            center_lines.push(Line::default());
             right_lines.push(Line::default());
         }
 
-        let left_rect = Rect::new(area.x, body_y, pane_w, body_h);
+        let left_rect = Rect::new(left_x, body_y, left_w, body_h);
+        let center_rect = Rect::new(center_x, body_y, center_w, body_h);
         let right_rect = Rect::new(right_x, body_y, right_w, body_h);
         crate::ui::rat::render(Paragraph::new(left_lines), left_rect, surface);
+        crate::ui::rat::render(Paragraph::new(center_lines), center_rect, surface);
         crate::ui::rat::render(Paragraph::new(right_lines), right_rect, surface);
     }
 
@@ -425,6 +651,64 @@ fn pane_line<'a>(
             Line::from(Span::styled(filler, to_rat_style(style.filler)))
         }
     }
+}
+
+/// Build the center **Result** pane line for one aligned row, live from its
+/// block resolution. A two-column prefix (`▌` select marker + `◀`/`▶` direction
+/// arrow) precedes the same number gutter + content layout as [`pane_line`].
+/// Unchanged rows (`resolution == None`) show no marker/arrow.
+#[allow(clippy::too_many_arguments)]
+fn result_line<'a>(
+    row: &DiffRow,
+    resolution: Option<Resolution>,
+    selected: bool,
+    base_lines: &[String],
+    doc_lines: &[String],
+    gutter: usize,
+    inner: usize,
+    style: &PaneStyle,
+    selected_style: Style,
+) -> ratatui::text::Line<'a> {
+    use crate::ui::rat::to_rat_style;
+    use ratatui::text::{Line, Span};
+
+    let marker = if selected { "\u{258C}" } else { " " }; // ▌
+    let arrow = match resolution {
+        None => " ",
+        Some(Resolution::Left) => "\u{25C0}",  // ◀
+        Some(Resolution::Right) => "\u{25B6}", // ▶
+    };
+    // Which source line this row resolves to.
+    let (idx, src): (Option<usize>, &[String]) = match resolution {
+        None if row.right.is_some() => (row.right, doc_lines),
+        None => (row.left, base_lines),
+        Some(Resolution::Left) => (row.left, base_lines),
+        Some(Resolution::Right) => (row.right, doc_lines),
+    };
+
+    let content_style = if selected { selected_style } else { style.text };
+    let mut prefix = vec![
+        Span::styled(marker.to_string(), to_rat_style(style.linenr)),
+        Span::styled(arrow.to_string(), to_rat_style(style.delta)),
+    ];
+
+    match idx {
+        Some(i) => {
+            let num = format!("{:>width$} ", i + 1, width = gutter.saturating_sub(1));
+            let mut content: String =
+                src.get(i).map(|s| s.replace('\t', "    ")).unwrap_or_default();
+            truncate_pad(&mut content, inner);
+            prefix.push(Span::styled(num, to_rat_style(style.linenr)));
+            prefix.push(Span::styled(content, to_rat_style(content_style)));
+        }
+        None => {
+            // Resolved side contributes no line here (a blank filler row).
+            let mut filler = String::new();
+            truncate_pad(&mut filler, gutter + inner);
+            prefix.push(Span::styled(filler, to_rat_style(style.filler)));
+        }
+    }
+    Line::from(prefix)
 }
 
 /// Truncate `s` to `width` display columns (best-effort, char-based) or pad it
@@ -530,5 +814,92 @@ mod tests {
         assert_eq!(split_lines("a\nb"), vec!["a", "b"]);
         assert_eq!(split_lines(""), Vec::<String>::new());
         assert_eq!(split_lines("a\r\nb\r\n"), vec!["a", "b"]);
+    }
+
+    // ── Result computation (slice 2) ─────────────────────────────────────────
+
+    /// Build the full Result-text inputs from two texts, override each block's
+    /// resolution with `resolutions[i]`, and return the merged text.
+    fn merged(base: &str, doc: &str, resolutions: &[Resolution]) -> String {
+        let rows = align(base, doc);
+        let mut blocks = compute_blocks(&rows);
+        assert_eq!(
+            blocks.len(),
+            resolutions.len(),
+            "test gave the wrong number of resolutions"
+        );
+        for (b, &r) in blocks.iter_mut().zip(resolutions) {
+            b.resolution = r;
+        }
+        let base_lines = split_lines(base);
+        let doc_lines = split_lines(doc);
+        result_text(&rows, &blocks, &base_lines, &doc_lines)
+    }
+
+    #[test]
+    fn compute_blocks_default_to_right() {
+        let rows = align("a\nb\nc\n", "a\nB\nc\n");
+        let blocks = compute_blocks(&rows);
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].rows, 1..2);
+        assert_eq!(blocks[0].resolution, Resolution::Right);
+    }
+
+    #[test]
+    fn unchanged_text_results_unchanged() {
+        // No blocks: Result is just the text.
+        let rows = align("a\nb\n", "a\nb\n");
+        let blocks = compute_blocks(&rows);
+        assert!(blocks.is_empty());
+        let lines = split_lines("a\nb\n");
+        assert_eq!(result_text(&rows, &blocks, &lines, &lines), "a\nb\n");
+    }
+
+    #[test]
+    fn modification_left_is_head_right_is_working() {
+        // "b" -> "B". Left keeps HEAD ("b"), Right keeps working ("B").
+        assert_eq!(merged("a\nb\nc\n", "a\nB\nc\n", &[Resolution::Left]), "a\nb\nc\n");
+        assert_eq!(
+            merged("a\nb\nc\n", "a\nB\nc\n", &[Resolution::Right]),
+            "a\nB\nc\n"
+        );
+    }
+
+    #[test]
+    fn deletion_left_keeps_line_right_drops_it() {
+        // "b" deleted in working. Left reverts (keeps "b"), Right drops it.
+        assert_eq!(merged("a\nb\nc\n", "a\nc\n", &[Resolution::Left]), "a\nb\nc\n");
+        assert_eq!(merged("a\nb\nc\n", "a\nc\n", &[Resolution::Right]), "a\nc\n");
+    }
+
+    #[test]
+    fn insertion_left_drops_line_right_keeps_it() {
+        // "b" inserted in working. Left drops it, Right keeps it.
+        assert_eq!(merged("a\nc\n", "a\nb\nc\n", &[Resolution::Left]), "a\nc\n");
+        assert_eq!(
+            merged("a\nc\n", "a\nb\nc\n", &[Resolution::Right]),
+            "a\nb\nc\n"
+        );
+    }
+
+    #[test]
+    fn lopsided_change_emits_actual_lines_not_blanks() {
+        // 1 line -> 3 lines. Right emits all three working lines (no padding);
+        // Left emits the single HEAD line.
+        let base = "a\nx\nc\n";
+        let doc = "a\np\nq\nr\nc\n";
+        assert_eq!(merged(base, doc, &[Resolution::Right]), "a\np\nq\nr\nc\n");
+        assert_eq!(merged(base, doc, &[Resolution::Left]), "a\nx\nc\n");
+    }
+
+    #[test]
+    fn multiple_blocks_resolve_independently() {
+        // Two separate changes: take HEAD for the first, working for the second.
+        let base = "a\nb\nc\nd\ne\n";
+        let doc = "a\nB\nc\nD\ne\n";
+        assert_eq!(
+            merged(base, doc, &[Resolution::Left, Resolution::Right]),
+            "a\nb\nc\nD\ne\n"
+        );
     }
 }

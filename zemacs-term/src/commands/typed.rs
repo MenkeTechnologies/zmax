@@ -1529,6 +1529,7 @@ fn diff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow
         doc.diff_handle().map(|handle| {
             let base = handle.load().diff_base().to_string();
             (
+                doc.id(),
                 doc.display_name().into_owned(),
                 base,
                 doc.text().to_string(),
@@ -1536,7 +1537,7 @@ fn diff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow
         })
     };
 
-    let Some((name, base, current)) = data else {
+    let Some((doc_id, name, base, current)) = data else {
         cx.editor.set_status("no git diff base for this file");
         return Ok(());
     };
@@ -1545,7 +1546,7 @@ fn diff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow
         return Ok(());
     }
 
-    let view = crate::ui::merge::DiffView::new(name, &base, &current);
+    let view = crate::ui::merge::DiffView::new(name, doc_id, &base, &current);
     if view.is_unchanged() {
         cx.editor.set_status("no changes against git HEAD");
         return Ok(());
