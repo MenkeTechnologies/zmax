@@ -247,7 +247,7 @@ impl Component for DiffView {
     }
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
-        use ratatui::text::{Line, Span};
+        use ratatui::text::Line;
         use ratatui::widgets::Paragraph;
 
         let theme = &ctx.editor.theme;
@@ -360,9 +360,6 @@ impl Component for DiffView {
         let right_rect = Rect::new(right_x, body_y, right_w, body_h);
         crate::ui::rat::render(Paragraph::new(left_lines), left_rect, surface);
         crate::ui::rat::render(Paragraph::new(right_lines), right_rect, surface);
-
-        // Silence unused warnings on the helper alias path.
-        let _ = Span::raw("");
     }
 
     fn id(&self) -> Option<&'static str> {

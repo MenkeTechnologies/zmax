@@ -1512,6 +1512,54 @@ fn ide(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
+/// `:diff` — open a read-only, full-screen side-by-side diff viewer comparing
+/// the focused buffer's git `HEAD` version (left) with the current working-tree
+/// buffer (right). Changed/added/removed lines are aligned and highlighted with
+/// synchronized scrolling and `n`/`p` change-to-change navigation. Requires a
+/// git diff base for the file (otherwise a status message is shown).
+fn diff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    // Pull the HEAD text + current buffer text on the main thread, then drop the
+    // document borrow before touching `cx.editor` mutably.
+    let data = {
+        let doc = doc!(cx.editor);
+        doc.diff_handle().map(|handle| {
+            let base = handle.load().diff_base().to_string();
+            (
+                doc.display_name().into_owned(),
+                base,
+                doc.text().to_string(),
+            )
+        })
+    };
+
+    let Some((name, base, current)) = data else {
+        cx.editor.set_status("no git diff base for this file");
+        return Ok(());
+    };
+    if base.is_empty() {
+        cx.editor.set_status("no git diff base for this file");
+        return Ok(());
+    }
+
+    let view = crate::ui::merge::DiffView::new(name, &base, &current);
+    if view.is_unchanged() {
+        cx.editor.set_status("no changes against git HEAD");
+        return Ok(());
+    }
+
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(view));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 /// `:terminal` / `:term` — open an integrated terminal (PTY shell). The panel is
 /// created inside the compositor callback so the PTY handle lives on the main
 /// thread (it isn't `Send`).
@@ -13172,6 +13220,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["workbench"],
         doc: "Enter IDE mode (file-tree sidebar + panels, like `--ide` / F2).",
         fun: ide,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "diff",
+        aliases: &["gdiff"],
+        doc: "Open a read-only side-by-side diff of the buffer vs. its git HEAD version.",
+        fun: diff,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
