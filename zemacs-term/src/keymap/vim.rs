@@ -564,6 +564,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "d" => goto_prev_diag,
             "g" => goto_prev_change,
             "c" => goto_prev_change,      // [c back to start of prev change (diff hunk)
+            "x" => goto_prev_conflict,    // [x previous merge-conflict marker
+            "n" => goto_prev_conflict,    // [n previous conflict (vim-unimpaired style)
             "f" => goto_file,             // [f same as gf: open file under cursor
             "m" => goto_prev_function,    // [m back to start of member/function
             "b" => goto_previous_buffer,  // [b previous buffer (unimpaired-style)
@@ -591,6 +593,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "d" => goto_next_diag,
             "g" => goto_next_change,
             "c" => goto_next_change,      // ]c forward to start of next change (diff hunk)
+            "x" => goto_next_conflict,    // ]x next merge-conflict marker
+            "n" => goto_next_conflict,    // ]n next conflict (vim-unimpaired style)
             "f" => goto_file,             // ]f same as gf: open file under cursor
             "m" => goto_next_function,    // ]m forward to next member/function
             "b" => goto_next_buffer,      // ]b next buffer (unimpaired-style)
@@ -784,6 +788,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "?"     => command_palette,            // SPC ?   : commands
             "'"     => last_picker,                // SPC '   : resume picker
             ";"     => toggle_comments,            // SPC ;   : comment operator
+
+            "a" => { "Applications"
+                "r" => repl,                       // SPC a r : embedded-language REPL (elisp/viml/stryke/awk/zsh)
+                "d" => file_explorer,              // SPC a d : dired (file manager)
+                "f" => file_explorer,              // SPC a f : file tree
+            },
 
             "T" => { "Themes"
                 "c" => theme_picker,               // SPC T c : fzf theme picker w/ live preview (:Colors)
@@ -996,6 +1006,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "e" => focus_problems,             // SPC W e : focus problems/errors
                 "r" => focus_run_console,          // SPC W r : focus Run console (j/k scroll)
                 "g" => focus_git_panel,            // SPC W g : focus Git changes (j/k select, Enter opens)
+                "m" => toggle_bottom_zoom,         // SPC W m : maximize / restore the bottom panel
             },
             "p" => { "Project"
                 "f" => file_picker,                // SPC p f
@@ -1072,7 +1083,13 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "r" => goto_reference,
                 "i" => goto_implementation,
                 "y" => goto_type_definition,
-                "b" => git_blame_line,             // SPC g b : git blame current line
+                "b" => git_blame_line,             // SPC g b : git blame current line (spacemacs magit-blame)
+                "c" => { "Conflict"
+                    // o/t/b (single resolve) come from the pre-existing :conflict-*
+                    // typables (space g c o/t/b); only the bulk ops are added here.
+                    "O" => conflict_take_all_ours, // SPC g c O : keep ours everywhere
+                    "T" => conflict_take_all_theirs, // SPC g c T : keep theirs everywhere
+                },
             },
             "l" => { "LSP"
                 "r" => rename_symbol,              // SPC l r
@@ -1126,11 +1143,6 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "y" => register_picker,            // SPC r y : kill ring
                 ":" => command_history_picker,     // SPC r : : command-line history (:History:)
                 "/" => search_history_picker,      // SPC r / : search history (:History/)
-            },
-            "a" => { "Applications"
-                "d" => file_explorer,              // SPC a d : dired (file manager)
-                "r" => file_explorer,              // SPC a r : ranger (file browser)
-                "f" => file_explorer,              // SPC a f : file tree
             },
             "k" => { "Lisp (sexp)"
                 // navigation maps onto the tree-sitter node commands

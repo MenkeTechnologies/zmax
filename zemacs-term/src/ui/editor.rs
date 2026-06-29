@@ -150,6 +150,16 @@ impl EditorView {
         }
     }
 
+    /// Toggle maximizing the bottom panel (read long logs/diffs full-height).
+    pub fn toggle_bottom_zoom(&mut self, cx: &mut crate::compositor::Context) {
+        let on = self.ide.get_or_insert_with(Ide::new).toggle_bottom_zoom();
+        cx.editor.set_status(if on {
+            "Bottom panel maximized (toggle to restore)"
+        } else {
+            "Bottom panel restored"
+        });
+    }
+
     /// Re-run the last command (status hint when there's nothing to re-run).
     pub fn rerun_last_run(&mut self, cx: &mut crate::compositor::Context) {
         let ok = self.ide.as_mut().is_some_and(Ide::rerun_last);
@@ -324,6 +334,84 @@ impl EditorView {
                 let _ = context.editor.registers.write('+', vec![text]);
                 context.editor.set_status(format!("Copied {n} lines to clipboard"));
                 None
+            }
+            IdeAction::GitPush => {
+                let cwd = std::env::current_dir().unwrap_or_default();
+                self.start_run(context, "git push".to_string(), cwd);
+                None
+            }
+            IdeAction::GitPull => {
+                let cwd = std::env::current_dir().unwrap_or_default();
+                self.start_run(context, "git pull --ff-only".to_string(), cwd);
+                None
+            }
+            IdeAction::GitFetch => {
+                let cwd = std::env::current_dir().unwrap_or_default();
+                self.start_run(context, "git fetch --all --prune".to_string(), cwd);
+                None
+            }
+            IdeAction::GitStash => {
+                crate::commands::typed::git_stash_action(context, false);
+                None
+            }
+            IdeAction::GitStashPop => {
+                crate::commands::typed::git_stash_action(context, true);
+                None
+            }
+            IdeAction::GitBranchPicker => {
+                // List branches into the status line, then prompt for the target —
+                // a Prompt pushed from here works reliably (unlike a Picker, whose
+                // matcher isn't spawned via this path). `:git-branch-picker` gives
+                // the fuzzy picker from the command palette.
+                let dir = std::env::current_dir().unwrap_or_default();
+                let branches = std::process::Command::new("git")
+                    .arg("-C")
+                    .arg(&dir)
+                    .args(["for-each-ref", "--format=%(refname:short)", "refs/heads/"])
+                    .output()
+                    .ok()
+                    .filter(|o| o.status.success())
+                    .map(|o| String::from_utf8_lossy(&o.stdout).split_whitespace().collect::<Vec<_>>().join(" "))
+                    .unwrap_or_default();
+                context.editor.set_status(format!("branches: {branches}"));
+                Some(Box::new(|compositor, _cx| {
+                    let prompt = crate::ui::Prompt::new(
+                        "checkout branch: ".into(),
+                        None,
+                        |_e, _i| Vec::new(),
+                        move |cx, input: &str, event| {
+                            if event != crate::ui::PromptEvent::Validate {
+                                return;
+                            }
+                            let branch = input.trim();
+                            if branch.is_empty() {
+                                return;
+                            }
+                            let dir = std::env::current_dir().unwrap_or_default();
+                            match std::process::Command::new("git")
+                                .arg("-C")
+                                .arg(&dir)
+                                .args(["checkout", branch])
+                                .output()
+                            {
+                                Ok(o) if o.status.success() => {
+                                    crate::commands::typed::reload_open_docs(cx);
+                                    cx.editor.set_status(format!("Switched to branch {branch}"));
+                                }
+                                Ok(o) => cx.editor.set_error(
+                                    String::from_utf8_lossy(&o.stderr)
+                                        .lines()
+                                        .next()
+                                        .unwrap_or("checkout failed")
+                                        .trim()
+                                        .to_owned(),
+                                ),
+                                Err(e) => cx.editor.set_error(format!("git: {e}")),
+                            }
+                        },
+                    );
+                    compositor.push(Box::new(prompt));
+                }))
             }
             IdeAction::GitLog => {
                 let cwd = std::env::current_dir().unwrap_or_default();

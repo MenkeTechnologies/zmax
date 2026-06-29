@@ -113,6 +113,15 @@ pub enum IdeAction {
     GitDiff(PathBuf),
     /// Show the repo's `git log` graph in the Run console.
     GitLog,
+    /// Remote ops streamed into the Run console (magit P/F/f from the status tab).
+    GitPush,
+    GitPull,
+    GitFetch,
+    /// Stash / unstash (synchronous + buffer reload); magit `z` from the status tab.
+    GitStash,
+    GitStashPop,
+    /// Branch checkout picker (magit `b` branch from the status tab).
+    GitBranchPicker,
     /// Show `git blame` for a path in the Run console.
     GitBlame(PathBuf),
     /// Right-click on a file-tree entry: show a CRUD context menu at (row, col).
@@ -165,6 +174,8 @@ pub struct Ide {
     seam_x: u16,
     left_rail_rect: Rect,
     bottom_height: u16,
+    /// Maximize the bottom panel (read long logs/diffs full-height), restorable.
+    bottom_zoom: bool,
     resizing_bottom: bool,
     /// True while the user is dragging the minimap to fold it (like the left drawer seam).
     resizing_stripe: bool,
@@ -282,6 +293,7 @@ impl Ide {
             seam_x: u16::MAX,
             left_rail_rect: empty_rect(),
             bottom_height: BOTTOM_H,
+            bottom_zoom: false,
             resizing_bottom: false,
             resizing_stripe: false,
             structure: Vec::new(),
@@ -422,6 +434,17 @@ impl Ide {
         };
         let (path, line) = errors[self.run_error_idx].clone();
         IdeAction::OpenFileAt { path, line }
+    }
+
+    /// Toggle maximizing the bottom panel (full-height for reading long output).
+    /// Returns the new state. Reveals + unfolds the panel when maximizing.
+    pub fn toggle_bottom_zoom(&mut self) -> bool {
+        self.bottom_zoom = !self.bottom_zoom;
+        if self.bottom_zoom {
+            self.visible = true;
+            self.fold_problems = false;
+        }
+        self.bottom_zoom
     }
 
     /// Re-run the last command (same cmd/cwd/shell), revealing the Run tab.
@@ -609,8 +632,9 @@ impl Ide {
                 self.focus = Focus::Editor;
                 IdeAction::None
             }
-            // fold/unfold the focused drawer
-            KeyCode::Char('z') => {
+            // fold/unfold the focused drawer — but not for the bottom panel, where
+            // `z` is the magit stash key (routed to list_key below).
+            KeyCode::Char('z') if self.focus != Focus::Problems => {
                 self.toggle_fold();
                 IdeAction::None
             }
@@ -903,6 +927,13 @@ impl Ide {
                         return IdeAction::GitBlame(path.clone());
                     }
                 }
+                // magit status-buffer keys for remote / stash operations
+                KeyCode::Char('P') => return IdeAction::GitPush,
+                KeyCode::Char('F') => return IdeAction::GitPull,
+                KeyCode::Char('f') => return IdeAction::GitFetch,
+                KeyCode::Char('z') => return IdeAction::GitStash,
+                KeyCode::Char('Z') => return IdeAction::GitStashPop,
+                KeyCode::Char('B') => return IdeAction::GitBranchPicker,
                 KeyCode::Enter => {
                     if let Some((_, _, path)) = self.git_changes.get(self.git_sel) {
                         if path.is_file() {
@@ -1440,7 +1471,14 @@ impl Ide {
         }
 
         // bottom problems — a visible divider line above it is the resize handle (like the left seam)
-        let bh = if self.fold_problems { 1 } else { self.bottom_height };
+        let bh = if self.fold_problems {
+            1
+        } else if self.bottom_zoom {
+            // maximize: leave a thin strip (toolbar + a few editor lines) on top
+            rest.height.saturating_sub(8).max(self.bottom_height)
+        } else {
+            self.bottom_height
+        };
         if rest.height > bh + 5 {
             self.problems_rect = Rect::new(rest.x, rest.y + rest.height - bh, rest.width, bh);
             self.bottom_divider_y = rest.y + rest.height - bh - 1;
@@ -1516,7 +1554,7 @@ impl Ide {
             // (these aren't in which-key) on the left of the divider line.
             if self.focus == Focus::Problems {
                 let hint = match self.bottom_tab {
-                    BottomTab::Git => " s/u stage (S/U all) · c commit · d diff · l log · b blame ",
+                    BottomTab::Git => " s/u stage · c commit · P push · F pull · f fetch · z stash · B branch · d diff · l log · b blame ",
                     BottomTab::Run => " j/k/g/G scroll · y copy · [ ] tabs ",
                     BottomTab::Registers => " ↵ paste register · [ ] tabs ",
                     BottomTab::Problems => " ↵ jump · [ ] tabs ",

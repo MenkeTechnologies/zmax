@@ -486,6 +486,9 @@ impl MappableCommand {
         goto_prev_diag, "Goto previous diagnostic",
         goto_next_change, "Goto next change",
         goto_prev_change, "Goto previous change",
+        goto_next_conflict, "Goto next merge-conflict marker",
+        goto_prev_conflict, "Goto previous merge-conflict marker",        conflict_take_all_ours, "Resolve ALL conflicts: keep our side",
+        conflict_take_all_theirs, "Resolve ALL conflicts: keep their side",
         goto_first_change, "Goto first change",
         goto_last_change, "Goto last change",
         goto_line_start, "Goto line start",
@@ -606,6 +609,7 @@ impl MappableCommand {
         file_info, "Show file name and cursor position (CTRL-G)",
         document_stats, "Show document line/word/char counts (g CTRL-G)",
         git_blame_line, "Show git blame for the current line (g b)",
+        git_branch_picker, "Pick a git branch and check it out",
         preferences, "Open the unified Preferences window",
         help, "Open the inline Help browser",
         run_config_manager, "Manage run/debug configurations",
@@ -621,6 +625,7 @@ impl MappableCommand {
         focus_problems, "Focus the problems/diagnostics panel",
         focus_run_console, "Focus the Run console (scroll output with j/k/PgUp/PgDn)",
         focus_git_panel, "Focus the Git changes panel (j/k select, Enter opens)",
+        toggle_bottom_zoom, "Maximize / restore the bottom panel",
         toggle_ide, "Toggle the IDE workbench (Zen / focus mode)",
         settings_page, "Open the settings page (config.toml editor)",
         goto_next_spell_error, "Move to the next misspelled word (]s)",
@@ -738,6 +743,7 @@ impl MappableCommand {
         record_macro, "Record macro",
         replay_macro, "Replay macro",
         command_palette, "Open command palette",
+        repl, "Open the embedded-language REPL (elisp/viml/stryke/awk/zsh)",
         goto_word, "Jump to a two-character label",
         extend_to_word, "Extend to a two-character label",
         goto_next_tabstop, "Goto next snippet placeholder",
@@ -4383,6 +4389,55 @@ fn harpoon_remove(cx: &mut Context) {
     cx.editor.set_status("Unpinned from harpoon");
 }
 
+/// Pick a local git branch and check it out (magit `b`), reloading open buffers.
+pub(crate) fn git_branch_picker(cx: &mut Context) {
+    let dir = std::env::current_dir().unwrap_or_default();
+    let branches: Vec<String> = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&dir)
+        .args(["for-each-ref", "--format=%(refname:short)", "refs/heads/"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .map(|s| s.trim().to_owned())
+                .filter(|s| !s.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    if branches.is_empty() {
+        cx.editor.set_status("No git branches");
+        return;
+    }
+    let columns = [PickerColumn::new("branch", |b: &String, _: &()| b.as_str().into())];
+    let picker = Picker::new(columns, 0, branches, (), |cx, branch: &String, _action| {
+        let dir = std::env::current_dir().unwrap_or_default();
+        match std::process::Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["checkout", branch])
+            .output()
+        {
+            Ok(o) if o.status.success() => {
+                crate::commands::typed::reload_open_docs(cx);
+                cx.editor.set_status(format!("Switched to branch {branch}"));
+            }
+            Ok(o) => cx.editor.set_error(
+                String::from_utf8_lossy(&o.stderr)
+                    .lines()
+                    .next()
+                    .unwrap_or("checkout failed")
+                    .trim()
+                    .to_owned(),
+            ),
+            Err(e) => cx.editor.set_error(format!("git: {e}")),
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 /// Reopen the most-recently-closed file (the IDE `Ctrl-Shift-T` gesture).
 /// Repeated calls walk back through the session's close history.
 fn reopen_last_closed(cx: &mut Context) {
@@ -5190,6 +5245,134 @@ fn goto_first_change_impl(cx: &mut Context, reverse: bool) {
             doc.set_selection(view.id, Selection::single(range.anchor, range.head));
         }
     }
+}
+
+/// True if a line begins with a git merge-conflict marker.
+fn is_conflict_marker(line: RopeSlice) -> bool {
+    let prefix: String = line.chars().take(7).collect();
+    matches!(
+        prefix.as_str(),
+        "<<<<<<<" | "=======" | ">>>>>>>" | "|||||||"
+    )
+}
+
+fn goto_conflict_impl(cx: &mut Context, forward: bool) {
+    let scrolloff = cx.editor.config().scrolloff;
+    let target = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let cur_line = slice.char_to_line(doc.selection(view.id).primary().cursor(slice));
+        let total = slice.len_lines();
+        let found = if forward {
+            (cur_line + 1..total).find(|&l| is_conflict_marker(slice.line(l)))
+        } else {
+            (0..cur_line).rev().find(|&l| is_conflict_marker(slice.line(l)))
+        };
+        found.map(|l| slice.line_to_char(l))
+    };
+    match target {
+        Some(pos) => {
+            let (view, doc) = current!(cx.editor);
+            push_jump(view, doc);
+            doc.set_selection(view.id, Selection::point(pos));
+            view.ensure_cursor_in_view(doc, scrolloff);
+        }
+        None => cx.editor.set_status("No merge-conflict markers"),
+    }
+}
+
+fn line_starts_with(line: RopeSlice, marker: &str) -> bool {
+    line.chars().take(marker.len()).collect::<String>() == marker
+}
+
+#[derive(Clone, Copy)]
+enum ConflictSide {
+    Ours,
+    Theirs,
+    Both,
+}
+
+/// Resolve EVERY merge conflict in the buffer, keeping the given side(s).
+fn resolve_all_conflicts(cx: &mut Context, side: ConflictSide) {
+    let changes: Vec<(usize, usize, Option<Tendril>)> = {
+        let (_, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let total = slice.len_lines();
+        let mut changes = Vec::new();
+        let mut l = 0;
+        while l < total {
+            if !line_starts_with(slice.line(l), "<<<<<<<") {
+                l += 1;
+                continue;
+            }
+            let start = l;
+            let (mut base, mut sep, mut end) = (None, None, None);
+            let mut k = start + 1;
+            while k < total {
+                if base.is_none() && sep.is_none() && line_starts_with(slice.line(k), "|||||||") {
+                    base = Some(k);
+                } else if sep.is_none() && line_starts_with(slice.line(k), "=======") {
+                    sep = Some(k);
+                } else if line_starts_with(slice.line(k), ">>>>>>>") {
+                    end = Some(k);
+                    break;
+                }
+                k += 1;
+            }
+            if let (Some(sep), Some(end)) = (sep, end) {
+                let ours_end = base.unwrap_or(sep);
+                let ours: String = slice
+                    .slice(slice.line_to_char(start + 1)..slice.line_to_char(ours_end))
+                    .chars()
+                    .collect();
+                let theirs: String = slice
+                    .slice(slice.line_to_char(sep + 1)..slice.line_to_char(end))
+                    .chars()
+                    .collect();
+                let repl = match side {
+                    ConflictSide::Ours => ours,
+                    ConflictSide::Theirs => theirs,
+                    ConflictSide::Both => format!("{ours}{theirs}"),
+                };
+                changes.push((
+                    slice.line_to_char(start),
+                    slice.line_to_char((end + 1).min(total)),
+                    (!repl.is_empty()).then(|| repl.into()),
+                ));
+                l = end + 1;
+            } else {
+                l += 1;
+            }
+        }
+        changes
+    };
+    if changes.is_empty() {
+        cx.editor.set_status("No conflicts to resolve");
+        return;
+    }
+    let n = changes.len();
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!("Resolved {n} conflicts"));
+}
+
+fn conflict_take_all_ours(cx: &mut Context) {
+    resolve_all_conflicts(cx, ConflictSide::Ours);
+}
+fn conflict_take_all_theirs(cx: &mut Context) {
+    resolve_all_conflicts(cx, ConflictSide::Theirs);
+}
+
+/// vim/git `]x`: jump to the next merge-conflict marker.
+fn goto_next_conflict(cx: &mut Context) {
+    goto_conflict_impl(cx, true);
+}
+
+/// vim/git `[x`: jump to the previous merge-conflict marker.
+fn goto_prev_conflict(cx: &mut Context) {
+    goto_conflict_impl(cx, false);
 }
 
 fn goto_next_change(cx: &mut Context) {
@@ -7833,6 +8016,13 @@ fn help(cx: &mut Context) {
     cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(4)));
 }
 
+/// Open the embedded-language REPL panel (defaults to elisp; Tab switches).
+fn repl(cx: &mut Context) {
+    cx.push_layer(Box::new(crate::ui::repl::ReplPanel::new(
+        crate::ui::repl::ReplLang::Elisp,
+    )));
+}
+
 /// Open Preferences on the Run/Debug Configurations tab.
 fn run_config_manager(cx: &mut Context) {
     cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(3)));
@@ -7863,6 +8053,15 @@ fn reveal_in_tree(cx: &mut Context) {
     cx.callback.push(Box::new(move |compositor, _cx| {
         if let Some(view) = compositor.find::<crate::ui::EditorView>() {
             view.reveal_in_tree(&path);
+        }
+    }));
+}
+
+/// Toggle maximizing the bottom panel (read long logs/diffs/errors full-height).
+fn toggle_bottom_zoom(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.toggle_bottom_zoom(cx);
         }
     }));
 }
