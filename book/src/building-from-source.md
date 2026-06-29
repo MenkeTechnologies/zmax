@@ -99,7 +99,7 @@ export ZEMACS_RUNTIME=~/src/zemacs/runtime
 Or, create a symbolic link:
 
 ```sh
-ln -Tsf $PWD/runtime ~/.config/zemacs/runtime
+ln -Tsf $PWD/runtime ~/.zemacs/runtime
 ```
 
 #### Windows
@@ -156,7 +156,7 @@ script could follow are:
 1. `cp target/opt/hx $BUILD_DIR/usr/bin/hx`
 
 This way the resulting `hx` binary will always look for its runtime directory in
-`/usr/lib/zemacs/runtime` if the user has no custom runtime in `~/.config/zemacs`
+`/usr/lib/zemacs/runtime` if the user has no custom runtime in `~/.zemacs`
 or `ZEMACS_RUNTIME`.
 
 ### Validating the installation

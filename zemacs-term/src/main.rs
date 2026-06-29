@@ -118,6 +118,12 @@ FLAGS:
     let config = match Config::load_default() {
         Ok(config) => config,
         Err(ConfigLoadError::Error(err)) if err.kind() == std::io::ErrorKind::NotFound => {
+            // First run: no `~/.zemacs/config.toml` yet. Seed it with the default
+            // starter config so the user has an editable file. Failure is non-fatal
+            // (logged only) — zemacs still runs on in-memory defaults.
+            if let Err(write_err) = zemacs_term::config::write_default_config_file() {
+                log::warn!("could not write default config file: {write_err}");
+            }
             Config::default()
         }
         Err(ConfigLoadError::Error(err)) => return Err(Error::new(err)),
