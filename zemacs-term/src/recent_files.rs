@@ -95,6 +95,37 @@ pub fn load() -> Vec<PathBuf> {
     entries.into_iter().map(|e| e.path).collect()
 }
 
+/// Like [`load`] but pairs each path with its unix access time (0 for legacy
+/// stores that predate timestamps). Newest first. Used to annotate the RECENT
+/// tab with a relative-age column.
+pub fn load_with_time() -> Vec<(PathBuf, u64)> {
+    let mut entries = load_entries();
+    entries.sort_by(|a, b| b.time.cmp(&a.time));
+    entries.truncate(MAX_ENTRIES);
+    entries.into_iter().map(|e| (e.path, e.time)).collect()
+}
+
+/// Seconds elapsed since `time` (a unix timestamp), saturating at 0.
+pub fn age_since(time: u64) -> u64 {
+    now().saturating_sub(time)
+}
+
+/// Compact human-readable age for a duration in seconds: `now`, `5m`, `3h`,
+/// `2d`, `4w`. Used to annotate the RECENT tab.
+pub fn humanize_age(age_secs: u64) -> String {
+    if age_secs < 60 {
+        "now".into()
+    } else if age_secs < 3600 {
+        format!("{}m", age_secs / 60)
+    } else if age_secs < 86_400 {
+        format!("{}h", age_secs / 3600)
+    } else if age_secs < 604_800 {
+        format!("{}d", age_secs / 86_400)
+    } else {
+        format!("{}w", age_secs / 604_800)
+    }
+}
+
 /// Load the file list ranked by `z` frecency (frequency × recency), best first.
 pub fn load_frecent() -> Vec<PathBuf> {
     let t = now();
@@ -161,6 +192,20 @@ mod tests {
         assert!(within_week > older);
         assert_eq!(within_hour, r * 4.0);
         assert_eq!(older, r / 4.0);
+    }
+
+    #[test]
+    fn humanize_age_buckets() {
+        assert_eq!(humanize_age(0), "now");
+        assert_eq!(humanize_age(59), "now");
+        assert_eq!(humanize_age(60), "1m");
+        assert_eq!(humanize_age(3599), "59m");
+        assert_eq!(humanize_age(3600), "1h");
+        assert_eq!(humanize_age(7200), "2h");
+        assert_eq!(humanize_age(86_400), "1d");
+        assert_eq!(humanize_age(259_200), "3d");
+        assert_eq!(humanize_age(604_800), "1w");
+        assert_eq!(humanize_age(1_209_600), "2w");
     }
 
     #[test]

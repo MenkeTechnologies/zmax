@@ -4,6 +4,7 @@ extern crate zemacs_view;
 pub mod appdata;
 pub mod application;
 pub mod args;
+pub mod ci;
 pub mod commands;
 pub mod compositor;
 pub mod config;

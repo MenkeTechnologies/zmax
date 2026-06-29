@@ -349,7 +349,7 @@ fn build_theme_values(
                 None
             }
         })
-        .unwrap_or_else(default_rainbow)
+        .unwrap_or_else(|| default_rainbow(&values, &palette))
         .into_iter()
         .enumerate()
     {
@@ -375,7 +375,8 @@ fn build_theme_values(
     (styles, scopes, highlights, rainbow_length, warnings)
 }
 
-fn default_rainbow() -> Vec<Style> {
+/// The hardcoded fallback rainbow for themes too sparse to derive one from.
+fn primary_rainbow() -> Vec<Style> {
     vec![
         Style::default().fg(Color::Red),
         Style::default().fg(Color::Yellow),
@@ -384,6 +385,47 @@ fn default_rainbow() -> Vec<Style> {
         Style::default().fg(Color::Cyan),
         Style::default().fg(Color::Magenta),
     ]
+}
+
+/// Derive rainbow-bracket colors from a theme that doesn't define an explicit
+/// `rainbow` palette, by sampling the foregrounds of its own syntax accent
+/// scopes. This makes rainbow brackets harmonize with any of the ~220 themes
+/// that lack a hand-tuned palette, instead of clashing primary ANSI colors.
+/// Falls back to [`primary_rainbow`] for themes that define too few accents.
+fn default_rainbow(values: &Map<String, Value>, palette: &ThemePalette) -> Vec<Style> {
+    // Ordered for a varied hue progression across bracket nesting depth.
+    const ACCENTS: [&str; 9] = [
+        "keyword",
+        "function",
+        "type",
+        "string",
+        "constant.numeric",
+        "operator",
+        "constant",
+        "variable.other.member",
+        "label",
+    ];
+    let mut colors: Vec<Color> = Vec::new();
+    for name in ACCENTS {
+        let Some(value) = values.get(name).cloned() else {
+            continue;
+        };
+        // parse_style accepts both bare-string and table scope definitions; we
+        // only want the foreground color, discarding any modifiers.
+        let mut style = Style::default();
+        if palette.parse_style(&mut style, value).is_ok() {
+            if let Some(color) = style.fg {
+                if !colors.contains(&color) {
+                    colors.push(color);
+                }
+            }
+        }
+    }
+    if colors.len() >= 3 {
+        colors.into_iter().map(|c| Style::default().fg(c)).collect()
+    } else {
+        primary_rainbow()
+    }
 }
 impl Theme {
     /// To allow `Highlight` to represent arbitrary RGB colors without turning it into an enum,
@@ -670,6 +712,39 @@ impl TryFrom<Value> for ThemePalette {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_rainbow_derives_from_accents() {
+        // A theme with several accent scopes (mix of string and table forms)
+        // should yield a rainbow sampled from their distinct foregrounds.
+        let values = toml::toml! {
+            "keyword" = "#ff0000"
+            "function" = { fg = "#00ff00", modifiers = ["bold"] }
+            "type" = "#0000ff"
+            "string" = "#ff0000"  // dup of keyword — must be de-duplicated
+        };
+        let palette = ThemePalette::default();
+        let rainbow = default_rainbow(&values, &palette);
+        assert_eq!(
+            rainbow,
+            vec![
+                Style::default().fg(Color::Rgb(255, 0, 0)),
+                Style::default().fg(Color::Rgb(0, 255, 0)),
+                Style::default().fg(Color::Rgb(0, 0, 255)),
+            ]
+        );
+    }
+
+    #[test]
+    fn default_rainbow_falls_back_when_sparse() {
+        // Fewer than 3 derivable accent colors → hardcoded primary palette.
+        let values = toml::toml! {
+            "keyword" = "#ff0000"
+            "ui.background" = { bg = "#000000" }  // no fg → not counted
+        };
+        let palette = ThemePalette::default();
+        assert_eq!(default_rainbow(&values, &palette), primary_rainbow());
+    }
 
     #[test]
     fn test_parse_style_string() {

@@ -115,6 +115,7 @@ pub fn to_rat_style(s: zemacs_view::graphics::Style) -> ratatui::style::Style {
 }
 
 fn blit(buf: &RatBuffer, surface: &mut Surface) {
+    use ratatui::style::Color as R;
     let area = buf.area;
     for y in area.top()..area.bottom() {
         for x in area.left()..area.right() {
@@ -122,7 +123,14 @@ fn blit(buf: &RatBuffer, surface: &mut Surface) {
             if let Some(sc) = surface.get_mut(x, y) {
                 sc.set_symbol(rc.symbol());
                 sc.set_fg(color(rc.fg));
-                sc.set_bg(color(rc.bg));
+                // A `Reset` background is a widget's "transparent" cell (most
+                // widgets leave their empty cells like this). Don't copy it onto
+                // the surface — that would punch through the panel's already-
+                // painted theme background to the terminal's default/transparent
+                // background. Keep whatever bg is already there instead.
+                if rc.bg != R::Reset {
+                    sc.set_bg(color(rc.bg));
+                }
                 sc.modifier = modifier(rc.modifier);
             }
         }

@@ -1476,6 +1476,192 @@ fn run_command(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// Wrap `s` in single quotes for safe inclusion in a `/bin/sh -c` command line,
+/// escaping any embedded single quotes. Pure — unit tested.
+fn shell_single_quote(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('\'');
+    for c in s.chars() {
+        if c == '\'' {
+            out.push_str("'\\''");
+        } else {
+            out.push(c);
+        }
+    }
+    out.push('\'');
+    out
+}
+
+/// Build the shell command for a project search: ripgrep `--vimgrep` (jumpable
+/// `file:line:col:text`) with a `grep -rnHIE` fallback when rg isn't installed.
+/// Pure — unit tested.
+fn grep_command(pattern: &str, whole_word: bool) -> String {
+    let q = shell_single_quote(pattern);
+    let w = if whole_word { "-w " } else { "" };
+    format!("rg --vimgrep --color=never {w}-e {q} 2>/dev/null || grep -rnHIE {w}-e {q} .")
+}
+
+/// The word (alphanumeric + `_`) at or immediately before char column `col` in
+/// `line`, used by `:grep-word`. Pure — unit tested.
+fn word_at_col(line: &str, col: usize) -> Option<String> {
+    let chars: Vec<char> = line.chars().collect();
+    let is_word = |c: char| c.is_alphanumeric() || c == '_';
+    let mut i = col.min(chars.len());
+    if i >= chars.len() || !is_word(chars[i]) {
+        if i > 0 && is_word(chars[i - 1]) {
+            i -= 1;
+        } else {
+            return None;
+        }
+    }
+    let mut start = i;
+    while start > 0 && is_word(chars[start - 1]) {
+        start -= 1;
+    }
+    let mut end = i;
+    while end < chars.len() && is_word(chars[end]) {
+        end += 1;
+    }
+    Some(chars[start..end].iter().collect())
+}
+
+/// Spawn `cmd` in the project root and route its output to the jumpable Run console.
+fn spawn_into_run_console(cx: &mut compositor::Context, cmd: String) {
+    let path = doc!(cx.editor).path().map(|p| p.to_path_buf());
+    let (_default, cwd) = crate::ui::run::smart_command(path.as_deref());
+    let shell = cx.editor.config().shell.clone();
+    let run = crate::ui::run::spawn(cmd, shell, cwd);
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                view.set_run(run);
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// `:grep <pattern>` — search the project and stream jumpable results into the
+/// Run console.
+fn grep(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    if pattern.trim().is_empty() {
+        bail!("usage: :grep <pattern>");
+    }
+    spawn_into_run_console(cx, grep_command(&pattern, false));
+    Ok(())
+}
+
+/// `:grep-word` — search the project for the whole word under the cursor (a
+/// lightweight "find references"), jumpable in the Run console.
+fn grep_word(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let word = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line_idx = text.char_to_line(cursor);
+        let col = cursor - text.line_to_char(line_idx);
+        let line: String = text
+            .line(line_idx)
+            .chars()
+            .filter(|c| *c != '\n' && *c != '\r')
+            .collect();
+        word_at_col(&line, col)
+    };
+    let Some(word) = word else {
+        bail!("no word under cursor");
+    };
+    spawn_into_run_console(cx, grep_command(&word, true));
+    Ok(())
+}
+
+/// Char-offset ranges of every whole-word occurrence of `word` in `haystack`
+/// (a match must not be flanked by identifier characters). Pure — unit tested.
+fn whole_word_ranges(haystack: &str, word: &str) -> Vec<(usize, usize)> {
+    if word.is_empty() {
+        return Vec::new();
+    }
+    let is_word = |c: char| c.is_alphanumeric() || c == '_';
+    let chars: Vec<char> = haystack.chars().collect();
+    let wchars: Vec<char> = word.chars().collect();
+    let wlen = wchars.len();
+    let mut ranges = Vec::new();
+    let mut i = 0;
+    while i + wlen <= chars.len() {
+        if chars[i..i + wlen] == wchars[..] {
+            let before_ok = i == 0 || !is_word(chars[i - 1]);
+            let after_ok = i + wlen >= chars.len() || !is_word(chars[i + wlen]);
+            if before_ok && after_ok {
+                ranges.push((i, i + wlen));
+                i += wlen;
+                continue;
+            }
+        }
+        i += 1;
+    }
+    ranges
+}
+
+/// `:rename-word <new>` — rename every whole-word occurrence of the identifier
+/// under the cursor within the current buffer (a textual rename that, unlike LSP
+/// rename, needs no language server).
+fn rename_word(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let new_name = args.join(" ");
+    let new_name = new_name.trim();
+    if new_name.is_empty() {
+        bail!("usage: :rename-word <new-name>");
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let line_idx = text.char_to_line(cursor);
+    let col = cursor - text.line_to_char(line_idx);
+    let line: String = text
+        .line(line_idx)
+        .chars()
+        .filter(|c| *c != '\n' && *c != '\r')
+        .collect();
+    let Some(old) = word_at_col(&line, col) else {
+        bail!("no symbol under cursor");
+    };
+
+    let haystack: String = text.chunks().collect();
+    let ranges = whole_word_ranges(&haystack, &old);
+    if ranges.is_empty() {
+        return Ok(());
+    }
+    let count = ranges.len();
+    let transaction = Transaction::change(
+        doc.text(),
+        ranges.into_iter().map(|(s, e)| (s, e, Some(new_name.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor
+        .set_status(format!("renamed {count} occurrence(s) of `{old}` → `{new_name}`"));
+    Ok(())
+}
+
+/// `:todos` — scan the whole project for TODO/FIXME-style markers, jumpable in
+/// the Run console (the Todo tab only scans the current buffer).
+fn project_todos(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    spawn_into_run_console(cx, grep_command(r"\b(TODO|FIXME|HACK|XXX|BUG|NOTE)\b", false));
+    Ok(())
+}
+
 fn registers(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -4018,6 +4204,93 @@ fn center_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     align_lines(cx, args, event, AlignMode::Center)
 }
 
+/// Align lines on the first occurrence of `delim` so the delimiters share a
+/// column (Tabularize / easy-align style). Lines without the delimiter are left
+/// untouched; trailing whitespace before the delimiter is collapsed to the
+/// computed padding plus a single space. Pure — unit tested.
+fn align_on_delim(lines: &[&str], delim: &str) -> Vec<String> {
+    if delim.is_empty() {
+        return lines.iter().map(|l| l.to_string()).collect();
+    }
+    // (byte index of delimiter, char width of the left part trimmed of trailing
+    // whitespace) for each line that contains the delimiter.
+    let metas: Vec<Option<(usize, usize)>> = lines
+        .iter()
+        .map(|l| {
+            l.find(delim)
+                .map(|bidx| (bidx, l[..bidx].trim_end().chars().count()))
+        })
+        .collect();
+    let target = metas
+        .iter()
+        .filter_map(|m| m.map(|(_, len)| len))
+        .max()
+        .unwrap_or(0);
+    lines
+        .iter()
+        .zip(&metas)
+        .map(|(l, m)| match m {
+            Some((bidx, len)) => {
+                let left = l[..*bidx].trim_end();
+                let rest = &l[*bidx..]; // delimiter + everything after it
+                format!("{}{} {}", left, " ".repeat(target - len), rest)
+            }
+            None => l.to_string(),
+        })
+        .collect()
+}
+
+fn align_delimiter(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let delim = args.first().map(|s| s.to_string()).unwrap_or_else(|| "=".into());
+    if delim.is_empty() {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let (first, last) = primary_line_range(doc, view.id);
+    let region_start = slice.line_to_char(first);
+    let region_end = if last + 1 < total {
+        slice.line_to_char(last + 1)
+    } else {
+        slice.len_chars()
+    };
+    if region_start >= region_end {
+        return Ok(());
+    }
+
+    let block: String = slice.slice(region_start..region_end).chunks().collect();
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<&str> = block.split('\n').collect();
+    if had_trailing {
+        lines.pop();
+    }
+    let aligned = align_on_delim(&lines, &delim);
+    let mut out = aligned.join("\n");
+    if had_trailing {
+        out.push('\n');
+    }
+    if out == block {
+        return Ok(());
+    }
+
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(out.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 fn undo_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -4256,6 +4529,742 @@ fn uniquify_lines(
     }
 
     let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Reverse the order of the lines in `block`, preserving its trailing-newline
+/// shape (a block that ended in a newline still does; one that didn't, doesn't).
+fn reverse_line_order(block: &str) -> String {
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<&str> = block.split('\n').collect();
+    if had_trailing {
+        lines.pop(); // drop the empty element produced by the trailing newline
+    }
+    lines.reverse();
+    let mut out = lines.join("\n");
+    if had_trailing {
+        out.push('\n');
+    }
+    out
+}
+
+fn reverse_lines(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    if total == 0 {
+        return Ok(());
+    }
+
+    // Reverse the primary selection's line span, or the whole buffer when the
+    // selection is confined to a single line.
+    let range = doc.selection(view.id).primary();
+    let start_line = slice.char_to_line(range.from());
+    let last_char = range.to().saturating_sub(1).max(range.from());
+    let end_line = slice.char_to_line(last_char);
+    let (first, last) = if end_line > start_line {
+        (start_line, end_line)
+    } else {
+        (0, total - 1)
+    };
+
+    let region_start = slice.line_to_char(first);
+    let region_end = if last + 1 < total {
+        slice.line_to_char(last + 1)
+    } else {
+        slice.len_chars()
+    };
+    if region_start >= region_end {
+        return Ok(());
+    }
+
+    let block: String = slice.slice(region_start..region_end).chunks().collect();
+    let reversed = reverse_line_order(&block);
+    if reversed == block {
+        return Ok(());
+    }
+
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(reversed.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Parse the leading numeric value of a line for `:sort-lines --numeric`, ignoring
+/// leading whitespace. Lines without a leading number sort first.
+fn leading_number(line: &str) -> f64 {
+    let t = line.trim_start();
+    let bytes = t.as_bytes();
+    let mut end = 0;
+    if end < bytes.len() && (bytes[end] == b'-' || bytes[end] == b'+') {
+        end += 1;
+    }
+    let digits_start = end;
+    while end < bytes.len() && (bytes[end].is_ascii_digit() || bytes[end] == b'.') {
+        end += 1;
+    }
+    if end == digits_start {
+        return f64::NEG_INFINITY; // no leading number → sort first
+    }
+    t[..end].parse::<f64>().unwrap_or(f64::NEG_INFINITY)
+}
+
+/// Sort the lines of `block`, preserving its trailing-newline shape. The sort is
+/// stable on ties. `numeric` orders by each line's leading number; `insensitive`
+/// folds case; `reverse` flips the result; `unique` drops duplicate lines.
+fn sort_line_block(
+    block: &str,
+    reverse: bool,
+    insensitive: bool,
+    numeric: bool,
+    unique: bool,
+) -> String {
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<&str> = block.split('\n').collect();
+    if had_trailing {
+        lines.pop();
+    }
+    if numeric {
+        lines.sort_by(|a, b| {
+            leading_number(a)
+                .partial_cmp(&leading_number(b))
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.cmp(b))
+        });
+    } else if insensitive {
+        lines.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()).then_with(|| a.cmp(b)));
+    } else {
+        lines.sort();
+    }
+    if reverse {
+        lines.reverse();
+    }
+    if unique {
+        lines.dedup();
+    }
+    let mut out = lines.join("\n");
+    if had_trailing {
+        out.push('\n');
+    }
+    out
+}
+
+fn sort_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    if total == 0 {
+        return Ok(());
+    }
+
+    // Sort the primary selection's line span, or the whole buffer when the
+    // selection is confined to a single line.
+    let range = doc.selection(view.id).primary();
+    let start_line = slice.char_to_line(range.from());
+    let last_char = range.to().saturating_sub(1).max(range.from());
+    let end_line = slice.char_to_line(last_char);
+    let (first, last) = if end_line > start_line {
+        (start_line, end_line)
+    } else {
+        (0, total - 1)
+    };
+
+    let region_start = slice.line_to_char(first);
+    let region_end = if last + 1 < total {
+        slice.line_to_char(last + 1)
+    } else {
+        slice.len_chars()
+    };
+    if region_start >= region_end {
+        return Ok(());
+    }
+
+    let block: String = slice.slice(region_start..region_end).chunks().collect();
+    let sorted = sort_line_block(
+        &block,
+        args.has_flag("reverse"),
+        args.has_flag("insensitive"),
+        args.has_flag("numeric"),
+        args.has_flag("unique"),
+    );
+    if sorted == block {
+        return Ok(());
+    }
+
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(sorted.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Join the lines of `block` with `sep` into a single line, preserving a trailing
+/// newline if the block had one. Pure — unit tested.
+fn join_lines_with(block: &str, sep: &str) -> String {
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<&str> = block.split('\n').collect();
+    if had_trailing {
+        lines.pop();
+    }
+    let joined = lines.join(sep);
+    if had_trailing {
+        format!("{joined}\n")
+    } else {
+        joined
+    }
+}
+
+/// `:join-with [sep]` — join the selected lines into one, separated by `sep`
+/// (default `", "`). Turns a column of values into a CSV/IN-list.
+fn join_with(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let sep = if args.is_empty() {
+        ", ".to_string()
+    } else {
+        args.join(" ")
+    };
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let (first, last) = primary_line_range(doc, view.id);
+    let region_start = slice.line_to_char(first);
+    let region_end = if last + 1 < total {
+        slice.line_to_char(last + 1)
+    } else {
+        slice.len_chars()
+    };
+    if region_start >= region_end {
+        return Ok(());
+    }
+
+    let block: String = slice.slice(region_start..region_end).chunks().collect();
+    let joined = join_lines_with(&block, &sep);
+    if joined == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(joined.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Split `block` on every occurrence of `sep`, putting each piece on its own
+/// line, preserving a trailing newline if the block had one. The inverse of
+/// [`join_lines_with`]. Pure — unit tested.
+fn split_on_sep(block: &str, sep: &str) -> String {
+    if sep.is_empty() {
+        return block.to_string();
+    }
+    let had_trailing = block.ends_with('\n');
+    let core = block.strip_suffix('\n').unwrap_or(block);
+    let joined = core.split(sep).collect::<Vec<_>>().join("\n");
+    if had_trailing {
+        format!("{joined}\n")
+    } else {
+        joined
+    }
+}
+
+/// `:split-on [sep]` — split the selected line(s) on `sep` (default `,`) into one
+/// item per line. The inverse of `:join-with`.
+fn split_on(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let sep = if args.is_empty() {
+        ",".to_string()
+    } else {
+        args.join(" ")
+    };
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let (first, last) = primary_line_range(doc, view.id);
+    let region_start = slice.line_to_char(first);
+    let region_end = if last + 1 < total {
+        slice.line_to_char(last + 1)
+    } else {
+        slice.len_chars()
+    };
+    if region_start >= region_end {
+        return Ok(());
+    }
+
+    let block: String = slice.slice(region_start..region_end).chunks().collect();
+    let split = split_on_sep(&block, &sep);
+    if split == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(split.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Prepend `start`-based, right-aligned line numbers (`"{n}. "`) to each line of
+/// `block`, preserving its trailing-newline shape. Pure — unit tested.
+fn number_lines(block: &str, start: usize) -> String {
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<&str> = block.split('\n').collect();
+    if had_trailing {
+        lines.pop();
+    }
+    if lines.is_empty() {
+        return block.to_string();
+    }
+    let width = (start + lines.len() - 1).to_string().len();
+    let numbered: Vec<String> = lines
+        .iter()
+        .enumerate()
+        .map(|(i, l)| format!("{:>width$}. {l}", start + i, width = width))
+        .collect();
+    let out = numbered.join("\n");
+    if had_trailing {
+        format!("{out}\n")
+    } else {
+        out
+    }
+}
+
+/// `:number-lines [start]` — prepend line numbers (default starting at 1) to the
+/// selected lines, like `nl`/`cat -n`.
+fn number_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let start: usize = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(1);
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let (first, last) = primary_line_range(doc, view.id);
+    let region_start = slice.line_to_char(first);
+    let region_end = if last + 1 < total {
+        slice.line_to_char(last + 1)
+    } else {
+        slice.len_chars()
+    };
+    if region_start >= region_end {
+        return Ok(());
+    }
+
+    let block: String = slice.slice(region_start..region_end).chunks().collect();
+    let numbered = number_lines(&block, start);
+    if numbered == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(numbered.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// A tiny recursive-descent evaluator for `:calc`. Grammar (lowest→highest):
+/// expr = term (('+'|'-') term)*; term = power (('*'|'/'|'%') power)*;
+/// power = factor ('^' power)?; factor = number | '(' expr ')' | ('+'|'-') factor.
+/// Unary minus binds tighter than `^` (so `-2^2` == 4; use `-(2^2)` for -4).
+struct Calc<'a> {
+    s: &'a [u8],
+    i: usize,
+}
+
+impl<'a> Calc<'a> {
+    fn new(s: &'a str) -> Self {
+        Calc { s: s.as_bytes(), i: 0 }
+    }
+    fn peek(&mut self) -> Option<u8> {
+        while self.i < self.s.len() && self.s[self.i].is_ascii_whitespace() {
+            self.i += 1;
+        }
+        self.s.get(self.i).copied()
+    }
+    fn eat(&mut self, c: u8) -> bool {
+        if self.peek() == Some(c) {
+            self.i += 1;
+            true
+        } else {
+            false
+        }
+    }
+    fn expr(&mut self) -> Result<f64, String> {
+        let mut v = self.term()?;
+        loop {
+            match self.peek() {
+                Some(b'+') => {
+                    self.i += 1;
+                    v += self.term()?;
+                }
+                Some(b'-') => {
+                    self.i += 1;
+                    v -= self.term()?;
+                }
+                _ => break,
+            }
+        }
+        Ok(v)
+    }
+    fn term(&mut self) -> Result<f64, String> {
+        let mut v = self.power()?;
+        loop {
+            match self.peek() {
+                Some(b'*') => {
+                    self.i += 1;
+                    v *= self.power()?;
+                }
+                Some(b'/') => {
+                    self.i += 1;
+                    let d = self.power()?;
+                    if d == 0.0 {
+                        return Err("division by zero".into());
+                    }
+                    v /= d;
+                }
+                Some(b'%') => {
+                    self.i += 1;
+                    let d = self.power()?;
+                    if d == 0.0 {
+                        return Err("modulo by zero".into());
+                    }
+                    v %= d;
+                }
+                _ => break,
+            }
+        }
+        Ok(v)
+    }
+    fn power(&mut self) -> Result<f64, String> {
+        let base = self.factor()?;
+        if self.eat(b'^') {
+            Ok(base.powf(self.power()?)) // right-associative
+        } else {
+            Ok(base)
+        }
+    }
+    fn factor(&mut self) -> Result<f64, String> {
+        match self.peek() {
+            Some(b'-') => {
+                self.i += 1;
+                Ok(-self.factor()?)
+            }
+            Some(b'+') => {
+                self.i += 1;
+                self.factor()
+            }
+            Some(b'(') => {
+                self.i += 1;
+                let v = self.expr()?;
+                if !self.eat(b')') {
+                    return Err("missing closing parenthesis".into());
+                }
+                Ok(v)
+            }
+            Some(c) if c.is_ascii_digit() || c == b'.' => self.number(),
+            Some(c) => Err(format!("unexpected character '{}'", c as char)),
+            None => Err("unexpected end of expression".into()),
+        }
+    }
+    fn number(&mut self) -> Result<f64, String> {
+        self.peek(); // skip whitespace
+        let start = self.i;
+        while self.i < self.s.len() {
+            let c = self.s[self.i];
+            if c.is_ascii_digit() || c == b'.' {
+                self.i += 1;
+            } else if (c == b'e' || c == b'E')
+                && self.i + 1 < self.s.len()
+                && (self.s[self.i + 1] == b'+' || self.s[self.i + 1] == b'-')
+            {
+                self.i += 2; // exponent with sign
+            } else if c == b'e' || c == b'E' {
+                self.i += 1;
+            } else {
+                break;
+            }
+        }
+        let tok = std::str::from_utf8(&self.s[start..self.i]).unwrap_or("");
+        tok.parse::<f64>()
+            .map_err(|_| format!("invalid number '{tok}'"))
+    }
+}
+
+/// Evaluate an arithmetic expression, erroring on trailing/garbage input.
+fn eval_arith(input: &str) -> Result<f64, String> {
+    let mut c = Calc::new(input);
+    let v = c.expr()?;
+    if c.peek().is_some() {
+        return Err("unexpected trailing input".into());
+    }
+    if !v.is_finite() {
+        return Err("result is not finite".into());
+    }
+    Ok(v)
+}
+
+/// Render a calc result: integers without a decimal point, otherwise trimmed.
+fn format_calc(v: f64) -> String {
+    if v.fract() == 0.0 && v.abs() < 1e15 {
+        format!("{}", v as i64)
+    } else {
+        let s = format!("{v:.10}");
+        s.trim_end_matches('0').trim_end_matches('.').to_string()
+    }
+}
+
+fn calc(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let expr = args.join(" ");
+    if !expr.trim().is_empty() {
+        // `:calc <expr>` — show the result in the status line.
+        match eval_arith(&expr) {
+            Ok(v) => cx.editor.set_status(format!("{} = {}", expr.trim(), format_calc(v))),
+            Err(e) => bail!("calc: {e}"),
+        }
+        return Ok(());
+    }
+
+    // No argument — evaluate each selection and replace it with the result.
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id);
+    let mut first_err: Option<String> = None;
+    let transaction = Transaction::change_by_selection(doc.text(), selection, |range| {
+        let s: String = text.slice(range.from()..range.to()).chunks().collect();
+        match eval_arith(&s) {
+            Ok(v) => (range.from(), range.to(), Some(format_calc(v).into())),
+            Err(e) => {
+                if first_err.is_none() {
+                    first_err = Some(e);
+                }
+                (range.from(), range.to(), None)
+            }
+        }
+    });
+    if let Some(e) = first_err {
+        bail!("calc: {e}");
+    }
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Extract every numeric literal from `s` (integers, decimals, scientific, with
+/// optional leading sign). A `+`/`-` counts as a sign only at a token boundary
+/// (start, whitespace, or one of `([{,;:=`), so `1-2` reads as `[1, 2]` while a
+/// column entry `-5` reads as `[-5]`. Pure — unit tested.
+fn extract_numbers(s: &str) -> Vec<f64> {
+    let b = s.as_bytes();
+    let mut nums = Vec::new();
+    let mut i = 0;
+    let boundary = |c: u8| matches!(c, b' ' | b'\t' | b'\n' | b'\r' | b'(' | b'[' | b'{' | b',' | b';' | b':' | b'=');
+    while i < b.len() {
+        let c = b[i];
+        let signed = (c == b'-' || c == b'+')
+            && (i == 0 || boundary(b[i - 1]))
+            && i + 1 < b.len()
+            && (b[i + 1].is_ascii_digit() || (b[i + 1] == b'.' && i + 2 < b.len() && b[i + 2].is_ascii_digit()));
+        let starts = c.is_ascii_digit()
+            || (c == b'.' && i + 1 < b.len() && b[i + 1].is_ascii_digit())
+            || signed;
+        if !starts {
+            i += 1;
+            continue;
+        }
+        let start = i;
+        if c == b'-' || c == b'+' {
+            i += 1;
+        }
+        while i < b.len() && (b[i].is_ascii_digit() || b[i] == b'.') {
+            i += 1;
+        }
+        if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
+            let mut j = i + 1;
+            if j < b.len() && (b[j] == b'+' || b[j] == b'-') {
+                j += 1;
+            }
+            if j < b.len() && b[j].is_ascii_digit() {
+                i = j;
+                while i < b.len() && b[i].is_ascii_digit() {
+                    i += 1;
+                }
+            }
+        }
+        if let Ok(v) = std::str::from_utf8(&b[start..i]).unwrap_or("").parse::<f64>() {
+            nums.push(v);
+        }
+    }
+    nums
+}
+
+fn sum(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(sel.from()..sel.to()).chunks().collect();
+    let nums = extract_numbers(&s);
+    if nums.is_empty() {
+        bail!("no numbers in selection");
+    }
+
+    let count = nums.len();
+    let total: f64 = nums.iter().sum();
+    let avg = total / count as f64;
+    let min = nums.iter().cloned().fold(f64::INFINITY, f64::min);
+    let max = nums.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    cx.editor.set_status(format!(
+        "sum={} avg={} min={} max={} n={count}",
+        format_calc(total),
+        format_calc(avg),
+        format_calc(min),
+        format_calc(max),
+    ));
+    Ok(())
+}
+
+/// Format a Unix timestamp as a UTC `YYYY-MM-DD` date, optionally with a
+/// ` HH:MM:SS` time. Pure — unit tested.
+fn format_utc(secs: u64, with_time: bool) -> String {
+    let days = (secs / 86_400) as i64;
+    let tod = secs % 86_400;
+    let (year, month, day) = crate::logging::civil_from_days(days);
+    let date = format!("{year:04}-{month:02}-{day:02}");
+    if with_time {
+        format!("{date} {:02}:{:02}:{:02}", tod / 3600, (tod % 3600) / 60, tod % 60)
+    } else {
+        date
+    }
+}
+
+fn now_unix_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// Insert `text` at every cursor (replacing any selection).
+fn insert_at_cursors(cx: &mut compositor::Context, text: String) {
+    let (view, doc) = current!(cx.editor);
+    let selection = doc.selection(view.id).clone();
+    let transaction = Transaction::change_by_selection(doc.text(), &selection, |range| {
+        (range.from(), range.to(), Some(text.clone().into()))
+    });
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// `:date` — insert the current UTC date (`YYYY-MM-DD`).
+fn insert_date(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    insert_at_cursors(cx, format_utc(now_unix_secs(), false));
+    Ok(())
+}
+
+/// `:datetime` — insert the current UTC date and time (`YYYY-MM-DD HH:MM:SS`).
+fn insert_datetime(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    insert_at_cursors(cx, format_utc(now_unix_secs(), true));
+    Ok(())
+}
+
+/// `:timestamp` — insert the current Unix epoch in seconds.
+fn insert_timestamp(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    insert_at_cursors(cx, now_unix_secs().to_string());
+    Ok(())
+}
+
+/// Format 16 random bytes as an RFC 4122 version-4 UUID string, setting the
+/// version and variant bits. Pure — unit tested.
+fn format_uuid_v4(mut b: [u8; 16]) -> String {
+    b[6] = (b[6] & 0x0f) | 0x40; // version 4
+    b[8] = (b[8] & 0x3f) | 0x80; // variant 10xx
+    format!(
+        "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+        b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]
+    )
+}
+
+/// 16 bytes from the OS RNG (`/dev/urandom`), with a time-seeded xorshift fallback.
+fn random_bytes_16() -> [u8; 16] {
+    use std::io::Read;
+    let mut buf = [0u8; 16];
+    if std::fs::File::open("/dev/urandom")
+        .and_then(|mut f| f.read_exact(&mut buf))
+        .is_ok()
+    {
+        return buf;
+    }
+    let mut x = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0)
+        ^ (&buf as *const _ as u64)
+        | 1;
+    for byte in buf.iter_mut() {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *byte = (x >> 24) as u8;
+    }
+    buf
+}
+
+/// `:uuid` — insert a fresh random UUID v4 at each cursor (replacing any selection).
+fn insert_uuid(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let selection = doc.selection(view.id).clone();
+    let transaction = Transaction::change_by_selection(doc.text(), &selection, |range| {
+        let uuid = format_uuid_v4(random_bytes_16());
+        (range.from(), range.to(), Some(uuid.into()))
+    });
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4947,6 +5956,63 @@ fn move_buffer_impl(
     if let Err(err) = cx.editor.move_path(&old_path, new_path.as_ref()) {
         bail!("Could not move file: {err}");
     }
+    Ok(())
+}
+
+/// Delete the current buffer's file from disk and close the buffer
+/// (vim-eunuch `:Delete`).
+fn delete_file(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let doc = doc!(cx.editor);
+    let path = doc
+        .path()
+        .map(ToOwned::to_owned)
+        .context("Scratch buffer has no file to delete")?;
+    let doc_id = doc.id();
+
+    if !path.exists() {
+        bail!("file does not exist: {}", path.display());
+    }
+    std::fs::remove_file(&path).map_err(|err| anyhow!("could not delete file: {err}"))?;
+
+    // Close the now-orphaned buffer (force: its backing file is gone).
+    buffer_close_by_ids_impl(cx, &[doc_id], true)?;
+    cx.editor.set_status(format!("Deleted {}", path.display()));
+    Ok(())
+}
+
+/// Resolve the directory `:mkdir` should create: the explicit argument if given,
+/// otherwise the parent directory of the current buffer's file. Pure — unit tested.
+fn resolve_mkdir_target(arg: Option<&str>, current_file: Option<&std::path::Path>) -> Option<PathBuf> {
+    match arg.map(str::trim).filter(|a| !a.is_empty()) {
+        Some(path) => Some(PathBuf::from(path)),
+        None => current_file
+            .and_then(|f| f.parent())
+            .filter(|p| !p.as_os_str().is_empty())
+            .map(ToOwned::to_owned),
+    }
+}
+
+/// Create a directory (and any missing parents), like vim-eunuch `:Mkdir`.
+/// With no argument, creates the parent directory of the current buffer's file.
+fn mkdir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let current = doc!(cx.editor).path().map(ToOwned::to_owned);
+    let target = resolve_mkdir_target(args.first(), current.as_deref())
+        .context("no path argument and current buffer has no file")?;
+
+    std::fs::create_dir_all(&target).map_err(|err| anyhow!("could not create directory: {err}"))?;
+    cx.editor.set_status(format!("Created {}", target.display()));
     Ok(())
 }
 
@@ -5664,6 +6730,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "grep",
+        aliases: &["rg", "search-project"],
+        doc: "Search the project (ripgrep) and show jumpable results in the Run console.",
+        fun: grep,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rename-word",
+        aliases: &["rename-local"],
+        doc: "Rename every whole-word occurrence of the symbol under the cursor in this buffer.",
+        fun: rename_word,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "grep-word",
+        aliases: &["gw", "find-references"],
+        doc: "Search the project for the whole word under the cursor (jumpable in Run).",
+        fun: grep_word,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "todos",
+        aliases: &["project-todos", "fixme"],
+        doc: "Scan the whole project for TODO/FIXME/HACK/XXX/BUG/NOTE markers (jumpable in Run).",
+        fun: project_todos,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
@@ -6423,6 +7533,164 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "reverse",
+        aliases: &["reverse-lines", "tac"],
+        doc: "Reverse the order of the selected lines (or the whole buffer).",
+        fun: reverse_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "uuid",
+        aliases: &["guid"],
+        doc: "Insert a random UUID v4 at each cursor (replaces any selection).",
+        fun: insert_uuid,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "date",
+        aliases: &[],
+        doc: "Insert the current UTC date (YYYY-MM-DD) at each cursor.",
+        fun: insert_date,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "datetime",
+        aliases: &["now"],
+        doc: "Insert the current UTC date and time (YYYY-MM-DD HH:MM:SS) at each cursor.",
+        fun: insert_datetime,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "timestamp",
+        aliases: &["epoch"],
+        doc: "Insert the current Unix epoch (seconds) at each cursor.",
+        fun: insert_timestamp,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sum",
+        aliases: &["total"],
+        doc: "Sum the numbers in the selection; reports sum/avg/min/max/count in the status line.",
+        fun: sum,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "calc",
+        aliases: &["eval-math"],
+        doc: "Evaluate an arithmetic expression (+ - * / % ^), or each selection in place.",
+        fun: calc,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "join-with",
+        aliases: &["joinw"],
+        doc: "Join the selected lines into one with a separator (default \", \").",
+        fun: join_with,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "split-on",
+        aliases: &["splito"],
+        doc: "Split the selected line(s) on a separator (default \",\") into one item per line.",
+        fun: split_on,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "number-lines",
+        aliases: &["nl"],
+        doc: "Prepend line numbers to the selected lines (optional start, default 1).",
+        fun: number_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "align",
+        aliases: &["tabularize"],
+        doc: "Align the selected lines on a delimiter (default `=`) so it shares a column.",
+        fun: align_delimiter,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sort-lines",
+        aliases: &["sortl"],
+        doc: "Sort the selected lines (or the whole buffer) — vim-style line sort.",
+        fun: sort_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            flags: &[
+                Flag {
+                    name: "reverse",
+                    alias: Some('r'),
+                    doc: "sort in reverse (descending) order",
+                    ..Flag::DEFAULT
+                },
+                Flag {
+                    name: "insensitive",
+                    alias: Some('i'),
+                    doc: "sort case-insensitively",
+                    ..Flag::DEFAULT
+                },
+                Flag {
+                    name: "numeric",
+                    alias: Some('n'),
+                    doc: "sort by each line's leading number",
+                    ..Flag::DEFAULT
+                },
+                Flag {
+                    name: "unique",
+                    alias: Some('u'),
+                    doc: "drop duplicate lines after sorting",
+                    ..Flag::DEFAULT
+                },
+            ],
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "transpose-words",
         aliases: &[],
         doc: "Transpose the word before the cursor with the word after it.",
@@ -6712,6 +7980,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "delete-file",
+        aliases: &["remove-file"],
+        doc: "Delete the current buffer's file from disk and close the buffer (vim-eunuch :Delete).",
+        fun: delete_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "mkdir",
+        aliases: &[],
+        doc: "Create a directory and any missing parents; with no arg, the current file's parent.",
+        fun: mkdir,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
@@ -7453,6 +8743,269 @@ fn exclude_workspace(
 #[cfg(test)]
 mod vim_set_tests {
     use super::*;
+
+    #[test]
+    fn grep_command_builds() {
+        use super::grep_command;
+        // pattern is single-quoted, present in both the rg and grep fallback,
+        // and the rg branch is tried first with a `||` fallback to grep.
+        assert_eq!(
+            grep_command("foo bar", false),
+            "rg --vimgrep --color=never -e 'foo bar' 2>/dev/null || grep -rnHIE -e 'foo bar' ."
+        );
+        // whole-word search adds -w to both branches
+        assert_eq!(
+            grep_command("foo", true),
+            "rg --vimgrep --color=never -w -e 'foo' 2>/dev/null || grep -rnHIE -w -e 'foo' ."
+        );
+        // an injection attempt stays inert inside the single quotes
+        assert!(grep_command("$(rm -rf /)", false).contains("'$(rm -rf /)'"));
+    }
+
+    #[test]
+    fn number_lines_prefixes() {
+        use super::number_lines;
+        assert_eq!(number_lines("a\nb\nc\n", 1), "1. a\n2. b\n3. c\n");
+        // width aligns when the range crosses into two digits
+        assert_eq!(number_lines("x\ny\n", 9), " 9. x\n10. y\n");
+        // custom start, no trailing newline
+        assert_eq!(number_lines("only", 5), "5. only");
+    }
+
+    #[test]
+    fn split_on_sep_splits() {
+        use super::split_on_sep;
+        assert_eq!(split_on_sep("a, b, c\n", ", "), "a\nb\nc\n");
+        assert_eq!(split_on_sep("x|y|z", "|"), "x\ny\nz");
+        // no separator present → single line unchanged
+        assert_eq!(split_on_sep("solo\n", ","), "solo\n");
+        // empty separator is a no-op
+        assert_eq!(split_on_sep("a,b", ""), "a,b");
+        // round-trips with join_lines_with for a simple case
+        assert_eq!(super::join_lines_with(&split_on_sep("a,b,c\n", ","), ","), "a,b,c\n");
+    }
+
+    #[test]
+    fn join_lines_with_sep() {
+        use super::join_lines_with;
+        // trailing newline preserved on the single joined line
+        assert_eq!(join_lines_with("a\nb\nc\n", ", "), "a, b, c\n");
+        // no trailing newline
+        assert_eq!(join_lines_with("a\nb", "|"), "a|b");
+        // empty separator concatenates
+        assert_eq!(join_lines_with("1\n2\n3\n", ""), "123\n");
+        // single line is unchanged
+        assert_eq!(join_lines_with("solo\n", ", "), "solo\n");
+    }
+
+    #[test]
+    fn whole_word_ranges_matches() {
+        use super::whole_word_ranges;
+        // only the standalone `foo`, not the one inside `foobar` or `_foo`
+        assert_eq!(
+            whole_word_ranges("foo foobar _foo foo", "foo"),
+            vec![(0, 3), (16, 19)]
+        );
+        // adjacency via underscore/digits blocks a match
+        assert_eq!(whole_word_ranges("x x2 x_ x", "x"), vec![(0, 1), (8, 9)]);
+        // no matches / empty word
+        assert!(whole_word_ranges("bar", "foo").is_empty());
+        assert!(whole_word_ranges("foo", "").is_empty());
+    }
+
+    #[test]
+    fn word_at_col_extracts() {
+        use super::word_at_col;
+        assert_eq!(word_at_col("foo bar", 0).as_deref(), Some("foo"));
+        assert_eq!(word_at_col("foo bar", 4).as_deref(), Some("bar"));
+        // on the space, fall back to the word just before
+        assert_eq!(word_at_col("foo bar", 3).as_deref(), Some("foo"));
+        // identifiers with underscores and digits
+        assert_eq!(word_at_col("let my_var2 = 1", 8).as_deref(), Some("my_var2"));
+        // cursor past the end falls back to the trailing word
+        assert_eq!(word_at_col("end", 3).as_deref(), Some("end"));
+        // no word here
+        assert_eq!(word_at_col("  ", 0), None);
+        assert_eq!(word_at_col("a.b", 1).as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn shell_single_quote_escapes() {
+        use super::shell_single_quote as q;
+        assert_eq!(q("foo"), "'foo'");
+        assert_eq!(q("a b"), "'a b'");
+        // embedded single quote is closed, escaped, and reopened
+        assert_eq!(q("it's"), "'it'\\''s'");
+        // shell metacharacters are inert inside single quotes
+        assert_eq!(q("$(rm -rf /)"), "'$(rm -rf /)'");
+        assert_eq!(q(""), "''");
+    }
+
+    #[test]
+    fn extract_numbers_scans() {
+        use super::extract_numbers;
+        // a column of numbers including a negative and a decimal
+        assert_eq!(extract_numbers("10\n-5\n3.5\n"), vec![10.0, -5.0, 3.5]);
+        // comma/space separated, sign at boundary is attached
+        assert_eq!(extract_numbers("a=1, b=-2, c=3"), vec![1.0, -2.0, 3.0]);
+        // a minus between digits is subtraction context → two positives
+        assert_eq!(extract_numbers("1-2"), vec![1.0, 2.0]);
+        // scientific notation and leading-dot decimals
+        assert_eq!(extract_numbers("1.5e3 and .25"), vec![1500.0, 0.25]);
+        // no numbers
+        assert!(extract_numbers("no digits here").is_empty());
+    }
+
+    #[test]
+    fn format_utc_dates() {
+        use super::format_utc;
+        assert_eq!(format_utc(0, false), "1970-01-01");
+        assert_eq!(format_utc(0, true), "1970-01-01 00:00:00");
+        // a known instant: 1700000000 == 2023-11-14 22:13:20 UTC
+        assert_eq!(format_utc(1_700_000_000, true), "2023-11-14 22:13:20");
+        // a leap day: 2024-02-29 12:30:45 UTC == 1709209845
+        assert_eq!(format_utc(1_709_209_845, true), "2024-02-29 12:30:45");
+    }
+
+    #[test]
+    fn uuid_v4_format() {
+        use super::{format_uuid_v4, random_bytes_16};
+        // all-zero input: version nibble is 4, variant nibble is 8, dashes placed
+        assert_eq!(
+            format_uuid_v4([0u8; 16]),
+            "00000000-0000-4000-8000-000000000000"
+        );
+        // all-ones input: version still 4, variant still 10xx (=> 'b')
+        assert_eq!(
+            format_uuid_v4([0xff; 16]),
+            "ffffffff-ffff-4fff-bfff-ffffffffffff"
+        );
+        // a real generated UUID has the right shape: 8-4-4-4-12, version 4, variant 8/9/a/b
+        let u = format_uuid_v4(random_bytes_16());
+        let parts: Vec<&str> = u.split('-').collect();
+        assert_eq!(parts.iter().map(|p| p.len()).collect::<Vec<_>>(), vec![8, 4, 4, 4, 12]);
+        assert!(u.chars().all(|c| c.is_ascii_hexdigit() || c == '-'));
+        assert_eq!(parts[2].as_bytes()[0], b'4');
+        assert!(matches!(parts[3].as_bytes()[0], b'8' | b'9' | b'a' | b'b'));
+    }
+
+    #[test]
+    fn calc_evaluates() {
+        use super::{eval_arith, format_calc};
+        assert_eq!(eval_arith("2+3*4").unwrap(), 14.0);
+        assert_eq!(eval_arith("(2+3)*4").unwrap(), 20.0);
+        assert_eq!(eval_arith("-5 + 3").unwrap(), -2.0);
+        assert_eq!(eval_arith("2^10").unwrap(), 1024.0);
+        assert_eq!(eval_arith("10 / 4").unwrap(), 2.5);
+        assert_eq!(eval_arith("10 % 3").unwrap(), 1.0);
+        assert_eq!(eval_arith("(-2)^2").unwrap(), 4.0);
+        assert_eq!(eval_arith("1.5e2").unwrap(), 150.0);
+        // errors
+        assert!(eval_arith("2 +").is_err());
+        assert!(eval_arith("1/0").is_err());
+        assert!(eval_arith("2 3").is_err()); // trailing garbage
+        assert!(eval_arith("(1+2").is_err()); // unbalanced
+        // formatting: integers are clean, fractions trimmed
+        assert_eq!(format_calc(14.0), "14");
+        assert_eq!(format_calc(2.5), "2.5");
+        assert_eq!(format_calc(7.0), "7");
+    }
+
+    #[test]
+    fn mkdir_target_resolution() {
+        use std::path::{Path, PathBuf};
+        // explicit arg wins
+        assert_eq!(
+            resolve_mkdir_target(Some("a/b/c"), Some(Path::new("/x/y/file.rs"))),
+            Some(PathBuf::from("a/b/c"))
+        );
+        // blank/whitespace arg falls back to the current file's parent
+        assert_eq!(
+            resolve_mkdir_target(Some("  "), Some(Path::new("/x/y/file.rs"))),
+            Some(PathBuf::from("/x/y"))
+        );
+        // no arg → current file's parent
+        assert_eq!(
+            resolve_mkdir_target(None, Some(Path::new("/x/y/file.rs"))),
+            Some(PathBuf::from("/x/y"))
+        );
+        // no arg and no file → nothing to create
+        assert_eq!(resolve_mkdir_target(None, None), None);
+        // a bare filename with no parent dir yields nothing
+        assert_eq!(resolve_mkdir_target(None, Some(Path::new("file.rs"))), None);
+    }
+
+    #[test]
+    fn align_on_delim_columns() {
+        // basic = alignment, single space before the delimiter
+        assert_eq!(
+            align_on_delim(&["foo = 1", "barbar = 2"], "="),
+            vec!["foo    = 1", "barbar = 2"]
+        );
+        // collapses extra pre-delimiter whitespace, preserves indentation
+        assert_eq!(
+            align_on_delim(&["  a   = 1", "  bb = 2"], "="),
+            vec!["  a  = 1", "  bb = 2"]
+        );
+        // lines without the delimiter are left untouched
+        assert_eq!(
+            align_on_delim(&["x = 1", "# comment", "yy = 2"], "="),
+            vec!["x  = 1", "# comment", "yy = 2"]
+        );
+        // multi-char delimiter
+        assert_eq!(
+            align_on_delim(&["a => 1", "bbb => 2"], "=>"),
+            vec!["a   => 1", "bbb => 2"]
+        );
+    }
+
+    #[test]
+    fn sort_line_block_variants() {
+        // plain ascending sort, trailing newline preserved
+        assert_eq!(sort_line_block("b\na\nc\n", false, false, false, false), "a\nb\nc\n");
+        // reverse (descending)
+        assert_eq!(sort_line_block("b\na\nc\n", true, false, false, false), "c\nb\na\n");
+        // case-insensitive groups regardless of case
+        assert_eq!(
+            sort_line_block("B\na\nC\n", false, true, false, false),
+            "a\nB\nC\n"
+        );
+        // numeric sorts by value, not lexically (10 after 2)
+        assert_eq!(
+            sort_line_block("10\n2\n1\n", false, false, true, false),
+            "1\n2\n10\n"
+        );
+        // unique drops duplicate lines after sorting
+        assert_eq!(
+            sort_line_block("b\na\nb\na\n", false, false, false, true),
+            "a\nb\n"
+        );
+        // no trailing newline is preserved
+        assert_eq!(sort_line_block("b\na", false, false, false, false), "a\nb");
+    }
+
+    #[test]
+    fn leading_number_parses() {
+        assert_eq!(leading_number("42 foo"), 42.0);
+        assert_eq!(leading_number("  -3.5 bar"), -3.5);
+        assert_eq!(leading_number("no number"), f64::NEG_INFINITY);
+        assert_eq!(leading_number("100"), 100.0);
+    }
+
+    #[test]
+    fn reverse_line_order_preserves_eol() {
+        // trailing newline preserved
+        assert_eq!(reverse_line_order("a\nb\nc\n"), "c\nb\na\n");
+        // no trailing newline preserved
+        assert_eq!(reverse_line_order("a\nb\nc"), "c\nb\na");
+        // single line is unchanged either way
+        assert_eq!(reverse_line_order("only\n"), "only\n");
+        assert_eq!(reverse_line_order("only"), "only");
+        // blank interior lines keep their place when reversed
+        assert_eq!(reverse_line_order("a\n\nb\n"), "b\n\na\n");
+        // empty input
+        assert_eq!(reverse_line_order(""), "");
+    }
 
     #[test]
     fn parse_set_tokens() {

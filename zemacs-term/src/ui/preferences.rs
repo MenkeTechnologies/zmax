@@ -14,12 +14,19 @@ use zemacs_view::{
 use crate::{
     compositor::{Component, Context, Event, EventResult},
     ui::{
-        help::HelpPanel, keymap_editor::KeymapEditor, run_config::RunConfigPanel,
-        settings::SettingsPanel, theme_editor::ThemeEditor,
+        dashboard::DashboardPanel, help::HelpPanel, keymap_editor::KeymapEditor,
+        run_config::RunConfigPanel, settings::SettingsPanel, theme_editor::ThemeEditor,
     },
 };
 
-const TABS: [&str; 5] = ["Settings", "Keymap", "Color Scheme", "Run Configs", "Help"];
+const TABS: [&str; 6] = [
+    "Settings",
+    "Keymap",
+    "Color Scheme",
+    "Run Configs",
+    "Help",
+    "Dashboard",
+];
 
 pub struct PreferencesPanel {
     tab: usize,
@@ -28,6 +35,7 @@ pub struct PreferencesPanel {
     theme: ThemeEditor,
     run: RunConfigPanel,
     help: HelpPanel,
+    dashboard: DashboardPanel,
     tab_hits: Vec<(u16, u16, u16, usize)>,
 }
 
@@ -40,6 +48,7 @@ impl PreferencesPanel {
             theme: ThemeEditor::new(),
             run: RunConfigPanel::new(),
             help: HelpPanel::new(),
+            dashboard: DashboardPanel::new(),
             tab_hits: Vec::new(),
         }
     }
@@ -50,7 +59,8 @@ impl PreferencesPanel {
             1 => &mut self.keymap,
             2 => &mut self.theme,
             3 => &mut self.run,
-            _ => &mut self.help,
+            4 => &mut self.help,
+            _ => &mut self.dashboard,
         }
     }
 

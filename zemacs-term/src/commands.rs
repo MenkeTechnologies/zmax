@@ -382,6 +382,7 @@ impl MappableCommand {
         page_cursor_half_down, "Move page and cursor half down",
         select_all, "Select whole document",
         select_regex, "Select all regex matches inside selections",
+        select_all_instances, "Select all occurrences of the current selection in the buffer",
         split_selection, "Split selections on regex matches",
         split_selection_on_newline, "Split selection on newlines",
         merge_selections, "Merge selections",
@@ -610,6 +611,15 @@ impl MappableCommand {
         resize_view_shorter, "Make current window shorter (CTRL-W -)",
         resize_view_equalize, "Make all windows equal size (CTRL-W =)",
         rot13, "ROT13-encode the selection (g?)",
+        url_encode, "Percent-encode (URL-encode) the selection",
+        url_decode, "Percent-decode (URL-decode) the selection",
+        encode_base64, "Base64-encode the selection",
+        decode_base64, "Base64-decode the selection",
+        encode_html, "HTML-escape the selection (& < > \" ')",
+        decode_html, "Decode HTML entities in the selection",
+        title_case_selection, "Title-case the selection (capitalize each word)",
+        slugify_selection, "Slugify the selection (lowercase, hyphen-separated)",
+        strip_ansi_selection, "Strip ANSI/VT escape codes from the selection",
         insert_digraph, "Insert a digraph by two-character mnemonic (CTRL-K)",
         copy_char_below, "Insert the character below the cursor (i_CTRL-E)",
         copy_char_above, "Insert the character above the cursor (i_CTRL-Y)",
@@ -619,6 +629,9 @@ impl MappableCommand {
         git_branch_picker, "Pick a git branch and check it out",
         preferences, "Open the unified Preferences window",
         help, "Open the inline Help browser",
+        dashboard, "Open the system-stats Dashboard (Preferences)",
+        search_in_files, "Open the project-wide Find in Files panel",
+        terminal, "Open an integrated terminal (PTY shell)",
         run_config_manager, "Manage run/debug configurations",
         run_active_config, "Run the active run configuration",
         clear_run_output, "Clear the Run tool window output",
@@ -632,7 +645,9 @@ impl MappableCommand {
         focus_problems, "Focus the problems/diagnostics panel",
         focus_run_console, "Focus the Run console (scroll output with j/k/PgUp/PgDn)",
         focus_git_panel, "Focus the Git changes panel (j/k select, Enter opens)",
+        focus_ci_panel, "Focus the CI status panel (GitHub Actions runs; Enter opens in browser)",
         toggle_bottom_zoom, "Maximize / restore the bottom panel",
+        toggle_drawer_mid, "Fold / unfold the middle column of the bottom drawer",
         toggle_ide, "Toggle the IDE workbench (Zen / focus mode)",
         settings_page, "Open the settings page (config.toml editor)",
         goto_next_spell_error, "Move to the next misspelled word (]s)",
@@ -668,8 +683,11 @@ impl MappableCommand {
         yank_file_path_with_line_col, "Yank current file path:line:col to clipboard",
         yank_file_dir, "Yank current file's directory to clipboard",
         copy_remote_url, "Copy web permalink (host/blob/<sha>/path#Ln) for current line",
+        open_remote_url, "Open current line's web permalink in the browser",
         duplicate_selection_down, "Duplicate current line(s) downward",
         duplicate_selection_up, "Duplicate current line(s) upward",
+        move_text_line_down, "Move current line(s) down past the next line",
+        move_text_line_up, "Move current line(s) up past the previous line",
         count_selection, "Count chars/words/lines in selection",
         match_brackets, "Goto matching bracket",
         match_brackets_or_goto_percent, "Goto matching bracket, or {count} percent through the file",
@@ -1466,40 +1484,70 @@ fn git_out(dir: &std::path::Path, args: &[&str]) -> Option<String> {
 /// Copy a web permalink (host/blob/<sha>/<path>#L<line>) for the current line to
 /// the clipboard — GitLens "Copy permalink" analogue. Pins to the exact HEAD
 /// commit so the link stays valid as the branch moves.
-fn copy_remote_url(cx: &mut Context) {
+/// Compute the web permalink for the primary cursor's line, or an error message
+/// suitable for `set_error`. Shared by [`copy_remote_url`] and [`open_remote_url`].
+fn current_line_permalink(cx: &mut Context) -> Result<String, String> {
     let (path, line) = {
         let (view, doc) = current!(cx.editor);
-        let Some(path) = doc.path().map(|p| p.to_path_buf()) else {
-            cx.editor.set_error("buffer has no file path");
-            return;
-        };
+        let path = doc
+            .path()
+            .map(|p| p.to_path_buf())
+            .ok_or("buffer has no file path")?;
         let text = doc.text().slice(..);
         let cursor = doc.selection(view.id).primary().cursor(text);
         let line = text.char_to_line(cursor) + 1;
         (path, line)
     };
     let dir = path.parent().unwrap_or_else(|| std::path::Path::new("."));
-    let Some(remote) = git_out(dir, &["remote", "get-url", "origin"]) else {
-        cx.editor.set_error("no git remote 'origin'");
-        return;
-    };
-    let Some(web_base) = git_remote_to_web_base(&remote) else {
-        cx.editor.set_error(format!("unsupported remote URL: {remote}"));
-        return;
-    };
-    let Some(root) = git_out(dir, &["rev-parse", "--show-toplevel"]) else {
-        cx.editor.set_error("not in a git repository");
-        return;
-    };
+    let remote = git_out(dir, &["remote", "get-url", "origin"]).ok_or("no git remote 'origin'")?;
+    let web_base =
+        git_remote_to_web_base(&remote).ok_or_else(|| format!("unsupported remote URL: {remote}"))?;
+    let root = git_out(dir, &["rev-parse", "--show-toplevel"]).ok_or("not in a git repository")?;
     let git_ref = git_out(dir, &["rev-parse", "HEAD"]).unwrap_or_else(|| "HEAD".into());
     let rel = path
         .strip_prefix(root.as_str())
         .unwrap_or(&path)
         .to_string_lossy()
         .replace('\\', "/");
-    let url = build_permalink(&web_base, &git_ref, &rel, line);
-    let _ = cx.editor.registers.write('+', vec![url.clone()]);
-    cx.editor.set_status(format!("Yanked permalink: {url}"));
+    Ok(build_permalink(&web_base, &git_ref, &rel, line))
+}
+
+fn copy_remote_url(cx: &mut Context) {
+    match current_line_permalink(cx) {
+        Ok(url) => {
+            let _ = cx.editor.registers.write('+', vec![url.clone()]);
+            cx.editor.set_status(format!("Yanked permalink: {url}"));
+        }
+        Err(e) => cx.editor.set_error(e),
+    }
+}
+
+/// Open a URL in the OS default browser (detached; output suppressed).
+fn open_in_browser(url: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    let opener = "open";
+    #[cfg(target_os = "windows")]
+    let opener = "explorer";
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let opener = "xdg-open";
+    std::process::Command::new(opener)
+        .arg(url)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+/// Open the current line's web permalink in the OS browser — "Open on GitHub".
+fn open_remote_url(cx: &mut Context) {
+    match current_line_permalink(cx) {
+        Ok(url) => match open_in_browser(&url) {
+            Ok(()) => cx.editor.set_status(format!("Opening {url}")),
+            Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
+        },
+        Err(e) => cx.editor.set_error(e),
+    }
 }
 
 // spacemacs `SPC x c`: count characters / words / lines in the selection.
@@ -2813,6 +2861,319 @@ fn rot13(cx: &mut Context) {
     });
 }
 
+/// Percent-encode per RFC 3986: keep the unreserved set (A-Z a-z 0-9 - _ . ~),
+/// encode every other UTF-8 byte as `%XX` (uppercase hex).
+fn percent_encode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for &b in s.as_bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
+/// Decode percent-encoded text: `%XX` → byte, invalid escapes left verbatim.
+/// `+` is preserved literally (path-style, not form-style). Output is lossy UTF-8.
+fn percent_decode(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            let hi = (bytes[i + 1] as char).to_digit(16);
+            let lo = (bytes[i + 2] as char).to_digit(16);
+            if let (Some(h), Some(l)) = (hi, lo) {
+                out.push((h * 16 + l) as u8);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+fn url_encode(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        percent_encode(&s).into()
+    });
+}
+
+fn url_decode(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        percent_decode(&s).into()
+    });
+}
+
+const BASE64_ALPHABET: &[u8; 64] =
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/// The 6-bit value of a standard base64 character, or `None` for padding,
+/// whitespace, or any other byte (so decode can skip them leniently).
+fn base64_val(c: u8) -> Option<u32> {
+    match c {
+        b'A'..=b'Z' => Some((c - b'A') as u32),
+        b'a'..=b'z' => Some((c - b'a' + 26) as u32),
+        b'0'..=b'9' => Some((c - b'0' + 52) as u32),
+        b'+' => Some(62),
+        b'/' => Some(63),
+        _ => None,
+    }
+}
+
+/// Standard base64-encode a string's UTF-8 bytes (with `=` padding).
+fn base64_encode(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    for chunk in bytes.chunks(3) {
+        let b1 = chunk.get(1).copied();
+        let b2 = chunk.get(2).copied();
+        let n =
+            ((chunk[0] as u32) << 16) | ((b1.unwrap_or(0) as u32) << 8) | (b2.unwrap_or(0) as u32);
+        out.push(BASE64_ALPHABET[((n >> 18) & 63) as usize] as char);
+        out.push(BASE64_ALPHABET[((n >> 12) & 63) as usize] as char);
+        out.push(if b1.is_some() {
+            BASE64_ALPHABET[((n >> 6) & 63) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if b2.is_some() {
+            BASE64_ALPHABET[(n & 63) as usize] as char
+        } else {
+            '='
+        });
+    }
+    out
+}
+
+/// Base64-decode, leniently skipping padding/whitespace/invalid bytes. Output is
+/// lossy UTF-8 (base64 may carry arbitrary bytes).
+fn base64_decode(input: &str) -> String {
+    let vals: Vec<u32> = input.bytes().filter_map(base64_val).collect();
+    let mut out: Vec<u8> = Vec::with_capacity(vals.len() / 4 * 3);
+    for chunk in vals.chunks(4) {
+        let k = chunk.len();
+        if k == 1 {
+            break; // a lone 6-bit group carries no full byte
+        }
+        let mut n = 0u32;
+        for i in 0..4 {
+            n = (n << 6) | chunk.get(i).copied().unwrap_or(0);
+        }
+        out.push((n >> 16) as u8);
+        if k >= 3 {
+            out.push((n >> 8) as u8);
+        }
+        if k >= 4 {
+            out.push(n as u8);
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+fn encode_base64(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        base64_encode(&s).into()
+    });
+}
+
+fn decode_base64(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        base64_decode(&s).into()
+    });
+}
+
+/// HTML-escape the five significant characters (`& < > " '`).
+fn html_encode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// Decode a single HTML entity body (the text between `&` and `;`): named
+/// entities plus decimal (`#39`) and hex (`#x27`) numeric references.
+fn decode_html_entity(entity: &str) -> Option<char> {
+    match entity {
+        "amp" => Some('&'),
+        "lt" => Some('<'),
+        "gt" => Some('>'),
+        "quot" => Some('"'),
+        "apos" => Some('\''),
+        "nbsp" => Some('\u{a0}'),
+        _ => {
+            if let Some(hex) = entity.strip_prefix("#x").or_else(|| entity.strip_prefix("#X")) {
+                u32::from_str_radix(hex, 16).ok().and_then(char::from_u32)
+            } else if let Some(dec) = entity.strip_prefix('#') {
+                dec.parse::<u32>().ok().and_then(char::from_u32)
+            } else {
+                None
+            }
+        }
+    }
+}
+
+/// Decode HTML entities, leaving unrecognized or malformed `&…;` runs verbatim.
+fn html_decode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(amp) = rest.find('&') {
+        out.push_str(&rest[..amp]);
+        let after = &rest[amp..];
+        if let Some(semi_rel) = after[1..].find(';') {
+            let entity = &after[1..1 + semi_rel];
+            let plausible =
+                semi_rel <= 12 && !entity.contains(|c: char| c.is_whitespace() || c == '&' || c == '<');
+            if plausible {
+                if let Some(c) = decode_html_entity(entity) {
+                    out.push(c);
+                    rest = &after[1 + semi_rel + 1..];
+                    continue;
+                }
+            }
+        }
+        out.push('&');
+        rest = &after[1..];
+    }
+    out.push_str(rest);
+    out
+}
+
+fn encode_html(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        html_encode(&s).into()
+    });
+}
+
+fn decode_html(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        html_decode(&s).into()
+    });
+}
+
+/// Convert text to a URL/file slug: lowercase ASCII alphanumerics kept, every
+/// other run collapsed to a single `-`, with no leading/trailing hyphen.
+fn slugify(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut pending_sep = false;
+    for c in s.chars() {
+        if c.is_ascii_alphanumeric() {
+            if pending_sep && !out.is_empty() {
+                out.push('-');
+            }
+            out.push(c.to_ascii_lowercase());
+            pending_sep = false;
+        } else {
+            pending_sep = true;
+        }
+    }
+    out
+}
+
+/// Title-case text: the first letter of each word uppercased, the rest
+/// lowercased. Apostrophes stay inside a word (so `don't` → `Don't`).
+fn title_case(s: &str) -> String {
+    let is_word = |c: char| c.is_alphanumeric() || c == '\'';
+    let mut out = String::with_capacity(s.len());
+    let mut at_word_start = true;
+    for c in s.chars() {
+        if is_word(c) {
+            if at_word_start {
+                out.extend(c.to_uppercase());
+            } else {
+                out.extend(c.to_lowercase());
+            }
+            at_word_start = false;
+        } else {
+            out.push(c);
+            at_word_start = true;
+        }
+    }
+    out
+}
+
+fn title_case_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        title_case(&s).into()
+    });
+}
+
+fn slugify_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        slugify(&s).into()
+    });
+}
+
+/// Remove ANSI/VT escape sequences (CSI `ESC[…`, OSC `ESC]…BEL/ST`, and lone
+/// `ESC`) from `s`, leaving plain text. Multi-byte text is preserved.
+fn strip_ansi(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '\u{1b}' {
+            out.push(c);
+            continue;
+        }
+        match chars.peek() {
+            Some('[') => {
+                chars.next();
+                // CSI: consume until a final byte in 0x40..=0x7e
+                for nc in chars.by_ref() {
+                    if ('\u{40}'..='\u{7e}').contains(&nc) {
+                        break;
+                    }
+                }
+            }
+            Some(']') => {
+                chars.next();
+                // OSC: consume until BEL (0x07) or ST (ESC \)
+                while let Some(&nc) = chars.peek() {
+                    if nc == '\u{07}' {
+                        chars.next();
+                        break;
+                    }
+                    if nc == '\u{1b}' {
+                        chars.next();
+                        if chars.peek() == Some(&'\\') {
+                            chars.next();
+                        }
+                        break;
+                    }
+                    chars.next();
+                }
+            }
+            _ => {} // lone ESC: drop it
+        }
+    }
+    out
+}
+
+fn strip_ansi_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        strip_ansi(&s).into()
+    });
+}
+
 pub fn scroll(cx: &mut Context, offset: usize, direction: Direction, sync_cursor: bool) {
     use Direction::*;
     let config = cx.editor.config();
@@ -3112,11 +3473,154 @@ fn duplicate_selection_up(cx: &mut Context) {
     duplicate_selection_impl(cx, false)
 }
 
+/// Reorder a `block` (ends with a newline unless it is the file's last line) with
+/// the `neighbor` line below it. Returns the new text for the spanned region.
+/// Keeps exactly one EOL between lines and never introduces a trailing newline
+/// the region didn't have.
+fn swap_block_down(block: &str, neighbor: &str) -> String {
+    if neighbor.ends_with('\n') {
+        format!("{neighbor}{block}")
+    } else {
+        // neighbor was the final line (no EOL); after moving up it gains one and
+        // the block becomes the new final line without a trailing newline.
+        format!("{neighbor}\n{}", block.strip_suffix('\n').unwrap_or(block))
+    }
+}
+
+/// Reorder a `block` with the `neighbor` line above it (mirror of [`swap_block_down`]).
+fn swap_block_up(block: &str, neighbor: &str) -> String {
+    if block.ends_with('\n') {
+        format!("{block}{neighbor}")
+    } else {
+        // block was the final line (no EOL); after moving up it gains one and the
+        // neighbor becomes the new final line without a trailing newline.
+        format!("{block}\n{}", neighbor.strip_suffix('\n').unwrap_or(neighbor))
+    }
+}
+
+/// Drag the whole line(s) spanned by the primary selection up or down past the
+/// adjacent line (VS Code's Alt-Up/Down), preserving the cursor column so the
+/// move can be repeated. Honours the editor count for repeated hops.
+fn move_text_line_impl(cx: &mut Context, downward: bool) {
+    let count = cx.count();
+    for _ in 0..count {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let len_lines = slice.len_lines();
+        let sel = doc.selection(view.id).clone();
+        let range = sel.primary();
+        let start_line = slice.char_to_line(range.from());
+        let last_char = range.to().saturating_sub(1).max(range.from());
+        let end_line = slice.char_to_line(last_char);
+
+        // Bail at the buffer edges (nothing to swap with).
+        if downward && end_line + 1 >= len_lines {
+            return;
+        }
+        if !downward && start_line == 0 {
+            return;
+        }
+
+        let block_start = slice.line_to_char(start_line);
+        let (region_start, region_end, new_text, new_start_line) = if downward {
+            let neighbor_line = end_line + 1;
+            let block_end = slice.line_to_char(neighbor_line);
+            let neighbor_end = if neighbor_line + 1 < len_lines {
+                slice.line_to_char(neighbor_line + 1)
+            } else {
+                slice.len_chars()
+            };
+            let block: String = slice.slice(block_start..block_end).to_string();
+            let neighbor: String = slice.slice(block_end..neighbor_end).to_string();
+            (block_start, neighbor_end, swap_block_down(&block, &neighbor), start_line + 1)
+        } else {
+            let neighbor_line = start_line - 1;
+            let region_start = slice.line_to_char(neighbor_line);
+            let block_end = if end_line + 1 < len_lines {
+                slice.line_to_char(end_line + 1)
+            } else {
+                slice.len_chars()
+            };
+            let neighbor: String = slice.slice(region_start..block_start).to_string();
+            let block: String = slice.slice(block_start..block_end).to_string();
+            (region_start, block_end, swap_block_up(&block, &neighbor), start_line - 1)
+        };
+
+        let transaction = Transaction::change(
+            text,
+            std::iter::once((region_start, region_end, Some(new_text.into()))),
+        );
+        doc.apply(&transaction, view.id);
+
+        // Shift the selection by the block's displacement so the cursor follows
+        // the moved text (every char of the block shifts by the same delta).
+        let new_slice = doc.text().slice(..);
+        let delta = new_slice.line_to_char(new_start_line) as isize - block_start as isize;
+        let shift = |p: usize| (p as isize + delta).max(0) as usize;
+        let new_range = Range::new(shift(range.anchor), shift(range.head));
+        doc.set_selection(view.id, Selection::single(new_range.anchor, new_range.head));
+    }
+    exit_select_mode(cx);
+}
+
+fn move_text_line_down(cx: &mut Context) {
+    move_text_line_impl(cx, true)
+}
+
+fn move_text_line_up(cx: &mut Context) {
+    move_text_line_impl(cx, false)
+}
+
 fn select_all(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
 
     let end = doc.text().len_chars();
     doc.set_selection(view.id, Selection::single(0, end))
+}
+
+/// Char-offset ranges of every non-overlapping occurrence of `needle` in
+/// `haystack`. O(n) overall. Pure — unit tested.
+fn find_all_ranges(haystack: &str, needle: &str) -> Vec<(usize, usize)> {
+    if needle.is_empty() {
+        return Vec::new();
+    }
+    let needle_chars = needle.chars().count();
+    let mut ranges = Vec::new();
+    let mut byte = 0;
+    let mut char_off = 0;
+    while let Some(rel) = haystack[byte..].find(needle) {
+        let match_byte = byte + rel;
+        char_off += haystack[byte..match_byte].chars().count();
+        ranges.push((char_off, char_off + needle_chars));
+        char_off += needle_chars;
+        byte = match_byte + needle.len();
+    }
+    ranges
+}
+
+/// Select every occurrence of the primary selection's text across the whole
+/// buffer (VS Code's "select all occurrences" / Ctrl-Shift-L).
+fn select_all_instances(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let primary = doc.selection(view.id).primary();
+    let needle: String = slice.slice(primary.from()..primary.to()).chunks().collect();
+    if needle.is_empty() {
+        cx.editor.set_error("select text first");
+        return;
+    }
+    let haystack: String = slice.chunks().collect();
+    let ranges = find_all_ranges(&haystack, &needle);
+    if ranges.is_empty() {
+        return;
+    }
+    let selection = Selection::new(
+        ranges.iter().map(|&(s, e)| Range::new(s, e)).collect(),
+        0,
+    );
+    doc.set_selection(view.id, selection);
+    cx.editor.set_status(format!("{} matches selected", ranges.len()));
 }
 
 fn select_regex(cx: &mut Context) {
@@ -8181,6 +8685,33 @@ fn run_config_manager(cx: &mut Context) {
     cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(3)));
 }
 
+/// Open Preferences on the Dashboard tab (live system/process stats).
+fn dashboard(cx: &mut Context) {
+    cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(5)));
+}
+
+/// Open an integrated terminal running the user's `$SHELL` in a PTY.
+fn terminal(cx: &mut Context) {
+    match crate::ui::terminal::TerminalPanel::new() {
+        Ok(panel) => cx.push_layer(Box::new(panel)),
+        Err(e) => cx.editor.set_error(format!("terminal: {e}")),
+    }
+}
+
+/// Open the project-wide Find in Files panel, seeded with the primary selection.
+fn search_in_files(cx: &mut Context) {
+    let seed = {
+        let (view, doc) = current!(cx.editor);
+        let sel = doc.selection(view.id).primary();
+        if sel.from() != sel.to() {
+            doc.text().slice(sel.from()..sel.to()).to_string()
+        } else {
+            String::new()
+        }
+    };
+    cx.push_layer(Box::new(crate::ui::search::SearchPanel::new(&seed)));
+}
+
 /// Open Preferences on the Settings tab (config.toml editor).
 fn settings_page(cx: &mut Context) {
     cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(0)));
@@ -8219,6 +8750,14 @@ fn toggle_bottom_zoom(cx: &mut Context) {
     }));
 }
 
+fn toggle_drawer_mid(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.toggle_drawer_mid(cx);
+        }
+    }));
+}
+
 /// Shared helper: focus a named IDE workbench panel via the editor view.
 fn focus_ide_panel(cx: &mut Context, name: &'static str) {
     cx.callback.push(Box::new(move |compositor, _cx| {
@@ -8251,6 +8790,12 @@ fn focus_run_console(cx: &mut Context) {
 /// Focus the Git changes panel — then j/k select a file and Enter opens it.
 fn focus_git_panel(cx: &mut Context) {
     focus_ide_panel(cx, "git");
+}
+
+fn focus_ci_panel(cx: &mut Context) {
+    focus_ide_panel(cx, "ci");
+    // Explicit open always refetches (the panel's own auto-fetch only fires once).
+    crate::ci::spawn_fetch(cx.jobs);
 }
 
 /// Jump to the next `file:line` reference in the run output (vim `:cnext`).
@@ -9752,6 +10297,112 @@ mod path_yank_tests {
     }
 
     #[test]
+    fn strip_ansi_codes() {
+        use super::strip_ansi;
+        // SGR color codes removed, text kept
+        assert_eq!(strip_ansi("\u{1b}[31mhello\u{1b}[0m"), "hello");
+        assert_eq!(strip_ansi("a\u{1b}[1;32mb\u{1b}[mc"), "abc");
+        // OSC sequence (window title) removed
+        assert_eq!(strip_ansi("\u{1b}]0;title\u{07}x"), "x");
+        // multi-byte text preserved
+        assert_eq!(strip_ansi("café\u{1b}[0m"), "café");
+        // plain text untouched
+        assert_eq!(strip_ansi("plain text"), "plain text");
+    }
+
+    #[test]
+    fn title_case_words() {
+        use super::title_case;
+        assert_eq!(title_case("hello world"), "Hello World");
+        assert_eq!(title_case("the QUICK brown FOX"), "The Quick Brown Fox");
+        // apostrophes stay within the word
+        assert_eq!(title_case("don't stop"), "Don't Stop");
+        // hyphens/underscores are word boundaries; punctuation preserved
+        assert_eq!(title_case("foo-bar_baz"), "Foo-Bar_Baz");
+        assert_eq!(title_case("a.b c"), "A.B C");
+    }
+
+    #[test]
+    fn slugify_text() {
+        use super::slugify;
+        assert_eq!(slugify("Hello, World!"), "hello-world");
+        assert_eq!(slugify("  Foo   Bar  "), "foo-bar");
+        assert_eq!(slugify("a_b.c"), "a-b-c");
+        assert_eq!(slugify("Already-Slug"), "already-slug");
+        assert_eq!(slugify("Section 1.2: Intro"), "section-1-2-intro");
+        assert_eq!(slugify("!!!"), "");
+    }
+
+    #[test]
+    fn find_all_ranges_works() {
+        use super::find_all_ranges;
+        assert_eq!(find_all_ranges("foo bar foo", "foo"), vec![(0, 3), (8, 11)]);
+        // non-overlapping matches
+        assert_eq!(find_all_ranges("aaaa", "aa"), vec![(0, 2), (2, 4)]);
+        // multi-byte needle: ranges are in chars, not bytes
+        assert_eq!(find_all_ranges("héllo héllo", "héllo"), vec![(0, 5), (6, 11)]);
+        // no match / empty needle
+        assert!(find_all_ranges("x", "y").is_empty());
+        assert!(find_all_ranges("x", "").is_empty());
+    }
+
+    #[test]
+    fn html_encode_decode() {
+        use super::{html_decode, html_encode};
+        assert_eq!(html_encode("a<b>&\"'"), "a&lt;b&gt;&amp;&quot;&#39;");
+        // decode inverts encode (the round-trip)
+        assert_eq!(html_decode("a&lt;b&gt;&amp;&quot;&#39;"), "a<b>&\"'");
+        // named, decimal, and hex numeric entities
+        assert_eq!(html_decode("&amp; &#65; &#x42;"), "& A B");
+        assert_eq!(html_decode("&apos;&nbsp;"), "'\u{a0}");
+        // unknown or malformed entities are left verbatim
+        assert_eq!(html_decode("100% &unknownentity; x"), "100% &unknownentity; x");
+        assert_eq!(html_decode("a & b"), "a & b");
+        // ampersand-encoding must come first so it doesn't double-escape
+        assert_eq!(html_decode(&html_encode("<a href=\"?x=1&y=2\">")), "<a href=\"?x=1&y=2\">");
+    }
+
+    #[test]
+    fn base64_encode_decode() {
+        use super::{base64_decode, base64_encode};
+        // RFC 4648 test vectors
+        assert_eq!(base64_encode(""), "");
+        assert_eq!(base64_encode("f"), "Zg==");
+        assert_eq!(base64_encode("fo"), "Zm8=");
+        assert_eq!(base64_encode("foo"), "Zm9v");
+        assert_eq!(base64_encode("foob"), "Zm9vYg==");
+        assert_eq!(base64_encode("fooba"), "Zm9vYmE=");
+        assert_eq!(base64_encode("foobar"), "Zm9vYmFy");
+        // decode inverts encode
+        assert_eq!(base64_decode("Zg=="), "f");
+        assert_eq!(base64_decode("Zm9vYmFy"), "foobar");
+        // lenient: whitespace and stray padding are ignored
+        assert_eq!(base64_decode("Zm9v\nYmFy"), "foobar");
+        // round-trip including multi-byte UTF-8
+        let s = "Hello, 世界! 🌍";
+        assert_eq!(base64_decode(&base64_encode(s)), s);
+    }
+
+    #[test]
+    fn percent_encode_decode_roundtrip() {
+        use super::{percent_decode, percent_encode};
+        // unreserved chars pass through; space/slash/colon get encoded
+        assert_eq!(percent_encode("a b/c:d"), "a%20b%2Fc%3Ad");
+        assert_eq!(percent_encode("safe-_.~"), "safe-_.~");
+        // multi-byte UTF-8 encodes each byte
+        assert_eq!(percent_encode("é"), "%C3%A9");
+        // decode inverts encode
+        assert_eq!(percent_decode("a%20b%2Fc%3Ad"), "a b/c:d");
+        assert_eq!(percent_decode("%C3%A9"), "é");
+        // invalid/truncated escapes are left verbatim
+        assert_eq!(percent_decode("100%"), "100%");
+        assert_eq!(percent_decode("%zz"), "%zz");
+        // round-trip on a mixed string
+        let s = "Hello, World! 路漫漫";
+        assert_eq!(percent_decode(&percent_encode(s)), s);
+    }
+
+    #[test]
     fn duplicate_block_newline() {
         use super::duplicate_block_insert as d;
         // normal block (ends with newline): inserted verbatim, both directions
@@ -9761,6 +10412,22 @@ mod path_yank_tests {
         // last line without trailing newline: a separator newline is synthesized
         assert_eq!(d("foo", true), "\nfoo");
         assert_eq!(d("foo", false), "foo\n");
+    }
+
+    #[test]
+    fn move_line_reorder() {
+        use super::{swap_block_down, swap_block_up};
+        // normal interior swap: both lines keep their trailing newline
+        assert_eq!(swap_block_down("B\n", "N\n"), "N\nB\n");
+        assert_eq!(swap_block_up("B\n", "N\n"), "B\nN\n");
+        // multi-line block moving down past a single neighbor
+        assert_eq!(swap_block_down("B1\nB2\n", "N\n"), "N\nB1\nB2\n");
+        // neighbor is the final line without an EOL: block must end EOL-less
+        assert_eq!(swap_block_down("B\n", "N"), "N\nB");
+        // block is the final line without an EOL, moving up: neighbor ends EOL-less
+        assert_eq!(swap_block_up("B", "N\n"), "B\nN");
+        // multi-line block moving up past a single neighbor
+        assert_eq!(swap_block_up("B1\nB2\n", "N\n"), "B1\nB2\nN\n");
     }
 
     #[test]

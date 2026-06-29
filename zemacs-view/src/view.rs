@@ -718,8 +718,8 @@ mod tests {
     use arc_swap::ArcSwap;
     use zemacs_core::{syntax, Rope};
 
-    // 1 diagnostic + 1 spacer + 3 linenr (< 1000 lines) + 1 spacer + 1 diff
-    const DEFAULT_GUTTER_OFFSET: u16 = 7;
+    // 1 diagnostic + 1 marks + 1 spacer + 3 linenr (< 1000 lines) + 1 spacer + 1 diff
+    const DEFAULT_GUTTER_OFFSET: u16 = 8;
 
     // 1 diagnostics + 1 spacer + 1 gutter
     const DEFAULT_GUTTER_OFFSET_ONLY_DIAGNOSTICS: u16 = 3;

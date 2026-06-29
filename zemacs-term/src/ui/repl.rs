@@ -418,10 +418,12 @@ impl Component for ReplPanel {
     }
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
-        use crate::ui::rat::{render, to_rat_style};
+        use crate::ui::rat::{render, render_stateful, to_rat_style};
         use ratatui::style::Modifier as RMod;
         use ratatui::text::{Line, Span};
-        use ratatui::widgets::Paragraph;
+        use ratatui::widgets::{
+            Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Tabs,
+        };
 
         self.tab_hits.clear();
 
@@ -448,19 +450,32 @@ impl Component for ReplPanel {
             Rect::new(area.x + 1, area.y, 7, 1),
             surface,
         );
-        let mut x = area.x + 8;
+        let tabs_x = area.x + 8;
+        let selected = ReplLang::ALL
+            .iter()
+            .position(|&l| l == self.lang)
+            .unwrap_or(0);
+        let titles: Vec<Line> = ReplLang::ALL.iter().map(|l| Line::from(l.label())).collect();
+        let tabs = Tabs::new(titles)
+            .select(selected)
+            .style(dim)
+            .highlight_style(accent.add_modifier(RMod::REVERSED))
+            .divider(Span::styled("│", dim))
+            .padding(" ", " ");
+        render(
+            tabs,
+            Rect::new(tabs_x, area.y, area.width.saturating_sub(tabs_x - area.x), 1),
+            surface,
+        );
+        // Mirror the Tabs geometry for mouse hit-testing: each tab renders as
+        // " {label} " (1-col padding each side); a 1-col divider follows all but
+        // the last.
+        let mut x = tabs_x;
         for (i, lang) in ReplLang::ALL.iter().enumerate() {
-            let lbl = format!(" {} ", lang.label());
-            let w = lbl.chars().count() as u16;
-            if x + w >= area.x + area.width {
+            let w = lang.label().chars().count() as u16 + 2;
+            if x + w > area.x + area.width {
                 break;
             }
-            let st = if *lang == self.lang {
-                accent.add_modifier(RMod::REVERSED)
-            } else {
-                dim
-            };
-            render(Paragraph::new(Span::styled(lbl, st)), Rect::new(x, area.y, w, 1), surface);
             self.tab_hits.push((x, x + w, area.y, i));
             x += w + 1;
         }
@@ -506,11 +521,32 @@ impl Component for ReplPanel {
         } else {
             self.scroll = self.scroll.min(total.saturating_sub(body_h));
         }
+        // Reserve the last body column for a scrollbar when the transcript
+        // overflows the viewport.
+        let overflow = total > body_h && body_h > 0;
+        let text_w = if overflow { body_w.saturating_sub(1) } else { body_w };
         render(
             Paragraph::new(lines).scroll((self.scroll, 0)),
-            Rect::new(area.x + 1, body_y, body_w, body_h),
+            Rect::new(area.x + 1, body_y, text_w, body_h),
             surface,
         );
+        if overflow {
+            let mut sb_state = ScrollbarState::new(total as usize)
+                .viewport_content_length(body_h as usize)
+                .position(self.scroll as usize);
+            let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                .begin_symbol(Some("▲"))
+                .end_symbol(Some("▼"))
+                .track_symbol(Some("║"))
+                .thumb_symbol("█")
+                .style(dim);
+            render_stateful(
+                scrollbar,
+                Rect::new(area.x + area.width - 1, body_y, 1, body_h),
+                surface,
+                &mut sb_state,
+            );
+        }
 
         // ── separator ────────────────────────────────────────────────────────
         render(
