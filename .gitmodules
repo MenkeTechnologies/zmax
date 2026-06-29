@@ -1,0 +1,15 @@
+[submodule "vendor/elisprs"]
+	path = vendor/elisprs
+	url = https://github.com/MenkeTechnologies/elisprs.git
+[submodule "vendor/vimlrs"]
+	path = vendor/vimlrs
+	url = https://github.com/MenkeTechnologies/vimlrs.git
+[submodule "vendor/awkrs"]
+	path = vendor/awkrs
+	url = https://github.com/MenkeTechnologies/awkrs.git
+[submodule "vendor/zshrs"]
+	path = vendor/zshrs
+	url = https://github.com/MenkeTechnologies/zshrs.git
+[submodule "vendor/strykelang"]
+	path = vendor/strykelang
+	url = https://github.com/MenkeTechnologies/strykelang.git
