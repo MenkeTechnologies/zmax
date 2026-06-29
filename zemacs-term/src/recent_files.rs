@@ -1,60 +1,174 @@
-//! Persistent most-recently-used (MRU) file list backing the startify start screen.
+//! Persistent most-recently-used (MRU) + frecency file store backing the
+//! startify start screen, the IDE "RECENT" tab, and the recent-files picker.
 //!
-//! Stored as newline-separated absolute paths at `<config-dir>/recent_files`,
-//! newest first. Files are recorded on `DocumentDidOpen` (see
-//! `handlers::recent_files`) and read when the start screen is shown on launch
-//! with no file argument (see `ui::startify`). This is the equivalent of vim's
-//! `v:oldfiles` / startify's MRU section, which Helix has no native store for.
+//! Stored at `<config-dir>/recent_files`, one entry per line as
+//! `path\t<rank>\t<unix-time>` (tab-separated). Older stores that hold a bare
+//! path per line are read transparently (rank 1, time 0). Files are recorded on
+//! `DocumentDidOpen` (see `handlers::recent_files`).
+//!
+//! Ranking uses the `z`/`autojump` "frecency" algorithm (rupa/z): a hit bumps
+//! the entry's `rank` and stamps its access `time`; the combined score weights
+//! frequency by how recently the file was touched, via fixed time buckets.
+//! Aging keeps the store bounded: once the summed rank passes 9000 every rank is
+//! scaled by 0.99 and sub-1.0 entries are dropped — exactly like `z`.
 
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const FILE_NAME: &str = "recent_files";
 const MAX_ENTRIES: usize = 50;
+/// `z`'s aging threshold: when total rank exceeds this, scale everything down.
+const AGING_THRESHOLD: f64 = 9000.0;
+
+struct Entry {
+    path: PathBuf,
+    rank: f64,
+    time: u64,
+}
 
 fn store_path() -> PathBuf {
     zemacs_loader::config_dir().join(FILE_NAME)
 }
 
-/// Load the recent-files list, newest first. A missing or unreadable store yields
-/// an empty list. Entries that no longer exist on disk are filtered out so the
-/// start screen never offers a dead path.
-pub fn load() -> Vec<PathBuf> {
+fn now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// The `z` frecency score: frequency (`rank`) weighted by recency via the
+/// classic rupa/z buckets — within an hour ×4, a day ×2, a week ÷2, else ÷4.
+fn frecency(rank: f64, age_secs: u64) -> f64 {
+    if age_secs < 3600 {
+        rank * 4.0
+    } else if age_secs < 86_400 {
+        rank * 2.0
+    } else if age_secs < 604_800 {
+        rank / 2.0
+    } else {
+        rank / 4.0
+    }
+}
+
+/// Parse the store, dropping entries whose files no longer exist on disk so no
+/// consumer ever offers a dead path. A line is `path[\trank[\ttime]]`.
+fn load_entries() -> Vec<Entry> {
     let Ok(contents) = std::fs::read_to_string(store_path()) else {
         return Vec::new();
     };
     contents
         .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(PathBuf::from)
-        .filter(|p| p.is_file())
-        .take(MAX_ENTRIES)
+        .filter_map(|line| {
+            let line = line.trim();
+            if line.is_empty() {
+                return None;
+            }
+            let mut parts = line.split('\t');
+            let path = PathBuf::from(parts.next()?);
+            let rank = parts.next().and_then(|s| s.parse().ok()).unwrap_or(1.0);
+            let time = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0);
+            Some(Entry { path, rank, time })
+        })
+        .filter(|e| e.path.is_file())
         .collect()
 }
 
-/// Record `path` as the most-recently-used file: canonicalizes it, moves it to
-/// the front (deduping), caps the list, and writes it back. Non-files (scratch
-/// buffers, directories) are ignored.
-pub fn record(path: &Path) {
-    if !path.is_file() {
-        return;
-    }
-    let path = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
-
-    let mut entries = load();
-    entries.retain(|p| p != &path);
-    entries.insert(0, path);
-    entries.truncate(MAX_ENTRIES);
-
+fn write_entries(entries: &[Entry]) {
     let body = entries
         .iter()
-        .map(|p| p.to_string_lossy().into_owned())
+        .map(|e| format!("{}\t{}\t{}", e.path.to_string_lossy(), e.rank, e.time))
         .collect::<Vec<_>>()
         .join("\n");
-
     let store = store_path();
     if let Some(parent) = store.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
     let _ = std::fs::write(store, body);
+}
+
+/// Load the recent-files list, newest first (pure recency / MRU order).
+pub fn load() -> Vec<PathBuf> {
+    let mut entries = load_entries();
+    entries.sort_by(|a, b| b.time.cmp(&a.time));
+    entries.truncate(MAX_ENTRIES);
+    entries.into_iter().map(|e| e.path).collect()
+}
+
+/// Load the file list ranked by `z` frecency (frequency × recency), best first.
+pub fn load_frecent() -> Vec<PathBuf> {
+    let t = now();
+    let mut entries = load_entries();
+    entries.sort_by(|a, b| {
+        let sb = frecency(b.rank, t.saturating_sub(b.time));
+        let sa = frecency(a.rank, t.saturating_sub(a.time));
+        sb.partial_cmp(&sa).unwrap_or(std::cmp::Ordering::Equal)
+    });
+    entries.truncate(MAX_ENTRIES);
+    entries.into_iter().map(|e| e.path).collect()
+}
+
+/// Record `path` as a hit: bump its rank, stamp the access time, age the store
+/// if it has grown too heavy, and persist. Non-files are ignored.
+pub fn record(path: &Path) {
+    if !path.is_file() {
+        return;
+    }
+    let path = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let t = now();
+
+    let mut entries = load_entries();
+    if let Some(e) = entries.iter_mut().find(|e| e.path == path) {
+        e.rank += 1.0;
+        e.time = t;
+    } else {
+        entries.push(Entry {
+            path,
+            rank: 1.0,
+            time: t,
+        });
+    }
+
+    // `z` aging: once the store is heavy, decay every rank and drop the dregs.
+    let total: f64 = entries.iter().map(|e| e.rank).sum();
+    if total > AGING_THRESHOLD {
+        for e in &mut entries {
+            e.rank *= 0.99;
+        }
+        entries.retain(|e| e.rank >= 1.0);
+    }
+
+    // Persist newest-first, capped.
+    entries.sort_by(|a, b| b.time.cmp(&a.time));
+    entries.truncate(MAX_ENTRIES);
+    write_entries(&entries);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frecency_buckets_match_z() {
+        // Same rank, more-recent access scores strictly higher across buckets.
+        let r = 10.0;
+        let within_hour = frecency(r, 60);
+        let within_day = frecency(r, 7200);
+        let within_week = frecency(r, 200_000);
+        let older = frecency(r, 1_000_000);
+        assert!(within_hour > within_day);
+        assert!(within_day > within_week);
+        assert!(within_week > older);
+        assert_eq!(within_hour, r * 4.0);
+        assert_eq!(older, r / 4.0);
+    }
+
+    #[test]
+    fn frequency_outranks_when_equally_recent() {
+        // Two files touched "now": the more frequently used one wins.
+        let t = 0; // age 0 for both → same bucket
+        let hot = frecency(50.0, t);
+        let cold = frecency(2.0, t);
+        assert!(hot > cold);
+    }
 }

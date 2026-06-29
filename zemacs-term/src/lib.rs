@@ -11,6 +11,8 @@ pub mod events;
 pub mod file_watcher;
 pub mod health;
 pub mod job;
+pub mod closed_files;
+pub mod harpoon;
 pub mod keymap;
 pub mod logging;
 pub mod recent_files;

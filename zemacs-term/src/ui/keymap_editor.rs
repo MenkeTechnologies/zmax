@@ -66,9 +66,37 @@ pub struct KeymapEditor {
     editing: bool,
     field: usize,
     buf: Bind,
+    /// Press-a-key capture: each keypress appends its chord token to `buf.chord`.
+    capturing: bool,
+    /// "All bindings" reference mode: (mode, chord, command) from the live keymap.
+    browse: bool,
+    all_binds: Vec<(String, String, String)>,
+    bfilter: String,
+    bsel: usize,
+    btop: usize,
     row_hits: Vec<(u16, u16, u16, usize)>,
     field_hits: Vec<(u16, u16, u16, usize)>,
-    btn_hits: Vec<(u16, u16, u16, u8)>, // 0 add, 1 delete
+    btn_hits: Vec<(u16, u16, u16, u8)>, // 0 add, 1 delete, 2 capture, 3 browse-toggle
+}
+
+/// Every binding in the default keymap as (mode, chord, command), sorted.
+fn all_bindings() -> Vec<(String, String, String)> {
+    let mut out = Vec::new();
+    for (mode, trie) in &crate::keymap::default() {
+        let m = match *mode {
+            zemacs_view::document::Mode::Normal => "normal",
+            zemacs_view::document::Mode::Select => "select",
+            zemacs_view::document::Mode::Insert => "insert",
+        };
+        for (cmd, chords) in trie.reverse_map() {
+            for chord in chords {
+                let s = chord.iter().map(|k| k.to_string()).collect::<Vec<_>>().join(" ");
+                out.push((m.to_string(), s, cmd.clone()));
+            }
+        }
+    }
+    out.sort();
+    out
 }
 
 impl KeymapEditor {
@@ -81,10 +109,31 @@ impl KeymapEditor {
             editing: false,
             field: 0,
             buf: Bind::default(),
+            capturing: false,
+            browse: false,
+            all_binds: all_bindings(),
+            bfilter: String::new(),
+            bsel: 0,
+            btop: 0,
             row_hits: Vec::new(),
             field_hits: Vec::new(),
             btn_hits: Vec::new(),
         }
+    }
+
+    fn browse_matches(&self) -> Vec<usize> {
+        let f = self.bfilter.to_lowercase();
+        self.all_binds
+            .iter()
+            .enumerate()
+            .filter(|(_, (m, c, cmd))| {
+                f.is_empty()
+                    || c.to_lowercase().contains(&f)
+                    || cmd.to_lowercase().contains(&f)
+                    || m.contains(&f)
+            })
+            .map(|(i, _)| i)
+            .collect()
     }
 
     fn persist(&mut self) {
@@ -178,7 +227,21 @@ impl KeymapEditor {
         {
             match b {
                 0 => self.add(),
-                _ => self.delete(),
+                1 => self.delete(),
+                3 => self.browse = true,
+                _ => {
+                    // Capture: start editing the selected (or a new) bind and record keys.
+                    if !self.editing {
+                        if self.binds.is_empty() {
+                            self.add();
+                        } else {
+                            self.start_edit();
+                        }
+                    }
+                    self.field = 1;
+                    self.buf.chord.clear();
+                    self.capturing = true;
+                }
             }
             return EventResult::Consumed(None);
         }
@@ -212,16 +275,68 @@ impl KeymapEditor {
 }
 
 impl Component for KeymapEditor {
-    fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
+        let reload = |cx: &mut Context| {
+            cx.editor
+                .config_events
+                .0
+                .send(zemacs_view::editor::ConfigEvent::Refresh)
+                .ok();
+        };
         let key: KeyEvent = match event {
             Event::Key(k) => *k,
-            Event::Mouse(ev) => return self.handle_mouse(ev.column, ev.row, ev.kind),
+            Event::Mouse(ev) => {
+                let r = self.handle_mouse(ev.column, ev.row, ev.kind);
+                reload(cx);
+                return r;
+            }
             _ => return EventResult::Ignored(None),
         };
+        // "All bindings" reference mode: a searchable read-only list.
+        if self.browse {
+            let n = self.browse_matches().len();
+            match key.code {
+                KeyCode::Esc => self.browse = false,
+                KeyCode::Tab => self.browse = false,
+                KeyCode::Down => self.bsel = (self.bsel + 1).min(n.saturating_sub(1)),
+                KeyCode::Up => self.bsel = self.bsel.saturating_sub(1),
+                KeyCode::Backspace => {
+                    self.bfilter.pop();
+                    self.bsel = 0;
+                }
+                KeyCode::Char(c) => {
+                    self.bfilter.push(c);
+                    self.bsel = 0;
+                }
+                _ => {}
+            }
+            return EventResult::Consumed(None);
+        }
+        // Press-a-key capture: record each keypress as a chord token. Enter ends
+        // capture, Esc cancels it. (Tab/Enter/Esc themselves can't be captured this way.)
+        if self.capturing {
+            match key.code {
+                KeyCode::Enter => self.capturing = false,
+                KeyCode::Esc => self.capturing = false,
+                _ => {
+                    let tok = key.to_string();
+                    if !tok.is_empty() {
+                        if !self.buf.chord.is_empty() {
+                            self.buf.chord.push(' ');
+                        }
+                        self.buf.chord.push_str(&tok);
+                    }
+                }
+            }
+            return EventResult::Consumed(None);
+        }
         if self.editing {
             match key.code {
                 KeyCode::Esc => self.editing = false,
-                KeyCode::Enter => self.commit(),
+                KeyCode::Enter => {
+                    self.commit();
+                    reload(cx);
+                }
                 KeyCode::Tab | KeyCode::Down => self.field = (self.field + 1) % FIELDS.len(),
                 KeyCode::Up => self.field = (self.field + FIELDS.len() - 1) % FIELDS.len(),
                 KeyCode::Char(' ') if self.field == 0 => {
@@ -263,8 +378,12 @@ impl Component for KeymapEditor {
                     self.selected = (self.selected + self.binds.len() - 1) % self.binds.len();
                 }
             }
+            KeyCode::Tab => self.browse = true,
             KeyCode::Char('a') => self.add(),
-            KeyCode::Char('d') => self.delete(),
+            KeyCode::Char('d') => {
+                self.delete();
+                reload(cx);
+            }
             KeyCode::Enter | KeyCode::Char('e') => self.start_edit(),
             _ => {}
         }
@@ -275,7 +394,7 @@ impl Component for KeymapEditor {
         use crate::ui::rat::{render, to_rat_style};
         use ratatui::style::Modifier as RMod;
         use ratatui::text::Span;
-        use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
+        use ratatui::widgets::Paragraph;
 
         self.row_hits.clear();
         self.field_hits.clear();
@@ -290,29 +409,63 @@ impl Component for KeymapEditor {
         let key_st = to_rat_style(theme.get("keyword"));
         surface.clear_with(area, theme.get("ui.background"));
 
-        let frame = Block::default()
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(border)
-            .style(bg)
-            .title(Span::styled(" Keymap — config.toml [keys.*] ", accent));
-        render(frame, area, surface);
-        let inner = Rect::new(area.x + 2, area.y + 1, area.width.saturating_sub(4), area.height.saturating_sub(2));
+        surface.clear_with(Rect::new(area.x, area.y, area.width, 1), theme.get("ui.statusline"));
+        render(Paragraph::new(Span::styled(" Keymap — config.toml [keys.*] ", accent)), Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1), surface);
+        let _ = (border, bg);
+        let inner = Rect::new(area.x + 1, area.y + 1, area.width.saturating_sub(2), area.height.saturating_sub(1));
         if inner.width < 12 || inner.height < 6 {
             return;
         }
 
         // buttons
         let mut bx = inner.x;
-        for (lbl, b) in [(" + Add ", 0u8), (" − Delete ", 1u8)] {
+        for (lbl, b) in [(" + Add ", 0u8), (" − Delete ", 1u8), (" ⌨ Capture key ", 2u8), (" 🔍 All Bindings (Tab) ", 3u8)] {
             let w = lbl.chars().count() as u16;
-            render(
-                Paragraph::new(Span::styled(lbl, text.add_modifier(RMod::REVERSED))),
-                Rect::new(bx, inner.y, w, 1),
-                surface,
-            );
+            let st = if (b == 2 && self.capturing) || (b == 3 && self.browse) {
+                to_rat_style(theme.get("diff.plus")).add_modifier(RMod::REVERSED | RMod::BOLD)
+            } else {
+                text.add_modifier(RMod::REVERSED)
+            };
+            render(Paragraph::new(Span::styled(lbl, st)), Rect::new(bx, inner.y, w, 1), surface);
             self.btn_hits.push((bx, bx + w, inner.y, b));
             bx += w + 1;
+        }
+
+        // "All bindings" reference list (read-only, searchable).
+        if self.browse {
+            let matched = self.browse_matches();
+            if self.bsel >= matched.len() {
+                self.bsel = matched.len().saturating_sub(1);
+            }
+            render(
+                Paragraph::new(Span::styled(
+                    format!("🔍 {}▏   {} of {} bindings   (Tab/Esc back)", self.bfilter, matched.len(), self.all_binds.len()),
+                    dim,
+                )),
+                Rect::new(inner.x, inner.y + 1, inner.width, 1),
+                surface,
+            );
+            let by = inner.y + 2;
+            let bh = inner.height.saturating_sub(3);
+            if self.bsel < self.btop {
+                self.btop = self.bsel;
+            } else if self.bsel >= self.btop + bh as usize {
+                self.btop = self.bsel + 1 - bh as usize;
+            }
+            let last = (self.btop + bh as usize).min(matched.len());
+            for pos in self.btop..last {
+                let (m, chord, cmd) = &self.all_binds[matched[pos]];
+                let y = by + (pos - self.btop) as u16;
+                let is_sel = pos == self.bsel;
+                if is_sel {
+                    surface.set_style(Rect::new(inner.x, y, inner.width, 1), theme.get("ui.selection"));
+                }
+                render(Paragraph::new(Span::styled(format!(" {m:<6}"), key_st)), Rect::new(inner.x, y, 8, 1), surface);
+                render(Paragraph::new(Span::styled(chord.clone(), if is_sel { accent } else { text })), Rect::new(inner.x + 8, y, 22, 1), surface);
+                render(Paragraph::new(Span::styled(format!("→ {cmd}"), dim)), Rect::new(inner.x + 31, y, inner.x + inner.width - (inner.x + 31), 1), surface);
+            }
+            render(Paragraph::new(Span::styled(" type to search · ↑/↓ move · Tab/Esc back to overrides", dim)), Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1), surface);
+            return;
         }
 
         // split: list (left) | edit fields (right)
@@ -356,10 +509,12 @@ impl Component for KeymapEditor {
             self.field_hits.push((y, fx, inner.x + inner.width, fi));
         }
 
-        let help = if self.editing {
-            " Tab/↑↓ field · Space cycles Mode · type chord/command · ⏎ save · Esc cancel"
+        let help = if self.capturing {
+            " ⌨ press keys to record the chord · ⏎ finish capture · Esc cancel"
+        } else if self.editing {
+            " Tab/↑↓ field · Space cycles Mode · type or ⌨ Capture the chord · ⏎ save · Esc cancel"
         } else {
-            " j/k move · a add · d delete · ⏎/e edit · click a field"
+            " j/k move · a add · d delete · ⏎/e edit · ⌨ Capture key · click a field"
         };
         render(Paragraph::new(Span::styled(help, dim)), Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1), surface);
     }

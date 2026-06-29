@@ -1,5 +1,6 @@
 pub(crate) mod dap;
 pub(crate) mod lsp;
+pub mod scripting;
 pub(crate) mod syntax;
 pub(crate) mod typed;
 
@@ -429,6 +430,18 @@ impl MappableCommand {
         syntax_symbol_picker, "Open symbol picker from syntax information",
         lsp_or_syntax_symbol_picker, "Open symbol picker from LSP or syntax information",
         changed_file_picker, "Open changed file picker",
+        frecent_file_picker, "Open recent files ranked by frecency (z algorithm)",
+        reopen_last_closed, "Reopen the most recently closed file",
+        harpoon_add, "Pin the current file to the harpoon list",
+        harpoon_jump, "Jump to the harpoon mark in slot [count]",
+        harpoon_1, "Jump to harpoon mark 1",
+        harpoon_2, "Jump to harpoon mark 2",
+        harpoon_3, "Jump to harpoon mark 3",
+        harpoon_4, "Jump to harpoon mark 4",
+        harpoon_next, "Open the next harpoon mark",
+        harpoon_prev, "Open the previous harpoon mark",
+        harpoon_menu, "Open the harpoon marks menu",
+        harpoon_remove, "Unpin the current file from harpoon",
         select_references_to_symbol_under_cursor, "Select symbol references",
         workspace_symbol_picker, "Open workspace symbol picker",
         syntax_workspace_symbol_picker, "Open workspace symbol picker from syntax information",
@@ -467,6 +480,7 @@ impl MappableCommand {
         goto_last_line, "Goto last line",
         extend_to_last_line, "Extend to last line",
         goto_first_diag, "Goto first diagnostic",
+        copy_diagnostic, "Copy the diagnostic message(s) on the current line",
         goto_last_diag, "Goto last diagnostic",
         goto_next_diag, "Goto next diagnostic",
         goto_prev_diag, "Goto previous diagnostic",
@@ -590,9 +604,24 @@ impl MappableCommand {
         copy_char_below, "Insert the character below the cursor (i_CTRL-E)",
         copy_char_above, "Insert the character above the cursor (i_CTRL-Y)",
         file_info, "Show file name and cursor position (CTRL-G)",
+        document_stats, "Show document line/word/char counts (g CTRL-G)",
+        git_blame_line, "Show git blame for the current line (g b)",
         preferences, "Open the unified Preferences window",
+        help, "Open the inline Help browser",
         run_config_manager, "Manage run/debug configurations",
         run_active_config, "Run the active run configuration",
+        clear_run_output, "Clear the Run tool window output",
+        rerun_last_run, "Re-run the last command in the Run console",
+        run_next_error, "Jump to the next file:line in the run output",
+        run_prev_error, "Jump to the previous file:line in the run output",
+        reveal_in_tree, "Reveal the current file in the project tree",
+        toggle_auto_reveal, "Toggle always-select-opened-file (autoscroll from source)",
+        focus_file_tree, "Focus the project file tree panel",
+        focus_structure, "Focus the structure/symbol outline panel",
+        focus_problems, "Focus the problems/diagnostics panel",
+        focus_run_console, "Focus the Run console (scroll output with j/k/PgUp/PgDn)",
+        focus_git_panel, "Focus the Git changes panel (j/k select, Enter opens)",
+        toggle_ide, "Toggle the IDE workbench (Zen / focus mode)",
         settings_page, "Open the settings page (config.toml editor)",
         goto_next_spell_error, "Move to the next misspelled word (]s)",
         goto_prev_spell_error, "Move to the previous misspelled word ([s)",
@@ -4229,6 +4258,167 @@ fn jumplist_picker(cx: &mut Context) {
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
+/// Pin the current file to the project's harpoon list (jump to it later with
+/// `harpoon_jump`/`SPC H 1..9` or the menu). Idempotent.
+fn harpoon_add(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("Cannot pin a scratch buffer");
+        return;
+    };
+    let slot = crate::harpoon::add(&path);
+    let name = path
+        .file_name()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    cx.editor.set_status(format!("Harpoon {slot}: {name}"));
+}
+
+/// Open the harpoon mark at 1-based slot `n` (shared by the count + slot commands).
+fn harpoon_open_slot(cx: &mut Context, n: usize) {
+    match crate::harpoon::get(n) {
+        Some(path) => {
+            if let Err(e) = cx.editor.open(&path, Action::Replace) {
+                cx.editor
+                    .set_error(format!("unable to open \"{}\": {e}", path.display()));
+            }
+        }
+        None => cx.editor.set_status(format!("No harpoon mark in slot {n}")),
+    }
+}
+
+/// Jump to the harpoon mark at 1-based slot `cx.count` (default 1).
+fn harpoon_jump(cx: &mut Context) {
+    let n = cx.count.map(|c| c.get()).unwrap_or(1);
+    harpoon_open_slot(cx, n);
+}
+
+fn harpoon_1(cx: &mut Context) {
+    harpoon_open_slot(cx, 1);
+}
+fn harpoon_2(cx: &mut Context) {
+    harpoon_open_slot(cx, 2);
+}
+fn harpoon_3(cx: &mut Context) {
+    harpoon_open_slot(cx, 3);
+}
+fn harpoon_4(cx: &mut Context) {
+    harpoon_open_slot(cx, 4);
+}
+
+/// Open the next / previous harpoon mark relative to the current file (wrapping).
+/// If the current file isn't pinned, jumps to the first mark.
+fn harpoon_cycle(cx: &mut Context, forward: bool) {
+    let marks = crate::harpoon::list();
+    if marks.is_empty() {
+        cx.editor.set_status("No harpoon marks yet");
+        return;
+    }
+    let cur = doc!(cx.editor).path().and_then(|p| {
+        let cp = std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+        marks.iter().position(|m| *m == cp)
+    });
+    let len = marks.len();
+    let idx = match cur {
+        Some(i) if forward => (i + 1) % len,
+        Some(i) => (i + len - 1) % len,
+        None => 0,
+    };
+    let path = marks[idx].clone();
+    if let Err(e) = cx.editor.open(&path, Action::Replace) {
+        cx.editor
+            .set_error(format!("unable to open \"{}\": {e}", path.display()));
+    }
+}
+
+/// Open the next harpoon mark (wraps).
+fn harpoon_next(cx: &mut Context) {
+    harpoon_cycle(cx, true);
+}
+
+/// Open the previous harpoon mark (wraps).
+fn harpoon_prev(cx: &mut Context) {
+    harpoon_cycle(cx, false);
+}
+
+/// Fuzzy menu of the project's harpoon marks; Enter opens, and the order is the
+/// pin order (slot 1 at the top).
+fn harpoon_menu(cx: &mut Context) {
+    let marks = crate::harpoon::list();
+    if marks.is_empty() {
+        cx.editor
+            .set_status("No harpoon marks yet — pin one with harpoon_add");
+        return;
+    }
+    let cwd = zemacs_stdx::env::current_working_dir();
+    // pair each mark with its 1-based slot so the picker shows the `SPC H N` mapping
+    let items: Vec<(usize, PathBuf)> = marks
+        .into_iter()
+        .enumerate()
+        .map(|(i, p)| (i + 1, p))
+        .collect();
+    let columns = [
+        PickerColumn::new("#", |item: &(usize, PathBuf), _: &PathBuf| {
+            item.0.to_string().into()
+        }),
+        PickerColumn::new("pinned file", |item: &(usize, PathBuf), cwd: &PathBuf| {
+            item.1.strip_prefix(cwd).unwrap_or(&item.1).display().to_string().into()
+        }),
+    ];
+    let picker = Picker::new(columns, 1, items, cwd, |cx, item: &(usize, PathBuf), action| {
+        if let Err(e) = cx.editor.open(&item.1, action) {
+            cx.editor
+                .set_error(format!("unable to open \"{}\": {e}", item.1.display()));
+        }
+    })
+    .with_preview(|_editor, item| Some((item.1.as_path().into(), None)));
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Remove the current file from the project's harpoon list.
+fn harpoon_remove(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        return;
+    };
+    crate::harpoon::remove(&path);
+    cx.editor.set_status("Unpinned from harpoon");
+}
+
+/// Reopen the most-recently-closed file (the IDE `Ctrl-Shift-T` gesture).
+/// Repeated calls walk back through the session's close history.
+fn reopen_last_closed(cx: &mut Context) {
+    match crate::closed_files::pop() {
+        Some(path) => {
+            if let Err(e) = cx.editor.open(&path, Action::Replace) {
+                cx.editor
+                    .set_error(format!("unable to reopen \"{}\": {e}", path.display()));
+            }
+        }
+        None => cx.editor.set_status("No recently closed file to reopen"),
+    }
+}
+
+/// Fuzzy-pick a previously opened file, ranked by `z`-style frecency
+/// (frequency × recency). Persisted across sessions in `<config>/recent_files`.
+fn frecent_file_picker(cx: &mut Context) {
+    let files = crate::recent_files::load_frecent();
+    if files.is_empty() {
+        cx.editor.set_status("No recent files yet");
+        return;
+    }
+    let cwd = zemacs_stdx::env::current_working_dir();
+    let columns = [PickerColumn::new("file", |p: &PathBuf, cwd: &PathBuf| {
+        p.strip_prefix(cwd).unwrap_or(p).display().to_string().into()
+    })];
+    let picker = Picker::new(columns, 0, files, cwd, |cx, path: &PathBuf, action| {
+        if let Err(e) = cx.editor.open(path, action) {
+            cx.editor
+                .set_error(format!("unable to open \"{}\": {e}", path.display()));
+        }
+    })
+    .with_preview(|_editor, path| Some((path.as_path().into(), None)));
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 fn changed_file_picker(cx: &mut Context) {
     pub struct FileChangeData {
         cwd: PathBuf,
@@ -4868,6 +5058,29 @@ fn exit_select_mode(cx: &mut Context) {
     if cx.editor.mode == Mode::Select {
         cx.editor.mode = Mode::Normal;
     }
+}
+
+/// Copy the diagnostic message(s) on the current line to the clipboard — handy
+/// for pasting an error into a search or issue.
+fn copy_diagnostic(cx: &mut Context) {
+    let messages = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let line = text.char_to_line(doc.selection(view.id).primary().cursor(text));
+        doc.diagnostics()
+            .iter()
+            .filter(|d| text.char_to_line(d.range.start) == line)
+            .map(|d| d.message.clone())
+            .collect::<Vec<_>>()
+    };
+    if messages.is_empty() {
+        cx.editor.set_status("No diagnostic on this line");
+        return;
+    }
+    let joined = messages.join("\n");
+    let _ = cx.editor.registers.write('+', vec![joined.clone()]);
+    let first = joined.lines().next().unwrap_or_default();
+    cx.editor.set_status(format!("Copied diagnostic: {first}"));
 }
 
 fn goto_first_diag(cx: &mut Context) {
@@ -7615,6 +7828,11 @@ fn preferences(cx: &mut Context) {
     cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(0)));
 }
 
+/// Open the configuration page on the Help tab (searchable: commands, keybindings, topics).
+fn help(cx: &mut Context) {
+    cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(4)));
+}
+
 /// Open Preferences on the Run/Debug Configurations tab.
 fn run_config_manager(cx: &mut Context) {
     cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(3)));
@@ -7625,6 +7843,110 @@ fn settings_page(cx: &mut Context) {
     cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(0)));
 }
 
+/// Toggle "always select opened file" — auto-reveal the current buffer in the
+/// project tree whenever you switch buffers (JetBrains autoscroll-from-source).
+fn toggle_auto_reveal(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.toggle_auto_reveal(cx);
+        }
+    }));
+}
+
+/// Reveal the current buffer's file in the project tree (JetBrains "Select
+/// Opened File"): expands ancestors, focuses the tree, and selects the row.
+fn reveal_in_tree(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("Current buffer has no file to reveal");
+        return;
+    };
+    cx.callback.push(Box::new(move |compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.reveal_in_tree(&path);
+        }
+    }));
+}
+
+/// Shared helper: focus a named IDE workbench panel via the editor view.
+fn focus_ide_panel(cx: &mut Context, name: &'static str) {
+    cx.callback.push(Box::new(move |compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.focus_ide_panel(name);
+        }
+    }));
+}
+
+/// Focus the project file tree panel (workbench).
+fn focus_file_tree(cx: &mut Context) {
+    focus_ide_panel(cx, "project");
+}
+
+/// Focus the structure / symbol outline panel (workbench).
+fn focus_structure(cx: &mut Context) {
+    focus_ide_panel(cx, "structure");
+}
+
+/// Focus the problems / diagnostics panel (workbench).
+fn focus_problems(cx: &mut Context) {
+    focus_ide_panel(cx, "problems");
+}
+
+/// Focus the Run console (bottom panel) — then j/k/PgUp/PgDn/g/G scroll output.
+fn focus_run_console(cx: &mut Context) {
+    focus_ide_panel(cx, "run");
+}
+
+/// Focus the Git changes panel — then j/k select a file and Enter opens it.
+fn focus_git_panel(cx: &mut Context) {
+    focus_ide_panel(cx, "git");
+}
+
+/// Jump to the next `file:line` reference in the run output (vim `:cnext`).
+fn run_next_error(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.goto_run_error(cx, true);
+        }
+    }));
+}
+
+/// Jump to the previous `file:line` reference in the run output (vim `:cprev`).
+fn run_prev_error(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.goto_run_error(cx, false);
+        }
+    }));
+}
+
+/// Re-run the last command shown in the Run console (re-run tests after an edit).
+fn rerun_last_run(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.rerun_last_run(cx);
+        }
+    }));
+}
+
+/// Clear the Run tool window's output (the process, if any, keeps streaming).
+fn clear_run_output(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.clear_run_output(cx);
+        }
+    }));
+}
+
+/// Toggle the IDE workbench (Zen / focus mode): hide every panel for
+/// distraction-free editing, then restore them on the next invocation.
+fn toggle_ide(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.toggle_ide();
+        }
+    }));
+}
+
 /// Run the active named run configuration (or auto-detect when none is set).
 fn run_active_config(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
@@ -7632,6 +7954,97 @@ fn run_active_config(cx: &mut Context) {
             view.run_active(cx);
         }
     }));
+}
+
+/// Count whitespace-delimited words in a rope slice.
+fn count_words(slice: RopeSlice) -> usize {
+    let mut count = 0;
+    let mut in_word = false;
+    for ch in slice.chars() {
+        if ch.is_whitespace() {
+            in_word = false;
+        } else if !in_word {
+            in_word = true;
+            count += 1;
+        }
+    }
+    count
+}
+
+/// vim `g CTRL-G`: report document statistics — total lines/words/chars, plus
+/// the selected lines/words/chars when a selection is active.
+fn document_stats(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let slice = doc.text().slice(..);
+    let lines = slice.len_lines();
+    let chars = slice.len_chars();
+    let words = count_words(slice);
+
+    let sel = doc.selection(view.id);
+    let sel_chars: usize = sel.ranges().iter().map(|r| r.len()).sum();
+    // In normal mode the cursor is a 1-wide range; only treat it as a selection
+    // when it spans more than one char or there are multiple cursors.
+    let has_selection = sel_chars > 1 || sel.ranges().len() > 1;
+    let msg = if has_selection {
+        let mut sel_words = 0;
+        let mut sel_lines = 0;
+        for r in sel.ranges() {
+            if r.len() == 0 {
+                continue;
+            }
+            sel_words += count_words(slice.slice(r.from()..r.to()));
+            let a = slice.char_to_line(r.from());
+            let b = slice.char_to_line(r.to().saturating_sub(1).max(r.from()));
+            sel_lines += b - a + 1;
+        }
+        format!(
+            "Selected {sel_lines} of {lines} lines; {sel_words} of {words} words; {sel_chars} of {chars} chars"
+        )
+    } else {
+        format!("{lines} lines; {words} words; {chars} chars")
+    };
+    cx.editor.set_status(msg);
+}
+
+/// GitLens-style blame: show who last changed the line under the cursor in the
+/// status line (`git blame -L`), on demand so there's no per-move cost.
+fn git_blame_line(cx: &mut Context) {
+    let info = {
+        let (view, doc) = current_ref!(cx.editor);
+        doc.path().map(|p| {
+            let text = doc.text();
+            let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+            (p.to_path_buf(), text.char_to_line(cursor) + 1)
+        })
+    };
+    let Some((path, line)) = info else {
+        cx.editor.set_error("No file to blame");
+        return;
+    };
+    let dir = path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&dir)
+        .args(["blame", "-L", &format!("{line},{line}"), "--"])
+        .arg(&path)
+        .output();
+    match out {
+        Ok(o) if o.status.success() => {
+            let text = String::from_utf8_lossy(&o.stdout);
+            let first = text.lines().next().unwrap_or("").trim();
+            if first.is_empty() {
+                cx.editor.set_status("blame: no info");
+            } else {
+                cx.editor.set_status(first.chars().take(180).collect::<String>());
+            }
+        }
+        Ok(o) => {
+            let err = String::from_utf8_lossy(&o.stderr);
+            let first = err.lines().next().unwrap_or("blame failed").to_owned();
+            cx.editor.set_error(format!("git blame: {first}"));
+        }
+        Err(e) => cx.editor.set_error(format!("git: {e}")),
+    }
 }
 
 // vim CTRL-G / g CTRL-G: print the current file name and cursor position.

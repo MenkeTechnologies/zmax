@@ -71,19 +71,20 @@ impl Startify {
             action: EntryAction::NewFile,
         });
 
+        let frecent = crate::recent_files::load_frecent();
         let recent = crate::recent_files::load();
         let cwd = std::env::current_dir().ok();
         let mut idx = 0usize;
 
-        // MRU — global recent files, [0]..[9].
+        // FRECENT — global files ranked by z-frecency (frequency × recency), [0]..[9].
         let mut first = true;
-        for path in recent.iter().take(10) {
+        for path in frecent.iter().take(10) {
             entries.push(Entry {
                 bracket: idx.to_string(),
                 shortcut: (idx <= 9).then(|| char::from(b'0' + idx as u8)),
                 label: tilde(path),
                 is_path: true,
-                section: first.then(|| "MRU".to_string()),
+                section: first.then(|| "FRECENT".to_string()),
                 action: EntryAction::Open(path.clone()),
             });
             idx += 1;

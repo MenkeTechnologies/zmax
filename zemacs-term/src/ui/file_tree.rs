@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use tui::buffer::Buffer as Surface;
-use zemacs_view::{graphics::Rect, input::KeyEvent, keyboard::KeyCode, Theme};
+use zemacs_view::{graphics::Rect, input::KeyEvent, keyboard::KeyCode, keyboard::KeyModifiers, Theme};
 
 /// Result of a key press handled by the tree.
 pub enum TreeAction {
@@ -31,6 +31,10 @@ pub struct FileTree {
     rows: Vec<Row>,
     selected: usize,
     scroll: usize,
+    /// Speed-search query (JetBrains-style). Empty unless filtering.
+    filter: String,
+    /// True while the user is typing into the speed-search field.
+    filtering: bool,
 }
 
 impl FileTree {
@@ -41,6 +45,8 @@ impl FileTree {
             rows: Vec::new(),
             selected: 0,
             scroll: 0,
+            filter: String::new(),
+            filtering: false,
         };
         tree.expanded.insert(root);
         tree.rebuild();
@@ -90,8 +96,51 @@ impl FileTree {
                 }
             }
         }
+        // Speed-search: descend into every directory (ignoring expand state) and
+        // keep only the paths leading to a name that matches the query. Directories
+        // on a matching path render auto-expanded. Depth-capped to stay snappy.
+        fn walk_filtered(dir: &Path, depth: usize, q: &str, out: &mut Vec<Row>) -> bool {
+            if depth > 16 {
+                return false;
+            }
+            let mut any = false;
+            for (path, name, is_dir) in FileTree::read_dir_sorted(dir) {
+                if is_dir {
+                    let name_match = name.to_lowercase().contains(q);
+                    let mut kids = Vec::new();
+                    let child_match = walk_filtered(&path, depth + 1, q, &mut kids);
+                    if name_match || child_match {
+                        out.push(Row {
+                            path,
+                            name,
+                            depth,
+                            is_dir: true,
+                            expanded: true,
+                        });
+                        out.append(&mut kids);
+                        any = true;
+                    }
+                } else if name.to_lowercase().contains(q) {
+                    out.push(Row {
+                        path,
+                        name,
+                        depth,
+                        is_dir: false,
+                        expanded: false,
+                    });
+                    any = true;
+                }
+            }
+            any
+        }
+
         let mut rows = Vec::new();
-        walk(&self.root, 0, &self.expanded, &mut rows);
+        let q = self.filter.to_lowercase();
+        if q.is_empty() {
+            walk(&self.root, 0, &self.expanded, &mut rows);
+        } else {
+            walk_filtered(&self.root, 0, &q, &mut rows);
+        }
         self.rows = rows;
         if self.selected >= self.rows.len() {
             self.selected = self.rows.len().saturating_sub(1);
@@ -138,8 +187,118 @@ impl FileTree {
         }
     }
 
+    /// True while the speed-search field is capturing keystrokes — the IDE routes
+    /// every key straight here so chrome shortcuts (z/</>/Esc/Tab) become text.
+    pub fn is_filtering(&self) -> bool {
+        self.filtering
+    }
+
+    /// Collapse every directory back to the root (IDE "Collapse All").
+    pub fn collapse_all(&mut self) {
+        self.expanded.clear();
+        self.expanded.insert(self.root.clone());
+        self.selected = 0;
+        self.scroll = 0;
+        self.rebuild();
+    }
+
+    /// Reveal `path` in the tree (JetBrains "Select Opened File"): expand every
+    /// ancestor directory down to the file and move the selection onto it. Any
+    /// active speed-search filter is cleared first. No-op if it's outside root.
+    pub fn reveal(&mut self, path: &Path) {
+        self.filtering = false;
+        self.filter.clear();
+        // Expand each ancestor from the file's parent up to (and including) root.
+        let mut cur = path.parent();
+        while let Some(dir) = cur {
+            if dir != self.root && !dir.starts_with(&self.root) {
+                break;
+            }
+            self.expanded.insert(dir.to_path_buf());
+            if dir == self.root {
+                break;
+            }
+            cur = dir.parent();
+        }
+        self.rebuild();
+        if let Some(idx) = self.rows.iter().position(|r| r.path == path) {
+            self.selected = idx;
+        }
+    }
+
     pub fn handle_key(&mut self, key: KeyEvent) -> TreeAction {
+        // Speed-search input mode: keystrokes build the query until Esc/Enter.
+        if self.filtering {
+            match key.code {
+                KeyCode::Esc => {
+                    self.filtering = false;
+                    self.filter.clear();
+                    self.selected = 0;
+                    self.scroll = 0;
+                    self.rebuild();
+                    return TreeAction::None;
+                }
+                KeyCode::Enter => {
+                    // Lock in the filter, leave the results; open if a file is selected.
+                    self.filtering = false;
+                    if let Some(row) = self.rows.get(self.selected) {
+                        if !row.is_dir {
+                            return TreeAction::Open(row.path.clone());
+                        }
+                    }
+                    return TreeAction::None;
+                }
+                KeyCode::Backspace => {
+                    self.filter.pop();
+                    self.selected = 0;
+                    self.scroll = 0;
+                    self.rebuild();
+                    return TreeAction::None;
+                }
+                KeyCode::Down => {
+                    if self.selected + 1 < self.rows.len() {
+                        self.selected += 1;
+                    }
+                    return TreeAction::None;
+                }
+                KeyCode::Up => {
+                    self.selected = self.selected.saturating_sub(1);
+                    return TreeAction::None;
+                }
+                // Emacs-style navigation while typing: C-n/C-j down, C-p/C-k up.
+                KeyCode::Char('n') | KeyCode::Char('j')
+                    if key.modifiers.contains(KeyModifiers::CONTROL) =>
+                {
+                    if self.selected + 1 < self.rows.len() {
+                        self.selected += 1;
+                    }
+                    return TreeAction::None;
+                }
+                KeyCode::Char('p') | KeyCode::Char('k')
+                    if key.modifiers.contains(KeyModifiers::CONTROL) =>
+                {
+                    self.selected = self.selected.saturating_sub(1);
+                    return TreeAction::None;
+                }
+                KeyCode::Char(c) => {
+                    self.filter.push(c);
+                    self.selected = 0;
+                    self.scroll = 0;
+                    self.rebuild();
+                    return TreeAction::None;
+                }
+                _ => return TreeAction::None,
+            }
+        }
         match key.code {
+            KeyCode::Char('/') => {
+                self.filtering = true;
+                self.filter.clear();
+                self.selected = 0;
+                self.scroll = 0;
+                self.rebuild();
+                TreeAction::None
+            }
             KeyCode::Char('j') | KeyCode::Down => {
                 if self.selected + 1 < self.rows.len() {
                     self.selected += 1;
@@ -148,6 +307,20 @@ impl FileTree {
             }
             KeyCode::Char('k') | KeyCode::Up => {
                 self.selected = self.selected.saturating_sub(1);
+                TreeAction::None
+            }
+            // vim-style jumps to the first / last visible row.
+            KeyCode::Char('g') | KeyCode::Home => {
+                self.selected = 0;
+                TreeAction::None
+            }
+            KeyCode::Char('G') | KeyCode::End => {
+                self.selected = self.rows.len().saturating_sub(1);
+                TreeAction::None
+            }
+            // Collapse the whole tree back to the project root.
+            KeyCode::Char('c') => {
+                self.collapse_all();
                 TreeAction::None
             }
             KeyCode::Esc => TreeAction::Close,
@@ -188,6 +361,30 @@ impl FileTree {
             return;
         }
 
+        // Speed-search field occupies the top row while active.
+        let mut area = area;
+        if self.filtering || !self.filter.is_empty() {
+            let cursor = if self.filtering { "▏" } else { "" };
+            let line = format!(" / {}{}", self.filter, cursor);
+            let style = theme.get("ui.text.focus");
+            surface.set_style(Rect::new(area.x, area.y, area.width, 1), theme.get("ui.selection"));
+            surface.set_stringn(area.x, area.y, &line, area.width as usize, style);
+            if self.rows.is_empty() {
+                let none = " (no matches)";
+                surface.set_stringn(
+                    area.x,
+                    area.y + 1,
+                    none,
+                    area.width as usize,
+                    theme.get("comment"),
+                );
+            }
+            area = Rect::new(area.x, area.y + 1, area.width, area.height.saturating_sub(1));
+            if area.height == 0 {
+                return;
+            }
+        }
+
         let height = area.height as usize;
 
         // keep selection in view
@@ -224,5 +421,147 @@ impl FileTree {
             let style = if row.is_dir { dir_style } else { base };
             surface.set_stringn(area.x, y, &text, area.width as usize, style);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zemacs_view::input::KeyModifiers;
+
+    fn key(c: char) -> KeyEvent {
+        KeyEvent {
+            code: KeyCode::Char(c),
+            modifiers: KeyModifiers::empty(),
+        }
+    }
+
+    fn ctrl(c: char) -> KeyEvent {
+        KeyEvent {
+            code: KeyCode::Char(c),
+            modifiers: KeyModifiers::CONTROL,
+        }
+    }
+
+    #[test]
+    fn speed_search_filters_to_matching_paths() {
+        // Build a throwaway project tree on disk.
+        let root = std::env::temp_dir().join(format!("zemacs_ft_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("sub")).unwrap();
+        std::fs::write(root.join("alpha.rs"), "").unwrap();
+        std::fs::write(root.join("beta.txt"), "").unwrap();
+        std::fs::write(root.join("sub").join("gamma_alpha.rs"), "").unwrap();
+        std::fs::write(root.join("sub").join("delta.txt"), "").unwrap();
+
+        let mut tree = FileTree::new(root.clone());
+
+        // Type "/alpha": only the two *alpha* files and their ancestor dir survive.
+        tree.handle_key(key('/'));
+        assert!(tree.is_filtering());
+        for c in "alpha".chars() {
+            tree.handle_key(key(c));
+        }
+        let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
+        assert!(names.contains(&"alpha.rs"), "rows: {names:?}");
+        assert!(names.contains(&"gamma_alpha.rs"), "rows: {names:?}");
+        assert!(names.contains(&"sub"), "ancestor dir kept: {names:?}");
+        assert!(!names.contains(&"beta.txt"), "non-match dropped: {names:?}");
+        assert!(!names.contains(&"delta.txt"), "non-match dropped: {names:?}");
+
+        // Esc clears the filter and restores the full (collapsed) tree.
+        tree.handle_key(KeyEvent {
+            code: KeyCode::Esc,
+            modifiers: KeyModifiers::empty(),
+        });
+        assert!(!tree.is_filtering());
+        let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
+        assert!(names.contains(&"beta.txt"), "filter cleared: {names:?}");
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn reveal_expands_ancestors_and_selects_file() {
+        let root = std::env::temp_dir().join(format!("zemacs_rv_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("sub").join("deep")).unwrap();
+        let target = root.join("sub").join("deep").join("buried.rs");
+        std::fs::write(&target, "").unwrap();
+        std::fs::write(root.join("top.rs"), "").unwrap();
+
+        let mut tree = FileTree::new(root.clone());
+        // Initially the nested dirs are collapsed, so the file isn't a row.
+        assert!(!tree.rows.iter().any(|r| r.path == target));
+
+        tree.reveal(&target);
+        // Ancestors expanded → the buried file is now a visible, selected row.
+        let sel = &tree.rows[tree.selected];
+        assert_eq!(sel.path, target, "selection landed on revealed file");
+        assert!(!sel.is_dir);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn speed_search_ctrl_nav_moves_selection() {
+        let root = std::env::temp_dir().join(format!("zemacs_cn_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("alpha.rs"), "").unwrap();
+        std::fs::write(root.join("alpha2.rs"), "").unwrap();
+        std::fs::write(root.join("zeta.txt"), "").unwrap();
+
+        let mut tree = FileTree::new(root.clone());
+        tree.handle_key(key('/'));
+        for c in "alpha".chars() {
+            tree.handle_key(key(c));
+        }
+        assert!(tree.rows.len() >= 2, "two matches expected: {}", tree.rows.len());
+        assert_eq!(tree.selected, 0);
+        // C-n / C-j move down, C-p / C-k move up — same as the Help filter.
+        tree.handle_key(ctrl('n'));
+        assert_eq!(tree.selected, 1);
+        tree.handle_key(ctrl('k'));
+        assert_eq!(tree.selected, 0);
+        tree.handle_key(ctrl('j'));
+        assert_eq!(tree.selected, 1);
+        tree.handle_key(ctrl('p'));
+        assert_eq!(tree.selected, 0);
+        // A plain letter still types into the filter (not a navigation key).
+        let before = tree.rows.len();
+        tree.handle_key(key('x'));
+        assert!(tree.rows.len() <= before, "plain key narrowed the filter");
+        assert_eq!(tree.filter, "alphax");
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn nav_jumps_and_collapse_all() {
+        let root = std::env::temp_dir().join(format!("zemacs_nav_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("sub")).unwrap();
+        std::fs::write(root.join("a.rs"), "").unwrap();
+        std::fs::write(root.join("sub").join("b.rs"), "").unwrap();
+
+        let mut tree = FileTree::new(root.clone());
+        // Reveal expands "sub", so there are >2 rows.
+        tree.reveal(&root.join("sub").join("b.rs"));
+        let expanded_rows = tree.rows.len();
+        assert!(expanded_rows >= 3, "rows: {expanded_rows}");
+
+        // G → last row, g → first row.
+        tree.handle_key(key('G'));
+        assert_eq!(tree.selected, tree.rows.len() - 1);
+        tree.handle_key(key('g'));
+        assert_eq!(tree.selected, 0);
+
+        // c → collapse all: only the root's direct children remain.
+        tree.handle_key(key('c'));
+        assert!(tree.rows.len() < expanded_rows, "collapsed: {}", tree.rows.len());
+        assert!(!tree.rows.iter().any(|r| r.name == "b.rs"), "nested file hidden");
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

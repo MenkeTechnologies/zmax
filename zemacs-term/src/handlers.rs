@@ -21,6 +21,7 @@ pub mod completion;
 pub mod diagnostics;
 mod document_colors;
 mod document_highlight;
+mod closed_files;
 mod document_links;
 mod prompt;
 mod recent_files;
@@ -66,5 +67,6 @@ pub fn setup(config: Arc<ArcSwap<Config>>) -> Handlers {
     prompt::register_hooks(&handlers);
     workspace_trust::register_hooks(&handlers);
     recent_files::register_hooks(&handlers);
+    closed_files::register_hooks(&handlers);
     handlers
 }

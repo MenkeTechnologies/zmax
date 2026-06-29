@@ -1,7 +1,2 @@
 active = 0
-
-[[config]]
-name = ""
-command = ""
-dir = ""
-env = ""
+config = []

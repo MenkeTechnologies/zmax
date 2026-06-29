@@ -50,6 +50,11 @@ zemacs-dap = { path = "../zemacs-dap" }
 zemacs-vcs = { path = "../zemacs-vcs" }
 zemacs-loader = { path = "../zemacs-loader" }
 
+# Embedded scripting engines. elisprs is the first language wired into the
+# `commands::scripting` host (Emacs Lisp on fusevm). It lives as a sibling
+# meta-repo submodule, consumed by path so local edits are picked up.
+elisprs = { path = "../../elisprs" }
+
 anyhow = "1"
 once_cell = "1.21"
 notify = "6"
