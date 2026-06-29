@@ -206,9 +206,19 @@ pub struct Document {
 
     savepoints: Vec<Weak<SavePoint>>,
 
-    // Last time we wrote to the file. This will carry the time the file was last opened if there
-    // were no saves.
-    last_saved_time: SystemTime,
+    // The mtime the file had as a result of zemacs's most recent interaction with
+    // it (open, reload, or save); it carries the open time if there were no saves.
+    // Used solely by the save path's external-modification guard.
+    //
+    // It is shared (`Arc<Mutex<_>>`) and cloned into each save future so the future
+    // can update it the moment it finishes writing — *before* the resulting
+    // `DocumentSavedEvent` round-trips through the event loop to call
+    // `set_last_saved_revision`. Per-document save futures run sequentially, so an
+    // explicit `:w` issued right after an in-flight autosave sees the autosave's
+    // post-write mtime here and does not mistake zemacs's own write for an edit by
+    // another process. A genuine write by another process bumps the file mtime
+    // past this value and is still correctly rejected.
+    last_saved_time: Arc<Mutex<SystemTime>>,
 
     last_saved_revision: usize,
     version: i32, // should be usize?
@@ -356,7 +366,7 @@ impl fmt::Debug for Document {
             .field("changes", &self.changes)
             .field("old_state", &self.old_state)
             // .field("history", &self.history)
-            .field("last_saved_time", &self.last_saved_time)
+            .field("last_saved_time", &*self.last_saved_time.lock())
             .field("last_saved_revision", &self.last_saved_revision)
             .field("version", &self.version)
             .field("modified_since_accessed", &self.modified_since_accessed)
@@ -768,7 +778,7 @@ impl Document {
             version: 0,
             history: Cell::new(History::default()),
             savepoints: Vec::new(),
-            last_saved_time: SystemTime::now(),
+            last_saved_time: Arc::new(Mutex::new(SystemTime::now())),
             last_saved_revision: 0,
             modified_since_accessed: false,
             language_servers: HashMap::new(),
@@ -1078,7 +1088,10 @@ impl Document {
         let atomic_save = self.config.load().atomic_save;
 
         let encoding_with_bom_info = (self.encoding, self.has_bom);
-        let last_saved_time = self.last_saved_time;
+        // Clone the shared cell (not its value): the future reads it at write time
+        // and updates it the instant the write lands, so a later same-document save
+        // never mistakes this save's own write for an external modification.
+        let last_saved_time = self.last_saved_time.clone();
 
         // We encode the file according to the `Document`'s encoding.
         let future = async move {
@@ -1098,7 +1111,7 @@ impl Document {
             if !force {
                 if let Ok(metadata) = fs::metadata(&path).await {
                     if let Ok(mtime) = metadata.modified() {
-                        if last_saved_time < mtime {
+                        if *last_saved_time.lock() < mtime {
                             bail!("file modified by an external process, use :w! to overwrite");
                         }
                     }
@@ -1227,6 +1240,13 @@ impl Document {
 
             write_result?;
 
+            // Record the mtime this write produced *now*, before the
+            // `DocumentSavedEvent` is processed. A subsequent same-document save
+            // (e.g. an explicit `:w` right after this autosave) reads this when
+            // running its external-modification guard and so won't flag zemacs's
+            // own write as an external edit.
+            *last_saved_time.lock() = save_time;
+
             let event = DocumentSavedEvent {
                 revision: current_rev,
                 save_time,
@@ -1298,7 +1318,7 @@ impl Document {
     }
 
     pub fn pickup_last_saved_time(&mut self) {
-        self.last_saved_time = match self.path() {
+        let mtime = match self.path() {
             Some(path) => match path.metadata() {
                 Ok(metadata) => match metadata.modified() {
                     Ok(mtime) => mtime,
@@ -1314,6 +1334,7 @@ impl Document {
             },
             None => SystemTime::now(),
         };
+        *self.last_saved_time.lock() = mtime;
     }
 
     // Detect if the file is readonly and change the readonly field if necessary (unix only)
@@ -1981,7 +2002,7 @@ impl Document {
             rev
         );
         self.last_saved_revision = rev;
-        self.last_saved_time = save_time;
+        *self.last_saved_time.lock() = save_time;
     }
 
     /// Get the document's latest saved revision.
