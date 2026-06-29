@@ -16396,6 +16396,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "keymap",
+        aliases: &[],
+        doc: "Switch the active keymap preset: vim, helix, or emacs.",
+        fun: set_keymap,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "config-open",
         aliases: &[],
         doc: "Open the user config.toml file.",
@@ -17327,6 +17338,33 @@ fn trust_workspace(
     cx.editor.config_events.0.send(ConfigEvent::Refresh)?;
     // Restart any LSPs that didn't start because trust was missing.
     lsp_restart(cx, args, event)
+}
+
+fn set_keymap(
+    cx: &mut compositor::Context,
+    args: Args<'_>,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let name = args
+        .first()
+        .ok_or_else(|| anyhow::anyhow!("usage: :keymap <{}>", crate::keymap::PRESETS.join("|")))?;
+    if !crate::keymap::PRESETS.iter().any(|p| *p == name) {
+        bail!(
+            "unknown keymap `{name}` (expected one of: {})",
+            crate::keymap::PRESETS.join(", ")
+        );
+    }
+    // The keymap lives in the app-level config, which only the Application can
+    // mutate; hand it the chosen preset to swap live (and set the matching mode).
+    cx.editor
+        .config_events
+        .0
+        .send(ConfigEvent::SetKeymap(name.to_string()))?;
+    Ok(())
 }
 
 fn untrust_workspace(

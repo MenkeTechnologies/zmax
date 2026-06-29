@@ -1459,6 +1459,10 @@ pub enum ConfigEvent {
     Refresh,
     Update(Box<Config>),
     ThemeChanged,
+    /// Switch the active keymap preset at runtime (e.g. from `:keymap emacs`).
+    /// Carries the preset name; the terminal layer rebuilds the keymap and sets
+    /// the appropriate mode (it owns the keymap preset registry).
+    SetKeymap(String),
 }
 
 enum ThemeAction {

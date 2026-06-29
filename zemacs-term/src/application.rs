@@ -315,6 +315,10 @@ impl Application {
         ])
         .context("build signal handler")?;
 
+        // Emacs is modeless — start in Insert mode so typing self-inserts
+        // immediately (the modal keymaps stay in Normal, the existing default).
+        editor.mode = crate::keymap::default_mode(&config.load().keymap);
+
         let app = Self {
             compositor,
             terminal,
@@ -480,6 +484,29 @@ impl Application {
                         .try_get_exact("ui.background")
                         .and_then(|style| style.bg),
                 );
+                return;
+            }
+            ConfigEvent::SetKeymap(name) => {
+                match crate::keymap::preset(&name) {
+                    Some(keys) => {
+                        // Swap the live keymap by storing a new app config; the
+                        // editor view reads `config.keys` through this ArcSwap.
+                        let mut app_config = (*self.config.load().clone()).clone();
+                        app_config.keys = keys;
+                        app_config.keymap = name.clone();
+                        self.config.store(Arc::new(app_config));
+                        // Match the preset's natural mode (emacs is modeless →
+                        // Insert) so the switch is immediately usable.
+                        self.editor.mode = crate::keymap::default_mode(&name);
+                        self.editor.set_status(format!("keymap: {name}"));
+                    }
+                    None => {
+                        self.editor.set_error(format!(
+                            "unknown keymap `{name}` (expected one of: {})",
+                            crate::keymap::PRESETS.join(", ")
+                        ));
+                    }
+                }
                 return;
             }
         }
