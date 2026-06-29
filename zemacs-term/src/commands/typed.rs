@@ -1946,6 +1946,88 @@ fn reload(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyh
     Ok(())
 }
 
+/// Run a `git stash …` subcommand synchronously (it's a fast local op) and
+/// return the first line of output, or the first line of stderr on failure.
+fn run_git_stash(args: &[&str]) -> Result<String, String> {
+    let dir = std::env::current_dir().unwrap_or_default();
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&dir)
+        .args(args)
+        .output()
+        .map_err(|e| e.to_string())?;
+    let first = |b: &[u8]| {
+        String::from_utf8_lossy(b)
+            .lines()
+            .next()
+            .unwrap_or("")
+            .trim()
+            .to_owned()
+    };
+    if out.status.success() {
+        Ok(first(&out.stdout))
+    } else {
+        Err(first(&out.stderr))
+    }
+}
+
+/// `:stash` — stash the working-tree changes, then reload open buffers so they
+/// reflect the reverted (HEAD) state.
+pub(crate) fn git_stash(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match run_git_stash(&["stash", "push"]) {
+        Ok(msg) => {
+            let _ = reload_all(cx, args, PromptEvent::Validate);
+            cx.editor.set_status(if msg.is_empty() {
+                "git stash: done".to_string()
+            } else {
+                format!("git: {msg}")
+            });
+        }
+        Err(e) => cx.editor.set_error(format!("git stash: {e}")),
+    }
+    Ok(())
+}
+
+/// `:stash-pop` — restore the most recent stash, then reload open buffers.
+pub(crate) fn git_stash_pop(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match run_git_stash(&["stash", "pop"]) {
+        Ok(msg) => {
+            let _ = reload_all(cx, args, PromptEvent::Validate);
+            cx.editor.set_status(if msg.is_empty() {
+                "git stash pop: done".to_string()
+            } else {
+                format!("git: {msg}")
+            });
+        }
+        Err(e) => cx.editor.set_error(format!("git stash pop: {e}")),
+    }
+    Ok(())
+}
+
+/// Reload all open documents from disk (after an external working-tree change
+/// such as a branch checkout). Usable from non-typable callers.
+pub(crate) fn reload_open_docs(cx: &mut compositor::Context) {
+    let _ = reload_all(cx, Args::default(), PromptEvent::Validate);
+}
+
+/// Invoke stash / stash-pop from a non-typable caller (e.g. the Git tab key map).
+pub(crate) fn git_stash_action(cx: &mut compositor::Context, pop: bool) {
+    let res = if pop {
+        git_stash_pop(cx, Args::default(), PromptEvent::Validate)
+    } else {
+        git_stash(cx, Args::default(), PromptEvent::Validate)
+    };
+    if let Err(e) = res {
+        cx.editor.set_error(e.to_string());
+    }
+}
+
 fn reload_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -4608,6 +4690,81 @@ fn viml_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+/// `:awk <program>` — filter the selection (or whole buffer if no selection)
+/// through an awk program via the embedded awkrs interpreter, replacing it with
+/// the program's output.
+fn awk_filter(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let program = args.join(" ");
+    if program.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::run_awk_filter(cx, &program) {
+        Ok(msg) => cx.editor.set_status(msg),
+        Err(err) => cx.editor.set_error(format!("awk: {err}")),
+    }
+    Ok(())
+}
+
+/// `:zsh <command>` — run a shell command in the embedded zshrs interpreter
+/// (state persists across calls) and show its captured output in a popup.
+fn zsh_run(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cmd = args.join(" ");
+    if cmd.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::run_zsh(&cmd) {
+        Ok((status, output)) if output.trim().is_empty() => {
+            cx.editor.set_status(format!("zsh: exit {status}"));
+        }
+        Ok((status, output)) => {
+            let callback = async move {
+                let call: job::Callback = Callback::EditorCompositor(Box::new(
+                    move |editor: &mut Editor, compositor: &mut Compositor| {
+                        let contents = ui::Markdown::new(
+                            format!("```\n{}\n```", output.trim_end()),
+                            editor.syn_loader.clone(),
+                        );
+                        let popup = Popup::new("zsh", contents).position(Some(
+                            zemacs_core::Position::new(editor.cursor().0.unwrap_or_default().row, 2),
+                        ));
+                        compositor.replace_or_push("zsh", popup);
+                        editor.set_status(format!("zsh: exit {status}"));
+                    },
+                ));
+                Ok(call)
+            };
+            cx.jobs.callback(callback);
+        }
+        Err(err) => cx.editor.set_error(format!("zsh: {err}")),
+    }
+    Ok(())
+}
+
+/// `:stryke <code>` — evaluate stryke (strykelang) source via the embedded
+/// interpreter. Shows captured `print` output or the last expression value on
+/// the status line; state persists across calls.
+fn stryke_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = args.join(" ");
+    if code.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::eval_stryke(cx, &code) {
+        Ok(result) if result.trim().is_empty() => cx.editor.set_status("ok"),
+        Ok(result) => cx.editor.set_status(result),
+        Err(err) => cx.editor.set_error(format!("stryke: {err}")),
+    }
+    Ok(())
+}
+
 fn reset_diff_change(
     cx: &mut compositor::Context,
     _args: Args,
@@ -4916,6 +5073,9 @@ pub const ELISP_SIGNATURE: Signature = Signature {
 };
 
 pub const VIML_SIGNATURE: Signature = ELISP_SIGNATURE;
+pub const AWK_SIGNATURE: Signature = ELISP_SIGNATURE;
+pub const ZSH_SIGNATURE: Signature = ELISP_SIGNATURE;
+pub const STRYKE_SIGNATURE: Signature = ELISP_SIGNATURE;
 
 pub const SHELL_COMPLETER: CommandCompleter = CommandCompleter::positional(&[
     // Command name
@@ -5750,6 +5910,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "stash",
+        aliases: &["git-stash"],
+        doc: "git stash the working-tree changes (then reload open buffers).",
+        fun: git_stash,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "stash-pop",
+        aliases: &["git-stash-pop"],
+        doc: "git stash pop the most recent stash (then reload open buffers).",
+        fun: git_stash_pop,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "update",
         aliases: &["u"],
         doc: "Write changes only if the file has been modified.",
@@ -6432,6 +6614,41 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: VIML_SIGNATURE,
     },
     TypableCommand {
+        name: "awk",
+        aliases: &["awk-filter"],
+        doc: "Filter the selection (or whole buffer) through an awk program (embedded awkrs).",
+        fun: awk_filter,
+        completer: CommandCompleter::none(),
+        signature: AWK_SIGNATURE,
+    },
+    TypableCommand {
+        name: "zsh",
+        aliases: &["zshell"],
+        doc: "Run a command in the embedded zsh shell (state persists); output shown in a popup.",
+        fun: zsh_run,
+        completer: CommandCompleter::none(),
+        signature: ZSH_SIGNATURE,
+    },
+    TypableCommand {
+        name: "stryke",
+        aliases: &["st"],
+        doc: "Evaluate stryke (strykelang) source via the embedded interpreter (state persists).",
+        fun: stryke_eval,
+        completer: CommandCompleter::none(),
+        signature: STRYKE_SIGNATURE,
+    },
+    TypableCommand {
+        name: "repl",
+        aliases: &[],
+        doc: "Open the embedded-language REPL (elisp/viml/stryke/awk/zsh); optional starting language.",
+        fun: repl_open,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "reset-diff-change",
         aliases: &["diffget", "diffg"],
         doc: "Reset the diff change at the cursor position.",
@@ -6731,6 +6948,33 @@ fn open_help(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         let call: job::Callback = job::Callback::EditorCompositor(Box::new(
             |_editor: &mut Editor, compositor: &mut Compositor| {
                 compositor.push(Box::new(crate::ui::preferences::PreferencesPanel::new(4)));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
+/// `:repl [lang]` — open the embedded-language REPL panel. With no argument it
+/// starts on elisp; `:repl awk` (etc.) opens on that language. Tab switches in-panel.
+fn repl_open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    use crate::ui::repl::ReplLang;
+    let arg = args.first().map(|s| s.to_string());
+    let lang = match arg.as_deref() {
+        None | Some("") => ReplLang::Elisp,
+        Some(name) => match ReplLang::from_name(name) {
+            Some(l) => l,
+            None => bail!("repl: unknown language '{name}' (elisp/viml/stryke/awk/zsh)"),
+        },
+    };
+    let callback = async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                compositor.push(Box::new(crate::ui::repl::ReplPanel::new(lang)));
             },
         ));
         Ok(call)

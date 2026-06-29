@@ -1457,7 +1457,9 @@ fn compute_inlay_hints_for_view(
                     };
 
                     let width = label.width();
-                    let limit = limit.get().into();
+                    // Explicit type: with `rug` in the dep graph (via awkrs),
+                    // `usize: PartialOrd<_>` is ambiguous for `.into()` inference.
+                    let limit: usize = limit.get().into();
                     if width > limit {
                         let mut floor_boundary = 0;
                         let mut acc = 0;
