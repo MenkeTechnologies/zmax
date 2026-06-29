@@ -180,6 +180,9 @@ pub enum IdeAction {
     GitBranchPicker,
     /// Show `git blame` for a path in the Run console.
     GitBlame(PathBuf),
+    /// Open a conflicted file and launch the 3-pane merge resolver (the `:merge`
+    /// flow), from the Git tab's "Conflicts" section.
+    ResolveConflict(PathBuf),
     /// Right-click on a file-tree entry: show a CRUD context menu at (row, col).
     ShowContextMenu {
         path: PathBuf,
@@ -345,6 +348,14 @@ pub struct Ide {
     /// Body rows consumed above the Git file list (the churn sparkline), so
     /// click-to-open can map a clicked row back to a `git_changes` index.
     git_list_offset: u16,
+    /// Number of leading entries in `git_changes` that are merge conflicts.
+    /// Conflicts are floated to the front of the list and rendered under a
+    /// distinct "Conflicts" header; `idx < git_conflict_count` ⇒ conflict.
+    git_conflict_count: usize,
+    /// Visual-row → `git_changes` index map for the Git tab body (`None` marks a
+    /// section header line). Built during render so clicks map back to the right
+    /// entry even with the interleaved "Conflicts"/"Changes" headers.
+    git_row_layout: Vec<Option<usize>>,
     git_last: Option<std::time::Instant>,
     /// Shared keyboard selection for the simple list tabs (Todo/Marks/Jumps/Recent).
     aux_sel: usize,
@@ -478,6 +489,8 @@ impl Ide {
             git_diffstat: Vec::new(),
             git_churn: Vec::new(),
             git_list_offset: 0,
+            git_conflict_count: 0,
+            git_row_layout: Vec::new(),
             aux_sel: 0,
             reg_sel: 0,
             run_row_src: Vec::new(),
@@ -1252,6 +1265,10 @@ impl Ide {
                     if let Some((_, _, path)) = self.git_changes.get(self.git_sel) {
                         if path.is_file() {
                             self.focus = Focus::Editor;
+                            // Conflicts jump straight into the merge resolver.
+                            if self.git_sel < self.git_conflict_count {
+                                return IdeAction::ResolveConflict(path.clone());
+                            }
                             return IdeAction::OpenFile(path.clone());
                         }
                     }
@@ -1608,16 +1625,24 @@ impl Ide {
                     && self.bottom_tab == BottomTab::Git
                 {
                     // account for the churn sparkline above the file list
-                    let Some(idx) = (row - self.problems_rect.y - 1)
+                    let Some(vis) = (row - self.problems_rect.y - 1)
                         .checked_sub(self.git_list_offset)
                         .map(|v| v as usize)
                     else {
+                        return IdeAction::None;
+                    };
+                    // map the clicked visual row back to a change index, skipping
+                    // the "Conflicts"/"Changes" section-header lines.
+                    let Some(Some(idx)) = self.git_row_layout.get(vis).copied() else {
                         return IdeAction::None;
                     };
                     if let Some((_, _, path)) = self.git_changes.get(idx) {
                         self.git_sel = idx;
                         if path.is_file() {
                             self.focus = Focus::Editor;
+                            if idx < self.git_conflict_count {
+                                return IdeAction::ResolveConflict(path.clone());
+                            }
                             return IdeAction::OpenFile(path.clone());
                         }
                     }
@@ -2584,6 +2609,16 @@ impl Ide {
             if stale {
                 if let Some(dir) = self.status_branch_dir.clone() {
                     self.git_changes = git_status(&dir);
+                    // Float merge-conflict entries to the front so the Git tab can
+                    // render them as a distinct "Conflicts" section; the rest keep
+                    // their porcelain order (sort_by_key is stable).
+                    self.git_changes
+                        .sort_by_key(|(code, _, _)| !git_is_conflict(code));
+                    self.git_conflict_count = self
+                        .git_changes
+                        .iter()
+                        .take_while(|(code, _, _)| git_is_conflict(code))
+                        .count();
                     (self.git_ahead, self.git_behind) = git_ahead_behind(&dir);
                     self.git_diffstat = git_diffstat(&dir);
                     self.git_churn = git_churn(&dir);
@@ -3703,26 +3738,71 @@ impl Ide {
         let bar_w = 10u16.min(list.width / 5);
         let stat_w = 12u16;
         let name_w = list.width.saturating_sub(4 + stat_w + bar_w + 1) as usize;
-        for (i, (code, disp, _)) in self.git_changes.iter().enumerate() {
-            if i >= list_h {
+
+        // Build the visual layout: merge conflicts first under a "Conflicts"
+        // header, then the normal changes under a "Changes" header (headers only
+        // appear when there are conflicts). `None` rows are section headers;
+        // `Some(i)` rows map back to `git_changes[i]` for click/keyboard dispatch.
+        let nconf = self.git_conflict_count.min(self.git_changes.len());
+        let conflict_style = theme
+            .try_get("diff.delta.conflict")
+            .unwrap_or_else(|| theme.get("warning"));
+        let mut layout: Vec<Option<usize>> = Vec::with_capacity(self.git_changes.len() + 2);
+        if nconf > 0 {
+            layout.push(None); // "Conflicts" header
+            layout.extend((0..nconf).map(Some));
+            layout.push(None); // "Changes" header
+        }
+        layout.extend((nconf..self.git_changes.len()).map(Some));
+        self.git_row_layout = layout;
+
+        for (k, entry) in self.git_row_layout.iter().enumerate() {
+            if k >= list_h {
                 break;
             }
-            let y = list.y + i as u16;
+            let y = list.y + k as u16;
+            let i = match *entry {
+                Some(i) => i,
+                None => {
+                    // Section header — the first `None` is always "Conflicts".
+                    let (label, style) = if k == 0 {
+                        ("Conflicts", conflict_style)
+                    } else {
+                        ("Changes", dim)
+                    };
+                    surface.set_stringn(
+                        list.x + 1,
+                        y,
+                        label,
+                        list.width.saturating_sub(1) as usize,
+                        style,
+                    );
+                    continue;
+                }
+            };
+            let (code, disp, _) = &self.git_changes[i];
+            let is_conflict = i < nconf;
             // highlight the keyboard-selected row when the panel holds focus
             if focused && i == self.git_sel {
                 surface.set_style(Rect::new(list.x, y, list.width, 1), sel_bg);
             }
-            // colour by status: added=green, modified=yellow, deleted=red, untracked=dim
-            let st = match code.trim() {
-                "A" | "AM" => plus,
-                "D" => minus,
-                "??" => dim,
-                _ => theme.get("diff.delta"),
+            // colour by status: conflicts use the conflict style; otherwise
+            // added=green, modified=yellow, deleted=red, untracked=dim.
+            let st = if is_conflict {
+                conflict_style
+            } else {
+                match code.trim() {
+                    "A" | "AM" => plus,
+                    "D" => minus,
+                    "??" => dim,
+                    _ => theme.get("diff.delta"),
+                }
             };
             surface.set_stringn(list.x + 1, y, &code.replace(' ', "·"), 3, st);
             // repo-relative path (after the "XY  " porcelain prefix)
             let rel = disp.split_once("  ").map(|x| x.1).unwrap_or("").trim();
-            surface.set_stringn(list.x + 4, y, rel, name_w.max(1), base);
+            let name_style = if is_conflict { conflict_style } else { base };
+            surface.set_stringn(list.x + 4, y, rel, name_w.max(1), name_style);
 
             // diffstat counts + proportional add/del bar, when numstat has the file
             if let Some((a, d)) = self
@@ -4529,6 +4609,15 @@ fn todo_marker_scope(marker: &str) -> &'static str {
     }
 }
 
+/// True when a porcelain `XY` status code denotes an unmerged (merge-conflict)
+/// entry: one side `U`, or both-added/both-deleted. See `git status --porcelain`.
+fn git_is_conflict(code: &str) -> bool {
+    matches!(
+        code.trim_end(),
+        "DD" | "AU" | "UD" | "UA" | "DU" | "AA" | "UU"
+    )
+}
+
 fn git_status(dir: &std::path::Path) -> Vec<(String, String, std::path::PathBuf)> {
     let out = std::process::Command::new("git")
         .arg("-C")
@@ -4626,8 +4715,42 @@ fn git_churn(dir: &std::path::Path) -> Vec<u64> {
 #[cfg(test)]
 mod parse_tests {
     use super::{
-        parse_file_line, parse_percent, parse_test_progress, todo_marker, todo_marker_scope,
+        git_is_conflict, parse_file_line, parse_percent, parse_test_progress, todo_marker,
+        todo_marker_scope,
     };
+
+    #[test]
+    fn git_conflict_codes() {
+        // The seven porcelain unmerged states are conflicts.
+        for code in ["DD", "AU", "UD", "UA", "DU", "AA", "UU"] {
+            assert!(git_is_conflict(code), "{code} should be a conflict");
+        }
+        // Ordinary staged/working-tree changes and untracked files are not.
+        for code in ["M ", " M", "MM", "A ", "AM", "D ", "R ", "??", "!!"] {
+            assert!(!git_is_conflict(code), "{code} should not be a conflict");
+        }
+    }
+
+    #[test]
+    fn conflicts_float_to_front() {
+        // Mirror the Git-tab refresh: stable sort with conflicts (key=false)
+        // first, then count the leading conflict run.
+        let mut changes = vec![
+            (" M".to_string(), "a".to_string()),
+            ("UU".to_string(), "b".to_string()),
+            ("??".to_string(), "c".to_string()),
+            ("AA".to_string(), "d".to_string()),
+        ];
+        changes.sort_by_key(|(code, _)| !git_is_conflict(code));
+        let nconf = changes
+            .iter()
+            .take_while(|(code, _)| git_is_conflict(code))
+            .count();
+        assert_eq!(nconf, 2);
+        // conflicts keep their relative order, as do the non-conflicts
+        let order: Vec<&str> = changes.iter().map(|(_, n)| n.as_str()).collect();
+        assert_eq!(order, ["b", "d", "a", "c"]);
+    }
 
     #[test]
     fn percent_token_parsing() {

@@ -1180,6 +1180,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "m" => focus_git_panel,            // SPC g m : magit dispatch (focus Git panel)
                 "t" => git_file_log_picker,        // SPC g t : git time machine (browse file history)
                 "M" => git_blame_line,             // SPC g M : last commit message of current line
+                "=" => git_diff,                   // SPC g = : side-by-side diff vs HEAD (d/D/m taken)
                 "l" => { "Links"
                     "l" => open_remote_url,        // SPC g l l : browse to file at current line
                     "c" => open_remote_url,        // SPC g l c : browse to file at a commit
@@ -1193,6 +1194,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     // typables (space g c o/t/b); only the bulk ops are added here.
                     "O" => conflict_take_all_ours, // SPC g c O : keep ours everywhere
                     "T" => conflict_take_all_theirs, // SPC g c T : keep theirs everywhere
+                    "r" => resolve_conflicts,      // SPC g c r : open 3-way merge resolver
                 },
             },
             "l" => { "LSP"

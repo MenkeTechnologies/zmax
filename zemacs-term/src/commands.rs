@@ -503,8 +503,11 @@ impl MappableCommand {
         goto_next_change, "Goto next change",
         goto_prev_change, "Goto previous change",
         goto_next_conflict, "Goto next merge-conflict marker",
-        goto_prev_conflict, "Goto previous merge-conflict marker",        conflict_take_all_ours, "Resolve ALL conflicts: keep our side",
+        goto_prev_conflict, "Goto previous merge-conflict marker",
+        conflict_take_all_ours, "Resolve ALL conflicts: keep our side",
         conflict_take_all_theirs, "Resolve ALL conflicts: keep their side",
+        git_diff, "Open side-by-side diff vs HEAD",
+        resolve_conflicts, "Resolve merge conflicts (3-way)",
         goto_first_change, "Goto first change",
         goto_last_change, "Goto last change",
         goto_line_start, "Goto line start",
@@ -7714,21 +7717,27 @@ fn is_conflict_marker(line: RopeSlice) -> bool {
     )
 }
 
+/// Pure core of `goto_conflict_impl`: starting from `cur_line` (exclusive),
+/// return the index of the nearest line that begins with a git merge-conflict
+/// marker, searching forward or backward. Unit-tested.
+fn find_conflict_line(slice: RopeSlice, cur_line: usize, forward: bool) -> Option<usize> {
+    let total = slice.len_lines();
+    if forward {
+        (cur_line + 1..total).find(|&l| is_conflict_marker(slice.line(l)))
+    } else {
+        (0..cur_line)
+            .rev()
+            .find(|&l| is_conflict_marker(slice.line(l)))
+    }
+}
+
 fn goto_conflict_impl(cx: &mut Context, forward: bool) {
     let scrolloff = cx.editor.config().scrolloff;
     let target = {
         let (view, doc) = current_ref!(cx.editor);
         let slice = doc.text().slice(..);
         let cur_line = slice.char_to_line(doc.selection(view.id).primary().cursor(slice));
-        let total = slice.len_lines();
-        let found = if forward {
-            (cur_line + 1..total).find(|&l| is_conflict_marker(slice.line(l)))
-        } else {
-            (0..cur_line)
-                .rev()
-                .find(|&l| is_conflict_marker(slice.line(l)))
-        };
-        found.map(|l| slice.line_to_char(l))
+        find_conflict_line(slice, cur_line, forward).map(|l| slice.line_to_char(l))
     };
     match target {
         Some(pos) => {
@@ -10670,6 +10679,18 @@ fn toggle_ide(cx: &mut Context) {
     }));
 }
 
+/// Open the side-by-side diff viewer of the buffer vs. its git HEAD version.
+/// Static-command mirror of the `:diff` typable command (cf. `toggle_ide` / `:ide`).
+fn git_diff(cx: &mut Context) {
+    typed::open_diff(cx.editor, cx.jobs);
+}
+
+/// Open the 3-pane merge-conflict resolver over the buffer's git conflicts.
+/// Static-command mirror of the `:merge` / `:resolve` typable command.
+fn resolve_conflicts(cx: &mut Context) {
+    typed::open_merge(cx.editor, cx.jobs);
+}
+
 /// Run the active named run configuration (or auto-detect when none is set).
 fn run_active_config(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
@@ -13118,6 +13139,49 @@ mod path_yank_tests {
             format_file_path(p, FilePathKind::Dir, 7, 3),
             "/home/u/proj/src"
         );
+    }
+
+    #[test]
+    fn conflict_marker_navigation() {
+        use super::{find_conflict_line, is_conflict_marker, Rope};
+
+        let text = "one\n\
+                    <<<<<<< HEAD\n\
+                    ours\n\
+                    =======\n\
+                    theirs\n\
+                    >>>>>>> branch\n\
+                    middle\n\
+                    <<<<<<< HEAD\n\
+                    a\n\
+                    =======\n\
+                    b\n\
+                    >>>>>>> other\n\
+                    tail\n";
+        let rope = Rope::from_str(text);
+        let slice = rope.slice(..);
+
+        // Marker detection: only the conflict lines match.
+        assert!(is_conflict_marker(slice.line(1)));
+        assert!(is_conflict_marker(slice.line(3)));
+        assert!(is_conflict_marker(slice.line(5)));
+        assert!(!is_conflict_marker(slice.line(0)));
+        assert!(!is_conflict_marker(slice.line(2)));
+
+        // Forward from the top lands on the first `<<<<<<<` (line 1), then the
+        // next marker (the `=======` on line 3), and so on.
+        assert_eq!(find_conflict_line(slice, 0, true), Some(1));
+        assert_eq!(find_conflict_line(slice, 1, true), Some(3));
+        // Forward from past the first hunk reaches the second hunk's start.
+        assert_eq!(find_conflict_line(slice, 6, true), Some(7));
+
+        // Backward from the bottom lands on the last marker, then the previous.
+        assert_eq!(find_conflict_line(slice, 12, false), Some(11));
+        assert_eq!(find_conflict_line(slice, 7, false), Some(5));
+
+        // No markers past the end / before the start.
+        assert_eq!(find_conflict_line(slice, 11, true), None);
+        assert_eq!(find_conflict_line(slice, 1, false), None);
     }
 
     #[test]

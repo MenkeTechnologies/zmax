@@ -1521,11 +1521,17 @@ fn diff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    open_diff(cx.editor, cx.jobs);
+    Ok(())
+}
 
+/// Shared implementation behind `:diff` and the `git_diff` static command:
+/// open a read-only side-by-side diff of the focused buffer vs. its git HEAD.
+pub(crate) fn open_diff(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
     // Pull the HEAD text + current buffer text on the main thread, then drop the
-    // document borrow before touching `cx.editor` mutably.
+    // document borrow before touching `editor` mutably.
     let data = {
-        let doc = doc!(cx.editor);
+        let doc = doc!(editor);
         doc.diff_handle().map(|handle| {
             let base = handle.load().diff_base().to_string();
             (
@@ -1538,18 +1544,18 @@ fn diff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow
     };
 
     let Some((doc_id, name, base, current)) = data else {
-        cx.editor.set_status("no git diff base for this file");
-        return Ok(());
+        editor.set_status("no git diff base for this file");
+        return;
     };
     if base.is_empty() {
-        cx.editor.set_status("no git diff base for this file");
-        return Ok(());
+        editor.set_status("no git diff base for this file");
+        return;
     }
 
     let view = crate::ui::merge::DiffView::new(name, doc_id, &base, &current);
     if view.is_unchanged() {
-        cx.editor.set_status("no changes against git HEAD");
-        return Ok(());
+        editor.set_status("no changes against git HEAD");
+        return;
     }
 
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
@@ -1557,8 +1563,7 @@ fn diff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow
             compositor.push(Box::new(view));
         },
     ));
-    cx.jobs.callback(async move { Ok(call) });
-    Ok(())
+    jobs.callback(async move { Ok(call) });
 }
 
 /// `:merge` / `:resolve` — open the 3-pane merge-conflict resolver over the
@@ -1572,11 +1577,18 @@ fn merge(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    open_merge(cx.editor, cx.jobs);
+    Ok(())
+}
 
+/// Shared implementation behind `:merge` / `:resolve` and the `resolve_conflicts`
+/// static command: open the 3-pane merge-conflict resolver over the focused
+/// buffer's git conflicts.
+pub(crate) fn open_merge(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
     // Capture the focused doc's id, name, absolute path and text, then drop the
-    // borrow before touching `cx.editor` mutably.
+    // borrow before touching `editor` mutably.
     let (doc_id, name, path, text) = {
-        let doc = doc!(cx.editor);
+        let doc = doc!(editor);
         (
             doc.id(),
             doc.display_name().into_owned(),
@@ -1590,18 +1602,21 @@ fn merge(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
     // its true per-region base. Only fall back to scraping `<<<<<<<` markers out
     // of the buffer when the file isn't a git conflict (or git is unavailable).
     let staged_segments = path.as_deref().and_then(|p| {
-        let trust_full = cx
-            .editor
+        let trust_full = editor
             .workspace_trust
             .query(
                 &zemacs_loader::find_workspace_in(p.parent().unwrap_or(p)).0,
                 zemacs_loader::workspace_trust::TrustQuery::Git,
             )
             .is_trusted();
+<<<<<<< Updated upstream
         let stages = cx
             .editor
             .diff_providers
             .get_conflict_stages(p, trust_full)?;
+=======
+        let stages = editor.diff_providers.get_conflict_stages(p, trust_full)?;
+>>>>>>> Stashed changes
         // Need at least ours + theirs to run a 3-way merge; missing base is fine
         // (add/add → "" base).
         let ours = stages.ours?;
@@ -1620,8 +1635,8 @@ fn merge(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
         None => match crate::ui::merge::parse_conflicts(&text) {
             Some(segments) => segments,
             None => {
-                cx.editor.set_status("no conflicts to resolve");
-                return Ok(());
+                editor.set_status("no conflicts to resolve");
+                return;
             }
         },
     };
@@ -1632,8 +1647,7 @@ fn merge(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
             compositor.push(Box::new(view));
         },
     ));
-    cx.jobs.callback(async move { Ok(call) });
-    Ok(())
+    jobs.callback(async move { Ok(call) });
 }
 
 /// `:terminal` / `:term` — open an integrated terminal (PTY shell). The panel is
