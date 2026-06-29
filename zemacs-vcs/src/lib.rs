@@ -27,6 +27,22 @@ pub struct CommitInfo {
     pub author: String,
 }
 
+/// The git **index** conflict stages for a single file: the stage-1 common
+/// ancestor (`base`), stage-2 `ours` and stage-3 `theirs` blob contents. Each
+/// blob has already been run through the worktree filter pipeline (CRLF etc.)
+/// so its bytes match what the working tree holds. Any side may be `None` —
+/// e.g. an add/add conflict has no base, a modify/delete conflict has no
+/// theirs.
+///
+/// Defined here (rather than in the feature-gated `git` module) so the
+/// [`DiffProviderRegistry`] method that returns it stays available even when
+/// the `git` feature is off — exactly like [`DiffProviderRegistry::get_diff_base`].
+pub struct ConflictStages {
+    pub base: Option<Vec<u8>>,
+    pub ours: Option<Vec<u8>>,
+    pub theirs: Option<Vec<u8>>,
+}
+
 /// Contains all active diff providers. Diff providers are compiled in via features. Currently
 /// only `git` is supported.
 #[derive(Clone)]
@@ -48,6 +64,27 @@ impl DiffProviderRegistry {
                     None
                 }
             })
+    }
+
+    /// Read the git **index** conflict stages (base/ours/theirs blobs) for a
+    /// conflicted `file`. Returns `Some(ConflictStages)` when the file has
+    /// conflict entries (stage 1/2/3) in the index, `None` when it is not
+    /// conflicted (only a stage-0 entry) or no provider succeeds. Mirrors
+    /// [`Self::get_diff_base`].
+    pub fn get_conflict_stages(&self, file: &Path, trust_full: bool) -> Option<ConflictStages> {
+        for provider in &self.providers {
+            match provider.get_conflict_stages(file, trust_full) {
+                // A provider handled the file: `Some` = conflicted (stages),
+                // `None` = not conflicted. Either way it is the authoritative
+                // answer, so stop without falling through to `DiffProvider::None`.
+                Ok(stages) => return stages,
+                Err(err) => {
+                    log::debug!("{err:#?}");
+                    log::debug!("failed to read conflict stages for {}", file.display());
+                }
+            }
+        }
+        None
     }
 
     /// Get the current name of the current [HEAD](https://stackoverflow.com/questions/2304087/what-is-head-in-git).
@@ -147,6 +184,18 @@ impl DiffProvider {
         match self {
             #[cfg(feature = "git")]
             Self::Git => git::get_diff_base(file, trust_full),
+            Self::None => bail!("No diff support compiled in"),
+        }
+    }
+
+    fn get_conflict_stages(
+        &self,
+        file: &Path,
+        trust_full: bool,
+    ) -> Result<Option<ConflictStages>> {
+        match self {
+            #[cfg(feature = "git")]
+            Self::Git => git::conflict_stages(file, trust_full),
             Self::None => bail!("No diff support compiled in"),
         }
     }

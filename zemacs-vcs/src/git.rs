@@ -65,6 +65,78 @@ pub fn get_diff_base(file: &Path, trust_full: bool) -> Result<Vec<u8>> {
     }
 }
 
+/// Run a raw git blob through the worktree filter pipeline so its bytes match
+/// what the working tree would contain (CRLF conversion etc.), exactly like
+/// [`get_diff_base`]. `rela_path` is the file's repository-relative path.
+fn convert_blob_to_worktree(
+    repo: &Repository,
+    data: Vec<u8>,
+    rela_path: &gix::bstr::BStr,
+) -> Result<Vec<u8>> {
+    let (mut pipeline, _) = repo.filter_pipeline(None)?;
+    let mut worktree_outcome = pipeline.convert_to_worktree(&data, rela_path, Delay::Forbid)?;
+    let mut buf = Vec::with_capacity(data.len());
+    worktree_outcome.read_to_end(&mut buf)?;
+    Ok(buf)
+}
+
+/// Read the conflict stages (stage 1 = base/ancestor, 2 = ours, 3 = theirs) for
+/// `file` straight from the git **index**. Returns `Ok(None)` when the file is
+/// not conflicted (it has only a stage-0 entry, or no entry at all). Each stage
+/// blob is decoded from the ODB and run through the worktree filter pipeline so
+/// it matches the buffer's line endings.
+///
+/// Any side may be absent: e.g. an add/add conflict has no stage-1 base, a
+/// modify/delete conflict has no stage-3 theirs.
+pub fn conflict_stages(file: &Path, trust_full: bool) -> Result<Option<crate::ConflictStages>> {
+    debug_assert!(!file.exists() || file.is_file());
+    debug_assert!(file.is_absolute());
+    let file = gix::path::realpath(file).context("resolve symlinks")?;
+
+    let repo_dir = get_repo_dir(&file)?;
+    let repo = open_repo(repo_dir, trust_full)
+        .context("failed to open git repo")?
+        .to_thread_local();
+
+    let work_dir = repo
+        .workdir()
+        .context("repo has no worktree")?
+        .to_path_buf();
+    let rela_path = file.strip_prefix(&work_dir)?;
+    let rela_path = gix::path::try_into_bstr(rela_path)?;
+    let rela_bstr: &gix::bstr::BStr = rela_path.as_ref();
+
+    let index = repo.index().context("failed to open git index")?;
+
+    let mut stages = crate::ConflictStages {
+        base: None,
+        ours: None,
+        theirs: None,
+    };
+    let mut saw_conflict = false;
+    for entry in index.entries() {
+        if entry.path(&index) != rela_bstr {
+            continue;
+        }
+        // stage 0 = no conflict; 1 = base, 2 = ours, 3 = theirs.
+        let slot = match entry.stage_raw() {
+            1 => &mut stages.base,
+            2 => &mut stages.ours,
+            3 => &mut stages.theirs,
+            _ => continue,
+        };
+        saw_conflict = true;
+        let data = repo.find_object(entry.id)?.detach().data;
+        *slot = Some(convert_blob_to_worktree(&repo, data, rela_bstr)?);
+    }
+
+    if saw_conflict {
+        Ok(Some(stages))
+    } else {
+        Ok(None)
+    }
+}
+
 pub fn get_current_head_name(file: &Path, trust_full: bool) -> Result<Arc<ArcSwap<Box<str>>>> {
     debug_assert!(!file.exists() || file.is_file());
     debug_assert!(file.is_absolute());

@@ -1585,9 +1585,42 @@ fn merge(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
         )
     };
 
-    let Some(segments) = crate::ui::merge::parse_conflicts(&text) else {
-        cx.editor.set_status("no conflict markers in this file");
-        return Ok(());
+    // Prefer the git **index** conflict stages: a real diff3 against the common
+    // ancestor auto-merges the non-conflicting changes and gives every conflict
+    // its true per-region base. Only fall back to scraping `<<<<<<<` markers out
+    // of the buffer when the file isn't a git conflict (or git is unavailable).
+    let staged_segments = path.as_deref().and_then(|p| {
+        let trust_full = cx
+            .editor
+            .workspace_trust
+            .query(
+                &zemacs_loader::find_workspace_in(p.parent().unwrap_or(p)).0,
+                zemacs_loader::workspace_trust::TrustQuery::Git,
+            )
+            .is_trusted();
+        let stages = cx.editor.diff_providers.get_conflict_stages(p, trust_full)?;
+        // Need at least ours + theirs to run a 3-way merge; missing base is fine
+        // (add/add → "" base).
+        let ours = stages.ours?;
+        let theirs = stages.theirs?;
+        let base = stages.base.unwrap_or_default();
+        let decode = |b: Vec<u8>| String::from_utf8_lossy(&b).into_owned();
+        Some(crate::ui::merge::diff3(
+            &decode(base),
+            &decode(ours),
+            &decode(theirs),
+        ))
+    });
+
+    let segments = match staged_segments {
+        Some(segments) => segments,
+        None => match crate::ui::merge::parse_conflicts(&text) {
+            Some(segments) => segments,
+            None => {
+                cx.editor.set_status("no conflicts to resolve");
+                return Ok(());
+            }
+        },
     };
 
     let view = crate::ui::merge::DiffView::from_conflicts(name, doc_id, path, segments);

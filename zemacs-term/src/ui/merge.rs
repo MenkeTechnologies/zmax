@@ -284,6 +284,128 @@ pub fn parse_conflicts(text: &str) -> Option<Vec<Segment>> {
     Some(segments)
 }
 
+/// For each line of `base`, the index of the corresponding line in `other` if
+/// that base line is **unchanged** between `base` and `other`, else `None`.
+///
+/// Built from the same line-level [`align`] used everywhere else, so the
+/// "unchanged" notion matches the rest of the module. The mapping is monotonic
+/// (later base lines map to later `other` lines) because the diff is.
+fn base_match_map(base: &str, other: &str) -> Vec<Option<usize>> {
+    let n_base = split_lines(base).len();
+    let mut map = vec![None; n_base];
+    for row in align(base, other) {
+        if row.kind == RowKind::Unchanged {
+            if let (Some(b), Some(o)) = (row.left, row.right) {
+                map[b] = Some(o);
+            }
+        }
+    }
+    map
+}
+
+/// Resolve one non-stable region of a 3-way merge into either auto-merged
+/// context (appended to `ctx`) or a real [`Segment::Conflict`] (which first
+/// flushes the pending context). The classic diff3 decision:
+///
+/// * ours == base → ours didn't touch it, take **theirs**.
+/// * theirs == base → theirs didn't touch it, take **ours**.
+/// * ours == theirs → both made the same edit, take it.
+/// * otherwise → a genuine conflict carrying the real per-region `base`.
+fn resolve_region(
+    segments: &mut Vec<Segment>,
+    ctx: &mut Vec<String>,
+    ours: Vec<String>,
+    base: Vec<String>,
+    theirs: Vec<String>,
+) {
+    if ours == base {
+        // ours didn't touch it → take theirs.
+        ctx.extend(theirs);
+    } else if theirs == base || ours == theirs {
+        // theirs didn't touch it, or both made the same edit → take ours.
+        ctx.extend(ours);
+    } else {
+        if !ctx.is_empty() {
+            segments.push(Segment::Context(std::mem::take(ctx)));
+        }
+        segments.push(Segment::Conflict { ours, base, theirs });
+    }
+}
+
+/// Three-way merge of `ours`/`theirs` against their common ancestor `base`,
+/// producing ordered [`Segment`]s. Pure and unit-tested.
+///
+/// Uses two line-level 2-way diffs — base↔ours and base↔theirs (via
+/// [`base_match_map`]) — and the classic diff3 algorithm: base lines that are
+/// unchanged in **both** sides are *stable* and become context; the regions
+/// between stable lines are resolved by [`resolve_region`]. Net effect:
+/// non-conflicting edits from either side are auto-merged into [`Segment::Context`];
+/// only genuinely overlapping edits become [`Segment::Conflict`], each carrying
+/// the real common-ancestor `base` for that region. Adjacent context runs are
+/// coalesced into a single segment.
+pub fn diff3(base: &str, ours: &str, theirs: &str) -> Vec<Segment> {
+    let base_lines = split_lines(base);
+    let ours_lines = split_lines(ours);
+    let theirs_lines = split_lines(theirs);
+    let n_base = base_lines.len();
+    let n_ours = ours_lines.len();
+    let n_theirs = theirs_lines.len();
+
+    let ours_match = base_match_map(base, ours);
+    let theirs_match = base_match_map(base, theirs);
+
+    let mut segments: Vec<Segment> = Vec::new();
+    let mut ctx: Vec<String> = Vec::new();
+
+    // Cursors into base / ours / theirs marking the start of the not-yet-emitted
+    // region. A base line is *stable* when it is unchanged in both sides.
+    let (mut b, mut o, mut t) = (0usize, 0usize, 0usize);
+    let mut bi = 0usize;
+    while bi < n_base {
+        let (Some(oi), Some(ti)) = (ours_match[bi], theirs_match[bi]) else {
+            bi += 1;
+            continue;
+        };
+        // Resolve the region preceding this stable line.
+        resolve_region(
+            &mut segments,
+            &mut ctx,
+            ours_lines[o..oi].to_vec(),
+            base_lines[b..bi].to_vec(),
+            theirs_lines[t..ti].to_vec(),
+        );
+        // Emit the maximal run of stable lines that are also consecutive in all
+        // three sequences (stable lines are identical across base/ours/theirs).
+        let (mut cb, mut co, mut ct) = (bi, oi, ti);
+        loop {
+            ctx.push(base_lines[cb].clone());
+            cb += 1;
+            co += 1;
+            ct += 1;
+            if cb < n_base && ours_match[cb] == Some(co) && theirs_match[cb] == Some(ct) {
+                continue;
+            }
+            break;
+        }
+        b = cb;
+        o = co;
+        t = ct;
+        bi = cb;
+    }
+    // Trailing region after the last stable line.
+    resolve_region(
+        &mut segments,
+        &mut ctx,
+        ours_lines[o..n_ours].to_vec(),
+        base_lines[b..n_base].to_vec(),
+        theirs_lines[t..n_theirs].to_vec(),
+    );
+    if !ctx.is_empty() {
+        segments.push(Segment::Context(ctx));
+    }
+    segments
+}
+
 /// Reconstruct the resolved text of a conflicted file from its parsed
 /// [`Segment`]s and the per-conflict resolutions held in `blocks` (one block
 /// per [`Segment::Conflict`], in order). Pure so it can be unit-tested.
@@ -430,6 +552,19 @@ pub struct DiffView {
     base_lines: Vec<String>,
     /// Working-tree / theirs lines (right pane), trailing newline stripped.
     doc_lines: Vec<String>,
+    /// Conflict mode only: the common-ancestor (diff3) **base** lines, shown in
+    /// the optional Base pane. Indexed by [`DiffView::row_base`]. Empty in diff
+    /// mode and for conflicts that have no recorded base.
+    base_pane_lines: Vec<String>,
+    /// Per-row index into [`DiffView::base_pane_lines`] for the Base pane, or
+    /// `None` for a blank filler on that row. Always the same length as `rows`.
+    row_base: Vec<Option<usize>>,
+    /// Whether the Base pane is currently shown (toggled with `B`). Defaults to
+    /// `true` when any conflict carries a non-empty base, else `false`.
+    show_base: bool,
+    /// True when at least one conflict has a non-empty base (so the Base pane is
+    /// meaningful and the `B` toggle / 4-pane layout are offered).
+    has_base: bool,
     rows: Vec<DiffRow>,
     /// Change blocks with their (mutable) per-block resolution.
     blocks: Vec<Block>,
@@ -450,6 +585,7 @@ impl DiffView {
     pub fn new(file_name: String, doc_id: DocumentId, base: &str, doc: &str) -> Self {
         let rows = align(base, doc);
         let blocks = compute_blocks(&rows);
+        let row_base = vec![None; rows.len()];
         DiffView {
             kind: ViewKind::Diff,
             file_name,
@@ -457,6 +593,10 @@ impl DiffView {
             path: None,
             base_lines: split_lines(base),
             doc_lines: split_lines(doc),
+            base_pane_lines: Vec::new(),
+            row_base,
+            show_base: false,
+            has_base: false,
             rows,
             blocks,
             segments: Vec::new(),
@@ -481,8 +621,11 @@ impl DiffView {
     ) -> Self {
         let mut base_lines = Vec::new();
         let mut doc_lines = Vec::new();
+        let mut base_pane_lines: Vec<String> = Vec::new();
+        let mut row_base: Vec<Option<usize>> = Vec::new();
         let mut rows = Vec::new();
         let mut blocks = Vec::new();
+        let mut has_base = false;
 
         for seg in &segments {
             match seg {
@@ -496,9 +639,17 @@ impl DiffView {
                             right: Some(di),
                             kind: RowKind::Unchanged,
                         });
+                        // Context is common to all sides, so the Base pane shows
+                        // the same line.
+                        let pbi = base_pane_lines.len();
+                        base_pane_lines.push(line.clone());
+                        row_base.push(Some(pbi));
                     }
                 }
-                Segment::Conflict { ours, theirs, .. } => {
+                Segment::Conflict { ours, base, theirs } => {
+                    if !base.is_empty() {
+                        has_base = true;
+                    }
                     let start = rows.len();
                     let common = ours.len().min(theirs.len());
                     for k in 0..common {
@@ -510,6 +661,7 @@ impl DiffView {
                             right: Some(di),
                             kind: RowKind::Changed,
                         });
+                        row_base.push(None);
                     }
                     for line in &ours[common..] {
                         let bi = base_lines.len();
@@ -519,6 +671,7 @@ impl DiffView {
                             right: None,
                             kind: RowKind::Removed,
                         });
+                        row_base.push(None);
                     }
                     for line in &theirs[common..] {
                         let di = doc_lines.len();
@@ -528,6 +681,25 @@ impl DiffView {
                             right: Some(di),
                             kind: RowKind::Added,
                         });
+                        row_base.push(None);
+                    }
+                    // Lay the conflict's base lines into the Base pane, aligned to
+                    // the block's rows; if there are more base lines than rows,
+                    // append blank-on-both-sides filler rows inside the block so
+                    // every base line stays visible (and the panes stay in step).
+                    for (k, line) in base.iter().enumerate() {
+                        let pbi = base_pane_lines.len();
+                        base_pane_lines.push(line.clone());
+                        if start + k < rows.len() {
+                            row_base[start + k] = Some(pbi);
+                        } else {
+                            rows.push(DiffRow {
+                                left: None,
+                                right: None,
+                                kind: RowKind::Changed,
+                            });
+                            row_base.push(Some(pbi));
+                        }
                     }
                     // One block per conflict, even if empty, so blocks stay 1:1
                     // and in order with the conflict segments.
@@ -546,6 +718,10 @@ impl DiffView {
             path,
             base_lines,
             doc_lines,
+            base_pane_lines,
+            row_base,
+            show_base: has_base,
+            has_base,
             rows,
             blocks,
             segments,
@@ -758,6 +934,12 @@ impl Component for DiffView {
             key!('u') | key!('x') if self.kind == ViewKind::Conflict => {
                 self.resolve_selected(Resolution::None)
             }
+            // Toggle the Base (common-ancestor) pane. Only meaningful when a
+            // conflict carries a base; on narrow terminals the renderer keeps it
+            // 3-pane regardless.
+            key!('B') if self.kind == ViewKind::Conflict && self.has_base => {
+                self.show_base = !self.show_base;
+            }
             _ => {}
         }
         // Stay modal: never let keys leak to the editor behind us.
@@ -784,29 +966,74 @@ impl Component for DiffView {
         }
 
         // ── Layout ──────────────────────────────────────────────────────────
-        // Two header rows, then the body. Three panes split into thirds with two
-        // 1-column separators between them.
+        // Two header rows, then the body. The body is split into 3 panes
+        // (Current/Result/Incoming) or — when a common-ancestor base is present
+        // and the Base pane is toggled on and the terminal is wide enough — 4
+        // panes (Base/Current/Result/Incoming), with 1-column separators.
         let header_h = 2u16;
         let body_y = area.y + header_h;
         let body_h = area.height.saturating_sub(header_h);
         self.viewport = body_h as usize;
 
-        // (width - 2 separators) / 3, with any remainder going to the panes
-        // earlier so the total exactly fills the area.
-        let avail = area.width.saturating_sub(2);
-        let third = avail / 3;
-        let left_w = third + (avail % 3).min(1);
-        let center_w = third + (avail % 3).saturating_sub(1).min(1);
-        let right_w = avail - left_w - center_w;
+        // Base pane: only in conflict mode, only when a base exists and the user
+        // hasn't toggled it off, and only on terminals wide enough to fit a
+        // readable 4th column (otherwise stay 3-pane).
+        let show_base_pane = self.kind == ViewKind::Conflict
+            && self.show_base
+            && self.has_base
+            && area.width >= 100;
 
-        let left_x = area.x;
-        let sep1_x = left_x + left_w;
-        let center_x = sep1_x + 1;
-        let sep2_x = center_x + center_w;
-        let right_x = sep2_x + 1;
+        // Split `width - separators` into N equal panes, remainder to the earlier
+        // panes so the columns exactly fill the area.
+        let n_panes: u16 = if show_base_pane { 4 } else { 3 };
+        let n_seps = n_panes - 1;
+        let avail = area.width.saturating_sub(n_seps);
+        let pane_base = avail / n_panes;
+        let rem = avail % n_panes;
+        let pane_w = |i: u16| pane_base + u16::from(i < rem);
+
+        // Compute each pane's x and the separator x's, left to right.
+        let mut xs = [0u16; 4];
+        let mut seps = [0u16; 3];
+        let mut cur = area.x;
+        for i in 0..n_panes {
+            xs[i as usize] = cur;
+            cur += pane_w(i);
+            if i + 1 < n_panes {
+                seps[i as usize] = cur;
+                cur += 1;
+            }
+        }
+
+        // Map the generic panes onto named columns. Result is always the pane
+        // just left of the Incoming pane; the Base pane (when shown) is first.
+        let base_col: Option<(u16, u16)>;
+        let (left_x, left_w, center_x, center_w, right_x, right_w);
+        if show_base_pane {
+            base_col = Some((xs[0], pane_w(0)));
+            left_x = xs[1];
+            left_w = pane_w(1);
+            center_x = xs[2];
+            center_w = pane_w(2);
+            right_x = xs[3];
+            right_w = pane_w(3);
+        } else {
+            base_col = None;
+            left_x = xs[0];
+            left_w = pane_w(0);
+            center_x = xs[1];
+            center_w = pane_w(1);
+            right_x = xs[2];
+            right_w = pane_w(2);
+        }
 
         // Gutter width: enough digits for the largest line number, plus a space.
-        let max_no = self.base_lines.len().max(self.doc_lines.len()).max(1);
+        let max_no = self
+            .base_lines
+            .len()
+            .max(self.doc_lines.len())
+            .max(self.base_pane_lines.len())
+            .max(1);
         let digits = ((max_no as f64).log10().floor() as usize) + 1;
         let gutter = (digits + 1) as u16;
         // Center gutter is two wider: a select marker + a direction arrow.
@@ -843,11 +1070,14 @@ impl Component for DiffView {
                 " Working tree",
             ),
             ViewKind::Conflict => (
-                ", ours  . theirs  b both  u unresolve  n/p nav  Enter apply  q cancel",
+                ", ours  . theirs  b both  u unresolve  B base  n/p nav  Enter apply  q cancel",
                 " Current (ours)",
                 " Incoming (theirs)",
             ),
         };
+        if let Some((base_x, base_w)) = base_col {
+            surface.set_stringn(base_x, area.y + 1, " Base", base_w as usize, linenr_style);
+        }
         surface.set_stringn(left_x, area.y + 1, left_label, left_w as usize, linenr_style);
         surface.set_stringn(center_x, area.y + 1, " Result", center_w as usize, linenr_style);
         surface.set_stringn(
@@ -859,8 +1089,9 @@ impl Component for DiffView {
         );
         // Separators down the full height.
         for y in area.y..area.y + area.height {
-            surface.set_string(sep1_x, y, "\u{2502}", sep_style);
-            surface.set_string(sep2_x, y, "\u{2502}", sep_style);
+            for sep_x in seps.iter().take(n_seps as usize) {
+                surface.set_string(*sep_x, y, "\u{2502}", sep_style);
+            }
         }
         // Overlay the key hint dimly on the right of the title row if it fits.
         if (header.len() + hint.len() + 3) < area.width as usize {
@@ -890,7 +1121,9 @@ impl Component for DiffView {
         let left_inner = left_w.saturating_sub(gutter) as usize;
         let center_inner = center_w.saturating_sub(center_gutter) as usize;
         let right_inner = right_w.saturating_sub(gutter) as usize;
+        let base_inner = base_col.map(|(_, w)| w.saturating_sub(gutter) as usize);
 
+        let mut base_pane_lines_v = Vec::with_capacity(body_h as usize);
         let mut left_lines = Vec::with_capacity(body_h as usize);
         let mut center_lines = Vec::with_capacity(body_h as usize);
         let mut right_lines = Vec::with_capacity(body_h as usize);
@@ -901,6 +1134,19 @@ impl Component for DiffView {
             .skip(self.scroll)
             .take(body_h as usize)
         {
+            if let Some(base_inner) = base_inner {
+                // The Base pane shows the common ancestor as neutral text
+                // (RowKind::Unchanged) regardless of the conflict colouring.
+                base_pane_lines_v.push(pane_line(
+                    self.row_base[offset],
+                    &self.base_pane_lines,
+                    RowKind::Unchanged,
+                    Side::Left,
+                    gutter as usize,
+                    base_inner,
+                    &style,
+                ));
+            }
             left_lines.push(pane_line(
                 row.left,
                 &self.base_lines,
@@ -940,8 +1186,15 @@ impl Component for DiffView {
             left_lines.push(Line::default());
             center_lines.push(Line::default());
             right_lines.push(Line::default());
+            if base_inner.is_some() {
+                base_pane_lines_v.push(Line::default());
+            }
         }
 
+        if let Some((base_x, base_w)) = base_col {
+            let base_rect = Rect::new(base_x, body_y, base_w, body_h);
+            crate::ui::rat::render(Paragraph::new(base_pane_lines_v), base_rect, surface);
+        }
         let left_rect = Rect::new(left_x, body_y, left_w, body_h);
         let center_rect = Rect::new(center_x, body_y, center_w, body_h);
         let right_rect = Rect::new(right_x, body_y, right_w, body_h);
@@ -1450,5 +1703,159 @@ mod tests {
         assert_eq!(view.blocks.len(), 1);
         assert_eq!(view.blocks[0].resolution, Resolution::None);
         assert!(!view.all_resolved());
+    }
+
+    // ── diff3 three-way merge (slice 4) ──────────────────────────────────────
+
+    #[test]
+    fn diff3_ours_only_change_auto_merges() {
+        // theirs == base; only ours changed line 2 → take ours, no conflict.
+        assert_eq!(
+            diff3("a\nb\nc\n", "a\nB\nc\n", "a\nb\nc\n"),
+            vec![ctx(&["a", "B", "c"])]
+        );
+    }
+
+    #[test]
+    fn diff3_theirs_only_change_auto_merges() {
+        // ours == base; only theirs changed → take theirs, no conflict.
+        assert_eq!(
+            diff3("a\nb\nc\n", "a\nb\nc\n", "a\nb\nC\n"),
+            vec![ctx(&["a", "b", "C"])]
+        );
+    }
+
+    #[test]
+    fn diff3_identical_change_on_both_sides() {
+        // Both sides made the same edit → take it, no conflict.
+        assert_eq!(
+            diff3("a\nb\nc\n", "a\nX\nc\n", "a\nX\nc\n"),
+            vec![ctx(&["a", "X", "c"])]
+        );
+    }
+
+    #[test]
+    fn diff3_genuine_conflict_carries_base() {
+        // Overlapping edits → conflict, and it carries the real base line "b".
+        assert_eq!(
+            diff3("a\nb\nc\n", "a\nX\nc\n", "a\nY\nc\n"),
+            vec![ctx(&["a"]), conflict(&["X"], &["b"], &["Y"]), ctx(&["c"])]
+        );
+    }
+
+    #[test]
+    fn diff3_disjoint_changes_both_apply() {
+        // ours changes the first line, theirs the last — both auto-merge.
+        assert_eq!(
+            diff3("a\nb\nc\nd\ne\n", "A\nb\nc\nd\ne\n", "a\nb\nc\nd\nE\n"),
+            vec![ctx(&["A", "b", "c", "d", "E"])]
+        );
+    }
+
+    #[test]
+    fn diff3_insertion_one_side_change_other_disjoint() {
+        // ours inserts a line near the top, theirs changes the last line.
+        assert_eq!(
+            diff3("a\nb\nc\n", "a\nNEW\nb\nc\n", "a\nb\nC\n"),
+            vec![ctx(&["a", "NEW", "b", "C"])]
+        );
+    }
+
+    #[test]
+    fn diff3_multiple_regions_mixed() {
+        // Region 1: ours-only change (auto-merged). Region 2: genuine conflict.
+        assert_eq!(
+            diff3("a\nb\nc\nd\ne\n", "a\nB\nc\nX\ne\n", "a\nb\nc\nY\ne\n"),
+            vec![
+                ctx(&["a", "B", "c"]),
+                conflict(&["X"], &["d"], &["Y"]),
+                ctx(&["e"]),
+            ]
+        );
+    }
+
+    #[test]
+    fn diff3_adjacent_conflict_regions() {
+        // Two conflicting lines back-to-back with no stable line between them:
+        // one conflict spanning both base lines.
+        assert_eq!(
+            diff3("a\nb\nc\n", "X1\nX2\nc\n", "Y1\nY2\nc\n"),
+            vec![
+                conflict(&["X1", "X2"], &["a", "b"], &["Y1", "Y2"]),
+                ctx(&["c"]),
+            ]
+        );
+    }
+
+    #[test]
+    fn diff3_empty_base_addadd_conflict() {
+        // No common ancestor; both sides added different content → conflict with
+        // an empty base.
+        assert_eq!(diff3("", "a\n", "b\n"), vec![conflict(&["a"], &[], &["b"])]);
+    }
+
+    #[test]
+    fn diff3_empty_base_addadd_identical() {
+        // Both sides added the same content → auto-merge, no conflict.
+        assert_eq!(diff3("", "a\n", "a\n"), vec![ctx(&["a"])]);
+    }
+
+    #[test]
+    fn diff3_ours_deletes_everything() {
+        // ours deleted all lines, theirs unchanged → take the deletion (empty).
+        assert!(diff3("a\nb\n", "", "a\nb\n").is_empty());
+    }
+
+    #[test]
+    fn diff3_theirs_deletes_everything() {
+        assert!(diff3("a\nb\n", "a\nb\n", "").is_empty());
+    }
+
+    #[test]
+    fn diff3_all_empty() {
+        assert!(diff3("", "", "").is_empty());
+    }
+
+    // ── diff3 round-trips through the conflict view (slice 4) ─────────────────
+
+    #[test]
+    fn diff3_roundtrip_auto_merge_survives_apply() {
+        // A fully auto-merged diff3 has no Conflict segments: the conflict view
+        // has zero blocks and its resolved text is just the merged content.
+        let segs = diff3("a\nb\nc\n", "a\nB\nc\n", "a\nb\nc\n");
+        let view = DiffView::from_conflicts("f".into(), DocumentId::default(), None, segs);
+        assert!(view.blocks.is_empty(), "auto-merge produces no conflict blocks");
+        assert_eq!(
+            conflict_result_text(&view.segments, &view.blocks),
+            "a\nB\nc\n"
+        );
+    }
+
+    #[test]
+    fn diff3_roundtrip_conflict_resolves_each_way() {
+        // A genuine conflict from diff3 round-trips through the view: Left→ours,
+        // Right→theirs, Both→ours then theirs.
+        let segs = diff3("a\nb\nc\n", "a\nX\nc\n", "a\nY\nc\n");
+        let view = DiffView::from_conflicts("f".into(), DocumentId::default(), None, segs);
+        assert_eq!(view.blocks.len(), 1);
+        let mut blocks = view.blocks.clone();
+
+        blocks[0].resolution = Resolution::Left;
+        assert_eq!(conflict_result_text(&view.segments, &blocks), "a\nX\nc\n");
+        blocks[0].resolution = Resolution::Right;
+        assert_eq!(conflict_result_text(&view.segments, &blocks), "a\nY\nc\n");
+        blocks[0].resolution = Resolution::Both;
+        assert_eq!(conflict_result_text(&view.segments, &blocks), "a\nX\nY\nc\n");
+    }
+
+    #[test]
+    fn diff3_roundtrip_conflict_records_base_for_pane() {
+        // The conflict's base line is captured so the Base pane can show it, and
+        // `has_base` is set.
+        let segs = diff3("a\nb\nc\n", "a\nX\nc\n", "a\nY\nc\n");
+        let view = DiffView::from_conflicts("f".into(), DocumentId::default(), None, segs);
+        assert!(view.has_base);
+        assert!(view.show_base);
+        assert!(view.base_pane_lines.contains(&"b".to_string()));
     }
 }
