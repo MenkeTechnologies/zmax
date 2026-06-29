@@ -677,6 +677,21 @@ impl MappableCommand {
         json_minify_selection, "Minify the selected JSON",
         xml_pretty_selection, "Pretty-print the selected XML/HTML",
         insert_digraph, "Insert a digraph by two-character mnemonic (CTRL-K)",
+        insert_uuid_v4, "Insert a random UUIDv4 (SPC i U 4)",
+        insert_uuid_v1, "Insert a time-based UUIDv1 (SPC i U 1)",
+        insert_lorem_sentence, "Insert a lorem-ipsum sentence (SPC i l s)",
+        insert_lorem_paragraph, "Insert a lorem-ipsum paragraph (SPC i l p)",
+        insert_lorem_list, "Insert a lorem-ipsum list (SPC i l l)",
+        insert_password_simple, "Insert a simple alphanumeric password (SPC i p 1)",
+        insert_password_strong, "Insert a stronger password with symbols (SPC i p 2)",
+        insert_password_paranoid, "Insert a long password for paranoids (SPC i p 3)",
+        insert_password_numerical, "Insert a numeric password (SPC i p n)",
+        insert_password_phonetic, "Insert a phonetically easy password (SPC i p p)",
+        symbol_upper_camel, "Change symbol style to UpperCamelCase (SPC x i C)",
+        symbol_up_case, "Change symbol style to UP_CASE (SPC x i U)",
+        symbol_under_score, "Change symbol style to under_score (SPC x i _)",
+        randomize_lines_in_region, "Randomize lines in the selection (SPC x l r)",
+        randomize_words_in_region, "Randomize words in the selection (SPC x w r)",
         copy_char_below, "Insert the character below the cursor (i_CTRL-E)",
         copy_char_above, "Insert the character above the cursor (i_CTRL-Y)",
         file_info, "Show file name and cursor position (CTRL-G)",
@@ -720,6 +735,7 @@ impl MappableCommand {
         fold_close_all, "Close all folds (zM)",
         fold_delete, "Delete fold under cursor (zd)",
         fold_delete_all, "Delete all folds (zE)",
+        narrow_to_region, "Narrow the view to the selected region (SPC n r)",
         fold_next, "Move to next fold (zj)",
         fold_prev, "Move to previous fold (zk)",
         goto_line_last_nonblank, "Goto last non-blank on line (g_)",
@@ -10793,6 +10809,374 @@ fn insert_digraph(cx: &mut Context) {
     });
 }
 
+// --- insert generators (spacemacs SPC i) -------------------------------------
+// Self-contained text generators wired under the `SPC i` leader: UUIDs
+// (`SPC i U`), lorem-ipsum (`SPC i l`) and passwords (`SPC i p`). Each command
+// builds a string from a pure helper (unit-tested below) and drops it at every
+// cursor. Randomness comes from `fastrand`, which self-seeds from system entropy.
+
+/// Insert `text` at every selection's cursor (collapsing nothing), then leave
+/// select mode — the shared tail of every `SPC i` generator.
+fn insert_generated(cx: &mut Context, text: &str) {
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id);
+    let t = Tendril::from(text);
+    let transaction = Transaction::change_by_selection(doc.text(), sel, |range| {
+        let pos = range.cursor(doc.text().slice(..));
+        (pos, pos, Some(t.clone()))
+    });
+    doc.apply(&transaction, view.id);
+    exit_select_mode(cx);
+}
+
+/// 16 random bytes formatted `8-4-4-4-12`, with the given version nibble and the
+/// RFC 4122 variant bits already applied.
+fn uuid_format(mut bytes: [u8; 16], version: u8) -> String {
+    bytes[6] = (bytes[6] & 0x0f) | (version << 4);
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    let h: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+    format!(
+        "{}-{}-{}-{}-{}",
+        &h[0..8],
+        &h[8..12],
+        &h[12..16],
+        &h[16..20],
+        &h[20..32]
+    )
+}
+
+fn uuid_v4_string() -> String {
+    let mut bytes = [0u8; 16];
+    bytes.iter_mut().for_each(|b| *b = fastrand::u8(..));
+    uuid_format(bytes, 4)
+}
+
+/// Time-based UUID (version 1): a 60-bit timestamp of 100ns intervals since the
+/// Gregorian epoch (1582-10-15), a random clock sequence, and a random node with
+/// the multicast bit set (so it can't collide with a real MAC address).
+fn uuid_v1_string() -> String {
+    let nanos = time::OffsetDateTime::now_utc()
+        .unix_timestamp_nanos()
+        .max(0) as u128;
+    // 100ns ticks since 1582-10-15, the Gregorian/UUID epoch.
+    let ts = (nanos / 100) as u64 + 0x01B2_1DD2_1381_4000;
+    let time_low = (ts & 0xffff_ffff) as u32;
+    let time_mid = ((ts >> 32) & 0xffff) as u16;
+    let time_hi = (((ts >> 48) & 0x0fff) as u16) | 0x1000; // version 1
+    let clock_seq = (fastrand::u16(..) & 0x3fff) | 0x8000; // variant
+    let mut node = [0u8; 6];
+    node.iter_mut().for_each(|b| *b = fastrand::u8(..));
+    node[0] |= 0x01; // multicast bit -> not a real MAC
+    let node_hex: String = node.iter().map(|b| format!("{b:02x}")).collect();
+    format!("{time_low:08x}-{time_mid:04x}-{time_hi:04x}-{clock_seq:04x}-{node_hex}")
+}
+
+fn insert_uuid_v4(cx: &mut Context) {
+    let s = uuid_v4_string();
+    insert_generated(cx, &s);
+}
+
+fn insert_uuid_v1(cx: &mut Context) {
+    let s = uuid_v1_string();
+    insert_generated(cx, &s);
+}
+
+/// Pool of classic lorem-ipsum words, lowercase and punctuation-free.
+const LOREM_WORDS: &[&str] = &[
+    "lorem",
+    "ipsum",
+    "dolor",
+    "sit",
+    "amet",
+    "consectetur",
+    "adipiscing",
+    "elit",
+    "sed",
+    "do",
+    "eiusmod",
+    "tempor",
+    "incididunt",
+    "ut",
+    "labore",
+    "et",
+    "dolore",
+    "magna",
+    "aliqua",
+    "enim",
+    "ad",
+    "minim",
+    "veniam",
+    "quis",
+    "nostrud",
+    "exercitation",
+    "ullamco",
+    "laboris",
+    "nisi",
+    "aliquip",
+    "ex",
+    "ea",
+    "commodo",
+    "consequat",
+    "duis",
+    "aute",
+    "irure",
+    "in",
+    "reprehenderit",
+    "voluptate",
+    "velit",
+    "esse",
+    "cillum",
+    "fugiat",
+    "nulla",
+    "pariatur",
+    "excepteur",
+    "sint",
+    "occaecat",
+    "cupidatat",
+    "non",
+    "proident",
+    "sunt",
+    "culpa",
+    "qui",
+    "officia",
+    "deserunt",
+    "mollit",
+    "anim",
+    "id",
+    "est",
+    "laborum",
+];
+
+/// One sentence: `len` words, first capitalised, terminated by a period.
+fn lorem_sentence(len: usize) -> String {
+    let len = len.max(1);
+    let mut out = String::new();
+    for i in 0..len {
+        if i > 0 {
+            out.push(' ');
+        }
+        let w = LOREM_WORDS[fastrand::usize(..LOREM_WORDS.len())];
+        if i == 0 {
+            let mut c = w.chars();
+            if let Some(f) = c.next() {
+                out.extend(f.to_uppercase());
+                out.push_str(c.as_str());
+            }
+        } else {
+            out.push_str(w);
+        }
+    }
+    out.push('.');
+    out
+}
+
+/// A paragraph of `sentences` lorem sentences of varied length.
+fn lorem_paragraph(sentences: usize) -> String {
+    (0..sentences.max(1))
+        .map(|_| lorem_sentence(6 + fastrand::usize(..8)))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// `items` dash-bulleted lines, one short lorem fragment each.
+fn lorem_list(items: usize) -> String {
+    (0..items.max(1))
+        .map(|_| format!("- {}", lorem_sentence(3 + fastrand::usize(..4))))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn insert_lorem_sentence(cx: &mut Context) {
+    let s = lorem_sentence(8 + fastrand::usize(..6));
+    insert_generated(cx, &s);
+}
+
+fn insert_lorem_paragraph(cx: &mut Context) {
+    let s = lorem_paragraph(4 + fastrand::usize(..3));
+    insert_generated(cx, &s);
+}
+
+fn insert_lorem_list(cx: &mut Context) {
+    let s = lorem_list(4 + fastrand::usize(..4));
+    insert_generated(cx, &s);
+}
+
+const PW_ALNUM: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const PW_SYMBOLS: &[u8] = b"!@#$%^&*()-_=+[]{};:,.<>?";
+
+/// `len` characters drawn uniformly from `charset`.
+fn password(len: usize, charset: &[u8]) -> String {
+    (0..len)
+        .map(|_| charset[fastrand::usize(..charset.len())] as char)
+        .collect()
+}
+
+/// A pronounceable password: alternating consonants and vowels, `len` chars.
+fn password_phonetic(len: usize) -> String {
+    const CONS: &[u8] = b"bcdfghjklmnpqrstvwxz";
+    const VOWELS: &[u8] = b"aeiouy";
+    (0..len)
+        .map(|i| {
+            let set = if i % 2 == 0 { CONS } else { VOWELS };
+            set[fastrand::usize(..set.len())] as char
+        })
+        .collect()
+}
+
+fn insert_password_simple(cx: &mut Context) {
+    let s = password(12, PW_ALNUM);
+    insert_generated(cx, &s);
+}
+
+fn insert_password_strong(cx: &mut Context) {
+    let mut set = PW_ALNUM.to_vec();
+    set.extend_from_slice(PW_SYMBOLS);
+    let s = password(20, &set);
+    insert_generated(cx, &s);
+}
+
+fn insert_password_paranoid(cx: &mut Context) {
+    let mut set = PW_ALNUM.to_vec();
+    set.extend_from_slice(PW_SYMBOLS);
+    let s = password(32, &set);
+    insert_generated(cx, &s);
+}
+
+fn insert_password_numerical(cx: &mut Context) {
+    let s = password(8, b"0123456789");
+    insert_generated(cx, &s);
+}
+
+fn insert_password_phonetic(cx: &mut Context) {
+    let s = password_phonetic(14);
+    insert_generated(cx, &s);
+}
+
+// --- symbol-case styles + region shuffles (spacemacs SPC x) ------------------
+// Pure string transforms applied to each selection range, reusing the
+// `switch_case_impl` plumbing. `SPC x i {C,U,_}` re-style an identifier;
+// `SPC x l r` / `SPC x w r` shuffle the lines / words of the selection.
+
+/// Split an identifier into its component words, recognising camelCase humps,
+/// snake_case, kebab-case and whitespace as boundaries.
+fn split_identifier_words(s: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut cur = String::new();
+    let mut prev_lower_or_digit = false;
+    for ch in s.chars() {
+        if ch == '_' || ch == '-' || ch.is_whitespace() {
+            if !cur.is_empty() {
+                words.push(std::mem::take(&mut cur));
+            }
+            prev_lower_or_digit = false;
+            continue;
+        }
+        if ch.is_uppercase() && prev_lower_or_digit && !cur.is_empty() {
+            words.push(std::mem::take(&mut cur));
+        }
+        cur.push(ch);
+        prev_lower_or_digit = ch.is_lowercase() || ch.is_numeric();
+    }
+    if !cur.is_empty() {
+        words.push(cur);
+    }
+    words
+}
+
+fn capitalize(w: &str) -> String {
+    let mut c = w.chars();
+    match c.next() {
+        Some(f) => {
+            let mut out: String = f.to_uppercase().collect();
+            out.push_str(&c.as_str().to_lowercase());
+            out
+        }
+        None => String::new(),
+    }
+}
+
+fn to_upper_camel(s: &str) -> String {
+    split_identifier_words(s)
+        .iter()
+        .map(|w| capitalize(w))
+        .collect()
+}
+
+fn to_up_case(s: &str) -> String {
+    split_identifier_words(s)
+        .iter()
+        .map(|w| w.to_uppercase())
+        .collect::<Vec<_>>()
+        .join("_")
+}
+
+fn to_under_score(s: &str) -> String {
+    split_identifier_words(s)
+        .iter()
+        .map(|w| w.to_lowercase())
+        .collect::<Vec<_>>()
+        .join("_")
+}
+
+fn change_symbol_case(cx: &mut Context, f: fn(&str) -> String) {
+    switch_case_impl(cx, move |slice| {
+        let s: Cow<str> = slice.into();
+        Tendril::from(f(&s))
+    });
+}
+
+fn symbol_upper_camel(cx: &mut Context) {
+    change_symbol_case(cx, to_upper_camel);
+}
+
+fn symbol_up_case(cx: &mut Context) {
+    change_symbol_case(cx, to_up_case);
+}
+
+fn symbol_under_score(cx: &mut Context) {
+    change_symbol_case(cx, to_under_score);
+}
+
+/// In-place Fisher–Yates shuffle using `fastrand`.
+fn shuffle_in_place<T>(v: &mut [T]) {
+    for i in (1..v.len()).rev() {
+        v.swap(i, fastrand::usize(..=i));
+    }
+}
+
+/// Shuffle the lines of `s`; a single trailing newline is preserved.
+fn randomize_lines(s: &str) -> String {
+    let had_trailing = s.ends_with('\n');
+    let mut lines: Vec<&str> = s.strip_suffix('\n').unwrap_or(s).split('\n').collect();
+    shuffle_in_place(&mut lines);
+    let mut out = lines.join("\n");
+    if had_trailing {
+        out.push('\n');
+    }
+    out
+}
+
+/// Shuffle the whitespace-separated words of `s`, joined by single spaces.
+fn randomize_words(s: &str) -> String {
+    let mut words: Vec<&str> = s.split_whitespace().collect();
+    shuffle_in_place(&mut words);
+    words.join(" ")
+}
+
+fn randomize_lines_in_region(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: Cow<str> = slice.into();
+        Tendril::from(randomize_lines(&s))
+    });
+}
+
+fn randomize_words_in_region(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: Cow<str> = slice.into();
+        Tendril::from(randomize_words(&s))
+    });
+}
+
 // --- code folding (vim z* family) --------------------------------------------
 // Folds live on the document (`Document::folds`). A closed fold hides its inner
 // lines from rendering and line-wise motion — the ranges flow into the
@@ -10942,6 +11326,43 @@ fn fold_prev(cx: &mut Context) {
         let target = doc.folds().visible_anchor(prev);
         fold_goto_line(view, doc, target);
     }
+}
+
+// --- narrowing (spacemacs SPC n) --------------------------------------------
+// Approximate Emacs narrowing using the fold engine: fold every line OUTSIDE the
+// region so only the region is visible. This is *visual* narrowing — editing is
+// not actually restricted to the region — so these bindings are recorded as
+// `partial` in the port mapping. `widen` (SPC n w) reuses `fold_open_all`.
+
+/// Line ranges to fold so that only `[start, end]` stays visible in a buffer of
+/// `last_line` (0-based, inclusive). Returns the before- and after-region spans
+/// that are non-empty.
+fn narrow_outside_ranges(start: usize, end: usize, last_line: usize) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    if start > 0 {
+        out.push((0, start - 1));
+    }
+    if end < last_line {
+        out.push((end + 1, last_line));
+    }
+    out
+}
+
+/// Fold everything outside the lines spanned by the primary selection.
+fn narrow_to_region(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let start = text.char_to_line(range.from());
+    let end = text.char_to_line(range.to().saturating_sub(1).max(range.from()));
+    let last = doc.text().len_lines().saturating_sub(1);
+    for (s, e) in narrow_outside_ranges(start, end, last) {
+        doc.folds_mut().create(s, e);
+    }
+    doc.folds_mut().clamp(last);
+    fold_goto_line(view, doc, start);
+    cx.editor
+        .set_status(format!("narrowed to lines {}-{}", start + 1, end + 1));
 }
 
 fn scroll_up(cx: &mut Context) {
@@ -12058,6 +12479,123 @@ fn lsp_or_syntax_workspace_symbol_picker(cx: &mut Context) {
         lsp::workspace_symbol_picker(cx);
     } else {
         syntax_workspace_symbol_picker(cx);
+    }
+}
+
+#[cfg(test)]
+mod insert_generator_tests {
+    use super::*;
+
+    fn is_hex(s: &str) -> bool {
+        s.chars().all(|c| c.is_ascii_hexdigit())
+    }
+
+    fn assert_uuid_shape(u: &str, version: char) {
+        let parts: Vec<&str> = u.split('-').collect();
+        assert_eq!(parts.len(), 5, "uuid has 5 groups: {u}");
+        let lens = [8, 4, 4, 4, 12];
+        for (p, l) in parts.iter().zip(lens) {
+            assert_eq!(p.len(), l, "group length in {u}");
+            assert!(is_hex(p), "group is hex in {u}");
+        }
+        // version nibble is the first char of group 3; variant is 8/9/a/b.
+        assert_eq!(parts[2].chars().next().unwrap(), version, "version of {u}");
+        assert!(
+            matches!(parts[3].chars().next().unwrap(), '8' | '9' | 'a' | 'b'),
+            "rfc4122 variant of {u}"
+        );
+    }
+
+    #[test]
+    fn uuid_v4_is_well_formed_and_random() {
+        let a = uuid_v4_string();
+        let b = uuid_v4_string();
+        assert_uuid_shape(&a, '4');
+        assert_uuid_shape(&b, '4');
+        assert_ne!(a, b, "two v4 uuids should differ");
+    }
+
+    #[test]
+    fn uuid_v1_is_well_formed() {
+        assert_uuid_shape(&uuid_v1_string(), '1');
+    }
+
+    #[test]
+    fn lorem_has_expected_structure() {
+        let s = lorem_sentence(5);
+        assert!(s.ends_with('.'));
+        assert_eq!(s.trim_end_matches('.').split(' ').count(), 5);
+        assert!(s.chars().next().unwrap().is_uppercase());
+
+        let list = lorem_list(3);
+        assert_eq!(list.lines().count(), 3);
+        assert!(list.lines().all(|l| l.starts_with("- ")));
+    }
+
+    #[test]
+    fn symbol_case_styles() {
+        for input in [
+            "myVariableName",
+            "my_variable_name",
+            "my-variable-name",
+            "MyVariableName",
+        ] {
+            assert_eq!(
+                to_upper_camel(input),
+                "MyVariableName",
+                "camel from {input}"
+            );
+            assert_eq!(to_up_case(input), "MY_VARIABLE_NAME", "upcase from {input}");
+            assert_eq!(
+                to_under_score(input),
+                "my_variable_name",
+                "snake from {input}"
+            );
+        }
+        assert_eq!(to_upper_camel("http2Server"), "Http2Server");
+    }
+
+    #[test]
+    fn region_shuffles_are_permutations() {
+        let shuffled = randomize_lines("a\nb\nc\nd\ne\n");
+        let mut got: Vec<&str> = shuffled.lines().collect();
+        got.sort_unstable();
+        assert_eq!(got, vec!["a", "b", "c", "d", "e"]);
+        assert!(shuffled.ends_with('\n'));
+
+        let words = randomize_words("one two three four");
+        let mut got: Vec<&str> = words.split(' ').collect();
+        got.sort_unstable();
+        assert_eq!(got, vec!["four", "one", "three", "two"]);
+    }
+
+    #[test]
+    fn narrow_ranges_fold_outside_region() {
+        // region in the middle: fold before and after
+        assert_eq!(narrow_outside_ranges(3, 7, 10), vec![(0, 2), (8, 10)]);
+        // region at the top: only fold after
+        assert_eq!(narrow_outside_ranges(0, 4, 10), vec![(5, 10)]);
+        // region at the bottom: only fold before
+        assert_eq!(narrow_outside_ranges(6, 10, 10), vec![(0, 5)]);
+        // whole buffer selected: nothing to fold
+        assert_eq!(
+            narrow_outside_ranges(0, 10, 10),
+            Vec::<(usize, usize)>::new()
+        );
+    }
+
+    #[test]
+    fn passwords_have_right_length_and_charset() {
+        assert_eq!(password(12, PW_ALNUM).len(), 12);
+        assert!(password(12, PW_ALNUM)
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric()));
+        assert!(password(8, b"0123456789")
+            .chars()
+            .all(|c| c.is_ascii_digit()));
+        let ph = password_phonetic(14);
+        assert_eq!(ph.len(), 14);
+        assert!(ph.chars().all(|c| c.is_ascii_lowercase()));
     }
 }
 
