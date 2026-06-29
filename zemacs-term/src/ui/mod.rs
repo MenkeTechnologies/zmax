@@ -13,6 +13,7 @@ pub mod picker;
 pub mod popup;
 pub mod prompt;
 pub mod rat;
+pub mod help;
 pub mod keymap_editor;
 pub mod preferences;
 pub mod run;

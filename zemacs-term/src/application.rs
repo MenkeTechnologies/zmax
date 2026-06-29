@@ -422,6 +422,17 @@ impl Application {
         }
     }
 
+    /// Load embedded-scripting init files (currently `~/.zemacs/init.el`) once
+    /// the editor is constructed. Best-effort: errors surface on the status line.
+    pub fn load_init_scripts(&mut self) {
+        let mut cx = crate::compositor::Context {
+            editor: &mut self.editor,
+            jobs: &mut self.jobs,
+            scroll: None,
+        };
+        crate::commands::scripting::load_init_scripts(&mut cx);
+    }
+
     pub fn handle_config_events(&mut self, config_event: ConfigEvent) {
         let old_editor_config = self.editor.config();
 

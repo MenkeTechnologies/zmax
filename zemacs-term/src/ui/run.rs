@@ -25,6 +25,53 @@ pub type Run = Arc<Mutex<RunState>>;
 
 const MAX_LINES: usize = 5000;
 
+/// Strip ANSI escape sequences (CSI/OSC) and collapse `\r` overwrites from a
+/// captured output line, so colour codes and progress-bar redraws render as
+/// clean text in the console instead of garbage.
+fn strip_ansi(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '\u{1b}' => match chars.peek() {
+                // CSI `ESC [ … final` — final byte is 0x40..=0x7e
+                Some('[') => {
+                    chars.next();
+                    while let Some(&n) = chars.peek() {
+                        chars.next();
+                        if ('@'..='~').contains(&n) {
+                            break;
+                        }
+                    }
+                }
+                // OSC `ESC ] … (BEL | ESC \)`
+                Some(']') => {
+                    chars.next();
+                    while let Some(&n) = chars.peek() {
+                        chars.next();
+                        if n == '\u{7}' {
+                            break;
+                        }
+                        if n == '\u{1b}' {
+                            chars.next();
+                            break;
+                        }
+                    }
+                }
+                // other two-char escapes (e.g. `ESC ( B`)
+                Some(_) => {
+                    chars.next();
+                }
+                None => {}
+            },
+            // carriage return = "redraw this line"; keep only what follows
+            '\r' => out.clear(),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
 /// Pick a sensible `(command, working_dir)` for the current file: stryke for `.stk`, cargo for a
 /// Rust crate, the interpreter for scripts — run from the project root (nearest manifest), not the
 /// terminal's cwd. This is what makes ▶ Run "smart about the current file".
@@ -126,7 +173,7 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
 
         let push = |st: &Run, line: String| {
             let mut s = st.lock().unwrap();
-            s.lines.push(line);
+            s.lines.push(strip_ansi(&line));
             if s.lines.len() > MAX_LINES {
                 let drop = s.lines.len() - MAX_LINES;
                 s.lines.drain(0..drop);
@@ -178,4 +225,21 @@ pub fn rerun(run: &Run) -> Run {
     };
     stop(run);
     spawn(cmd, shell, cwd)
+}
+
+#[cfg(test)]
+mod ansi_tests {
+    use super::strip_ansi;
+
+    #[test]
+    fn strips_color_and_progress() {
+        // SGR color codes removed, text kept
+        assert_eq!(strip_ansi("\u{1b}[31merror\u{1b}[0m: boom"), "error: boom");
+        // carriage-return progress redraw keeps only the final state
+        assert_eq!(strip_ansi("Building 10%\rBuilding 80%"), "Building 80%");
+        // OSC (window title) sequence removed
+        assert_eq!(strip_ansi("\u{1b}]0;title\u{7}done"), "done");
+        // plain text untouched
+        assert_eq!(strip_ansi("just text"), "just text");
+    }
 }

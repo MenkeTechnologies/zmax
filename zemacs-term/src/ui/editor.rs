@@ -58,7 +58,9 @@ pub struct EditorView {
     /// IDE workbench (file tree + structure + problems + error stripe). None until opened.
     ide: Option<Ide>,
     /// Tab strip hit regions `(x_start, x_end, doc)` and its row, for click-to-switch.
-    bufferline_tabs: Vec<(u16, u16, zemacs_view::DocumentId)>,
+    bufferline_tabs: Vec<(u16, u16, u16, zemacs_view::DocumentId)>,
+    /// `(x_start, x_end)` of the trailing `+` new-buffer button.
+    bufferline_new: (u16, u16),
     bufferline_y: u16,
     /// Active pane-divider drag: the view whose right edge is being dragged, and
     /// the last mouse column seen, so we can apply incremental resize deltas.
@@ -94,6 +96,7 @@ impl EditorView {
             replaying: false,
             ide: None,
             bufferline_tabs: Vec::new(),
+            bufferline_new: (0, 0),
             bufferline_y: 0,
             resize_drag: None,
         }
@@ -109,6 +112,72 @@ impl EditorView {
     /// Boot the IDE workbench, editor focused (the `zemacs --ide` entry point).
     pub fn open_sidebar(&mut self) {
         self.ide.get_or_insert_with(Ide::new).focus_editor();
+    }
+
+    /// Reveal a file path in the project tree (creates the workbench if needed).
+    pub fn reveal_in_tree(&mut self, path: &std::path::Path) {
+        self.ide.get_or_insert_with(Ide::new).reveal(path);
+    }
+
+    /// Focus a workbench panel by name (creates the workbench if needed).
+    pub fn focus_ide_panel(&mut self, name: &str) {
+        self.ide.get_or_insert_with(Ide::new).focus_panel(name);
+    }
+
+    /// Toggle "always select opened file" (auto-reveal the current buffer in tree).
+    pub fn toggle_auto_reveal(&mut self, cx: &mut crate::compositor::Context) {
+        let on = self.ide.get_or_insert_with(Ide::new).toggle_auto_reveal();
+        cx.editor.set_status(if on {
+            "Always select opened file: on"
+        } else {
+            "Always select opened file: off"
+        });
+    }
+
+    /// Jump to the next / previous `file:line` in the run output (error nav).
+    pub fn goto_run_error(&mut self, cx: &mut crate::compositor::Context, forward: bool) {
+        let action = match self.ide.as_mut() {
+            Some(ide) => ide.goto_run_error(forward),
+            None => super::ide::IdeAction::None,
+        };
+        match action {
+            super::ide::IdeAction::None => {
+                cx.editor.set_status("No file:line references in run output");
+            }
+            other => {
+                let _ = self.apply_ide_action(other, cx);
+            }
+        }
+    }
+
+    /// Re-run the last command (status hint when there's nothing to re-run).
+    pub fn rerun_last_run(&mut self, cx: &mut crate::compositor::Context) {
+        let ok = self.ide.as_mut().is_some_and(Ide::rerun_last);
+        if !ok {
+            cx.editor.set_status("No previous run to re-run");
+        }
+    }
+
+    /// Clear the Run console output (no-op with a status hint when nothing ran).
+    pub fn clear_run_output(&mut self, cx: &mut crate::compositor::Context) {
+        let cleared = self.ide.as_mut().is_some_and(Ide::clear_run);
+        if !cleared {
+            cx.editor.set_status("No run output to clear");
+        }
+    }
+
+    /// Toggle the IDE workbench on/off (Zen / focus mode). Creates the workbench
+    /// on first use; thereafter flips its visibility, reclaiming the full screen
+    /// for distraction-free editing and restoring the panels on the next toggle.
+    pub fn toggle_ide(&mut self) {
+        match &mut self.ide {
+            Some(ide) => ide.toggle_visible(),
+            None => {
+                let mut ide = Ide::new();
+                ide.focus_editor();
+                self.ide = Some(ide);
+            }
+        }
     }
 
     /// Attach a running command to the IDE Run tool window (opens + focuses it).
@@ -196,6 +265,22 @@ impl EditorView {
                     .open(&path, zemacs_view::editor::Action::Replace);
                 None
             }
+            IdeAction::OpenFileAt { path, line } => {
+                let opened = context
+                    .editor
+                    .open(&path, zemacs_view::editor::Action::Replace)
+                    .is_ok();
+                if opened {
+                    let scrolloff = context.editor.config().scrolloff;
+                    let (view, doc) = current!(context.editor);
+                    let text = doc.text();
+                    let li = line.saturating_sub(1).min(text.len_lines().saturating_sub(1));
+                    let pos = text.line_to_char(li);
+                    doc.set_selection(view.id, Selection::point(pos));
+                    view.ensure_cursor_in_view(doc, scrolloff);
+                }
+                None
+            }
             IdeAction::Goto { from, to } => {
                 let scrolloff = context.editor.config().scrolloff;
                 let (view, doc) = current!(context.editor);
@@ -203,12 +288,108 @@ impl EditorView {
                 view.ensure_cursor_in_view(doc, scrolloff);
                 None
             }
+            IdeAction::PasteRegister(ch) => {
+                // Read the register's real contents (not the truncated tab preview).
+                let text: String = context
+                    .editor
+                    .registers
+                    .read(ch, context.editor)
+                    .map(|vals| {
+                        vals.map(|v| v.into_owned()).collect::<Vec<_>>().join("\n")
+                    })
+                    .unwrap_or_default();
+                if !text.is_empty() {
+                    let (view, doc) = current!(context.editor);
+                    let sel = doc.selection(view.id).clone();
+                    let tx = zemacs_core::Transaction::insert(doc.text(), &sel, text.into());
+                    doc.apply(&tx, view.id);
+                }
+                None
+            }
             IdeAction::RunStart => {
                 self.run_active(context);
                 None
             }
+            IdeAction::GitDiff(path) => {
+                let cwd = path
+                    .parent()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+                let cmd = format!("git diff HEAD -- '{}'", path.display());
+                self.start_run(context, cmd, cwd);
+                None
+            }
+            IdeAction::CopyText(text) => {
+                let n = text.lines().count();
+                let _ = context.editor.registers.write('+', vec![text]);
+                context.editor.set_status(format!("Copied {n} lines to clipboard"));
+                None
+            }
+            IdeAction::GitLog => {
+                let cwd = std::env::current_dir().unwrap_or_default();
+                self.start_run(
+                    context,
+                    "git log --oneline --graph --decorate --all -30".into(),
+                    cwd,
+                );
+                None
+            }
+            IdeAction::GitBlame(path) => {
+                let cwd = path
+                    .parent()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+                let cmd = format!("git blame '{}'", path.display());
+                self.start_run(context, cmd, cwd);
+                None
+            }
             IdeAction::RunConfigManager => Some(Box::new(|compositor, _cx| {
                 compositor.push(Box::new(crate::ui::preferences::PreferencesPanel::new(3)));
+            })),
+            IdeAction::GitCommit => Some(Box::new(|compositor, _cx| {
+                let prompt = crate::ui::Prompt::new(
+                    "commit message: ".into(),
+                    None,
+                    |_editor, _input| Vec::new(),
+                    move |cx, input: &str, event| {
+                        if event != crate::ui::PromptEvent::Validate {
+                            return;
+                        }
+                        let msg = input.trim();
+                        if msg.is_empty() {
+                            cx.editor.set_error("Aborted: empty commit message");
+                            return;
+                        }
+                        let dir = std::env::current_dir().unwrap_or_default();
+                        match std::process::Command::new("git")
+                            .arg("-C")
+                            .arg(&dir)
+                            .args(["commit", "-m", msg])
+                            .output()
+                        {
+                            Ok(o) if o.status.success() => {
+                                let out = String::from_utf8_lossy(&o.stdout);
+                                let first = out.lines().next().unwrap_or("committed").to_owned();
+                                cx.editor.set_status(format!("git: {first}"));
+                            }
+                            Ok(o) => {
+                                let err = String::from_utf8_lossy(&o.stderr);
+                                let first = err
+                                    .lines()
+                                    .chain(String::from_utf8_lossy(&o.stdout).lines())
+                                    .find(|l| !l.trim().is_empty())
+                                    .unwrap_or("commit failed")
+                                    .to_owned();
+                                cx.editor.set_error(format!("git commit: {first}"));
+                            }
+                            Err(e) => cx.editor.set_error(format!("git: {e}")),
+                        }
+                    },
+                );
+                compositor.push(Box::new(prompt));
+            })),
+            IdeAction::OpenPrefs(tab) => Some(Box::new(move |compositor, _cx| {
+                compositor.push(Box::new(crate::ui::preferences::PreferencesPanel::new(tab)));
             })),
             IdeAction::Debug => {
                 // Launch a DAP session (shows the debug-template picker).
@@ -840,13 +1021,14 @@ impl EditorView {
         Some(OverlayHighlights::Homogeneous { highlight, ranges })
     }
 
-    /// Render bufferline at the top
-    /// Renders the tab strip and returns each tab's `(x_start, x_end, doc)` for click hit-testing.
+    /// Render bufferline at the top. Returns `(tabs, new_button)` where each tab is
+    /// `(x_start, x_end, close_x, doc)` (`close_x` = the `×` column) and `new_button`
+    /// is the `(x_start, x_end)` of the trailing `+` new-buffer button.
     pub fn render_bufferline(
         editor: &Editor,
         viewport: Rect,
         surface: &mut Surface,
-    ) -> Vec<(u16, u16, zemacs_view::DocumentId)> {
+    ) -> (Vec<(u16, u16, u16, zemacs_view::DocumentId)>, (u16, u16)) {
         let scratch = PathBuf::from(SCRATCH_BUFFER_NAME); // default filename to use for scratch buffer
         surface.clear_with(
             viewport,
@@ -896,16 +1078,29 @@ impl EditorView {
             let rem_width = surface.area.width.saturating_sub(used_width);
 
             let start = x;
-            x = surface
+            // tab label
+            let after = surface
                 .set_stringn(x, viewport.y, &text, rem_width as usize, style)
                 .0;
-            tabs.push((start, x, doc.id()));
+            // clickable close button
+            let close_x = after;
+            let rem2 = (surface.area.right()).saturating_sub(close_x) as usize;
+            x = surface.set_stringn(close_x, viewport.y, "× ", rem2, style).0;
+            tabs.push((start, x, close_x, doc.id()));
 
             if x >= surface.area.right() {
                 break;
             }
         }
-        tabs
+        // trailing "+" new-buffer button
+        let new_start = x;
+        let new_style = editor
+            .theme
+            .try_get("ui.bufferline")
+            .unwrap_or_else(|| editor.theme.get("ui.statusline.inactive"));
+        let rem = surface.area.right().saturating_sub(x) as usize;
+        x = surface.set_stringn(x, viewport.y, " + ", rem, new_style).0;
+        (tabs, (new_start, x))
     }
 
     pub fn render_gutter<'d>(
@@ -1684,16 +1879,62 @@ impl Component for EditorView {
             }
         }
         if let Event::Mouse(me) = event {
-            // Click a tab in the bufferline to switch buffers.
-            if matches!(me.kind, MouseEventKind::Down(MouseButton::Left)) && me.row == self.bufferline_y {
-                if let Some(&(_, _, doc_id)) = self
+            // Scroll the wheel over the bufferline to cycle through buffers.
+            if me.row == self.bufferline_y
+                && matches!(me.kind, MouseEventKind::ScrollDown | MouseEventKind::ScrollUp)
+            {
+                let docs: Vec<zemacs_view::DocumentId> =
+                    context.editor.documents().map(|d| d.id()).collect();
+                if docs.len() > 1 {
+                    let cur = view!(context.editor).doc;
+                    if let Some(i) = docs.iter().position(|d| *d == cur) {
+                        let next = if matches!(me.kind, MouseEventKind::ScrollDown) {
+                            (i + 1) % docs.len()
+                        } else {
+                            (i + docs.len() - 1) % docs.len()
+                        };
+                        context
+                            .editor
+                            .switch(docs[next], zemacs_view::editor::Action::Replace);
+                    }
+                }
+                return EventResult::Consumed(None);
+            }
+            // Left-click a bufferline tab switches to it; middle-click closes it
+            // (the modern-IDE convention). The bufferline is its own row, so this
+            // doesn't clash with middle-click paste in the editor body.
+            if me.row == self.bufferline_y
+                && matches!(
+                    me.kind,
+                    MouseEventKind::Down(MouseButton::Left) | MouseEventKind::Down(MouseButton::Middle)
+                )
+            {
+                if let Some(&(_, end, close_x, doc_id)) = self
                     .bufferline_tabs
                     .iter()
-                    .find(|(a, b, _)| me.column >= *a && me.column < *b)
+                    .find(|(a, b, _, _)| me.column >= *a && me.column < *b)
                 {
-                    context
-                        .editor
-                        .switch(doc_id, zemacs_view::editor::Action::Replace);
+                    // Close on the × button (left-click) or anywhere with middle-click.
+                    let on_close = me.column >= close_x && me.column < end;
+                    if matches!(me.kind, MouseEventKind::Down(MouseButton::Middle)) || on_close {
+                        if context.editor.close_document(doc_id, false).is_err() {
+                            context
+                                .editor
+                                .set_error("Buffer has unsaved changes (use :bc! to force-close)".to_string());
+                        }
+                    } else {
+                        context
+                            .editor
+                            .switch(doc_id, zemacs_view::editor::Action::Replace);
+                    }
+                    return EventResult::Consumed(None);
+                }
+                // Left-click the trailing "+" opens a new scratch buffer.
+                if matches!(me.kind, MouseEventKind::Down(MouseButton::Left))
+                    && me.column >= self.bufferline_new.0
+                    && me.column < self.bufferline_new.1
+                {
+                    context.editor.new_file(zemacs_view::editor::Action::Replace);
                     return EventResult::Consumed(None);
                 }
             }
@@ -1954,10 +2195,13 @@ impl Component for EditorView {
         cx.editor.resize(editor_area);
 
         if use_bufferline {
-            self.bufferline_tabs = Self::render_bufferline(cx.editor, area.with_height(1), surface);
+            let (tabs, new_btn) = Self::render_bufferline(cx.editor, area.with_height(1), surface);
+            self.bufferline_tabs = tabs;
+            self.bufferline_new = new_btn;
             self.bufferline_y = area.y;
         } else {
             self.bufferline_tabs.clear();
+            self.bufferline_new = (0, 0);
         }
 
         for (view, is_focused) in cx.editor.tree.views() {

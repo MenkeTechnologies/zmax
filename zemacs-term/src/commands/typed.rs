@@ -1177,41 +1177,44 @@ fn hunk_reset(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    // Compute the replacement under an immutable borrow, then re-borrow mutably to apply it.
-    let change: Option<(usize, usize, String)> = {
-        let (view, doc) = current_ref!(cx.editor);
-        match doc.diff_handle() {
-            None => None,
-            Some(handle) => {
-                let diff = handle.load();
-                let text = doc.text();
-                let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
-                let line = text.char_to_line(cursor) as u32;
-                diff.hunk_at(line, true).map(|idx| {
-                    let hunk = diff.nth_hunk(idx);
-                    let base = diff.diff_base();
-                    let bstart = base.line_to_char(hunk.before.start as usize);
-                    let bend = base.line_to_char(hunk.before.end as usize);
-                    let replacement: String = base.slice(bstart..bend).chars().collect();
-                    let dstart = text.line_to_char(hunk.after.start as usize);
-                    let dend = text.line_to_char(hunk.after.end as usize);
-                    (dstart, dend, replacement)
-                })
-            }
-        }
-    };
-    let Some((start, end, replacement)) = change else {
-        cx.editor.set_status("no git hunk at cursor");
-        return Ok(());
-    };
+    // Reset EVERY hunk intersecting the selection's line ranges — so a visual
+    // selection across several hunks resets all of them, while a plain cursor
+    // (a one-line range) resets just the hunk under it.
+    let scrolloff = cx.editor.config().scrolloff;
     let (view, doc) = current!(cx.editor);
+    let Some(handle) = doc.diff_handle() else {
+        bail!("Diff is not available in the current buffer");
+    };
+    let diff = handle.load();
+    let doc_text = doc.text().slice(..);
+    let diff_base = diff.diff_base();
+    let mut count = 0usize;
     let transaction = Transaction::change(
         doc.text(),
-        std::iter::once((start, end, (!replacement.is_empty()).then(|| replacement.into()))),
+        diff.hunks_intersecting_line_ranges(doc.selection(view.id).line_ranges(doc_text))
+            .map(|hunk| {
+                count += 1;
+                let start = diff_base.line_to_char(hunk.before.start as usize);
+                let end = diff_base.line_to_char(hunk.before.end as usize);
+                let text: Tendril = diff_base.slice(start..end).chunks().collect();
+                (
+                    doc_text.line_to_char(hunk.after.start as usize),
+                    doc_text.line_to_char(hunk.after.end as usize),
+                    (!text.is_empty()).then_some(text),
+                )
+            }),
     );
+    if count == 0 {
+        bail!("No git hunk under the selection");
+    }
+    drop(diff); // release the immutable diff borrow before mutating the doc
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
-    cx.editor.set_status("hunk reset");
+    view.ensure_cursor_in_view(doc, scrolloff);
+    cx.editor.set_status(format!(
+        "Reset {count} hunk{}",
+        if count == 1 { "" } else { "s" }
+    ));
     Ok(())
 }
 
@@ -4564,6 +4567,28 @@ fn run_shell_command(
     Ok(())
 }
 
+/// `:elisp <code>` / `:eval-expression` — evaluate Emacs Lisp against the live
+/// editor via the embedded elisprs interpreter. The result is shown on the
+/// status line.
+fn elisp_eval(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = args.join(" ");
+    if code.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::eval_elisp(cx, &code) {
+        Ok(result) => cx.editor.set_status(format!("=> {result}")),
+        Err(err) => cx.editor.set_error(format!("elisp: {err}")),
+    }
+    Ok(())
+}
+
 fn reset_diff_change(
     cx: &mut compositor::Context,
     _args: Args,
@@ -4863,6 +4888,14 @@ pub const SHELL_SIGNATURE: Signature = Signature {
     ..Signature::DEFAULT
 };
 
+// `:elisp <code>` takes the entire remainder verbatim (one raw positional) so
+// string literals and whitespace inside the code survive parsing.
+pub const ELISP_SIGNATURE: Signature = Signature {
+    positionals: (1, Some(1)),
+    raw_after: Some(0),
+    ..Signature::DEFAULT
+};
+
 pub const SHELL_COMPLETER: CommandCompleter = CommandCompleter::positional(&[
     // Command name
     completers::program,
@@ -4912,6 +4945,61 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["q"],
         doc: "Close the current view.",
         fun: quit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "help",
+        aliases: &["h"],
+        doc: "Open the inline Help browser (searchable: commands, keybindings, topics).",
+        fun: open_help,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "wc",
+        aliases: &["words", "count"],
+        doc: "Show document line/word/char counts (and selection stats).",
+        fun: word_count,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "blame",
+        aliases: &[],
+        doc: "Show git blame for the current line in the status bar.",
+        fun: blame_line,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "reopen",
+        aliases: &["reopen-closed"],
+        doc: "Reopen the most recently closed file.",
+        fun: reopen_closed,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "zen",
+        aliases: &[],
+        doc: "Toggle the IDE workbench (Zen / focus mode).",
+        fun: zen_mode,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
@@ -6307,6 +6395,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: SHELL_SIGNATURE,
     },
     TypableCommand {
+        name: "elisp",
+        aliases: &["eval-expression", "el"],
+        doc: "Evaluate an Emacs Lisp expression against the editor (embedded elisprs).",
+        fun: elisp_eval,
+        completer: CommandCompleter::none(),
+        signature: ELISP_SIGNATURE,
+    },
+    TypableCommand {
         name: "reset-diff-change",
         aliases: &["diffget", "diffg"],
         doc: "Reset the diff change at the cursor position.",
@@ -6541,6 +6637,79 @@ pub(super) fn execute_command(
 }
 
 #[allow(clippy::unnecessary_unwrap)]
+/// vim `:help` / `:h`: open the inline Help browser.
+/// Build a `commands::Context` from a typable's compositor context, for calling
+/// static commands that only touch the editor (no layer/callback side effects).
+fn editor_context<'a>(cx: &'a mut compositor::Context) -> super::Context<'a> {
+    super::Context {
+        editor: cx.editor,
+        count: None,
+        register: None,
+        callback: Vec::new(),
+        on_next_key_callback: None,
+        jobs: cx.jobs,
+    }
+}
+
+/// `:wc` — report document line/word/char counts (and selection stats).
+fn word_count(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    super::document_stats(&mut editor_context(cx));
+    Ok(())
+}
+
+/// `:blame` — show git blame for the current line in the status bar.
+fn blame_line(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    super::git_blame_line(&mut editor_context(cx));
+    Ok(())
+}
+
+/// `:reopen` — reopen the most recently closed file.
+fn reopen_closed(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    super::reopen_last_closed(&mut editor_context(cx));
+    Ok(())
+}
+
+/// `:zen` — toggle the IDE workbench (Zen / focus mode).
+fn zen_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        |_editor: &mut Editor, compositor: &mut Compositor| {
+            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                view.toggle_ide();
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+fn open_help(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let callback = async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            |_editor: &mut Editor, compositor: &mut Compositor| {
+                compositor.push(Box::new(crate::ui::preferences::PreferencesPanel::new(4)));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
 /// vim `@:`: re-run the most recently executed command-line (`:` history).
 /// Run a command line (without the leading `:`) from a picker/job callback that
 /// already holds a `compositor::Context`. Used by `command_history_picker`.
