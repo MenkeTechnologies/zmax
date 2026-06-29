@@ -79,20 +79,45 @@ fn run(root: PathBuf) {
         };
 
         let mut relevant = event_is_relevant(&first);
+        let mut changed: Vec<PathBuf> = changed_paths(&first);
 
         // Coalesce a burst (e.g. a `git checkout` touching many files) into one
         // refresh so we don't rebuild the tree dozens of times.
         while let Ok(event) = rx.recv_timeout(Duration::from_millis(150)) {
             relevant |= event_is_relevant(&event);
+            changed.extend(changed_paths(&event));
         }
 
         if relevant {
-            job::dispatch_blocking(|_editor, compositor| {
+            changed.sort();
+            changed.dedup();
+            job::dispatch_blocking(move |editor, compositor| {
+                // Auto-reload any open buffer whose file changed on disk
+                // (vim `autoread`); `auto_reload_file` honors the setting,
+                // skips the editor's own saves, and protects unsaved edits.
+                for path in &changed {
+                    editor.auto_reload_file(path);
+                }
                 if let Some(view) = compositor.find::<EditorView>() {
                     view.refresh_file_tree();
                 }
             });
         }
+    }
+}
+
+/// Non-ignored paths touched by an event, used to drive buffer auto-reload.
+/// `Editor::auto_reload_file` filters these down to open buffers whose file
+/// genuinely changed on disk, so collecting every touched path here is fine.
+fn changed_paths(event: &notify::Result<notify::Event>) -> Vec<PathBuf> {
+    match event {
+        Ok(event) => event
+            .paths
+            .iter()
+            .filter(|path| !is_ignored(path))
+            .cloned()
+            .collect(),
+        Err(_) => Vec::new(),
     }
 }
 

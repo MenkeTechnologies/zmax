@@ -338,6 +338,11 @@ pub struct Config {
     /// Time delay defaults to false with 3000ms delay. Focus lost defaults to false.
     #[serde(deserialize_with = "deserialize_auto_save")]
     pub auto_save: AutoSave,
+    /// Reload a buffer automatically when its file changes on disk outside the
+    /// editor (vim `autoread`). Only reloads buffers with no unsaved edits; if
+    /// both the buffer and the file changed, the buffer is kept and a warning is
+    /// shown. Defaults to true.
+    pub auto_reload: bool,
     /// Set a global text_width
     pub text_width: usize,
     /// Time in milliseconds since last keypress before idle timers trigger.
@@ -1256,6 +1261,7 @@ impl Default for Config {
             auto_format: true,
             default_yank_register: '"',
             auto_save: AutoSave::default(),
+            auto_reload: true,
             idle_timeout: Duration::from_millis(250),
             completion_timeout: Duration::from_millis(250),
             preview_completion_insert: true,
@@ -2230,6 +2236,76 @@ impl Editor {
 
     pub fn document_id_by_path(&self, path: &Path) -> Option<DocumentId> {
         self.document_by_path(path).map(|doc| doc.id)
+    }
+
+    /// Reload `path`'s buffer from disk after the file changed outside the editor
+    /// (vim `autoread`), driven by the filesystem watcher. No-ops unless the
+    /// `auto-reload` setting is on and the file genuinely changed on disk (not
+    /// the editor's own save). A buffer with unsaved edits is never clobbered:
+    /// it's kept and a warning is shown so the user can `:reload` to discard.
+    /// Returns whether a reload happened.
+    pub fn auto_reload_file(&mut self, path: &Path) -> bool {
+        if !self.config().auto_reload {
+            return false;
+        }
+        let Some(doc_id) = self.document_id_by_path(path) else {
+            return false;
+        };
+
+        // Snapshot what we need, then drop the borrow before mutating `self`.
+        let (changed_on_disk, modified, name, view_ids) = {
+            let Some(doc) = self.documents.get(&doc_id) else {
+                return false;
+            };
+            (
+                doc.is_changed_on_disk(),
+                doc.is_modified(),
+                doc.display_name().into_owned(),
+                doc.selections().keys().copied().collect::<Vec<_>>(),
+            )
+        };
+
+        // Only react to real external edits — ignore our own (auto)saves.
+        if !changed_on_disk {
+            return false;
+        }
+        if modified {
+            self.set_error(format!(
+                "{name} changed on disk but the buffer has unsaved edits — kept your version (:reload to discard)"
+            ));
+            return false;
+        }
+        let Some(&first_view) = view_ids.first() else {
+            return false;
+        };
+
+        let trust_full = self
+            .workspace_trust
+            .query(self.documents[&doc_id].workspace_root(), TrustQuery::Git)
+            .is_trusted();
+
+        {
+            let doc = self.documents.get_mut(&doc_id).unwrap();
+            let view = self.tree.get_mut(first_view);
+            view.sync_changes(doc);
+            if let Err(err) = doc.reload(view, &self.diff_providers, trust_full) {
+                self.set_error(format!("auto-reload failed: {err}"));
+                return false;
+            }
+        }
+
+        // Keep any other views onto this document in sync with the reloaded text
+        // so their jumplist selections don't reference the pre-reload buffer.
+        for &view_id in &view_ids[1..] {
+            let doc = self.documents.get_mut(&doc_id).unwrap();
+            let view = self.tree.get_mut(view_id);
+            view.sync_changes(doc);
+        }
+
+        if let Some(path) = self.documents[&doc_id].path().map(ToOwned::to_owned) {
+            self.language_servers.file_event_handler.file_changed(path);
+        }
+        true
     }
 
     // ??? possible use for integration tests

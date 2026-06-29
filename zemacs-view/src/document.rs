@@ -1985,6 +1985,22 @@ impl Document {
         current_revision != self.last_saved_revision || !self.changes.is_empty()
     }
 
+    /// Whether the file on disk changed since we last loaded or saved it — i.e.
+    /// it was modified by another process. Compares the file's mtime against the
+    /// time of our own last write/load (the same baseline the save-time
+    /// external-modification guard uses), so the editor's own saves do not count
+    /// as external changes. Returns false if the document has no path or the
+    /// file can't be stat'd. Drives auto-reload.
+    pub fn is_changed_on_disk(&self) -> bool {
+        let Some(path) = self.path() else {
+            return false;
+        };
+        match std::fs::metadata(path).and_then(|meta| meta.modified()) {
+            Ok(mtime) => *self.last_saved_time.lock() < mtime,
+            Err(_) => false,
+        }
+    }
+
     /// Save modifications to history, and so [`Self::is_modified`] will return false.
     pub fn reset_modified(&mut self) {
         let history = self.history.take();
