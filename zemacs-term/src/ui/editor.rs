@@ -65,6 +65,10 @@ pub struct EditorView {
     replaying: bool,
     /// IDE workbench (file tree + structure + problems + error stripe). None until opened.
     ide: Option<Ide>,
+    /// Persisted IDE layout (widths, folds, collapse/hide state) from the last
+    /// session, applied whenever the workbench is (re)created so `:ide` and friends
+    /// restore the user's arrangement instead of starting from defaults.
+    ide_layout: crate::appdata::IdeLayout,
     /// Tab strip hit regions `(x_start, x_end, doc)` and its row, for click-to-switch.
     bufferline_tabs: BufferlineTabs,
     /// `(x_start, x_end)` of the trailing `+` new-buffer button.
@@ -109,6 +113,7 @@ impl EditorView {
             recording_insert_change: false,
             replaying: false,
             ide: None,
+            ide_layout: crate::appdata::IdeLayout::default(),
             bufferline_tabs: Vec::new(),
             bufferline_new: (0, 0),
             bufferline_y: 0,
@@ -124,24 +129,43 @@ impl EditorView {
         }
     }
 
+    /// Get the IDE workbench, creating it if absent. On first creation the
+    /// persisted layout (widths, folds, collapse/hide state) is applied, so every
+    /// entry point (`:ide`, toggle, reveal, panel focus, …) restores the user's
+    /// last arrangement instead of starting from defaults.
+    fn ide_or_create(&mut self) -> &mut Ide {
+        if self.ide.is_none() {
+            let mut ide = Ide::new();
+            ide.apply_layout(&self.ide_layout);
+            self.ide = Some(ide);
+        }
+        self.ide.as_mut().unwrap()
+    }
+
+    /// Store the IDE layout persisted from the previous session so it's applied
+    /// the next time the workbench is opened.
+    pub fn set_ide_layout(&mut self, layout: crate::appdata::IdeLayout) {
+        self.ide_layout = layout;
+    }
+
     /// Boot the IDE workbench, editor focused (the `zemacs --ide` entry point).
     pub fn open_sidebar(&mut self) {
-        self.ide.get_or_insert_with(Ide::new).focus_editor();
+        self.ide_or_create().focus_editor();
     }
 
     /// Reveal a file path in the project tree (creates the workbench if needed).
     pub fn reveal_in_tree(&mut self, path: &std::path::Path) {
-        self.ide.get_or_insert_with(Ide::new).reveal(path);
+        self.ide_or_create().reveal(path);
     }
 
     /// Focus a workbench panel by name (creates the workbench if needed).
     pub fn focus_ide_panel(&mut self, name: &str) {
-        self.ide.get_or_insert_with(Ide::new).focus_panel(name);
+        self.ide_or_create().focus_panel(name);
     }
 
     /// Toggle "always select opened file" (auto-reveal the current buffer in tree).
     pub fn toggle_auto_reveal(&mut self, cx: &mut crate::compositor::Context) {
-        let on = self.ide.get_or_insert_with(Ide::new).toggle_auto_reveal();
+        let on = self.ide_or_create().toggle_auto_reveal();
         cx.editor.set_status(if on {
             "Always select opened file: on"
         } else {
@@ -168,7 +192,7 @@ impl EditorView {
 
     /// Toggle maximizing the bottom panel (read long logs/diffs full-height).
     pub fn toggle_bottom_zoom(&mut self, cx: &mut crate::compositor::Context) {
-        let on = self.ide.get_or_insert_with(Ide::new).toggle_bottom_zoom();
+        let on = self.ide_or_create().toggle_bottom_zoom();
         cx.editor.set_status(if on {
             "Bottom panel maximized (toggle to restore)"
         } else {
@@ -177,7 +201,7 @@ impl EditorView {
     }
 
     pub fn toggle_drawer_mid(&mut self, cx: &mut crate::compositor::Context) {
-        let folded = self.ide.get_or_insert_with(Ide::new).toggle_mid_fold();
+        let folded = self.ide_or_create().toggle_mid_fold();
         cx.editor.set_status(if folded {
             "Middle drawer column folded"
         } else {
@@ -208,30 +232,19 @@ impl EditorView {
         match &mut self.ide {
             Some(ide) => ide.toggle_visible(),
             None => {
-                let mut ide = Ide::new();
-                ide.focus_editor();
-                self.ide = Some(ide);
+                self.ide_or_create().focus_editor();
             }
         }
     }
 
     /// Attach a running command to the IDE Run tool window (opens + focuses it).
     pub fn set_run(&mut self, run: crate::ui::run::Run) {
-        self.ide.get_or_insert_with(Ide::new).set_run(run);
+        self.ide_or_create().set_run(run);
     }
 
     /// Snapshot the IDE workbench layout for persistence (None if never opened).
     pub fn ide_layout(&self) -> Option<crate::appdata::IdeLayout> {
         self.ide.as_ref().map(Ide::layout)
-    }
-
-    /// Restore a persisted IDE layout (only opens the workbench if it was open).
-    pub fn restore_ide(&mut self, layout: &crate::appdata::IdeLayout) {
-        if layout.open {
-            let ide = self.ide.get_or_insert_with(Ide::new);
-            ide.apply_layout(layout);
-            ide.focus_editor();
-        }
     }
 
     /// Render the workbench (if any) into its regions; return the editor's remaining area.
@@ -284,7 +297,7 @@ impl EditorView {
     ) {
         let shell = context.editor.config().shell.clone();
         let run = crate::ui::run::spawn(cmd, shell, cwd);
-        self.ide.get_or_insert_with(Ide::new).set_run(run);
+        self.ide_or_create().set_run(run);
     }
 
     fn apply_ide_action(
@@ -2079,7 +2092,7 @@ impl Component for EditorView {
         // IDE workbench: F2 toggles; focused panels capture keys; clicks in a panel route here.
         if let Event::Key(key) = event {
             if key.code == KeyCode::F(2) && key.modifiers.is_empty() {
-                self.ide.get_or_insert_with(Ide::new).toggle();
+                self.ide_or_create().toggle();
                 return EventResult::Consumed(None);
             }
             // Run the current file (Cmd+R → F5) / Debug (Cmd+D → F6), regardless of panel focus.

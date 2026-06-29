@@ -157,16 +157,18 @@ impl Application {
         }
 
         let mut editor_view = ui::EditorView::new(Keymaps::new(keys));
-        // The IDE workbench only opens when explicitly requested with `--ide`.
-        // We intentionally do NOT auto-reopen it from a previous session's
-        // persisted `open` state — that surprised users who launched without
-        // `--ide`. When `--ide` is given we still restore the saved layout
-        // (widths / folds) so the workbench remembers your sizing.
+        // Make the previous session's IDE layout (drawer widths, folds, collapse /
+        // hide state) available so that opening the workbench later — via `:ide`,
+        // a toggle, or `--ide` — restores the user's arrangement instead of
+        // starting from defaults.
+        if let Some(data) = &appdata {
+            editor_view.set_ide_layout(data.ide.clone());
+        }
+        // The IDE only auto-opens when explicitly requested with `--ide`; we don't
+        // reopen it from the persisted `open` flag (that surprised users who
+        // launched without `--ide`). Opening applies the stored layout above.
         if args.ide {
             editor_view.open_sidebar();
-            if let Some(data) = &appdata {
-                editor_view.restore_ide(&data.ide);
-            }
         }
         compositor.push(Box::new(editor_view));
 

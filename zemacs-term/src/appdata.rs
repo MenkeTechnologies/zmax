@@ -15,6 +15,14 @@ pub struct IdeLayout {
     pub fold_problems: bool,
     /// Whether the right-hand minimap stripe is collapsed to a thin handle.
     pub fold_minimap: bool,
+    /// Height of the bottom tool drawer, in rows (0 = use the default).
+    pub bottom_height: u16,
+    /// Bottom drawer maximized to full height.
+    pub bottom_zoom: bool,
+    /// The two bottom-drawer column divider positions, as % of drawer width.
+    pub bottom_splits: [u16; 2],
+    /// Bottom drawer middle column collapsed (two-column layout).
+    pub bottom_mid_folded: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
