@@ -6,7 +6,7 @@ set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-cargo install --path "$repo/zemacs-term" --locked
+cargo install --path "$repo/zemacs-term" --locked --force
 mkdir -p "$HOME/.zemacs"
 ln -sfn "$repo/runtime" "$HOME/.zemacs/runtime"
 
