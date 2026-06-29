@@ -343,15 +343,11 @@ impl Component for RunConfigPanel {
         let key = to_rat_style(theme.get("keyword"));
         surface.clear_with(area, theme.get("ui.background"));
 
-        // Outer rounded frame.
-        let frame = Block::default()
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(border)
-            .style(bg)
-            .title(Span::styled(" Run/Debug Configurations ", accent));
-        render(frame, area, surface);
-        let inner = inset(area);
+        // Flat page header bar (no modal frame).
+        surface.clear_with(Rect::new(area.x, area.y, area.width, 1), theme.get("ui.statusline"));
+        render(Paragraph::new(Span::styled(" Run/Debug Configurations ", accent)), Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1), surface);
+        let _ = (border, bg);
+        let inner = Rect::new(area.x + 1, area.y + 1, area.width.saturating_sub(2), area.height.saturating_sub(1));
         if inner.width < 4 || inner.height < 4 {
             return;
         }

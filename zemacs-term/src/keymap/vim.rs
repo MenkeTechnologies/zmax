@@ -463,7 +463,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             // ga (print char ascii/unicode value) is bound via VIM_TYPABLE to
             // :character-info — vim's ga, not zemacs's goto-last-accessed-file.
             "m" => goto_line_middle,          // gm: go to middle of the screen line (vim, not last-modified)
-            "C-g" => file_info,               // g CTRL-G: show file name + cursor position
+            "C-g" => document_stats,          // g CTRL-G: line/word/char counts (+ selection)
             "t" => goto_next_buffer,           // gt: next tabpage -> next buffer
             "T" => goto_previous_buffer,       // gT: previous tabpage -> previous buffer
             "p" => paste_after,                // gp: paste after (vim leaves cursor after)
@@ -797,7 +797,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "F" => goto_file,                              // SPC f F : open file under point
                 "L" => file_picker,                            // SPC f L : locate a file
                 "b" => marks_picker,                           // SPC f b : go to file bookmarks (marks)
-                "r" => goto_last_modified_file,                // SPC f r
+                "r" => frecent_file_picker,                    // SPC f r : recent files (z frecency)
+                "u" => reopen_last_closed,                     // SPC f u : reopen last closed file
                 "t" => file_explorer,                          // SPC f t
                 "d" => file_explorer_in_current_buffer_directory, // SPC f d
                 "j" => file_explorer_in_current_buffer_directory, // SPC f j : dired
@@ -963,12 +964,39 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             },
             "R" => { "Run"
                 "r" => run_active_config,          // SPC R r : run the active configuration
-                "R" => run_active_config,          // SPC R R : run
+                "R" => rerun_last_run,             // SPC R R : re-run the last command
                 "c" => run_config_manager,         // SPC R c : manage run/debug configurations
                 "e" => run_config_manager,         // SPC R e : edit configurations
+                "l" => clear_run_output,           // SPC R l : clear the Run console output
+                "x" => clear_run_output,           // SPC R x : clear the Run console output
+                "n" => run_next_error,             // SPC R n : jump to next file:line in output
+                "p" => run_prev_error,             // SPC R p : jump to previous file:line in output
             },
             "S" => settings_page,                  // SPC S : Preferences → Settings tab
             "," => preferences,                    // SPC , : open the unified Preferences window
+            "z" => toggle_ide,                     // SPC z : toggle IDE workbench (Zen / focus mode)
+            "H" => { "Harpoon"
+                "a" => harpoon_add,                // SPC H a : pin current file
+                "l" => harpoon_menu,               // SPC H l : marks menu
+                "h" => harpoon_menu,               // SPC H h : marks menu
+                "d" => harpoon_remove,             // SPC H d : unpin current file
+                "j" => harpoon_jump,               // SPC H j : jump to slot [count]
+                "n" => harpoon_next,               // SPC H n : next mark (wraps)
+                "p" => harpoon_prev,               // SPC H p : previous mark (wraps)
+                "1" => harpoon_1,                  // SPC H 1
+                "2" => harpoon_2,                  // SPC H 2
+                "3" => harpoon_3,                  // SPC H 3
+                "4" => harpoon_4,                  // SPC H 4
+            },
+            "W" => { "Workbench panels"
+                "t" => focus_file_tree,            // SPC W t : focus project tree
+                "p" => focus_file_tree,            // SPC W p : focus project tree
+                "s" => focus_structure,            // SPC W s : focus structure/outline
+                "o" => focus_structure,            // SPC W o : focus outline
+                "e" => focus_problems,             // SPC W e : focus problems/errors
+                "r" => focus_run_console,          // SPC W r : focus Run console (j/k scroll)
+                "g" => focus_git_panel,            // SPC W g : focus Git changes (j/k select, Enter opens)
+            },
             "p" => { "Project"
                 "f" => file_picker,                // SPC p f
                 "p" => file_picker,                // SPC p p
@@ -977,6 +1005,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "s" => global_search,              // SPC p s
                 "r" => goto_last_modified_file,    // SPC p r
                 "t" => file_explorer,              // SPC p t : project tree (treemacs)
+                "v" => reveal_in_tree,             // SPC p v : reveal current file in the tree
+                "V" => toggle_auto_reveal,         // SPC p V : toggle always-select-opened-file
                 "d" => file_explorer,              // SPC p d : find directory
                 "g" => symbol_picker,              // SPC p g : find tags
                 "o" => global_search,              // SPC p o : multi-occur
@@ -988,6 +1018,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "n" => goto_next_diag,                 // SPC e n
                 "p" => goto_prev_diag,                 // SPC e p
                 "f" => goto_first_diag,                // SPC e f
+                "y" => copy_diagnostic,                // SPC e y : copy diagnostic message(s)
                 "h" => command_palette,                // SPC e h : describe checker
                 "v" => command_palette,                // SPC e v : verify checker setup
                 "." => goto_last_diag,
@@ -1041,6 +1072,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "r" => goto_reference,
                 "i" => goto_implementation,
                 "y" => goto_type_definition,
+                "b" => git_blame_line,             // SPC g b : git blame current line
             },
             "l" => { "LSP"
                 "r" => rename_symbol,              // SPC l r
@@ -1122,9 +1154,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 },
             },
             "h" => { "Help"
-                "k" => command_palette,            // SPC h k : describe key / commands
-                "?" => command_palette,            // SPC h ? : list bindings
-                "c" => command_palette,            // SPC h c : describe command
+                "h" => help,                       // SPC h h : open the inline Help browser
+                "k" => help,                       // SPC h k : describe key / commands
+                "?" => help,                       // SPC h ? : list bindings
+                "c" => help,                       // SPC h c : describe command
                 "space" => command_palette,        // SPC h SPC : discover docs/layers
                 "f" => command_palette,            // SPC h f : discover the FAQ
                 "l" => command_palette,            // SPC h l : search layers
@@ -1175,7 +1208,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
     });
 
     // Visual / select mode: motions extend, operators act directly.
-    let select = keymap!({ "Visual mode"
+    let mut select = keymap!({ "Visual mode"
         "h" | "left"  => extend_char_left,
         "j" | "down"  => extend_visual_line_down,
         "k" | "up"    => extend_visual_line_up,
@@ -1250,6 +1283,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // gq / gw: reformat the highlighted lines (LSP formatter)
         "g" => { "Goto"
             "g" => extend_to_file_start,             // vgg: extend selection to first line
+            "C-g" => document_stats,                 // v g CTRL-G: count the selection
             "e" => extend_to_last_line,              // ge: extend to last line
             "h" => extend_to_first_nonwhitespace,    // extend to first non-blank
             "l" | "$" => extend_to_line_end,         // extend to line end
@@ -1386,6 +1420,15 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
     });
 
     add_spacemacs_typables(&mut normal);
+
+    // Make git hunk-reset work on a visual selection too: SPC g r in select mode
+    // resets every hunk the selection touches (the leader is otherwise
+    // normal-mode only). `]c`/`[c` also navigate hunks while selecting.
+    if let KeyTrie::Node(sel) = &mut select {
+        add_command(sel, &chord("space g r"), "Git", ":hunk-reset");
+        add_command(sel, &chord("] c"), "Git", ":hunk-next");
+        add_command(sel, &chord("[ c"), "Git", ":hunk-prev");
+    }
 
     hashmap!(
         Mode::Normal => normal,

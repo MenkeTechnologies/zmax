@@ -1,9 +1,9 @@
-//! Unified Preferences window — a JetBrains-style tabbed shell hosting every
-//! configuration editor (Settings, Keymap, Color Scheme, Run Configs). A clickable
-//! tab strip sits above the active tab's panel; each tab is a self-contained
-//! `Component` the shell delegates render/events to.
+//! The IDE configuration **page** — a full-screen, tabbed workspace (NOT a modal):
+//! a top tab strip (Settings · Keymap · Color Scheme · Run Configs · Help) with the
+//! active page filling the rest of the screen. Each tab is a self-contained
+//! `Component` the page delegates render/events to.
 //!
-//! Switch tabs: click a tab · Ctrl-Tab / Ctrl-Shift-Tab · Esc closes the window.
+//! Switch tabs: click a tab · Ctrl-Tab / Ctrl-Shift-Tab · `[` / `]` · Esc closes.
 
 use tui::buffer::Buffer as Surface;
 use zemacs_view::{
@@ -14,12 +14,12 @@ use zemacs_view::{
 use crate::{
     compositor::{Component, Context, Event, EventResult},
     ui::{
-        keymap_editor::KeymapEditor, run_config::RunConfigPanel, settings::SettingsPanel,
-        theme_editor::ThemeEditor,
+        help::HelpPanel, keymap_editor::KeymapEditor, run_config::RunConfigPanel,
+        settings::SettingsPanel, theme_editor::ThemeEditor,
     },
 };
 
-const TABS: [&str; 4] = ["Settings", "Keymap", "Color Scheme", "Run Configs"];
+const TABS: [&str; 5] = ["Settings", "Keymap", "Color Scheme", "Run Configs", "Help"];
 
 pub struct PreferencesPanel {
     tab: usize,
@@ -27,6 +27,7 @@ pub struct PreferencesPanel {
     keymap: KeymapEditor,
     theme: ThemeEditor,
     run: RunConfigPanel,
+    help: HelpPanel,
     tab_hits: Vec<(u16, u16, u16, usize)>,
 }
 
@@ -38,6 +39,7 @@ impl PreferencesPanel {
             keymap: KeymapEditor::new(),
             theme: ThemeEditor::new(),
             run: RunConfigPanel::new(),
+            help: HelpPanel::new(),
             tab_hits: Vec::new(),
         }
     }
@@ -47,21 +49,26 @@ impl PreferencesPanel {
             0 => &mut self.settings,
             1 => &mut self.keymap,
             2 => &mut self.theme,
-            _ => &mut self.run,
+            3 => &mut self.run,
+            _ => &mut self.help,
         }
+    }
+
+    fn cycle(&mut self, forward: bool) {
+        self.tab = if forward {
+            (self.tab + 1) % TABS.len()
+        } else {
+            (self.tab + TABS.len() - 1) % TABS.len()
+        };
     }
 }
 
 impl Component for PreferencesPanel {
     fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         if let Event::Key(k) = event {
-            // Ctrl-Tab / Ctrl-Shift-Tab cycle tabs (clicks handled below).
+            // Ctrl-Tab / Ctrl-Shift-Tab cycle tabs (works from any page).
             if k.code == KeyCode::Tab && k.modifiers.contains(KeyModifiers::CONTROL) {
-                self.tab = if k.modifiers.contains(KeyModifiers::SHIFT) {
-                    (self.tab + TABS.len() - 1) % TABS.len()
-                } else {
-                    (self.tab + 1) % TABS.len()
-                };
+                self.cycle(!k.modifiers.contains(KeyModifiers::SHIFT));
                 return EventResult::Consumed(None);
             }
         }
@@ -70,14 +77,14 @@ impl Component for PreferencesPanel {
                 if let Some(&(_, _, _, t)) = self
                     .tab_hits
                     .iter()
-                    .find(|&&(x0, x1, r, _)| ev.row == r && ev.column >= x0 && ev.column < x1)
+                    .find(|&&(r, x0, x1, _)| ev.row == r && ev.column >= x0 && ev.column < x1)
                 {
                     self.tab = t;
                     return EventResult::Consumed(None);
                 }
             }
         }
-        // Everything else → the active tab (it closes the window on Esc in list mode).
+        // Everything else → the active page (it pops the layer on Esc in its list mode).
         self.active().handle_event(event, cx)
     }
 
@@ -88,35 +95,48 @@ impl Component for PreferencesPanel {
         use ratatui::widgets::Paragraph;
 
         self.tab_hits.clear();
-        surface.clear_with(area, ctx.editor.theme.get("ui.background"));
-
         let theme = &ctx.editor.theme;
-        let active_st = to_rat_style(theme.get("ui.text.focus")).add_modifier(RMod::BOLD | RMod::REVERSED);
+        surface.clear_with(area, theme.get("ui.background"));
+
+        let bar_bg = theme.get("ui.statusline");
+        let active_st = to_rat_style(theme.get("ui.text.focus")).add_modifier(RMod::BOLD);
         let idle_st = to_rat_style(theme.get("comment"));
 
-        // tab strip on the top row
+        // Top tab strip (full-width bar). Active tab is highlighted; the rest dim.
+        surface.clear_with(Rect::new(area.x, area.y, area.width, 1), bar_bg);
         let mut x = area.x + 1;
         for (i, name) in TABS.iter().enumerate() {
             let label = format!(" {name} ");
             let w = label.chars().count() as u16;
-            let st = if i == self.tab { active_st } else { idle_st };
+            if x + w >= area.x + area.width {
+                break;
+            }
+            let st = if i == self.tab {
+                to_rat_style(theme.get("ui.selection")).add_modifier(RMod::BOLD)
+            } else {
+                idle_st
+            };
             render(Paragraph::new(Span::styled(label, st)), Rect::new(x, area.y, w, 1), surface);
-            self.tab_hits.push((x, x + w, area.y, i));
-            x += w + 1;
+            self.tab_hits.push((area.y, x, x + w, i));
+            x += w;
+            // separator between tabs
+            render(Paragraph::new(Span::styled("│", idle_st)), Rect::new(x, area.y, 1, 1), surface);
+            x += 1;
         }
-        // hint, right-aligned
-        let hint = "Ctrl-Tab ↹  ";
+        // right-aligned hint
+        let hint = " Ctrl-Tab ↹  Esc close ";
         let hw = hint.chars().count() as u16;
-        if area.width > hw + 4 {
+        if area.width > hw + x.saturating_sub(area.x) {
             render(
                 Paragraph::new(Span::styled(hint, idle_st)),
-                Rect::new(area.x + area.width - hw - 1, area.y, hw, 1),
+                Rect::new(area.x + area.width - hw, area.y, hw, 1),
                 surface,
             );
         }
+        let _ = active_st;
 
-        // active tab fills the rest
-        let body = Rect::new(area.x, area.y + 1, area.width, area.height.saturating_sub(1));
-        self.active().render(body, surface, ctx);
+        // Active page fills the rest of the screen (it draws its own content frame).
+        let content = Rect::new(area.x, area.y + 1, area.width, area.height.saturating_sub(1));
+        self.active().render(content, surface, ctx);
     }
 }
