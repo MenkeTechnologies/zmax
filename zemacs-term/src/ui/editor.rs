@@ -1896,6 +1896,23 @@ impl EditorView {
                     }
                 }
 
+                // Fall back to focusing whichever pane the click landed in, even
+                // if it wasn't on text or the gutter (e.g. the blank area below a
+                // short buffer, or another split). A click should always move
+                // focus to the pane it hit so the next keystrokes go there.
+                let clicked_view = cxt.editor.tree.views().find_map(|(view, _)| {
+                    let a = view.area;
+                    (column >= a.x
+                        && column < a.x.saturating_add(a.width)
+                        && row >= a.y
+                        && row < a.y.saturating_add(a.height))
+                    .then_some(view.id)
+                });
+                if let Some(view_id) = clicked_view {
+                    cxt.editor.focus(view_id);
+                    return EventResult::Consumed(None);
+                }
+
                 EventResult::Ignored(None)
             }
 
