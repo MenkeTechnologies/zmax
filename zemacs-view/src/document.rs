@@ -2888,6 +2888,53 @@ mod test {
     }
 
     #[test]
+    fn is_changed_on_disk_tracks_external_writes() {
+        // No path → never "changed on disk".
+        let pathless = Document::from(
+            Rope::from("scratch\n"),
+            None,
+            Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        assert!(!pathless.is_changed_on_disk());
+
+        // A freshly opened file is not changed; an external write is detected.
+        let mut path = std::env::temp_dir();
+        path.push(format!("zemacs_changed_on_disk_{}.txt", std::process::id()));
+        std::fs::write(&path, b"original\n").unwrap();
+
+        let mut doc = Document::from(
+            Rope::from("original\n"),
+            None,
+            Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        doc.set_path(Some(&path)); // records last_saved_time from the file's mtime
+        assert!(
+            !doc.is_changed_on_disk(),
+            "a just-opened, unmodified file must not look changed"
+        );
+
+        // Bump the file's mtime with an external write.
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        std::fs::write(&path, b"changed by another process\n").unwrap();
+        assert!(
+            doc.is_changed_on_disk(),
+            "a write by another process must be detected"
+        );
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn auto_reload_on_by_default() {
+        assert!(
+            Config::default().auto_reload,
+            "auto-reload (vim autoread) should default to on"
+        );
+    }
+
+    #[test]
     fn test_line_ending() {
         assert_eq!(
             Document::default(

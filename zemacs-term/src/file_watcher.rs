@@ -129,3 +129,42 @@ fn event_is_relevant(event: &notify::Result<notify::Event>) -> bool {
         Err(_) => true,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::changed_paths;
+    use std::path::PathBuf;
+
+    fn modify_event(paths: &[&str]) -> notify::Result<notify::Event> {
+        let mut event =
+            notify::Event::new(notify::EventKind::Modify(notify::event::ModifyKind::Any));
+        for p in paths {
+            event = event.add_path(PathBuf::from(p));
+        }
+        Ok(event)
+    }
+
+    #[test]
+    fn changed_paths_keeps_real_files_and_drops_ignored() {
+        let got = changed_paths(&modify_event(&[
+            "/repo/src/main.rs",
+            "/repo/target/debug/zemacs", // ignored: target/
+            "/repo/.git/index",          // ignored: .git/
+            "/repo/node_modules/x/y.js", // ignored: node_modules/
+            "/repo/docs/readme.md",
+        ]));
+        assert_eq!(
+            got,
+            vec![
+                PathBuf::from("/repo/src/main.rs"),
+                PathBuf::from("/repo/docs/readme.md"),
+            ]
+        );
+    }
+
+    #[test]
+    fn changed_paths_on_error_is_empty() {
+        let err: notify::Result<notify::Event> = Err(notify::Error::generic("watch error"));
+        assert!(changed_paths(&err).is_empty());
+    }
+}
