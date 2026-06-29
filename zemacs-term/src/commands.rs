@@ -10478,11 +10478,20 @@ fn dashboard(cx: &mut Context) {
 }
 
 /// Open an integrated terminal running the user's `$SHELL` in a PTY.
+///
+/// Pushes the panel through the job queue (an `EditorCompositor` callback)
+/// rather than `cx.push_layer`, because the command palette executes commands
+/// with a throwaway context and drops `push_layer` callbacks — so a `push_layer`
+/// here would do nothing from `SPC SPC terminal`. Jobs are carried through, so
+/// this works both from a keybinding and from the palette.
 fn terminal(cx: &mut Context) {
-    match crate::ui::terminal::TerminalPanel::new() {
-        Ok(panel) => cx.push_layer(Box::new(panel)),
-        Err(e) => cx.editor.set_error(format!("terminal: {e}")),
-    }
+    let call: job::Callback = Callback::EditorCompositor(Box::new(|editor, compositor| {
+        match crate::ui::terminal::TerminalPanel::new() {
+            Ok(panel) => compositor.push(Box::new(panel)),
+            Err(e) => editor.set_error(format!("terminal: {e}")),
+        }
+    }));
+    cx.jobs.callback(async move { Ok(call) });
 }
 
 /// Open the project-wide Find in Files panel, seeded with the primary selection.
