@@ -312,6 +312,21 @@ pub fn test_editor_config() -> zemacs_view::editor::Config {
             enable: false,
             ..Default::default()
         },
+        // Autosave defaults to on (save on every change). Many tests open a
+        // buffer with a *relative* path (e.g. `with_file("foo.rs")`, used only
+        // for language detection) and then type into it — with autosave on, the
+        // event loop writes those buffers to `foo.rs` / `foo.html` in the test's
+        // working directory, polluting the repo. Tests must never touch the real
+        // filesystem unless they explicitly opt in, so disable autosave here;
+        // the write/save tests drive `:w` explicitly and are unaffected.
+        auto_save: zemacs_view::editor::AutoSave {
+            on_change: false,
+            focus_lost: false,
+            after_delay: zemacs_view::editor::AutoSaveAfterDelay {
+                enable: false,
+                ..Default::default()
+            },
+        },
         // The word-index hook accumulates per-document pending changes across
         // every `DocumentDidChange` and composes them on the next event for the
         // same doc id. Each test builds a fresh `Application` that reuses
