@@ -138,12 +138,35 @@ impl Application {
         }));
         // Session persistence: restore drawer layout / reopen tabs from a previous session.
         let appdata = crate::appdata::load();
+
+        // Restore the last session's theme (chosen via `:theme`, the picker, or
+        // `:theme-toggle`, persisted to appdata on exit). This overrides the
+        // config theme loaded above so a runtime theme change sticks across
+        // restarts. Falls back to the already-loaded config theme on failure.
+        if let Some(name) = appdata.as_ref().and_then(|d| d.theme.as_deref()) {
+            let true_color = terminal.backend().supports_true_color()
+                || config.load().editor.true_color
+                || crate::true_color();
+            match editor.theme_loader.load(name) {
+                Ok(theme) if true_color || theme.is_16_color() => {
+                    let _ = editor.set_theme(theme);
+                }
+                Ok(_) => {}
+                Err(e) => log::warn!("failed to restore saved theme `{}` - {}", name, e),
+            }
+        }
+
         let mut editor_view = ui::EditorView::new(Keymaps::new(keys));
+        // The IDE workbench only opens when explicitly requested with `--ide`.
+        // We intentionally do NOT auto-reopen it from a previous session's
+        // persisted `open` state — that surprised users who launched without
+        // `--ide`. When `--ide` is given we still restore the saved layout
+        // (widths / folds) so the workbench remembers your sizing.
         if args.ide {
             editor_view.open_sidebar();
-        }
-        if let Some(data) = &appdata {
-            editor_view.restore_ide(&data.ide);
+            if let Some(data) = &appdata {
+                editor_view.restore_ide(&data.ide);
+            }
         }
         compositor.push(Box::new(editor_view));
 
@@ -1460,6 +1483,11 @@ impl Application {
             .and_then(|ev| ev.ide_layout())
         {
             data.ide = layout;
+        } else if let Some(prev) = crate::appdata::load() {
+            // The IDE wasn't opened this session (e.g. launched without `--ide`),
+            // so there's no live layout to snapshot. Carry forward the previously
+            // saved widths/folds instead of clobbering them with zeroed defaults.
+            data.ide = prev.ide;
         }
         crate::appdata::save(&data);
     }

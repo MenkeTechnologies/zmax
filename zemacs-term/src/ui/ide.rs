@@ -705,6 +705,7 @@ impl Ide {
             fold_project: self.fold_project,
             fold_structure: self.fold_structure,
             fold_problems: self.fold_problems,
+            fold_minimap: self.fold_minimap,
         }
     }
 
@@ -716,6 +717,7 @@ impl Ide {
         self.fold_project = l.fold_project;
         self.fold_structure = l.fold_structure;
         self.fold_problems = l.fold_problems;
+        self.fold_minimap = l.fold_minimap;
     }
 
     /// F2: toggle the whole workbench (and focus the tree when showing).

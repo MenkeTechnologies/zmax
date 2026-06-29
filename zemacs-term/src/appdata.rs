@@ -13,6 +13,8 @@ pub struct IdeLayout {
     pub fold_project: bool,
     pub fold_structure: bool,
     pub fold_problems: bool,
+    /// Whether the right-hand minimap stripe is collapsed to a thin handle.
+    pub fold_minimap: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
