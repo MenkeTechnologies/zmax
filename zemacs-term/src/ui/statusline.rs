@@ -11,9 +11,9 @@ use zemacs_view::{
 
 use crate::ui::ProgressSpinners;
 
-use zemacs_view::editor::StatusLineElement as StatusLineElementID;
 use tui::buffer::Buffer as Surface;
 use tui::text::{Span, Spans};
+use zemacs_view::editor::StatusLineElement as StatusLineElementID;
 
 pub struct RenderContext<'a> {
     pub editor: &'a Editor,
@@ -145,7 +145,9 @@ where
         zemacs_view::editor::StatusLineElement::FileType => render_file_type,
         zemacs_view::editor::StatusLineElement::Diagnostics => render_diagnostics,
         zemacs_view::editor::StatusLineElement::CiStatus => render_ci_status,
-        zemacs_view::editor::StatusLineElement::WorkspaceDiagnostics => render_workspace_diagnostics,
+        zemacs_view::editor::StatusLineElement::WorkspaceDiagnostics => {
+            render_workspace_diagnostics
+        }
         zemacs_view::editor::StatusLineElement::Selections => render_selections,
         zemacs_view::editor::StatusLineElement::PrimarySelectionLength => {
             render_primary_selection_length
@@ -315,7 +317,10 @@ where
 {
     if let Some((glyph, scope)) = crate::ci::latest_badge() {
         write(context, Span::raw(" CI "));
-        write(context, Span::styled(glyph, context.editor.theme.get(scope)));
+        write(
+            context,
+            Span::styled(glyph, context.editor.theme.get(scope)),
+        );
         write(context, Span::raw(" "));
     }
 }

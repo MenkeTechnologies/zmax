@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use tokio::sync::mpsc::Sender;
+use tokio::time::Instant;
 use zemacs_core::syntax::config::LanguageServerFeature;
 use zemacs_event::{cancelable_future, register_hook, send_blocking, TaskController, TaskHandle};
 use zemacs_lsp::lsp::{self, SignatureInformation};
@@ -9,8 +11,6 @@ use zemacs_view::document::Mode;
 use zemacs_view::events::{DocumentDidChange, SelectionDidChange};
 use zemacs_view::handlers::lsp::{SignatureHelpEvent, SignatureHelpInvoked};
 use zemacs_view::Editor;
-use tokio::sync::mpsc::Sender;
-use tokio::time::Instant;
 
 use crate::commands::Open;
 use crate::compositor::Compositor;

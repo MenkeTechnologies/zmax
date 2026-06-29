@@ -99,9 +99,7 @@ fn run(root: PathBuf) {
 /// True if an event touches a path we actually display (outside ignored dirs).
 fn event_is_relevant(event: &notify::Result<notify::Event>) -> bool {
     match event {
-        Ok(event) => {
-            event.paths.is_empty() || event.paths.iter().any(|path| !is_ignored(path))
-        }
+        Ok(event) => event.paths.is_empty() || event.paths.iter().any(|path| !is_ignored(path)),
         // On error, be conservative and refresh.
         Err(_) => true,
     }

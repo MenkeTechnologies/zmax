@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use tokio::task::JoinSet;
 use zemacs_core::chars::char_is_word;
 use zemacs_core::completion::CompletionProvider;
 use zemacs_core::syntax::config::LanguageServerFeature;
@@ -9,7 +10,6 @@ use zemacs_stdx::rope::RopeSliceExt;
 use zemacs_view::document::Mode;
 use zemacs_view::handlers::completion::{CompletionEvent, ResponseContext};
 use zemacs_view::Editor;
-use tokio::task::JoinSet;
 
 use crate::commands;
 use crate::compositor::Compositor;

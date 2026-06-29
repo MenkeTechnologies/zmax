@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
-use zemacs_core::syntax::{self, OverlayHighlights};
-use zemacs_view::graphics::{Margin, Rect, Style};
-use zemacs_view::input::Event;
 use tui::buffer::Buffer;
 use tui::layout::Alignment;
 use tui::text::Text;
 use tui::widgets::{BorderType, Paragraph, Widget, Wrap};
+use zemacs_core::syntax::{self, OverlayHighlights};
+use zemacs_view::graphics::{Margin, Rect, Style};
+use zemacs_view::input::Event;
 
 use crate::compositor::{Component, Compositor, Context, EventResult};
 

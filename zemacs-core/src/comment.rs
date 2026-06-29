@@ -7,8 +7,8 @@ use crate::{
     syntax::config::BlockCommentToken, Change, Range, Rope, RopeSlice, Selection, Tendril,
     Transaction,
 };
-use zemacs_stdx::rope::RopeSliceExt;
 use std::borrow::Cow;
+use zemacs_stdx::rope::RopeSliceExt;
 
 pub const DEFAULT_COMMENT_TOKEN: &str = "#";
 

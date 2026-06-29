@@ -1,6 +1,9 @@
 use std::cmp::min;
 
-use zemacs_core::doc_formatter::{DocumentFormatter, FormattedGrapheme, GraphemeSource, TextFormat};
+use tui::buffer::Buffer as Surface;
+use zemacs_core::doc_formatter::{
+    DocumentFormatter, FormattedGrapheme, GraphemeSource, TextFormat,
+};
 use zemacs_core::graphemes::Grapheme;
 use zemacs_core::str_utils::char_to_byte_idx;
 use zemacs_core::syntax::{self, HighlightEvent, Highlighter, OverlayHighlights};
@@ -12,7 +15,6 @@ use zemacs_view::graphics::Rect;
 use zemacs_view::theme::Style;
 use zemacs_view::view::ViewPosition;
 use zemacs_view::{Document, Theme};
-use tui::buffer::Buffer as Surface;
 
 use crate::ui::text_decorations::DecorationManager;
 

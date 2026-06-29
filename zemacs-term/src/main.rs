@@ -131,8 +131,9 @@ FLAGS:
         }
     };
 
-    let workspace_trust =
-        zemacs_loader::workspace_trust::WorkspaceTrust::new((&config.editor.workspace_trust).into());
+    let workspace_trust = zemacs_loader::workspace_trust::WorkspaceTrust::new(
+        (&config.editor.workspace_trust).into(),
+    );
 
     let lang_loader =
         zemacs_core::config::user_lang_loader(&workspace_trust).unwrap_or_else(|err| {

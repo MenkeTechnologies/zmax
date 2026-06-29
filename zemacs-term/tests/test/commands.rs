@@ -1012,36 +1012,21 @@ async fn move_line_up_middle() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn move_line_down_into_last_no_newline() -> anyhow::Result<()> {
-    test((
-        "#[|a]#aa\nbbb",
-        ":move-line-down<ret>",
-        "bbb\n#[a|]#aa",
-    ))
-    .await?;
+    test(("#[|a]#aa\nbbb", ":move-line-down<ret>", "bbb\n#[a|]#aa")).await?;
 
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn transpose_chars_basic() -> anyhow::Result<()> {
-    test((
-        "a#[|b]#c\n",
-        ":transpose-chars<ret>",
-        "ba#[c|]#\n",
-    ))
-    .await?;
+    test(("a#[|b]#c\n", ":transpose-chars<ret>", "ba#[c|]#\n")).await?;
 
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn transpose_chars_noop_at_buffer_start() -> anyhow::Result<()> {
-    test((
-        "#[|a]#bc\n",
-        ":transpose-chars<ret>",
-        "#[|a]#bc\n",
-    ))
-    .await?;
+    test(("#[|a]#bc\n", ":transpose-chars<ret>", "#[|a]#bc\n")).await?;
 
     Ok(())
 }
@@ -1060,12 +1045,7 @@ async fn transpose_words_basic() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn transpose_words_noop_single_word() -> anyhow::Result<()> {
-    test((
-        "#[|f]#oo\n",
-        ":transpose-words<ret>",
-        "#[|f]#oo\n",
-    ))
-    .await?;
+    test(("#[|f]#oo\n", ":transpose-words<ret>", "#[|f]#oo\n")).await?;
 
     Ok(())
 }
@@ -1096,60 +1076,35 @@ async fn delete_blank_lines_collapses_runs() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn just_one_space_collapses_run() -> anyhow::Result<()> {
-    test((
-        "a #[| ]# b\n",
-        ":just-one-space<ret>",
-        "a #[b|]#\n",
-    ))
-    .await?;
+    test(("a #[| ]# b\n", ":just-one-space<ret>", "a #[b|]#\n")).await?;
 
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn change_case_camel_to_snake() -> anyhow::Result<()> {
-    test((
-        "#[|f]#ooBar\n",
-        ":change-case snake<ret>",
-        "#[f|]#oo_bar\n",
-    ))
-    .await?;
+    test(("#[|f]#ooBar\n", ":change-case snake<ret>", "#[f|]#oo_bar\n")).await?;
 
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn change_case_snake_to_camel() -> anyhow::Result<()> {
-    test((
-        "#[|f]#oo_bar\n",
-        ":change-case camel<ret>",
-        "#[f|]#ooBar\n",
-    ))
-    .await?;
+    test(("#[|f]#oo_bar\n", ":change-case camel<ret>", "#[f|]#ooBar\n")).await?;
 
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn cycle_case_snake_to_camel() -> anyhow::Result<()> {
-    test((
-        "#[|f]#oo_bar\n",
-        ":cycle-case<ret>",
-        "#[f|]#ooBar\n",
-    ))
-    .await?;
+    test(("#[|f]#oo_bar\n", ":cycle-case<ret>", "#[f|]#ooBar\n")).await?;
 
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn split_line_keeps_cursor() -> anyhow::Result<()> {
-    test((
-        "ab#[|c]#\n",
-        ":split-line<ret>",
-        "ab#[\n|]#c\n",
-    ))
-    .await?;
+    test(("ab#[|c]#\n", ":split-line<ret>", "ab#[\n|]#c\n")).await?;
 
     Ok(())
 }

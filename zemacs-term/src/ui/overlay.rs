@@ -1,9 +1,9 @@
+use tui::buffer::Buffer;
 use zemacs_core::Position;
 use zemacs_view::{
     graphics::{CursorKind, Rect},
     Editor,
 };
-use tui::buffer::Buffer;
 
 use crate::compositor::{Component, Context, Event, EventResult};
 

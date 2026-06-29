@@ -11,9 +11,9 @@ use tui::buffer::Buffer as Surface;
 use zemacs_core::{diagnostic::Severity, Selection};
 use zemacs_view::{
     graphics::Rect,
+    input::KeyEvent,
     input::{MouseButton, MouseEvent, MouseEventKind},
     keyboard::{KeyCode, KeyModifiers},
-    input::KeyEvent,
     DocumentId,
 };
 
@@ -144,8 +144,14 @@ pub enum IdeAction {
     /// Open a URL in the system browser (CI run links).
     OpenUrl(String),
     /// Open a file and place the cursor on a 1-based line (run-output jump).
-    OpenFileAt { path: PathBuf, line: usize },
-    Goto { from: usize, to: usize },
+    OpenFileAt {
+        path: PathBuf,
+        line: usize,
+    },
+    Goto {
+        from: usize,
+        to: usize,
+    },
     /// Run/debug toolbar actions that need editor/compositor access.
     RunStart,
     Debug,
@@ -254,16 +260,16 @@ pub struct Ide {
     recent_times: Vec<u64>,
     /// Harpoon marks for the current project (pin order).
     harpoon_rows: Vec<PathBuf>,
-    bottom_tab: BottomTab,       // mirror of the focused column's active tab (keeps existing key/mouse logic working)
+    bottom_tab: BottomTab, // mirror of the focused column's active tab (keeps existing key/mouse logic working)
     bottom_tabs: [BottomTab; 3], // active tab in each of the three columns
-    bottom_focus_col: usize,     // which column has keyboard focus (0 | 1 | 2)
-    bottom_splits: [u16; 2],     // the two divider positions as % of drawer width
-    bottom_div_x: [u16; 2],      // screen columns of the two dividers (0 = not laid out)
-    aux_sels: [usize; 3],        // per-column list selection (mirrored to aux_sel for the focused col)
+    bottom_focus_col: usize, // which column has keyboard focus (0 | 1 | 2)
+    bottom_splits: [u16; 2], // the two divider positions as % of drawer width
+    bottom_div_x: [u16; 2], // screen columns of the two dividers (0 = not laid out)
+    aux_sels: [usize; 3],  // per-column list selection (mirrored to aux_sel for the focused col)
     resizing_div: Option<usize>, // which divider (0|1) is being dragged
-    bottom_mid_folded: bool,     // middle column collapsed → two-column layout
-    bottom_body_y: u16,          // top row of the drawer body (for the fold-button hit)
-    mid_fold_btn_x: u16,         // column of the fold/unfold chevron (0 = none)
+    bottom_mid_folded: bool, // middle column collapsed → two-column layout
+    bottom_body_y: u16,    // top row of the drawer body (for the fold-button hit)
+    mid_fold_btn_x: u16,   // column of the fold/unfold chevron (0 = none)
     bottom_hits: Vec<(u16, u16, BottomHit)>,
     bottom_header_y: u16,
     bottom_divider_y: u16,
@@ -548,7 +554,11 @@ impl Ide {
                 .filter_map(|l| {
                     let (p, line, _) = parse_file_line(l)?;
                     let pb = std::path::Path::new(&p);
-                    let abs = if pb.is_absolute() { pb.to_path_buf() } else { cwd.join(pb) };
+                    let abs = if pb.is_absolute() {
+                        pb.to_path_buf()
+                    } else {
+                        cwd.join(pb)
+                    };
                     abs.is_file().then_some((abs, line))
                 })
                 .collect()
@@ -712,7 +722,11 @@ impl Ide {
     /// Restore a persisted drawer layout.
     pub fn apply_layout(&mut self, l: &crate::appdata::IdeLayout) {
         self.visible = l.open;
-        self.left_width = if l.left_width >= 14 { l.left_width } else { LEFT_W };
+        self.left_width = if l.left_width >= 14 {
+            l.left_width
+        } else {
+            LEFT_W
+        };
         self.left_collapsed = l.left_collapsed;
         self.fold_project = l.fold_project;
         self.fold_structure = l.fold_structure;
@@ -723,7 +737,11 @@ impl Ide {
     /// F2: toggle the whole workbench (and focus the tree when showing).
     pub fn toggle(&mut self) {
         self.visible = !self.visible;
-        self.focus = if self.visible { Focus::Project } else { Focus::Editor };
+        self.focus = if self.visible {
+            Focus::Project
+        } else {
+            Focus::Editor
+        };
     }
 
     fn toggle_fold(&mut self) {
@@ -966,7 +984,11 @@ impl Ide {
             .position(|t| *t == self.bottom_tabs[col])
             .unwrap_or(0);
         let n = order.len();
-        let next = if forward { (cur + 1) % n } else { (cur + n - 1) % n };
+        let next = if forward {
+            (cur + 1) % n
+        } else {
+            (cur + n - 1) % n
+        };
         self.bottom_tabs[col] = order[next];
         self.aux_sel = 0;
         self.aux_sels[col] = 0;
@@ -992,19 +1014,28 @@ impl Ide {
             BottomTab::Todo => self
                 .todos
                 .get(self.aux_sel)
-                .map(|(pos, _, _)| IdeAction::Goto { from: *pos, to: *pos })
+                .map(|(pos, _, _)| IdeAction::Goto {
+                    from: *pos,
+                    to: *pos,
+                })
                 .unwrap_or(IdeAction::None),
             BottomTab::Marks => self
                 .marks_list
                 .get(self.aux_sel)
-                .map(|(pos, _)| IdeAction::Goto { from: *pos, to: *pos })
+                .map(|(pos, _)| IdeAction::Goto {
+                    from: *pos,
+                    to: *pos,
+                })
                 .unwrap_or(IdeAction::None),
             BottomTab::Jumplist => match self.jumplist_rows.get(self.aux_sel) {
                 Some((Some(path), _, _)) if path.is_file() => {
                     self.focus = Focus::Editor;
                     IdeAction::OpenFile(path.clone())
                 }
-                Some((None, pos, _)) => IdeAction::Goto { from: *pos, to: *pos },
+                Some((None, pos, _)) => IdeAction::Goto {
+                    from: *pos,
+                    to: *pos,
+                },
                 _ => IdeAction::None,
             },
             BottomTab::Recent => match self.recent_rows.get(self.aux_sel) {
@@ -1037,7 +1068,11 @@ impl Ide {
         let mut s = run.lock().unwrap();
         let h = self.problems_rect.height.saturating_sub(1) as usize;
         let max_top = self.run_total_vis.saturating_sub(h);
-        let cur = if s.follow { max_top } else { s.scroll.min(max_top) };
+        let cur = if s.follow {
+            max_top
+        } else {
+            s.scroll.min(max_top)
+        };
         let nt = if lines >= 0 {
             cur.saturating_add(lines as usize)
         } else {
@@ -1269,8 +1304,16 @@ impl Ide {
             }
             return IdeAction::None;
         }
-        let len = if structure { self.structure.len() } else { self.problems.len() };
-        let sel = if structure { &mut self.structure_sel } else { &mut self.problems_sel };
+        let len = if structure {
+            self.structure.len()
+        } else {
+            self.problems.len()
+        };
+        let sel = if structure {
+            &mut self.structure_sel
+        } else {
+            &mut self.problems_sel
+        };
         match key.code {
             KeyCode::Char('j') | KeyCode::Down => {
                 if *sel + 1 < len {
@@ -1294,17 +1337,27 @@ impl Ide {
         if structure {
             self.structure
                 .get(self.structure_sel)
-                .map(|o| IdeAction::Goto { from: o.start, to: o.end })
+                .map(|o| IdeAction::Goto {
+                    from: o.start,
+                    to: o.end,
+                })
                 .unwrap_or(IdeAction::None)
         } else {
             self.problems
                 .get(self.problems_sel)
-                .map(|p| IdeAction::Goto { from: p.start, to: p.end })
+                .map(|p| IdeAction::Goto {
+                    from: p.start,
+                    to: p.end,
+                })
                 .unwrap_or(IdeAction::None)
         }
     }
 
-    pub fn handle_mouse(&mut self, ev: &MouseEvent, line_to_char: impl Fn(usize) -> usize) -> IdeAction {
+    pub fn handle_mouse(
+        &mut self,
+        ev: &MouseEvent,
+        line_to_char: impl Fn(usize) -> usize,
+    ) -> IdeAction {
         let (col, row) = (ev.column, ev.row);
         match ev.kind {
             MouseEventKind::Down(MouseButton::Left) => {
@@ -1442,11 +1495,15 @@ impl Ide {
                 }
                 if in_rect(&self.structure_rect, col, row) && row > self.structure_rect.y {
                     self.focus = Focus::Structure;
-                    let idx = self.structure_state.offset() + (row - self.structure_rect.y - 1) as usize;
+                    let idx =
+                        self.structure_state.offset() + (row - self.structure_rect.y - 1) as usize;
                     if idx < self.structure.len() {
                         self.structure_sel = idx;
                         let o = &self.structure[idx];
-                        return IdeAction::Goto { from: o.start, to: o.end };
+                        return IdeAction::Goto {
+                            from: o.start,
+                            to: o.end,
+                        };
                     }
                 }
                 // Three-column drawer: a body click focuses the column under the
@@ -1475,7 +1532,11 @@ impl Ide {
                     }
                     if d0 != 0 {
                         let c = if self.bottom_mid_folded {
-                            if col > d0 { 2 } else { 0 }
+                            if col > d0 {
+                                2
+                            } else {
+                                0
+                            }
                         } else if col > d1 {
                             2
                         } else if col > d0 {
@@ -1495,7 +1556,10 @@ impl Ide {
                     let idx = (row - self.problems_rect.y - 1) as usize;
                     if let Some((pos, _, _)) = self.todos.get(idx) {
                         self.aux_sel = idx;
-                        return IdeAction::Goto { from: *pos, to: *pos };
+                        return IdeAction::Goto {
+                            from: *pos,
+                            to: *pos,
+                        };
                     }
                     return IdeAction::None;
                 }
@@ -1508,7 +1572,10 @@ impl Ide {
                     let idx = (row - self.problems_rect.y - 2) as usize;
                     if let Some((_, _, Some((path, line)))) = self.dap_lines.get(idx) {
                         self.focus = Focus::Editor;
-                        return IdeAction::OpenFileAt { path: path.clone(), line: *line };
+                        return IdeAction::OpenFileAt {
+                            path: path.clone(),
+                            line: *line,
+                        };
                     }
                     return IdeAction::None;
                 }
@@ -1539,7 +1606,10 @@ impl Ide {
                     let idx = (row - self.problems_rect.y - 1) as usize;
                     if let Some((pos, _)) = self.marks_list.get(idx) {
                         self.aux_sel = idx;
-                        return IdeAction::Goto { from: *pos, to: *pos };
+                        return IdeAction::Goto {
+                            from: *pos,
+                            to: *pos,
+                        };
                     }
                     return IdeAction::None;
                 }
@@ -1557,7 +1627,12 @@ impl Ide {
                                 return IdeAction::OpenFile(path.clone());
                             }
                             // Entry in the focused document: jump to it.
-                            None => return IdeAction::Goto { from: *pos, to: *pos },
+                            None => {
+                                return IdeAction::Goto {
+                                    from: *pos,
+                                    to: *pos,
+                                }
+                            }
                             _ => {}
                         }
                     }
@@ -1595,7 +1670,11 @@ impl Ide {
                             drop(s);
                             let (p, line, _col) = parse_file_line(&text)?;
                             let pb = std::path::Path::new(&p);
-                            let abs = if pb.is_absolute() { pb.to_path_buf() } else { cwd.join(pb) };
+                            let abs = if pb.is_absolute() {
+                                pb.to_path_buf()
+                            } else {
+                                cwd.join(pb)
+                            };
                             abs.is_file().then_some((abs, line))
                         });
                     self.focus = Focus::Problems;
@@ -1624,11 +1703,15 @@ impl Ide {
                     && self.bottom_tab == BottomTab::Problems
                 {
                     self.focus = Focus::Problems;
-                    let idx = self.problems_state.offset() + (row - self.problems_rect.y - 1) as usize;
+                    let idx =
+                        self.problems_state.offset() + (row - self.problems_rect.y - 1) as usize;
                     if idx < self.problems.len() {
                         self.problems_sel = idx;
                         let p = &self.problems[idx];
-                        return IdeAction::Goto { from: p.start, to: p.end };
+                        return IdeAction::Goto {
+                            from: p.start,
+                            to: p.end,
+                        };
                     }
                 }
                 if in_rect(&self.stripe_rect, col, row) && self.stripe_rect.height > 0 {
@@ -1649,7 +1732,8 @@ impl Ide {
                         return IdeAction::None;
                     }
                     let frac = (row - self.stripe_rect.y) as f32 / self.stripe_rect.height as f32;
-                    let line = ((frac * self.total_lines as f32) as usize).min(self.total_lines.saturating_sub(1));
+                    let line = ((frac * self.total_lines as f32) as usize)
+                        .min(self.total_lines.saturating_sub(1));
                     let pos = line_to_char(line);
                     return IdeAction::Goto { from: pos, to: pos };
                 }
@@ -1677,13 +1761,19 @@ impl Ide {
                     self.project.scroll_sel(down);
                 } else if in_rect(&self.structure_rect, col, row) {
                     step(&mut self.structure_sel, self.structure.len(), down);
-                } else if in_rect(&self.problems_rect, col, row) && self.bottom_tab == BottomTab::Run {
+                } else if in_rect(&self.problems_rect, col, row)
+                    && self.bottom_tab == BottomTab::Run
+                {
                     // scroll the run console; reaching the bottom re-enables tail-follow
                     if let Some(run) = &self.run {
                         let mut s = run.lock().unwrap();
                         let h = self.problems_rect.height.saturating_sub(1) as usize;
                         let max_top = self.run_total_vis.saturating_sub(h);
-                        let cur = if s.follow { max_top } else { s.scroll.min(max_top) };
+                        let cur = if s.follow {
+                            max_top
+                        } else {
+                            s.scroll.min(max_top)
+                        };
                         if down {
                             let nt = cur + 3;
                             if nt >= max_top {
@@ -1725,7 +1815,10 @@ impl Ide {
                     let rel = col.saturating_sub(self.problems_rect.x);
                     let pct = (rel as u32 * 100 / self.problems_rect.width as u32) as u16;
                     match self.resizing_div {
-                        Some(0) => self.bottom_splits[0] = pct.clamp(12, self.bottom_splits[1].saturating_sub(8).max(12)),
+                        Some(0) => {
+                            self.bottom_splits[0] =
+                                pct.clamp(12, self.bottom_splits[1].saturating_sub(8).max(12))
+                        }
                         Some(1) => self.bottom_splits[1] = pct.clamp(self.bottom_splits[0] + 8, 88),
                         _ => {}
                     }
@@ -1754,7 +1847,12 @@ impl Ide {
     }
 
     /// Render every panel; returns the rect left for the editor.
-    pub fn render(&mut self, area: Rect, surface: &mut Surface, cx: &mut crate::compositor::Context) -> Rect {
+    pub fn render(
+        &mut self,
+        area: Rect,
+        surface: &mut Surface,
+        cx: &mut crate::compositor::Context,
+    ) -> Rect {
         if !self.visible {
             return area;
         }
@@ -1778,7 +1876,12 @@ impl Ide {
             self.project_rect = empty_rect();
             self.structure_rect = empty_rect();
             self.seam_x = u16::MAX;
-            rest = Rect::new(rest.x + 1, rest.y, rest.width.saturating_sub(1), rest.height);
+            rest = Rect::new(
+                rest.x + 1,
+                rest.y,
+                rest.width.saturating_sub(1),
+                rest.height,
+            );
         } else if rest.width > self.left_width + 24 {
             self.left_rail_rect = empty_rect();
             let content_w = self.left_width.saturating_sub(1).max(1);
@@ -1795,7 +1898,12 @@ impl Ide {
             self.project_rect = Rect::new(rest.x, rest.y, content_w, ph);
             self.structure_rect = Rect::new(rest.x, rest.y + ph, content_w, sh);
             self.seam_x = rest.x + content_w;
-            rest = Rect::new(rest.x + self.left_width, rest.y, rest.width - self.left_width, rest.height);
+            rest = Rect::new(
+                rest.x + self.left_width,
+                rest.y,
+                rest.width - self.left_width,
+                rest.height,
+            );
         } else {
             self.left_rail_rect = empty_rect();
             self.project_rect = empty_rect();
@@ -1808,7 +1916,12 @@ impl Ide {
             self.stripe_rect = Rect::new(rest.x + rest.width - 1, rest.y, 1, rest.height);
             rest = Rect::new(rest.x, rest.y, rest.width - 1, rest.height);
         } else if !self.fold_minimap && rest.width > STRIPE_W + 30 {
-            self.stripe_rect = Rect::new(rest.x + rest.width - STRIPE_W, rest.y, STRIPE_W, rest.height);
+            self.stripe_rect = Rect::new(
+                rest.x + rest.width - STRIPE_W,
+                rest.y,
+                STRIPE_W,
+                rest.height,
+            );
             rest = Rect::new(rest.x, rest.y, rest.width - STRIPE_W, rest.height);
         } else {
             self.stripe_rect = empty_rect();
@@ -1857,7 +1970,14 @@ impl Ide {
         }
         if self.project_rect.height > 0 {
             surface.clear_with(self.project_rect, theme.get("ui.background"));
-            draw_header(surface, self.project_rect, "PROJECT", self.fold_project, self.focus == Focus::Project, theme);
+            draw_header(
+                surface,
+                self.project_rect,
+                "PROJECT",
+                self.fold_project,
+                self.focus == Focus::Project,
+                theme,
+            );
             // JetBrains-style "Select Opened File" button at the header's right
             // edge: ◎ when "always select" is on, ⊙ for a one-shot reveal.
             self.locate_hit = (0, 0, 0);
@@ -1873,7 +1993,8 @@ impl Ide {
                 self.locate_hit = (self.project_rect.y, ix, ix + 1);
             }
             if !self.fold_project && self.project_rect.height > 1 {
-                self.project.render(body_rect(self.project_rect), surface, theme);
+                self.project
+                    .render(body_rect(self.project_rect), surface, theme);
             }
         }
         if self.structure_rect.height > 0 {
@@ -1912,7 +2033,11 @@ impl Ide {
                 let mid = w / 2 - 1;
                 line.replace_range(
                     line.char_indices().nth(mid).map(|(i, _)| i).unwrap_or(0)
-                        ..line.char_indices().nth(mid + 3).map(|(i, _)| i).unwrap_or(line.len()),
+                        ..line
+                            .char_indices()
+                            .nth(mid + 3)
+                            .map(|(i, _)| i)
+                            .unwrap_or(line.len()),
                     "⣿⣿⣿",
                 );
             }
@@ -1929,15 +2054,31 @@ impl Ide {
                     _ => " ↵ open · [ ] tabs ",
                 };
                 let maxw = (w / 2).saturating_sub(2);
-                surface.set_stringn(self.problems_rect.x + 1, self.bottom_divider_y, hint, maxw, theme.get("comment"));
+                surface.set_stringn(
+                    self.problems_rect.x + 1,
+                    self.bottom_divider_y,
+                    hint,
+                    maxw,
+                    theme.get("comment"),
+                );
             }
         }
 
         // resize seam / collapse rail down the left edge
         if self.left_collapsed && self.left_rail_rect.height > 0 {
-            surface.set_string(self.left_rail_rect.x, full.y, "›", theme.get("ui.text.focus"));
+            surface.set_string(
+                self.left_rail_rect.x,
+                full.y,
+                "›",
+                theme.get("ui.text.focus"),
+            );
             for y in 1..full.height {
-                surface.set_string(self.left_rail_rect.x, full.y + y, "▏", theme.get("ui.window"));
+                surface.set_string(
+                    self.left_rail_rect.x,
+                    full.y + y,
+                    "▏",
+                    theme.get("ui.window"),
+                );
             }
         } else if self.seam_x != u16::MAX {
             let style = theme.get("ui.window");
@@ -1970,9 +2111,21 @@ impl Ide {
             (style.bg.unwrap_or(fb_bg), style.fg.unwrap_or(fb_fg))
         };
         let (mode_txt, mode_scope, fb_mode) = match self.status_mode {
-            2 => ("INSERT", "ui.statusline.insert", Color::Rgb(0x00, 0xb3, 0xd7)),
-            1 => ("VISUAL", "ui.statusline.select", Color::Rgb(0xff, 0x8c, 0x00)),
-            _ => ("NORMAL", "ui.statusline.normal", Color::Rgb(0x9e, 0xd0, 0x10)),
+            2 => (
+                "INSERT",
+                "ui.statusline.insert",
+                Color::Rgb(0x00, 0xb3, 0xd7),
+            ),
+            1 => (
+                "VISUAL",
+                "ui.statusline.select",
+                Color::Rgb(0xff, 0x8c, 0x00),
+            ),
+            _ => (
+                "NORMAL",
+                "ui.statusline.normal",
+                Color::Rgb(0x9e, 0xd0, 0x10),
+            ),
         };
         let blackfg = Color::Rgb(0x10, 0x12, 0x16);
         let (mode_bg, mode_fg) = bgfg(theme.get(mode_scope), fb_mode, blackfg);
@@ -1986,8 +2139,14 @@ impl Ide {
             Color::Rgb(0x28, 0x28, 0x2f),
             Color::Rgb(0x9c, 0x9c, 0xa6),
         );
-        let warn = theme.get("warning").fg.unwrap_or(Color::Rgb(0x7a, 0xa8, 0x10));
-        let fill = theme.get("ui.statusline").bg.unwrap_or(Color::Rgb(0x1b, 0x1b, 0x20));
+        let warn = theme
+            .get("warning")
+            .fg
+            .unwrap_or(Color::Rgb(0x7a, 0xa8, 0x10));
+        let fill = theme
+            .get("ui.statusline")
+            .bg
+            .unwrap_or(Color::Rgb(0x1b, 0x1b, 0x20));
         let seg = |bg: Color, fg: Color| Style::default().bg(bg).fg(fg);
 
         surface.clear_with(area, seg(fill, darkfg));
@@ -1995,7 +2154,10 @@ impl Ide {
 
         // ── left segments ──────────────────────────────────────────────
         let mut left: Vec<(String, Style)> = Vec::new();
-        left.push((format!(" {mode_txt} "), seg(mode_bg, mode_fg).add_modifier(bold)));
+        left.push((
+            format!(" {mode_txt} "),
+            seg(mode_bg, mode_fg).add_modifier(bold),
+        ));
         if self.status_modified {
             // airline's secondary section (where PASTE/spell live) — here: modified flag
             left.push((" + ".to_string(), seg(warn, mode_fg).add_modifier(bold)));
@@ -2057,7 +2219,13 @@ impl Ide {
                 break;
             }
             let next_bg = left.get(i + 1).and_then(|(_, s)| s.bg).unwrap_or(fill);
-            surface.set_stringn(x, area.y, SEP_R, 1, Style::default().fg(style.bg.unwrap_or(fill)).bg(next_bg));
+            surface.set_stringn(
+                x,
+                area.y,
+                SEP_R,
+                1,
+                Style::default().fg(style.bg.unwrap_or(fill)).bg(next_bg),
+            );
             x += 1;
         }
 
@@ -2075,8 +2243,18 @@ impl Ide {
                 break;
             }
             rx -= 1;
-            let left_bg = if i == 0 { fill } else { right[i - 1].1.bg.unwrap_or(fill) };
-            surface.set_stringn(rx, area.y, SEP_L, 1, Style::default().fg(style.bg.unwrap_or(fill)).bg(left_bg));
+            let left_bg = if i == 0 {
+                fill
+            } else {
+                right[i - 1].1.bg.unwrap_or(fill)
+            };
+            surface.set_stringn(
+                rx,
+                area.y,
+                SEP_L,
+                1,
+                Style::default().fg(style.bg.unwrap_or(fill)).bg(left_bg),
+            );
         }
     }
 
@@ -2108,16 +2286,29 @@ impl Ide {
                     if let Some(frames) = c.stack_frames.get(&t) {
                         self.dap_lines.push((0, "CALL STACK".to_string(), None));
                         for (i, f) in frames.iter().enumerate() {
-                            let target = f.source.as_ref().and_then(|s| s.path.clone()).map(|p| (p, f.line));
-                            let marker = if Some(i) == c.active_frame { "▶ " } else { "  " };
-                            self.dap_lines.push((1, format!("{marker}{}", f.name), target));
+                            let target = f
+                                .source
+                                .as_ref()
+                                .and_then(|s| s.path.clone())
+                                .map(|p| (p, f.line));
+                            let marker = if Some(i) == c.active_frame {
+                                "▶ "
+                            } else {
+                                "  "
+                            };
+                            self.dap_lines
+                                .push((1, format!("{marker}{}", f.name), target));
                         }
                     }
                 }
                 if !cx.editor.dap_variables.is_empty() {
                     self.dap_lines.push((0, "VARIABLES".to_string(), None));
                     for (name, val) in &cx.editor.dap_variables {
-                        let text = if val.is_empty() { name.clone() } else { format!("{name} = {val}") };
+                        let text = if val.is_empty() {
+                            name.clone()
+                        } else {
+                            format!("{name} = {val}")
+                        };
                         self.dap_lines.push((2, text, None));
                     }
                 }
@@ -2135,8 +2326,12 @@ impl Ide {
             bps.sort();
             self.dap_lines.push((0, "BREAKPOINTS".to_string(), None));
             for (p, line) in bps {
-                let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-                self.dap_lines.push((3, format!("{name}:{}", line + 1), Some((p, line + 1))));
+                let name = p
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                self.dap_lines
+                    .push((3, format!("{name}:{}", line + 1), Some((p, line + 1))));
             }
         }
 
@@ -2188,7 +2383,12 @@ impl Ide {
             let doc = doc!(cx.editor);
             self.structure = crate::commands::syntax::document_outline(doc, &loader)
                 .into_iter()
-                .map(|o| OutlineRow { kind: o.kind, name: o.name, start: o.start, end: o.end })
+                .map(|o| OutlineRow {
+                    kind: o.kind,
+                    name: o.name,
+                    start: o.start,
+                    end: o.end,
+                })
                 .collect();
             self.structure_key = key;
             if self.structure_sel >= self.structure.len() {
@@ -2237,8 +2437,11 @@ impl Ide {
             for i in 0..text.len_lines() {
                 let line: String = text.line(i).chars().filter(|c| !c.is_control()).collect();
                 if let Some(marker) = todo_marker(&line) {
-                    self.todos
-                        .push((text.line_to_char(i), format!("{}: {}", i + 1, line.trim()), marker));
+                    self.todos.push((
+                        text.line_to_char(i),
+                        format!("{}: {}", i + 1, line.trim()),
+                        marker,
+                    ));
                 }
             }
 
@@ -2269,8 +2472,11 @@ impl Ide {
                 .map(|(c, pos)| {
                     let p = pos.min(text.len_chars());
                     let line = text.char_to_line(p);
-                    let lt: String =
-                        text.line(line).chars().filter(|ch| !ch.is_control()).collect();
+                    let lt: String = text
+                        .line(line)
+                        .chars()
+                        .filter(|ch| !ch.is_control())
+                        .collect();
                     (p, format!("'{c}  {}: {}", line + 1, lt.trim()))
                 })
                 .collect();
@@ -2299,7 +2505,10 @@ impl Ide {
         self.harpoon_total = self.harpoon_rows.len();
         self.harpoon_slot = self.current_doc_path.as_ref().and_then(|p| {
             let cp = std::fs::canonicalize(p).unwrap_or_else(|_| p.clone());
-            self.harpoon_rows.iter().position(|m| *m == cp).map(|i| i + 1)
+            self.harpoon_rows
+                .iter()
+                .position(|m| *m == cp)
+                .map(|i| i + 1)
         });
 
         // status-bar snapshot (JetBrains bottom bar): Ln/Col, selection count, language, LSP, encoding
@@ -2347,7 +2556,9 @@ impl Ide {
 
         // VCS changes — only while the Git tab is open, throttled so big repos don't stall the frame
         if self.bottom_tab == BottomTab::Git {
-            let stale = self.git_last.map_or(true, |t| t.elapsed().as_millis() > 800);
+            let stale = self
+                .git_last
+                .map_or(true, |t| t.elapsed().as_millis() > 800);
             if stale {
                 if let Some(dir) = self.status_branch_dir.clone() {
                     self.git_changes = git_status(&dir);
@@ -2385,7 +2596,8 @@ impl Ide {
                         } else {
                             doc.path().map(|p| p.to_path_buf())
                         };
-                        self.jumplist_rows.push((target, pos, format!("{name}:{line}")));
+                        self.jumplist_rows
+                            .push((target, pos, format!("{name}:{line}")));
                     }
                 }
             }
@@ -2418,7 +2630,8 @@ impl Ide {
         } else {
             format!(" {chevron} STRUCTURE ")
         };
-        let count_style = crate::ui::rat::to_rat_style(theme.get("keyword")).add_modifier(RMod::BOLD);
+        let count_style =
+            crate::ui::rat::to_rat_style(theme.get("keyword")).add_modifier(RMod::BOLD);
         // The ratatui render blits an offscreen buffer, so empty rows would clobber our clear_with
         // back to a transparent bg — paint the whole block with the panel background to prevent that.
         let block = Block::default()
@@ -2426,7 +2639,13 @@ impl Ide {
             .border_style(crate::ui::rat::to_rat_style(theme.get("ui.window")))
             .style(crate::ui::rat::to_rat_style(theme.get("ui.background")))
             .title(Span::styled(title, title_style))
-            .title(Line::from(Span::styled(format!(" {} ", self.structure.len()), count_style)).right_aligned());
+            .title(
+                Line::from(Span::styled(
+                    format!(" {} ", self.structure.len()),
+                    count_style,
+                ))
+                .right_aligned(),
+            );
 
         if self.fold_structure {
             crate::ui::rat::render(block, area, surface);
@@ -2434,12 +2653,19 @@ impl Ide {
         }
         if self.structure.is_empty() {
             crate::ui::rat::render(block, area, surface);
-            surface.set_stringn(area.x + 1, area.y + 1, "(no symbols)", area.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                area.x + 1,
+                area.y + 1,
+                "(no symbols)",
+                area.width as usize,
+                theme.get("comment"),
+            );
             return;
         }
 
         let base = crate::ui::rat::to_rat_style(theme.get("ui.text"));
-        let sel_style = crate::ui::rat::to_rat_style(theme.get("ui.selection")).add_modifier(RMod::BOLD);
+        let sel_style =
+            crate::ui::rat::to_rat_style(theme.get("ui.selection")).add_modifier(RMod::BOLD);
 
         let items: Vec<ListItem> = self
             .structure
@@ -2499,7 +2725,13 @@ impl Ide {
             .or_else(|| self.run.as_ref().map(|r| r.lock().unwrap().cmd.clone()))
             .unwrap_or_else(|| "Edit Configurations…".to_string());
         let label = format!(" ⚙ {cfg} ▾ ");
-        let (lx, _) = surface.set_stringn(area.x, area.y, &label, area.width as usize, theme.get("function"));
+        let (lx, _) = surface.set_stringn(
+            area.x,
+            area.y,
+            &label,
+            area.width as usize,
+            theme.get("function"),
+        );
         self.toolbar_hits.push((area.x, lx, ToolHit::Configs));
 
         // run/debug + settings/help buttons RIGHT-aligned. ⊙ Locate = JetBrains
@@ -2522,7 +2754,11 @@ impl Ide {
         let bc_start = lx + 2;
         if buttons_start > bc_start + 4 && !self.status_path.is_empty() {
             let avail = (buttons_start - 1 - bc_start) as usize;
-            let parts: Vec<&str> = self.status_path.split('/').filter(|s| !s.is_empty()).collect();
+            let parts: Vec<&str> = self
+                .status_path
+                .split('/')
+                .filter(|s| !s.is_empty())
+                .collect();
             if let Some((file, dirs)) = parts.split_last() {
                 let glyph = crate::ui::icons::file_icon(file);
                 let mut crumb = String::from(" ");
@@ -2557,7 +2793,8 @@ impl Ide {
                 } else {
                     crumb
                 };
-                let (end_x, _) = surface.set_stringn(bc_start, area.y, &shown, avail, theme.get("comment"));
+                let (end_x, _) =
+                    surface.set_stringn(bc_start, area.y, &shown, avail, theme.get("comment"));
                 self.breadcrumb_hit = (bc_start, end_x);
             }
         }
@@ -2578,7 +2815,11 @@ impl Ide {
         self.bottom_header_y = area.y;
 
         let focused = self.focus == Focus::Problems;
-        let on = if focused { theme.get("ui.text.focus") } else { theme.get("ui.text") };
+        let on = if focused {
+            theme.get("ui.text.focus")
+        } else {
+            theme.get("ui.text")
+        };
         let off = theme.get("comment");
 
         // fold chevron
@@ -2595,11 +2836,22 @@ impl Ide {
                 _ => infos += 1,
             }
         }
-        let plabel_style = if self.bottom_tab == BottomTab::Problems { on } else { off };
+        let plabel_style = if self.bottom_tab == BottomTab::Problems {
+            on
+        } else {
+            off
+        };
         let x0 = x;
-        let (mut nx, _) = surface.set_stringn(x, area.y, " PROBLEMS ", area.width as usize, plabel_style);
+        let (mut nx, _) =
+            surface.set_stringn(x, area.y, " PROBLEMS ", area.width as usize, plabel_style);
         if self.problems.is_empty() {
-            let (e, _) = surface.set_stringn(nx, area.y, "✓ ", area.width as usize, theme.get("diff.plus"));
+            let (e, _) = surface.set_stringn(
+                nx,
+                area.y,
+                "✓ ",
+                area.width as usize,
+                theme.get("diff.plus"),
+            );
             nx = e;
         } else {
             for (count, glyph, scope) in [
@@ -2609,7 +2861,8 @@ impl Ide {
             ] {
                 if count > 0 {
                     let s = format!("{glyph}{count} ");
-                    let (e, _) = surface.set_stringn(nx, area.y, &s, area.width as usize, theme.get(scope));
+                    let (e, _) =
+                        surface.set_stringn(nx, area.y, &s, area.width as usize, theme.get(scope));
                     nx = e;
                 }
             }
@@ -2645,7 +2898,17 @@ impl Ide {
         // Run tab
         let rlabel = " RUN ";
         let rw = rlabel.chars().count() as u16;
-        surface.set_stringn(x, area.y, rlabel, area.width as usize, if self.bottom_tab == BottomTab::Run { on } else { off });
+        surface.set_stringn(
+            x,
+            area.y,
+            rlabel,
+            area.width as usize,
+            if self.bottom_tab == BottomTab::Run {
+                on
+            } else {
+                off
+            },
+        );
         self.bottom_hits.push((x, x + rw, BottomHit::TabRun));
         x += rw + 1;
 
@@ -2659,11 +2922,22 @@ impl Ide {
                 _ => modified += 1,
             }
         }
-        let glabel_style = if self.bottom_tab == BottomTab::Git { on } else { off };
+        let glabel_style = if self.bottom_tab == BottomTab::Git {
+            on
+        } else {
+            off
+        };
         let gx0 = x;
-        let (mut gx, _) = surface.set_stringn(x, area.y, " GIT ", area.width as usize, glabel_style);
+        let (mut gx, _) =
+            surface.set_stringn(x, area.y, " GIT ", area.width as usize, glabel_style);
         if self.git_changes.is_empty() {
-            let (e, _) = surface.set_stringn(gx, area.y, "✓ ", area.width as usize, theme.get("diff.plus"));
+            let (e, _) = surface.set_stringn(
+                gx,
+                area.y,
+                "✓ ",
+                area.width as usize,
+                theme.get("diff.plus"),
+            );
             gx = e;
         } else {
             for (count, sign, scope) in [
@@ -2674,34 +2948,64 @@ impl Ide {
             ] {
                 if count > 0 {
                     let s = format!("{sign}{count} ");
-                    let (e, _) = surface.set_stringn(gx, area.y, &s, area.width as usize, theme.get(scope));
+                    let (e, _) =
+                        surface.set_stringn(gx, area.y, &s, area.width as usize, theme.get(scope));
                     gx = e;
                 }
             }
         }
         // ahead/behind the upstream
         if self.git_ahead > 0 {
-            let (e, _) = surface.set_stringn(gx, area.y, &format!("↑{} ", self.git_ahead), area.width as usize, theme.get("diff.plus"));
+            let (e, _) = surface.set_stringn(
+                gx,
+                area.y,
+                &format!("↑{} ", self.git_ahead),
+                area.width as usize,
+                theme.get("diff.plus"),
+            );
             gx = e;
         }
         if self.git_behind > 0 {
-            let (e, _) = surface.set_stringn(gx, area.y, &format!("↓{} ", self.git_behind), area.width as usize, theme.get("diff.minus"));
+            let (e, _) = surface.set_stringn(
+                gx,
+                area.y,
+                &format!("↓{} ", self.git_behind),
+                area.width as usize,
+                theme.get("diff.minus"),
+            );
             gx = e;
         }
         self.bottom_hits.push((gx0, gx, BottomHit::TabGit));
         x = gx + 1;
 
         // Debug tab — ● when a session is live, ⏺N breakpoint count
-        let dlabel_style = if self.bottom_tab == BottomTab::Debug { on } else { off };
+        let dlabel_style = if self.bottom_tab == BottomTab::Debug {
+            on
+        } else {
+            off
+        };
         let dx0 = x;
-        let (mut dx, _) = surface.set_stringn(x, area.y, " DEBUG ", area.width as usize, dlabel_style);
+        let (mut dx, _) =
+            surface.set_stringn(x, area.y, " DEBUG ", area.width as usize, dlabel_style);
         if !self.dap_status.starts_with("no ") {
-            let (e, _) = surface.set_stringn(dx, area.y, "● ", area.width as usize, theme.get("diff.plus"));
+            let (e, _) = surface.set_stringn(
+                dx,
+                area.y,
+                "● ",
+                area.width as usize,
+                theme.get("diff.plus"),
+            );
             dx = e;
         }
         let bpn = self.dap_lines.iter().filter(|(k, _, _)| *k == 3).count();
         if bpn > 0 {
-            let (e, _) = surface.set_stringn(dx, area.y, &format!("⏺{bpn} "), area.width as usize, theme.get("error"));
+            let (e, _) = surface.set_stringn(
+                dx,
+                area.y,
+                &format!("⏺{bpn} "),
+                area.width as usize,
+                theme.get("error"),
+            );
             dx = e;
         }
         self.bottom_hits.push((dx0, dx, BottomHit::TabDebug));
@@ -2710,49 +3014,119 @@ impl Ide {
         // Registers tab (LOTR)
         let glabel = format!(" REGISTERS {} ", self.registers.len());
         let gw = glabel.chars().count() as u16;
-        surface.set_stringn(x, area.y, &glabel, area.width as usize, if self.bottom_tab == BottomTab::Registers { on } else { off });
+        surface.set_stringn(
+            x,
+            area.y,
+            &glabel,
+            area.width as usize,
+            if self.bottom_tab == BottomTab::Registers {
+                on
+            } else {
+                off
+            },
+        );
         self.bottom_hits.push((x, x + gw, BottomHit::TabRegisters));
         x += gw + 1;
 
         // Todo tab
         let tlabel = format!(" TODO {} ", self.todos.len());
         let tw = tlabel.chars().count() as u16;
-        surface.set_stringn(x, area.y, &tlabel, area.width as usize, if self.bottom_tab == BottomTab::Todo { on } else { off });
+        surface.set_stringn(
+            x,
+            area.y,
+            &tlabel,
+            area.width as usize,
+            if self.bottom_tab == BottomTab::Todo {
+                on
+            } else {
+                off
+            },
+        );
         self.bottom_hits.push((x, x + tw, BottomHit::TabTodo));
         x += tw + 1;
 
         // Marks tab
         let mlabel = format!(" MARKS {} ", self.marks_list.len());
         let mw = mlabel.chars().count() as u16;
-        surface.set_stringn(x, area.y, &mlabel, area.width as usize, if self.bottom_tab == BottomTab::Marks { on } else { off });
+        surface.set_stringn(
+            x,
+            area.y,
+            &mlabel,
+            area.width as usize,
+            if self.bottom_tab == BottomTab::Marks {
+                on
+            } else {
+                off
+            },
+        );
         self.bottom_hits.push((x, x + mw, BottomHit::TabMarks));
         x += mw + 1;
 
         // Jumplist tab
         let jlabel = format!(" JUMPS {} ", self.jumplist_rows.len());
         let jw = jlabel.chars().count() as u16;
-        surface.set_stringn(x, area.y, &jlabel, area.width as usize, if self.bottom_tab == BottomTab::Jumplist { on } else { off });
+        surface.set_stringn(
+            x,
+            area.y,
+            &jlabel,
+            area.width as usize,
+            if self.bottom_tab == BottomTab::Jumplist {
+                on
+            } else {
+                off
+            },
+        );
         self.bottom_hits.push((x, x + jw, BottomHit::TabJumplist));
         x += jw + 1;
 
         // Recent files tab
         let nlabel = format!(" RECENT {} ", self.recent_rows.len());
         let nw = nlabel.chars().count() as u16;
-        surface.set_stringn(x, area.y, &nlabel, area.width as usize, if self.bottom_tab == BottomTab::Recent { on } else { off });
+        surface.set_stringn(
+            x,
+            area.y,
+            &nlabel,
+            area.width as usize,
+            if self.bottom_tab == BottomTab::Recent {
+                on
+            } else {
+                off
+            },
+        );
         self.bottom_hits.push((x, x + nw, BottomHit::TabRecent));
         x += nw + 1;
 
         // Harpoon marks tab
         let hlabel = format!(" ⚓ {} ", self.harpoon_rows.len());
         let hw = hlabel.chars().count() as u16 + 1; // anchor glyph is double-width
-        surface.set_stringn(x, area.y, &hlabel, area.width as usize, if self.bottom_tab == BottomTab::Harpoon { on } else { off });
+        surface.set_stringn(
+            x,
+            area.y,
+            &hlabel,
+            area.width as usize,
+            if self.bottom_tab == BottomTab::Harpoon {
+                on
+            } else {
+                off
+            },
+        );
         self.bottom_hits.push((x, x + hw, BottomHit::TabHarpoon));
         x += hw + 2;
 
         // CI tab (GitHub Actions runs)
         let cilabel = " CI ";
         let ciw = cilabel.chars().count() as u16;
-        surface.set_stringn(x, area.y, cilabel, area.width as usize, if self.bottom_tab == BottomTab::Ci { on } else { off });
+        surface.set_stringn(
+            x,
+            area.y,
+            cilabel,
+            area.width as usize,
+            if self.bottom_tab == BottomTab::Ci {
+                on
+            } else {
+                off
+            },
+        );
         self.bottom_hits.push((x, x + ciw, BottomHit::TabCi));
 
         if self.fold_problems {
@@ -2782,7 +3156,11 @@ impl Ide {
             let d0 = full.x + (full.width as u32 * s as u32 / 100) as u16;
             self.bottom_div_x = [d0, 0];
             self.mid_fold_btn_x = d0;
-            let dst = if self.resizing_div == Some(0) { focus_st } else { off };
+            let dst = if self.resizing_div == Some(0) {
+                focus_st
+            } else {
+                off
+            };
             for yy in full.y..full.y + full.height {
                 surface.set_stringn(d0, yy, "\u{2502}", 1, dst);
             }
@@ -2798,7 +3176,10 @@ impl Ide {
             let d1 = full.x + (full.width as u32 * s1 as u32 / 100) as u16;
             self.bottom_div_x = [d0, d1];
             self.mid_fold_btn_x = d1;
-            for (dx, active) in [(d0, self.resizing_div == Some(0)), (d1, self.resizing_div == Some(1))] {
+            for (dx, active) in [
+                (d0, self.resizing_div == Some(0)),
+                (d1, self.resizing_div == Some(1)),
+            ] {
                 let dst = if active { focus_st } else { off };
                 for yy in full.y..full.y + full.height {
                     surface.set_stringn(dx, yy, "\u{2502}", 1, dst);
@@ -2836,7 +3217,13 @@ impl Ide {
             } else {
                 "  loading…".to_string()
             };
-            surface.set_stringn(body.x, body.y, &msg, body.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                body.x,
+                body.y,
+                &msg,
+                body.width as usize,
+                theme.get("comment"),
+            );
             return;
         }
         if self.aux_sel >= runs.len() {
@@ -2876,13 +3263,24 @@ impl Ide {
         crate::ui::rat::render_stateful(table, body, surface, &mut self.ci_state);
     }
 
-    fn render_jumplist_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
+    fn render_jumplist_body(
+        &mut self,
+        surface: &mut Surface,
+        theme: &zemacs_view::Theme,
+        body: Rect,
+    ) {
         let height = body.height as usize;
         if height == 0 {
             return;
         }
         if self.jumplist_rows.is_empty() {
-            surface.set_stringn(body.x, body.y, "  no jumps", body.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                body.x,
+                body.y,
+                "  no jumps",
+                body.width as usize,
+                theme.get("comment"),
+            );
             return;
         }
         let mark = theme.get("function");
@@ -2894,20 +3292,40 @@ impl Ide {
             }
             let y = body.y + i as u16;
             if focused && i == self.aux_sel {
-                surface.set_style(Rect::new(body.x, y, body.width, 1), theme.get("ui.selection"));
+                surface.set_style(
+                    Rect::new(body.x, y, body.width, 1),
+                    theme.get("ui.selection"),
+                );
             }
             surface.set_stringn(body.x, y, " ↪", body.width as usize, mark);
-            surface.set_stringn(body.x + 3, y, label, body.width.saturating_sub(3) as usize, base);
+            surface.set_stringn(
+                body.x + 3,
+                y,
+                label,
+                body.width.saturating_sub(3) as usize,
+                base,
+            );
         }
     }
 
-    fn render_recent_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
+    fn render_recent_body(
+        &mut self,
+        surface: &mut Surface,
+        theme: &zemacs_view::Theme,
+        body: Rect,
+    ) {
         let height = body.height as usize;
         if height == 0 {
             return;
         }
         if self.recent_rows.is_empty() {
-            surface.set_stringn(body.x, body.y, "  no recent files", body.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                body.x,
+                body.y,
+                "  no recent files",
+                body.width as usize,
+                theme.get("comment"),
+            );
             return;
         }
         let base = theme.get("ui.text");
@@ -2919,7 +3337,10 @@ impl Ide {
             }
             let y = body.y + i as u16;
             if focused && i == self.aux_sel {
-                surface.set_style(Rect::new(body.x, y, body.width, 1), theme.get("ui.selection"));
+                surface.set_style(
+                    Rect::new(body.x, y, body.width, 1),
+                    theme.get("ui.selection"),
+                );
             }
             let name = path
                 .file_name()
@@ -2930,7 +3351,10 @@ impl Ide {
             let (nx, _) = surface.set_stringn(body.x, y, &label, body.width as usize, base);
             // trailing dimmed relative access time + parent directory
             let age = match self.recent_times.get(i) {
-                Some(&t) if t > 0 => format!("· {} ", crate::recent_files::humanize_age(crate::recent_files::age_since(t))),
+                Some(&t) if t > 0 => format!(
+                    "· {} ",
+                    crate::recent_files::humanize_age(crate::recent_files::age_since(t))
+                ),
                 _ => String::new(),
             };
             if let Some(parent) = path.parent().map(|p| p.to_string_lossy().into_owned()) {
@@ -2940,13 +3364,24 @@ impl Ide {
         }
     }
 
-    fn render_harpoon_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
+    fn render_harpoon_body(
+        &mut self,
+        surface: &mut Surface,
+        theme: &zemacs_view::Theme,
+        body: Rect,
+    ) {
         let height = body.height as usize;
         if height == 0 {
             return;
         }
         if self.harpoon_rows.is_empty() {
-            surface.set_stringn(body.x, body.y, "  no marks — pin with SPC H a", body.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                body.x,
+                body.y,
+                "  no marks — pin with SPC H a",
+                body.width as usize,
+                theme.get("comment"),
+            );
             return;
         }
         let base = theme.get("ui.text");
@@ -2958,7 +3393,10 @@ impl Ide {
             }
             let y = body.y + i as u16;
             if focused && i == self.aux_sel {
-                surface.set_style(Rect::new(body.x, y, body.width, 1), theme.get("ui.selection"));
+                surface.set_style(
+                    Rect::new(body.x, y, body.width, 1),
+                    theme.get("ui.selection"),
+                );
             }
             // slot number (1-based) then the file name
             surface.set_stringn(body.x + 1, y, &format!("{}", i + 1), 2, slot_style);
@@ -2967,7 +3405,13 @@ impl Ide {
                 .map(|s| s.to_string_lossy().into_owned())
                 .unwrap_or_default();
             let glyph = crate::ui::icons::file_icon(&name);
-            surface.set_stringn(body.x + 3, y, &format!("{glyph} {name}"), body.width.saturating_sub(3) as usize, base);
+            surface.set_stringn(
+                body.x + 3,
+                y,
+                &format!("{glyph} {name}"),
+                body.width.saturating_sub(3) as usize,
+                base,
+            );
         }
     }
 
@@ -2977,7 +3421,13 @@ impl Ide {
             return;
         }
         if self.todos.is_empty() {
-            surface.set_stringn(body.x, body.y, "  no TODOs", body.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                body.x,
+                body.y,
+                "  no TODOs",
+                body.width as usize,
+                theme.get("comment"),
+            );
             return;
         }
         let base = theme.get("ui.text");
@@ -2988,21 +3438,41 @@ impl Ide {
             }
             let y = body.y + i as u16;
             if focused && i == self.aux_sel {
-                surface.set_style(Rect::new(body.x, y, body.width, 1), theme.get("ui.selection"));
+                surface.set_style(
+                    Rect::new(body.x, y, body.width, 1),
+                    theme.get("ui.selection"),
+                );
             }
             let mark = theme.get(todo_marker_scope(marker));
             surface.set_stringn(body.x, y, " •", body.width as usize, mark);
-            surface.set_stringn(body.x + 3, y, text, body.width.saturating_sub(3) as usize, base);
+            surface.set_stringn(
+                body.x + 3,
+                y,
+                text,
+                body.width.saturating_sub(3) as usize,
+                base,
+            );
         }
     }
 
-    fn render_registers_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
+    fn render_registers_body(
+        &mut self,
+        surface: &mut Surface,
+        theme: &zemacs_view::Theme,
+        body: Rect,
+    ) {
         let height = body.height as usize;
         if height == 0 {
             return;
         }
         if self.registers.is_empty() {
-            surface.set_stringn(body.x, body.y, "  no registers", body.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                body.x,
+                body.y,
+                "  no registers",
+                body.width as usize,
+                theme.get("comment"),
+            );
             return;
         }
         let name_style = theme.get("keyword");
@@ -3014,15 +3484,29 @@ impl Ide {
             }
             let y = body.y + i as u16;
             if focused && i == self.reg_sel {
-                surface.set_style(Rect::new(body.x, y, body.width, 1), theme.get("ui.selection"));
+                surface.set_style(
+                    Rect::new(body.x, y, body.width, 1),
+                    theme.get("ui.selection"),
+                );
             }
             let label = format!(" \"{ch}  ");
             let (nx, _) = surface.set_stringn(body.x, y, &label, body.width as usize, name_style);
-            surface.set_stringn(nx, y, content, body.width.saturating_sub(nx - body.x) as usize, base);
+            surface.set_stringn(
+                nx,
+                y,
+                content,
+                body.width.saturating_sub(nx - body.x) as usize,
+                base,
+            );
         }
     }
 
-    fn render_problems_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
+    fn render_problems_body(
+        &mut self,
+        surface: &mut Surface,
+        theme: &zemacs_view::Theme,
+        body: Rect,
+    ) {
         use ratatui::layout::Constraint;
         use ratatui::style::Modifier as RMod;
         use ratatui::widgets::{Block, Cell, Row, Table};
@@ -3030,7 +3514,13 @@ impl Ide {
             return;
         }
         if self.problems.is_empty() {
-            surface.set_stringn(body.x, body.y, "  no problems", body.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                body.x,
+                body.y,
+                "  no problems",
+                body.width as usize,
+                theme.get("comment"),
+            );
             return;
         }
         let base = crate::ui::rat::to_rat_style(theme.get("ui.text"));
@@ -3050,7 +3540,11 @@ impl Ide {
             .collect();
         let table = Table::new(
             rows,
-            [Constraint::Length(1), Constraint::Length(6), Constraint::Min(8)],
+            [
+                Constraint::Length(1),
+                Constraint::Length(6),
+                Constraint::Min(8),
+            ],
         )
         .column_spacing(1)
         .block(Block::default().style(crate::ui::rat::to_rat_style(theme.get("ui.background"))))
@@ -3088,8 +3582,18 @@ impl Ide {
         let kw = theme.get("keyword");
 
         // status line
-        let status_style = if self.dap_status.starts_with("no ") { dim } else { accent };
-        surface.set_stringn(body.x + 1, body.y, &self.dap_status, body.width.saturating_sub(1) as usize, status_style);
+        let status_style = if self.dap_status.starts_with("no ") {
+            dim
+        } else {
+            accent
+        };
+        surface.set_stringn(
+            body.x + 1,
+            body.y,
+            &self.dap_status,
+            body.width.saturating_sub(1) as usize,
+            status_style,
+        );
         if body.height < 2 {
             return;
         }
@@ -3100,11 +3604,17 @@ impl Ide {
             }
             let y = list.y + i as u16;
             let (style, indent) = match kind {
-                0 => (dim, 0u16),   // section header
-                3 => (kw, 1),       // breakpoint
-                _ => (base, 1),     // frame / variable
+                0 => (dim, 0u16), // section header
+                3 => (kw, 1),     // breakpoint
+                _ => (base, 1),   // frame / variable
             };
-            surface.set_stringn(list.x + indent, y, text, list.width.saturating_sub(indent) as usize, style);
+            surface.set_stringn(
+                list.x + indent,
+                y,
+                text,
+                list.width.saturating_sub(indent) as usize,
+                style,
+            );
         }
     }
 
@@ -3119,7 +3629,13 @@ impl Ide {
             } else {
                 "  working tree clean ✓"
             };
-            surface.set_stringn(body.x, body.y, msg, body.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                body.x,
+                body.y,
+                msg,
+                body.width as usize,
+                theme.get("comment"),
+            );
             return;
         }
         if self.git_sel >= self.git_changes.len() {
@@ -3198,8 +3714,7 @@ impl Ide {
                     surface.set_stringn(sx, y, &format!("+{a}"), 6, plus);
                     surface.set_stringn(sx + 6, y, &format!("-{d}"), 6, minus);
                     let total = (a + d).max(0);
-                    let filled =
-                        ((total as u64 * bar_w as u64) / max_churn as u64) as u16;
+                    let filled = ((total as u64 * bar_w as u64) / max_churn as u64) as u16;
                     let adds_px = if total == 0 {
                         0
                     } else {
@@ -3221,7 +3736,13 @@ impl Ide {
             return;
         }
         if self.marks_list.is_empty() {
-            surface.set_stringn(body.x, body.y, "  no marks — set with m{a-z}", body.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                body.x,
+                body.y,
+                "  no marks — set with m{a-z}",
+                body.width as usize,
+                theme.get("comment"),
+            );
             return;
         }
         let base = theme.get("ui.text");
@@ -3233,19 +3754,34 @@ impl Ide {
             }
             let y = body.y + i as u16;
             if focused && i == self.aux_sel {
-                surface.set_style(Rect::new(body.x, y, body.width, 1), theme.get("ui.selection"));
+                surface.set_style(
+                    Rect::new(body.x, y, body.width, 1),
+                    theme.get("ui.selection"),
+                );
             }
             // mark sigil ('x) gets the accent colour, the rest is plain
             let head: String = disp.chars().take(2).collect();
             surface.set_stringn(body.x + 1, y, &head, 2, accent);
             let rest: String = disp.chars().skip(2).collect();
-            surface.set_stringn(body.x + 3, y, &rest, body.width.saturating_sub(3) as usize, base);
+            surface.set_stringn(
+                body.x + 3,
+                y,
+                &rest,
+                body.width.saturating_sub(3) as usize,
+                base,
+            );
         }
     }
 
     fn render_run_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
         let Some(run) = self.run.clone() else {
-            surface.set_stringn(body.x, body.y, "  no run — :run [cmd]", body.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                body.x,
+                body.y,
+                "  no run — :run [cmd]",
+                body.width as usize,
+                theme.get("comment"),
+            );
             return;
         };
         let s = run.lock().unwrap();
@@ -3273,13 +3809,21 @@ impl Ide {
         // Soft-wrap: every output line occupies ceil(width/w) visual rows (≥1).
         let line_vis = |line: &str| -> usize {
             let dw = disp_width(line) as usize;
-            if dw == 0 { 1 } else { dw.div_ceil(w) }
+            if dw == 0 {
+                1
+            } else {
+                dw.div_ceil(w)
+            }
         };
         let total_vis: usize = s.lines.iter().map(|l| line_vis(l)).sum::<usize>().max(1);
         self.run_total_vis = total_vis;
         let max_top = total_vis.saturating_sub(height);
         // tail-follow unless the user scrolled up
-        let top = if s.follow { max_top } else { s.scroll.min(max_top) };
+        let top = if s.follow {
+            max_top
+        } else {
+            s.scroll.min(max_top)
+        };
 
         // (re)build the visible-row → source-line map for click-to-jump. Indexed
         // by *body* row (0-based from body.y) so the header offset lines up with
@@ -3308,7 +3852,11 @@ impl Ide {
         if total_vis > height && out.width > 1 {
             let track_x = out.x + out.width - 1;
             let thumb_h = (height * height / total_vis).max(1);
-            let thumb_y = if max_top == 0 { 0 } else { top * (height - thumb_h) / max_top };
+            let thumb_y = if max_top == 0 {
+                0
+            } else {
+                top * (height - thumb_h) / max_top
+            };
             let bar = theme.get("ui.selection");
             for k in 0..thumb_h {
                 surface.set_stringn(track_x, out.y + (thumb_y + k) as u16, "▐", 1, bar);
@@ -3351,7 +3899,11 @@ impl Ide {
             let gw = 20u16.min(area.width / 3);
             if gw >= 8 && area.width > gw + 8 {
                 let gx = area.x + area.width - gw - 1;
-                let ratio = if total > 0 { passed as f64 / total as f64 } else { 0.0 };
+                let ratio = if total > 0 {
+                    passed as f64 / total as f64
+                } else {
+                    0.0
+                };
                 let ok = passed == total;
                 let bar_scope = if ok { "diff.plus" } else { "diff.delta" };
                 let gauge = Gauge::default()
@@ -3412,8 +3964,14 @@ impl Ide {
         // by the pane, not the file size).
         let mut code_pts: Vec<(f64, f64)> = Vec::new();
         for sub in 0..slots {
-            let srcline = if total <= slots { sub } else { sub * total / slots };
-            let Some(dots) = self.minimap_dots.get(srcline) else { continue };
+            let srcline = if total <= slots {
+                sub
+            } else {
+                sub * total / slots
+            };
+            let Some(dots) = self.minimap_dots.get(srcline) else {
+                continue;
+            };
             let cy = flip(sub);
             for (c, on) in dots.iter().enumerate() {
                 if *on && (c as f64) < cols {
@@ -3461,7 +4019,10 @@ impl Ide {
             .x_bounds([0.0, cols])
             .y_bounds([0.0, slots as f64])
             .paint(move |ctx| {
-                ctx.draw(&Points { coords: &code_pts, color: dot_color });
+                ctx.draw(&Points {
+                    coords: &code_pts,
+                    color: dot_color,
+                });
                 ctx.draw(&Rectangle {
                     x: 0.0,
                     y: vp_y,
@@ -3470,10 +4031,16 @@ impl Ide {
                     color: vp_color,
                 });
                 for (x, y, color) in &diag_pts {
-                    ctx.draw(&Points { coords: &[(*x, *y)], color: *color });
+                    ctx.draw(&Points {
+                        coords: &[(*x, *y)],
+                        color: *color,
+                    });
                 }
                 for (x, y, color) in &git_pts {
-                    ctx.draw(&Points { coords: &[(*x, *y)], color: *color });
+                    ctx.draw(&Points {
+                        coords: &[(*x, *y)],
+                        color: *color,
+                    });
                 }
             });
         if let Some(bgc) = bg_color {
@@ -3582,11 +4149,23 @@ impl Ide {
 
 /// The area below a drawer's 1-row header.
 fn body_rect(area: Rect) -> Rect {
-    Rect::new(area.x, area.y + 1, area.width, area.height.saturating_sub(1))
+    Rect::new(
+        area.x,
+        area.y + 1,
+        area.width,
+        area.height.saturating_sub(1),
+    )
 }
 
 /// Draw a drawer header with a fold chevron (▾ open / ▸ folded).
-fn draw_header(surface: &mut Surface, area: Rect, title: &str, folded: bool, focused: bool, theme: &zemacs_view::Theme) {
+fn draw_header(
+    surface: &mut Surface,
+    area: Rect,
+    title: &str,
+    folded: bool,
+    focused: bool,
+    theme: &zemacs_view::Theme,
+) {
     let style = if focused {
         theme.get("ui.text.focus")
     } else {
@@ -3634,7 +4213,10 @@ fn is_member_kind(kind: &str) -> bool {
     )
 }
 
-fn sev_mark(sev: Severity, theme: &zemacs_view::Theme) -> (&'static str, zemacs_view::graphics::Style) {
+fn sev_mark(
+    sev: Severity,
+    theme: &zemacs_view::Theme,
+) -> (&'static str, zemacs_view::graphics::Style) {
     match sev {
         Severity::Error => ("E", theme.get("error")),
         Severity::Warning => ("W", theme.get("warning")),
@@ -3692,12 +4274,27 @@ pub fn file_context_menu(
 
     let mut items = Vec::new();
     if is_dir {
-        items.push(ContextAction { label: "New File", kind: FileActionKind::NewFile });
-        items.push(ContextAction { label: "New Folder", kind: FileActionKind::NewFolder });
+        items.push(ContextAction {
+            label: "New File",
+            kind: FileActionKind::NewFile,
+        });
+        items.push(ContextAction {
+            label: "New Folder",
+            kind: FileActionKind::NewFolder,
+        });
     }
-    items.push(ContextAction { label: "Rename", kind: FileActionKind::Rename });
-    items.push(ContextAction { label: "Delete", kind: FileActionKind::Delete });
-    items.push(ContextAction { label: "Copy Path", kind: FileActionKind::CopyPath });
+    items.push(ContextAction {
+        label: "Rename",
+        kind: FileActionKind::Rename,
+    });
+    items.push(ContextAction {
+        label: "Delete",
+        kind: FileActionKind::Delete,
+    });
+    items.push(ContextAction {
+        label: "Copy Path",
+        kind: FileActionKind::CopyPath,
+    });
 
     let menu = Menu::new(items, (), move |editor, item, event| {
         if !matches!(event, PromptEvent::Validate) {
@@ -3823,7 +4420,10 @@ fn parse_file_line(line: &str) -> Option<(String, usize, usize)> {
         if lineno == 0 {
             continue;
         }
-        let col = parts.get(2).and_then(|c| c.parse::<usize>().ok()).unwrap_or(1);
+        let col = parts
+            .get(2)
+            .and_then(|c| c.parse::<usize>().ok())
+            .unwrap_or(1);
         return Some((path.to_string(), lineno, col.max(1)));
     }
     None
@@ -4007,7 +4607,9 @@ fn git_churn(dir: &std::path::Path) -> Vec<u64> {
 
 #[cfg(test)]
 mod parse_tests {
-    use super::{parse_file_line, parse_percent, parse_test_progress, todo_marker, todo_marker_scope};
+    use super::{
+        parse_file_line, parse_percent, parse_test_progress, todo_marker, todo_marker_scope,
+    };
 
     #[test]
     fn percent_token_parsing() {

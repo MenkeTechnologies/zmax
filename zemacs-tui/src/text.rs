@@ -46,11 +46,11 @@
 //!     Span::raw(" title"),
 //! ]);
 //! ```
+use std::borrow::Cow;
+use unicode_segmentation::UnicodeSegmentation;
 use zemacs_core::line_ending::str_is_line_ending;
 use zemacs_core::unicode::width::UnicodeWidthStr;
 use zemacs_view::graphics::Style;
-use std::borrow::Cow;
-use unicode_segmentation::UnicodeSegmentation;
 
 /// A grapheme associated to a style.
 #[derive(Debug, Clone, PartialEq, Eq)]

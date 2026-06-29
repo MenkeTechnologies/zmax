@@ -1,9 +1,9 @@
 use crate::compositor::{Component, Context};
-use zemacs_view::graphics::{Margin, Rect};
-use zemacs_view::info::Info;
 use tui::buffer::Buffer as Surface;
 use tui::text::Text;
 use tui::widgets::{Block, Paragraph, Widget};
+use zemacs_view::graphics::{Margin, Rect};
+use zemacs_view::info::Info;
 
 impl Component for Info {
     fn render(&mut self, viewport: Rect, surface: &mut Surface, cx: &mut Context) {

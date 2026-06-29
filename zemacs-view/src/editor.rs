@@ -20,8 +20,8 @@ use zemacs_vcs::DiffProviderRegistry;
 
 use futures_util::stream::select_all::SelectAll;
 use futures_util::StreamExt;
-use zemacs_lsp::{Call, LanguageServerId};
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use zemacs_lsp::{Call, LanguageServerId};
 
 use std::{
     borrow::Cow,
@@ -2055,7 +2055,9 @@ impl Editor {
                 let (view, doc) = current_ref!(self);
                 (
                     doc.id(),
-                    doc.selection(view.id).primary().cursor(doc.text().slice(..)),
+                    doc.selection(view.id)
+                        .primary()
+                        .cursor(doc.text().slice(..)),
                 )
             };
             if leave.0 != id {

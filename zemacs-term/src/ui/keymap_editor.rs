@@ -90,7 +90,11 @@ fn all_bindings() -> Vec<(String, String, String)> {
         };
         for (cmd, chords) in trie.reverse_map() {
             for chord in chords {
-                let s = chord.iter().map(|k| k.to_string()).collect::<Vec<_>>().join(" ");
+                let s = chord
+                    .iter()
+                    .map(|k| k.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" ");
                 out.push((m.to_string(), s, cmd.clone()));
             }
         }
@@ -409,24 +413,45 @@ impl Component for KeymapEditor {
         let key_st = to_rat_style(theme.get("keyword"));
         surface.clear_with(area, theme.get("ui.background"));
 
-        surface.clear_with(Rect::new(area.x, area.y, area.width, 1), theme.get("ui.statusline"));
-        render(Paragraph::new(Span::styled(" Keymap — config.toml [keys.*] ", accent)), Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1), surface);
+        surface.clear_with(
+            Rect::new(area.x, area.y, area.width, 1),
+            theme.get("ui.statusline"),
+        );
+        render(
+            Paragraph::new(Span::styled(" Keymap — config.toml [keys.*] ", accent)),
+            Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1),
+            surface,
+        );
         let _ = (border, bg);
-        let inner = Rect::new(area.x + 1, area.y + 1, area.width.saturating_sub(2), area.height.saturating_sub(1));
+        let inner = Rect::new(
+            area.x + 1,
+            area.y + 1,
+            area.width.saturating_sub(2),
+            area.height.saturating_sub(1),
+        );
         if inner.width < 12 || inner.height < 6 {
             return;
         }
 
         // buttons
         let mut bx = inner.x;
-        for (lbl, b) in [(" + Add ", 0u8), (" − Delete ", 1u8), (" ⌨ Capture key ", 2u8), (" 🔍 All Bindings (Tab) ", 3u8)] {
+        for (lbl, b) in [
+            (" + Add ", 0u8),
+            (" − Delete ", 1u8),
+            (" ⌨ Capture key ", 2u8),
+            (" 🔍 All Bindings (Tab) ", 3u8),
+        ] {
             let w = lbl.chars().count() as u16;
             let st = if (b == 2 && self.capturing) || (b == 3 && self.browse) {
                 to_rat_style(theme.get("diff.plus")).add_modifier(RMod::REVERSED | RMod::BOLD)
             } else {
                 text.add_modifier(RMod::REVERSED)
             };
-            render(Paragraph::new(Span::styled(lbl, st)), Rect::new(bx, inner.y, w, 1), surface);
+            render(
+                Paragraph::new(Span::styled(lbl, st)),
+                Rect::new(bx, inner.y, w, 1),
+                surface,
+            );
             self.btn_hits.push((bx, bx + w, inner.y, b));
             bx += w + 1;
         }
@@ -439,7 +464,12 @@ impl Component for KeymapEditor {
             }
             render(
                 Paragraph::new(Span::styled(
-                    format!("🔍 {}▏   {} of {} bindings   (Tab/Esc back)", self.bfilter, matched.len(), self.all_binds.len()),
+                    format!(
+                        "🔍 {}▏   {} of {} bindings   (Tab/Esc back)",
+                        self.bfilter,
+                        matched.len(),
+                        self.all_binds.len()
+                    ),
                     dim,
                 )),
                 Rect::new(inner.x, inner.y + 1, inner.width, 1),
@@ -458,13 +488,38 @@ impl Component for KeymapEditor {
                 let y = by + (pos - self.btop) as u16;
                 let is_sel = pos == self.bsel;
                 if is_sel {
-                    surface.set_style(Rect::new(inner.x, y, inner.width, 1), theme.get("ui.selection"));
+                    surface.set_style(
+                        Rect::new(inner.x, y, inner.width, 1),
+                        theme.get("ui.selection"),
+                    );
                 }
-                render(Paragraph::new(Span::styled(format!(" {m:<6}"), key_st)), Rect::new(inner.x, y, 8, 1), surface);
-                render(Paragraph::new(Span::styled(chord.clone(), if is_sel { accent } else { text })), Rect::new(inner.x + 8, y, 22, 1), surface);
-                render(Paragraph::new(Span::styled(format!("→ {cmd}"), dim)), Rect::new(inner.x + 31, y, inner.x + inner.width - (inner.x + 31), 1), surface);
+                render(
+                    Paragraph::new(Span::styled(format!(" {m:<6}"), key_st)),
+                    Rect::new(inner.x, y, 8, 1),
+                    surface,
+                );
+                render(
+                    Paragraph::new(Span::styled(
+                        chord.clone(),
+                        if is_sel { accent } else { text },
+                    )),
+                    Rect::new(inner.x + 8, y, 22, 1),
+                    surface,
+                );
+                render(
+                    Paragraph::new(Span::styled(format!("→ {cmd}"), dim)),
+                    Rect::new(inner.x + 31, y, inner.x + inner.width - (inner.x + 31), 1),
+                    surface,
+                );
             }
-            render(Paragraph::new(Span::styled(" type to search · ↑/↓ move · Tab/Esc back to overrides", dim)), Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1), surface);
+            render(
+                Paragraph::new(Span::styled(
+                    " type to search · ↑/↓ move · Tab/Esc back to overrides",
+                    dim,
+                )),
+                Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1),
+                surface,
+            );
             return;
         }
 
@@ -472,7 +527,11 @@ impl Component for KeymapEditor {
         let split = inner.x + (inner.width * 3 / 5);
         let list_y = inner.y + 2;
         // header
-        render(Paragraph::new(Span::styled("mode    chord → command", dim)), Rect::new(inner.x, list_y - 1, split - inner.x, 1), surface);
+        render(
+            Paragraph::new(Span::styled("mode    chord → command", dim)),
+            Rect::new(inner.x, list_y - 1, split - inner.x, 1),
+            surface,
+        );
         for (i, b) in self.binds.iter().enumerate() {
             let row = list_y + i as u16;
             if row >= inner.y + inner.height - 1 {
@@ -480,7 +539,10 @@ impl Component for KeymapEditor {
             }
             let is_sel = i == self.selected;
             if is_sel {
-                surface.set_style(Rect::new(inner.x, row, split - inner.x, 1), theme.get("ui.selection"));
+                surface.set_style(
+                    Rect::new(inner.x, row, split - inner.x, 1),
+                    theme.get("ui.selection"),
+                );
             }
             let line = format!("{:<7} {} → {}", MODES[b.mode], b.chord, b.command);
             render(
@@ -493,19 +555,50 @@ impl Component for KeymapEditor {
 
         // right: edit form for the selected/edited bind
         let fx = split + 2;
-        let src = if self.editing { &self.buf } else { self.binds.get(self.selected).unwrap_or(&self.buf) };
-        let vals = [MODES[src.mode].to_string(), src.chord.clone(), src.command.clone()];
+        let src = if self.editing {
+            &self.buf
+        } else {
+            self.binds.get(self.selected).unwrap_or(&self.buf)
+        };
+        let vals = [
+            MODES[src.mode].to_string(),
+            src.chord.clone(),
+            src.command.clone(),
+        ];
         for (fi, fname) in FIELDS.iter().enumerate() {
             let y = list_y + fi as u16 * 2;
             if y >= inner.y + inner.height - 1 {
                 break;
             }
             let active = self.editing && fi == self.field;
-            render(Paragraph::new(Span::styled(format!("{fname}:"), if active { accent } else { dim })), Rect::new(fx, y, 10, 1), surface);
+            render(
+                Paragraph::new(Span::styled(
+                    format!("{fname}:"),
+                    if active { accent } else { dim },
+                )),
+                Rect::new(fx, y, 10, 1),
+                surface,
+            );
             let vx = fx + 10;
-            let shown = if active && fi != 0 { format!("{}▏", vals[fi]) } else { vals[fi].clone() };
-            let vstyle = if fi == 0 { key_st } else { text.add_modifier(if active { RMod::UNDERLINED } else { RMod::empty() }) };
-            render(Paragraph::new(Span::styled(shown, vstyle)), Rect::new(vx, y, (inner.x + inner.width).saturating_sub(vx), 1), surface);
+            let shown = if active && fi != 0 {
+                format!("{}▏", vals[fi])
+            } else {
+                vals[fi].clone()
+            };
+            let vstyle = if fi == 0 {
+                key_st
+            } else {
+                text.add_modifier(if active {
+                    RMod::UNDERLINED
+                } else {
+                    RMod::empty()
+                })
+            };
+            render(
+                Paragraph::new(Span::styled(shown, vstyle)),
+                Rect::new(vx, y, (inner.x + inner.width).saturating_sub(vx), 1),
+                surface,
+            );
             self.field_hits.push((y, fx, inner.x + inner.width, fi));
         }
 
@@ -516,6 +609,10 @@ impl Component for KeymapEditor {
         } else {
             " j/k move · a add · d delete · ⏎/e edit · ⌨ Capture key · click a field"
         };
-        render(Paragraph::new(Span::styled(help, dim)), Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1), surface);
+        render(
+            Paragraph::new(Span::styled(help, dim)),
+            Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1),
+            surface,
+        );
     }
 }

@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
+use tui::buffer::Buffer;
+use tui::widgets::{BorderType, Paragraph, Widget, Wrap};
 use zemacs_core::syntax;
 use zemacs_lsp::lsp;
 use zemacs_view::graphics::{Margin, Rect, Style};
 use zemacs_view::input::Event;
-use tui::buffer::Buffer;
-use tui::widgets::{BorderType, Paragraph, Widget, Wrap};
 
 use crate::compositor::{Component, Context, EventResult};
 

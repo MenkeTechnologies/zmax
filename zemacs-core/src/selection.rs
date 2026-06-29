@@ -12,10 +12,10 @@ use crate::{
     tree_sitter::Node,
     Assoc, ChangeSet, RopeSlice,
 };
-use zemacs_stdx::range::is_subset;
-use zemacs_stdx::rope::{self, RopeSliceExt};
 use smallvec::{smallvec, SmallVec};
 use std::{borrow::Cow, iter, slice};
+use zemacs_stdx::range::is_subset;
+use zemacs_stdx::rope::{self, RopeSliceExt};
 
 /// A single selection range.
 ///

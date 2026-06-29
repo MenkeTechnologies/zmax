@@ -1,8 +1,8 @@
+use serde::{Deserialize, Serialize};
 use zemacs_core::diagnostic::Severity;
 use zemacs_core::doc_formatter::{FormattedGrapheme, TextFormat};
 use zemacs_core::text_annotations::LineAnnotation;
 use zemacs_core::{softwrapped_dimensions, Diagnostic, Position};
-use serde::{Deserialize, Serialize};
 
 use crate::Document;
 

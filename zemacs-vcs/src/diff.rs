@@ -1,13 +1,13 @@
 use std::iter::Peekable;
 use std::sync::Arc;
 
-use zemacs_core::Rope;
-use zemacs_event::RenderLockGuard;
 use imara_diff::Algorithm;
 use parking_lot::{RwLock, RwLockReadGuard};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 use tokio::task::JoinHandle;
 use tokio::time::Instant;
+use zemacs_core::Rope;
+use zemacs_event::RenderLockGuard;
 
 use crate::diff::worker::DiffWorker;
 

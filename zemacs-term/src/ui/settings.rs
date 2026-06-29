@@ -19,7 +19,7 @@ enum Kind {
     Int,
     Float,
     Str,
-    Toml, // arrays / inline tables — edited as a TOML literal
+    Toml,                          // arrays / inline tables — edited as a TOML literal
     Enum(&'static [&'static str]), // cycle through a fixed set of values
 }
 
@@ -45,7 +45,8 @@ const ENUMS: &[(&[&str], &[&str])] = &[
 
 fn enum_for(path: &[String]) -> Option<&'static [&'static str]> {
     ENUMS.iter().find_map(|(p, opts)| {
-        (p.len() == path.len() && p.iter().zip(path).all(|(a, b)| *a == b.as_str())).then_some(*opts)
+        (p.len() == path.len() && p.iter().zip(path).all(|(a, b)| *a == b.as_str()))
+            .then_some(*opts)
     })
 }
 
@@ -76,7 +77,8 @@ fn live_reload(cx: &mut Context) {
 
 /// The full effective `[editor]` config as a TOML value (defaults + overrides).
 fn live_editor_config(ctx: &Context) -> toml::Value {
-    toml::Value::try_from(&*ctx.editor.config()).unwrap_or_else(|_| toml::Value::Table(Default::default()))
+    toml::Value::try_from(&*ctx.editor.config())
+        .unwrap_or_else(|_| toml::Value::Table(Default::default()))
 }
 
 /// The compiled-in default `[editor]` config (for "modified?" comparison).
@@ -142,7 +144,9 @@ fn build_rows(cfg: &toml::Value, defaults: &toml::Value) -> Vec<Row> {
             rows.push(Row::Field {
                 path: path.clone(),
                 label: path[0].clone(),
-                kind: enum_for(path).map(Kind::Enum).unwrap_or_else(|| kind_of(val)),
+                kind: enum_for(path)
+                    .map(Kind::Enum)
+                    .unwrap_or_else(|| kind_of(val)),
                 modified: is_modified(path, val),
                 value: val.clone(),
             });
@@ -160,7 +164,9 @@ fn build_rows(cfg: &toml::Value, defaults: &toml::Value) -> Vec<Row> {
         rows.push(Row::Field {
             path: path.clone(),
             label: path[1..].join("."),
-            kind: enum_for(path).map(Kind::Enum).unwrap_or_else(|| kind_of(val)),
+            kind: enum_for(path)
+                .map(Kind::Enum)
+                .unwrap_or_else(|| kind_of(val)),
             modified: is_modified(path, val),
             value: val.clone(),
         });
@@ -170,7 +176,13 @@ fn build_rows(cfg: &toml::Value, defaults: &toml::Value) -> Vec<Row> {
 
 fn display(kind: Kind, v: &toml::Value) -> String {
     match (kind, v) {
-        (Kind::Bool, toml::Value::Boolean(b)) => if *b { "✓ on".into() } else { "✗ off".into() },
+        (Kind::Bool, toml::Value::Boolean(b)) => {
+            if *b {
+                "✓ on".into()
+            } else {
+                "✗ off".into()
+            }
+        }
         (Kind::Enum(_), toml::Value::String(s)) => format!("{s} ▾"),
         (_, toml::Value::String(s)) => s.clone(),
         (_, other) => other.to_string().trim().to_string(),
@@ -248,8 +260,8 @@ fn remove_user(path: &[String]) {
 
 pub struct SettingsPanel {
     rows: Vec<Row>,
-    sel: usize,   // index into rows (always a Field)
-    top: usize,   // scroll offset
+    sel: usize, // index into rows (always a Field)
+    top: usize, // scroll offset
     editing: bool,
     buf: String,
     filter: String,
@@ -309,7 +321,10 @@ impl SettingsPanel {
     }
 
     fn activate(&mut self, cx: &mut Context) {
-        let Some(Row::Field { path, kind, value, .. }) = self.rows.get(self.sel) else {
+        let Some(Row::Field {
+            path, kind, value, ..
+        }) = self.rows.get(self.sel)
+        else {
             return;
         };
         match kind {
@@ -322,7 +337,11 @@ impl SettingsPanel {
             Kind::Enum(opts) => {
                 // Cycle to the next allowed value (like a dropdown).
                 let cur = raw(value);
-                let idx = opts.iter().position(|o| *o == cur).map(|i| i + 1).unwrap_or(0);
+                let idx = opts
+                    .iter()
+                    .position(|o| *o == cur)
+                    .map(|i| i + 1)
+                    .unwrap_or(0);
                 let next = opts[idx % opts.len()].to_string();
                 let path = path.clone();
                 set_user(&path, toml::Value::String(next));
@@ -370,11 +389,19 @@ impl SettingsPanel {
     fn open_raw_cb() -> Callback {
         Box::new(|c: &mut Compositor, cx: &mut Context| {
             c.pop();
-            let _ = cx.editor.open(&config_path(), zemacs_view::editor::Action::Replace);
+            let _ = cx
+                .editor
+                .open(&config_path(), zemacs_view::editor::Action::Replace);
         })
     }
 
-    fn handle_mouse(&mut self, col: u16, row: u16, kind: MouseEventKind, cx: &mut Context) -> EventResult {
+    fn handle_mouse(
+        &mut self,
+        col: u16,
+        row: u16,
+        kind: MouseEventKind,
+        cx: &mut Context,
+    ) -> EventResult {
         match kind {
             MouseEventKind::ScrollDown => {
                 self.top = (self.top + 3).min(self.rows.len().saturating_sub(1));
@@ -475,7 +502,11 @@ impl Component for SettingsPanel {
         self.rows = build_rows(&live_editor_config(ctx), &default_editor_config());
         if !self.is_field(self.sel) {
             // snap selection onto the first field
-            self.sel = self.rows.iter().position(|r| matches!(r, Row::Field { .. })).unwrap_or(0);
+            self.sel = self
+                .rows
+                .iter()
+                .position(|r| matches!(r, Row::Field { .. }))
+                .unwrap_or(0);
         }
         self.row_hits.clear();
         self.btn_hits.clear();
@@ -490,12 +521,30 @@ impl Component for SettingsPanel {
         let valc = to_rat_style(theme.get("string"));
         surface.clear_with(area, theme.get("ui.background"));
 
-        let title = format!(" Editor Settings — {} options ", self.rows.iter().filter(|r| matches!(r, Row::Field { .. })).count());
+        let title = format!(
+            " Editor Settings — {} options ",
+            self.rows
+                .iter()
+                .filter(|r| matches!(r, Row::Field { .. }))
+                .count()
+        );
         // flat page header bar (no modal frame)
-        surface.clear_with(Rect::new(area.x, area.y, area.width, 1), theme.get("ui.statusline"));
-        render(Paragraph::new(Span::styled(title, accent)), Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1), surface);
+        surface.clear_with(
+            Rect::new(area.x, area.y, area.width, 1),
+            theme.get("ui.statusline"),
+        );
+        render(
+            Paragraph::new(Span::styled(title, accent)),
+            Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1),
+            surface,
+        );
         let _ = (border, bg);
-        let inner = Rect::new(area.x + 1, area.y + 1, area.width.saturating_sub(2), area.height.saturating_sub(1));
+        let inner = Rect::new(
+            area.x + 1,
+            area.y + 1,
+            area.width.saturating_sub(2),
+            area.height.saturating_sub(1),
+        );
         if inner.width < 12 || inner.height < 5 {
             return;
         }
@@ -504,16 +553,33 @@ impl Component for SettingsPanel {
         let mut bx = inner.x + 1;
         for (lbl, b) in [(" 📄 Raw ", 0u8), (" ✕ Close ", 1u8)] {
             let w = lbl.chars().count() as u16;
-            render(Paragraph::new(Span::styled(lbl, text.add_modifier(RMod::REVERSED))), Rect::new(bx, inner.y, w, 1), surface);
+            render(
+                Paragraph::new(Span::styled(lbl, text.add_modifier(RMod::REVERSED))),
+                Rect::new(bx, inner.y, w, 1),
+                surface,
+            );
             self.btn_hits.push((bx, bx + w, inner.y, b));
             bx += w + 1;
         }
         let fstr = if self.filtering || !self.filter.is_empty() {
-            format!("  🔍 {}{}", self.filter, if self.filtering { "▏" } else { "" })
+            format!(
+                "  🔍 {}{}",
+                self.filter,
+                if self.filtering { "▏" } else { "" }
+            )
         } else {
             "  /  to search".into()
         };
-        render(Paragraph::new(Span::styled(fstr, dim)), Rect::new(bx + 1, inner.y, inner.width.saturating_sub(bx - inner.x + 1), 1), surface);
+        render(
+            Paragraph::new(Span::styled(fstr, dim)),
+            Rect::new(
+                bx + 1,
+                inner.y,
+                inner.width.saturating_sub(bx - inner.x + 1),
+                1,
+            ),
+            surface,
+        );
 
         // body: scrollable list
         let body_y = inner.y + 2;
@@ -532,18 +598,38 @@ impl Component for SettingsPanel {
             let y = body_y + line as u16;
             match &self.rows[ri] {
                 Row::Header(name) => {
-                    render(Paragraph::new(Span::styled(format!("▸ {name}"), head)), Rect::new(inner.x, y, inner.width, 1), surface);
+                    render(
+                        Paragraph::new(Span::styled(format!("▸ {name}"), head)),
+                        Rect::new(inner.x, y, inner.width, 1),
+                        surface,
+                    );
                 }
-                Row::Field { label, kind, value, modified, .. } => {
+                Row::Field {
+                    label,
+                    kind,
+                    value,
+                    modified,
+                    ..
+                } => {
                     let is_sel = ri == self.sel;
                     if is_sel {
-                        surface.set_style(Rect::new(inner.x, y, inner.width, 1), theme.get("ui.selection"));
+                        surface.set_style(
+                            Rect::new(inner.x, y, inner.width, 1),
+                            theme.get("ui.selection"),
+                        );
                     }
                     // ● marks a value changed from its default (resettable with `r`).
                     let marker = if *modified { "●" } else { " " };
-                    render(Paragraph::new(Span::styled(marker, accent)), Rect::new(inner.x, y, 1, 1), surface);
                     render(
-                        Paragraph::new(Span::styled(format!(" {label}"), if is_sel { accent } else { text })),
+                        Paragraph::new(Span::styled(marker, accent)),
+                        Rect::new(inner.x, y, 1, 1),
+                        surface,
+                    );
+                    render(
+                        Paragraph::new(Span::styled(
+                            format!(" {label}"),
+                            if is_sel { accent } else { text },
+                        )),
                         Rect::new(inner.x + 1, y, val_x - inner.x - 2, 1),
                         surface,
                     );
@@ -552,8 +638,16 @@ impl Component for SettingsPanel {
                     } else {
                         display(*kind, value)
                     };
-                    let vstyle = if is_sel && self.editing { text.add_modifier(RMod::UNDERLINED) } else { valc };
-                    render(Paragraph::new(Span::styled(shown, vstyle)), Rect::new(val_x, y, inner.x + inner.width - val_x, 1), surface);
+                    let vstyle = if is_sel && self.editing {
+                        text.add_modifier(RMod::UNDERLINED)
+                    } else {
+                        valc
+                    };
+                    render(
+                        Paragraph::new(Span::styled(shown, vstyle)),
+                        Rect::new(val_x, y, inner.x + inner.width - val_x, 1),
+                        surface,
+                    );
                     self.row_hits.push((y, inner.x, inner.x + inner.width, ri));
                 }
             }
@@ -566,7 +660,11 @@ impl Component for SettingsPanel {
         } else {
             " j/k move · Space/⏎ toggle/edit · r reset (● = changed) · / search · o raw · Esc close"
         };
-        render(Paragraph::new(Span::styled(help, dim)), Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1), surface);
+        render(
+            Paragraph::new(Span::styled(help, dim)),
+            Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1),
+            surface,
+        );
     }
 }
 
@@ -579,10 +677,16 @@ mod tests {
         let cfg = toml::Value::try_from(zemacs_view::editor::Config::default())
             .expect("Config serializes to TOML");
         let rows = build_rows(&cfg, &default_editor_config());
-        let fields = rows.iter().filter(|r| matches!(r, Row::Field { .. })).count();
+        let fields = rows
+            .iter()
+            .filter(|r| matches!(r, Row::Field { .. }))
+            .count();
         let headers = rows.iter().filter(|r| matches!(r, Row::Header(_))).count();
         eprintln!("settings: {fields} fields across {headers} sections");
-        assert!(fields > 40, "expected the full editor surface, got {fields}");
+        assert!(
+            fields > 40,
+            "expected the full editor surface, got {fields}"
+        );
         assert!(headers > 4, "expected multiple sections, got {headers}");
     }
 }

@@ -122,15 +122,24 @@ pub fn marks<'doc>(
     let range = doc.selection(view.id).primary();
     let sent = textobject::textobject_sentence(slice, range, TextObject::Around, 1);
     put(slice.char_to_line(sent.from().min(len)), '(');
-    put(slice.char_to_line(sent.to().saturating_sub(1).min(len)), ')');
+    put(
+        slice.char_to_line(sent.to().saturating_sub(1).min(len)),
+        ')',
+    );
     let para = textobject::textobject_paragraph(slice, range, TextObject::Around, 1);
     put(slice.char_to_line(para.from().min(len)), '{');
-    put(slice.char_to_line(para.to().saturating_sub(1).min(len)), '}');
+    put(
+        slice.char_to_line(para.to().saturating_sub(1).min(len)),
+        '}',
+    );
 
     // `'` / `` ` `` — position before the most recent jump in this buffer.
     let doc_id = doc.id();
     if let Some((_, sel)) = view.jumps.iter().filter(|(id, _)| *id == doc_id).last() {
-        put(text.char_to_line(sel.primary().cursor(slice).min(len)), '\'');
+        put(
+            text.char_to_line(sel.primary().cursor(slice).min(len)),
+            '\'',
+        );
     }
 
     // Stored marks (named + ^ < > . [ ]) — highest priority.

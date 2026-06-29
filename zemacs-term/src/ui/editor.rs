@@ -13,6 +13,7 @@ use crate::{
     },
 };
 
+use std::{mem::take, num::NonZeroUsize, ops, path::PathBuf, rc::Rc};
 use zemacs_core::{
     diagnostic::NumberOrString,
     graphemes::{next_grapheme_boundary, prev_grapheme_boundary},
@@ -31,7 +32,6 @@ use zemacs_view::{
     keyboard::{KeyCode, KeyModifiers},
     Document, Editor, Theme, View,
 };
-use std::{mem::take, num::NonZeroUsize, ops, path::PathBuf, rc::Rc};
 
 use tui::{buffer::Buffer as Surface, text::Span};
 
@@ -69,9 +69,8 @@ pub struct EditorView {
     /// Sticky-scroll cache: `(doc, doc len, scopes)` where each scope is
     /// `(start_line, end_line, header_text)`. Recomputed only when the focused
     /// document's length changes, so scrolling stays cheap.
-    sticky_cache: std::cell::RefCell<
-        Option<(zemacs_view::DocumentId, usize, Vec<(usize, usize, String)>)>,
-    >,
+    sticky_cache:
+        std::cell::RefCell<Option<(zemacs_view::DocumentId, usize, Vec<(usize, usize, String)>)>>,
 }
 
 use super::ide::{Ide, IdeAction};
@@ -151,7 +150,8 @@ impl EditorView {
         };
         match action {
             super::ide::IdeAction::None => {
-                cx.editor.set_status("No file:line references in run output");
+                cx.editor
+                    .set_status("No file:line references in run output");
             }
             other => {
                 let _ = self.apply_ide_action(other, cx);
@@ -307,7 +307,9 @@ impl EditorView {
                     let scrolloff = context.editor.config().scrolloff;
                     let (view, doc) = current!(context.editor);
                     let text = doc.text();
-                    let li = line.saturating_sub(1).min(text.len_lines().saturating_sub(1));
+                    let li = line
+                        .saturating_sub(1)
+                        .min(text.len_lines().saturating_sub(1));
                     let pos = text.line_to_char(li);
                     doc.set_selection(view.id, Selection::point(pos));
                     view.ensure_cursor_in_view(doc, scrolloff);
@@ -327,9 +329,7 @@ impl EditorView {
                     .editor
                     .registers
                     .read(ch, context.editor)
-                    .map(|vals| {
-                        vals.map(|v| v.into_owned()).collect::<Vec<_>>().join("\n")
-                    })
+                    .map(|vals| vals.map(|v| v.into_owned()).collect::<Vec<_>>().join("\n"))
                     .unwrap_or_default();
                 if !text.is_empty() {
                     let (view, doc) = current!(context.editor);
@@ -355,7 +355,9 @@ impl EditorView {
             IdeAction::CopyText(text) => {
                 let n = text.lines().count();
                 let _ = context.editor.registers.write('+', vec![text]);
-                context.editor.set_status(format!("Copied {n} lines to clipboard"));
+                context
+                    .editor
+                    .set_status(format!("Copied {n} lines to clipboard"));
                 None
             }
             IdeAction::GitPush => {
@@ -394,7 +396,12 @@ impl EditorView {
                     .output()
                     .ok()
                     .filter(|o| o.status.success())
-                    .map(|o| String::from_utf8_lossy(&o.stdout).split_whitespace().collect::<Vec<_>>().join(" "))
+                    .map(|o| {
+                        String::from_utf8_lossy(&o.stdout)
+                            .split_whitespace()
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    })
                     .unwrap_or_default();
                 context.editor.set_status(format!("branches: {branches}"));
                 Some(Box::new(|compositor, _cx| {
@@ -766,8 +773,10 @@ impl EditorView {
 
         let top = text.char_to_line(anchor.min(text.len_chars()));
         // Enclosing scopes that opened above the viewport, outermost first.
-        let mut ctx: Vec<&(usize, usize, String)> =
-            scopes.iter().filter(|(sl, el, _)| *sl < top && *el >= top).collect();
+        let mut ctx: Vec<&(usize, usize, String)> = scopes
+            .iter()
+            .filter(|(sl, el, _)| *sl < top && *el >= top)
+            .collect();
         ctx.sort_by_key(|(sl, _, _)| *sl);
         if ctx.is_empty() {
             return;
@@ -1266,7 +1275,9 @@ impl EditorView {
             // clickable close button
             let close_x = after;
             let rem2 = (surface.area.right()).saturating_sub(close_x) as usize;
-            x = surface.set_stringn(close_x, viewport.y, "× ", rem2, style).0;
+            x = surface
+                .set_stringn(close_x, viewport.y, "× ", rem2, style)
+                .0;
             tabs.push((start, x, close_x, doc.id()));
 
             if x >= surface.area.right() {
@@ -1356,12 +1367,12 @@ impl EditorView {
         surface: &mut Surface,
         theme: &Theme,
     ) {
-        use zemacs_core::diagnostic::Severity;
         use tui::{
             layout::Alignment,
             text::Text,
             widgets::{Paragraph, Widget, Wrap},
         };
+        use zemacs_core::diagnostic::Severity;
 
         let cursor = doc
             .selection(view.id)
@@ -1553,7 +1564,10 @@ impl EditorView {
                         // (c, d, g, z, >, ci, di, ...) is suppressed.
                         key != "space"
                     } else {
-                        config.auto_info_exclude.iter().any(|excluded| excluded == &key)
+                        config
+                            .auto_info_exclude
+                            .iter()
+                            .any(|excluded| excluded == &key)
                     }
                 });
                 cxt.editor.autoinfo = if suppressed {
@@ -2062,7 +2076,10 @@ impl Component for EditorView {
         if let Event::Mouse(me) = event {
             // Scroll the wheel over the bufferline to cycle through buffers.
             if me.row == self.bufferline_y
-                && matches!(me.kind, MouseEventKind::ScrollDown | MouseEventKind::ScrollUp)
+                && matches!(
+                    me.kind,
+                    MouseEventKind::ScrollDown | MouseEventKind::ScrollUp
+                )
             {
                 let docs: Vec<zemacs_view::DocumentId> =
                     context.editor.documents().map(|d| d.id()).collect();
@@ -2087,7 +2104,8 @@ impl Component for EditorView {
             if me.row == self.bufferline_y
                 && matches!(
                     me.kind,
-                    MouseEventKind::Down(MouseButton::Left) | MouseEventKind::Down(MouseButton::Middle)
+                    MouseEventKind::Down(MouseButton::Left)
+                        | MouseEventKind::Down(MouseButton::Middle)
                 )
             {
                 if let Some(&(_, end, close_x, doc_id)) = self
@@ -2099,9 +2117,9 @@ impl Component for EditorView {
                     let on_close = me.column >= close_x && me.column < end;
                     if matches!(me.kind, MouseEventKind::Down(MouseButton::Middle)) || on_close {
                         if context.editor.close_document(doc_id, false).is_err() {
-                            context
-                                .editor
-                                .set_error("Buffer has unsaved changes (use :bc! to force-close)".to_string());
+                            context.editor.set_error(
+                                "Buffer has unsaved changes (use :bc! to force-close)".to_string(),
+                            );
                         }
                     } else {
                         context
@@ -2115,7 +2133,9 @@ impl Component for EditorView {
                     && me.column >= self.bufferline_new.0
                     && me.column < self.bufferline_new.1
                 {
-                    context.editor.new_file(zemacs_view::editor::Action::Replace);
+                    context
+                        .editor
+                        .new_file(zemacs_view::editor::Action::Replace);
                     return EventResult::Consumed(None);
                 }
             }

@@ -242,9 +242,10 @@ pub fn file_commits(
 
     let mut emitted = 0;
     for info in repo.rev_walk(Some(head.id)).all()? {
-        let commit = match info.map_err(anyhow::Error::from).and_then(|info| {
-            info.object().map_err(anyhow::Error::from)
-        }) {
+        let commit = match info
+            .map_err(anyhow::Error::from)
+            .and_then(|info| info.object().map_err(anyhow::Error::from))
+        {
             Ok(commit) => commit,
             Err(err) => {
                 if !f(Err(err)) {
@@ -270,7 +271,11 @@ pub fn file_commits(
         let summary = commit
             .message_raw()
             .ok()
-            .and_then(|m| m.lines().next().map(|l| String::from_utf8_lossy(l).into_owned()))
+            .and_then(|m| {
+                m.lines()
+                    .next()
+                    .map(|l| String::from_utf8_lossy(l).into_owned())
+            })
             .unwrap_or_default();
         let author = commit
             .author()

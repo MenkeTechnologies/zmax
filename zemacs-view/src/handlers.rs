@@ -1,6 +1,6 @@
 use completion::{CompletionEvent, CompletionHandler};
-use zemacs_event::send_blocking;
 use tokio::sync::mpsc::Sender;
+use zemacs_event::send_blocking;
 
 use crate::handlers::lsp::SignatureHelpInvoked;
 use crate::{DocumentId, Editor, ViewId};
@@ -15,7 +15,9 @@ pub mod word_index;
 pub enum AutoSaveEvent {
     /// Save immediately (next idle tick) — used for save-on-every-change.
     SaveNow,
-    DocumentChanged { save_after: u64 },
+    DocumentChanged {
+        save_after: u64,
+    },
     LeftInsertMode,
 }
 

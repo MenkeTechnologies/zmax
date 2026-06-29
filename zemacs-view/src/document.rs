@@ -3,6 +3,8 @@ use arc_swap::access::DynAccess;
 use arc_swap::ArcSwap;
 use futures_util::future::BoxFuture;
 use futures_util::FutureExt;
+use once_cell::sync::OnceCell;
+use thiserror;
 use zemacs_core::auto_pairs::AutoPairs;
 use zemacs_core::chars::char_is_word;
 use zemacs_core::command_line::Token;
@@ -16,8 +18,6 @@ use zemacs_event::TaskController;
 use zemacs_lsp::util::lsp_pos_to_pos;
 use zemacs_stdx::faccess::{copy_metadata, readonly};
 use zemacs_vcs::{DiffHandle, DiffProviderRegistry};
-use once_cell::sync::OnceCell;
-use thiserror;
 
 use ::parking_lot::Mutex;
 use serde::de::{self, Deserialize, Deserializer};
@@ -811,11 +811,11 @@ impl Document {
     fn is_binary_file(path: &Path) -> Result<bool, io::Error> {
         use std::fs::File;
         use std::io::Read;
-        
+
         let mut file = File::open(path)?;
         let mut buf = [0u8; 1024];
         let n = file.read(&mut buf)?;
-        
+
         // Check for byte order marks (text encodings)
         const BOMS: &[&[u8]] = &[
             &[0xEF, 0xBB, 0xBF],       // UTF-8
@@ -824,9 +824,12 @@ impl Document {
             &[0xFE, 0xFF],             // UTF-16BE
             &[0xFF, 0xFE],             // UTF-16LE
         ];
-        
+
         let has_bom = BOMS.iter().any(|bom| buf[..n].starts_with(bom));
-        Ok(!has_bom && (buf[..n].contains(&0) || buf[..n].starts_with(b"%PDF") || buf[..n].starts_with(&[0x89, 0x50, 0x4E, 0x47])))
+        Ok(!has_bom
+            && (buf[..n].contains(&0)
+                || buf[..n].starts_with(b"%PDF")
+                || buf[..n].starts_with(&[0x89, 0x50, 0x4E, 0x47])))
     }
 
     pub fn open(
@@ -840,7 +843,7 @@ impl Document {
         if path.metadata().is_ok_and(|metadata| !metadata.is_file()) {
             return Err(DocumentOpenError::IrregularFile);
         }
-        
+
         // Check if file is binary before attempting to decode it
         if path.exists() && Self::is_binary_file(path)? {
             log::warn!("Refusing to open binary file: {}", path.display());
@@ -1760,7 +1763,9 @@ impl Document {
 
     /// Get a vim named mark's char position, clamped to the current text length.
     pub fn mark(&self, mark: char) -> Option<usize> {
-        self.marks.get(&mark).map(|&pos| pos.min(self.text.len_chars()))
+        self.marks
+            .get(&mark)
+            .map(|&pos| pos.min(self.text.len_chars()))
     }
 
     /// Char positions of all lowercase (`a`-`z`) marks, for `['`/`]'`/`` [` ``/`` ]` ``

@@ -4,6 +4,8 @@ use std::time::Duration;
 
 use arc_swap::ArcSwap;
 use futures_util::Future;
+use tokio::task::JoinSet;
+use tokio::time::{timeout_at, Instant};
 use zemacs_core::completion::CompletionProvider;
 use zemacs_core::syntax::config::LanguageServerFeature;
 use zemacs_event::{cancelable_future, TaskController, TaskHandle};
@@ -14,8 +16,6 @@ use zemacs_stdx::rope::RopeSliceExt;
 use zemacs_view::document::{Mode, SavePoint};
 use zemacs_view::handlers::completion::{CompletionEvent, ResponseContext};
 use zemacs_view::{Document, DocumentId, Editor, ViewId};
-use tokio::task::JoinSet;
-use tokio::time::{timeout_at, Instant};
 
 use crate::compositor::Compositor;
 use crate::config::Config;

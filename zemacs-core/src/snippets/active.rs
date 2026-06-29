@@ -1,9 +1,9 @@
 use std::ops::{Index, IndexMut};
 
 use foldhash::HashSet;
+use ropey::Rope;
 use zemacs_stdx::range::{is_exact_subset, is_subset};
 use zemacs_stdx::Range;
-use ropey::Rope;
 
 use crate::movement::Direction;
 use crate::snippets::render::{RenderedSnippet, Tabstop};

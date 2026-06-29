@@ -30,8 +30,8 @@ const MAX_FILE_BYTES: u64 = 2 * 1024 * 1024;
 
 /// One matching line within a file.
 struct LineMatch {
-    line0: usize,            // 0-based line number
-    text: String,            // the (truncated) line text
+    line0: usize,                // 0-based line number
+    text: String,                // the (truncated) line text
     ranges: Vec<(usize, usize)>, // char ranges of matches within `text`
 }
 
@@ -163,22 +163,38 @@ impl SearchPanel {
                 }
                 if !ranges.is_empty() {
                     let text: String = line.chars().take(400).collect();
-                    matches.push(LineMatch { line0: i, text, ranges });
+                    matches.push(LineMatch {
+                        line0: i,
+                        text,
+                        ranges,
+                    });
                     total += 1;
                     if total >= MAX_MATCHES {
                         let rel = rel_path(&root, path);
-                        self.hits.push(FileHit { path: path.to_path_buf(), rel, matches });
+                        self.hits.push(FileHit {
+                            path: path.to_path_buf(),
+                            rel,
+                            matches,
+                        });
                         break 'walk;
                     }
                 }
             }
             if !matches.is_empty() {
                 let rel = rel_path(&root, path);
-                self.hits.push(FileHit { path: path.to_path_buf(), rel, matches });
+                self.hits.push(FileHit {
+                    path: path.to_path_buf(),
+                    rel,
+                    matches,
+                });
             }
         }
         self.rebuild_rows();
-        let capped = if total >= MAX_MATCHES { " (capped)" } else { "" };
+        let capped = if total >= MAX_MATCHES {
+            " (capped)"
+        } else {
+            ""
+        };
         self.status = format!("{total} matches in {} files{capped}", self.hits.len());
     }
 
@@ -238,7 +254,10 @@ impl SearchPanel {
         match self.rows.get(self.sel)? {
             Row::Header(fi) => {
                 let h = self.hits.get(*fi)?;
-                Some((h.path.clone(), h.matches.first().map(|m| m.line0 + 1).unwrap_or(1)))
+                Some((
+                    h.path.clone(),
+                    h.matches.first().map(|m| m.line0 + 1).unwrap_or(1),
+                ))
             }
             Row::Match(fi, mi) => {
                 let h = self.hits.get(*fi)?;
@@ -256,21 +275,23 @@ impl SearchPanel {
 
     /// Open `path` at 1-based `line`, popping this panel.
     fn open(path: PathBuf, line: usize) -> EventResult {
-        EventResult::Consumed(Some(Box::new(move |c: &mut Compositor, cx: &mut Context| {
-            c.pop();
-            let scrolloff = cx.editor.config().scrolloff;
-            match cx.editor.open(&path, Action::Replace) {
-                Ok(_) => {
-                    let (view, doc) = current!(cx.editor);
-                    let text = doc.text();
-                    let last = text.len_lines().saturating_sub(1);
-                    let pos = text.line_to_char(line.saturating_sub(1).min(last));
-                    doc.set_selection(view.id, Selection::point(pos));
-                    view.ensure_cursor_in_view(doc, scrolloff);
+        EventResult::Consumed(Some(Box::new(
+            move |c: &mut Compositor, cx: &mut Context| {
+                c.pop();
+                let scrolloff = cx.editor.config().scrolloff;
+                match cx.editor.open(&path, Action::Replace) {
+                    Ok(_) => {
+                        let (view, doc) = current!(cx.editor);
+                        let text = doc.text();
+                        let last = text.len_lines().saturating_sub(1);
+                        let pos = text.line_to_char(line.saturating_sub(1).min(last));
+                        doc.set_selection(view.id, Selection::point(pos));
+                        view.ensure_cursor_in_view(doc, scrolloff);
+                    }
+                    Err(e) => cx.editor.set_error(format!("open failed: {e}")),
                 }
-                Err(e) => cx.editor.set_error(format!("open failed: {e}")),
-            }
-        })))
+            },
+        )))
     }
 }
 
@@ -304,7 +325,8 @@ impl Component for SearchPanel {
             } else {
                 self.confirm_replace = true;
                 let r: String = self.replace.iter().collect();
-                self.status = format!("replace all → \"{r}\"? Alt-Enter again to confirm, Esc to cancel");
+                self.status =
+                    format!("replace all → \"{r}\"? Alt-Enter again to confirm, Esc to cancel");
             }
             return EventResult::Consumed(None);
         }
@@ -325,7 +347,11 @@ impl Component for SearchPanel {
                 self.run_search();
             }
             KeyCode::Tab => {
-                self.field = if self.field == Field::Query { Field::Replace } else { Field::Query };
+                self.field = if self.field == Field::Query {
+                    Field::Replace
+                } else {
+                    Field::Query
+                };
                 self.cursor = self.buf().len();
             }
             KeyCode::Char('r') if alt => {
@@ -395,7 +421,10 @@ impl Component for SearchPanel {
         }
 
         // title bar
-        surface.clear_with(Rect::new(area.x, area.y, area.width, 1), theme.get("ui.statusline"));
+        surface.clear_with(
+            Rect::new(area.x, area.y, area.width, 1),
+            theme.get("ui.statusline"),
+        );
         surface.set_stringn(area.x + 1, area.y, " Find in Files ", 15, accent);
         let right = format!(" {} ", self.status);
         let rw = right.chars().count().min(area.width as usize / 2) as u16;
@@ -424,7 +453,13 @@ impl Component for SearchPanel {
         surface.set_stringn(qx, ry, &rstr, qw as usize, base);
 
         // separator
-        surface.set_stringn(area.x, area.y + 3, &"─".repeat(area.width as usize), area.width as usize, dim);
+        surface.set_stringn(
+            area.x,
+            area.y + 3,
+            &"─".repeat(area.width as usize),
+            area.width as usize,
+            dim,
+        );
 
         // results
         let body_y = area.y + 4;
@@ -447,7 +482,13 @@ impl Component for SearchPanel {
                     let h = &self.hits[*fi];
                     surface.set_stringn(area.x + 1, y, &h.rel, (area.width - 8) as usize, kw);
                     let cnt = format!(" {} ", h.matches.len());
-                    surface.set_stringn(area.x + area.width - cnt.len() as u16 - 1, y, &cnt, cnt.len(), dim);
+                    surface.set_stringn(
+                        area.x + area.width - cnt.len() as u16 - 1,
+                        y,
+                        &cnt,
+                        cnt.len(),
+                        dim,
+                    );
                 }
                 Row::Match(fi, mi) => {
                     let m = &self.hits[*fi].matches[*mi];
@@ -471,16 +512,32 @@ impl Component for SearchPanel {
 
         // footer
         let hint = " Enter open · Tab field · Alt-r regex · Alt-i case · Alt-Enter replace-all · Esc close ";
-        surface.set_stringn(area.x + 1, footer_y, hint, area.width.saturating_sub(2) as usize, dim);
+        surface.set_stringn(
+            area.x + 1,
+            footer_y,
+            hint,
+            area.width.saturating_sub(2) as usize,
+            dim,
+        );
 
         // caret in the focused input
         let cx = if self.field == Field::Query { qx } else { qx };
         let cy = if self.field == Field::Query { qy } else { ry };
-        self.caret = Some(zemacs_core::Position::new(cy as usize, (cx + self.cursor as u16) as usize));
+        self.caret = Some(zemacs_core::Position::new(
+            cy as usize,
+            (cx + self.cursor as u16) as usize,
+        ));
     }
 
-    fn cursor(&self, _area: Rect, editor: &zemacs_view::editor::Editor) -> (Option<zemacs_core::Position>, CursorKind) {
-        (self.caret, editor.config().cursor_shape.from_mode(Mode::Insert))
+    fn cursor(
+        &self,
+        _area: Rect,
+        editor: &zemacs_view::editor::Editor,
+    ) -> (Option<zemacs_core::Position>, CursorKind) {
+        (
+            self.caret,
+            editor.config().cursor_shape.from_mode(Mode::Insert),
+        )
     }
 
     fn id(&self) -> Option<&'static str> {
@@ -494,8 +551,10 @@ impl SearchPanel {
             MouseEventKind::ScrollDown => self.move_sel(2),
             MouseEventKind::ScrollUp => self.move_sel(-2),
             MouseEventKind::Down(MouseButton::Left) => {
-                if let Some(&(_, _, _, is_regex)) =
-                    self.toggle_hits.iter().find(|&&(x0, x1, r, _)| row == r && col >= x0 && col < x1)
+                if let Some(&(_, _, _, is_regex)) = self
+                    .toggle_hits
+                    .iter()
+                    .find(|&&(x0, x1, r, _)| row == r && col >= x0 && col < x1)
                 {
                     if is_regex {
                         self.regex = !self.regex;
@@ -513,5 +572,8 @@ impl SearchPanel {
 
 /// Display path relative to `root` when possible.
 fn rel_path(root: &std::path::Path, path: &std::path::Path) -> String {
-    path.strip_prefix(root).unwrap_or(path).display().to_string()
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .display()
+        .to_string()
 }

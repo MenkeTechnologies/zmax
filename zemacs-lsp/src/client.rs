@@ -11,13 +11,6 @@ use crate::lsp::{
     DidChangeWorkspaceFoldersParams, OneOf, PositionEncodingKind, SignatureHelp, Url,
     WorkspaceFolder, WorkspaceFoldersChangeEvent,
 };
-use zemacs_core::{
-    find_workspace,
-    syntax::config::{LanguageServerFeature, RootMarkers},
-    ChangeSet, Rope,
-};
-use zemacs_loader::VERSION_AND_GIT_HASH;
-use zemacs_stdx::path;
 use parking_lot::Mutex;
 use serde::Deserialize;
 use serde_json::Value;
@@ -39,6 +32,13 @@ use tokio::{
         Notify, OnceCell,
     },
 };
+use zemacs_core::{
+    find_workspace,
+    syntax::config::{LanguageServerFeature, RootMarkers},
+    ChangeSet, Rope,
+};
+use zemacs_loader::VERSION_AND_GIT_HASH;
+use zemacs_stdx::path;
 
 fn workspace_for_uri(uri: lsp::Url) -> WorkspaceFolder {
     lsp::WorkspaceFolder {

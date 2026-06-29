@@ -1,5 +1,7 @@
 use arc_swap::{access::Map, ArcSwap};
 use futures_util::Stream;
+use serde_json::json;
+use tui::backend::Backend;
 use zemacs_core::{diagnostic::Severity, pos_at_coords, syntax, Range, Selection};
 use zemacs_lsp::{
     lsp::{self, notification::Notification},
@@ -16,8 +18,6 @@ use zemacs_view::{
     tree::Layout,
     Align, Editor,
 };
-use serde_json::json;
-use tui::backend::Backend;
 
 use crate::{
     args::Args,
@@ -1008,13 +1008,12 @@ impl Application {
                         let server_name = language_server!().name().to_string();
                         match work {
                             lsp::WorkDoneProgress::Begin(begin_status) => {
-                                self.editor.lsp_progress =
-                                    Some(zemacs_view::editor::LspProgress {
-                                        server: server_name,
-                                        title: begin_status.title.clone(),
-                                        message: begin_status.message.clone(),
-                                        percentage: begin_status.percentage,
-                                    });
+                                self.editor.lsp_progress = Some(zemacs_view::editor::LspProgress {
+                                    server: server_name,
+                                    title: begin_status.title.clone(),
+                                    message: begin_status.message.clone(),
+                                    percentage: begin_status.percentage,
+                                });
                                 self.lsp_progress
                                     .begin(server_id, token.clone(), begin_status);
                             }
@@ -1024,13 +1023,12 @@ impl Application {
                                     .title(server_id, &token)
                                     .cloned()
                                     .unwrap_or_default();
-                                self.editor.lsp_progress =
-                                    Some(zemacs_view::editor::LspProgress {
-                                        server: server_name,
-                                        title,
-                                        message: report_status.message.clone(),
-                                        percentage: report_status.percentage,
-                                    });
+                                self.editor.lsp_progress = Some(zemacs_view::editor::LspProgress {
+                                    server: server_name,
+                                    title,
+                                    message: report_status.message.clone(),
+                                    percentage: report_status.percentage,
+                                });
                                 self.lsp_progress
                                     .update(server_id, token.clone(), report_status);
                             }
@@ -1473,8 +1471,11 @@ impl Application {
                 if let Some(path) = doc.path() {
                     data.focused_file = Some(path.to_string_lossy().into_owned());
                 }
-                data.cursor =
-                    Some(doc.selection(view_id).primary().cursor(doc.text().slice(..)));
+                data.cursor = Some(
+                    doc.selection(view_id)
+                        .primary()
+                        .cursor(doc.text().slice(..)),
+                );
             }
         }
         if let Some(layout) = self

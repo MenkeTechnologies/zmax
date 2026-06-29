@@ -8,7 +8,9 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use tui::buffer::Buffer as Surface;
-use zemacs_view::{graphics::Rect, input::KeyEvent, keyboard::KeyCode, keyboard::KeyModifiers, Theme};
+use zemacs_view::{
+    graphics::Rect, input::KeyEvent, keyboard::KeyCode, keyboard::KeyModifiers, Theme,
+};
 
 /// Result of a key press handled by the tree.
 pub enum TreeAction {
@@ -367,7 +369,10 @@ impl FileTree {
             let cursor = if self.filtering { "▏" } else { "" };
             let line = format!(" / {}{}", self.filter, cursor);
             let style = theme.get("ui.text.focus");
-            surface.set_style(Rect::new(area.x, area.y, area.width, 1), theme.get("ui.selection"));
+            surface.set_style(
+                Rect::new(area.x, area.y, area.width, 1),
+                theme.get("ui.selection"),
+            );
             surface.set_stringn(area.x, area.y, &line, area.width as usize, style);
             if self.rows.is_empty() {
                 let none = " (no matches)";
@@ -379,7 +384,12 @@ impl FileTree {
                     theme.get("comment"),
                 );
             }
-            area = Rect::new(area.x, area.y + 1, area.width, area.height.saturating_sub(1));
+            area = Rect::new(
+                area.x,
+                area.y + 1,
+                area.width,
+                area.height.saturating_sub(1),
+            );
             if area.height == 0 {
                 return;
             }
@@ -467,7 +477,10 @@ mod tests {
         assert!(names.contains(&"gamma_alpha.rs"), "rows: {names:?}");
         assert!(names.contains(&"sub"), "ancestor dir kept: {names:?}");
         assert!(!names.contains(&"beta.txt"), "non-match dropped: {names:?}");
-        assert!(!names.contains(&"delta.txt"), "non-match dropped: {names:?}");
+        assert!(
+            !names.contains(&"delta.txt"),
+            "non-match dropped: {names:?}"
+        );
 
         // Esc clears the filter and restores the full (collapsed) tree.
         tree.handle_key(KeyEvent {
@@ -517,7 +530,11 @@ mod tests {
         for c in "alpha".chars() {
             tree.handle_key(key(c));
         }
-        assert!(tree.rows.len() >= 2, "two matches expected: {}", tree.rows.len());
+        assert!(
+            tree.rows.len() >= 2,
+            "two matches expected: {}",
+            tree.rows.len()
+        );
         assert_eq!(tree.selected, 0);
         // C-n / C-j move down, C-p / C-k move up — same as the Help filter.
         tree.handle_key(ctrl('n'));
@@ -559,8 +576,15 @@ mod tests {
 
         // c → collapse all: only the root's direct children remain.
         tree.handle_key(key('c'));
-        assert!(tree.rows.len() < expanded_rows, "collapsed: {}", tree.rows.len());
-        assert!(!tree.rows.iter().any(|r| r.name == "b.rs"), "nested file hidden");
+        assert!(
+            tree.rows.len() < expanded_rows,
+            "collapsed: {}",
+            tree.rows.len()
+        );
+        assert!(
+            !tree.rows.iter().any(|r| r.name == "b.rs"),
+            "nested file hidden"
+        );
 
         let _ = std::fs::remove_dir_all(&root);
     }

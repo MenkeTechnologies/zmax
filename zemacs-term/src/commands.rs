@@ -13,12 +13,6 @@ pub(crate) mod typed;
 
 pub use dap::*;
 use futures_util::FutureExt;
-use zemacs_event::status;
-use zemacs_stdx::{
-    path::{self, find_paths},
-    rope::{self, RopeSliceExt},
-};
-use zemacs_vcs::{CommitInfo, FileChange, Hunk};
 pub use lsp::*;
 pub use syntax::*;
 use tui::{
@@ -26,6 +20,12 @@ use tui::{
     widgets::Cell,
 };
 pub use typed::*;
+use zemacs_event::status;
+use zemacs_stdx::{
+    path::{self, find_paths},
+    rope::{self, RopeSliceExt},
+};
+use zemacs_vcs::{CommitInfo, FileChange, Hunk};
 
 use zemacs_core::{
     char_idx_at_visual_offset,
@@ -94,9 +94,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use zemacs_stdx::Url;
 use once_cell::sync::Lazy;
 use serde::de::{self, Deserialize, Deserializer};
+use zemacs_stdx::Url;
 
 use grep_regex::RegexMatcherBuilder;
 use grep_searcher::{sinks, BinaryDetection, SearcherBuilder};
@@ -1549,8 +1549,8 @@ fn current_line_permalink(cx: &mut Context) -> Result<String, String> {
     };
     let dir = path.parent().unwrap_or_else(|| std::path::Path::new("."));
     let remote = git_out(dir, &["remote", "get-url", "origin"]).ok_or("no git remote 'origin'")?;
-    let web_base =
-        git_remote_to_web_base(&remote).ok_or_else(|| format!("unsupported remote URL: {remote}"))?;
+    let web_base = git_remote_to_web_base(&remote)
+        .ok_or_else(|| format!("unsupported remote URL: {remote}"))?;
     let root = git_out(dir, &["rev-parse", "--show-toplevel"]).ok_or("not in a git repository")?;
     let git_ref = git_out(dir, &["rev-parse", "HEAD"]).unwrap_or_else(|| "HEAD".into());
     let rel = path
@@ -2463,7 +2463,10 @@ fn set_mark(cx: &mut Context) {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
             let (view, doc) = current!(cx.editor);
-            let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+            let pos = doc
+                .selection(view.id)
+                .primary()
+                .cursor(doc.text().slice(..));
             doc.set_mark(ch, pos);
         }
     });
@@ -2482,12 +2485,14 @@ fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
                 let text = doc.text().slice(..);
                 let range = doc.selection(view.id).primary();
                 match ch {
-                    '}' | ')' => {
-                        Some(zemacs_core::movement::move_next_paragraph(text, range, 1, Movement::Move).cursor(text))
-                    }
-                    '{' | '(' => {
-                        Some(zemacs_core::movement::move_prev_paragraph(text, range, 1, Movement::Move).cursor(text))
-                    }
+                    '}' | ')' => Some(
+                        zemacs_core::movement::move_next_paragraph(text, range, 1, Movement::Move)
+                            .cursor(text),
+                    ),
+                    '{' | '(' => Some(
+                        zemacs_core::movement::move_prev_paragraph(text, range, 1, Movement::Move)
+                            .cursor(text),
+                    ),
                     _ => None,
                 }
             });
@@ -2515,7 +2520,10 @@ fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
 // left (the `^` mark). The mark is edit-tracked like any other.
 fn mark_insert_exit(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
-    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let pos = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
     doc.set_mark('^', pos);
 }
 
@@ -2981,7 +2989,9 @@ fn percent_encode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for &b in s.as_bytes() {
         match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
             _ => out.push_str(&format!("%{b:02X}")),
         }
     }
@@ -3289,7 +3299,10 @@ fn decode_html_entity(entity: &str) -> Option<char> {
         "apos" => Some('\''),
         "nbsp" => Some('\u{a0}'),
         _ => {
-            if let Some(hex) = entity.strip_prefix("#x").or_else(|| entity.strip_prefix("#X")) {
+            if let Some(hex) = entity
+                .strip_prefix("#x")
+                .or_else(|| entity.strip_prefix("#X"))
+            {
                 u32::from_str_radix(hex, 16).ok().and_then(char::from_u32)
             } else if let Some(dec) = entity.strip_prefix('#') {
                 dec.parse::<u32>().ok().and_then(char::from_u32)
@@ -3309,8 +3322,8 @@ fn html_decode(s: &str) -> String {
         let after = &rest[amp..];
         if let Some(semi_rel) = after[1..].find(';') {
             let entity = &after[1..1 + semi_rel];
-            let plausible =
-                semi_rel <= 12 && !entity.contains(|c: char| c.is_whitespace() || c == '&' || c == '<');
+            let plausible = semi_rel <= 12
+                && !entity.contains(|c: char| c.is_whitespace() || c == '&' || c == '<');
             if plausible {
                 if let Some(c) = decode_html_entity(entity) {
                     out.push(c);
@@ -3435,7 +3448,11 @@ fn adjust_lightness(hex: &str, pct: u32, lighten: bool) -> Option<String> {
     let f = pct as f64 / 100.0;
     let adj = |c: u8| -> u8 {
         let c = c as f64;
-        let new = if lighten { c + (255.0 - c) * f } else { c * (1.0 - f) };
+        let new = if lighten {
+            c + (255.0 - c) * f
+        } else {
+            c * (1.0 - f)
+        };
         new.round().clamp(0.0, 255.0) as u8
     };
     Some(format!("#{:02x}{:02x}{:02x}", adj(r), adj(g), adj(b)))
@@ -3484,9 +3501,19 @@ fn to_roman(mut n: u32) -> Option<String> {
         return None;
     }
     const TABLE: [(u32, &str); 13] = [
-        (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"),
-        (90, "XC"), (50, "L"), (40, "XL"), (10, "X"), (9, "IX"),
-        (5, "V"), (4, "IV"), (1, "I"),
+        (1000, "M"),
+        (900, "CM"),
+        (500, "D"),
+        (400, "CD"),
+        (100, "C"),
+        (90, "XC"),
+        (50, "L"),
+        (40, "XL"),
+        (10, "X"),
+        (9, "IX"),
+        (5, "V"),
+        (4, "IV"),
+        (1, "I"),
     ];
     let mut out = String::new();
     for (v, sym) in TABLE {
@@ -3501,7 +3528,14 @@ fn to_roman(mut n: u32) -> Option<String> {
 /// Parse a Roman numeral into an integer, or `None` if malformed. Pure — unit tested.
 fn from_roman(s: &str) -> Option<u32> {
     let val = |c: char| match c {
-        'I' => 1, 'V' => 5, 'X' => 10, 'L' => 50, 'C' => 100, 'D' => 500, 'M' => 1000, _ => 0,
+        'I' => 1,
+        'V' => 5,
+        'X' => 10,
+        'L' => 50,
+        'C' => 100,
+        'D' => 500,
+        'M' => 1000,
+        _ => 0,
     };
     let digits: Vec<i64> = s.trim().to_uppercase().chars().map(val).collect();
     if digits.is_empty() || digits.contains(&0) {
@@ -3658,7 +3692,10 @@ fn reverse_words(block: &str) -> String {
     map_lines(block, |l| {
         let indent: String = l.chars().take_while(|c| c.is_whitespace()).collect();
         let words: Vec<&str> = l.split_whitespace().collect();
-        format!("{indent}{}", words.into_iter().rev().collect::<Vec<_>>().join(" "))
+        format!(
+            "{indent}{}",
+            words.into_iter().rev().collect::<Vec<_>>().join(" ")
+        )
     })
 }
 
@@ -3744,7 +3781,11 @@ fn darken_selection(cx: &mut Context) {
 fn contrast_recommendation(hex: &str) -> Option<String> {
     let (r, g, b) = parse_hex_rgb(hex)?;
     let lum = (0.299 * r as f64 + 0.587 * g as f64 + 0.114 * b as f64) / 255.0;
-    let text = if lum > 0.5 { "#000000 (black)" } else { "#ffffff (white)" };
+    let text = if lum > 0.5 {
+        "#000000 (black)"
+    } else {
+        "#ffffff (white)"
+    };
     Some(format!("luminance {lum:.2} → use {text} text"))
 }
 
@@ -3757,7 +3798,9 @@ fn contrast_text(cx: &mut Context) {
     };
     match contrast_recommendation(s.trim()) {
         Some(msg) => cx.editor.set_status(msg),
-        None => cx.editor.set_error(format!("not a hex color: {}", s.trim())),
+        None => cx
+            .editor
+            .set_error(format!("not a hex color: {}", s.trim())),
     }
 }
 
@@ -3835,8 +3878,14 @@ fn normalize_whitespace(s: &str) -> String {
     let normalized: Vec<String> = lines
         .iter()
         .map(|line| {
-            let indent: String = line.chars().take_while(|c| *c == ' ' || *c == '\t').collect();
-            let body = line[indent.len()..].split_whitespace().collect::<Vec<_>>().join(" ");
+            let indent: String = line
+                .chars()
+                .take_while(|c| *c == ' ' || *c == '\t')
+                .collect();
+            let body = line[indent.len()..]
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ");
             format!("{indent}{body}")
         })
         .collect();
@@ -3967,8 +4016,12 @@ fn insert_toc(cx: &mut Context) {
         cx.editor.set_error("no markdown headings found");
         return;
     }
-    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
-    let transaction = Transaction::change(doc.text(), std::iter::once((pos, pos, Some(toc.into()))));
+    let pos = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((pos, pos, Some(toc.into()))));
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
 }
@@ -4260,7 +4313,10 @@ fn html_unescape(s: &str) -> String {
                     "quot" => Some('"'),
                     "apos" | "#39" => Some('\''),
                     _ => {
-                        if let Some(hex) = entity.strip_prefix("#x").or_else(|| entity.strip_prefix("#X")) {
+                        if let Some(hex) = entity
+                            .strip_prefix("#x")
+                            .or_else(|| entity.strip_prefix("#X"))
+                        {
                             u32::from_str_radix(hex, 16).ok().and_then(char::from_u32)
                         } else if let Some(dec) = entity.strip_prefix('#') {
                             dec.parse::<u32>().ok().and_then(char::from_u32)
@@ -4398,7 +4454,10 @@ fn json_unescape_selection(cx: &mut Context) {
 
 /// Render text as space-separated lowercase hex of its UTF-8 bytes. Pure — unit tested.
 fn to_hex(s: &str) -> String {
-    s.bytes().map(|b| format!("{b:02x}")).collect::<Vec<_>>().join(" ")
+    s.bytes()
+        .map(|b| format!("{b:02x}"))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// Decode hex back to text: every pair of hex digits becomes a byte, ignoring any
@@ -4569,7 +4628,13 @@ fn markdown_table_to_csv(block: &str) -> String {
         if is_table_separator(&cells) {
             continue;
         }
-        out_lines.push(cells.iter().map(|c| csv_quote(c)).collect::<Vec<_>>().join(","));
+        out_lines.push(
+            cells
+                .iter()
+                .map(|c| csv_quote(c))
+                .collect::<Vec<_>>()
+                .join(","),
+        );
     }
     let mut res = out_lines.join("\n");
     if block.ends_with('\n') && !res.is_empty() {
@@ -4720,7 +4785,9 @@ fn pretty_xml(s: &str, indent: &str) -> String {
             // comment <!-- ... -->
             if chars[i..].starts_with(&['<', '!', '-', '-']) {
                 let mut j = i + 4;
-                while j + 2 < chars.len() && !(chars[j] == '-' && chars[j + 1] == '-' && chars[j + 2] == '>') {
+                while j + 2 < chars.len()
+                    && !(chars[j] == '-' && chars[j + 1] == '-' && chars[j + 2] == '>')
+                {
                     j += 1;
                 }
                 let end = (j + 3).min(chars.len());
@@ -5100,7 +5167,10 @@ fn swap_block_up(block: &str, neighbor: &str) -> String {
     } else {
         // block was the final line (no EOL); after moving up it gains one and the
         // neighbor becomes the new final line without a trailing newline.
-        format!("{block}\n{}", neighbor.strip_suffix('\n').unwrap_or(neighbor))
+        format!(
+            "{block}\n{}",
+            neighbor.strip_suffix('\n').unwrap_or(neighbor)
+        )
     }
 }
 
@@ -5139,7 +5209,12 @@ fn move_text_line_impl(cx: &mut Context, downward: bool) {
             };
             let block: String = slice.slice(block_start..block_end).to_string();
             let neighbor: String = slice.slice(block_end..neighbor_end).to_string();
-            (block_start, neighbor_end, swap_block_down(&block, &neighbor), start_line + 1)
+            (
+                block_start,
+                neighbor_end,
+                swap_block_down(&block, &neighbor),
+                start_line + 1,
+            )
         } else {
             let neighbor_line = start_line - 1;
             let region_start = slice.line_to_char(neighbor_line);
@@ -5150,7 +5225,12 @@ fn move_text_line_impl(cx: &mut Context, downward: bool) {
             };
             let neighbor: String = slice.slice(region_start..block_start).to_string();
             let block: String = slice.slice(block_start..block_end).to_string();
-            (region_start, block_end, swap_block_up(&block, &neighbor), start_line - 1)
+            (
+                region_start,
+                block_end,
+                swap_block_up(&block, &neighbor),
+                start_line - 1,
+            )
         };
 
         let transaction = Transaction::change(
@@ -5221,12 +5301,10 @@ fn select_all_instances(cx: &mut Context) {
     if ranges.is_empty() {
         return;
     }
-    let selection = Selection::new(
-        ranges.iter().map(|&(s, e)| Range::new(s, e)).collect(),
-        0,
-    );
+    let selection = Selection::new(ranges.iter().map(|&(s, e)| Range::new(s, e)).collect(), 0);
     doc.set_selection(view.id, selection);
-    cx.editor.set_status(format!("{} matches selected", ranges.len()));
+    cx.editor
+        .set_status(format!("{} matches selected", ranges.len()));
 }
 
 fn select_regex(cx: &mut Context) {
@@ -6630,15 +6708,26 @@ fn harpoon_menu(cx: &mut Context) {
             item.0.to_string().into()
         }),
         PickerColumn::new("pinned file", |item: &(usize, PathBuf), cwd: &PathBuf| {
-            item.1.strip_prefix(cwd).unwrap_or(&item.1).display().to_string().into()
+            item.1
+                .strip_prefix(cwd)
+                .unwrap_or(&item.1)
+                .display()
+                .to_string()
+                .into()
         }),
     ];
-    let picker = Picker::new(columns, 1, items, cwd, |cx, item: &(usize, PathBuf), action| {
-        if let Err(e) = cx.editor.open(&item.1, action) {
-            cx.editor
-                .set_error(format!("unable to open \"{}\": {e}", item.1.display()));
-        }
-    })
+    let picker = Picker::new(
+        columns,
+        1,
+        items,
+        cwd,
+        |cx, item: &(usize, PathBuf), action| {
+            if let Err(e) = cx.editor.open(&item.1, action) {
+                cx.editor
+                    .set_error(format!("unable to open \"{}\": {e}", item.1.display()));
+            }
+        },
+    )
     .with_preview(|_editor, item| Some((item.1.as_path().into(), None)));
     cx.push_layer(Box::new(overlaid(picker)));
 }
@@ -6674,7 +6763,9 @@ pub(crate) fn git_branch_picker(cx: &mut Context) {
         cx.editor.set_status("No git branches");
         return;
     }
-    let columns = [PickerColumn::new("branch", |b: &String, _: &()| b.as_str().into())];
+    let columns = [PickerColumn::new("branch", |b: &String, _: &()| {
+        b.as_str().into()
+    })];
     let picker = Picker::new(columns, 0, branches, (), |cx, branch: &String, _action| {
         let dir = std::env::current_dir().unwrap_or_default();
         match std::process::Command::new("git")
@@ -6725,7 +6816,11 @@ fn frecent_file_picker(cx: &mut Context) {
     }
     let cwd = zemacs_stdx::env::current_working_dir();
     let columns = [PickerColumn::new("file", |p: &PathBuf, cwd: &PathBuf| {
-        p.strip_prefix(cwd).unwrap_or(p).display().to_string().into()
+        p.strip_prefix(cwd)
+            .unwrap_or(p)
+            .display()
+            .to_string()
+            .into()
     })];
     let picker = Picker::new(columns, 0, files, cwd, |cx, path: &PathBuf, action| {
         if let Err(e) = cx.editor.open(path, action) {
@@ -7529,7 +7624,9 @@ fn goto_conflict_impl(cx: &mut Context, forward: bool) {
         let found = if forward {
             (cur_line + 1..total).find(|&l| is_conflict_marker(slice.line(l)))
         } else {
-            (0..cur_line).rev().find(|&l| is_conflict_marker(slice.line(l)))
+            (0..cur_line)
+                .rev()
+                .find(|&l| is_conflict_marker(slice.line(l)))
         };
         found.map(|l| slice.line_to_char(l))
     };
@@ -8644,7 +8741,9 @@ fn marks_picker(cx: &mut Context) {
 
     let columns = [
         ui::PickerColumn::new("mark", |m: &MarkMeta, _: &()| m.mark.to_string().into()),
-        ui::PickerColumn::new("line", |m: &MarkMeta, _: &()| (m.line + 1).to_string().into()),
+        ui::PickerColumn::new("line", |m: &MarkMeta, _: &()| {
+            (m.line + 1).to_string().into()
+        }),
         ui::PickerColumn::new("text", |m: &MarkMeta, _: &()| m.text.as_str().into()),
     ];
 
@@ -8684,7 +8783,9 @@ fn buffer_line_picker(cx: &mut Context) {
         .collect();
 
     let columns = [
-        ui::PickerColumn::new("line", |m: &LineMeta, _: &()| (m.line + 1).to_string().into()),
+        ui::PickerColumn::new("line", |m: &LineMeta, _: &()| {
+            (m.line + 1).to_string().into()
+        }),
         ui::PickerColumn::new("text", |m: &LineMeta, _: &()| m.text.as_str().into()),
     ];
 
@@ -8751,8 +8852,7 @@ fn search_history_picker(cx: &mut Context) {
         let _ = cx.editor.registers.write('/', vec![query.clone()]);
         cx.editor.registers.last_search_register = '/';
         let config = cx.editor.config();
-        let case_insensitive =
-            config.search.smart_case && !query.chars().any(char::is_uppercase);
+        let case_insensitive = config.search.smart_case && !query.chars().any(char::is_uppercase);
         let wrap_around = config.search.wrap_around;
         let scrolloff = config.scrolloff;
         let is_crlf = doc!(cx.editor).line_ending == LineEnding::Crlf;
@@ -8807,7 +8907,9 @@ fn git_log_picker(cx: &mut Context, current_file_only: bool) {
 
     let columns = [
         ui::PickerColumn::new("hash", |c: &CommitInfo, _: &()| c.id.as_str().into()),
-        ui::PickerColumn::new("summary", |c: &CommitInfo, _: &()| c.summary.as_str().into()),
+        ui::PickerColumn::new("summary", |c: &CommitInfo, _: &()| {
+            c.summary.as_str().into()
+        }),
         ui::PickerColumn::new("author", |c: &CommitInfo, _: &()| c.author.as_str().into()),
     ];
 
@@ -8863,7 +8965,9 @@ fn unicode_picker(cx: &mut Context) {
 
     let columns = [
         ui::PickerColumn::new("char", |m: &CharMeta, _: &()| m.ch.to_string().into()),
-        ui::PickerColumn::new("mnemonic", |m: &CharMeta, _: &()| m.mnemonic.as_str().into()),
+        ui::PickerColumn::new("mnemonic", |m: &CharMeta, _: &()| {
+            m.mnemonic.as_str().into()
+        }),
         ui::PickerColumn::new("code", |m: &CharMeta, _: &()| {
             format!("U+{:04X}", m.ch as u32).into()
         }),
@@ -8890,21 +8994,27 @@ fn theme_picker(cx: &mut Context) {
     let themes = crate::commands::typed::all_theme_names();
     let initial = themes.iter().position(|n| n == &current).unwrap_or(0) as u32;
 
-    let columns = [ui::PickerColumn::new(
-        "theme",
-        |name: &String, _: &()| name.as_str().into(),
-    )];
+    let columns = [ui::PickerColumn::new("theme", |name: &String, _: &()| {
+        name.as_str().into()
+    })];
 
-    let picker = Picker::new(columns, 0, themes, (), |cx, name: &String, _action| {
-        match cx.editor.theme_loader.load(name) {
+    let picker = Picker::new(
+        columns,
+        0,
+        themes,
+        (),
+        |cx, name: &String, _action| match cx.editor.theme_loader.load(name) {
             Ok(theme) => {
                 if let Err(err) = cx.editor.set_theme(theme) {
-                    cx.editor.set_error(format!("failed to set theme '{name}': {err}"));
+                    cx.editor
+                        .set_error(format!("failed to set theme '{name}': {err}"));
                 }
             }
-            Err(err) => cx.editor.set_error(format!("failed to load theme '{name}': {err}")),
-        }
-    })
+            Err(err) => cx
+                .editor
+                .set_error(format!("failed to load theme '{name}': {err}")),
+        },
+    )
     .with_initial_cursor(initial)
     // Show the current buffer in the preview pane so you see real code re-themed
     // live as you move through the list (and the picker no longer hides everything).
@@ -9718,11 +9828,7 @@ fn match_brackets_or_goto_percent(cx: &mut Context) {
             text.len_lines()
         };
         // vim formula: ({count} * number-of-lines + 99) / 100
-        let line = (count
-            .get()
-            .saturating_mul(lines)
-            .saturating_add(99)
-            / 100)
+        let line = (count.get().saturating_mul(lines).saturating_add(99) / 100)
             .saturating_sub(1)
             .min(lines.saturating_sub(1));
         let pos = text.line_to_char(line);
@@ -10177,7 +10283,9 @@ fn goto_spell_error(cx: &mut Context, forward: bool) {
     let ranges = spell_word_ranges(text);
     let misspelled: Vec<(usize, usize)> = ranges
         .into_iter()
-        .filter(|&(s, e)| crate::spell::is_misspelled(&text.slice(s..e).chars().collect::<String>()))
+        .filter(|&(s, e)| {
+            crate::spell::is_misspelled(&text.slice(s..e).chars().collect::<String>())
+        })
         .collect();
     if misspelled.is_empty() {
         cx.editor.set_status("No misspelled words");
@@ -10218,7 +10326,8 @@ fn spell_word_under_cursor(cx: &mut Context) -> Option<(usize, usize, String)> {
 fn spell_add_good(cx: &mut Context) {
     if let Some((_, _, w)) = spell_word_under_cursor(cx) {
         crate::spell::add_good(&w);
-        cx.editor.set_status(format!("Added '{w}' to spellfile (good)"));
+        cx.editor
+            .set_status(format!("Added '{w}' to spellfile (good)"));
     }
 }
 fn spell_add_bad(cx: &mut Context) {
@@ -10230,7 +10339,8 @@ fn spell_add_bad(cx: &mut Context) {
 fn spell_undo(cx: &mut Context) {
     if let Some((_, _, w)) = spell_word_under_cursor(cx) {
         crate::spell::remove_user(&w);
-        cx.editor.set_status(format!("Removed '{w}' from spellfile"));
+        cx.editor
+            .set_status(format!("Removed '{w}' from spellfile"));
     }
 }
 
@@ -10539,7 +10649,8 @@ fn git_blame_line(cx: &mut Context) {
             if first.is_empty() {
                 cx.editor.set_status("blame: no info");
             } else {
-                cx.editor.set_status(first.chars().take(180).collect::<String>());
+                cx.editor
+                    .set_status(first.chars().take(180).collect::<String>());
             }
         }
         Ok(o) => {
@@ -10565,7 +10676,11 @@ fn file_info(cx: &mut Context) {
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_else(|| "[No Name]".to_string());
     let modified = if doc.is_modified() { " [Modified]" } else { "" };
-    let pct = if total > 1 { (line - 1) * 100 / (total - 1) } else { 0 };
+    let pct = if total > 1 {
+        (line - 1) * 100 / (total - 1)
+    } else {
+        0
+    };
     cx.editor.set_status(format!(
         "\"{name}\"{modified} line {line} of {total} col {col} --{pct}%--"
     ));
@@ -10580,9 +10695,10 @@ fn copy_char_above(cx: &mut Context) {
 }
 
 fn insert_digraph(cx: &mut Context) {
-    cx.editor
-        .autoinfo
-        .replace(Info::new("Digraph", &[("{c1}{c2}", "two-character mnemonic")]));
+    cx.editor.autoinfo.replace(Info::new(
+        "Digraph",
+        &[("{c1}{c2}", "two-character mnemonic")],
+    ));
     cx.on_next_key(move |cx, ev1| {
         cx.editor.autoinfo = None;
         let Some(c1) = ev1.char() else { return };
@@ -10640,7 +10756,8 @@ fn fold_create(cx: &mut Context) {
     doc.folds_mut().create(start, end);
     doc.folds_mut().clamp(last);
     fold_goto_line(view, doc, start);
-    cx.editor.set_status(format!("created fold {}-{}", start + 1, end + 1));
+    cx.editor
+        .set_status(format!("created fold {}-{}", start + 1, end + 1));
 }
 
 fn fold_toggle(cx: &mut Context) {
@@ -10657,7 +10774,11 @@ fn fold_open(cx: &mut Context) {
 }
 
 fn line_has_marker(doc: &Document, line: usize, pat: &str) -> bool {
-    doc.text().line(line).chars().collect::<String>().contains(pat)
+    doc.text()
+        .line(line)
+        .chars()
+        .collect::<String>()
+        .contains(pat)
 }
 
 /// vim marker folding: the `{{{`…`}}}` region enclosing `cursor_line`, if any.
@@ -11869,7 +11990,10 @@ mod path_yank_tests {
     #[test]
     fn file_path_formats() {
         let p = Path::new("/home/u/proj/src/main.rs");
-        assert_eq!(format_file_path(p, FilePathKind::Full, 7, 3), "/home/u/proj/src/main.rs");
+        assert_eq!(
+            format_file_path(p, FilePathKind::Full, 7, 3),
+            "/home/u/proj/src/main.rs"
+        );
         assert_eq!(format_file_path(p, FilePathKind::Name, 7, 3), "main.rs");
         assert_eq!(
             format_file_path(p, FilePathKind::WithLine, 7, 3),
@@ -11879,7 +12003,10 @@ mod path_yank_tests {
             format_file_path(p, FilePathKind::WithLineCol, 7, 3),
             "/home/u/proj/src/main.rs:7:3"
         );
-        assert_eq!(format_file_path(p, FilePathKind::Dir, 7, 3), "/home/u/proj/src");
+        assert_eq!(
+            format_file_path(p, FilePathKind::Dir, 7, 3),
+            "/home/u/proj/src"
+        );
     }
 
     #[test]
@@ -11896,25 +12023,52 @@ mod path_yank_tests {
         let line = "see https://example.com/path for more.";
         // cursor anywhere inside the URL finds it
         assert_eq!(url_at(line, 4).as_deref(), Some("https://example.com/path"));
-        assert_eq!(url_at(line, 20).as_deref(), Some("https://example.com/path"));
+        assert_eq!(
+            url_at(line, 20).as_deref(),
+            Some("https://example.com/path")
+        );
         // cursor in plain text → None
         assert_eq!(url_at(line, 0), None);
         // trailing punctuation trimmed
         assert_eq!(url_at("(http://x.io).", 5).as_deref(), Some("http://x.io"));
         // www. without scheme is recognized
-        assert_eq!(url_at("go www.foo.com now", 6).as_deref(), Some("www.foo.com"));
+        assert_eq!(
+            url_at("go www.foo.com now", 6).as_deref(),
+            Some("www.foo.com")
+        );
     }
 
     #[test]
     fn remote_url_normalizes() {
         use super::git_remote_to_web_base as b;
-        assert_eq!(b("git@github.com:owner/repo.git").as_deref(), Some("https://github.com/owner/repo"));
-        assert_eq!(b("git@github.com:owner/repo").as_deref(), Some("https://github.com/owner/repo"));
-        assert_eq!(b("https://github.com/owner/repo.git").as_deref(), Some("https://github.com/owner/repo"));
-        assert_eq!(b("https://gitlab.com/g/sub/repo.git").as_deref(), Some("https://gitlab.com/g/sub/repo"));
-        assert_eq!(b("ssh://git@github.com/owner/repo.git").as_deref(), Some("https://github.com/owner/repo"));
-        assert_eq!(b("ssh://git@ssh.github.com:443/owner/repo.git").as_deref(), Some("https://ssh.github.com/owner/repo"));
-        assert_eq!(b("git://github.com/owner/repo.git").as_deref(), Some("https://github.com/owner/repo"));
+        assert_eq!(
+            b("git@github.com:owner/repo.git").as_deref(),
+            Some("https://github.com/owner/repo")
+        );
+        assert_eq!(
+            b("git@github.com:owner/repo").as_deref(),
+            Some("https://github.com/owner/repo")
+        );
+        assert_eq!(
+            b("https://github.com/owner/repo.git").as_deref(),
+            Some("https://github.com/owner/repo")
+        );
+        assert_eq!(
+            b("https://gitlab.com/g/sub/repo.git").as_deref(),
+            Some("https://gitlab.com/g/sub/repo")
+        );
+        assert_eq!(
+            b("ssh://git@github.com/owner/repo.git").as_deref(),
+            Some("https://github.com/owner/repo")
+        );
+        assert_eq!(
+            b("ssh://git@ssh.github.com:443/owner/repo.git").as_deref(),
+            Some("https://ssh.github.com/owner/repo")
+        );
+        assert_eq!(
+            b("git://github.com/owner/repo.git").as_deref(),
+            Some("https://github.com/owner/repo")
+        );
         assert_eq!(b("not a url"), None);
     }
 
@@ -11965,17 +12119,17 @@ mod path_yank_tests {
             "<a>\n  <b>\n    x\n  </b>\n</a>"
         );
         // self-closing tags don't increase depth
-        assert_eq!(pretty_xml("<r><br/><br/></r>", "  "), "<r>\n  <br/>\n  <br/>\n</r>");
+        assert_eq!(
+            pretty_xml("<r><br/><br/></r>", "  "),
+            "<r>\n  <br/>\n  <br/>\n</r>"
+        );
         // a `>` inside a quoted attribute does not end the tag early
         assert_eq!(
             pretty_xml(r#"<a x="1>2"><c/></a>"#, "  "),
             "<a x=\"1>2\">\n  <c/>\n</a>"
         );
         // comments and declarations are passed through, not nested
-        assert_eq!(
-            pretty_xml("<!-- hi --><x/>", "  "),
-            "<!-- hi -->\n<x/>"
-        );
+        assert_eq!(pretty_xml("<!-- hi --><x/>", "  "), "<!-- hi -->\n<x/>");
     }
 
     #[test]
@@ -11990,7 +12144,10 @@ mod path_yank_tests {
         let s = r#"{"k":"a, b: {c}"}"#;
         assert_eq!(minify_json(&pretty_json(s, "  ")), s);
         // key order is preserved (z before a)
-        assert!(pretty_json(r#"{"z":1,"a":2}"#, "  ").find("\"z\"").unwrap() < pretty_json(r#"{"z":1,"a":2}"#, "  ").find("\"a\"").unwrap());
+        assert!(
+            pretty_json(r#"{"z":1,"a":2}"#, "  ").find("\"z\"").unwrap()
+                < pretty_json(r#"{"z":1,"a":2}"#, "  ").find("\"a\"").unwrap()
+        );
     }
 
     #[test]
@@ -12007,7 +12164,10 @@ mod path_yank_tests {
         );
         // round-trips with csv_to_markdown_table for a simple table
         let csv = "h1,h2\nv1,v2\n";
-        assert_eq!(markdown_table_to_csv(&super::csv_to_markdown_table(csv)), csv);
+        assert_eq!(
+            markdown_table_to_csv(&super::csv_to_markdown_table(csv)),
+            csv
+        );
     }
 
     #[test]
@@ -12071,7 +12231,10 @@ mod path_yank_tests {
     #[test]
     fn json_escape_unescape() {
         use super::{json_escape, json_unescape};
-        assert_eq!(json_escape("he said \"hi\"\n\ttab"), "he said \\\"hi\\\"\\n\\ttab");
+        assert_eq!(
+            json_escape("he said \"hi\"\n\ttab"),
+            "he said \\\"hi\\\"\\n\\ttab"
+        );
         assert_eq!(json_escape("back\\slash"), "back\\\\slash");
         // control char → \u escape
         assert_eq!(json_escape("\u{01}"), "\\u0001");
@@ -12134,11 +12297,17 @@ mod path_yank_tests {
     fn contrast_recommends_text() {
         use super::contrast_recommendation;
         // light background → black text
-        assert!(contrast_recommendation("#ffffff").unwrap().contains("#000000"));
+        assert!(contrast_recommendation("#ffffff")
+            .unwrap()
+            .contains("#000000"));
         // dark background → white text
-        assert!(contrast_recommendation("#000000").unwrap().contains("#ffffff"));
+        assert!(contrast_recommendation("#000000")
+            .unwrap()
+            .contains("#ffffff"));
         // a light yellow → black text
-        assert!(contrast_recommendation("#ffff00").unwrap().contains("#000000"));
+        assert!(contrast_recommendation("#ffff00")
+            .unwrap()
+            .contains("#000000"));
         assert_eq!(contrast_recommendation("notacolor"), None);
     }
 
@@ -12146,23 +12315,35 @@ mod path_yank_tests {
     fn lighten_darken_colors() {
         use super::adjust_lightness;
         // mid-gray ±50%
-        assert_eq!(adjust_lightness("#808080", 50, true).as_deref(), Some("#c0c0c0"));
-        assert_eq!(adjust_lightness("#808080", 50, false).as_deref(), Some("#404040"));
+        assert_eq!(
+            adjust_lightness("#808080", 50, true).as_deref(),
+            Some("#c0c0c0")
+        );
+        assert_eq!(
+            adjust_lightness("#808080", 50, false).as_deref(),
+            Some("#404040")
+        );
         // black lightened 50% → mid-gray; white darkened 50% → mid-gray
-        assert_eq!(adjust_lightness("#000000", 50, true).as_deref(), Some("#808080"));
-        assert_eq!(adjust_lightness("#ffffff", 50, false).as_deref(), Some("#808080"));
+        assert_eq!(
+            adjust_lightness("#000000", 50, true).as_deref(),
+            Some("#808080")
+        );
+        assert_eq!(
+            adjust_lightness("#ffffff", 50, false).as_deref(),
+            Some("#808080")
+        );
         // short form accepted; non-hex → None
-        assert_eq!(adjust_lightness("#fff", 0, true).as_deref(), Some("#ffffff"));
+        assert_eq!(
+            adjust_lightness("#fff", 0, true).as_deref(),
+            Some("#ffffff")
+        );
         assert_eq!(adjust_lightness("nope", 10, true), None);
     }
 
     #[test]
     fn sort_paragraphs_orders() {
         use super::sort_paragraphs;
-        assert_eq!(
-            sort_paragraphs("b\nb2\n\na\na2\n"),
-            "a\na2\n\nb\nb2"
-        );
+        assert_eq!(sort_paragraphs("b\nb2\n\na\na2\n"), "a\na2\n\nb\nb2");
         // multiple blank lines between paragraphs are normalized to one
         assert_eq!(sort_paragraphs("z\n\n\n\na\n"), "a\n\nz");
         // single paragraph unchanged
@@ -12187,7 +12368,10 @@ mod path_yank_tests {
         // leading indentation preserved
         assert_eq!(reverse_words("  a b c"), "  c b a");
         // multiple lines
-        assert_eq!(reverse_words("one two\nthree four\n"), "two one\nfour three\n");
+        assert_eq!(
+            reverse_words("one two\nthree four\n"),
+            "two one\nfour three\n"
+        );
     }
 
     #[test]
@@ -12251,15 +12435,21 @@ mod path_yank_tests {
         // bare comma/space forms also parse
         assert_eq!(rgb_to_hex("255, 136, 0").as_deref(), Some("#ff8800"));
         assert_eq!(rgb_to_hex("12 34").as_deref(), None); // too few components
-        // round-trip
-        assert_eq!(rgb_to_hex(&hex_to_rgb("#1e90ff").unwrap()).as_deref(), Some("#1e90ff"));
+                                                          // round-trip
+        assert_eq!(
+            rgb_to_hex(&hex_to_rgb("#1e90ff").unwrap()).as_deref(),
+            Some("#1e90ff")
+        );
     }
 
     #[test]
     fn straighten_quotes_to_ascii() {
         use super::straighten_quotes;
         // curly double/single quotes → straight
-        assert_eq!(straighten_quotes("\u{201C}hi\u{201D} it\u{2019}s"), "\"hi\" it's");
+        assert_eq!(
+            straighten_quotes("\u{201C}hi\u{201D} it\u{2019}s"),
+            "\"hi\" it's"
+        );
         // em dash → -, ellipsis → ...
         assert_eq!(straighten_quotes("a\u{2014}b\u{2026}"), "a-b...");
         // non-breaking space → space; plain text untouched
@@ -12275,7 +12465,10 @@ mod path_yank_tests {
             "Hello world. How are you? Fine."
         );
         // acronyms / mid-sentence casing left untouched (non-destructive)
-        assert_eq!(sentence_case("use the API now. it works."), "Use the API now. It works.");
+        assert_eq!(
+            sentence_case("use the API now. it works."),
+            "Use the API now. It works."
+        );
         // already-capitalized stays
         assert_eq!(sentence_case("Hi."), "Hi.");
     }
@@ -12373,7 +12566,10 @@ mod path_yank_tests {
         // non-overlapping matches
         assert_eq!(find_all_ranges("aaaa", "aa"), vec![(0, 2), (2, 4)]);
         // multi-byte needle: ranges are in chars, not bytes
-        assert_eq!(find_all_ranges("héllo héllo", "héllo"), vec![(0, 5), (6, 11)]);
+        assert_eq!(
+            find_all_ranges("héllo héllo", "héllo"),
+            vec![(0, 5), (6, 11)]
+        );
         // no match / empty needle
         assert!(find_all_ranges("x", "y").is_empty());
         assert!(find_all_ranges("x", "").is_empty());
@@ -12382,7 +12578,10 @@ mod path_yank_tests {
     #[test]
     fn html_to_text_strips() {
         use super::strip_html;
-        assert_eq!(strip_html("<b>Hello</b> &amp; <i>world</i>"), "Hello & world");
+        assert_eq!(
+            strip_html("<b>Hello</b> &amp; <i>world</i>"),
+            "Hello & world"
+        );
         // attributes and self-closing tags removed
         assert_eq!(strip_html(r#"<a href="x">link</a><br/>end"#), "linkend");
         // entities decoded; plain text untouched
@@ -12400,10 +12599,16 @@ mod path_yank_tests {
         assert_eq!(html_decode("&amp; &#65; &#x42;"), "& A B");
         assert_eq!(html_decode("&apos;&nbsp;"), "'\u{a0}");
         // unknown or malformed entities are left verbatim
-        assert_eq!(html_decode("100% &unknownentity; x"), "100% &unknownentity; x");
+        assert_eq!(
+            html_decode("100% &unknownentity; x"),
+            "100% &unknownentity; x"
+        );
         assert_eq!(html_decode("a & b"), "a & b");
         // ampersand-encoding must come first so it doesn't double-escape
-        assert_eq!(html_decode(&html_encode("<a href=\"?x=1&y=2\">")), "<a href=\"?x=1&y=2\">");
+        assert_eq!(
+            html_decode(&html_encode("<a href=\"?x=1&y=2\">")),
+            "<a href=\"?x=1&y=2\">"
+        );
     }
 
     #[test]
@@ -12429,7 +12634,7 @@ mod path_yank_tests {
         // url-safe alphabet uses '-' (62) where standard uses '+'; no padding
         assert_eq!(base64url_encode(">>>"), "Pj4-");
         assert_eq!(base64url_encode("foob"), "Zm9vYg"); // no '=' padding
-        // decode accepts both alphabets (so it handles JWT/URL base64)
+                                                        // decode accepts both alphabets (so it handles JWT/URL base64)
         assert_eq!(base64_decode("Pj4-"), ">>>");
         assert_eq!(base64_decode("Zm9vYg"), "foob");
         // round-trip including bytes that map to 62/63
@@ -12466,9 +12671,15 @@ mod path_yank_tests {
             "scheme: https\nhost: api.example.com\nport: 8080\npath: /v1/users\nquery:\n  name=John Doe\n  limit=10"
         );
         // minimal URL: just host
-        assert_eq!(url_info("http://example.com"), "scheme: http\nhost: example.com");
+        assert_eq!(
+            url_info("http://example.com"),
+            "scheme: http\nhost: example.com"
+        );
         // no scheme, with path
-        assert_eq!(url_info("example.com/path"), "host: example.com\npath: /path");
+        assert_eq!(
+            url_info("example.com/path"),
+            "host: example.com\npath: /path"
+        );
     }
 
     #[test]

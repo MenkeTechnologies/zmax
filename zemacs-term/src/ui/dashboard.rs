@@ -101,7 +101,12 @@ impl DashboardPanel {
             &mut self.mem_hist,
             self.sys.used_memory() as f64 / total as f64 * 100.0,
         );
-        self.cores = self.sys.cpus().iter().map(|c| c.cpu_usage() as f64).collect();
+        self.cores = self
+            .sys
+            .cpus()
+            .iter()
+            .map(|c| c.cpu_usage() as f64)
+            .collect();
 
         let (mut rx, mut tx) = (0u64, 0u64);
         for (_n, d) in self.nets.iter() {
@@ -122,7 +127,11 @@ impl DashboardPanel {
                 mem: p.memory(),
             })
             .collect();
-        rows.sort_by(|a, b| b.cpu.partial_cmp(&a.cpu).unwrap_or(std::cmp::Ordering::Equal));
+        rows.sort_by(|a, b| {
+            b.cpu
+                .partial_cmp(&a.cpu)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         rows.truncate(256);
         self.procs = rows;
         true
@@ -151,11 +160,9 @@ impl Component for DashboardPanel {
             View::Processes => View::Overview,
         };
         match key.code {
-            KeyCode::Esc => {
-                EventResult::Consumed(Some(Box::new(|c: &mut Compositor, _| {
-                    c.pop();
-                })))
-            }
+            KeyCode::Esc => EventResult::Consumed(Some(Box::new(|c: &mut Compositor, _| {
+                c.pop();
+            }))),
             KeyCode::Tab | KeyCode::Char('[') | KeyCode::Char(']') => {
                 self.view = toggle(self.view);
                 self.proc_scroll = 0;
@@ -201,7 +208,13 @@ impl Component for DashboardPanel {
         let theme = &ctx.editor.theme;
         surface.clear_with(area, panel_bg(theme));
         if area.width < 24 || area.height < 8 {
-            surface.set_stringn(area.x, area.y, "  terminal too small for dashboard", area.width as usize, theme.get("comment"));
+            surface.set_stringn(
+                area.x,
+                area.y,
+                "  terminal too small for dashboard",
+                area.width as usize,
+                theme.get("comment"),
+            );
             return;
         }
 
@@ -245,6 +258,7 @@ impl Component for DashboardPanel {
 
 impl DashboardPanel {
     fn render_overview(&self, surface: &mut Surface, theme: &zemacs_view::Theme, area: Rect) {
+        use ratatui::layout::Constraint;
         use ratatui::style::Modifier as RMod;
         use ratatui::symbols::Marker;
         use ratatui::text::{Line, Span};
@@ -253,7 +267,6 @@ impl DashboardPanel {
             Axis, BarChart, Chart, Dataset, Gauge, GraphType, LineGauge, List, ListItem, Paragraph,
             Row, Table,
         };
-        use ratatui::layout::Constraint;
 
         let dim = to_rat_style(theme.get("comment"));
         let text = to_rat_style(theme.get("ui.text"));
@@ -299,10 +312,18 @@ impl DashboardPanel {
             let inner = card(surface, theme, topc[1], "Memory");
             let total = self.sys.total_memory();
             let used = self.sys.used_memory();
-            let mem_ratio = if total > 0 { used as f64 / total as f64 } else { 0.0 };
+            let mem_ratio = if total > 0 {
+                used as f64 / total as f64
+            } else {
+                0.0
+            };
             let stot = self.sys.total_swap();
             let sused = self.sys.used_swap();
-            let swap_ratio = if stot > 0 { sused as f64 / stot as f64 } else { 0.0 };
+            let swap_ratio = if stot > 0 {
+                sused as f64 / stot as f64
+            } else {
+                0.0
+            };
             if inner.height >= 1 {
                 let lg = LineGauge::default()
                     .ratio(mem_ratio.clamp(0.0, 1.0))
@@ -369,7 +390,10 @@ impl DashboardPanel {
                 kv("cpu", format!("{cpu:.1}%")),
                 kv("rss", human(mem)),
                 kv("virt", human(virt)),
-                kv("threads", threads.map(|t| t.to_string()).unwrap_or_else(|| "—".into())),
+                kv(
+                    "threads",
+                    threads.map(|t| t.to_string()).unwrap_or_else(|| "—".into()),
+                ),
                 kv("uptime", fmt_dur(rt)),
             ];
             let table = Table::new(rows, [Constraint::Length(8), Constraint::Min(6)]).style(text);
@@ -382,10 +406,18 @@ impl DashboardPanel {
         // CPU + mem history Chart
         {
             let inner = card(surface, theme, midc[0], "CPU / mem history");
-            let cpu: Vec<(f64, f64)> =
-                self.cpu_hist.iter().enumerate().map(|(i, v)| (i as f64, *v)).collect();
-            let mem: Vec<(f64, f64)> =
-                self.mem_hist.iter().enumerate().map(|(i, v)| (i as f64, *v)).collect();
+            let cpu: Vec<(f64, f64)> = self
+                .cpu_hist
+                .iter()
+                .enumerate()
+                .map(|(i, v)| (i as f64, *v))
+                .collect();
+            let mem: Vec<(f64, f64)> = self
+                .mem_hist
+                .iter()
+                .enumerate()
+                .map(|(i, v)| (i as f64, *v))
+                .collect();
             let n = self.cpu_hist.len().max(self.mem_hist.len()).max(2) as f64 - 1.0;
             let datasets = vec![
                 Dataset::default()
@@ -403,12 +435,11 @@ impl DashboardPanel {
             ];
             let chart = Chart::new(datasets)
                 .x_axis(Axis::default().style(dim).bounds([0.0, n]))
-                .y_axis(
-                    Axis::default()
-                        .style(dim)
-                        .bounds([0.0, 100.0])
-                        .labels(vec![Line::from("0"), Line::from("50"), Line::from("100")]),
-                );
+                .y_axis(Axis::default().style(dim).bounds([0.0, 100.0]).labels(vec![
+                    Line::from("0"),
+                    Line::from("50"),
+                    Line::from("100"),
+                ]));
             render(chart, inner, surface);
         }
 
@@ -423,7 +454,8 @@ impl DashboardPanel {
                 .map(|(i, v)| (labels[i].as_str(), *v as u64))
                 .collect();
             if !data.is_empty() && inner.width > 2 {
-                let bar_w = ((inner.width as usize / data.len().max(1)).saturating_sub(1)).clamp(1, 4) as u16;
+                let bar_w = ((inner.width as usize / data.len().max(1)).saturating_sub(1))
+                    .clamp(1, 4) as u16;
                 let chart = BarChart::default()
                     .data(data.as_slice())
                     .bar_width(bar_w.max(1))
@@ -469,8 +501,14 @@ impl DashboardPanel {
                 .x_bounds([0.0, n.max(1.0)])
                 .y_bounds([0.0, 100.0])
                 .paint(move |c| {
-                    c.draw(&Points { coords: &rx, color: rx_color });
-                    c.draw(&Points { coords: &tx, color: tx_color });
+                    c.draw(&Points {
+                        coords: &rx,
+                        color: rx_color,
+                    });
+                    c.draw(&Points {
+                        coords: &tx,
+                        color: tx_color,
+                    });
                 });
             render(canvas, inner, surface);
         }
@@ -483,8 +521,18 @@ impl DashboardPanel {
             let inner = card(surface, theme, botc[0], "System");
             let load = System::load_average();
             let lines = vec![
-                kv_line("os", System::long_os_version().unwrap_or_default(), dim, text),
-                kv_line("kernel", System::kernel_version().unwrap_or_default(), dim, text),
+                kv_line(
+                    "os",
+                    System::long_os_version().unwrap_or_default(),
+                    dim,
+                    text,
+                ),
+                kv_line(
+                    "kernel",
+                    System::kernel_version().unwrap_or_default(),
+                    dim,
+                    text,
+                ),
                 kv_line("arch", System::cpu_arch(), dim, text),
                 kv_line("cpus", self.cores.len().to_string(), dim, text),
                 kv_line(
@@ -553,12 +601,10 @@ impl DashboardPanel {
     }
 
     fn render_processes(&self, surface: &mut Surface, theme: &zemacs_view::Theme, area: Rect) {
+        use ratatui::layout::Constraint;
         use ratatui::style::Modifier as RMod;
         use ratatui::text::Span;
-        use ratatui::widgets::{
-            Cell, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table,
-        };
-        use ratatui::layout::Constraint;
+        use ratatui::widgets::{Cell, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table};
 
         let dim = to_rat_style(theme.get("comment"));
         let text = to_rat_style(theme.get("ui.text"));
@@ -581,7 +627,10 @@ impl DashboardPanel {
                 Row::new(vec![
                     Cell::from(Span::styled(p.pid.to_string(), dim)),
                     Cell::from(Span::styled(p.name.clone(), text)),
-                    Cell::from(Span::styled(format!("{:.1}%", p.cpu), gauge_color(p.cpu as f64, theme))),
+                    Cell::from(Span::styled(
+                        format!("{:.1}%", p.cpu),
+                        gauge_color(p.cpu as f64, theme),
+                    )),
                     Cell::from(Span::styled(human(p.mem), text)),
                 ])
             })
@@ -601,7 +650,12 @@ impl DashboardPanel {
             .column_spacing(1)
             .style(text);
         // leave the last column for the scrollbar
-        let table_rect = Rect::new(inner.x, inner.y, inner.width.saturating_sub(1), inner.height);
+        let table_rect = Rect::new(
+            inner.x,
+            inner.y,
+            inner.width.saturating_sub(1),
+            inner.height,
+        );
         render(table, table_rect, surface);
 
         if self.procs.len() > visible {
@@ -712,7 +766,10 @@ fn kv_line(
     text: ratatui::style::Style,
 ) -> ratatui::text::Line<'static> {
     use ratatui::text::{Line, Span};
-    Line::from(vec![Span::styled(format!("{k:<7}"), dim), Span::styled(v, text)])
+    Line::from(vec![
+        Span::styled(format!("{k:<7}"), dim),
+        Span::styled(v, text),
+    ])
 }
 
 /// Colour a gauge/percentage by load: green < 60, yellow < 85, red beyond.
@@ -778,5 +835,11 @@ fn fmt_dur(secs: u64) -> String {
 
 /// Shorten a disk/device name to its last path component for a bar label.
 fn short_disk(name: &str) -> String {
-    name.rsplit('/').next().filter(|s| !s.is_empty()).unwrap_or(name).chars().take(6).collect()
+    name.rsplit('/')
+        .next()
+        .filter(|s| !s.is_empty())
+        .unwrap_or(name)
+        .chars()
+        .take(6)
+        .collect()
 }

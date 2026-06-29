@@ -1,7 +1,7 @@
+use once_cell::sync::OnceCell;
 use zemacs_event::status::StatusMessage;
 use zemacs_event::{runtime_local, send_blocking};
 use zemacs_view::Editor;
-use once_cell::sync::OnceCell;
 
 use crate::compositor::Compositor;
 

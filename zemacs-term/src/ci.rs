@@ -11,7 +11,7 @@ use serde::Deserialize;
 /// One workflow run, flattened for display.
 #[derive(Clone, Debug)]
 pub struct CiRun {
-    pub status: String,            // queued | in_progress | completed
+    pub status: String,             // queued | in_progress | completed
     pub conclusion: Option<String>, // success | failure | cancelled | … (None while running)
     pub workflow: String,
     pub title: String,
@@ -100,7 +100,10 @@ pub fn store(result: Result<Vec<CiRun>, String>) {
 
 /// Latest run's glyph + theme key for the statusline (None if nothing fetched).
 pub fn latest_badge() -> Option<(&'static str, &'static str)> {
-    STATE.lock().ok().and_then(|s| s.runs.first().map(|r| r.icon()))
+    STATE
+        .lock()
+        .ok()
+        .and_then(|s| s.runs.first().map(|r| r.icon()))
 }
 
 /// Kick off an async fetch into the global cache (ureq is blocking, so the work
@@ -264,7 +267,10 @@ mod tests {
 
     #[test]
     fn slug_parsing() {
-        assert_eq!(parse_slug("https://github.com/o/r.git").as_deref(), Some("o/r"));
+        assert_eq!(
+            parse_slug("https://github.com/o/r.git").as_deref(),
+            Some("o/r")
+        );
         assert_eq!(parse_slug("git@github.com:o/r.git").as_deref(), Some("o/r"));
         assert_eq!(parse_slug("https://gitlab.com/o/r"), None);
     }

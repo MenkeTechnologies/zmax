@@ -12,7 +12,6 @@ use arc_swap::{
     access::{DynAccess, DynGuard},
     ArcSwap,
 };
-use zemacs_view::{document::Mode, info::Info, input::KeyEvent};
 use indexmap::IndexMap;
 use macros::key;
 use serde::Deserialize;
@@ -22,6 +21,7 @@ use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
 };
+use zemacs_view::{document::Mode, info::Info, input::KeyEvent};
 
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct KeyTrieNode {
@@ -384,9 +384,9 @@ mod tests {
     use super::*;
     use crate::commands::MappableCommand;
     use arc_swap::access::Constant;
+    use indexmap::indexmap;
     use zemacs_core::hashmap;
     use zemacs_view::input::{KeyCode, KeyEvent, KeyModifiers};
-    use indexmap::indexmap;
 
     #[test]
     #[should_panic]
