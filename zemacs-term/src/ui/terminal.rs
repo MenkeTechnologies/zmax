@@ -20,7 +20,7 @@ use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize}
 use tui::buffer::Buffer as Surface;
 use zemacs_view::{
     graphics::{Color, CursorKind, Modifier, Rect, Style},
-    input::{KeyCode, KeyEvent, KeyModifiers},
+    input::{KeyCode, KeyEvent, KeyModifiers, MouseEventKind},
     ViewId,
 };
 
@@ -142,6 +142,17 @@ impl TerminalPanel {
         let _ = self.writer.write_all(bytes);
         let _ = self.writer.flush();
     }
+
+    /// Scroll the terminal's scrollback view by `delta` lines (positive = back
+    /// into history, negative = toward the live screen).
+    fn scroll(&mut self, delta: isize) {
+        if let Ok(mut parser) = self.parser.lock() {
+            let cur = parser.screen().scrollback() as isize;
+            let next = (cur + delta).max(0) as usize;
+            parser.set_scrollback(next);
+        }
+        zemacs_event::request_redraw();
+    }
 }
 
 impl Drop for TerminalPanel {
@@ -155,9 +166,14 @@ impl Component for TerminalPanel {
     fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         // Only capture input while the terminal's pane is the focused one. When
         // another split is focused, fall through (Ignored) so the editor handles
-        // keys; mouse events always fall through so a click on any pane (incl.
-        // this one) reaches the editor's click-to-focus handler.
+        // keys and clicks (e.g. click-to-focus on another pane).
         let focused = self.pane.is_none_or(|pane| cx.editor.tree.focus == pane);
+        // The terminal's own pane rect (for distinguishing clicks inside it from
+        // clicks on another split).
+        let pane_area = self
+            .pane
+            .and_then(|p| cx.editor.tree.try_get(p))
+            .map(|view| view.area);
         match event {
             Event::Key(key) if focused => {
                 // F12 detaches without needing to exit the shell.
@@ -175,6 +191,31 @@ impl Component for TerminalPanel {
             }
             Event::Paste(s) if focused => {
                 self.send(s.as_bytes());
+                EventResult::Consumed(None)
+            }
+            // While focused, the wheel scrolls the terminal's own scrollback
+            // rather than the editor underneath it.
+            Event::Mouse(me) if focused && matches!(me.kind, MouseEventKind::ScrollUp) => {
+                self.scroll(3);
+                EventResult::Consumed(None)
+            }
+            Event::Mouse(me) if focused && matches!(me.kind, MouseEventKind::ScrollDown) => {
+                self.scroll(-3);
+                EventResult::Consumed(None)
+            }
+            // A click inside the terminal's pane stays here (and is swallowed so
+            // it doesn't disturb the editor); a click on another pane falls
+            // through so the editor's click-to-focus moves focus there.
+            Event::Mouse(me)
+                if focused
+                    && matches!(me.kind, MouseEventKind::Down(_))
+                    && pane_area.is_some_and(|a| {
+                        me.column >= a.x
+                            && me.column < a.x.saturating_add(a.width)
+                            && me.row >= a.y
+                            && me.row < a.y.saturating_add(a.height)
+                    }) =>
+            {
                 EventResult::Consumed(None)
             }
             _ => EventResult::Ignored(None),
