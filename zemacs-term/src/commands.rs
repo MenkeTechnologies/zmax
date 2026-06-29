@@ -11400,7 +11400,7 @@ fn kmacro_counter_reset() {
     KMACRO_COUNTER.store(0, std::sync::atomic::Ordering::Relaxed);
 }
 
-/// SPC K c a: add [count] (default 1) to the macro counter.
+/// SPC K c a: add `count` (default 1) to the macro counter.
 fn kmacro_add_counter(cx: &mut Context) {
     let v = kmacro_counter_add(cx.count() as i64);
     cx.editor.set_status(format!("macro counter = {v}"));
@@ -11434,7 +11434,7 @@ fn pe_enclosing(ch: &[char], pos: usize) -> Option<(usize, usize)> {
             stack.push(i);
         } else if pe_is_close(c) {
             if let Some(o) = stack.pop() {
-                if o <= pos && pos <= i && best.map_or(true, |(bo, _)| o > bo) {
+                if o <= pos && pos <= i && best.is_none_or(|(bo, _)| o > bo) {
                     best = Some((o, i));
                 }
             }
@@ -11454,10 +11454,10 @@ fn pe_sexp_forward(ch: &[char], i: usize) -> Option<(usize, usize)> {
     }
     if pe_is_open(ch[j]) {
         let mut depth = 0i32;
-        for k in j..ch.len() {
-            if pe_is_open(ch[k]) {
+        for (k, &c) in ch.iter().enumerate().skip(j) {
+            if pe_is_open(c) {
                 depth += 1;
-            } else if pe_is_close(ch[k]) {
+            } else if pe_is_close(c) {
                 depth -= 1;
                 if depth == 0 {
                     return Some((j, k));
@@ -11657,8 +11657,12 @@ fn pe_transpose(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
     Some((out, ne + 1))
 }
 
+/// A pure paredit transform: given the buffer chars and cursor offset, returns
+/// the new chars and cursor offset, or `None` if the edit doesn't apply.
+type PareditFn = fn(&[char], usize) -> Option<(Vec<char>, usize)>;
+
 /// Run a pure paredit transform on the primary cursor, applying a minimal diff.
-fn apply_paredit(cx: &mut Context, f: fn(&[char], usize) -> Option<(Vec<char>, usize)>) {
+fn apply_paredit(cx: &mut Context, f: PareditFn) {
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let slice = text.slice(..);
@@ -12966,11 +12970,7 @@ mod insert_generator_tests {
         assert_eq!(got, vec!["four", "one", "three", "two"]);
     }
 
-    fn paredit_run(
-        f: fn(&[char], usize) -> Option<(Vec<char>, usize)>,
-        s: &str,
-        cursor_marker: char,
-    ) -> Option<String> {
+    fn paredit_run(f: super::PareditFn, s: &str, cursor_marker: char) -> Option<String> {
         // `cursor_marker` in `s` marks the cursor position, then is removed.
         let pos = s.find(cursor_marker).expect("marker present");
         let clean: String = s.chars().filter(|&c| c != cursor_marker).collect();

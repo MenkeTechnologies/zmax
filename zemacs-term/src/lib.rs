@@ -1,3 +1,9 @@
+// Internal docs deliberately cross-link private items (rendered with
+// `--document-private-items` in CI). These links are intentional and would only
+// be "broken" in a public-docs build this binary crate never produces. Genuinely
+// unresolved links (`broken_intra_doc_links`) remain denied.
+#![allow(rustdoc::private_intra_doc_links)]
+
 #[macro_use]
 extern crate zemacs_view;
 
