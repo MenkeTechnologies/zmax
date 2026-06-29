@@ -1748,12 +1748,21 @@ mod tests {
         // it stays in Normal mode).
         let km = default();
         let s = &km[&Mode::Select];
-        assert_eq!(cmd_name(resolve(s, "space f f").unwrap()), Some("file_picker"));
-        assert_eq!(cmd_name(resolve(s, "space space").unwrap()), Some("command_palette"));
+        assert_eq!(
+            cmd_name(resolve(s, "space f f").unwrap()),
+            Some("file_picker")
+        );
+        assert_eq!(
+            cmd_name(resolve(s, "space space").unwrap()),
+            Some("command_palette")
+        );
         assert_eq!(cmd_name(resolve(s, "space w s").unwrap()), Some("hsplit"));
         // the visual-specific override (:hunk-reset, a typable) still wins over
         // the grafted Normal leaf (goto_reference): the leaf is no longer it.
-        assert_ne!(cmd_name(resolve(s, "space g r").unwrap()), Some("goto_reference"));
+        assert_ne!(
+            cmd_name(resolve(s, "space g r").unwrap()),
+            Some("goto_reference")
+        );
     }
 
     #[test]

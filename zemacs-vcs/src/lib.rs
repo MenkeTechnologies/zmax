@@ -188,11 +188,7 @@ impl DiffProvider {
         }
     }
 
-    fn get_conflict_stages(
-        &self,
-        file: &Path,
-        trust_full: bool,
-    ) -> Result<Option<ConflictStages>> {
+    fn get_conflict_stages(&self, file: &Path, trust_full: bool) -> Result<Option<ConflictStages>> {
         match self {
             #[cfg(feature = "git")]
             Self::Git => git::conflict_stages(file, trust_full),
