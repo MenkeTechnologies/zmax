@@ -1,6 +1,6 @@
 //! Integrated terminal: a real PTY-backed shell rendered inside zemacs.
 //!
-//! A full-screen [`Component`] that spawns the user's `$SHELL` in a pseudo-
+//! A [`Component`] (confined to the focused editor pane) that spawns the user's `$SHELL` in a pseudo-
 //! terminal ([`portable_pty`]), feeds its output through a [`vt100`] parser that
 //! maintains a screen grid, and blits that grid onto the zemacs `Surface` each
 //! frame. Keystrokes are translated to terminal byte sequences and written back
@@ -168,7 +168,18 @@ impl Component for TerminalPanel {
         }
     }
 
-    fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
+    fn render(&mut self, screen: Rect, surface: &mut Surface, ctx: &mut Context) {
+        // Confine the terminal to the focused editor pane rather than the whole
+        // screen, so other splits and the statusline stay visible (vim/emacs
+        // `:term` opens in the current window). Fall back to the full area if the
+        // focused view can't be resolved.
+        let area = ctx
+            .editor
+            .tree
+            .try_get(ctx.editor.tree.focus)
+            .map(|view| view.area)
+            .unwrap_or(screen);
+
         let theme = &ctx.editor.theme;
         surface.clear_with(area, theme.get("ui.background"));
         if area.height < 2 || area.width < 2 {
