@@ -1319,18 +1319,6 @@ fn pane_line<'a>(
     match idx {
         Some(i) => {
             let num = format!("{:>width$} ", i + 1, width = gutter.saturating_sub(1));
-<<<<<<< Updated upstream
-            let mut content: String = src
-                .get(i)
-                .map(|s| s.replace('\t', "    "))
-                .unwrap_or_default();
-            // Truncate/pad to the inner width so the styled background spans the pane.
-            truncate_pad(&mut content, inner);
-            Line::from(vec![
-                Span::styled(num, to_rat_style(style.linenr)),
-                Span::styled(content, to_rat_style(zstyle)),
-            ])
-=======
             // Char-level runs: the diff spans for a paired modification, else the
             // whole line as a single non-emphasised run.
             let runs: Vec<(String, bool)> = match emphasis {
@@ -1343,7 +1331,6 @@ fn pane_line<'a>(
             let mut spans = vec![Span::styled(num, to_rat_style(style.linenr))];
             spans.extend(content_spans(&runs, hscroll, inner, zstyle, emph));
             Line::from(spans)
->>>>>>> Stashed changes
         }
         None => {
             // Blank filler on the side that has no counterpart line.
@@ -1402,15 +1389,7 @@ fn result_line<'a>(
     match idx {
         Some(i) => {
             let num = format!("{:>width$} ", i + 1, width = gutter.saturating_sub(1));
-<<<<<<< Updated upstream
-            let mut content: String = src
-                .get(i)
-                .map(|s| s.replace('\t', "    "))
-                .unwrap_or_default();
-            truncate_pad(&mut content, inner);
-=======
             let runs = vec![(src.get(i).cloned().unwrap_or_default(), false)];
->>>>>>> Stashed changes
             prefix.push(Span::styled(num, to_rat_style(style.linenr)));
             prefix.extend(content_spans(
                 &runs,
@@ -1468,6 +1447,7 @@ fn push_run(out: &mut Vec<(String, bool)>, chars: &[char], emph: bool) {
 /// inputs yield a single non-emphasised run on each side. Pure and unit-tested;
 /// mirrors the char-diff approach in `zemacs-core::diff` (Myers over `char`
 /// tokens, since the histogram heuristic is poor for repeated characters).
+#[allow(clippy::type_complexity)]
 fn inline_spans(old: &str, new: &str) -> (Vec<(String, bool)>, Vec<(String, bool)>) {
     let old_chars: Vec<char> = old.chars().collect();
     let new_chars: Vec<char> = new.chars().collect();
@@ -2213,7 +2193,10 @@ mod tests {
         let cells = layout_cells(&runs, 1, 3);
         // "bCD" — first char un-emphasised, next two emphasised.
         assert_eq!(cells_text(&cells), "bCD");
-        assert_eq!(cells.iter().map(|(_, e)| *e).collect::<Vec<_>>(), vec![false, true, true]);
+        assert_eq!(
+            cells.iter().map(|(_, e)| *e).collect::<Vec<_>>(),
+            vec![false, true, true]
+        );
     }
 
     #[test]

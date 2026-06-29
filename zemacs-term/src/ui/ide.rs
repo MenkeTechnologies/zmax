@@ -4735,7 +4735,7 @@ mod parse_tests {
     fn conflicts_float_to_front() {
         // Mirror the Git-tab refresh: stable sort with conflicts (key=false)
         // first, then count the leading conflict run.
-        let mut changes = vec![
+        let mut changes = [
             (" M".to_string(), "a".to_string()),
             ("UU".to_string(), "b".to_string()),
             ("??".to_string(), "c".to_string()),

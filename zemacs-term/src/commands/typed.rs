@@ -1609,14 +1609,7 @@ pub(crate) fn open_merge(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
                 zemacs_loader::workspace_trust::TrustQuery::Git,
             )
             .is_trusted();
-<<<<<<< Updated upstream
-        let stages = cx
-            .editor
-            .diff_providers
-            .get_conflict_stages(p, trust_full)?;
-=======
         let stages = editor.diff_providers.get_conflict_stages(p, trust_full)?;
->>>>>>> Stashed changes
         // Need at least ours + theirs to run a 3-way merge; missing base is fine
         // (add/add → "" base).
         let ours = stages.ours?;
