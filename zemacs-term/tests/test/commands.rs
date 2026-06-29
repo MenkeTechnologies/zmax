@@ -1193,6 +1193,29 @@ async fn vim_change_inner_paren() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn vim_change_inner_block_alias() -> anyhow::Result<()> {
+    // `cib` is vim's alias for `ci(`.
+    test_with_config(
+        AppBuilder::new().with_config(zemacs_term::config::Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        ("f(#[|a]#bc)\n", "cibX", "f(X#[)|]#\n"),
+    )
+    .await?;
+    // `ciB` is vim's alias for `ci{`.
+    test_with_config(
+        AppBuilder::new().with_config(zemacs_term::config::Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        ("f{#[|a]#bc}\n", "ciBX", "f{X#[}|]#\n"),
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn vim_delete_find_char() -> anyhow::Result<()> {
     test_with_config(
         AppBuilder::new().with_config(zemacs_term::config::Config {

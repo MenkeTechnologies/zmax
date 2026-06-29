@@ -9246,6 +9246,7 @@ dependencies = [
  "grep-regex",
  "grep-searcher",
  "ignore",
+ "imara-diff",
  "indexmap",
  "indoc",
  "libc",

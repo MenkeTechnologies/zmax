@@ -739,6 +739,13 @@ impl MappableCommand {
         kmacro_add_counter, "Add [count] to the keyboard-macro counter (SPC K c a)",
         kmacro_insert_counter, "Insert the macro counter value, then increment (SPC K c c)",
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
+        paredit_slurp_forward, "Paredit: slurp the next s-expression forward (SPC k s)",
+        paredit_barf_forward, "Paredit: barf the last s-expression forward (SPC k b)",
+        paredit_slurp_backward, "Paredit: slurp the previous s-expression backward (SPC k S)",
+        paredit_barf_backward, "Paredit: barf the first s-expression backward (SPC k B)",
+        paredit_splice, "Paredit: splice/unwrap the enclosing s-expression (SPC k W)",
+        paredit_raise, "Paredit: raise the current s-expression (SPC k r)",
+        paredit_transpose, "Paredit: transpose the s-expressions around point (SPC k t)",
         fold_next, "Move to next fold (zj)",
         fold_prev, "Move to previous fold (zk)",
         goto_line_last_nonblank, "Goto last non-blank on line (g_)",
@@ -11401,11 +11408,279 @@ fn kmacro_insert_counter(cx: &mut Context) {
     kmacro_counter_add(1);
 }
 
+// --- paredit-style structural editing (spacemacs SPC k) ----------------------
+// Pure s-expression transforms over a char buffer + cursor, applied with a
+// minimal prefix/suffix diff so undo/marks stay tight. An "s-expression" is a
+// balanced ()/[]/{} group or an atom (a run of non-space, non-bracket chars).
+
+fn pe_is_open(c: char) -> bool {
+    matches!(c, '(' | '[' | '{')
+}
+fn pe_is_close(c: char) -> bool {
+    matches!(c, ')' | ']' | '}')
+}
+
+/// Innermost bracket pair `(open_idx, close_idx)` enclosing `pos`.
+fn pe_enclosing(ch: &[char], pos: usize) -> Option<(usize, usize)> {
+    let mut stack: Vec<usize> = Vec::new();
+    let mut best: Option<(usize, usize)> = None;
+    for (i, &c) in ch.iter().enumerate() {
+        if pe_is_open(c) {
+            stack.push(i);
+        } else if pe_is_close(c) {
+            if let Some(o) = stack.pop() {
+                if o <= pos && pos <= i && best.map_or(true, |(bo, _)| o > bo) {
+                    best = Some((o, i));
+                }
+            }
+        }
+    }
+    best
+}
+
+/// First s-expression at/after `i` (skipping leading whitespace): `(start, end_inclusive)`.
+fn pe_sexp_forward(ch: &[char], i: usize) -> Option<(usize, usize)> {
+    let mut j = i;
+    while j < ch.len() && ch[j].is_whitespace() {
+        j += 1;
+    }
+    if j >= ch.len() || pe_is_close(ch[j]) {
+        return None;
+    }
+    if pe_is_open(ch[j]) {
+        let mut depth = 0i32;
+        for k in j..ch.len() {
+            if pe_is_open(ch[k]) {
+                depth += 1;
+            } else if pe_is_close(ch[k]) {
+                depth -= 1;
+                if depth == 0 {
+                    return Some((j, k));
+                }
+            }
+        }
+        None
+    } else {
+        let start = j;
+        while j < ch.len() && !ch[j].is_whitespace() && !pe_is_open(ch[j]) && !pe_is_close(ch[j]) {
+            j += 1;
+        }
+        Some((start, j - 1))
+    }
+}
+
+/// Last s-expression ending before `i` (scanning back over whitespace): `(start, end_inclusive)`.
+fn pe_sexp_backward(ch: &[char], i: usize) -> Option<(usize, usize)> {
+    let mut k = i as isize - 1;
+    while k >= 0 && ch[k as usize].is_whitespace() {
+        k -= 1;
+    }
+    if k < 0 {
+        return None;
+    }
+    let k = k as usize;
+    if pe_is_open(ch[k]) {
+        return None;
+    }
+    if pe_is_close(ch[k]) {
+        let mut depth = 0i32;
+        let mut m = k as isize;
+        while m >= 0 {
+            let c = ch[m as usize];
+            if pe_is_close(c) {
+                depth += 1;
+            } else if pe_is_open(c) {
+                depth -= 1;
+                if depth == 0 {
+                    return Some((m as usize, k));
+                }
+            }
+            m -= 1;
+        }
+        None
+    } else {
+        let end = k;
+        let mut m = k as isize;
+        while m >= 0
+            && !ch[m as usize].is_whitespace()
+            && !pe_is_open(ch[m as usize])
+            && !pe_is_close(ch[m as usize])
+        {
+            m -= 1;
+        }
+        Some(((m + 1) as usize, end))
+    }
+}
+
+fn pe_vec(prefix: &[char], mid: impl IntoIterator<Item = char>, suffix: &[char]) -> Vec<char> {
+    let mut v = Vec::with_capacity(prefix.len() + suffix.len() + 8);
+    v.extend_from_slice(prefix);
+    v.extend(mid);
+    v.extend_from_slice(suffix);
+    v
+}
+
+/// Slurp forward: move the closing bracket past the next outside s-expression.
+/// `a (b) c` → `a (b c)`.
+fn pe_slurp_forward(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (_o, c) = pe_enclosing(ch, pos)?;
+    let (_ns, ne) = pe_sexp_forward(ch, c + 1)?;
+    let closer = ch[c];
+    let mut out = pe_vec(&ch[..c], ch[c + 1..=ne].iter().copied(), &ch[ne + 1..]);
+    out.insert(ne, closer); // ne shifted left by one after removing the closer at c
+    Some((out, pos))
+}
+
+/// Barf forward: move the closing bracket in before the last inside s-expression.
+/// `(a b c)` → `(a b) c`.
+fn pe_barf_forward(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (o, c) = pe_enclosing(ch, pos)?;
+    let (ls, _le) = pe_sexp_backward(ch, c)?;
+    if ls <= o + 1 {
+        return None; // only one sexp inside; nothing to barf
+    }
+    // place the closer right after the previous content (skip the gap before `ls`)
+    let mut ins = ls;
+    while ins > o + 1 && ch[ins - 1].is_whitespace() {
+        ins -= 1;
+    }
+    let closer = ch[c];
+    let mut out = pe_vec(&ch[..ins], std::iter::once(closer), &ch[ins..c]);
+    out.extend_from_slice(&ch[c + 1..]);
+    Some((out, pos.min(ins)))
+}
+
+/// Slurp backward: move the opening bracket before the previous outside s-expression.
+/// `a (b) c` → `(a b) c`.
+fn pe_slurp_backward(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (o, _c) = pe_enclosing(ch, pos)?;
+    let (ps, _pe) = pe_sexp_backward(ch, o)?;
+    let opener = ch[o];
+    let mut out = pe_vec(&ch[..ps], std::iter::once(opener), &ch[ps..o]);
+    out.extend_from_slice(&ch[o + 1..]);
+    Some((out, pos + 1))
+}
+
+/// Barf backward: move the opening bracket in after the first inside s-expression.
+/// `(a b c)` → `a (b c)`.
+fn pe_barf_backward(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (o, c) = pe_enclosing(ch, pos)?;
+    let (_fs, fe) = pe_sexp_forward(ch, o + 1)?;
+    if fe >= c {
+        return None;
+    }
+    // place the opener right before the next content (skip the gap after `fe`)
+    let mut ins = fe + 1;
+    while ins < c && ch[ins].is_whitespace() {
+        ins += 1;
+    }
+    let opener = ch[o];
+    let mut out = pe_vec(&ch[..o], ch[o + 1..ins].iter().copied(), &[]);
+    out.push(opener);
+    out.extend_from_slice(&ch[ins..]);
+    Some((out, pos))
+}
+
+/// Unwrap / splice: remove the enclosing brackets, keeping their contents.
+/// `(a b)` → `a b`.
+fn pe_splice(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (o, c) = pe_enclosing(ch, pos)?;
+    let out = pe_vec(&ch[..o], ch[o + 1..c].iter().copied(), &ch[c + 1..]);
+    let cursor = if pos > o { pos - 1 } else { pos };
+    Some((out, cursor))
+}
+
+/// Raise: replace the enclosing s-expression with the child at point.
+/// `(a (b c) d)` with point in `(b c)` → `(b c)`.
+fn pe_raise(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (o, c) = pe_enclosing(ch, pos)?;
+    let (cs, ce) = pe_sexp_forward(ch, pos)?;
+    if cs < o || ce > c {
+        return None;
+    }
+    let out = pe_vec(&ch[..o], ch[cs..=ce].iter().copied(), &ch[c + 1..]);
+    Some((out, o))
+}
+
+/// Transpose: swap the s-expression before point with the one after it.
+/// `(a b)` with point between → `(b a)`.
+fn pe_transpose(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (ps, pe_) = pe_sexp_backward(ch, pos)?;
+    let (ns, ne) = pe_sexp_forward(ch, pos)?;
+    if pe_ >= ns {
+        return None;
+    }
+    let mut out = pe_vec(&ch[..ps], ch[ns..=ne].iter().copied(), &ch[pe_ + 1..ns]);
+    out.extend_from_slice(&ch[ps..=pe_]);
+    out.extend_from_slice(&ch[ne + 1..]);
+    Some((out, ne + 1))
+}
+
+/// Run a pure paredit transform on the primary cursor, applying a minimal diff.
+fn apply_paredit(cx: &mut Context, f: fn(&[char], usize) -> Option<(Vec<char>, usize)>) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let chars: Vec<char> = slice.chars().collect();
+    let pos = doc.selection(view.id).primary().cursor(slice);
+    let Some((newc, newcursor)) = f(&chars, pos) else {
+        cx.editor.set_status("paredit: no target s-expression here");
+        return;
+    };
+    // common prefix / suffix in char space → one minimal change
+    let mut p = 0;
+    while p < chars.len() && p < newc.len() && chars[p] == newc[p] {
+        p += 1;
+    }
+    let mut q = 0;
+    while q < chars.len() - p
+        && q < newc.len() - p
+        && chars[chars.len() - 1 - q] == newc[newc.len() - 1 - q]
+    {
+        q += 1;
+    }
+    let repl: String = newc[p..newc.len() - q].iter().collect();
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((p, chars.len() - q, Some(Tendril::from(repl)))),
+    );
+    doc.apply(&transaction, view.id);
+    let (view, doc) = current!(cx.editor);
+    let nc = newcursor.min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::point(nc));
+}
+
+fn paredit_slurp_forward(cx: &mut Context) {
+    apply_paredit(cx, pe_slurp_forward);
+}
+fn paredit_barf_forward(cx: &mut Context) {
+    apply_paredit(cx, pe_barf_forward);
+}
+fn paredit_slurp_backward(cx: &mut Context) {
+    apply_paredit(cx, pe_slurp_backward);
+}
+fn paredit_barf_backward(cx: &mut Context) {
+    apply_paredit(cx, pe_barf_backward);
+}
+fn paredit_splice(cx: &mut Context) {
+    apply_paredit(cx, pe_splice);
+}
+fn paredit_raise(cx: &mut Context) {
+    apply_paredit(cx, pe_raise);
+}
+fn paredit_transpose(cx: &mut Context) {
+    apply_paredit(cx, pe_transpose);
+}
+
 /// SPC b w: toggle the current buffer's read-only (writable) state.
 fn toggle_readonly(cx: &mut Context) {
     let (_view, doc) = current!(cx.editor);
     doc.readonly = !doc.readonly;
-    let state = if doc.readonly { "read-only" } else { "writable" };
+    let state = if doc.readonly {
+        "read-only"
+    } else {
+        "writable"
+    };
     cx.editor.set_status(format!("buffer is now {state}"));
 }
 
@@ -11598,6 +11873,23 @@ fn select_textobject_then(
                     match ch {
                         'w' => textobject::textobject_word(text, range, objtype, count, false),
                         'W' => textobject::textobject_word(text, range, objtype, count, true),
+                        // vim block aliases: `ib`/`ab` == `i(`/`a(`, `iB`/`aB` == `i{`/`a{`.
+                        'b' => textobject::textobject_pair_surround(
+                            doc.syntax(),
+                            text,
+                            range,
+                            objtype,
+                            '(',
+                            count,
+                        ),
+                        'B' => textobject::textobject_pair_surround(
+                            doc.syntax(),
+                            text,
+                            range,
+                            objtype,
+                            '{',
+                            count,
+                        ),
                         // vim `it`/`at`: change/select inside/around the enclosing
                         // (X)HTML/XML tag. `C` keeps the type/class object.
                         't' => textobject_treesitter("xml-element", range),
@@ -11648,6 +11940,8 @@ fn select_textobject_then(
     let help_text = [
         ("w", "Word"),
         ("W", "WORD"),
+        ("b", "Block — parentheses (alias for ( )"),
+        ("B", "Block — braces (alias for { )"),
         ("p", "Paragraph"),
         ("t", "Tag / (X)HTML element (tree-sitter)"),
         ("C", "Type/class definition (tree-sitter)"),
@@ -12615,6 +12909,68 @@ mod insert_generator_tests {
         let mut got: Vec<&str> = words.split(' ').collect();
         got.sort_unstable();
         assert_eq!(got, vec!["four", "one", "three", "two"]);
+    }
+
+    fn paredit_run(
+        f: fn(&[char], usize) -> Option<(Vec<char>, usize)>,
+        s: &str,
+        cursor_marker: char,
+    ) -> Option<String> {
+        // `cursor_marker` in `s` marks the cursor position, then is removed.
+        let pos = s.find(cursor_marker).expect("marker present");
+        let clean: String = s.chars().filter(|&c| c != cursor_marker).collect();
+        // char index of the marker (markers are single-byte ASCII here)
+        let pos = clean[..pos].chars().count();
+        let ch: Vec<char> = clean.chars().collect();
+        f(&ch, pos).map(|(v, _)| v.into_iter().collect())
+    }
+
+    #[test]
+    fn paredit_slurp_and_barf() {
+        // slurp forward: cursor inside (b), pull c in
+        assert_eq!(
+            paredit_run(pe_slurp_forward, "(a (b|) c)", '|').as_deref(),
+            Some("(a (b c))")
+        );
+        // barf forward: push c out
+        assert_eq!(
+            paredit_run(pe_barf_forward, "(a (b| c))", '|').as_deref(),
+            Some("(a (b) c)")
+        );
+        // slurp backward: pull a in
+        assert_eq!(
+            paredit_run(pe_slurp_backward, "(a (b|) c)", '|').as_deref(),
+            Some("((a b) c)")
+        );
+        // barf backward: push b out
+        assert_eq!(
+            paredit_run(pe_barf_backward, "((a| b) c)", '|').as_deref(),
+            Some("(a (b) c)")
+        );
+    }
+
+    #[test]
+    fn paredit_splice_raise_transpose() {
+        assert_eq!(
+            paredit_run(pe_splice, "(a (b| c) d)", '|').as_deref(),
+            Some("(a b c d)")
+        );
+        // raise replaces the enclosing list with the s-expression at point
+        assert_eq!(
+            paredit_run(pe_raise, "(a (b |c) d)", '|').as_deref(),
+            Some("(a c d)")
+        );
+        // transpose the atom before point with the one after
+        assert_eq!(
+            paredit_run(pe_transpose, "(a |b)", '|').as_deref(),
+            Some("(b a)")
+        );
+    }
+
+    #[test]
+    fn paredit_no_target_returns_none() {
+        // no enclosing pair → None (command would just report a status)
+        assert!(pe_slurp_forward(&"a b c".chars().collect::<Vec<_>>(), 2).is_none());
     }
 
     #[test]
