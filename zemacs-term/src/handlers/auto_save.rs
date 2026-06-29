@@ -170,4 +170,15 @@ mod tests {
         // A small file shrinking is fine (under the substantial-file threshold).
         assert!(!is_catastrophic_truncation(10, 200));
     }
+
+    #[test]
+    fn boundary_cases() {
+        // Empty-buffer guard: only when the file on disk is non-trivial (> 16 B).
+        assert!(is_catastrophic_truncation(0, 17));
+        assert!(!is_catastrophic_truncation(0, 16));
+        // The "< 10% of a substantial file" rule needs disk strictly > 256 B.
+        assert!(!is_catastrophic_truncation(5, 256)); // 256 is not > 256
+        assert!(is_catastrophic_truncation(25, 257)); // 250 < 257 -> blocked
+        assert!(!is_catastrophic_truncation(26, 257)); // 260 >= 257 -> allowed
+    }
 }

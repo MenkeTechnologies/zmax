@@ -4666,6 +4666,35 @@ mod parse_tests {
         assert!(restored.bottom_zoom);
     }
 
+    // Bad/uninitialized persisted geometry must fall back to defaults rather than
+    // produce an unusable workbench (e.g. a zero-width drawer or inverted splits).
+    #[test]
+    fn apply_layout_rejects_bad_geometry() {
+        let mut ide = super::Ide::new();
+        let (def_left, def_splits, def_height) =
+            (ide.left_width, ide.bottom_splits, ide.bottom_height);
+        let bad = crate::appdata::IdeLayout {
+            open: true,
+            left_width: 5,           // below the 14-col minimum
+            bottom_splits: [80, 20], // disordered (first >= second)
+            bottom_height: 0,        // unset
+            ..Default::default()
+        };
+        ide.apply_layout(&bad);
+        assert_eq!(
+            ide.left_width, def_left,
+            "tiny left_width should be rejected"
+        );
+        assert_eq!(
+            ide.bottom_splits, def_splits,
+            "disordered splits should be rejected"
+        );
+        assert_eq!(
+            ide.bottom_height, def_height,
+            "zero height should be rejected"
+        );
+    }
+
     #[test]
     fn test_progress_counts_results() {
         let lines: Vec<String> = [
