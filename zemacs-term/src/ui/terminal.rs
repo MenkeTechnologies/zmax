@@ -42,6 +42,10 @@ pub struct TerminalPanel {
     /// is the focused one — so clicking another split moves focus to the editor
     /// and clicking back returns focus to the terminal.
     pane: Option<ViewId>,
+    /// True after the `C-\` window leader, so the next key is interpreted as a
+    /// window command (split / move focus) instead of being sent to the shell.
+    /// `C-\` is used because `C-w` is the shell's delete-previous-word.
+    pending_window: bool,
 }
 
 impl TerminalPanel {
@@ -111,6 +115,7 @@ impl TerminalPanel {
             cols,
             caret: None,
             pane: None,
+            pending_window: false,
         })
     }
 
@@ -153,6 +158,34 @@ impl TerminalPanel {
         }
         zemacs_event::request_redraw();
     }
+
+    /// Run a window command (the key after the `C-\` leader): split or move
+    /// focus between panes, mirroring vim's `C-w` window maps. `v`/`s` split;
+    /// `h`/`j`/`k`/`l` move focus; anything else is a no-op.
+    fn window_command(key: &KeyEvent, cx: &mut Context) -> EventResult {
+        use zemacs_view::editor::Action;
+        use zemacs_view::tree::Direction;
+        let editor = &mut cx.editor;
+        let doc = editor.tree.try_get(editor.tree.focus).map(|view| view.doc);
+        match key.code {
+            KeyCode::Char('v') => {
+                if let Some(doc) = doc {
+                    editor.switch(doc, Action::VerticalSplit);
+                }
+            }
+            KeyCode::Char('s') => {
+                if let Some(doc) = doc {
+                    editor.switch(doc, Action::HorizontalSplit);
+                }
+            }
+            KeyCode::Char('h') | KeyCode::Left => editor.focus_direction(Direction::Left),
+            KeyCode::Char('j') | KeyCode::Down => editor.focus_direction(Direction::Down),
+            KeyCode::Char('k') | KeyCode::Up => editor.focus_direction(Direction::Up),
+            KeyCode::Char('l') | KeyCode::Right => editor.focus_direction(Direction::Right),
+            _ => {}
+        }
+        EventResult::Consumed(None)
+    }
 }
 
 impl Drop for TerminalPanel {
@@ -175,6 +208,22 @@ impl Component for TerminalPanel {
             .and_then(|p| cx.editor.tree.try_get(p))
             .map(|view| view.area);
         match event {
+            // Second key after the `C-\` window leader: run it as a window
+            // command (split / move focus) instead of sending it to the shell.
+            Event::Key(key) if focused && self.pending_window => {
+                self.pending_window = false;
+                Self::window_command(key, cx)
+            }
+            // `C-\` arms the window leader (C-w is the shell's word-kill, so we
+            // can't use it). Swallowed; the next key is the window command.
+            Event::Key(key)
+                if focused
+                    && key.code == KeyCode::Char('\\')
+                    && key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
+                self.pending_window = true;
+                EventResult::Consumed(None)
+            }
             Event::Key(key) if focused => {
                 // F12 detaches without needing to exit the shell.
                 if key.code == KeyCode::F(12) {
