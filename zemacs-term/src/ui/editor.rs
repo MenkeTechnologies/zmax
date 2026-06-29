@@ -64,6 +64,7 @@ pub struct EditorView {
     bufferline_y: u16,
     /// Active pane-divider drag: the view whose right edge is being dragged, and
     /// the last mouse column seen, so we can apply incremental resize deltas.
+    #[allow(dead_code)] // wired by the in-progress pane-resize handling
     resize_drag: Option<(zemacs_view::ViewId, u16)>,
     /// Sticky-scroll cache: `(doc, doc len, scopes)` where each scope is
     /// `(start_line, end_line, header_text)`. Recomputed only when the focused
@@ -76,6 +77,7 @@ pub struct EditorView {
 use super::ide::{Ide, IdeAction};
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // payload consumed via pattern matches; fields read situationally
 pub enum InsertEvent {
     Key(KeyEvent),
     CompletionApply {
