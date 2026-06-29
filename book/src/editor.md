@@ -221,7 +221,7 @@ All git related options are only enabled in a git repository.
 Ignore files can be placed locally as `.ignore` or put in your home directory as `~/.ignore`. They support the usual ignore and negative ignore (unignore) rules used in `.gitignore` files.
 
 Additionally, you can use Zemacs-specific ignore files by creating a local `.zemacs/ignore` file in the current workspace or a global `ignore` file located in your Zemacs config directory:
-- Linux and Mac: `~/.config/zemacs/ignore`
+- Linux and Mac: `~/.zemacs/ignore`
 - Windows: `%AppData%\zemacs\ignore`
 
 Example:

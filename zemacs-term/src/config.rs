@@ -181,6 +181,58 @@ impl Config {
     }
 }
 
+/// Starter `config.toml` written to `~/.zemacs/config.toml` on first run when no
+/// global config exists. Every value shown is the in-code default (most are left
+/// commented so future default changes still reach existing users — only the
+/// active settings here are pinned). `{keymap}` is filled from [`DEFAULT_KEYMAP`]
+/// so the written file never drifts from the compiled-in default.
+const DEFAULT_CONFIG_BODY: &str = r#"# Zemacs configuration. See `book/src/configuration.md` for the full reference.
+
+# Base keymap preset: "vim", "helix", or "emacs".
+keymap = "{keymap}"
+
+# theme = "default"
+
+[editor]
+# line-number = "absolute"
+# mouse = true
+# cursorline = false
+# color-modes = true
+# bufferline = "never"
+
+[editor.cursor-shape]
+# insert = "bar"
+# normal = "block"
+# select = "underline"
+
+[editor.file-picker]
+# hidden = true
+
+[editor.statusline]
+# left = ["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator"]
+"#;
+
+/// Render [`DEFAULT_CONFIG_BODY`] with the compiled-in default keymap substituted.
+pub fn default_config_body() -> String {
+    DEFAULT_CONFIG_BODY.replace("{keymap}", DEFAULT_KEYMAP)
+}
+
+/// Write the starter [`default_config_body`] to `~/.zemacs/config.toml` if that
+/// file does not already exist. Creates the parent directory as needed. Never
+/// overwrites an existing config. Errors are returned so the caller can decide
+/// whether to surface them; a failure here is non-fatal (zemacs still runs on
+/// in-memory defaults).
+pub fn write_default_config_file() -> std::io::Result<()> {
+    let path = zemacs_loader::config_file();
+    if path.exists() {
+        return Ok(());
+    }
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(&path, default_config_body())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -227,6 +279,21 @@ mod tests {
                 ..Default::default()
             }
         );
+    }
+
+    /// The starter `config.toml` we write on first run must parse cleanly and
+    /// must select the compiled-in default keymap (so the seeded file matches the
+    /// in-memory defaults a fresh run would otherwise use).
+    #[test]
+    fn default_config_body_parses_to_defaults() {
+        let body = default_config_body();
+        assert!(
+            body.contains(&format!("keymap = \"{DEFAULT_KEYMAP}\"")),
+            "seeded config must pin the default keymap, got:\n{body}"
+        );
+        let parsed = Config::load_test(&body);
+        assert_eq!(parsed.keymap, DEFAULT_KEYMAP);
+        assert_eq!(parsed, Config::default());
     }
 
     #[test]

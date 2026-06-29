@@ -10,7 +10,7 @@ file which pattern matches interesting nodes from syntax trees.
 
 Query files should be placed in `runtime/queries/{language}/tags.scm`
 when contributing to Zemacs. You may place these under your local runtime
-directory (`~/.config/zemacs/runtime` in Linux for example) for the sake of
+directory (`~/.zemacs/runtime` in Linux for example) for the sake of
 testing.
 
 ## Captures

@@ -1,9 +1,13 @@
 # Configuration
 
-To override global configuration parameters, create a `config.toml` file located in your config directory:
+Zemacs keeps all of its configuration under a single dotted home directory:
 
-- Linux and Mac: `~/.config/zemacs/config.toml`
-- Windows: `%AppData%\zemacs\config.toml`
+- Linux and Mac: `~/.zemacs/config.toml`
+- Windows: `%USERPROFILE%\.zemacs\config.toml`
+
+On first run, if this file does not exist, Zemacs writes a default starter
+`config.toml` there for you to edit. Override global configuration parameters by
+editing it.
 
 > 💡 You can easily open the config file by typing `:config-open` within Zemacs normal mode.
 
