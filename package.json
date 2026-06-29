@@ -8,6 +8,7 @@
     "build": "cargo build --release -p zemacs-term",
     "test": "cargo test --workspace && cargo integration-test",
     "localinstall": "bash scripts/install.sh",
-    "update": "git submodule update --init --remote --recursive -- vendor"
+    "update": "git submodule update --init --remote --recursive -- vendor",
+    "release": "bash scripts/release.sh --release-only"
   }
 }
