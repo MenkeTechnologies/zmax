@@ -14,6 +14,10 @@ pub struct Config {
     pub theme: Option<theme::Config>,
     pub keys: HashMap<Mode, KeyTrie>,
     pub editor: zemacs_view::editor::Config,
+    /// Selected keymap preset name ("vim" | "helix" | "emacs"). `keys` is this
+    /// preset with any `[keys]` overrides merged on top. Drives the startup mode
+    /// (emacs starts in Insert) and the `:keymap` command's current value.
+    pub keymap: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -22,6 +26,20 @@ pub struct ConfigRaw {
     pub theme: Option<theme::Config>,
     pub keys: Option<HashMap<Mode, KeyTrie>>,
     pub editor: Option<toml::Value>,
+    /// Base keymap preset: "vim" (default), "helix", or "emacs".
+    pub keymap: Option<String>,
+}
+
+/// Default keymap preset when none is configured.
+pub const DEFAULT_KEYMAP: &str = "vim";
+
+/// Resolve a keymap preset name to its base bindings, warning + falling back to
+/// the default preset on an unknown name.
+fn keymap_base(name: &str) -> HashMap<Mode, KeyTrie> {
+    keymap::preset(name).unwrap_or_else(|| {
+        log::warn!("unknown keymap preset `{name}`, falling back to `{DEFAULT_KEYMAP}`");
+        keymap::preset(DEFAULT_KEYMAP).unwrap_or_else(keymap::default)
+    })
 }
 
 impl Default for Config {
@@ -30,6 +48,7 @@ impl Default for Config {
             theme: None,
             keys: keymap::default(),
             editor: zemacs_view::editor::Config::default(),
+            keymap: DEFAULT_KEYMAP.to_string(),
         }
     }
 }
@@ -66,7 +85,12 @@ impl Config {
             local.and_then(|file| toml::from_str(&file).map_err(ConfigLoadError::BadConfig));
         let res = match (global_config, local_config) {
             (Ok(global), Ok(local)) => {
-                let mut keys = keymap::default();
+                let keymap_name = local
+                    .keymap
+                    .clone()
+                    .or_else(|| global.keymap.clone())
+                    .unwrap_or_else(|| DEFAULT_KEYMAP.to_string());
+                let mut keys = keymap_base(&keymap_name);
                 if let Some(global_keys) = global.keys {
                     merge_keys(&mut keys, global_keys)
                 }
@@ -88,6 +112,7 @@ impl Config {
                     theme: local.theme.or(global.theme),
                     keys,
                     editor,
+                    keymap: keymap_name,
                 }
             }
             // if any configs are invalid return that first
@@ -96,9 +121,13 @@ impl Config {
                 return Err(ConfigLoadError::BadConfig(err))
             }
             (Ok(config), Err(_)) | (Err(_), Ok(config)) => {
-                let mut keys = keymap::default();
-                if let Some(keymap) = config.keys {
-                    merge_keys(&mut keys, keymap);
+                let keymap_name = config
+                    .keymap
+                    .clone()
+                    .unwrap_or_else(|| DEFAULT_KEYMAP.to_string());
+                let mut keys = keymap_base(&keymap_name);
+                if let Some(user_keys) = config.keys {
+                    merge_keys(&mut keys, user_keys);
                 }
                 Config {
                     theme: config.theme,
@@ -107,6 +136,7 @@ impl Config {
                         || Ok(zemacs_view::editor::Config::default()),
                         |val| val.try_into().map_err(ConfigLoadError::BadConfig),
                     )?,
+                    keymap: keymap_name,
                 }
             }
 

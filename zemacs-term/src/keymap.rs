@@ -1,4 +1,5 @@
 pub mod default;
+pub mod emacs;
 pub mod macros;
 pub mod vim;
 
@@ -7,6 +8,31 @@ pub use crate::commands::MappableCommand;
 // The Helix selection-first keymap remains available as `default::default`
 // (module path) for reference, but is no longer what the editor binds.
 pub use vim::default;
+
+/// The keymap preset names selectable via `keymap = "..."` in config.toml and
+/// the `:keymap` command.
+pub const PRESETS: &[&str] = &["vim", "helix", "emacs"];
+
+/// Resolve a named keymap preset to its base keybindings. Returns `None` for an
+/// unknown name so callers can report it.
+pub fn preset(name: &str) -> Option<HashMap<Mode, KeyTrie>> {
+    match name {
+        "vim" => Some(vim::default()),
+        "helix" => Some(default::default()),
+        "emacs" => Some(emacs::default()),
+        _ => None,
+    }
+}
+
+/// The mode the editor should start in for a keymap preset. Emacs is modeless
+/// (you are always inserting), so it starts in Insert; the modal keymaps start
+/// in Normal.
+pub fn default_mode(name: &str) -> Mode {
+    match name {
+        "emacs" => Mode::Insert,
+        _ => Mode::Normal,
+    }
+}
 
 use arc_swap::{
     access::{DynAccess, DynGuard},
@@ -387,6 +413,22 @@ mod tests {
     use indexmap::indexmap;
     use zemacs_core::hashmap;
     use zemacs_view::input::{KeyCode, KeyEvent, KeyModifiers};
+
+    #[test]
+    fn all_presets_build() {
+        // Each named preset must build without panicking (this exercises every
+        // key-string and `:typable` parse, e.g. emacs's `A-<` and `C-x C-s`) and
+        // define all three editor modes.
+        for name in PRESETS {
+            let km = preset(name).unwrap_or_else(|| panic!("missing preset `{name}`"));
+            assert!(km.contains_key(&Mode::Normal), "{name}: no Normal mode");
+            assert!(km.contains_key(&Mode::Select), "{name}: no Select mode");
+            assert!(km.contains_key(&Mode::Insert), "{name}: no Insert mode");
+        }
+        assert!(preset("nope").is_none());
+        assert_eq!(default_mode("emacs"), Mode::Insert);
+        assert_eq!(default_mode("vim"), Mode::Normal);
+    }
 
     #[test]
     #[should_panic]
