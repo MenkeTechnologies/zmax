@@ -10118,5 +10118,29 @@
    "key:normal:space n w"
   ],
   "note": "spacemacs spc_n_w -> widen (show whole buffer again)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_c_a",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space K c a"
+  ],
+  "note": "spacemacs spc_k_c_a -> increment macro counter"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_c_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space K c c"
+  ],
+  "note": "spacemacs spc_k_c_c -> insert macro counter value, then increment"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_b_w_2",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b w"
+  ],
+  "note": "spacemacs spc_b_w -> toggle read-only (writable state)"
  }
 ]
