@@ -2821,6 +2821,36 @@ mod test {
     }
 
     #[test]
+    fn undo_does_not_truncate() {
+        use crate::view::View;
+        let text = Rope::from("line one\nline two\nline three\n");
+        let original = text.to_string();
+        let mut doc = Document::from(
+            text,
+            None,
+            Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let mut view = View::new(doc.id(), Default::default());
+        doc.ensure_view_init(view.id);
+        doc.set_selection(view.id, Selection::single(0, 0));
+
+        // Simulate typing then committing to history (as leaving insert mode does).
+        let tx = Transaction::insert(doc.text(), doc.selection(view.id), "X".into());
+        doc.apply(&tx, view.id);
+        doc.append_changes_to_history(&mut view);
+        assert_ne!(doc.text().to_string(), original, "edit should have applied");
+
+        // Undo must revert the edit, restoring the original content — never truncate.
+        assert!(doc.undo(&mut view));
+        assert_eq!(
+            doc.text().to_string(),
+            original,
+            "undo truncated/changed the buffer instead of reverting the edit"
+        );
+    }
+
+    #[test]
     fn test_line_ending() {
         assert_eq!(
             Document::default(
