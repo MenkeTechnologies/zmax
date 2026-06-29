@@ -10142,5 +10142,93 @@
    "key:normal:space b w"
   ],
   "note": "spacemacs spc_b_w -> toggle read-only (writable state)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_x",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k %"
+  ],
+  "note": "spacemacs spc_k_x -> go to other paren of the pair"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_x_4",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k :"
+  ],
+  "note": "spacemacs spc_k_x_4 -> ex command"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_i_2",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k i"
+  ],
+  "note": "spacemacs spc_k_i_2 -> switch to insert state"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_u_2",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k u"
+  ],
+  "note": "spacemacs spc_k_u_2 -> undo"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_p_2",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k p"
+  ],
+  "note": "spacemacs spc_k_p_2 -> paste after"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_pU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k P"
+  ],
+  "note": "spacemacs spc_k_pU -> paste before"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_vU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k V"
+  ],
+  "note": "spacemacs spc_k_vU -> line-wise visual select"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_lU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k L"
+  ],
+  "note": "spacemacs spc_k_lU -> forward to next sexp"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_hU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k H"
+  ],
+  "note": "spacemacs spc_k_hU -> backward to previous sexp"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_iU_xinsertx",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k I"
+  ],
+  "note": "spacemacs spc_k_iU_xinsertx -> begin of expression + insert"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_jU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k J"
+  ],
+  "note": "spacemacs spc_k_jU -> join sexp (join lines)"
  }
 ]
