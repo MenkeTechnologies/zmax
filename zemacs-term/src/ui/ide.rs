@@ -1266,21 +1266,23 @@ impl Ide {
         }
         // Harpoon: K/J reorder the selected mark up/down (other keys fall through
         // to the shared list nav below).
-        if !structure && self.bottom_tab == BottomTab::Harpoon
-            && matches!(key.code, KeyCode::Char('K') | KeyCode::Char('J')) {
-                let up = matches!(key.code, KeyCode::Char('K'));
-                if let Some(path) = self.harpoon_rows.get(self.aux_sel).cloned() {
-                    if crate::harpoon::move_mark(&path, up) {
-                        self.harpoon_rows = crate::harpoon::list();
-                        self.aux_sel = if up {
-                            self.aux_sel.saturating_sub(1)
-                        } else {
-                            (self.aux_sel + 1).min(self.harpoon_rows.len().saturating_sub(1))
-                        };
-                    }
+        if !structure
+            && self.bottom_tab == BottomTab::Harpoon
+            && matches!(key.code, KeyCode::Char('K') | KeyCode::Char('J'))
+        {
+            let up = matches!(key.code, KeyCode::Char('K'));
+            if let Some(path) = self.harpoon_rows.get(self.aux_sel).cloned() {
+                if crate::harpoon::move_mark(&path, up) {
+                    self.harpoon_rows = crate::harpoon::list();
+                    self.aux_sel = if up {
+                        self.aux_sel.saturating_sub(1)
+                    } else {
+                        (self.aux_sel + 1).min(self.harpoon_rows.len().saturating_sub(1))
+                    };
                 }
-                return IdeAction::None;
             }
+            return IdeAction::None;
+        }
         // Simple list tabs (Todo/Marks/Jumps/Recent): j/k select, Enter activates.
         if !structure
             && matches!(
@@ -2559,9 +2561,7 @@ impl Ide {
 
         // VCS changes — only while the Git tab is open, throttled so big repos don't stall the frame
         if self.bottom_tab == BottomTab::Git {
-            let stale = self
-                .git_last
-                .is_none_or(|t| t.elapsed().as_millis() > 800);
+            let stale = self.git_last.is_none_or(|t| t.elapsed().as_millis() > 800);
             if stale {
                 if let Some(dir) = self.status_branch_dir.clone() {
                     self.git_changes = git_status(&dir);
