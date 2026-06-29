@@ -72,7 +72,7 @@ async fn test_move_parent_node_end() -> anyhow::Result<()> {
     ];
 
     for test in tests {
-        test_with_config(AppBuilder::new().with_file("foo.rs", None), test).await?;
+        test_with_config(AppBuilder::new().with_file(temp_path("foo.rs"), None), test).await?;
     }
 
     Ok(())
@@ -192,7 +192,7 @@ async fn test_move_parent_node_start() -> anyhow::Result<()> {
     ];
 
     for test in tests {
-        test_with_config(AppBuilder::new().with_file("foo.rs", None), test).await?;
+        test_with_config(AppBuilder::new().with_file(temp_path("foo.rs"), None), test).await?;
     }
 
     Ok(())
@@ -445,7 +445,7 @@ async fn test_smart_tab_move_parent_node_end() -> anyhow::Result<()> {
     ];
 
     for test in tests {
-        test_with_config(AppBuilder::new().with_file("foo.rs", None), test).await?;
+        test_with_config(AppBuilder::new().with_file(temp_path("foo.rs"), None), test).await?;
     }
 
     Ok(())
@@ -596,7 +596,7 @@ async fn select_all_siblings() -> anyhow::Result<()> {
     ];
 
     for test in tests {
-        test_with_config(AppBuilder::new().with_file("foo.rs", None), test).await?;
+        test_with_config(AppBuilder::new().with_file(temp_path("foo.rs"), None), test).await?;
     }
 
     Ok(())
@@ -721,7 +721,7 @@ async fn select_all_children() -> anyhow::Result<()> {
     ];
 
     for test in tests {
-        test_with_config(AppBuilder::new().with_file("foo.rs", None), test).await?;
+        test_with_config(AppBuilder::new().with_file(temp_path("foo.rs"), None), test).await?;
     }
 
     Ok(())
@@ -761,7 +761,7 @@ async fn test_select_next_sibling() -> anyhow::Result<()> {
     ];
 
     for test in tests {
-        test_with_config(AppBuilder::new().with_file("foo.rs", None), test).await?;
+        test_with_config(AppBuilder::new().with_file(temp_path("foo.rs"), None), test).await?;
     }
 
     Ok(())
@@ -801,7 +801,7 @@ async fn test_select_prev_sibling() -> anyhow::Result<()> {
     ];
 
     for test in tests {
-        test_with_config(AppBuilder::new().with_file("foo.rs", None), test).await?;
+        test_with_config(AppBuilder::new().with_file(temp_path("foo.rs"), None), test).await?;
     }
 
     Ok(())
@@ -939,11 +939,11 @@ async fn match_bracket() -> anyhow::Result<()> {
 
     for test in rust_tests {
         println!("{test:?}");
-        test_with_config(AppBuilder::new().with_file("foo.rs", None), test).await?;
+        test_with_config(AppBuilder::new().with_file(temp_path("foo.rs"), None), test).await?;
     }
     for test in python_tests {
         println!("{test:?}");
-        test_with_config(AppBuilder::new().with_file("foo.py", None), test).await?;
+        test_with_config(AppBuilder::new().with_file(temp_path("foo.py"), None), test).await?;
     }
 
     Ok(())

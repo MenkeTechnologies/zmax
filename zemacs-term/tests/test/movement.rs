@@ -377,7 +377,7 @@ async fn surround_around_pair() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn match_around_closest_ts() -> anyhow::Result<()> {
     test_with_config(
-        AppBuilder::new().with_file("foo.rs", None),
+        AppBuilder::new().with_file(temp_path("foo.rs"), None),
         (
             r#"fn main() {testing!{"f#[|oo]#)"};}"#,
             "mam",
@@ -387,7 +387,7 @@ async fn match_around_closest_ts() -> anyhow::Result<()> {
     .await?;
 
     test_with_config(
-        AppBuilder::new().with_file("foo.rs", None),
+        AppBuilder::new().with_file(temp_path("foo.rs"), None),
         (
             r##"fn main() { let _ = ("#[|1]#23", "#(|1)#23"); } "##,
             "3mam",
@@ -397,7 +397,7 @@ async fn match_around_closest_ts() -> anyhow::Result<()> {
     .await?;
 
     test_with_config(
-        AppBuilder::new().with_file("foo.rs", None),
+        AppBuilder::new().with_file(temp_path("foo.rs"), None),
         (
             r##" fn main() { let _ = ("12#[|3", "12]#3"); } "##,
             "1mam",
@@ -447,7 +447,7 @@ async fn cursor_position_append_eof() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn select_mode_tree_sitter_next_function_is_union_of_objects() -> anyhow::Result<()> {
     test_with_config(
-        AppBuilder::new().with_file("foo.rs", None),
+        AppBuilder::new().with_file(temp_path("foo.rs"), None),
         (
             indoc! {"\
                 #[/|]#// Increments
@@ -472,7 +472,7 @@ async fn select_mode_tree_sitter_next_function_is_union_of_objects() -> anyhow::
 #[tokio::test(flavor = "multi_thread")]
 async fn select_mode_tree_sitter_prev_function_unselects_object() -> anyhow::Result<()> {
     test_with_config(
-        AppBuilder::new().with_file("foo.rs", None),
+        AppBuilder::new().with_file(temp_path("foo.rs"), None),
         (
             indoc! {"\
                 /// Increments
@@ -498,7 +498,7 @@ async fn select_mode_tree_sitter_prev_function_unselects_object() -> anyhow::Res
 async fn select_mode_tree_sitter_prev_function_goes_backwards_to_object() -> anyhow::Result<()> {
     // Note: the anchor stays put and the head moves back.
     test_with_config(
-        AppBuilder::new().with_file("foo.rs", None),
+        AppBuilder::new().with_file(temp_path("foo.rs"), None),
         (
             indoc! {"\
                 /// Increments
@@ -522,7 +522,7 @@ async fn select_mode_tree_sitter_prev_function_goes_backwards_to_object() -> any
     .await?;
 
     test_with_config(
-        AppBuilder::new().with_file("foo.rs", None),
+        AppBuilder::new().with_file(temp_path("foo.rs"), None),
         (
             indoc! {"\
                 /// Increments
@@ -789,7 +789,7 @@ async fn test_surround_delete() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn tree_sitter_motions_work_across_injections() -> anyhow::Result<()> {
     test_with_config(
-        AppBuilder::new().with_file("foo.html", None),
+        AppBuilder::new().with_file(temp_path("foo.html"), None),
         (
             "<script>let #[|x]# = 1;</script>",
             "<A-o>",
@@ -801,7 +801,7 @@ async fn tree_sitter_motions_work_across_injections() -> anyhow::Result<()> {
     // When the full injected layer is selected, expand_selection jumps to
     // a more shallow layer.
     test_with_config(
-        AppBuilder::new().with_file("foo.html", None),
+        AppBuilder::new().with_file(temp_path("foo.html"), None),
         (
             "<script>#[|let x = 1;]#</script>",
             "<A-o>",
@@ -811,7 +811,7 @@ async fn tree_sitter_motions_work_across_injections() -> anyhow::Result<()> {
     .await?;
 
     test_with_config(
-        AppBuilder::new().with_file("foo.html", None),
+        AppBuilder::new().with_file(temp_path("foo.html"), None),
         (
             "<script>let #[|x = 1]#;</script>",
             "<A-i>",
@@ -821,7 +821,7 @@ async fn tree_sitter_motions_work_across_injections() -> anyhow::Result<()> {
     .await?;
 
     test_with_config(
-        AppBuilder::new().with_file("foo.html", None),
+        AppBuilder::new().with_file(temp_path("foo.html"), None),
         (
             "<script>let #[|x]# = 1;</script>",
             "<A-n>",
@@ -831,7 +831,7 @@ async fn tree_sitter_motions_work_across_injections() -> anyhow::Result<()> {
     .await?;
 
     test_with_config(
-        AppBuilder::new().with_file("foo.html", None),
+        AppBuilder::new().with_file(temp_path("foo.html"), None),
         (
             "<script>let #[|x]# = 1;</script>",
             "<A-p>",
