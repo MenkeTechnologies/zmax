@@ -5,15 +5,15 @@ pub mod appdata;
 pub mod application;
 pub mod args;
 pub mod ci;
+pub mod closed_files;
 pub mod commands;
 pub mod compositor;
 pub mod config;
 pub mod events;
 pub mod file_watcher;
+pub mod harpoon;
 pub mod health;
 pub mod job;
-pub mod closed_files;
-pub mod harpoon;
 pub mod keymap;
 pub mod logging;
 pub mod recent_files;
@@ -29,8 +29,8 @@ use std::path::Path;
 use futures_util::Future;
 mod handlers;
 
-use zemacs_stdx::Url;
 use ignore::DirEntry;
+use zemacs_stdx::Url;
 
 #[cfg(windows)]
 fn true_color() -> bool {

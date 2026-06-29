@@ -1,15 +1,15 @@
 use crate::compositor::{Component, Compositor, Context, Event, EventResult};
 use crate::{alt, ctrl, key, shift, ui};
 use arc_swap::ArcSwap;
-use zemacs_core::syntax;
-use zemacs_view::document::Mode;
-use zemacs_view::input::KeyEvent;
-use zemacs_view::keyboard::KeyCode;
 use std::sync::Arc;
 use std::{borrow::Cow, ops::RangeFrom};
 use tui::buffer::Buffer as Surface;
 use tui::text::Span;
 use tui::widgets::{Block, Widget};
+use zemacs_core::syntax;
+use zemacs_view::document::Mode;
+use zemacs_view::input::KeyEvent;
+use zemacs_view::keyboard::KeyCode;
 
 use zemacs_core::{
     unicode::segmentation::{GraphemeCursor, UnicodeSegmentation},

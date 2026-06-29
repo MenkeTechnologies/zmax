@@ -3,6 +3,7 @@ use std::{path::PathBuf, time::Duration};
 use anyhow::Ok;
 use arc_swap::access::Access;
 
+use tokio::time::Instant;
 use zemacs_event::{register_hook, send_blocking};
 use zemacs_view::{
     document::Mode,
@@ -10,7 +11,6 @@ use zemacs_view::{
     handlers::{AutoSaveEvent, Handlers},
     DocumentId, Editor,
 };
-use tokio::time::Instant;
 
 use crate::{events::OnModeSwitch, job};
 

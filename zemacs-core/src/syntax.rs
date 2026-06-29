@@ -14,8 +14,6 @@ use anyhow::{Context, Result};
 use arc_swap::{ArcSwap, Guard};
 use config::{Configuration, FileType, LanguageConfiguration, LanguageServerConfiguration};
 use foldhash::HashSet;
-use zemacs_loader::grammar::get_language;
-use zemacs_stdx::rope::RopeSliceExt as _;
 use once_cell::sync::OnceCell;
 use ropey::RopeSlice;
 use tree_house::{
@@ -27,6 +25,8 @@ use tree_house::{
     },
     Error, InjectionLanguageMarker, LanguageConfig as SyntaxConfig, Layer,
 };
+use zemacs_loader::grammar::get_language;
+use zemacs_stdx::rope::RopeSliceExt as _;
 
 use crate::{indent::IndentQuery, tree_sitter, ChangeSet, Language};
 
@@ -391,8 +391,8 @@ impl Loader {
     pub fn language_for_shebang(&self, text: RopeSlice) -> Option<Language> {
         // NOTE: this is slightly different than the one for injection markers in tree-house. It
         // is anchored at the beginning.
-        use zemacs_stdx::rope::Regex;
         use once_cell::sync::Lazy;
+        use zemacs_stdx::rope::Regex;
         const SHEBANG: &str = r"^#!\s*(?:\S*[/\\](?:env\s+(?:\-\S+\s+)*)?)?([^\s\.\d]+)";
         static SHEBANG_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(SHEBANG).unwrap());
 

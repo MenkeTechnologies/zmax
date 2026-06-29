@@ -69,7 +69,10 @@ fn fold_hides_inner_lines() {
     assert!(folded.contains("line0"), "fold header stays: {folded:?}");
     assert!(!folded.contains("line1"), "folded line hidden: {folded:?}");
     assert!(!folded.contains("line2"), "folded line hidden: {folded:?}");
-    assert!(folded.contains("line3"), "line after fold shows: {folded:?}");
+    assert!(
+        folded.contains("line3"),
+        "line after fold shows: {folded:?}"
+    );
     // line0 and line3 are on adjacent visual rows (exactly one row break).
     assert_eq!(folded.matches('\n').count(), 2, "rows: {folded:?}");
 }

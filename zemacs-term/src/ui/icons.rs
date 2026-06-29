@@ -33,25 +33,25 @@ pub fn file_icon(name: &str) -> char {
         .to_ascii_lowercase();
 
     match ext.as_str() {
-        "rs" => '\u{e7a8}',                              // rust
-        "py" | "pyi" | "pyc" => '\u{e606}',             // python
-        "js" | "mjs" | "cjs" => '\u{e74e}',             // javascript
-        "jsx" => '\u{e7ba}',                            // react
-        "ts" => '\u{e628}',                             // typescript
-        "tsx" => '\u{e7ba}',                            // react
-        "go" => '\u{e627}',                             // go
-        "c" | "h" => '\u{e61e}',                        // c
+        "rs" => '\u{e7a8}',                                // rust
+        "py" | "pyi" | "pyc" => '\u{e606}',                // python
+        "js" | "mjs" | "cjs" => '\u{e74e}',                // javascript
+        "jsx" => '\u{e7ba}',                               // react
+        "ts" => '\u{e628}',                                // typescript
+        "tsx" => '\u{e7ba}',                               // react
+        "go" => '\u{e627}',                                // go
+        "c" | "h" => '\u{e61e}',                           // c
         "cpp" | "cc" | "cxx" | "hpp" | "hh" => '\u{e61d}', // c++
-        "cs" => '\u{f81a}',                             // c#
+        "cs" => '\u{f81a}',                                // c#
         "java" => '\u{e738}',
-        "kt" | "kts" => '\u{e634}',                     // kotlin
-        "rb" => '\u{e739}',                             // ruby
+        "kt" | "kts" => '\u{e634}', // kotlin
+        "rb" => '\u{e739}',         // ruby
         "php" => '\u{e73d}',
         "swift" => '\u{e755}',
         "lua" => '\u{e620}',
         "vim" => '\u{e62b}',
-        "el" | "lisp" | "clj" | "cljs" => '\u{e779}',   // lisp/clojure
-        "hs" => '\u{e777}',                             // haskell
+        "el" | "lisp" | "clj" | "cljs" => '\u{e779}', // lisp/clojure
+        "hs" => '\u{e777}',                           // haskell
         "scala" => '\u{e737}',
         "html" | "htm" => '\u{e736}',
         "css" => '\u{e749}',
@@ -67,7 +67,7 @@ pub fn file_icon(name: &str) -> char {
         "txt" | "text" | "log" => '\u{f15c}',
         "pdf" => '\u{f1c1}',
         "png" | "jpg" | "jpeg" | "gif" | "bmp" | "svg" | "webp" | "ico" => '\u{f1c5}', // image
-        "zip" | "tar" | "gz" | "xz" | "zst" | "bz2" | "7z" | "rar" => '\u{f1c6}', // archive
+        "zip" | "tar" | "gz" | "xz" | "zst" | "bz2" | "7z" | "rar" => '\u{f1c6}',      // archive
         "lock" => '\u{f023}',
         "" => '\u{f016}', // extensionless → plain file
         _ => '\u{f15b}',  // generic file

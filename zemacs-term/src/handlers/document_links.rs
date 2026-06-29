@@ -1,6 +1,7 @@
 use std::{collections::HashSet, time::Duration};
 
 use futures_util::{stream::FuturesUnordered, StreamExt};
+use tokio::time::Instant;
 use zemacs_core::{syntax::config::LanguageServerFeature, Assoc};
 use zemacs_event::{cancelable_future, register_hook};
 use zemacs_view::{
@@ -9,7 +10,6 @@ use zemacs_view::{
     handlers::{lsp::DocumentLinksEvent, Handlers},
     DocumentId, Editor,
 };
-use tokio::time::Instant;
 
 use crate::job;
 

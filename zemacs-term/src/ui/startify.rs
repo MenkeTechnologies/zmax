@@ -205,7 +205,13 @@ impl Startify {
                     (72.0, 76.0, 20.0, 24.0),
                     (20.0, 24.0, 72.0, 24.0),
                 ] {
-                    ctx.draw(&CanvasLine { x1, y1, x2, y2, color: stroke });
+                    ctx.draw(&CanvasLine {
+                        x1,
+                        y1,
+                        x2,
+                        y2,
+                        color: stroke,
+                    });
                 }
                 ctx.print(10.0, 50.0, Line::from(Span::styled("zemacs", accent)));
             });
@@ -403,7 +409,14 @@ fn build_header() -> Vec<String> {
 }
 
 /// Draw a path with the directory portion dimmed and the filename bright.
-fn draw_path(surface: &mut Surface, x: u16, y: u16, path: &str, dir: zemacs_view::graphics::Style, file: zemacs_view::graphics::Style) {
+fn draw_path(
+    surface: &mut Surface,
+    x: u16,
+    y: u16,
+    path: &str,
+    dir: zemacs_view::graphics::Style,
+    file: zemacs_view::graphics::Style,
+) {
     match path.rfind('/') {
         Some(slash) => {
             let (head, tail) = path.split_at(slash + 1); // head includes the '/'

@@ -437,7 +437,12 @@ pub(crate) fn prev_sentence_boundary(slice: RopeSlice, pos: usize) -> usize {
     start
 }
 
-pub fn move_next_sentence(slice: RopeSlice, range: Range, count: usize, behavior: Movement) -> Range {
+pub fn move_next_sentence(
+    slice: RopeSlice,
+    range: Range,
+    count: usize,
+    behavior: Movement,
+) -> Range {
     let len = slice.len_chars();
     let mut pos = range.cursor(slice);
     for _ in 0..count {
@@ -456,7 +461,12 @@ pub fn move_next_sentence(slice: RopeSlice, range: Range, count: usize, behavior
     Range::new(anchor, head)
 }
 
-pub fn move_prev_sentence(slice: RopeSlice, range: Range, count: usize, behavior: Movement) -> Range {
+pub fn move_prev_sentence(
+    slice: RopeSlice,
+    range: Range,
+    count: usize,
+    behavior: Movement,
+) -> Range {
     let mut pos = range.cursor(slice);
     for _ in 0..count {
         let pb = prev_sentence_boundary(slice, pos);

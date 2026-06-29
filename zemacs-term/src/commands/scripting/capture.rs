@@ -32,8 +32,7 @@ pub(super) fn with_captured_fds<R>(f: impl FnOnce() -> R) -> Result<(R, String),
     let nullfd = devnull.as_raw_fd();
 
     // Save the real fds so we can restore them no matter how `f` returns.
-    let (saved_in, saved_out, saved_err) =
-        unsafe { (libc::dup(0), libc::dup(1), libc::dup(2)) };
+    let (saved_in, saved_out, saved_err) = unsafe { (libc::dup(0), libc::dup(1), libc::dup(2)) };
     if saved_in < 0 || saved_out < 0 || saved_err < 0 {
         return Err("failed to save stdio fds".into());
     }

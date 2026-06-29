@@ -9,6 +9,7 @@ use dashmap::DashMap;
 use futures_util::FutureExt;
 use grep_regex::RegexMatcherBuilder;
 use grep_searcher::{sinks, BinaryDetection, SearcherBuilder};
+use ignore::{DirEntry, WalkBuilder, WalkState};
 use zemacs_core::{
     syntax::{Loader, QueryMatchIterEvent},
     Rope, RopeSlice, Selection, Syntax, Uri,
@@ -22,7 +23,6 @@ use zemacs_view::{
     document::{from_reader, SCRATCH_BUFFER_NAME},
     Align, Document, DocumentId, Editor,
 };
-use ignore::{DirEntry, WalkBuilder, WalkState};
 
 use crate::{
     filter_picker_entry,

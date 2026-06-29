@@ -1,10 +1,5 @@
 use std::io::{self, Write as _};
 
-use zemacs_view::{
-    editor::KittyKeyboardProtocolConfig,
-    graphics::{CursorKind, Rect, UnderlineStyle},
-    theme::{self, Color, Modifier},
-};
 use termina::{
     escape::{
         csi::{self, Csi, SgrAttributes, SgrModifiers},
@@ -13,6 +8,11 @@ use termina::{
     },
     style::{CursorStyle, RgbColor},
     Event, OneBased, PlatformTerminal, Terminal as _, WindowSize,
+};
+use zemacs_view::{
+    editor::KittyKeyboardProtocolConfig,
+    graphics::{CursorKind, Rect, UnderlineStyle},
+    theme::{self, Color, Modifier},
 };
 
 use crate::{buffer::Cell, terminal::Config};

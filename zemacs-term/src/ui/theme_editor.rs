@@ -16,7 +16,10 @@ const MODS: [(u8, char, &str, Modifier); 3] = [
 ];
 
 fn mods_of(m: Modifier) -> u8 {
-    MODS.iter().fold(0u8, |acc, (bit, _, _, flag)| if m.contains(*flag) { acc | bit } else { acc })
+    MODS.iter().fold(
+        0u8,
+        |acc, (bit, _, _, flag)| if m.contains(*flag) { acc | bit } else { acc },
+    )
 }
 
 /// Build a ratatui style from an edited (fg-hex, bg-hex, modifier-mask).
@@ -152,8 +155,14 @@ impl ThemeEditor {
                 .iter()
                 .map(|s| (s.to_string(), hex_of(cx.editor.theme.get(s).fg)))
                 .collect();
-            self.bgs = SCOPES.iter().map(|s| hex_of(cx.editor.theme.get(s).bg)).collect();
-            self.mods = SCOPES.iter().map(|s| mods_of(cx.editor.theme.get(s).add_modifier)).collect();
+            self.bgs = SCOPES
+                .iter()
+                .map(|s| hex_of(cx.editor.theme.get(s).bg))
+                .collect();
+            self.mods = SCOPES
+                .iter()
+                .map(|s| mods_of(cx.editor.theme.get(s).add_modifier))
+                .collect();
         }
     }
 
@@ -193,9 +202,19 @@ impl ThemeEditor {
             .custom_name
             .trim()
             .chars()
-            .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
+            .map(|c| {
+                if c.is_alphanumeric() || c == '-' || c == '_' {
+                    c
+                } else {
+                    '-'
+                }
+            })
             .collect();
-        let name = if name.is_empty() { theme_name().to_string() } else { name };
+        let name = if name.is_empty() {
+            theme_name().to_string()
+        } else {
+            name
+        };
         let dir = zemacs_loader::config_dir().join("themes");
         let _ = std::fs::create_dir_all(&dir);
         let _ = std::fs::write(dir.join(format!("{name}.toml")), body);
@@ -244,11 +263,20 @@ impl ThemeEditor {
         if self.target == 1 {
             self.bgs.get(self.selected).cloned().unwrap_or_default()
         } else {
-            self.colors.get(self.selected).map(|c| c.1.clone()).unwrap_or_default()
+            self.colors
+                .get(self.selected)
+                .map(|c| c.1.clone())
+                .unwrap_or_default()
         }
     }
 
-    fn handle_mouse(&mut self, col: u16, row: u16, kind: MouseEventKind, cx: &mut Context) -> EventResult {
+    fn handle_mouse(
+        &mut self,
+        col: u16,
+        row: u16,
+        kind: MouseEventKind,
+        cx: &mut Context,
+    ) -> EventResult {
         match kind {
             MouseEventKind::ScrollDown => {
                 if self.pane == 0 && !self.themes.is_empty() {
@@ -269,7 +297,11 @@ impl ThemeEditor {
             MouseEventKind::Down(MouseButton::Left) => {}
             _ => return EventResult::Consumed(None),
         }
-        if let Some(&(_, _, _, b)) = self.btn_hits.iter().find(|&&(x0, x1, r, _)| row == r && col >= x0 && col < x1) {
+        if let Some(&(_, _, _, b)) = self
+            .btn_hits
+            .iter()
+            .find(|&&(x0, x1, r, _)| row == r && col >= x0 && col < x1)
+        {
             if b == 1 {
                 self.naming = true;
             } else {
@@ -369,7 +401,9 @@ impl Component for ThemeEditor {
             // 1/2/3 toggle bold / italic / dim on the selected scope.
             KeyCode::Char(d @ '1'..='3') if self.pane == 1 => {
                 let idx = d as usize - '1' as usize;
-                if let (Some(m), Some((bit, _, _, _))) = (self.mods.get_mut(self.selected), MODS.get(idx)) {
+                if let (Some(m), Some((bit, _, _, _))) =
+                    (self.mods.get_mut(self.selected), MODS.get(idx))
+                {
                     *m ^= bit;
                 }
             }
@@ -385,7 +419,8 @@ impl Component for ThemeEditor {
             KeyCode::Char('k') | KeyCode::Up => {
                 if self.pane == 0 {
                     if !self.themes.is_empty() {
-                        self.theme_sel = (self.theme_sel + self.themes.len() - 1) % self.themes.len();
+                        self.theme_sel =
+                            (self.theme_sel + self.themes.len() - 1) % self.themes.len();
                     }
                 } else if !self.colors.is_empty() {
                     self.selected = (self.selected + self.colors.len() - 1) % self.colors.len();
@@ -421,8 +456,14 @@ impl Component for ThemeEditor {
                 .iter()
                 .map(|s| (s.to_string(), hex_of(ctx.editor.theme.get(s).fg)))
                 .collect();
-            self.bgs = SCOPES.iter().map(|s| hex_of(ctx.editor.theme.get(s).bg)).collect();
-            self.mods = SCOPES.iter().map(|s| mods_of(ctx.editor.theme.get(s).add_modifier)).collect();
+            self.bgs = SCOPES
+                .iter()
+                .map(|s| hex_of(ctx.editor.theme.get(s).bg))
+                .collect();
+            self.mods = SCOPES
+                .iter()
+                .map(|s| mods_of(ctx.editor.theme.get(s).add_modifier))
+                .collect();
             self.seeded = true;
         }
         self.row_hits.clear();
@@ -438,18 +479,41 @@ impl Component for ThemeEditor {
         let cur_theme = ctx.editor.theme.name().to_string();
         surface.clear_with(area, theme.get("ui.background"));
 
-        surface.clear_with(Rect::new(area.x, area.y, area.width, 1), theme.get("ui.statusline"));
-        render(Paragraph::new(Span::styled(format!(" Color Scheme — {cur_theme} "), accent)), Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1), surface);
+        surface.clear_with(
+            Rect::new(area.x, area.y, area.width, 1),
+            theme.get("ui.statusline"),
+        );
+        render(
+            Paragraph::new(Span::styled(
+                format!(" Color Scheme — {cur_theme} "),
+                accent,
+            )),
+            Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1),
+            surface,
+        );
         let _ = (border, bg);
-        let inner = Rect::new(area.x + 1, area.y + 1, area.width.saturating_sub(2), area.height.saturating_sub(1));
+        let inner = Rect::new(
+            area.x + 1,
+            area.y + 1,
+            area.width.saturating_sub(2),
+            area.height.saturating_sub(1),
+        );
         if inner.width < 16 || inner.height < 5 {
             return;
         }
 
         // save button + name field (top)
-        let label = if self.saved_msg { " ✓ Saved — applied live " } else { " 💾 Save theme " };
+        let label = if self.saved_msg {
+            " ✓ Saved — applied live "
+        } else {
+            " 💾 Save theme "
+        };
         let w = label.chars().count() as u16;
-        render(Paragraph::new(Span::styled(label, text.add_modifier(RMod::REVERSED))), Rect::new(inner.x, inner.y, w, 1), surface);
+        render(
+            Paragraph::new(Span::styled(label, text.add_modifier(RMod::REVERSED))),
+            Rect::new(inner.x, inner.y, w, 1),
+            surface,
+        );
         self.btn_hits.push((inner.x, inner.x + w, inner.y, 0));
         // editable "as: <name>" field
         let nx = inner.x + w + 2;
@@ -459,21 +523,42 @@ impl Component for ThemeEditor {
             format!(" as: {} ✎ ", self.custom_name)
         };
         let nw = nlabel.chars().count() as u16;
-        let nst = if self.naming { accent.add_modifier(RMod::REVERSED) } else { dim };
-        render(Paragraph::new(Span::styled(nlabel, nst)), Rect::new(nx, inner.y, nw, 1), surface);
+        let nst = if self.naming {
+            accent.add_modifier(RMod::REVERSED)
+        } else {
+            dim
+        };
+        render(
+            Paragraph::new(Span::styled(nlabel, nst)),
+            Rect::new(nx, inner.y, nw, 1),
+            surface,
+        );
         self.btn_hits.push((nx, nx + nw, inner.y, 1));
 
         let body_y = inner.y + 2;
         let body_h = inner.height.saturating_sub(4); // reserve a row for the live preview
-        // LEFT: theme picker
+                                                     // LEFT: theme picker
         let tw = 22u16.min(inner.width / 2);
-        render(Paragraph::new(Span::styled("Themes (⏎ apply)", if self.pane == 0 { accent } else { dim })), Rect::new(inner.x, body_y - 1, tw, 1), surface);
+        render(
+            Paragraph::new(Span::styled(
+                "Themes (⏎ apply)",
+                if self.pane == 0 { accent } else { dim },
+            )),
+            Rect::new(inner.x, body_y - 1, tw, 1),
+            surface,
+        );
         if self.theme_sel < self.theme_top {
             self.theme_top = self.theme_sel;
         } else if self.theme_sel >= self.theme_top + body_h as usize {
             self.theme_top = self.theme_sel + 1 - body_h as usize;
         }
-        for (line, name) in self.themes.iter().enumerate().skip(self.theme_top).take(body_h as usize) {
+        for (line, name) in self
+            .themes
+            .iter()
+            .enumerate()
+            .skip(self.theme_top)
+            .take(body_h as usize)
+        {
             let row = body_y + (line - self.theme_top) as u16;
             let is_sel = line == self.theme_sel;
             let active = *name == cur_theme;
@@ -481,14 +566,25 @@ impl Component for ThemeEditor {
                 surface.set_style(Rect::new(inner.x, row, tw, 1), theme.get("ui.selection"));
             }
             let mark = if active { "● " } else { "  " };
-            render(Paragraph::new(Span::styled(format!("{mark}{name}"), if is_sel { accent } else { text })), Rect::new(inner.x, row, tw, 1), surface);
+            render(
+                Paragraph::new(Span::styled(
+                    format!("{mark}{name}"),
+                    if is_sel { accent } else { text },
+                )),
+                Rect::new(inner.x, row, tw, 1),
+                surface,
+            );
             self.theme_hits.push((row, inner.x, inner.x + tw, line));
         }
 
         // divider
         let dx = inner.x + tw + 1;
         for y in body_y..body_y + body_h {
-            render(Paragraph::new(Span::styled("│", dim)), Rect::new(dx, y, 1, 1), surface);
+            render(
+                Paragraph::new(Span::styled("│", dim)),
+                Rect::new(dx, y, 1, 1),
+                surface,
+            );
         }
 
         // RIGHT: scope color editor   name | #hex | swatch
@@ -499,9 +595,30 @@ impl Component for ThemeEditor {
         let bg_x = swatch_x + 5;
         let bg_sw_x = bg_x + 8;
         // column headers
-        render(Paragraph::new(Span::styled("fg", if self.target == 0 { accent } else { dim })), Rect::new(hex_x, body_y - 1, 8, 1), surface);
-        render(Paragraph::new(Span::styled("bg (b)", if self.target == 1 { accent } else { dim })), Rect::new(bg_x, body_y - 1, 8, 1), surface);
-        render(Paragraph::new(Span::styled("Edit colors", if self.pane == 1 { accent } else { dim })), Rect::new(sx, body_y - 1, inner.x + inner.width - sx, 1), surface);
+        render(
+            Paragraph::new(Span::styled(
+                "fg",
+                if self.target == 0 { accent } else { dim },
+            )),
+            Rect::new(hex_x, body_y - 1, 8, 1),
+            surface,
+        );
+        render(
+            Paragraph::new(Span::styled(
+                "bg (b)",
+                if self.target == 1 { accent } else { dim },
+            )),
+            Rect::new(bg_x, body_y - 1, 8, 1),
+            surface,
+        );
+        render(
+            Paragraph::new(Span::styled(
+                "Edit colors",
+                if self.pane == 1 { accent } else { dim },
+            )),
+            Rect::new(sx, body_y - 1, inner.x + inner.width - sx, 1),
+            surface,
+        );
         for i in 0..self.colors.len() {
             let row = body_y + i as u16;
             if row >= body_y + body_h {
@@ -511,32 +628,87 @@ impl Component for ThemeEditor {
             let bg = self.bgs.get(i).cloned().unwrap_or_default();
             let is_sel = i == self.selected && self.pane == 1;
             if is_sel {
-                surface.set_style(Rect::new(sx, row, inner.x + inner.width - sx, 1), theme.get("ui.selection"));
+                surface.set_style(
+                    Rect::new(sx, row, inner.x + inner.width - sx, 1),
+                    theme.get("ui.selection"),
+                );
             }
-            render(Paragraph::new(Span::styled(scope, if is_sel { accent } else { text })), Rect::new(sx, row, hex_x - sx - 1, 1), surface);
+            render(
+                Paragraph::new(Span::styled(scope, if is_sel { accent } else { text })),
+                Rect::new(sx, row, hex_x - sx - 1, 1),
+                surface,
+            );
             // fg hex + swatch
             let fg_buf = is_sel && self.editing && self.target == 0;
-            let fg_shown = if fg_buf { format!("{}▏", self.buf) } else { fg.clone() };
-            render(Paragraph::new(Span::styled(fg_shown, text.add_modifier(RMod::UNDERLINED))), Rect::new(hex_x, row, 8, 1), surface);
-            let fg_cur = if fg_buf { self.buf.as_str() } else { fg.as_str() };
+            let fg_shown = if fg_buf {
+                format!("{}▏", self.buf)
+            } else {
+                fg.clone()
+            };
+            render(
+                Paragraph::new(Span::styled(fg_shown, text.add_modifier(RMod::UNDERLINED))),
+                Rect::new(hex_x, row, 8, 1),
+                surface,
+            );
+            let fg_cur = if fg_buf {
+                self.buf.as_str()
+            } else {
+                fg.as_str()
+            };
             if let Ok(Color::Rgb(r, g, b)) = Color::from_hex(fg_cur) {
-                render(Paragraph::new(Span::styled("    ", RStyle::default().bg(ratatui::style::Color::Rgb(r, g, b)))), Rect::new(swatch_x, row, 4, 1), surface);
+                render(
+                    Paragraph::new(Span::styled(
+                        "    ",
+                        RStyle::default().bg(ratatui::style::Color::Rgb(r, g, b)),
+                    )),
+                    Rect::new(swatch_x, row, 4, 1),
+                    surface,
+                );
             }
             // bg hex + swatch
             let bg_buf = is_sel && self.editing && self.target == 1;
-            let bg_shown = if bg_buf { format!("{}▏", self.buf) } else if bg.is_empty() { "—".into() } else { bg.clone() };
-            render(Paragraph::new(Span::styled(bg_shown, text.add_modifier(RMod::UNDERLINED))), Rect::new(bg_x, row, 8, 1), surface);
-            let bg_cur = if bg_buf { self.buf.as_str() } else { bg.as_str() };
+            let bg_shown = if bg_buf {
+                format!("{}▏", self.buf)
+            } else if bg.is_empty() {
+                "—".into()
+            } else {
+                bg.clone()
+            };
+            render(
+                Paragraph::new(Span::styled(bg_shown, text.add_modifier(RMod::UNDERLINED))),
+                Rect::new(bg_x, row, 8, 1),
+                surface,
+            );
+            let bg_cur = if bg_buf {
+                self.buf.as_str()
+            } else {
+                bg.as_str()
+            };
             if let Ok(Color::Rgb(r, g, b)) = Color::from_hex(bg_cur) {
-                render(Paragraph::new(Span::styled("    ", RStyle::default().bg(ratatui::style::Color::Rgb(r, g, b)))), Rect::new(bg_sw_x, row, 4, 1), surface);
+                render(
+                    Paragraph::new(Span::styled(
+                        "    ",
+                        RStyle::default().bg(ratatui::style::Color::Rgb(r, g, b)),
+                    )),
+                    Rect::new(bg_sw_x, row, 4, 1),
+                    surface,
+                );
             }
             // modifier indicators: B I D (lit when set)
             let m = self.mods.get(i).copied().unwrap_or(0);
             let mods_x = bg_sw_x + 5;
             for (j, (bit, ch, _, _)) in MODS.iter().enumerate() {
                 let on = m & bit != 0;
-                let st = if on { accent.add_modifier(RMod::REVERSED) } else { dim };
-                render(Paragraph::new(Span::styled(format!("{ch}"), st)), Rect::new(mods_x + j as u16 * 2, row, 1, 1), surface);
+                let st = if on {
+                    accent.add_modifier(RMod::REVERSED)
+                } else {
+                    dim
+                };
+                render(
+                    Paragraph::new(Span::styled(format!("{ch}"), st)),
+                    Rect::new(mods_x + j as u16 * 2, row, 1, 1),
+                    surface,
+                );
             }
             self.row_hits.push((row, sx, inner.x + inner.width, i));
         }
@@ -555,16 +727,28 @@ impl Component for ThemeEditor {
             ("constant", "42"),
             ("type", "Vec"),
         ];
-        render(Paragraph::new(Span::styled("preview ", dim)), Rect::new(inner.x, preview_y, 8, 1), surface);
+        render(
+            Paragraph::new(Span::styled("preview ", dim)),
+            Rect::new(inner.x, preview_y, 8, 1),
+            surface,
+        );
         let mut px = inner.x + 8;
         for (scope, word) in sample {
             if px + word.chars().count() as u16 + 1 >= inner.x + inner.width {
                 break;
             }
             if let Some(i) = SCOPES.iter().position(|s| s == scope) {
-                let st = style_for(&self.colors[i].1, self.bgs.get(i).map(|s| s.as_str()).unwrap_or(""), self.mods.get(i).copied().unwrap_or(0));
+                let st = style_for(
+                    &self.colors[i].1,
+                    self.bgs.get(i).map(|s| s.as_str()).unwrap_or(""),
+                    self.mods.get(i).copied().unwrap_or(0),
+                );
                 let w = word.chars().count() as u16;
-                render(Paragraph::new(Span::styled(*word, st)), Rect::new(px, preview_y, w, 1), surface);
+                render(
+                    Paragraph::new(Span::styled(*word, st)),
+                    Rect::new(px, preview_y, w, 1),
+                    surface,
+                );
                 px += w + 1;
             }
         }
@@ -576,6 +760,10 @@ impl Component for ThemeEditor {
         } else {
             " Tab pane · j/k move · f fg/b bg · 1/2/3 bold/italic/dim · n name · s save · Esc"
         };
-        render(Paragraph::new(Span::styled(help, dim)), Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1), surface);
+        render(
+            Paragraph::new(Span::styled(help, dim)),
+            Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1),
+            surface,
+        );
     }
 }

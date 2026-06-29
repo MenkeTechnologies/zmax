@@ -126,11 +126,19 @@ impl Component for PreferencesPanel {
             } else {
                 idle_st
             };
-            render(Paragraph::new(Span::styled(label, st)), Rect::new(x, area.y, w, 1), surface);
+            render(
+                Paragraph::new(Span::styled(label, st)),
+                Rect::new(x, area.y, w, 1),
+                surface,
+            );
             self.tab_hits.push((area.y, x, x + w, i));
             x += w;
             // separator between tabs
-            render(Paragraph::new(Span::styled("│", idle_st)), Rect::new(x, area.y, 1, 1), surface);
+            render(
+                Paragraph::new(Span::styled("│", idle_st)),
+                Rect::new(x, area.y, 1, 1),
+                surface,
+            );
             x += 1;
         }
         // right-aligned hint
@@ -146,7 +154,12 @@ impl Component for PreferencesPanel {
         let _ = active_st;
 
         // Active page fills the rest of the screen (it draws its own content frame).
-        let content = Rect::new(area.x, area.y + 1, area.width, area.height.saturating_sub(1));
+        let content = Rect::new(
+            area.x,
+            area.y + 1,
+            area.width,
+            area.height.saturating_sub(1),
+        );
         self.active().render(content, surface, ctx);
     }
 }

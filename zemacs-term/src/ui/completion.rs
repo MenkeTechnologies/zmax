@@ -6,6 +6,12 @@ use crate::{
         trigger_auto_completion, CompletionItem, CompletionResponse, ResolveHandler,
     },
 };
+use nucleo::{
+    pattern::{Atom, AtomKind, CaseMatching, Normalization},
+    Config, Utf32Str,
+};
+use tui::text::Spans;
+use tui::{buffer::Buffer as Surface, text::Span};
 use zemacs_core::snippets::{ActiveSnippet, RenderedSnippet, Snippet};
 use zemacs_core::{self as core, chars, fuzzy::MATCHER, Change, Transaction};
 use zemacs_lsp::{lsp, util, OffsetEncoding};
@@ -16,12 +22,6 @@ use zemacs_view::{
     ViewId,
 };
 use zemacs_view::{graphics::Rect, Document, Editor};
-use nucleo::{
-    pattern::{Atom, AtomKind, CaseMatching, Normalization},
-    Config, Utf32Str,
-};
-use tui::text::Spans;
-use tui::{buffer::Buffer as Surface, text::Span};
 
 use std::cmp::Reverse;
 

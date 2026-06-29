@@ -6,6 +6,8 @@ use std::{
 };
 
 use anyhow::bail;
+use tempfile::NamedTempFile;
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use zemacs_core::{diagnostic::Severity, test, Selection, Transaction};
 use zemacs_loader::workspace_trust::WorkspaceTrust;
 use zemacs_term::{application::Application, args::Args, config::Config, keymap::merge_keys};
@@ -15,8 +17,6 @@ use zemacs_view::{
     input::parse_macro,
     Editor,
 };
-use tempfile::NamedTempFile;
-use tokio_stream::wrappers::UnboundedReceiverStream;
 
 #[cfg(windows)]
 use crossterm::event::{Event, KeyEvent};

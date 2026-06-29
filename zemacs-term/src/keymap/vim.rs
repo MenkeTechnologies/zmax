@@ -22,9 +22,9 @@ use std::collections::HashMap;
 
 use super::macros::keymap;
 use super::{KeyTrie, KeyTrieNode, MappableCommand, Mode};
+use indexmap::IndexMap;
 use zemacs_core::hashmap;
 use zemacs_view::input::KeyEvent;
-use indexmap::IndexMap;
 
 /// spacemacs SPC bindings that resolve to typable (`:`) commands. The keymap
 /// macro can only express static commands, so these are inserted after macro
@@ -147,7 +147,9 @@ fn add_command(root: &mut KeyTrieNode, path: &[KeyEvent], label: &str, cmd: &str
 }
 
 fn chord(s: &str) -> Vec<KeyEvent> {
-    s.split(' ').map(|k| k.parse().expect("valid key")).collect()
+    s.split(' ')
+        .map(|k| k.parse().expect("valid key"))
+        .collect()
 }
 
 /// vim normal-mode chords that resolve to typable commands (not expressible in
@@ -1526,8 +1528,14 @@ mod tests {
         let km = default();
         let n = &km[&Mode::Normal];
         // vim CTRL-W window moves map onto zemacs's view commands.
-        assert_eq!(cmd_name(resolve(n, "C-w H").unwrap()), Some("swap_view_left"));
-        assert_eq!(cmd_name(resolve(n, "C-w J").unwrap()), Some("swap_view_down"));
+        assert_eq!(
+            cmd_name(resolve(n, "C-w H").unwrap()),
+            Some("swap_view_left")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "C-w J").unwrap()),
+            Some("swap_view_down")
+        );
         assert_eq!(cmd_name(resolve(n, "C-w K").unwrap()), Some("swap_view_up"));
         assert_eq!(
             cmd_name(resolve(n, "C-w L").unwrap()),
@@ -1575,7 +1583,10 @@ mod tests {
         let km = default();
         let n = &km[&Mode::Normal];
         // spacemacs SPC tree resolves to the expected zemacs commands.
-        assert_eq!(cmd_name(resolve(n, "space f f").unwrap()), Some("file_picker"));
+        assert_eq!(
+            cmd_name(resolve(n, "space f f").unwrap()),
+            Some("file_picker")
+        );
         assert_eq!(
             cmd_name(resolve(n, "space b b").unwrap()),
             Some("buffer_picker")
@@ -1600,13 +1611,12 @@ mod tests {
         let n = &km[&Mode::Normal];
         // SPC f s / SPC q q etc. resolve to typable commands inserted post-macro.
         for (chord_str, _, cmd) in SPACEMACS_TYPABLE.iter().chain(VIM_TYPABLE) {
-            let leaf = resolve(n, chord_str)
-                .unwrap_or_else(|| panic!("{chord_str} did not resolve"));
+            let leaf =
+                resolve(n, chord_str).unwrap_or_else(|| panic!("{chord_str} did not resolve"));
             // The bound leaf must equal what the command string parses to, and
             // it must be a typable command.
-            let expected = KeyTrie::MappableCommand(
-                cmd.parse::<MappableCommand>().expect("valid command"),
-            );
+            let expected =
+                KeyTrie::MappableCommand(cmd.parse::<MappableCommand>().expect("valid command"));
             assert_eq!(leaf, &expected, "wrong command for {chord_str}");
             // Entries are mostly typable `:cmd`s, but `add_command` also accepts
             // bare static command names (e.g. `git_file_log_picker`), so allow both.
@@ -1622,8 +1632,7 @@ mod tests {
         let km = default();
         let n = &km[&Mode::Normal];
         for chord in ["g U U", "g U w", "g u u", "g u w", "g ~ ~", "g ~ w"] {
-            let leaf =
-                resolve(n, chord).unwrap_or_else(|| panic!("{chord} did not resolve"));
+            let leaf = resolve(n, chord).unwrap_or_else(|| panic!("{chord} did not resolve"));
             assert!(
                 matches!(leaf, KeyTrie::Sequence(_)),
                 "{chord} should be a case-operator sequence"
@@ -1636,17 +1645,13 @@ mod tests {
         let km = default();
         let n = &km[&Mode::Normal];
         for chord in ["space j k", "space b Y"] {
-            let leaf =
-                resolve(n, chord).unwrap_or_else(|| panic!("{chord} did not resolve"));
+            let leaf = resolve(n, chord).unwrap_or_else(|| panic!("{chord} did not resolve"));
             assert!(
                 matches!(leaf, KeyTrie::Sequence(_)),
                 "{chord} should be a command sequence"
             );
         }
-        assert_eq!(
-            cmd_name(resolve(n, "space x tab").unwrap()),
-            Some("indent")
-        );
+        assert_eq!(cmd_name(resolve(n, "space x tab").unwrap()), Some("indent"));
     }
 
     #[test]
@@ -1655,22 +1660,46 @@ mod tests {
         let n = &km[&Mode::Normal];
         // ctrl/arrow motion aliases from index.txt
         assert_eq!(cmd_name(resolve(n, "C-h").unwrap()), Some("move_char_left"));
-        assert_eq!(cmd_name(resolve(n, "C-left").unwrap()), Some("move_prev_word_start"));
-        assert_eq!(cmd_name(resolve(n, "C-right").unwrap()), Some("move_next_word_start"));
-        assert_eq!(cmd_name(resolve(n, "C-home").unwrap()), Some("goto_file_start"));
-        assert_eq!(cmd_name(resolve(n, "C-end").unwrap()), Some("goto_last_line"));
+        assert_eq!(
+            cmd_name(resolve(n, "C-left").unwrap()),
+            Some("move_prev_word_start")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "C-right").unwrap()),
+            Some("move_next_word_start")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "C-home").unwrap()),
+            Some("goto_file_start")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "C-end").unwrap()),
+            Some("goto_last_line")
+        );
         assert_eq!(cmd_name(resolve(n, "ins").unwrap()), Some("insert_mode"));
-        assert_eq!(cmd_name(resolve(n, "C-]").unwrap()), Some("goto_definition"));
+        assert_eq!(
+            cmd_name(resolve(n, "C-]").unwrap()),
+            Some("goto_definition")
+        );
         // gt/gT navigate buffers (vim tabpages)
-        assert_eq!(cmd_name(resolve(n, "g t").unwrap()), Some("goto_next_buffer"));
-        assert_eq!(cmd_name(resolve(n, "g T").unwrap()), Some("goto_previous_buffer"));
+        assert_eq!(
+            cmd_name(resolve(n, "g t").unwrap()),
+            Some("goto_next_buffer")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "g T").unwrap()),
+            Some("goto_previous_buffer")
+        );
         // = reindent operator is a sequence for motions, leaf for ==
         assert_eq!(cmd_name(resolve(n, "= =").unwrap()), Some("indent"));
         assert!(matches!(resolve(n, "= j").unwrap(), KeyTrie::Sequence(_)));
 
         // visual block + extras
         let s = &km[&Mode::Select];
-        assert_eq!(cmd_name(resolve(s, "C-v").unwrap()), Some("copy_selection_on_next_line"));
+        assert_eq!(
+            cmd_name(resolve(s, "C-v").unwrap()),
+            Some("copy_selection_on_next_line")
+        );
         assert_eq!(cmd_name(resolve(s, "K").unwrap()), Some("hover"));
         assert_eq!(cmd_name(resolve(s, "g C-a").unwrap()), Some("increment"));
 
@@ -1687,22 +1716,49 @@ mod tests {
         let n = &km[&Mode::Normal];
         let i = &km[&Mode::Insert];
         // Meta keys in normal mode (M-x, M-f/b, M-w, M-</>)
-        assert_eq!(cmd_name(resolve(n, "A-x").unwrap()), Some("command_palette"));
-        assert_eq!(cmd_name(resolve(n, "A-f").unwrap()), Some("move_next_word_start"));
-        assert_eq!(cmd_name(resolve(n, "A-<").unwrap()), Some("goto_file_start"));
+        assert_eq!(
+            cmd_name(resolve(n, "A-x").unwrap()),
+            Some("command_palette")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "A-f").unwrap()),
+            Some("move_next_word_start")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "A-<").unwrap()),
+            Some("goto_file_start")
+        );
         // vim CTRL-G (file info) wins over the emacs keyboard-quit on C-g; Esc still collapses.
         assert_eq!(cmd_name(resolve(n, "C-g").unwrap()), Some("file_info"));
-        assert_eq!(cmd_name(resolve(n, "C-l").unwrap()), Some("align_view_center"));
+        assert_eq!(
+            cmd_name(resolve(n, "C-l").unwrap()),
+            Some("align_view_center")
+        );
         // readline motion in insert mode that does NOT clash with a vim insert key
         // (vim leaves C-f/C-b/M-f free in insert) stays emacs.
-        assert_eq!(cmd_name(resolve(i, "C-f").unwrap()), Some("move_char_right"));
+        assert_eq!(
+            cmd_name(resolve(i, "C-f").unwrap()),
+            Some("move_char_right")
+        );
         assert_eq!(cmd_name(resolve(i, "C-b").unwrap()), Some("move_char_left"));
-        assert_eq!(cmd_name(resolve(i, "A-f").unwrap()), Some("move_next_word_start"));
+        assert_eq!(
+            cmd_name(resolve(i, "A-f").unwrap()),
+            Some("move_next_word_start")
+        );
         // vim insert keys win where they conflict with the old emacs bindings.
-        assert_eq!(cmd_name(resolve(i, "C-e").unwrap()), Some("copy_char_below"));
-        assert_eq!(cmd_name(resolve(i, "C-y").unwrap()), Some("copy_char_above"));
+        assert_eq!(
+            cmd_name(resolve(i, "C-e").unwrap()),
+            Some("copy_char_below")
+        );
+        assert_eq!(
+            cmd_name(resolve(i, "C-y").unwrap()),
+            Some("copy_char_above")
+        );
         assert_eq!(cmd_name(resolve(i, "C-k").unwrap()), Some("insert_digraph"));
-        assert_eq!(cmd_name(resolve(i, "C-v").unwrap()), Some("insert_char_interactive"));
+        assert_eq!(
+            cmd_name(resolve(i, "C-v").unwrap()),
+            Some("insert_char_interactive")
+        );
     }
 
     #[test]
@@ -1711,8 +1767,7 @@ mod tests {
         let n = &km[&Mode::Normal];
         // `dd`, `dw`, `cw`, `yy` resolve to multi-command sequences.
         for chord in ["d d", "d w", "c w", "y y", "d $"] {
-            let leaf = resolve(n, chord)
-                .unwrap_or_else(|| panic!("{chord} did not resolve"));
+            let leaf = resolve(n, chord).unwrap_or_else(|| panic!("{chord} did not resolve"));
             assert!(
                 matches!(leaf, KeyTrie::Sequence(_)),
                 "{chord} should be an operator sequence, got {leaf:?}"

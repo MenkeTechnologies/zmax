@@ -87,7 +87,13 @@ jobs:
           cache-key: build
 
       - name: Run cargo fmt
-        run: cargo fmt --all --check
+        # `cargo fmt --all` descends into local path dependencies, which would
+        # try to format the vendored scripting submodules under vendor/. Format
+        # only this workspace's members instead (derived so it tracks members).
+        run: |
+          members=$(cargo metadata --format-version 1 --no-deps \
+            | python3 -c "import sys,json;print(' '.join('-p '+p['name'] for p in json.load(sys.stdin)['packages']))")
+          cargo fmt $members --check
 
       - name: Run cargo clippy
         run: cargo clippy --workspace --all-targets -- -D warnings

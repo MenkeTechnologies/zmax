@@ -16,12 +16,12 @@ use self::document_colors::DocumentColorsHandler;
 use self::document_links::DocumentLinksHandler;
 
 mod auto_save;
+mod closed_files;
 mod code_action_hint;
 pub mod completion;
 pub mod diagnostics;
 mod document_colors;
 mod document_highlight;
-mod closed_files;
 mod document_links;
 mod prompt;
 mod recent_files;

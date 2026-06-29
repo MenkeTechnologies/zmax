@@ -1,6 +1,8 @@
 use std::{collections::HashSet, time::Duration};
 
 use futures_util::stream::FuturesUnordered;
+use tokio::time::Instant;
+use tokio_stream::StreamExt;
 use zemacs_event::{cancelable_future, register_hook, send_blocking, AsyncHook};
 use zemacs_lsp::lsp::{CodeAction, CodeActionOrCommand, CodeActionTriggerKind};
 use zemacs_view::{
@@ -11,8 +13,6 @@ use zemacs_view::{
     handlers::{lsp::CodeActionHintEvent, Handlers},
     DocumentId, Editor, ViewId,
 };
-use tokio::time::Instant;
-use tokio_stream::StreamExt;
 
 use crate::{commands::code_actions_for_range, job};
 

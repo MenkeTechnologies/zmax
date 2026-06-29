@@ -14,13 +14,13 @@ use crossterm::{
     terminal::{self, BeginSynchronizedUpdate, Clear, ClearType, EndSynchronizedUpdate},
     Command,
 };
-use zemacs_view::graphics::{Color, CursorKind, Modifier, Rect, UnderlineStyle};
 use once_cell::sync::OnceCell;
 use std::{
     fmt,
     io::{self, Write},
 };
 use termini::TermInfo;
+use zemacs_view::graphics::{Color, CursorKind, Modifier, Rect, UnderlineStyle};
 
 fn term_program() -> Option<String> {
     // Some terminals don't set $TERM_PROGRAM
@@ -339,7 +339,10 @@ where
         None
     }
 
-    fn set_background_color(&mut self, _color: Option<zemacs_view::theme::Color>) -> io::Result<()> {
+    fn set_background_color(
+        &mut self,
+        _color: Option<zemacs_view::theme::Color>,
+    ) -> io::Result<()> {
         Ok(())
     }
 }

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use zemacs_lsp::lsp;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{Duration, Instant};
+use zemacs_lsp::lsp;
 
 use zemacs_event::{send_blocking, AsyncHook, TaskController, TaskHandle};
 use zemacs_view::Editor;

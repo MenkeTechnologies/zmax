@@ -1,6 +1,6 @@
 use crate::register::Registers;
-use zemacs_core::unicode::width::UnicodeWidthStr;
 use std::{borrow::Cow, fmt::Write};
+use zemacs_core::unicode::width::UnicodeWidthStr;
 
 #[derive(Debug)]
 /// Info box used in editor. Rendering logic will be in other crate.

@@ -3,8 +3,8 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use zemacs_stdx::rope::RopeSliceExt;
 use tree_house::TREE_SITTER_MATCH_LIMIT;
+use zemacs_stdx::rope::RopeSliceExt;
 
 use crate::{
     chars::{char_is_line_ending, char_is_whitespace},

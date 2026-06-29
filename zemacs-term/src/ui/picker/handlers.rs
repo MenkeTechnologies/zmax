@@ -4,8 +4,8 @@ use std::{
     time::Duration,
 };
 
-use zemacs_event::AsyncHook;
 use tokio::time::Instant;
+use zemacs_event::AsyncHook;
 
 use crate::{job, ui::overlay::Overlay};
 

@@ -136,7 +136,12 @@ impl RunConfigPanel {
     }
 
     fn load_fields(&mut self) {
-        let c = self.data.configs.get(self.selected).cloned().unwrap_or_default();
+        let c = self
+            .data
+            .configs
+            .get(self.selected)
+            .cloned()
+            .unwrap_or_default();
         self.buf = [c.name, c.command, c.dir, c.env];
     }
 
@@ -209,12 +214,14 @@ impl RunConfigPanel {
             .collect();
         let cmd = format!("{env_prefix}{}", c.command);
         let cwd = run_config::resolve_dir(&c.dir);
-        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.pop();
-            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
-                view.start_run(cx, cmd, cwd);
-            }
-        }))
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                    view.start_run(cx, cmd, cwd);
+                }
+            },
+        ))
     }
 
     fn handle_list_key(&mut self, key: KeyEvent) -> EventResult {
@@ -317,7 +324,9 @@ impl Component for RunConfigPanel {
         use crate::ui::rat::{render, render_stateful, to_rat_style};
         use ratatui::style::Modifier as RMod;
         use ratatui::text::{Line, Span};
-        use ratatui::widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Wrap};
+        use ratatui::widgets::{
+            Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Wrap,
+        };
 
         // Shrink a zemacs Rect by one cell on every side (a widget's bordered interior).
         let inset = |r: Rect| {
@@ -344,10 +353,22 @@ impl Component for RunConfigPanel {
         surface.clear_with(area, theme.get("ui.background"));
 
         // Flat page header bar (no modal frame).
-        surface.clear_with(Rect::new(area.x, area.y, area.width, 1), theme.get("ui.statusline"));
-        render(Paragraph::new(Span::styled(" Run/Debug Configurations ", accent)), Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1), surface);
+        surface.clear_with(
+            Rect::new(area.x, area.y, area.width, 1),
+            theme.get("ui.statusline"),
+        );
+        render(
+            Paragraph::new(Span::styled(" Run/Debug Configurations ", accent)),
+            Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1),
+            surface,
+        );
         let _ = (border, bg);
-        let inner = Rect::new(area.x + 1, area.y + 1, area.width.saturating_sub(2), area.height.saturating_sub(1));
+        let inner = Rect::new(
+            area.x + 1,
+            area.y + 1,
+            area.width.saturating_sub(2),
+            area.height.saturating_sub(1),
+        );
         if inner.width < 4 || inner.height < 4 {
             return;
         }
@@ -355,7 +376,12 @@ impl Component for RunConfigPanel {
         // inner rows: [ button bar (1) | body | help (1) ]
         let btn_row = Rect::new(inner.x, inner.y, inner.width, 1);
         let help_row = Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1);
-        let body = Rect::new(inner.x, inner.y + 2, inner.width, inner.height.saturating_sub(3));
+        let body = Rect::new(
+            inner.x,
+            inner.y + 2,
+            inner.width,
+            inner.height.saturating_sub(3),
+        );
 
         // --- toolbar buttons (clickable) ---
         let buttons = [
@@ -379,7 +405,10 @@ impl Component for RunConfigPanel {
                 _ => text,
             };
             render(
-                Paragraph::new(Line::from(Span::styled(txt, style.add_modifier(RMod::REVERSED)))),
+                Paragraph::new(Line::from(Span::styled(
+                    txt,
+                    style.add_modifier(RMod::REVERSED),
+                ))),
                 Rect::new(bx, btn_row.y, w, 1),
                 surface,
             );
@@ -390,7 +419,12 @@ impl Component for RunConfigPanel {
         // --- body: [ list | form ] ---
         let list_w = 30.min(body.width / 2).max(12);
         let list_rect = Rect::new(body.x, body.y, list_w, body.height);
-        let form_rect = Rect::new(body.x + list_w, body.y, body.width.saturating_sub(list_w), body.height);
+        let form_rect = Rect::new(
+            body.x + list_w,
+            body.y,
+            body.width.saturating_sub(list_w),
+            body.height,
+        );
 
         // Left list of configs (bordered List widget).
         let list_block = Block::default()
@@ -407,7 +441,11 @@ impl Component for RunConfigPanel {
             .enumerate()
             .map(|(i, c)| {
                 let marker = if i == self.data.active { "▶ " } else { "  " };
-                let name = if c.name.is_empty() { "(unnamed)" } else { c.name.as_str() };
+                let name = if c.name.is_empty() {
+                    "(unnamed)"
+                } else {
+                    c.name.as_str()
+                };
                 ListItem::new(Line::from(vec![
                     Span::styled(marker, key),
                     Span::styled(name.to_string(), text),
@@ -453,11 +491,18 @@ impl Component for RunConfigPanel {
                     break;
                 }
                 let editing = self.mode == Mode::Edit;
-                let val: String = if editing { self.buf[fi].clone() } else { stored[fi].clone() };
+                let val: String = if editing {
+                    self.buf[fi].clone()
+                } else {
+                    stored[fi].clone()
+                };
                 let active = editing && fi == self.field;
                 // label
                 render(
-                    Paragraph::new(Span::styled(format!("{fname}:"), if active { accent } else { dim })),
+                    Paragraph::new(Span::styled(
+                        format!("{fname}:"),
+                        if active { accent } else { dim },
+                    )),
                     Rect::new(form_inner.x, y, 12.min(form_inner.width), 1),
                     surface,
                 );

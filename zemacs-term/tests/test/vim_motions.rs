@@ -66,7 +66,11 @@ async fn indent_operator_double() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn indent_operator_with_motion() -> anyhow::Result<()> {
     // >j indents the current line and the next.
-    test_with_config(vim(), ("#[f|]#oo\nbar\nbaz\n", "<gt>j", "\t#[f|]#oo\n\tbar\nbaz\n")).await?;
+    test_with_config(
+        vim(),
+        ("#[f|]#oo\nbar\nbaz\n", "<gt>j", "\t#[f|]#oo\n\tbar\nbaz\n"),
+    )
+    .await?;
     Ok(())
 }
 

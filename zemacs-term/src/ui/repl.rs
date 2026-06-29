@@ -177,8 +177,8 @@ pub struct ReplPanel {
     input: Vec<char>,
     cursor: usize, // char index into `input`
     transcript: Vec<ReplEntry>,
-    scroll: u16,    // top transcript line shown
-    follow: bool,   // stick to the bottom as new output arrives
+    scroll: u16,  // top transcript line shown
+    follow: bool, // stick to the bottom as new output arrives
     history: History,
     /// `None` = editing fresh input; `Some(i)` = browsing history at index `i`.
     hist_idx: Option<usize>,
@@ -421,9 +421,7 @@ impl Component for ReplPanel {
         use crate::ui::rat::{render, render_stateful, to_rat_style};
         use ratatui::style::Modifier as RMod;
         use ratatui::text::{Line, Span};
-        use ratatui::widgets::{
-            Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Tabs,
-        };
+        use ratatui::widgets::{Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Tabs};
 
         self.tab_hits.clear();
 
@@ -455,7 +453,10 @@ impl Component for ReplPanel {
             .iter()
             .position(|&l| l == self.lang)
             .unwrap_or(0);
-        let titles: Vec<Line> = ReplLang::ALL.iter().map(|l| Line::from(l.label())).collect();
+        let titles: Vec<Line> = ReplLang::ALL
+            .iter()
+            .map(|l| Line::from(l.label()))
+            .collect();
         let tabs = Tabs::new(titles)
             .select(selected)
             .style(dim)
@@ -464,7 +465,12 @@ impl Component for ReplPanel {
             .padding(" ", " ");
         render(
             tabs,
-            Rect::new(tabs_x, area.y, area.width.saturating_sub(tabs_x - area.x), 1),
+            Rect::new(
+                tabs_x,
+                area.y,
+                area.width.saturating_sub(tabs_x - area.x),
+                1,
+            ),
             surface,
         );
         // Mirror the Tabs geometry for mouse hit-testing: each tab renders as
@@ -524,7 +530,11 @@ impl Component for ReplPanel {
         // Reserve the last body column for a scrollbar when the transcript
         // overflows the viewport.
         let overflow = total > body_h && body_h > 0;
-        let text_w = if overflow { body_w.saturating_sub(1) } else { body_w };
+        let text_w = if overflow {
+            body_w.saturating_sub(1)
+        } else {
+            body_w
+        };
         render(
             Paragraph::new(lines).scroll((self.scroll, 0)),
             Rect::new(area.x + 1, body_y, text_w, body_h),
@@ -589,7 +599,11 @@ impl Component for ReplPanel {
         self.caret = Some(Position::new(crow as usize, ccol as usize));
     }
 
-    fn cursor(&self, _area: Rect, editor: &zemacs_view::editor::Editor) -> (Option<Position>, CursorKind) {
+    fn cursor(
+        &self,
+        _area: Rect,
+        editor: &zemacs_view::editor::Editor,
+    ) -> (Option<Position>, CursorKind) {
         (
             self.caret,
             editor.config().cursor_shape.from_mode(Mode::Insert),
@@ -638,6 +652,9 @@ mod tests {
             h.push(ReplLang::Elisp, &format!("expr {i}"));
         }
         assert_eq!(h.list(ReplLang::Elisp).len(), HISTORY_CAP);
-        assert_eq!(h.list(ReplLang::Elisp).last().unwrap(), &format!("expr {}", HISTORY_CAP + 9));
+        assert_eq!(
+            h.list(ReplLang::Elisp).last().unwrap(),
+            &format!("expr {}", HISTORY_CAP + 9)
+        );
     }
 }

@@ -87,8 +87,14 @@ pub fn smart_command(path: Option<&Path>) -> (String, PathBuf) {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
     let p = path.display().to_string();
     match ext {
-        "stk" => (format!("stryke {p}"), find_up(&dir, "stryke.toml").unwrap_or(dir)),
-        "rs" => ("cargo run".to_string(), find_up(&dir, "Cargo.toml").unwrap_or(dir)),
+        "stk" => (
+            format!("stryke {p}"),
+            find_up(&dir, "stryke.toml").unwrap_or(dir),
+        ),
+        "rs" => (
+            "cargo run".to_string(),
+            find_up(&dir, "Cargo.toml").unwrap_or(dir),
+        ),
         "py" => (format!("python3 {p}"), dir),
         "go" => ("go run .".to_string(), dir),
         "js" | "mjs" | "cjs" | "ts" => (format!("node {p}"), dir),

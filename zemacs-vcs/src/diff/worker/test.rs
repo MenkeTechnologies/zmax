@@ -1,5 +1,5 @@
-use zemacs_core::Rope;
 use tokio::task::JoinHandle;
+use zemacs_core::Rope;
 
 use crate::diff::{DiffHandle, Hunk};
 

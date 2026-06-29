@@ -53,7 +53,11 @@ fn key_index() -> HashMap<String, Vec<String>> {
         for (cmd, chords) in trie.reverse_map() {
             let e = out.entry(cmd).or_default();
             for chord in chords {
-                let s = chord.iter().map(|k| k.to_string()).collect::<Vec<_>>().join(" ");
+                let s = chord
+                    .iter()
+                    .map(|k| k.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" ");
                 e.push(format!("{short}: {s}"));
             }
         }
@@ -66,97 +70,133 @@ fn key_index() -> HashMap<String, Vec<String>> {
 }
 
 const TOPICS: &[(&str, &str)] = &[
-    ("Welcome to zemacs",
-     "zemacs is a hackable modal editor with a full IDE shell (project tree, structure, \
+    (
+        "Welcome to zemacs",
+        "zemacs is a hackable modal editor with a full IDE shell (project tree, structure, \
       problems, run window, git, minimap) and a vim-faithful keymap.\n\n\
       • Press SPC (space) for the leader menu.\n\
       • SPC , opens Preferences (Settings, Keymap, Color Scheme, Run Configs).\n\
       • SPC h opens this Help.\n\
-      • : opens the command line; SPC SPC is the command palette (M-x)."),
-    ("Editing modes",
-     "Normal — move and operate (h j k l, w b e, d c y, etc.).\n\
+      • : opens the command line; SPC SPC is the command palette (M-x).",
+    ),
+    (
+        "Editing modes",
+        "Normal — move and operate (h j k l, w b e, d c y, etc.).\n\
       Insert — type text; i a o, I A O, cw, s.  Esc / C-c returns to Normal.\n\
       Visual (Select) — v / V / C-v to select, then an operator (d y c > <).\n\
-      gv reselects the last visual area.  Counts: 3dd, 5j, etc."),
-    ("Search & replace",
-     "/  search forward, ?  search backward, n / N  next / previous.\n\
+      gv reselects the last visual area.  Counts: 3dd, 5j, etc.",
+    ),
+    (
+        "Search & replace",
+        "/  search forward, ?  search backward, n / N  next / previous.\n\
       *  / #  search the word under the cursor.\n\
       :%s/old/new/g  substitute in the file;  &  repeats the last substitute.\n\
-      gn selects the next match (then c / d operates on it)."),
-    ("Windows, splits & buffers",
-     "C-w s / C-w v  horizontal / vertical split.  C-w h/j/k/l move between them.\n\
+      gn selects the next match (then c / d operates on it).",
+    ),
+    (
+        "Windows, splits & buffers",
+        "C-w s / C-w v  horizontal / vertical split.  C-w h/j/k/l move between them.\n\
       C-w > / C-w <  resize width;  C-w + / C-w -  resize height;  C-w =  equalize.\n\
-      C-w q  close;  C-w o  only.  ]b / [b  next / previous buffer."),
-    ("Folds",
-     "za toggle, zo open, zc close, zR open all, zM close all.\n\
-      zj / zk move between folds.  zf{motion} creates a fold."),
-    ("Spell checking",
-     "]s / [s  next / previous misspelled word.\n\
+      C-w q  close;  C-w o  only.  ]b / [b  next / previous buffer.",
+    ),
+    (
+        "Folds",
+        "za toggle, zo open, zc close, zR open all, zM close all.\n\
+      zj / zk move between folds.  zf{motion} creates a fold.",
+    ),
+    (
+        "Spell checking",
+        "]s / [s  next / previous misspelled word.\n\
       z=  suggestions (press a number to apply).\n\
-      zg  mark good, zw  mark wrong, zug / zuw  undo.  Uses the system dictionary."),
-    ("Run configurations",
-     "SPC R c  opens the Run/Debug Configurations manager (add/edit/delete named \
+      zg  mark good, zw  mark wrong, zug / zuw  undo.  Uses the system dictionary.",
+    ),
+    (
+        "Run configurations",
+        "SPC R c  opens the Run/Debug Configurations manager (add/edit/delete named \
       configs).  SPC R r  runs the active config.  The ▶ Run toolbar button runs it too. \
-      Configs persist to <workspace>/.zemacs/run-configs.toml."),
-    ("Preferences & settings",
-     "SPC ,  opens the unified Preferences window:\n\
+      Configs persist to <workspace>/.zemacs/run-configs.toml.",
+    ),
+    (
+        "Preferences & settings",
+        "SPC ,  opens the unified Preferences window:\n\
       • Settings — every editor option, searchable, applied live (no restart).\n\
       • Keymap — add/edit your own [keys.*] bindings.\n\
       • Color Scheme — edit theme colors and save a custom theme.\n\
       • Run Configs — manage run configurations.\n\
-      Ctrl-Tab cycles tabs.  Edits live-reload immediately."),
-    ("Digraphs & special insert",
-     "In insert mode: C-k {c1}{c2} inserts a digraph (e.g. C-k a' → á, C-k -> → →).\n\
+      Ctrl-Tab cycles tabs.  Edits live-reload immediately.",
+    ),
+    (
+        "Digraphs & special insert",
+        "In insert mode: C-k {c1}{c2} inserts a digraph (e.g. C-k a' → á, C-k -> → →).\n\
       C-v / C-q insert the next key literally.  C-r inserts a register.\n\
-      C-e / C-y copy the character below / above the cursor."),
-    ("The leader (SPC) menu",
-     "SPC is the spacemacs-style leader.  A which-key popup shows the next keys.\n\
+      C-e / C-y copy the character below / above the cursor.",
+    ),
+    (
+        "The leader (SPC) menu",
+        "SPC is the spacemacs-style leader.  A which-key popup shows the next keys.\n\
       SPC f  files, SPC b  buffers, SPC s  search, SPC g  git, SPC p  project,\n\
-      SPC w  windows, SPC R  run, SPC ,  preferences, SPC h  help."),
-    ("Preferences (SPC ,)",
-     "A full-screen tabbed page — Ctrl-Tab cycles tabs, Esc closes, everything is\n\
+      SPC w  windows, SPC R  run, SPC ,  preferences, SPC h  help.",
+    ),
+    (
+        "Preferences (SPC ,)",
+        "A full-screen tabbed page — Ctrl-Tab cycles tabs, Esc closes, everything is\n\
       mouse + keyboard and applies live (no restart):\n\
       • Settings — every editor option, searchable.\n\
       • Keymap — your [keys.*] overrides + a browse-all-bindings reference.\n\
       • Color Scheme — theme picker + per-scope color/style editor.\n\
       • Run Configs — named run/debug configurations.\n\
-      • Help — this browser."),
-    ("Settings tab",
-     "Every [editor] option is listed automatically (so nothing is ever missing),\n\
+      • Help — this browser.",
+    ),
+    (
+        "Settings tab",
+        "Every [editor] option is listed automatically (so nothing is ever missing),\n\
       grouped into sections and searchable with /.\n\
       • Booleans toggle with Space/⏎/click.\n\
       • Enums (line-number, cursor-shape, …) cycle through valid values.\n\
       • Numbers/strings are typed; arrays edit as a TOML literal.\n\
       • ● marks a changed value; press r to reset it to the default.\n\
-      • o opens the raw config.toml.  All edits apply live."),
-    ("Theme studio (Color Scheme)",
-     "Left pane: every installed theme — ⏎/click applies it live (● = active).\n\
+      • o opens the raw config.toml.  All edits apply live.",
+    ),
+    (
+        "Theme studio (Color Scheme)",
+        "Left pane: every installed theme — ⏎/click applies it live (● = active).\n\
       Right pane: per-scope editor.  f / b switch foreground / background,\n\
       type a #rrggbb hex; 1/2/3 toggle bold / italic / dim.  A live preview row\n\
       shows a sample styled with your edits.  n names the theme, s saves it to\n\
-      ~/.zemacs/themes/<name>.toml and selects it in the picker."),
-    ("Keymap editor",
-     "Tab toggles between your overrides and a searchable list of ALL bindings.\n\
+      ~/.zemacs/themes/<name>.toml and selects it in the picker.",
+    ),
+    (
+        "Keymap editor",
+        "Tab toggles between your overrides and a searchable list of ALL bindings.\n\
       In overrides: a add, d delete, e/⏎ edit (mode · chord · command).\n\
       ⌨ Capture key records a chord by pressing the actual keys (e.g. Ctrl-W H).\n\
-      Saves to [keys.<mode>] in config.toml and reloads live."),
-    ("Run configurations",
-     "SPC R c opens the manager: a add, c copy, d delete, e edit, r run.\n\
+      Saves to [keys.<mode>] in config.toml and reloads live.",
+    ),
+    (
+        "Run configurations",
+        "SPC R c opens the manager: a add, c copy, d delete, e edit, r run.\n\
       Each config has a name, command, working dir, and KEY=VAL env.\n\
       The active one runs from the ▶ toolbar button or SPC R r, and shows in\n\
-      the Run tool window.  Stored in <workspace>/.zemacs/run-configs.toml."),
-    ("Marks & jumps",
-     "m{a-z} sets a mark, `{a-z} / '{a-z} jumps to it.  `` / '' return to the\n\
+      the Run tool window.  Stored in <workspace>/.zemacs/run-configs.toml.",
+    ),
+    (
+        "Marks & jumps",
+        "m{a-z} sets a mark, `{a-z} / '{a-z} jumps to it.  `` / '' return to the\n\
       previous jump.  C-o / C-i move back / forward in the jumplist.\n\
-      gd goto definition, gr references, gi goto implementation (LSP)."),
-    ("Macros & registers",
-     "q{reg} records a macro, q stops, @{reg} replays, @@ repeats.\n\
+      gd goto definition, gr references, gi goto implementation (LSP).",
+    ),
+    (
+        "Macros & registers",
+        "q{reg} records a macro, q stops, @{reg} replays, @@ repeats.\n\
       \"{reg} selects a register before y/d/p.  C-r {reg} pastes it in insert.\n\
-      The Registers (LOTR) tool window shows every register live."),
-    ("Text objects & operators",
-     "Operators d c y > < =  combine with motions and text objects:\n\
+      The Registers (LOTR) tool window shows every register live.",
+    ),
+    (
+        "Text objects & operators",
+        "Operators d c y > < =  combine with motions and text objects:\n\
       diw / ciw word, di( / ci\" inside pair, dap paragraph, dat tag.\n\
-      i = inside, a = around.  Counts repeat: 2daw, 3dd.  . repeats the change."),
+      i = inside, a = around.  Counts repeat: 2daw, 3dd.  . repeats the change.",
+    ),
 ];
 
 pub struct HelpPanel {
@@ -249,13 +289,21 @@ impl HelpPanel {
             MouseEventKind::Down(MouseButton::Left) => {}
             _ => return EventResult::Consumed(None),
         }
-        if let Some(&(_, _, _, ci)) = self.cat_hits.iter().find(|&&(x0, x1, r, _)| row == r && col >= x0 && col < x1) {
+        if let Some(&(_, _, _, ci)) = self
+            .cat_hits
+            .iter()
+            .find(|&&(x0, x1, r, _)| row == r && col >= x0 && col < x1)
+        {
             self.cat = CATS[ci].0;
             self.sel = 0;
             self.top = 0;
             return EventResult::Consumed(None);
         }
-        if let Some(&(_, _, _, pos)) = self.row_hits.iter().find(|&&(r, x0, x1, _)| row == r && col >= x0 && col < x1) {
+        if let Some(&(_, _, _, pos)) = self
+            .row_hits
+            .iter()
+            .find(|&&(r, x0, x1, _)| row == r && col >= x0 && col < x1)
+        {
             self.sel = pos;
             self.detail_scroll = 0;
         }
@@ -335,10 +383,22 @@ impl Component for HelpPanel {
         let keyc = to_rat_style(theme.get("keyword"));
         surface.clear_with(area, theme.get("ui.background"));
 
-        surface.clear_with(Rect::new(area.x, area.y, area.width, 1), theme.get("ui.statusline"));
-        render(Paragraph::new(Span::styled(" Help ", accent)), Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1), surface);
+        surface.clear_with(
+            Rect::new(area.x, area.y, area.width, 1),
+            theme.get("ui.statusline"),
+        );
+        render(
+            Paragraph::new(Span::styled(" Help ", accent)),
+            Rect::new(area.x + 1, area.y, area.width.saturating_sub(1), 1),
+            surface,
+        );
         let _ = (border, bg);
-        let inner = Rect::new(area.x + 1, area.y + 1, area.width.saturating_sub(2), area.height.saturating_sub(1));
+        let inner = Rect::new(
+            area.x + 1,
+            area.y + 1,
+            area.width.saturating_sub(2),
+            area.height.saturating_sub(1),
+        );
         if inner.width < 24 || inner.height < 6 {
             return;
         }
@@ -348,13 +408,24 @@ impl Component for HelpPanel {
         for (i, (c, name)) in CATS.iter().enumerate() {
             let lbl = format!(" {name} ");
             let w = lbl.chars().count() as u16;
-            let st = if *c == self.cat { text.add_modifier(RMod::REVERSED) } else { dim };
-            render(Paragraph::new(Span::styled(lbl, st)), Rect::new(x, inner.y, w, 1), surface);
+            let st = if *c == self.cat {
+                text.add_modifier(RMod::REVERSED)
+            } else {
+                dim
+            };
+            render(
+                Paragraph::new(Span::styled(lbl, st)),
+                Rect::new(x, inner.y, w, 1),
+                surface,
+            );
             self.cat_hits.push((x, x + w, inner.y, i));
             x += w + 1;
         }
         render(
-            Paragraph::new(Span::styled(format!("  🔍 {}▏  ({} results)", self.filter, matched.len()), dim)),
+            Paragraph::new(Span::styled(
+                format!("  🔍 {}▏  ({} results)", self.filter, matched.len()),
+                dim,
+            )),
             Rect::new(x + 1, inner.y, inner.x + inner.width - x - 1, 1),
             surface,
         );
@@ -377,9 +448,16 @@ impl Component for HelpPanel {
             if is_sel {
                 surface.set_style(Rect::new(inner.x, y, list_w, 1), theme.get("ui.selection"));
             }
-            let glyph = if e.cat == Cat::Topics { "📖 " } else { "› " };
+            let glyph = if e.cat == Cat::Topics {
+                "📖 "
+            } else {
+                "› "
+            };
             render(
-                Paragraph::new(Span::styled(format!("{glyph}{}", e.title), if is_sel { accent } else { text })),
+                Paragraph::new(Span::styled(
+                    format!("{glyph}{}", e.title),
+                    if is_sel { accent } else { text },
+                )),
                 Rect::new(inner.x, y, list_w, 1),
                 surface,
             );
@@ -389,7 +467,11 @@ impl Component for HelpPanel {
         // divider
         let dx = inner.x + list_w;
         for y in body_y..body_y + body_h {
-            render(Paragraph::new(Span::styled("│", dim)), Rect::new(dx, y, 1, 1), surface);
+            render(
+                Paragraph::new(Span::styled("│", dim)),
+                Rect::new(dx, y, 1, 1),
+                surface,
+            );
         }
 
         // detail
@@ -400,10 +482,16 @@ impl Component for HelpPanel {
             let mut lines: Vec<Line> = Vec::new();
             lines.push(Line::from(Span::styled(e.title.clone(), accent)));
             if !e.keys.is_empty() {
-                lines.push(Line::from(Span::styled(format!("keys: {}", e.keys.join("   ")), keyc)));
+                lines.push(Line::from(Span::styled(
+                    format!("keys: {}", e.keys.join("   ")),
+                    keyc,
+                )));
             }
             if !e.aliases.is_empty() {
-                lines.push(Line::from(Span::styled(format!("aliases: {}", e.aliases.join(", ")), dim)));
+                lines.push(Line::from(Span::styled(
+                    format!("aliases: {}", e.aliases.join(", ")),
+                    dim,
+                )));
             }
             lines.push(Line::from(""));
             for para in e.doc.split('\n') {
@@ -436,6 +524,9 @@ mod tests {
         eprintln!("help: {cmds} commands, {topics} topics, {with_keys} with keybindings");
         assert!(cmds > 200, "expected the full command surface, got {cmds}");
         assert!(topics >= 8);
-        assert!(with_keys > 50, "expected many commands to show keys, got {with_keys}");
+        assert!(
+            with_keys > 50,
+            "expected many commands to show keys, got {with_keys}"
+        );
     }
 }

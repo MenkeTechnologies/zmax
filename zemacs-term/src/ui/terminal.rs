@@ -42,7 +42,12 @@ impl TerminalPanel {
         let (rows, cols) = (24u16, 80u16);
         let pty = native_pty_system();
         let pair = pty
-            .openpty(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
+            .openpty(PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
             .map_err(|e| std::io::Error::other(e.to_string()))?;
 
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
@@ -172,13 +177,22 @@ impl Component for TerminalPanel {
         }
 
         // title bar
-        surface.clear_with(Rect::new(area.x, area.y, area.width, 1), theme.get("ui.statusline"));
+        surface.clear_with(
+            Rect::new(area.x, area.y, area.width, 1),
+            theme.get("ui.statusline"),
+        );
         let title = if self.dead.load(Ordering::Relaxed) {
             " Terminal — process exited · press any key to close "
         } else {
             " Terminal — F12 detach "
         };
-        surface.set_stringn(area.x + 1, area.y, title, area.width as usize, theme.get("function"));
+        surface.set_stringn(
+            area.x + 1,
+            area.y,
+            title,
+            area.width as usize,
+            theme.get("function"),
+        );
 
         let grid = Rect::new(area.x, area.y + 1, area.width, area.height - 1);
         self.resize(grid.height, grid.width);
@@ -190,7 +204,9 @@ impl Component for TerminalPanel {
         let screen = parser.screen();
         for row in 0..grid.height {
             for col in 0..grid.width {
-                let Some(cell) = screen.cell(row, col) else { continue };
+                let Some(cell) = screen.cell(row, col) else {
+                    continue;
+                };
                 let mut style = Style::default()
                     .fg(conv_color(cell.fgcolor(), Color::Reset))
                     .bg(conv_color(cell.bgcolor(), Color::Reset));
@@ -228,7 +244,11 @@ impl Component for TerminalPanel {
         }
     }
 
-    fn cursor(&self, _area: Rect, _editor: &zemacs_view::editor::Editor) -> (Option<zemacs_core::Position>, CursorKind) {
+    fn cursor(
+        &self,
+        _area: Rect,
+        _editor: &zemacs_view::editor::Editor,
+    ) -> (Option<zemacs_core::Position>, CursorKind) {
         (self.caret, CursorKind::Block)
     }
 

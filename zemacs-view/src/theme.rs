@@ -5,12 +5,12 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use zemacs_core::{hashmap, syntax::Highlight};
-use zemacs_loader::merge_toml_values;
 use log::warn;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Deserializer};
 use toml::{map::Map, Value};
+use zemacs_core::{hashmap, syntax::Highlight};
+use zemacs_loader::merge_toml_values;
 
 use crate::graphics::UnderlineStyle;
 pub use crate::graphics::{Color, Modifier, Style};

@@ -1,13 +1,13 @@
 use crate::keymap;
 use crate::keymap::{merge_keys, KeyTrie};
-use zemacs_loader::merge_toml_values;
-use zemacs_view::{document::Mode, theme};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs;
 use std::io::Error as IOError;
 use toml::de::Error as TomlError;
+use zemacs_loader::merge_toml_values;
+use zemacs_view::{document::Mode, theme};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
@@ -225,14 +225,21 @@ mod tests {
             let evs: Vec<KeyEvent> = chord.split(' ').map(|k| k.parse().unwrap()).collect();
             normal.search(&evs).cloned()
         };
-        let is_static = |t: Option<KeyTrie>, name: &str| {
-            matches!(t, Some(KeyTrie::MappableCommand(MappableCommand::Static { name: n, .. })) if n == name)
-        };
+        let is_static = |t: Option<KeyTrie>, name: &str| matches!(t, Some(KeyTrie::MappableCommand(MappableCommand::Static { name: n, .. })) if n == name);
 
         // G jumps to the last line (vim), and C-v starts a (multi-cursor) block.
-        assert!(is_static(resolve("G"), "goto_last_line"), "G should be goto_last_line");
-        assert!(is_static(resolve("C-v"), "select_mode"), "C-v should start visual block");
+        assert!(
+            is_static(resolve("G"), "goto_last_line"),
+            "G should be goto_last_line"
+        );
+        assert!(
+            is_static(resolve("C-v"), "select_mode"),
+            "C-v should start visual block"
+        );
         // V is the vim linewise-visual sequence, not a single Helix command.
-        assert!(matches!(resolve("V"), Some(KeyTrie::Sequence(_))), "V should be linewise visual");
+        assert!(
+            matches!(resolve("V"), Some(KeyTrie::Sequence(_))),
+            "V should be linewise visual"
+        );
     }
 }

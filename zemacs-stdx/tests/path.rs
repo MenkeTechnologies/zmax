@@ -2,8 +2,8 @@
 
 use std::{env::set_current_dir, error::Error, path::Component};
 
-use zemacs_stdx::path;
 use tempfile::Builder;
+use zemacs_stdx::path;
 
 // Paths on Windows are almost always case-insensitive.
 // Normalization should return the original path.

@@ -1,4 +1,6 @@
 use futures_util::{stream::FuturesUnordered, FutureExt};
+use tokio_stream::StreamExt;
+use tui::{text::Span, widgets::Row};
 use zemacs_lsp::{
     block_on,
     lsp::{
@@ -8,8 +10,6 @@ use zemacs_lsp::{
     util::{diagnostic_to_lsp_diagnostic, lsp_range_to_range, range_to_lsp_range},
     Client, LanguageServerId, OffsetEncoding,
 };
-use tokio_stream::StreamExt;
-use tui::{text::Span, widgets::Row};
 
 use super::{align_view, push_jump, Align, Context, Editor};
 
@@ -1433,13 +1433,15 @@ fn compute_inlay_hints_for_view(
             let inlay_hints_length_limit = doc.config.load().lsp.inlay_hints_length_limit;
 
             for hint in hints {
-                let char_idx =
-                    match zemacs_lsp::util::lsp_pos_to_pos(doc_text, hint.position, offset_encoding)
-                    {
-                        Some(pos) => pos,
-                        // Skip inlay hints that have no "real" position
-                        None => continue,
-                    };
+                let char_idx = match zemacs_lsp::util::lsp_pos_to_pos(
+                    doc_text,
+                    hint.position,
+                    offset_encoding,
+                ) {
+                    Some(pos) => pos,
+                    // Skip inlay hints that have no "real" position
+                    None => continue,
+                };
 
                 let mut label = match hint.label {
                     lsp::InlayHintLabel::String(s) => s,

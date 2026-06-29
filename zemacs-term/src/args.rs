@@ -1,8 +1,8 @@
 use anyhow::Result;
-use zemacs_core::Position;
-use zemacs_view::tree::Layout;
 use indexmap::IndexMap;
 use std::path::{Path, PathBuf};
+use zemacs_core::Position;
+use zemacs_view::tree::Layout;
 
 #[derive(Default)]
 pub struct Args {

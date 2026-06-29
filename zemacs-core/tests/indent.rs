@@ -1,11 +1,11 @@
+use ropey::Rope;
+use std::{ops::Range, path::PathBuf, process::Command};
 use zemacs_core::{
     indent::{indent_level_for_line, treesitter_indent_for_pos, IndentStyle},
     syntax::{config::Configuration, Loader},
     Syntax,
 };
 use zemacs_stdx::rope::RopeSliceExt;
-use ropey::Rope;
-use std::{ops::Range, path::PathBuf, process::Command};
 
 #[test]
 fn test_treesitter_indent_rust_zemacs() {

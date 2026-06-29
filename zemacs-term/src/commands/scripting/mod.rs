@@ -320,7 +320,10 @@ mod tests {
     /// The embedded awkrs interpreter filters string input → string output.
     #[test]
     fn awk_filter_runs() {
-        assert_eq!(super::awk::run("{print $1}", "a b\nc d\n").unwrap(), "a\nc\n");
+        assert_eq!(
+            super::awk::run("{print $1}", "a b\nc d\n").unwrap(),
+            "a\nc\n"
+        );
         assert_eq!(super::awk::run("BEGIN{print 1+2}", "").unwrap(), "3\n");
     }
 

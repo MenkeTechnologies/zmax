@@ -40,7 +40,12 @@ fn dict() -> &'static HashSet<String> {
 
 fn load_words(path: PathBuf) -> HashSet<String> {
     std::fs::read_to_string(path)
-        .map(|c| c.lines().map(|l| l.trim().to_lowercase()).filter(|w| !w.is_empty()).collect())
+        .map(|c| {
+            c.lines()
+                .map(|l| l.trim().to_lowercase())
+                .filter(|w| !w.is_empty())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -56,7 +61,11 @@ fn user_bad() -> &'static RwLock<HashSet<String>> {
 fn persist(path: PathBuf, set: &HashSet<String>) {
     let mut words: Vec<&String> = set.iter().collect();
     words.sort();
-    let body = words.iter().map(|w| w.as_str()).collect::<Vec<_>>().join("\n");
+    let body = words
+        .iter()
+        .map(|w| w.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
     let _ = std::fs::write(path, body);
 }
 

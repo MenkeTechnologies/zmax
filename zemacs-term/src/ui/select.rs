@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 
-use zemacs_view::{graphics::Rect, Editor};
 use tui::{
     buffer::Buffer as Surface,
     widgets::{Block, Widget as _},
 };
+use zemacs_view::{graphics::Rect, Editor};
 
 use crate::compositor::{Component, Context, Event, EventResult};
 

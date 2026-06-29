@@ -1,43 +1,41 @@
 mod completion;
+pub mod dashboard;
 mod document;
 pub(crate) mod editor;
 mod file_tree;
+pub mod help;
 pub mod icons;
 mod ide;
 mod info;
+pub mod keymap_editor;
 pub mod lsp;
 mod markdown;
 pub mod menu;
 pub mod overlay;
 pub mod picker;
 pub mod popup;
+pub mod preferences;
 pub mod prompt;
 pub mod rat;
-pub mod help;
-pub mod keymap_editor;
-pub mod preferences;
 pub mod repl;
 pub mod run;
 pub mod run_config;
+pub mod search;
 mod select;
 pub mod settings;
-pub mod theme_editor;
 mod spinner;
 pub mod startify;
-pub mod dashboard;
-pub mod search;
-pub mod terminal;
 mod statusline;
+pub mod terminal;
 mod text;
 mod text_decorations;
+pub mod theme_editor;
 
 use crate::compositor::Compositor;
 use crate::filter_picker_entry;
 use crate::job::{self, Callback};
 pub use completion::Completion;
 pub use editor::EditorView;
-use zemacs_stdx::rope;
-use zemacs_view::theme::Style;
 pub use markdown::Markdown;
 pub use menu::Menu;
 pub use picker::{Column as PickerColumn, FileLocation, Picker};
@@ -47,9 +45,11 @@ pub use select::Select;
 pub use spinner::{ProgressSpinners, Spinner};
 pub use startify::Startify;
 pub use text::Text;
+use zemacs_stdx::rope;
+use zemacs_view::theme::Style;
 
-use zemacs_view::Editor;
 use tui::text::{Span, Spans};
+use zemacs_view::Editor;
 
 use std::path::Path;
 use std::{error::Error, path::PathBuf};
@@ -441,16 +441,16 @@ fn get_child_if_single_dir(path: &Path) -> Option<PathBuf> {
 pub mod completers {
     use super::Utf8PathBuf;
     use crate::ui::prompt::Completion;
+    use once_cell::sync::Lazy;
+    use std::borrow::Cow;
+    use std::collections::BTreeSet;
+    use tui::text::Span;
     use zemacs_core::command_line::{self, Tokenizer};
     use zemacs_core::fuzzy::fuzzy_match;
     use zemacs_core::syntax::config::LanguageServerFeature;
     use zemacs_view::document::SCRATCH_BUFFER_NAME;
     use zemacs_view::theme;
     use zemacs_view::{editor::Config, Editor};
-    use once_cell::sync::Lazy;
-    use std::borrow::Cow;
-    use std::collections::BTreeSet;
-    use tui::text::Span;
 
     pub type Completer = fn(&Editor, &str) -> Vec<Completion>;
 

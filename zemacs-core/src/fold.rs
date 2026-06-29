@@ -60,12 +60,20 @@ impl Folds {
     /// returns `false`. An identical range is reused (re-closed) rather than
     /// duplicated. Returns `true` if a fold now covers the range.
     pub fn create(&mut self, start: usize, end: usize) -> bool {
-        let (start, end) = if start <= end { (start, end) } else { (end, start) };
+        let (start, end) = if start <= end {
+            (start, end)
+        } else {
+            (end, start)
+        };
         if start == end {
             return false; // a fold must span at least two lines
         }
         // Reuse an exact match (just close it).
-        if let Some(f) = self.folds.iter_mut().find(|f| f.start == start && f.end == end) {
+        if let Some(f) = self
+            .folds
+            .iter_mut()
+            .find(|f| f.start == start && f.end == end)
+        {
             f.closed = true;
             return true;
         }
@@ -77,8 +85,13 @@ impl Folds {
                 return false;
             }
         }
-        self.folds.push(Fold { start, end, closed: true });
-        self.folds.sort_by(|a, b| a.start.cmp(&b.start).then(b.end.cmp(&a.end)));
+        self.folds.push(Fold {
+            start,
+            end,
+            closed: true,
+        });
+        self.folds
+            .sort_by(|a, b| a.start.cmp(&b.start).then(b.end.cmp(&a.end)));
         true
     }
 
@@ -200,11 +213,7 @@ impl Folds {
 
     /// Last fold end strictly before `line`, for `zk` (move to prev fold).
     pub fn prev_fold_end(&self, line: usize) -> Option<usize> {
-        self.folds
-            .iter()
-            .map(|f| f.end)
-            .filter(|&e| e < line)
-            .max()
+        self.folds.iter().map(|f| f.end).filter(|&e| e < line).max()
     }
 
     /// Closed folds as inclusive `(start, end)` line ranges — the form the
@@ -231,7 +240,11 @@ mod tests {
     use super::*;
 
     fn closed(folds: &Folds) -> Vec<(usize, usize)> {
-        folds.iter().filter(|f| f.closed).map(|f| (f.start, f.end)).collect()
+        folds
+            .iter()
+            .filter(|f| f.closed)
+            .map(|f| (f.start, f.end))
+            .collect()
     }
 
     #[test]
@@ -266,8 +279,22 @@ mod tests {
         assert!(f.create(1, 10));
         assert!(f.create(3, 5), "nested fold allowed");
         assert!(!f.create(4, 12), "partial overlap rejected");
-        assert_eq!(f.innermost_at(4), Some(Fold { start: 3, end: 5, closed: true }));
-        assert_eq!(f.innermost_at(8), Some(Fold { start: 1, end: 10, closed: true }));
+        assert_eq!(
+            f.innermost_at(4),
+            Some(Fold {
+                start: 3,
+                end: 5,
+                closed: true
+            })
+        );
+        assert_eq!(
+            f.innermost_at(8),
+            Some(Fold {
+                start: 1,
+                end: 10,
+                closed: true
+            })
+        );
     }
 
     #[test]

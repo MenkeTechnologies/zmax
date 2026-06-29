@@ -7,18 +7,18 @@ mod transport;
 use arc_swap::ArcSwap;
 pub use client::Client;
 pub use futures_executor::block_on;
-pub use zemacs_lsp_types as lsp;
 pub use jsonrpc::Call;
 use log::warn;
 pub use lsp::{Position, Url};
+pub use zemacs_lsp_types as lsp;
 
 use futures_util::stream::select_all::SelectAll;
+use slotmap::SlotMap;
+use tokio::sync::mpsc::UnboundedReceiver;
 use zemacs_core::syntax::config::{
     LanguageConfiguration, LanguageServerConfiguration, LanguageServerFeatures, RootMarkers,
 };
 use zemacs_stdx::path;
-use slotmap::SlotMap;
-use tokio::sync::mpsc::UnboundedReceiver;
 
 use std::{
     collections::HashMap,
@@ -117,7 +117,9 @@ pub mod util {
                 zemacs_core::diagnostic::DiagnosticTag::Unnecessary => {
                     lsp::DiagnosticTag::UNNECESSARY
                 }
-                zemacs_core::diagnostic::DiagnosticTag::Deprecated => lsp::DiagnosticTag::DEPRECATED,
+                zemacs_core::diagnostic::DiagnosticTag::Deprecated => {
+                    lsp::DiagnosticTag::DEPRECATED
+                }
             })
             .collect();
 

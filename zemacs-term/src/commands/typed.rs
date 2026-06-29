@@ -6,6 +6,8 @@ use crate::job::Job;
 
 use super::*;
 
+use serde_json::Value;
+use ui::completers::{self, Completer};
 use zemacs_core::command_line::{Args, Flag, Signature, Token, TokenKind};
 use zemacs_core::fuzzy::fuzzy_match;
 use zemacs_core::indent::MAX_INDENT;
@@ -14,8 +16,6 @@ use zemacs_stdx::path::home_dir;
 use zemacs_view::document::{read_to_string, DEFAULT_LANGUAGE_NAME};
 use zemacs_view::editor::{CloseError, ConfigEvent};
 use zemacs_view::expansion;
-use serde_json::Value;
-use ui::completers::{self, Completer};
 
 #[derive(Clone)]
 pub struct TypableCommand {
@@ -1143,7 +1143,9 @@ pub(crate) fn all_theme_names() -> Vec<String> {
     let mut names =
         zemacs_view::theme::Loader::read_names(&zemacs_loader::config_dir().join("themes"));
     for rt_dir in zemacs_loader::runtime_dirs() {
-        names.extend(zemacs_view::theme::Loader::read_names(&rt_dir.join("themes")));
+        names.extend(zemacs_view::theme::Loader::read_names(
+            &rt_dir.join("themes"),
+        ));
     }
     names.push("default".to_string());
     names.push("base16_default".to_string());
@@ -1302,7 +1304,12 @@ fn conflict_block(
     let ours_end = base_sep.unwrap_or(sep);
     let ours: String = ((start + 1)..ours_end).map(line_str).collect();
     let theirs: String = ((sep + 1)..end).map(line_str).collect();
-    Some((text.line_to_char(start), text.line_to_char(end + 1), ours, theirs))
+    Some((
+        text.line_to_char(start),
+        text.line_to_char(end + 1),
+        ours,
+        theirs,
+    ))
 }
 
 /// Resolve the merge conflict under the cursor by keeping `which` ∈ {ours, theirs, both}.
@@ -1331,7 +1338,8 @@ fn conflict_resolve(cx: &mut compositor::Context, which: &str) -> anyhow::Result
     );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
-    cx.editor.set_status(format!("conflict resolved: kept {which}"));
+    cx.editor
+        .set_status(format!("conflict resolved: kept {which}"));
     Ok(())
 }
 
@@ -1396,7 +1404,11 @@ fn conflict_prev(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyh
 /// Toggle the editor between a dark and a light theme. The current mode is detected from the active
 /// theme's background luminance, so it works regardless of which theme is set. Optional args override
 /// the pair: `:theme-toggle [darkTheme] [lightTheme]`.
-fn theme_toggle(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn theme_toggle(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -1416,8 +1428,14 @@ fn theme_toggle(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
     } else {
         None
     };
-    let dark = args.first().map(|s| s.to_string()).unwrap_or_else(|| "zgui-cyberpunk".to_string());
-    let light = args.get(1).map(|s| s.to_string()).unwrap_or_else(|| "catppuccin_latte".to_string());
+    let dark = args
+        .first()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "zgui-cyberpunk".to_string());
+    let light = args
+        .get(1)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "catppuccin_latte".to_string());
     let target = match (paired, is_light) {
         (Some(p), _) => p,
         (None, true) => dark,
@@ -1568,12 +1586,19 @@ fn shell_quote_cmd(
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let quoted = shell_single_quote(&s);
     if quoted == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(quoted.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(quoted.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -1585,7 +1610,11 @@ fn wrap_in_tag(content: &str, tag: &str) -> String {
 }
 
 /// `:wrap-tag <tag>` — wrap each selection in `<tag>…</tag>` (HTML/JSX/XML).
-fn wrap_tag_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn wrap_tag_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -1597,8 +1626,16 @@ fn wrap_tag_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
     let text = doc.text();
     let selection = doc.selection(view.id).clone();
     let transaction = Transaction::change_by_selection(text, &selection, |range| {
-        let content: String = text.slice(..).slice(range.from()..range.to()).chunks().collect();
-        (range.from(), range.to(), Some(wrap_in_tag(&content, &tag).into()))
+        let content: String = text
+            .slice(..)
+            .slice(range.from()..range.to())
+            .chunks()
+            .collect();
+        (
+            range.from(),
+            range.to(),
+            Some(wrap_in_tag(&content, &tag).into()),
+        )
     });
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
@@ -1623,7 +1660,11 @@ fn csv_column(s: &str, col: usize) -> String {
 }
 
 /// `:csv-column <n>` — replace the selected CSV/TSV with just its Nth column.
-fn csv_column_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn csv_column_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -1635,12 +1676,19 @@ fn csv_column_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = csv_column(&s, col);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -1653,7 +1701,11 @@ fn code_fence(content: &str, lang: &str) -> String {
     format!("```{lang}\n{body}\n```")
 }
 
-fn code_fence_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn code_fence_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -1661,9 +1713,16 @@ fn code_fence_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = code_fence(&s, lang);
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -1741,7 +1800,11 @@ fn format_md_table(s: &str) -> String {
                         _ => "-".repeat(w),
                     }
                 } else {
-                    pad(row.get(ci).map(|s| s.as_str()).unwrap_or(""), widths[ci], align[ci])
+                    pad(
+                        row.get(ci).map(|s| s.as_str()).unwrap_or(""),
+                        widths[ci],
+                        align[ci],
+                    )
                 }
             })
             .collect();
@@ -1750,19 +1813,30 @@ fn format_md_table(s: &str) -> String {
     out.join("\n")
 }
 
-fn md_table_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn md_table_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = format_md_table(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -1791,7 +1865,11 @@ fn json_query(input: &str, path: &str) -> anyhow::Result<String> {
     Ok(serde_json::to_string_pretty(cur)?)
 }
 
-fn json_query_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_query_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -1800,9 +1878,16 @@ fn json_query_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_query(&s, path)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -1817,13 +1902,21 @@ fn json_flatten(input: &str) -> anyhow::Result<String> {
         match v {
             Value::Object(map) if !map.is_empty() => {
                 for (k, val) in map {
-                    let p = if prefix.is_empty() { k.clone() } else { format!("{prefix}.{k}") };
+                    let p = if prefix.is_empty() {
+                        k.clone()
+                    } else {
+                        format!("{prefix}.{k}")
+                    };
                     walk(&p, val, out);
                 }
             }
             Value::Array(arr) if !arr.is_empty() => {
                 for (i, val) in arr.iter().enumerate() {
-                    let p = if prefix.is_empty() { i.to_string() } else { format!("{prefix}.{i}") };
+                    let p = if prefix.is_empty() {
+                        i.to_string()
+                    } else {
+                        format!("{prefix}.{i}")
+                    };
                     walk(&p, val, out);
                 }
             }
@@ -1837,16 +1930,27 @@ fn json_flatten(input: &str) -> anyhow::Result<String> {
     Ok(out.join("\n"))
 }
 
-fn json_flatten_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_flatten_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_flatten(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -1858,10 +1962,14 @@ fn json_flatten_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEven
 /// of `:csv-to-json`. Pure — unit tested.
 fn json_to_csv(input: &str) -> anyhow::Result<String> {
     let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
-    let arr = root.as_array().context("expected a JSON array of objects")?;
+    let arr = root
+        .as_array()
+        .context("expected a JSON array of objects")?;
     let mut headers: Vec<String> = Vec::new();
     for item in arr {
-        let obj = item.as_object().context("every array element must be a JSON object")?;
+        let obj = item
+            .as_object()
+            .context("every array element must be a JSON object")?;
         for k in obj.keys() {
             if !headers.iter().any(|h| h == k) {
                 headers.push(k.clone());
@@ -1895,16 +2003,27 @@ fn json_to_csv(input: &str) -> anyhow::Result<String> {
     Ok(lines.join("\n"))
 }
 
-fn json_to_csv_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_to_csv_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_to_csv(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -1959,16 +2078,27 @@ fn json_unflatten(input: &str) -> anyhow::Result<String> {
     Ok(serde_json::to_string_pretty(&root)?)
 }
 
-fn json_unflatten_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_unflatten_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_unflatten(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -1989,31 +2119,53 @@ fn json_to_toml(input: &str) -> anyhow::Result<String> {
         .context("value has no TOML representation (null, or non-table at top level)")
 }
 
-fn toml_to_json_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn toml_to_json_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = toml_to_json(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn json_to_toml_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_to_toml_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_to_toml(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2038,9 +2190,10 @@ fn json_type_rank(v: Option<&Value>) -> u8 {
 fn json_cmp(a: Option<&Value>, b: Option<&Value>) -> std::cmp::Ordering {
     use std::cmp::Ordering;
     match (a, b) {
-        (Some(Value::Number(x)), Some(Value::Number(y))) => {
-            x.as_f64().partial_cmp(&y.as_f64()).unwrap_or(Ordering::Equal)
-        }
+        (Some(Value::Number(x)), Some(Value::Number(y))) => x
+            .as_f64()
+            .partial_cmp(&y.as_f64())
+            .unwrap_or(Ordering::Equal),
         (Some(Value::String(x)), Some(Value::String(y))) => x.cmp(y),
         (Some(Value::Bool(x)), Some(Value::Bool(y))) => x.cmp(y),
         _ => json_type_rank(a).cmp(&json_type_rank(b)),
@@ -2051,7 +2204,8 @@ fn json_cmp(a: Option<&Value>, b: Option<&Value>) -> std::cmp::Ordering {
 /// expected to be objects and are ordered by that field; without, the elements
 /// themselves are compared. Stable sort. Pure — unit tested.
 fn json_sort_array(input: &str, key: Option<&str>) -> anyhow::Result<String> {
-    let mut root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let mut root: Value =
+        serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
     let arr = root.as_array_mut().context("expected a JSON array")?;
     arr.sort_by(|a, b| match key {
         Some(k) => json_cmp(a.get(k), b.get(k)),
@@ -2060,7 +2214,11 @@ fn json_sort_array(input: &str, key: Option<&str>) -> anyhow::Result<String> {
     Ok(serde_json::to_string_pretty(&root)?)
 }
 
-fn json_sort_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_sort_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -2070,9 +2228,16 @@ fn json_sort_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_sort_array(&s, key)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2104,7 +2269,11 @@ fn json_pick(input: &str, keys: &[&str]) -> anyhow::Result<String> {
     Ok(serde_json::to_string_pretty(&result)?)
 }
 
-fn json_pick_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_pick_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -2122,9 +2291,16 @@ fn json_pick_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_pick(&s, &key_refs)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2155,7 +2331,11 @@ fn json_omit(input: &str, keys: &[&str]) -> anyhow::Result<String> {
     Ok(serde_json::to_string_pretty(&result)?)
 }
 
-fn json_omit_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_omit_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -2173,9 +2353,16 @@ fn json_omit_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_omit(&s, &key_refs)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2185,7 +2372,8 @@ fn json_omit_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
 /// each. Without `key`, identity is the element's canonical JSON; with `key`,
 /// elements are deduplicated by that object field. Pure — unit tested.
 fn json_unique(input: &str, key: Option<&str>) -> anyhow::Result<String> {
-    let mut root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let mut root: Value =
+        serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
     let arr = root.as_array_mut().context("expected a JSON array")?;
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut out: Vec<Value> = Vec::new();
@@ -2201,7 +2389,11 @@ fn json_unique(input: &str, key: Option<&str>) -> anyhow::Result<String> {
     Ok(serde_json::to_string_pretty(&Value::Array(out))?)
 }
 
-fn json_unique_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_unique_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -2211,9 +2403,16 @@ fn json_unique_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent)
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_unique(&s, key)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2243,7 +2442,11 @@ fn json_group_by(input: &str, key: &str) -> anyhow::Result<String> {
     Ok(serde_json::to_string_pretty(&Value::Object(groups))?)
 }
 
-fn json_group_by_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_group_by_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -2255,9 +2458,16 @@ fn json_group_by_cmd(cx: &mut compositor::Context, args: Args, event: PromptEven
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_group_by(&s, key)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2295,9 +2505,16 @@ fn extract_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = extract_matches(&s, pattern)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2307,11 +2524,19 @@ fn extract_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
 /// — the in-buffer equivalent of `grep` / `grep -v`. Pure — unit tested.
 fn filter_lines(input: &str, pattern: &str, keep: bool) -> anyhow::Result<String> {
     let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
-    let out: Vec<&str> = input.lines().filter(|line| re.is_match(line) == keep).collect();
+    let out: Vec<&str> = input
+        .lines()
+        .filter(|line| re.is_match(line) == keep)
+        .collect();
     Ok(out.join("\n"))
 }
 
-fn filter_reject_impl(cx: &mut compositor::Context, args: Args, event: PromptEvent, keep: bool) -> anyhow::Result<()> {
+fn filter_reject_impl(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    keep: bool,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -2323,9 +2548,16 @@ fn filter_reject_impl(cx: &mut compositor::Context, args: Args, event: PromptEve
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = filter_lines(&s, pattern, keep)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2348,7 +2580,11 @@ fn count_matches(input: &str, pattern: &str) -> anyhow::Result<(usize, usize)> {
     Ok((total, lines))
 }
 
-fn count_matches_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn count_matches_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -2359,10 +2595,16 @@ fn count_matches_cmd(cx: &mut compositor::Context, args: Args, event: PromptEven
     }
     let (view, doc) = current!(cx.editor);
     let sel = doc.selection(view.id).primary();
-    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = doc
+        .text()
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let (total, lines) = count_matches(&s, pattern)?;
-    cx.editor
-        .set_status(format!("{total} match(es) on {lines} line(s) for /{pattern}/"));
+    cx.editor.set_status(format!(
+        "{total} match(es) on {lines} line(s) for /{pattern}/"
+    ));
     Ok(())
 }
 
@@ -2389,19 +2631,30 @@ fn uniq_count(input: &str) -> String {
         .join("\n")
 }
 
-fn uniq_count_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn uniq_count_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = uniq_count(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2438,7 +2691,12 @@ fn stats_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     }
     let (view, doc) = current!(cx.editor);
     let sel = doc.selection(view.id).primary();
-    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = doc
+        .text()
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let nums = extract_numbers(&s);
     match number_stats(&nums) {
         Some((n, sum, mean, min, max)) => cx.editor.set_status(format!(
@@ -2501,7 +2759,10 @@ fn seq_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2531,12 +2792,19 @@ fn field_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = cut_field(&s, n);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2560,19 +2828,30 @@ fn running_total(input: &str) -> String {
         .join("\n")
 }
 
-fn running_total_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn running_total_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = running_total(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2600,19 +2879,30 @@ fn diff_lines(input: &str) -> String {
         .join("\n")
 }
 
-fn diff_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn diff_lines_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = diff_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2634,7 +2924,11 @@ fn sum_column(input: &str, n: usize) -> (f64, usize) {
     (sum, count)
 }
 
-fn sum_column_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sum_column_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -2645,10 +2939,17 @@ fn sum_column_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
         .context("usage: :sum-column <n> (1-based)")?;
     let (view, doc) = current!(cx.editor);
     let sel = doc.selection(view.id).primary();
-    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = doc
+        .text()
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let (sum, count) = sum_column(&s, n);
-    cx.editor
-        .set_status(format!("sum of column {n} = {} (over {count} value(s))", fmt_stat(sum)));
+    cx.editor.set_status(format!(
+        "sum of column {n} = {} (over {count} value(s))",
+        fmt_stat(sum)
+    ));
     Ok(())
 }
 
@@ -2671,7 +2972,11 @@ fn shuffle_lines(input: &str, seed: u64) -> String {
     lines.join("\n")
 }
 
-fn shuffle_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn shuffle_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -2682,12 +2987,19 @@ fn shuffle_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = shuffle_lines(&s, seed);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2716,7 +3028,11 @@ fn sample_lines(input: &str, n: usize, seed: u64) -> String {
     }
     let mut chosen: Vec<usize> = idx[..n].to_vec();
     chosen.sort_unstable();
-    chosen.iter().map(|&i| lines[i]).collect::<Vec<_>>().join("\n")
+    chosen
+        .iter()
+        .map(|&i| lines[i])
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn sample_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -2735,12 +3051,19 @@ fn sample_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = sample_lines(&s, n, seed);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2755,7 +3078,8 @@ fn jsonl_to_json(input: &str) -> anyhow::Result<String> {
         if t.is_empty() {
             continue;
         }
-        let v: Value = serde_json::from_str(t).with_context(|| format!("line {}: invalid JSON", i + 1))?;
+        let v: Value =
+            serde_json::from_str(t).with_context(|| format!("line {}: invalid JSON", i + 1))?;
         arr.push(v);
     }
     Ok(serde_json::to_string_pretty(&Value::Array(arr))?)
@@ -2766,35 +3090,60 @@ fn jsonl_to_json(input: &str) -> anyhow::Result<String> {
 fn json_to_jsonl(input: &str) -> anyhow::Result<String> {
     let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
     let arr = root.as_array().context("expected a JSON array")?;
-    let lines = arr.iter().map(serde_json::to_string).collect::<Result<Vec<_>, _>>()?;
+    let lines = arr
+        .iter()
+        .map(serde_json::to_string)
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(lines.join("\n"))
 }
 
-fn jsonl_to_json_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn jsonl_to_json_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = jsonl_to_json(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn json_to_jsonl_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_to_jsonl_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_to_jsonl(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2812,7 +3161,12 @@ fn tail_lines(input: &str, n: usize) -> String {
     lines[start..].join("\n")
 }
 
-fn head_tail_impl(cx: &mut compositor::Context, args: Args, event: PromptEvent, head: bool) -> anyhow::Result<()> {
+fn head_tail_impl(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    head: bool,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -2824,12 +3178,23 @@ fn head_tail_impl(cx: &mut compositor::Context, args: Args, event: PromptEvent, 
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
-    let new = if head { head_lines(&s, n) } else { tail_lines(&s, n) };
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
+    let new = if head {
+        head_lines(&s, n)
+    } else {
+        tail_lines(&s, n)
+    };
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2861,12 +3226,19 @@ fn rev_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = rev_each_line(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2878,10 +3250,14 @@ fn rev_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
 /// unquoted, null/missing as empty. Pure — unit tested.
 fn json_to_table(input: &str) -> anyhow::Result<String> {
     let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
-    let arr = root.as_array().context("expected a JSON array of objects")?;
+    let arr = root
+        .as_array()
+        .context("expected a JSON array of objects")?;
     let mut headers: Vec<String> = Vec::new();
     for item in arr {
-        let obj = item.as_object().context("every array element must be a JSON object")?;
+        let obj = item
+            .as_object()
+            .context("every array element must be a JSON object")?;
         for k in obj.keys() {
             if !headers.iter().any(|h| h == k) {
                 headers.push(k.clone());
@@ -2900,7 +3276,10 @@ fn json_to_table(input: &str) -> anyhow::Result<String> {
         .iter()
         .map(|item| {
             let obj = item.as_object().expect("validated above");
-            headers.iter().map(|h| obj.get(h).map(cell).unwrap_or_default()).collect()
+            headers
+                .iter()
+                .map(|h| obj.get(h).map(cell).unwrap_or_default())
+                .collect()
         })
         .collect();
     let mut widths: Vec<usize> = headers.iter().map(|h| h.chars().count()).collect();
@@ -2927,16 +3306,27 @@ fn json_to_table(input: &str) -> anyhow::Result<String> {
     Ok(out.join("\n"))
 }
 
-fn json_table_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_table_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_to_table(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2961,26 +3351,43 @@ fn hexdump(input: &str) -> String {
         }
         let ascii: String = chunk
             .iter()
-            .map(|&b| if (0x20..0x7f).contains(&b) { b as char } else { '.' })
+            .map(|&b| {
+                if (0x20..0x7f).contains(&b) {
+                    b as char
+                } else {
+                    '.'
+                }
+            })
             .collect();
         out.push(format!("{:08x}  {hex}|{ascii}|", i * 16));
     }
     out.join("\n")
 }
 
-fn hexdump_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn hexdump_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = hexdump(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -2998,19 +3405,30 @@ fn dedup_all_lines(input: &str) -> String {
         .join("\n")
 }
 
-fn dedup_all_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn dedup_all_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = dedup_all_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3046,12 +3464,19 @@ fn caesar_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = caesar(&s, shift);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3097,7 +3522,8 @@ fn base32_decode(input: &str) -> anyhow::Result<String> {
         let v = BASE32_ALPHABET
             .iter()
             .position(|&x| x == b.to_ascii_uppercase())
-            .with_context(|| format!("invalid base32 character '{}'", b as char))? as u32;
+            .with_context(|| format!("invalid base32 character '{}'", b as char))?
+            as u32;
         bits = (bits << 5) | v;
         nbits += 5;
         if nbits >= 8 {
@@ -3108,34 +3534,56 @@ fn base32_decode(input: &str) -> anyhow::Result<String> {
     String::from_utf8(out).context("decoded bytes are not valid UTF-8")
 }
 
-fn base32_encode_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn base32_encode_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = base32_encode(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn base32_decode_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn base32_decode_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = base32_decode(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3161,7 +3609,12 @@ fn crc32_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     }
     let (view, doc) = current!(cx.editor);
     let sel = doc.selection(view.id).primary();
-    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = doc
+        .text()
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let crc = crc32(&s);
     cx.editor.set_status(format!("CRC32: {crc:08x} ({crc})"));
     Ok(())
@@ -3191,12 +3644,19 @@ fn rot47_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = rot47(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3204,13 +3664,42 @@ fn rot47_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
 
 /// International Morse code for A–Z and 0–9.
 const MORSE: &[(char, &str)] = &[
-    ('A', ".-"), ('B', "-..."), ('C', "-.-."), ('D', "-.."), ('E', "."), ('F', "..-."),
-    ('G', "--."), ('H', "...."), ('I', ".."), ('J', ".---"), ('K', "-.-"), ('L', ".-.."),
-    ('M', "--"), ('N', "-."), ('O', "---"), ('P', ".--."), ('Q', "--.-"), ('R', ".-."),
-    ('S', "..."), ('T', "-"), ('U', "..-"), ('V', "...-"), ('W', ".--"), ('X', "-..-"),
-    ('Y', "-.--"), ('Z', "--.."), ('0', "-----"), ('1', ".----"), ('2', "..---"),
-    ('3', "...--"), ('4', "....-"), ('5', "....."), ('6', "-...."), ('7', "--..."),
-    ('8', "---.."), ('9', "----."),
+    ('A', ".-"),
+    ('B', "-..."),
+    ('C', "-.-."),
+    ('D', "-.."),
+    ('E', "."),
+    ('F', "..-."),
+    ('G', "--."),
+    ('H', "...."),
+    ('I', ".."),
+    ('J', ".---"),
+    ('K', "-.-"),
+    ('L', ".-.."),
+    ('M', "--"),
+    ('N', "-."),
+    ('O', "---"),
+    ('P', ".--."),
+    ('Q', "--.-"),
+    ('R', ".-."),
+    ('S', "..."),
+    ('T', "-"),
+    ('U', "..-"),
+    ('V', "...-"),
+    ('W', ".--"),
+    ('X', "-..-"),
+    ('Y', "-.--"),
+    ('Z', "--.."),
+    ('0', "-----"),
+    ('1', ".----"),
+    ('2', "..---"),
+    ('3', "...--"),
+    ('4', "....-"),
+    ('5', "....."),
+    ('6', "-...."),
+    ('7', "--..."),
+    ('8', "---.."),
+    ('9', "----."),
 ];
 
 /// Encode text to Morse: letters separated by spaces, words by ` / `. Unknown
@@ -3222,7 +3711,10 @@ fn morse_encode(input: &str) -> String {
             word.chars()
                 .filter_map(|c| {
                     let uc = c.to_ascii_uppercase();
-                    MORSE.iter().find(|(ch, _)| *ch == uc).map(|(_, code)| *code)
+                    MORSE
+                        .iter()
+                        .find(|(ch, _)| *ch == uc)
+                        .map(|(_, code)| *code)
                 })
                 .collect::<Vec<_>>()
                 .join(" ")
@@ -3248,37 +3740,59 @@ fn morse_decode(input: &str) -> String {
         .join(" ")
 }
 
-fn morse_encode_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn morse_encode_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = morse_encode(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn morse_decode_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn morse_decode_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = morse_decode(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3315,19 +3829,30 @@ fn humanize_lines(input: &str) -> String {
         .join("\n")
 }
 
-fn human_bytes_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn human_bytes_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = humanize_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3362,19 +3887,30 @@ fn ordinalize_lines(input: &str) -> String {
         .join("\n")
 }
 
-fn ordinal_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ordinal_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = ordinalize_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3435,7 +3971,10 @@ fn to_camel(s: &str) -> String {
 }
 
 fn to_pascal(s: &str) -> String {
-    split_identifier_words(s).iter().map(|w| ucfirst(w)).collect()
+    split_identifier_words(s)
+        .iter()
+        .map(|w| ucfirst(w))
+        .collect()
 }
 
 fn to_constant(s: &str) -> String {
@@ -3457,34 +3996,61 @@ fn convert_case_impl(
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = f(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn to_snake_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn to_snake_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     convert_case_impl(cx, event, to_snake)
 }
 
-fn to_kebab_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn to_kebab_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     convert_case_impl(cx, event, to_kebab)
 }
 
-fn to_camel_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn to_camel_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     convert_case_impl(cx, event, to_camel)
 }
 
-fn to_pascal_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn to_pascal_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     convert_case_impl(cx, event, to_pascal)
 }
 
-fn to_constant_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn to_constant_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     convert_case_impl(cx, event, to_constant)
 }
 
@@ -3509,34 +4075,56 @@ fn from_binary(input: &str) -> anyhow::Result<String> {
     String::from_utf8(bytes).context("decoded bytes are not valid UTF-8")
 }
 
-fn to_binary_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn to_binary_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = to_binary(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn from_binary_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn from_binary_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = from_binary(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3565,7 +4153,11 @@ fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
                 }
                 let va = na.trim_start_matches('0');
                 let vb = nb.trim_start_matches('0');
-                let ord = va.len().cmp(&vb.len()).then_with(|| va.cmp(vb)).then_with(|| na.len().cmp(&nb.len()));
+                let ord = va
+                    .len()
+                    .cmp(&vb.len())
+                    .then_with(|| va.cmp(vb))
+                    .then_with(|| na.len().cmp(&nb.len()));
                 if ord != Ordering::Equal {
                     return ord;
                 }
@@ -3589,19 +4181,30 @@ fn natural_sort_lines(input: &str) -> String {
     lines.join("\n")
 }
 
-fn natural_sort_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn natural_sort_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = natural_sort_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3631,33 +4234,58 @@ fn pad_lines(input: &str, width: usize, left: bool) -> String {
         .join("\n")
 }
 
-fn pad_lines_impl(cx: &mut compositor::Context, args: Args, event: PromptEvent, left: bool) -> anyhow::Result<()> {
+fn pad_lines_impl(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    left: bool,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let width: usize = args
         .first()
         .and_then(|a| a.trim().parse().ok())
-        .with_context(|| format!("usage: :{} <width>", if left { "pad-right" } else { "pad-left" }))?;
+        .with_context(|| {
+            format!(
+                "usage: :{} <width>",
+                if left { "pad-right" } else { "pad-left" }
+            )
+        })?;
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = pad_lines(&s, width, left);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn pad_right_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pad_right_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     pad_lines_impl(cx, args, event, true)
 }
 
-fn pad_left_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pad_left_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     pad_lines_impl(cx, args, event, false)
 }
 
@@ -3689,16 +4317,27 @@ fn json_keys(input: &str) -> anyhow::Result<String> {
     Ok(keys.join("\n"))
 }
 
-fn json_keys_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_keys_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_keys(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3718,13 +4357,22 @@ fn json_describe(input: &str) -> anyhow::Result<String> {
     })
 }
 
-fn json_type_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_type_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let sel = doc.selection(view.id).primary();
-    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = doc
+        .text()
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let desc = json_describe(&s)?;
     cx.editor.set_status(format!("JSON: {desc}"));
     Ok(())
@@ -3750,24 +4398,39 @@ fn cut_lines(input: &str, delim: &str, keep_after: bool) -> String {
         .join("\n")
 }
 
-fn cut_lines_impl(cx: &mut compositor::Context, args: Args, event: PromptEvent, keep_after: bool) -> anyhow::Result<()> {
+fn cut_lines_impl(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    keep_after: bool,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let delim = args.join(" ");
     let delim = delim.trim();
     if delim.is_empty() {
-        anyhow::bail!("usage: :{} <delimiter>", if keep_after { "after" } else { "before" });
+        anyhow::bail!(
+            "usage: :{} <delimiter>",
+            if keep_after { "after" } else { "before" }
+        );
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = cut_lines(&s, delim, keep_after);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3798,19 +4461,30 @@ fn swapcase(input: &str) -> String {
         .collect()
 }
 
-fn swapcase_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn swapcase_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = swapcase(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3830,19 +4504,30 @@ fn strip_zero_width(input: &str) -> String {
         .collect()
 }
 
-fn strip_invisible_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn strip_invisible_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = strip_zero_width(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3851,7 +4536,10 @@ fn strip_invisible_cmd(cx: &mut compositor::Context, _args: Args, event: PromptE
 /// Turn each line of `input` into a JSON string element of a pretty array. Pure —
 /// unit tested.
 fn lines_to_json_array(input: &str) -> String {
-    let arr: Vec<Value> = input.lines().map(|l| Value::String(l.to_string())).collect();
+    let arr: Vec<Value> = input
+        .lines()
+        .map(|l| Value::String(l.to_string()))
+        .collect();
     serde_json::to_string_pretty(&Value::Array(arr)).unwrap_or_else(|_| "[]".to_string())
 }
 
@@ -3871,34 +4559,56 @@ fn json_array_to_lines(input: &str) -> anyhow::Result<String> {
     Ok(lines.join("\n"))
 }
 
-fn lines_to_json_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn lines_to_json_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = lines_to_json_array(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn json_to_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_to_lines_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_array_to_lines(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3923,19 +4633,30 @@ fn checkbox_list(input: &str) -> String {
         .join("\n")
 }
 
-fn checkbox_list_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn checkbox_list_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = checkbox_list(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -3964,19 +4685,30 @@ fn unwrap_paragraphs(input: &str) -> String {
     out.join("\n")
 }
 
-fn unwrap_paragraphs_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn unwrap_paragraphs_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = unwrap_paragraphs(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4001,12 +4733,19 @@ fn sql_in_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = sql_in_list(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4037,7 +4776,10 @@ fn hex_to_dec_lines(input: &str) -> String {
                 Some(rest) => (-1i64, rest),
                 None => (1, t),
             };
-            let digits = digits.strip_prefix("0x").or_else(|| digits.strip_prefix("0X")).unwrap_or(digits);
+            let digits = digits
+                .strip_prefix("0x")
+                .or_else(|| digits.strip_prefix("0X"))
+                .unwrap_or(digits);
             match i64::from_str_radix(digits, 16) {
                 Ok(n) => (sign * n).to_string(),
                 Err(_) => l.to_string(),
@@ -4047,37 +4789,59 @@ fn hex_to_dec_lines(input: &str) -> String {
         .join("\n")
 }
 
-fn dec_to_hex_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn dec_to_hex_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = dec_to_hex_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn hex_to_dec_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn hex_to_dec_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = hex_to_dec_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4134,37 +4898,59 @@ fn unicode_unescape(input: &str) -> String {
     out
 }
 
-fn unicode_escape_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn unicode_escape_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = unicode_escape(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn unicode_unescape_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn unicode_unescape_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = unicode_unescape(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4174,23 +4960,39 @@ fn unicode_unescape_cmd(cx: &mut compositor::Context, _args: Args, event: Prompt
 /// lexically for determinism. Pure — unit tested.
 fn sort_by_length(input: &str) -> String {
     let mut lines: Vec<&str> = input.lines().collect();
-    lines.sort_by(|a, b| a.chars().count().cmp(&b.chars().count()).then_with(|| a.cmp(b)));
+    lines.sort_by(|a, b| {
+        a.chars()
+            .count()
+            .cmp(&b.chars().count())
+            .then_with(|| a.cmp(b))
+    });
     lines.join("\n")
 }
 
-fn sort_by_length_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sort_by_length_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = sort_by_length(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4204,15 +5006,25 @@ fn count_unique(input: &str) -> (usize, usize) {
     (unique.len(), total)
 }
 
-fn count_unique_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn count_unique_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let sel = doc.selection(view.id).primary();
-    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = doc
+        .text()
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let (unique, total) = count_unique(&s);
-    cx.editor.set_status(format!("{unique} unique / {total} total line(s)"));
+    cx.editor
+        .set_status(format!("{unique} unique / {total} total line(s)"));
     Ok(())
 }
 
@@ -4231,7 +5043,11 @@ fn rotate_lines(input: &str, n: i64) -> String {
     rotated.join("\n")
 }
 
-fn rotate_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn rotate_lines_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4242,12 +5058,19 @@ fn rotate_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = rotate_lines(&s, n);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4262,7 +5085,8 @@ fn unquote_each_line(input: &str) -> String {
         .map(|line| {
             let first = line.chars().next();
             let last = line.chars().last();
-            if line.chars().count() >= 2 && first == last && matches!(first, Some('"' | '\'' | '`')) {
+            if line.chars().count() >= 2 && first == last && matches!(first, Some('"' | '\'' | '`'))
+            {
                 let q = first.unwrap().len_utf8();
                 line[q..line.len() - q].to_string()
             } else {
@@ -4273,19 +5097,30 @@ fn unquote_each_line(input: &str) -> String {
         .join("\n")
 }
 
-fn unquote_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn unquote_lines_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = unquote_each_line(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4302,19 +5137,30 @@ fn quote_each_line(input: &str) -> String {
         .join("\n")
 }
 
-fn quote_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn quote_lines_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = quote_each_line(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4331,12 +5177,19 @@ fn repeat_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = s.repeat(n);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4364,19 +5217,30 @@ fn capitalize_lines(input: &str) -> String {
         .join("\n")
 }
 
-fn capitalize_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn capitalize_lines_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = capitalize_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4392,19 +5256,30 @@ fn remove_blank_lines(input: &str) -> String {
         .join("\n")
 }
 
-fn remove_blank_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn remove_blank_lines_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = remove_blank_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4417,19 +5292,30 @@ fn trim_lines(input: &str) -> String {
     input.lines().map(str::trim).collect::<Vec<_>>().join("\n")
 }
 
-fn trim_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn trim_lines_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = trim_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4457,16 +5343,27 @@ fn kv_to_json(input: &str) -> anyhow::Result<String> {
     Ok(serde_json::to_string_pretty(&Value::Object(map))?)
 }
 
-fn kv_to_json_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn kv_to_json_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = kv_to_json(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4490,16 +5387,27 @@ fn json_to_kv(input: &str) -> anyhow::Result<String> {
     Ok(lines.join("\n"))
 }
 
-fn json_to_kv_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_to_kv_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_to_kv(&s)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4522,7 +5430,11 @@ fn json_pluck(input: &str, key: &str) -> anyhow::Result<String> {
     Ok(vals.join("\n"))
 }
 
-fn json_pluck_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_pluck_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4534,9 +5446,16 @@ fn json_pluck_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = json_pluck(&s, key)?;
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4549,26 +5468,41 @@ fn to_html_list(input: &str) -> String {
         .lines()
         .filter(|l| !l.trim().is_empty())
         .map(|l| {
-            let esc = l.trim().replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
+            let esc = l
+                .trim()
+                .replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;");
             format!("  <li>{esc}</li>")
         })
         .collect();
     format!("<ul>\n{}\n</ul>", items.join("\n"))
 }
 
-fn to_html_list_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn to_html_list_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = to_html_list(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4589,19 +5523,30 @@ fn from_html_list(input: &str) -> String {
         .join("\n")
 }
 
-fn from_html_list_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn from_html_list_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = from_html_list(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4616,30 +5561,49 @@ fn csv_to_html_table(input: &str) -> String {
         return String::new();
     }
     let delim = if input.contains('\t') { '\t' } else { ',' };
-    let esc = |s: &str| s.trim().replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
+    let esc = |s: &str| {
+        s.trim()
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+    };
     let mut out = String::from("<table>");
     for (i, row) in rows.iter().enumerate() {
         let tag = if i == 0 { "th" } else { "td" };
-        let cells: String = row.split(delim).map(|c| format!("<{tag}>{}</{tag}>", esc(c))).collect();
+        let cells: String = row
+            .split(delim)
+            .map(|c| format!("<{tag}>{}</{tag}>", esc(c)))
+            .collect();
         out.push_str(&format!("\n  <tr>{cells}</tr>"));
     }
     out.push_str("\n</table>");
     out
 }
 
-fn csv_to_html_table_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn csv_to_html_table_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = csv_to_html_table(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4665,22 +5629,37 @@ fn slugify_line(s: &str) -> String {
 /// Slugify each line independently (unlike whole-selection slugify). Pure — unit
 /// tested.
 fn slugify_lines(input: &str) -> String {
-    input.lines().map(slugify_line).collect::<Vec<_>>().join("\n")
+    input
+        .lines()
+        .map(slugify_line)
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
-fn slugify_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn slugify_lines_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = slugify_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4702,19 +5681,30 @@ fn lines_to_csv_row(input: &str) -> String {
         .join(",")
 }
 
-fn lines_to_csv_row_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn lines_to_csv_row_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = lines_to_csv_row(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4752,19 +5742,30 @@ fn csv_row_to_lines(input: &str) -> String {
     fields.join("\n")
 }
 
-fn csv_row_to_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn csv_row_to_lines_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = csv_row_to_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4781,7 +5782,11 @@ fn deslugify(input: &str) -> String {
                 .map(|w| {
                     let mut c = w.chars();
                     match c.next() {
-                        Some(f) => format!("{}{}", f.to_uppercase().collect::<String>(), c.as_str().to_lowercase()),
+                        Some(f) => format!(
+                            "{}{}",
+                            f.to_uppercase().collect::<String>(),
+                            c.as_str().to_lowercase()
+                        ),
                         None => String::new(),
                     }
                 })
@@ -4792,19 +5797,30 @@ fn deslugify(input: &str) -> String {
         .join("\n")
 }
 
-fn deslugify_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn deslugify_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = deslugify(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4820,19 +5836,30 @@ fn csv_to_tsv(input: &str) -> String {
         .join("\n")
 }
 
-fn csv_to_tsv_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn csv_to_tsv_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = csv_to_tsv(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4860,19 +5887,30 @@ fn tsv_to_csv(input: &str) -> String {
         .join("\n")
 }
 
-fn tsv_to_csv_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn tsv_to_csv_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = tsv_to_csv(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4890,26 +5928,39 @@ fn strip_line_numbers(input: &str) -> String {
             if after_digits.len() == trimmed.len() {
                 return line.to_string();
             }
-            let rest = after_digits.strip_prefix(['.', ':', ')', '|', '\t']).unwrap_or(after_digits);
+            let rest = after_digits
+                .strip_prefix(['.', ':', ')', '|', '\t'])
+                .unwrap_or(after_digits);
             rest.trim_start().to_string()
         })
         .collect::<Vec<_>>()
         .join("\n")
 }
 
-fn strip_line_numbers_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn strip_line_numbers_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = strip_line_numbers(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4920,7 +5971,11 @@ fn markdown_link(text: &str, url: &str) -> String {
     format!("[{text}]({url})")
 }
 
-fn markdown_link_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn markdown_link_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4932,9 +5987,16 @@ fn markdown_link_cmd(cx: &mut compositor::Context, args: Args, event: PromptEven
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = markdown_link(&s, url);
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4950,19 +6012,30 @@ fn extract_urls(input: &str) -> String {
         .join("\n")
 }
 
-fn extract_urls_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn extract_urls_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = extract_urls(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -4971,26 +6044,38 @@ fn extract_urls_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEven
 /// Extract every email-like address from `input`, one per line, in order. Pure —
 /// unit tested.
 fn extract_emails(input: &str) -> String {
-    let re = regex::Regex::new(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}").expect("valid regex");
+    let re =
+        regex::Regex::new(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}").expect("valid regex");
     re.find_iter(input)
         .map(|m| m.as_str().to_string())
         .collect::<Vec<_>>()
         .join("\n")
 }
 
-fn extract_emails_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn extract_emails_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = extract_emails(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5006,19 +6091,30 @@ fn extract_ips(input: &str) -> String {
         .join("\n")
 }
 
-fn extract_ips_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn extract_ips_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = extract_ips(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5034,19 +6130,30 @@ fn extract_quoted(input: &str) -> String {
         .join("\n")
 }
 
-fn extract_quoted_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn extract_quoted_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = extract_quoted(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5070,7 +6177,11 @@ fn extract_between(input: &str, start: &str, end: &str) -> String {
     out.join("\n")
 }
 
-fn extract_between_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn extract_between_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5084,12 +6195,19 @@ fn extract_between_cmd(cx: &mut compositor::Context, args: Args, event: PromptEv
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = extract_between(&s, start, end);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5100,7 +6218,11 @@ fn wrap_with(text: &str, wrapper: &str) -> String {
     format!("{wrapper}{text}{wrapper}")
 }
 
-fn wrap_with_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn wrap_with_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5112,9 +6234,16 @@ fn wrap_with_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = wrap_with(&s, wrapper);
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5130,19 +6259,30 @@ fn extract_numbers_lines(input: &str) -> String {
         .join("\n")
 }
 
-fn extract_numbers_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn extract_numbers_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = extract_numbers_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5151,16 +6291,27 @@ fn extract_numbers_cmd(cx: &mut compositor::Context, _args: Args, event: PromptE
 /// Validate that `input` is well-formed JSON, returning the parse error message
 /// (with line/column) on failure. Pure — unit tested.
 fn json_validate(input: &str) -> Result<(), String> {
-    serde_json::from_str::<Value>(input.trim()).map(|_| ()).map_err(|e| e.to_string())
+    serde_json::from_str::<Value>(input.trim())
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }
 
-fn json_validate_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn json_validate_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let sel = doc.selection(view.id).primary();
-    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = doc
+        .text()
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     match json_validate(&s) {
         Ok(()) => cx.editor.set_status("valid JSON"),
         Err(e) => cx.editor.set_status(format!("invalid JSON: {e}")),
@@ -5194,7 +6345,11 @@ fn csv_field_count(row: &str) -> usize {
 /// Check that every non-blank CSV row has the same field count. Returns that count
 /// on success, or a message naming the first offending line. Pure — unit tested.
 fn csv_validate(input: &str) -> Result<usize, String> {
-    let rows: Vec<(usize, &str)> = input.lines().enumerate().filter(|(_, l)| !l.trim().is_empty()).collect();
+    let rows: Vec<(usize, &str)> = input
+        .lines()
+        .enumerate()
+        .filter(|(_, l)| !l.trim().is_empty())
+        .collect();
     let Some((_, first)) = rows.first() else {
         return Err("no rows".to_string());
     };
@@ -5202,19 +6357,31 @@ fn csv_validate(input: &str) -> Result<usize, String> {
     for (i, row) in &rows {
         let n = csv_field_count(row);
         if n != expected {
-            return Err(format!("line {} has {n} fields, expected {expected}", i + 1));
+            return Err(format!(
+                "line {} has {n} fields, expected {expected}",
+                i + 1
+            ));
         }
     }
     Ok(expected)
 }
 
-fn csv_validate_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn csv_validate_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let sel = doc.selection(view.id).primary();
-    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = doc
+        .text()
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     match csv_validate(&s) {
         Ok(n) => cx.editor.set_status(format!("valid CSV: {n} columns")),
         Err(e) => cx.editor.set_status(format!("CSV mismatch: {e}")),
@@ -5243,19 +6410,30 @@ fn ordered_list(input: &str) -> String {
         .join("\n")
 }
 
-fn ordered_list_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ordered_list_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = ordered_list(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5275,8 +6453,10 @@ fn strip_list_markers(input: &str) -> String {
                 .or_else(|| t.strip_prefix("- [X] "))
             {
                 rest.to_string()
-            } else if let Some(rest) =
-                t.strip_prefix("- ").or_else(|| t.strip_prefix("* ")).or_else(|| t.strip_prefix("+ "))
+            } else if let Some(rest) = t
+                .strip_prefix("- ")
+                .or_else(|| t.strip_prefix("* "))
+                .or_else(|| t.strip_prefix("+ "))
             {
                 rest.to_string()
             } else {
@@ -5296,19 +6476,30 @@ fn strip_list_markers(input: &str) -> String {
         .join("\n")
 }
 
-fn strip_list_markers_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn strip_list_markers_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = strip_list_markers(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5328,19 +6519,30 @@ fn sort_words(input: &str) -> String {
         .join("\n")
 }
 
-fn sort_words_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sort_words_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = sort_words(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5362,19 +6564,30 @@ fn unique_words(input: &str) -> String {
         .join("\n")
 }
 
-fn unique_words_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn unique_words_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = unique_words(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5386,26 +6599,40 @@ fn sum_fields(input: &str) -> String {
     input
         .lines()
         .map(|line| {
-            let sum: f64 = line.split_whitespace().filter_map(|w| w.parse::<f64>().ok()).sum();
+            let sum: f64 = line
+                .split_whitespace()
+                .filter_map(|w| w.parse::<f64>().ok())
+                .sum();
             fmt_stat(sum)
         })
         .collect::<Vec<_>>()
         .join("\n")
 }
 
-fn sum_fields_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sum_fields_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = sum_fields(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5417,7 +6644,10 @@ fn avg_fields(input: &str) -> String {
     input
         .lines()
         .map(|line| {
-            let nums: Vec<f64> = line.split_whitespace().filter_map(|w| w.parse::<f64>().ok()).collect();
+            let nums: Vec<f64> = line
+                .split_whitespace()
+                .filter_map(|w| w.parse::<f64>().ok())
+                .collect();
             if nums.is_empty() {
                 line.to_string()
             } else {
@@ -5428,19 +6658,30 @@ fn avg_fields(input: &str) -> String {
         .join("\n")
 }
 
-fn avg_fields_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn avg_fields_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = avg_fields(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5452,7 +6693,10 @@ fn reduce_fields(input: &str, max: bool) -> String {
     input
         .lines()
         .map(|line| {
-            let nums: Vec<f64> = line.split_whitespace().filter_map(|w| w.parse::<f64>().ok()).collect();
+            let nums: Vec<f64> = line
+                .split_whitespace()
+                .filter_map(|w| w.parse::<f64>().ok())
+                .collect();
             if nums.is_empty() {
                 return line.to_string();
             }
@@ -5467,29 +6711,48 @@ fn reduce_fields(input: &str, max: bool) -> String {
         .join("\n")
 }
 
-fn reduce_fields_impl(cx: &mut compositor::Context, event: PromptEvent, max: bool) -> anyhow::Result<()> {
+fn reduce_fields_impl(
+    cx: &mut compositor::Context,
+    event: PromptEvent,
+    max: bool,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = reduce_fields(&s, max);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn max_fields_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn max_fields_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     reduce_fields_impl(cx, event, true)
 }
 
-fn min_fields_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn min_fields_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     reduce_fields_impl(cx, event, false)
 }
 
@@ -5499,7 +6762,10 @@ fn range_fields(input: &str) -> String {
     input
         .lines()
         .map(|line| {
-            let nums: Vec<f64> = line.split_whitespace().filter_map(|w| w.parse::<f64>().ok()).collect();
+            let nums: Vec<f64> = line
+                .split_whitespace()
+                .filter_map(|w| w.parse::<f64>().ok())
+                .collect();
             if nums.is_empty() {
                 return line.to_string();
             }
@@ -5511,19 +6777,30 @@ fn range_fields(input: &str) -> String {
         .join("\n")
 }
 
-fn range_fields_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn range_fields_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = range_fields(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5547,19 +6824,30 @@ fn to_env_export(input: &str) -> String {
         .join("\n")
 }
 
-fn to_env_export_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn to_env_export_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = to_env_export(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5582,19 +6870,30 @@ fn strip_export(input: &str) -> String {
         .join("\n")
 }
 
-fn strip_export_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn strip_export_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = strip_export(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5611,29 +6910,48 @@ fn unix2dos(input: &str) -> String {
     input.replace("\r\n", "\n").replace('\n', "\r\n")
 }
 
-fn line_ending_impl(cx: &mut compositor::Context, event: PromptEvent, to_dos: bool) -> anyhow::Result<()> {
+fn line_ending_impl(
+    cx: &mut compositor::Context,
+    event: PromptEvent,
+    to_dos: bool,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = if to_dos { unix2dos(&s) } else { dos2unix(&s) };
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn dos2unix_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn dos2unix_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     line_ending_impl(cx, event, false)
 }
 
-fn unix2dos_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn unix2dos_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     line_ending_impl(cx, event, true)
 }
 
@@ -5641,7 +6959,10 @@ fn unix2dos_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
 /// Non-numeric lines pass through; if the total is zero, nothing changes. Pure —
 /// unit tested.
 fn percent_of_total(input: &str) -> String {
-    let nums: Vec<Option<f64>> = input.lines().map(|l| l.trim().parse::<f64>().ok()).collect();
+    let nums: Vec<Option<f64>> = input
+        .lines()
+        .map(|l| l.trim().parse::<f64>().ok())
+        .collect();
     let total: f64 = nums.iter().flatten().sum();
     input
         .lines()
@@ -5654,19 +6975,30 @@ fn percent_of_total(input: &str) -> String {
         .join("\n")
 }
 
-fn percent_of_total_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn percent_of_total_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = percent_of_total(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5691,19 +7023,30 @@ fn running_max(input: &str) -> String {
         .join("\n")
 }
 
-fn running_max_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn running_max_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = running_max(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5728,19 +7071,30 @@ fn running_min(input: &str) -> String {
         .join("\n")
 }
 
-fn running_min_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn running_min_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = running_min(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5759,7 +7113,11 @@ fn to_fixed(input: &str, n: usize) -> String {
         .join("\n")
 }
 
-fn to_fixed_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn to_fixed_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5770,12 +7128,19 @@ fn to_fixed_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = to_fixed(&s, n);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5813,12 +7178,19 @@ fn clamp_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = clamp_lines(&s, lo, hi);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5848,12 +7220,19 @@ fn scale_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = scale_lines(&s, factor);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5883,12 +7262,19 @@ fn offset_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = offset_lines(&s, delta);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5914,12 +7300,19 @@ fn abs_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = abs_lines(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5932,19 +7325,30 @@ fn linkify(input: &str) -> String {
     re.replace_all(input, "[$0]($0)").to_string()
 }
 
-fn linkify_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn linkify_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = linkify(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5957,19 +7361,30 @@ fn strip_markdown_links(input: &str) -> String {
     re.replace_all(input, "$1").to_string()
 }
 
-fn strip_markdown_links_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn strip_markdown_links_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = strip_markdown_links(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -5980,26 +7395,43 @@ fn strip_markdown_links_cmd(cx: &mut compositor::Context, _args: Args, event: Pr
 /// single ones. Pure — unit tested.
 fn strip_emphasis(input: &str) -> String {
     let mut s = input.to_string();
-    for pat in [r"\*\*([^*]+)\*\*", r"__([^_]+)__", r"\*([^*]+)\*", r"_([^_]+)_", r"`([^`]+)`"] {
+    for pat in [
+        r"\*\*([^*]+)\*\*",
+        r"__([^_]+)__",
+        r"\*([^*]+)\*",
+        r"_([^_]+)_",
+        r"`([^`]+)`",
+    ] {
         let re = regex::Regex::new(pat).expect("valid regex");
         s = re.replace_all(&s, "$1").to_string();
     }
     s
 }
 
-fn strip_emphasis_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn strip_emphasis_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = strip_emphasis(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -6012,19 +7444,30 @@ fn strip_html_comments(input: &str) -> String {
     re.replace_all(input, "").to_string()
 }
 
-fn strip_html_comments_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn strip_html_comments_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = strip_html_comments(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -6037,19 +7480,30 @@ fn remove_trailing_commas(input: &str) -> String {
     re.replace_all(input, "$1").to_string()
 }
 
-fn remove_trailing_commas_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn remove_trailing_commas_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = remove_trailing_commas(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -6063,19 +7517,30 @@ fn add_trailing_commas(input: &str) -> String {
     re.replace_all(input, "$1,$2").to_string()
 }
 
-fn add_trailing_commas_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn add_trailing_commas_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = add_trailing_commas(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -6088,7 +7553,8 @@ fn smart_quotes(input: &str) -> String {
     let chars: Vec<char> = input.chars().collect();
     let mut out = String::new();
     for (i, &c) in chars.iter().enumerate() {
-        let opening = i == 0 || chars[i - 1].is_whitespace() || matches!(chars[i - 1], '(' | '[' | '{');
+        let opening =
+            i == 0 || chars[i - 1].is_whitespace() || matches!(chars[i - 1], '(' | '[' | '{');
         match c {
             '"' => out.push(if opening { '\u{201C}' } else { '\u{201D}' }),
             '\'' => out.push(if opening { '\u{2018}' } else { '\u{2019}' }),
@@ -6098,19 +7564,30 @@ fn smart_quotes(input: &str) -> String {
     out
 }
 
-fn smart_quotes_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn smart_quotes_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = smart_quotes(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -6125,19 +7602,30 @@ fn typographic_dashes(input: &str) -> String {
         .replace("...", "\u{2026}")
 }
 
-fn typographic_dashes_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn typographic_dashes_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = typographic_dashes(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -6154,19 +7642,30 @@ fn de_typography(input: &str) -> String {
         .replace('\u{2026}', "...")
 }
 
-fn de_typography_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn de_typography_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = de_typography(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -6208,19 +7707,30 @@ fn to_ascii(input: &str) -> String {
     out
 }
 
-fn to_ascii_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn to_ascii_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = to_ascii(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -6228,13 +7738,42 @@ fn to_ascii_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
 
 /// NATO phonetic alphabet for A–Z and 0–9.
 const NATO: &[(char, &str)] = &[
-    ('a', "Alfa"), ('b', "Bravo"), ('c', "Charlie"), ('d', "Delta"), ('e', "Echo"),
-    ('f', "Foxtrot"), ('g', "Golf"), ('h', "Hotel"), ('i', "India"), ('j', "Juliett"),
-    ('k', "Kilo"), ('l', "Lima"), ('m', "Mike"), ('n', "November"), ('o', "Oscar"),
-    ('p', "Papa"), ('q', "Quebec"), ('r', "Romeo"), ('s', "Sierra"), ('t', "Tango"),
-    ('u', "Uniform"), ('v', "Victor"), ('w', "Whiskey"), ('x', "Xray"), ('y', "Yankee"), ('z', "Zulu"),
-    ('0', "Zero"), ('1', "One"), ('2', "Two"), ('3', "Three"), ('4', "Four"),
-    ('5', "Five"), ('6', "Six"), ('7', "Seven"), ('8', "Eight"), ('9', "Nine"),
+    ('a', "Alfa"),
+    ('b', "Bravo"),
+    ('c', "Charlie"),
+    ('d', "Delta"),
+    ('e', "Echo"),
+    ('f', "Foxtrot"),
+    ('g', "Golf"),
+    ('h', "Hotel"),
+    ('i', "India"),
+    ('j', "Juliett"),
+    ('k', "Kilo"),
+    ('l', "Lima"),
+    ('m', "Mike"),
+    ('n', "November"),
+    ('o', "Oscar"),
+    ('p', "Papa"),
+    ('q', "Quebec"),
+    ('r', "Romeo"),
+    ('s', "Sierra"),
+    ('t', "Tango"),
+    ('u', "Uniform"),
+    ('v', "Victor"),
+    ('w', "Whiskey"),
+    ('x', "Xray"),
+    ('y', "Yankee"),
+    ('z', "Zulu"),
+    ('0', "Zero"),
+    ('1', "One"),
+    ('2', "Two"),
+    ('3', "Three"),
+    ('4', "Four"),
+    ('5', "Five"),
+    ('6', "Six"),
+    ('7', "Seven"),
+    ('8', "Eight"),
+    ('9', "Nine"),
 ];
 
 /// Spell `input` in the NATO phonetic alphabet (case-insensitive), space-joined.
@@ -6257,12 +7796,19 @@ fn nato_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = nato_spell(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -6271,27 +7817,46 @@ fn nato_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
 /// Transpose a whitespace-separated grid: row `i`, column `j` becomes row `j`,
 /// column `i`. Short rows are padded with empty cells. Pure — unit tested.
 fn transpose_grid(input: &str) -> String {
-    let rows: Vec<Vec<&str>> = input.lines().map(|l| l.split_whitespace().collect()).collect();
+    let rows: Vec<Vec<&str>> = input
+        .lines()
+        .map(|l| l.split_whitespace().collect())
+        .collect();
     let cols = rows.iter().map(Vec::len).max().unwrap_or(0);
     (0..cols)
-        .map(|c| rows.iter().map(|r| r.get(c).copied().unwrap_or("")).collect::<Vec<_>>().join(" "))
+        .map(|c| {
+            rows.iter()
+                .map(|r| r.get(c).copied().unwrap_or(""))
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }
 
-fn transpose_grid_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn transpose_grid_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = transpose_grid(&s);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -6306,7 +7871,11 @@ fn repeat_lines(input: &str, n: usize) -> String {
         .join("\n")
 }
 
-fn repeat_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn repeat_lines_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6318,17 +7887,23 @@ fn repeat_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = repeat_lines(&s, n);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
-
 
 /// `:grep-word` — search the project for the whole word under the cursor (a
 /// lightweight "find references"), jumpable in the Run console.
@@ -6418,22 +7993,32 @@ fn rename_word(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     let count = ranges.len();
     let transaction = Transaction::change(
         doc.text(),
-        ranges.into_iter().map(|(s, e)| (s, e, Some(new_name.into()))),
+        ranges
+            .into_iter()
+            .map(|(s, e)| (s, e, Some(new_name.into()))),
     );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
-    cx.editor
-        .set_status(format!("renamed {count} occurrence(s) of `{old}` → `{new_name}`"));
+    cx.editor.set_status(format!(
+        "renamed {count} occurrence(s) of `{old}` → `{new_name}`"
+    ));
     Ok(())
 }
 
 /// `:todos` — scan the whole project for TODO/FIXME-style markers, jumpable in
 /// the Run console (the Todo tab only scans the current buffer).
-fn project_todos(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn project_todos(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    spawn_into_run_console(cx, grep_command(r"\b(TODO|FIXME|HACK|XXX|BUG|NOTE)\b", false));
+    spawn_into_run_console(
+        cx,
+        grep_command(r"\b(TODO|FIXME|HACK|XXX|BUG|NOTE)\b", false),
+    );
     Ok(())
 }
 
@@ -6934,7 +8519,11 @@ fn run_git_stash(args: &[&str]) -> Result<String, String> {
 
 /// `:stash` — stash the working-tree changes, then reload open buffers so they
 /// reflect the reverted (HEAD) state.
-pub(crate) fn git_stash(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+pub(crate) fn git_stash(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6953,7 +8542,11 @@ pub(crate) fn git_stash(cx: &mut compositor::Context, args: Args, event: PromptE
 }
 
 /// `:stash-pop` — restore the most recent stash, then reload open buffers.
-pub(crate) fn git_stash_pop(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+pub(crate) fn git_stash_pop(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6997,7 +8590,10 @@ fn git_on_current_file(
         cx.editor.set_status(format!("{verb} {}", path.display()));
         Ok(())
     } else {
-        bail!("git {verb}: {}", String::from_utf8_lossy(&out.stderr).trim());
+        bail!(
+            "git {verb}: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
     }
 }
 
@@ -7010,7 +8606,11 @@ fn git_stage(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
 }
 
 /// `:git-unstage` — unstage the current buffer's file (`git reset HEAD`).
-fn git_unstage(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn git_unstage(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -7780,7 +9380,8 @@ fn translate_vim_option(
                 let v = if toggle {
                     !current_bool(hkey)
                 } else if let Some(val) = value {
-                    val.parse().map_err(|_| anyhow!("expected bool for {name}"))?
+                    val.parse()
+                        .map_err(|_| anyhow!("expected bool for {name}"))?
                 } else {
                     !neg
                 };
@@ -7796,7 +9397,9 @@ fn translate_vim_option(
             }
             VimOptKind::Num => {
                 let val = value.ok_or_else(|| anyhow!("'{name}' needs a value (e.g. {name}=4)"))?;
-                let n: i64 = val.parse().map_err(|_| anyhow!("expected number for {name}"))?;
+                let n: i64 = val
+                    .parse()
+                    .map_err(|_| anyhow!("expected number for {name}"))?;
                 Value::Number(n.into())
             }
         };
@@ -7817,7 +9420,10 @@ fn apply_config_value(
         .ok_or_else(|| anyhow!("Unknown key `{zemacs_key}`"))?;
     *slot = new_value;
     let config = serde_json::from_value(config).map_err(|e| anyhow!("{e}"))?;
-    cx.editor.config_events.0.send(ConfigEvent::Update(config))?;
+    cx.editor
+        .config_events
+        .0
+        .send(ConfigEvent::Update(config))?;
     Ok(())
 }
 
@@ -8254,11 +9860,7 @@ fn transform_symbol_under_cursor(
     Ok(())
 }
 
-fn change_case(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn change_case(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -8269,11 +9871,7 @@ fn change_case(
     })
 }
 
-fn cycle_case(
-    cx: &mut compositor::Context,
-    _args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn cycle_case(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -8877,8 +10475,10 @@ fn put_lines_impl(
         text.insert_str(0, line_ending);
     }
 
-    let transaction =
-        Transaction::change(doc.text(), std::iter::once((insert_at, insert_at, Some(Tendril::from(text.as_str())))));
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((insert_at, insert_at, Some(Tendril::from(text.as_str())))),
+    );
     doc.apply(&transaction, view.id);
     // Place the cursor at the start of the first put line.
     let new_slice = doc.text().slice(..);
@@ -8891,7 +10491,11 @@ fn put_lines_impl(
 fn put_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     put_lines_impl(cx, args, event, false)
 }
-fn put_lines_above(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn put_lines_above(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     put_lines_impl(cx, args, event, true)
 }
 
@@ -9069,7 +10673,10 @@ fn align_delimiter(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let delim = args.first().map(|s| s.to_string()).unwrap_or_else(|| "=".into());
+    let delim = args
+        .first()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "=".into());
     if delim.is_empty() {
         return Ok(());
     }
@@ -9154,25 +10761,37 @@ fn retab(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
     Ok(())
 }
 
-fn join_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
-    join_lines(cx, args, event, true)
-}
-fn join_lines_nospace_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
-    join_lines(cx, args, event, false)
-}
-
-fn yank_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
-    yank_lines(cx, args, event, false)
-}
-fn delete_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
-    yank_lines(cx, args, event, true)
-}
-
-fn substitute(
+fn join_lines_cmd(
     cx: &mut compositor::Context,
     args: Args,
     event: PromptEvent,
 ) -> anyhow::Result<()> {
+    join_lines(cx, args, event, true)
+}
+fn join_lines_nospace_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    join_lines(cx, args, event, false)
+}
+
+fn yank_lines_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    yank_lines(cx, args, event, false)
+}
+fn delete_lines_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    yank_lines(cx, args, event, true)
+}
+
+fn substitute(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -9195,11 +10814,7 @@ fn substitute(
     do_substitute(cx.editor, false, pattern, replacement, flags)
 }
 
-fn split_line(
-    cx: &mut compositor::Context,
-    _args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn split_line(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -9211,8 +10826,10 @@ fn split_line(
 
     // Insert a line ending at the cursor, pushing the rest of the line down,
     // but keep the cursor where it was (emacs `split-line`).
-    let transaction =
-        Transaction::change(doc.text(), std::iter::once((cursor, cursor, Some(line_ending))));
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((cursor, cursor, Some(line_ending))),
+    );
     doc.apply(&transaction, view.id);
     doc.set_selection(view.id, Selection::point(cursor));
     doc.append_changes_to_history(view);
@@ -9250,7 +10867,10 @@ fn just_one_space(
         std::iter::once((start, end, Some(Tendril::from(" ")))),
     );
     doc.apply(&transaction, view.id);
-    doc.set_selection(view.id, Selection::point((start + 1).min(doc.text().len_chars())));
+    doc.set_selection(
+        view.id,
+        Selection::point((start + 1).min(doc.text().len_chars())),
+    );
     doc.append_changes_to_history(view);
     Ok(())
 }
@@ -9272,7 +10892,10 @@ fn delete_blank_lines(
     let is_blank = |line: usize| {
         let start = slice.line_to_char(line);
         let end = line_ending::line_end_char_index(&slice, line);
-        slice.slice(start..end).chars().all(|c| c == ' ' || c == '\t')
+        slice
+            .slice(start..end)
+            .chars()
+            .all(|c| c == ' ' || c == '\t')
     };
 
     // Collapse each run of consecutive blank lines down to a single blank line.
@@ -9490,7 +11113,11 @@ fn sort_line_block(
                 .then_with(|| a.cmp(b))
         });
     } else if insensitive {
-        lines.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()).then_with(|| a.cmp(b)));
+        lines.sort_by(|a, b| {
+            a.to_lowercase()
+                .cmp(&b.to_lowercase())
+                .then_with(|| a.cmp(b))
+        });
     } else {
         lines.sort();
     }
@@ -9508,11 +11135,19 @@ fn sort_line_block(
 }
 
 /// `:sort-by-field <n>` — sort the selected lines by their Nth whitespace field.
-fn sort_by_field(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sort_by_field(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let field: usize = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(1).max(1);
+    let field: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .unwrap_or(1)
+        .max(1);
 
     let (view, doc) = current!(cx.editor);
     let slice = doc.text().slice(..);
@@ -9797,7 +11432,11 @@ fn dedup_adjacent_lines(block: &str) -> String {
 
 /// `:dedup-adjacent` — collapse consecutive duplicate lines in the selection
 /// (Unix `uniq`), unlike `:uniquify-lines` which removes all duplicates.
-fn dedup_adjacent(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn dedup_adjacent(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -9855,11 +11494,18 @@ fn number_lines(block: &str, start: usize) -> String {
 
 /// `:number-lines [start]` — prepend line numbers (default starting at 1) to the
 /// selected lines, like `nl`/`cat -n`.
-fn number_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn number_lines_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let start: usize = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(1);
+    let start: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .unwrap_or(1);
 
     let (view, doc) = current!(cx.editor);
     let slice = doc.text().slice(..);
@@ -9900,7 +11546,10 @@ struct Calc<'a> {
 
 impl<'a> Calc<'a> {
     fn new(s: &'a str) -> Self {
-        Calc { s: s.as_bytes(), i: 0 }
+        Calc {
+            s: s.as_bytes(),
+            i: 0,
+        }
     }
     fn peek(&mut self) -> Option<u8> {
         while self.i < self.s.len() && self.s[self.i].is_ascii_whitespace() {
@@ -10049,7 +11698,9 @@ fn calc(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     if !expr.trim().is_empty() {
         // `:calc <expr>` — show the result in the status line.
         match eval_arith(&expr) {
-            Ok(v) => cx.editor.set_status(format!("{} = {}", expr.trim(), format_calc(v))),
+            Ok(v) => cx
+                .editor
+                .set_status(format!("{} = {}", expr.trim(), format_calc(v))),
             Err(e) => bail!("calc: {e}"),
         }
         return Ok(());
@@ -10088,13 +11739,19 @@ fn extract_numbers(s: &str) -> Vec<f64> {
     let b = s.as_bytes();
     let mut nums = Vec::new();
     let mut i = 0;
-    let boundary = |c: u8| matches!(c, b' ' | b'\t' | b'\n' | b'\r' | b'(' | b'[' | b'{' | b',' | b';' | b':' | b'=');
+    let boundary = |c: u8| {
+        matches!(
+            c,
+            b' ' | b'\t' | b'\n' | b'\r' | b'(' | b'[' | b'{' | b',' | b';' | b':' | b'='
+        )
+    };
     while i < b.len() {
         let c = b[i];
         let signed = (c == b'-' || c == b'+')
             && (i == 0 || boundary(b[i - 1]))
             && i + 1 < b.len()
-            && (b[i + 1].is_ascii_digit() || (b[i + 1] == b'.' && i + 2 < b.len() && b[i + 2].is_ascii_digit()));
+            && (b[i + 1].is_ascii_digit()
+                || (b[i + 1] == b'.' && i + 2 < b.len() && b[i + 2].is_ascii_digit()));
         let starts = c.is_ascii_digit()
             || (c == b'.' && i + 1 < b.len() && b[i + 1].is_ascii_digit())
             || signed;
@@ -10121,7 +11778,10 @@ fn extract_numbers(s: &str) -> Vec<f64> {
                 }
             }
         }
-        if let Ok(v) = std::str::from_utf8(&b[start..i]).unwrap_or("").parse::<f64>() {
+        if let Ok(v) = std::str::from_utf8(&b[start..i])
+            .unwrap_or("")
+            .parse::<f64>()
+        {
             nums.push(v);
         }
     }
@@ -10165,7 +11825,12 @@ fn format_utc(secs: u64, with_time: bool) -> String {
     let (year, month, day) = crate::logging::civil_from_days(days);
     let date = format!("{year:04}-{month:02}-{day:02}");
     if with_time {
-        format!("{date} {:02}:{:02}:{:02}", tod / 3600, (tod % 3600) / 60, tod % 60)
+        format!(
+            "{date} {:02}:{:02}:{:02}",
+            tod / 3600,
+            (tod % 3600) / 60,
+            tod % 60
+        )
     } else {
         date
     }
@@ -10228,7 +11893,10 @@ fn lorem_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let n: usize = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(30);
+    let n: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .unwrap_or(30);
     insert_at_cursors(cx, lorem(n));
     Ok(())
 }
@@ -10291,7 +11959,9 @@ fn show_bases(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
         let sel = doc.selection(view.id).primary();
-        text.slice(sel.from()..sel.to()).chunks().collect::<String>()
+        text.slice(sel.from()..sel.to())
+            .chunks()
+            .collect::<String>()
     };
     match parse_int_any(&s) {
         Some(n) => cx.editor.set_status(format_bases(n)),
@@ -10312,7 +11982,11 @@ fn increment_numbers(s: &str, delta: i64) -> String {
             while i < chars.len() && chars[i].is_ascii_digit() {
                 i += 1;
             }
-            let num: i64 = chars[start..i].iter().collect::<String>().parse().unwrap_or(0);
+            let num: i64 = chars[start..i]
+                .iter()
+                .collect::<String>()
+                .parse()
+                .unwrap_or(0);
             out.push_str(&(num + delta).to_string());
         } else {
             out.push(chars[i]);
@@ -10361,12 +12035,19 @@ fn pad_numbers_cmd(
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = pad_numbers(&s, width);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -10382,23 +12063,37 @@ fn increment_numbers_cmd(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let delta: i64 = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(1);
+    let delta: i64 = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .unwrap_or(1);
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
-    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let s: String = text
+        .slice(..)
+        .slice(sel.from()..sel.to())
+        .chunks()
+        .collect();
     let new = increment_numbers(&s, delta);
     if new == s {
         return Ok(());
     }
-    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((sel.from(), sel.to(), Some(new.into()))),
+    );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
 }
 
 /// `:date` — insert the current UTC date (`YYYY-MM-DD`).
-fn insert_date(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn insert_date(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -10407,7 +12102,11 @@ fn insert_date(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
 }
 
 /// `:datetime` — insert the current UTC date and time (`YYYY-MM-DD HH:MM:SS`).
-fn insert_datetime(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn insert_datetime(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -10416,7 +12115,11 @@ fn insert_datetime(cx: &mut compositor::Context, _args: Args, event: PromptEvent
 }
 
 /// `:timestamp` — insert the current Unix epoch in seconds.
-fn insert_timestamp(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn insert_timestamp(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -10461,7 +12164,11 @@ fn random_bytes_16() -> [u8; 16] {
 }
 
 /// `:uuid` — insert a fresh random UUID v4 at each cursor (replacing any selection).
-fn insert_uuid(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn insert_uuid(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -10529,12 +12236,17 @@ fn transpose_words(
     let word2: Tendril = slice.slice(w2_start..w2_end).chunks().collect();
     let swapped: Tendril = format!("{word2}{sep}{word1}").into();
 
-    let transaction =
-        Transaction::change(doc.text(), std::iter::once((w1_start, w2_end, Some(swapped))));
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((w1_start, w2_end, Some(swapped))),
+    );
     doc.apply(&transaction, view.id);
     // Point lands after the transposed pair (emacs behaviour). Region length is
     // unchanged, so w2_end is still the end of the swapped span.
-    doc.set_selection(view.id, Selection::point(w2_end.min(doc.text().len_chars())));
+    doc.set_selection(
+        view.id,
+        Selection::point(w2_end.min(doc.text().len_chars())),
+    );
     doc.append_changes_to_history(view);
     Ok(())
 }
@@ -10763,7 +12475,8 @@ fn open_log(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
         return Ok(());
     }
 
-    cx.editor.open(&zemacs_loader::log_file(), Action::Replace)?;
+    cx.editor
+        .open(&zemacs_loader::log_file(), Action::Replace)?;
     Ok(())
 }
 
@@ -10867,11 +12580,7 @@ fn run_shell_command(
 /// `:elisp <code>` / `:eval-expression` — evaluate Emacs Lisp against the live
 /// editor via the embedded elisprs interpreter. The result is shown on the
 /// status line.
-fn elisp_eval(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn elisp_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -10945,9 +12654,11 @@ fn zsh_run(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                             format!("```\n{}\n```", output.trim_end()),
                             editor.syn_loader.clone(),
                         );
-                        let popup = Popup::new("zsh", contents).position(Some(
-                            zemacs_core::Position::new(editor.cursor().0.unwrap_or_default().row, 2),
-                        ));
+                        let popup =
+                            Popup::new("zsh", contents).position(Some(zemacs_core::Position::new(
+                                editor.cursor().0.unwrap_or_default().row,
+                                2,
+                            )));
                         compositor.replace_or_push("zsh", popup);
                         editor.set_status(format!("zsh: exit {status}"));
                     },
@@ -11196,7 +12907,10 @@ fn delete_file(
 
 /// Resolve the directory `:mkdir` should create: the explicit argument if given,
 /// otherwise the parent directory of the current buffer's file. Pure — unit tested.
-fn resolve_mkdir_target(arg: Option<&str>, current_file: Option<&std::path::Path>) -> Option<PathBuf> {
+fn resolve_mkdir_target(
+    arg: Option<&str>,
+    current_file: Option<&std::path::Path>,
+) -> Option<PathBuf> {
     match arg.map(str::trim).filter(|a| !a.is_empty()) {
         Some(path) => Some(PathBuf::from(path)),
         None => current_file
@@ -11218,7 +12932,8 @@ fn mkdir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
         .context("no path argument and current buffer has no file")?;
 
     std::fs::create_dir_all(&target).map_err(|err| anyhow!("could not create directory: {err}"))?;
-    cx.editor.set_status(format!("Created {}", target.display()));
+    cx.editor
+        .set_status(format!("Created {}", target.display()));
     Ok(())
 }
 
@@ -11246,7 +12961,8 @@ fn chmod_x(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
         perms.set_mode(with_exec_bits(perms.mode()));
         std::fs::set_permissions(&path, perms)
             .map_err(|err| anyhow!("could not set permissions: {err}"))?;
-        cx.editor.set_status(format!("made executable: {}", path.display()));
+        cx.editor
+            .set_status(format!("made executable: {}", path.display()));
     }
     #[cfg(not(unix))]
     {
@@ -15074,7 +16790,11 @@ fn blame_line(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
 }
 
 /// `:reopen` — reopen the most recently closed file.
-fn reopen_closed(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn reopen_closed(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -15151,7 +16871,11 @@ pub(super) fn run_command_line(cx: &mut compositor::Context, line: &str) {
 }
 
 pub(super) fn repeat_last_command_line(cx: &mut Context) {
-    let last = cx.editor.registers.first(':', cx.editor).map(|c| c.into_owned());
+    let last = cx
+        .editor
+        .registers
+        .first(':', cx.editor)
+        .map(|c| c.into_owned());
     let Some(cmd) = last else {
         cx.editor.set_error("No previous command-line");
         return;
@@ -15659,7 +17383,10 @@ mod vim_set_tests {
         // array index + nested key; string leaf keeps its JSON quotes
         assert_eq!(json_query(j, "users.1.name").unwrap(), "\"Bob\"");
         // leading dot tolerated; object leaf pretty-printed
-        assert_eq!(json_query(j, ".users.0").unwrap(), "{\n  \"name\": \"Alice\"\n}");
+        assert_eq!(
+            json_query(j, ".users.0").unwrap(),
+            "{\n  \"name\": \"Alice\"\n}"
+        );
         // missing key, bad index, and descending into a scalar all error
         assert!(json_query(j, "nope").is_err());
         assert!(json_query(j, "users.9").is_err());
@@ -15693,10 +17420,16 @@ mod vim_set_tests {
         use super::json_to_csv;
         let j = r#"[{"name":"Alice","age":30},{"name":"Bob","city":"NYC"}]"#;
         // header = sorted union (age, city, name); missing fields → empty cells
-        assert_eq!(json_to_csv(j).unwrap(), "age,city,name\n30,,Alice\n,NYC,Bob");
+        assert_eq!(
+            json_to_csv(j).unwrap(),
+            "age,city,name\n30,,Alice\n,NYC,Bob"
+        );
         // values needing RFC-4180 escaping get quoted/doubled
         let q = r#"[{"note":"a,b","say":"he \"hi\""}]"#;
-        assert_eq!(json_to_csv(q).unwrap(), "note,say\n\"a,b\",\"he \"\"hi\"\"\"");
+        assert_eq!(
+            json_to_csv(q).unwrap(),
+            "note,say\n\"a,b\",\"he \"\"hi\"\"\""
+        );
         // non-array and non-object-element inputs error
         assert!(json_to_csv(r#"{"a":1}"#).is_err());
         assert!(json_to_csv(r#"[1,2]"#).is_err());
@@ -15713,7 +17446,11 @@ mod vim_set_tests {
         assert_eq!(v["users"][0]["name"], serde_json::json!("Alice"));
         assert_eq!(v["users"][1]["name"], serde_json::json!("Bob"));
         // round-trips against json_flatten (compare as sorted line sets)
-        let mut reflat: Vec<String> = json_flatten(&json).unwrap().lines().map(String::from).collect();
+        let mut reflat: Vec<String> = json_flatten(&json)
+            .unwrap()
+            .lines()
+            .map(String::from)
+            .collect();
         let mut orig: Vec<String> = flat.lines().map(String::from).collect();
         reflat.sort();
         orig.sort();
@@ -15748,7 +17485,10 @@ mod vim_set_tests {
     fn json_sort_orders() {
         use super::json_sort_array;
         // scalar numbers ascending
-        assert_eq!(json_sort_array("[3,1,2]", None).unwrap(), "[\n  1,\n  2,\n  3\n]");
+        assert_eq!(
+            json_sort_array("[3,1,2]", None).unwrap(),
+            "[\n  1,\n  2,\n  3\n]"
+        );
         // strings lexically
         assert_eq!(
             json_sort_array(r#"["banana","apple"]"#, None).unwrap(),
@@ -15799,7 +17539,10 @@ mod vim_set_tests {
         assert_eq!(v[1]["age"], serde_json::json!(5));
         // omit is the complement of pick: omitting all-but-one == picking that one
         let o = r#"{"a":1,"b":2,"c":3}"#;
-        assert_eq!(json_omit(o, &["b", "c"]).unwrap(), json_pick(o, &["a"]).unwrap());
+        assert_eq!(
+            json_omit(o, &["b", "c"]).unwrap(),
+            json_pick(o, &["a"]).unwrap()
+        );
         // invalid JSON errors
         assert!(json_omit("nope", &["a"]).is_err());
     }
@@ -15808,7 +17551,10 @@ mod vim_set_tests {
     fn json_unique_dedups() {
         use super::json_unique;
         // scalar dedup preserves first-seen order
-        assert_eq!(json_unique("[1,2,2,3,1]", None).unwrap(), "[\n  1,\n  2,\n  3\n]");
+        assert_eq!(
+            json_unique("[1,2,2,3,1]", None).unwrap(),
+            "[\n  1,\n  2,\n  3\n]"
+        );
         // dedup by field: first occurrence of each key wins
         let j = r#"[{"id":1,"v":"a"},{"id":1,"v":"b"},{"id":2,"v":"c"}]"#;
         let v: Value = serde_json::from_str(&json_unique(j, Some("id")).unwrap()).unwrap();
@@ -15831,7 +17577,8 @@ mod vim_set_tests {
         assert_eq!(v["NYC"][0]["n"], serde_json::json!("a"));
         assert_eq!(v["NYC"][1]["n"], serde_json::json!("c"));
         // missing field groups under "null"
-        let v2: Value = serde_json::from_str(&json_group_by(r#"[{"x":1},{"y":2}]"#, "x").unwrap()).unwrap();
+        let v2: Value =
+            serde_json::from_str(&json_group_by(r#"[{"x":1},{"y":2}]"#, "x").unwrap()).unwrap();
         assert_eq!(v2["1"].as_array().unwrap().len(), 1);
         assert_eq!(v2["null"].as_array().unwrap().len(), 1);
         // non-array and invalid inputs error
@@ -15845,7 +17592,10 @@ mod vim_set_tests {
         // no capture group → whole matches, one per line
         assert_eq!(extract_matches("a1 b2 c3", r"\d").unwrap(), "1\n2\n3");
         // capture group → group 1 text
-        assert_eq!(extract_matches("key=val; x=y", r"(\w+)=").unwrap(), "key\nx");
+        assert_eq!(
+            extract_matches("key=val; x=y", r"(\w+)=").unwrap(),
+            "key\nx"
+        );
         // no matches → empty
         assert_eq!(extract_matches("abc", r"\d").unwrap(), "");
         // invalid pattern errors rather than panicking
@@ -15994,7 +17744,10 @@ mod vim_set_tests {
         assert_eq!(got.len(), 3);
         assert!(got.iter().all(|l| orig.contains(l)));
         // order is preserved (result is a subsequence): indices strictly increasing
-        let positions: Vec<usize> = got.iter().map(|l| orig.iter().position(|o| o == l).unwrap()).collect();
+        let positions: Vec<usize> = got
+            .iter()
+            .map(|l| orig.iter().position(|o| o == l).unwrap())
+            .collect();
         assert!(positions.windows(2).all(|w| w[0] < w[1]));
         // deterministic for a fixed seed
         assert_eq!(sample_lines(input, 3, 42), out);
@@ -16012,7 +17765,10 @@ mod vim_set_tests {
         assert_eq!(v.as_array().unwrap().len(), 3);
         assert_eq!(v[1]["a"], serde_json::json!(2));
         // back to JSONL: compact, one per line (blank line not reproduced)
-        assert_eq!(json_to_jsonl(&json).unwrap(), "{\"a\":1}\n{\"a\":2}\n{\"a\":3}");
+        assert_eq!(
+            json_to_jsonl(&json).unwrap(),
+            "{\"a\":1}\n{\"a\":2}\n{\"a\":3}"
+        );
         // errors: bad JSON line, and non-array input to the inverse
         assert!(jsonl_to_json("{not json}").is_err());
         assert!(json_to_jsonl("{}").is_err());
@@ -16039,7 +17795,10 @@ mod vim_set_tests {
         // precomposed accent preserved
         assert_eq!(rev_each_line("héllo"), "olléh");
         // double application is the identity
-        assert_eq!(rev_each_line(&rev_each_line("hello\nworld")), "hello\nworld");
+        assert_eq!(
+            rev_each_line(&rev_each_line("hello\nworld")),
+            "hello\nworld"
+        );
     }
 
     #[test]
@@ -16091,7 +17850,7 @@ mod vim_set_tests {
         use super::caesar;
         assert_eq!(caesar("abc", 1), "bcd");
         assert_eq!(caesar("xyz", 3), "abc"); // wraps within case
-        // shift 13 == ROT13, case + punctuation preserved
+                                             // shift 13 == ROT13, case + punctuation preserved
         assert_eq!(caesar("Hello, World!", 13), "Uryyb, Jbeyq!");
         // identity and negative shifts (normalized mod 26)
         assert_eq!(caesar("abc", 0), "abc");
@@ -16107,7 +17866,10 @@ mod vim_set_tests {
         assert_eq!(base32_encode("foobar"), "MZXW6YTBOI======");
         assert_eq!(base32_decode("MZXW6YTBOI======").unwrap(), "foobar");
         // round-trips arbitrary text
-        assert_eq!(base32_decode(&base32_encode("Hello, World!")).unwrap(), "Hello, World!");
+        assert_eq!(
+            base32_decode(&base32_encode("Hello, World!")).unwrap(),
+            "Hello, World!"
+        );
         // decode tolerates lowercase and whitespace/padding
         assert_eq!(base32_decode("mzxw6ytb oi======").unwrap(), "foobar");
         // empty, and invalid char errors
@@ -16122,7 +17884,10 @@ mod vim_set_tests {
         // canonical CRC32 check value
         assert_eq!(crc32("123456789"), 0xCBF4_3926);
         // pangram vector
-        assert_eq!(crc32("The quick brown fox jumps over the lazy dog"), 0x414F_A339);
+        assert_eq!(
+            crc32("The quick brown fox jumps over the lazy dog"),
+            0x414F_A339
+        );
     }
 
     #[test]
@@ -16144,7 +17909,10 @@ mod vim_set_tests {
         // word separator ` / ` and case-insensitive encode
         assert_eq!(morse_encode("Hi there"), ".... .. / - .... . .-. .");
         // round-trips uppercase words and digits
-        assert_eq!(morse_decode(&morse_encode("HELLO WORLD 42")), "HELLO WORLD 42");
+        assert_eq!(
+            morse_decode(&morse_encode("HELLO WORLD 42")),
+            "HELLO WORLD 42"
+        );
         assert_eq!(morse_encode(""), "");
     }
 
@@ -16158,7 +17926,10 @@ mod vim_set_tests {
         assert_eq!(human_bytes(1048576.0), "1.0 MiB");
         assert_eq!(human_bytes(1073741824.0), "1.0 GiB");
         // per-line: numbers converted, others passed through
-        assert_eq!(humanize_lines("2048\nfoo\n1073741824"), "2.0 KiB\nfoo\n1.0 GiB");
+        assert_eq!(
+            humanize_lines("2048\nfoo\n1073741824"),
+            "2.0 KiB\nfoo\n1.0 GiB"
+        );
     }
 
     #[test]
@@ -16184,13 +17955,31 @@ mod vim_set_tests {
     fn case_conversions() {
         use super::{split_identifier_words, to_camel, to_kebab, to_pascal, to_snake};
         // word splitting across all input conventions
-        assert_eq!(split_identifier_words("myVariableName"), ["my", "variable", "name"]);
-        assert_eq!(split_identifier_words("my_variable_name"), ["my", "variable", "name"]);
-        assert_eq!(split_identifier_words("my-variable-name"), ["my", "variable", "name"]);
-        assert_eq!(split_identifier_words("MyVariableName"), ["my", "variable", "name"]);
-        assert_eq!(split_identifier_words("my variable name"), ["my", "variable", "name"]);
+        assert_eq!(
+            split_identifier_words("myVariableName"),
+            ["my", "variable", "name"]
+        );
+        assert_eq!(
+            split_identifier_words("my_variable_name"),
+            ["my", "variable", "name"]
+        );
+        assert_eq!(
+            split_identifier_words("my-variable-name"),
+            ["my", "variable", "name"]
+        );
+        assert_eq!(
+            split_identifier_words("MyVariableName"),
+            ["my", "variable", "name"]
+        );
+        assert_eq!(
+            split_identifier_words("my variable name"),
+            ["my", "variable", "name"]
+        );
         // acronym followed by a word splits correctly
-        assert_eq!(split_identifier_words("HTTPSConnection"), ["https", "connection"]);
+        assert_eq!(
+            split_identifier_words("HTTPSConnection"),
+            ["https", "connection"]
+        );
         // rendering into each target case (from any source form)
         assert_eq!(to_snake("myVariableName"), "my_variable_name");
         assert_eq!(to_kebab("MyVariableName"), "my-variable-name");
@@ -16224,8 +18013,14 @@ mod vim_set_tests {
     fn natural_sort_orders() {
         use super::natural_sort_lines;
         // numbers compared by value, not lexically
-        assert_eq!(natural_sort_lines("file10\nfile2\nfile1"), "file1\nfile2\nfile10");
-        assert_eq!(natural_sort_lines("img12\nimg2\nimg1\nimg100"), "img1\nimg2\nimg12\nimg100");
+        assert_eq!(
+            natural_sort_lines("file10\nfile2\nfile1"),
+            "file1\nfile2\nfile10"
+        );
+        assert_eq!(
+            natural_sort_lines("img12\nimg2\nimg1\nimg100"),
+            "img1\nimg2\nimg12\nimg100"
+        );
         // shorter prefix sorts first ("a" < "a2" < "b")
         assert_eq!(natural_sort_lines("b\na2\na"), "a\na2\nb");
         // leading zeros: equal value, fewer digits first
@@ -16261,7 +18056,10 @@ mod vim_set_tests {
         use super::json_describe;
         assert_eq!(json_describe("42").unwrap(), "number (42)");
         assert_eq!(json_describe("[1,2,3]").unwrap(), "array (3 elements)");
-        assert_eq!(json_describe(r#"{"a":1,"b":2}"#).unwrap(), "object (2 keys)");
+        assert_eq!(
+            json_describe(r#"{"a":1,"b":2}"#).unwrap(),
+            "object (2 keys)"
+        );
         assert_eq!(json_describe(r#""hi""#).unwrap(), "string (len 2)");
         assert_eq!(json_describe("true").unwrap(), "boolean (true)");
         assert_eq!(json_describe("null").unwrap(), "null");
@@ -16313,7 +18111,10 @@ mod vim_set_tests {
         // non-string elements render as compact JSON
         assert_eq!(json_array_to_lines("[1,2,3]").unwrap(), "1\n2\n3");
         // string round-trip
-        assert_eq!(json_array_to_lines(&lines_to_json_array("x\ny")).unwrap(), "x\ny");
+        assert_eq!(
+            json_array_to_lines(&lines_to_json_array("x\ny")).unwrap(),
+            "x\ny"
+        );
         // non-array errors
         assert!(json_array_to_lines("{}").is_err());
     }
@@ -16321,7 +18122,10 @@ mod vim_set_tests {
     #[test]
     fn checkbox_list_builds() {
         use super::checkbox_list;
-        assert_eq!(checkbox_list("buy milk\nwalk dog"), "- [ ] buy milk\n- [ ] walk dog");
+        assert_eq!(
+            checkbox_list("buy milk\nwalk dog"),
+            "- [ ] buy milk\n- [ ] walk dog"
+        );
         // an existing bullet is stripped, not doubled
         assert_eq!(checkbox_list("- existing"), "- [ ] existing");
         // blank lines stay blank
@@ -16408,7 +18212,10 @@ mod vim_set_tests {
         // each line independently: double, single, and backtick quotes
         assert_eq!(unquote_each_line("\"a\"\n'b'\n`c`"), "a\nb\nc");
         // unquoted and mismatched lines pass through
-        assert_eq!(unquote_each_line("\"x\"\nplain\n\"unmatched"), "x\nplain\n\"unmatched");
+        assert_eq!(
+            unquote_each_line("\"x\"\nplain\n\"unmatched"),
+            "x\nplain\n\"unmatched"
+        );
         // empty quotes collapse to empty
         assert_eq!(unquote_each_line("\"\""), "");
     }
@@ -16456,7 +18263,8 @@ mod vim_set_tests {
     fn kv_to_json_builds_object() {
         use super::kv_to_json;
         let v: Value =
-            serde_json::from_str(&kv_to_json("a=1\nb: two\n# comment\n\nc = three").unwrap()).unwrap();
+            serde_json::from_str(&kv_to_json("a=1\nb: two\n# comment\n\nc = three").unwrap())
+                .unwrap();
         assert_eq!(v["a"], serde_json::json!("1"));
         assert_eq!(v["b"], serde_json::json!("two"));
         assert_eq!(v["c"], serde_json::json!("three"));
@@ -16474,9 +18282,14 @@ mod vim_set_tests {
         // BTreeMap-sorted keys; string values unquoted
         assert_eq!(json_to_kv(r#"{"a":"1","b":"two"}"#).unwrap(), "a=1\nb=two");
         // non-string values render as compact JSON
-        assert_eq!(json_to_kv(r#"{"n":42,"ok":true}"#).unwrap(), "n=42\nok=true");
+        assert_eq!(
+            json_to_kv(r#"{"n":42,"ok":true}"#).unwrap(),
+            "n=42\nok=true"
+        );
         // round-trips string values through kv_to_json
-        let v: Value = serde_json::from_str(&kv_to_json(&json_to_kv(r#"{"x":"y"}"#).unwrap()).unwrap()).unwrap();
+        let v: Value =
+            serde_json::from_str(&kv_to_json(&json_to_kv(r#"{"x":"y"}"#).unwrap()).unwrap())
+                .unwrap();
         assert_eq!(v["x"], serde_json::json!("y"));
         // non-object errors
         assert!(json_to_kv("[1,2]").is_err());
@@ -16503,13 +18316,19 @@ mod vim_set_tests {
             "<ul>\n  <li>apple</li>\n  <li>banana</li>\n</ul>"
         );
         // content is HTML-escaped; blank lines skipped
-        assert_eq!(to_html_list("a < b\n\nx & y"), "<ul>\n  <li>a &lt; b</li>\n  <li>x &amp; y</li>\n</ul>");
+        assert_eq!(
+            to_html_list("a < b\n\nx & y"),
+            "<ul>\n  <li>a &lt; b</li>\n  <li>x &amp; y</li>\n</ul>"
+        );
     }
 
     #[test]
     fn from_html_list_extracts() {
         use super::{from_html_list, to_html_list};
-        assert_eq!(from_html_list("<ul>\n  <li>apple</li>\n  <li>banana</li>\n</ul>"), "apple\nbanana");
+        assert_eq!(
+            from_html_list("<ul>\n  <li>apple</li>\n  <li>banana</li>\n</ul>"),
+            "apple\nbanana"
+        );
         // entities are unescaped
         assert_eq!(from_html_list("<li>a &lt; b</li>"), "a < b");
         // round-trips with to_html_list
@@ -16532,7 +18351,10 @@ mod vim_set_tests {
     #[test]
     fn slugify_lines_each() {
         use super::slugify_lines;
-        assert_eq!(slugify_lines("Hello World\nFoo Bar!"), "hello-world\nfoo-bar");
+        assert_eq!(
+            slugify_lines("Hello World\nFoo Bar!"),
+            "hello-world\nfoo-bar"
+        );
         // runs of non-alphanumerics collapse; leading/trailing trimmed
         assert_eq!(slugify_lines("  Multiple   Spaces  "), "multiple-spaces");
         // numbers retained
@@ -16544,7 +18366,10 @@ mod vim_set_tests {
         use super::lines_to_csv_row;
         assert_eq!(lines_to_csv_row("a\nb\nc"), "a,b,c");
         // a field containing a comma is quoted; an embedded quote is doubled
-        assert_eq!(lines_to_csv_row("a,b\nplain\nsay \"hi\""), "\"a,b\",plain,\"say \"\"hi\"\"\"");
+        assert_eq!(
+            lines_to_csv_row("a,b\nplain\nsay \"hi\""),
+            "\"a,b\",plain,\"say \"\"hi\"\"\""
+        );
     }
 
     #[test]
@@ -16556,7 +18381,10 @@ mod vim_set_tests {
         // doubled quote decodes to a single quote
         assert_eq!(csv_row_to_lines("\"say \"\"hi\"\"\",x"), "say \"hi\"\nx");
         // round-trips with lines_to_csv_row
-        assert_eq!(csv_row_to_lines(&lines_to_csv_row("p\nq,r\ns")), "p\nq,r\ns");
+        assert_eq!(
+            csv_row_to_lines(&lines_to_csv_row("p\nq,r\ns")),
+            "p\nq,r\ns"
+        );
     }
 
     #[test]
@@ -16604,7 +18432,10 @@ mod vim_set_tests {
     #[test]
     fn markdown_link_wraps() {
         use super::markdown_link;
-        assert_eq!(markdown_link("Google", "https://google.com"), "[Google](https://google.com)");
+        assert_eq!(
+            markdown_link("Google", "https://google.com"),
+            "[Google](https://google.com)"
+        );
         assert_eq!(markdown_link("", "u"), "[](u)");
     }
 
@@ -16622,7 +18453,10 @@ mod vim_set_tests {
     #[test]
     fn extract_emails_finds() {
         use super::extract_emails;
-        assert_eq!(extract_emails("contact a@b.com or c.d@e.org!"), "a@b.com\nc.d@e.org");
+        assert_eq!(
+            extract_emails("contact a@b.com or c.d@e.org!"),
+            "a@b.com\nc.d@e.org"
+        );
         // no emails → empty
         assert_eq!(extract_emails("nothing here"), "");
     }
@@ -16630,7 +18464,10 @@ mod vim_set_tests {
     #[test]
     fn extract_ips_finds() {
         use super::extract_ips;
-        assert_eq!(extract_ips("from 192.168.1.1 to 10.0.0.255 done"), "192.168.1.1\n10.0.0.255");
+        assert_eq!(
+            extract_ips("from 192.168.1.1 to 10.0.0.255 done"),
+            "192.168.1.1\n10.0.0.255"
+        );
         // no IPs → empty
         assert_eq!(extract_ips("no ips here"), "");
     }
@@ -16650,7 +18487,10 @@ mod vim_set_tests {
         use super::extract_between;
         assert_eq!(extract_between("a(1)b(2)c", "(", ")"), "1\n2");
         // multi-char delimiters
-        assert_eq!(extract_between("<x>foo</x><x>bar</x>", "<x>", "</x>"), "foo\nbar");
+        assert_eq!(
+            extract_between("<x>foo</x><x>bar</x>", "<x>", "</x>"),
+            "foo\nbar"
+        );
         // unterminated start is ignored; no matches → empty
         assert_eq!(extract_between("a[1] b[", "[", "]"), "1");
         assert_eq!(extract_between("none", "[", "]"), "");
@@ -16696,7 +18536,10 @@ mod vim_set_tests {
     #[test]
     fn ordered_list_numbers() {
         use super::ordered_list;
-        assert_eq!(ordered_list("apple\nbanana\ncherry"), "1. apple\n2. banana\n3. cherry");
+        assert_eq!(
+            ordered_list("apple\nbanana\ncherry"),
+            "1. apple\n2. banana\n3. cherry"
+        );
         // an existing bullet is replaced, not doubled
         assert_eq!(ordered_list("- existing"), "1. existing");
         // blank lines kept and don't advance the counter
@@ -16706,7 +18549,10 @@ mod vim_set_tests {
     #[test]
     fn strip_list_markers_cleans() {
         use super::strip_list_markers;
-        assert_eq!(strip_list_markers("- apple\n* banana\n+ cherry"), "apple\nbanana\ncherry");
+        assert_eq!(
+            strip_list_markers("- apple\n* banana\n+ cherry"),
+            "apple\nbanana\ncherry"
+        );
         assert_eq!(strip_list_markers("1. one\n2) two"), "one\ntwo");
         assert_eq!(strip_list_markers("- [ ] todo\n- [x] done"), "todo\ndone");
         // lines without a marker are untouched
@@ -16772,9 +18618,15 @@ mod vim_set_tests {
     #[test]
     fn to_env_export_prefixes() {
         use super::to_env_export;
-        assert_eq!(to_env_export("FOO=bar\nBAZ=qux"), "export FOO=bar\nexport BAZ=qux");
+        assert_eq!(
+            to_env_export("FOO=bar\nBAZ=qux"),
+            "export FOO=bar\nexport BAZ=qux"
+        );
         // comments, already-exported, and non-assignments are left alone
-        assert_eq!(to_env_export("# c\nexport X=1\nplain"), "# c\nexport X=1\nplain");
+        assert_eq!(
+            to_env_export("# c\nexport X=1\nplain"),
+            "# c\nexport X=1\nplain"
+        );
     }
 
     #[test]
@@ -16880,17 +18732,26 @@ mod vim_set_tests {
     #[test]
     fn strip_markdown_links_to_text() {
         use super::{linkify, strip_markdown_links};
-        assert_eq!(strip_markdown_links("see [Google](https://g.com) now"), "see Google now");
+        assert_eq!(
+            strip_markdown_links("see [Google](https://g.com) now"),
+            "see Google now"
+        );
         assert_eq!(strip_markdown_links("[a](u) and [b](v)"), "a and b");
         // text without links unchanged; round-trips a linkified bare URL back to bare
         assert_eq!(strip_markdown_links("plain"), "plain");
-        assert_eq!(strip_markdown_links(&linkify("x https://a.com y")), "x https://a.com y");
+        assert_eq!(
+            strip_markdown_links(&linkify("x https://a.com y")),
+            "x https://a.com y"
+        );
     }
 
     #[test]
     fn strip_emphasis_plain() {
         use super::strip_emphasis;
-        assert_eq!(strip_emphasis("**bold** and *italic* and `code`"), "bold and italic and code");
+        assert_eq!(
+            strip_emphasis("**bold** and *italic* and `code`"),
+            "bold and italic and code"
+        );
         assert_eq!(strip_emphasis("__b__ and _i_"), "b and i");
         // text without paired markers is unchanged (single underscore kept)
         assert_eq!(strip_emphasis("plain snake_case"), "plain snake_case");
@@ -16925,7 +18786,10 @@ mod vim_set_tests {
         assert_eq!(add_trailing_commas("[]"), "[]");
         assert_eq!(add_trailing_commas("[1, 2,]"), "[1, 2,]");
         // add then remove returns the original
-        assert_eq!(remove_trailing_commas(&add_trailing_commas("[1, 2]")), "[1, 2]");
+        assert_eq!(
+            remove_trailing_commas(&add_trailing_commas("[1, 2]")),
+            "[1, 2]"
+        );
     }
 
     #[test]
@@ -16993,7 +18857,6 @@ mod vim_set_tests {
         // n=1 leaves the input unchanged
         assert_eq!(repeat_lines("a\nb", 1), "a\nb");
     }
-
 
     #[test]
     fn wrap_in_tag_wraps() {
@@ -17064,7 +18927,10 @@ mod vim_set_tests {
         // empty separator is a no-op
         assert_eq!(split_on_sep("a,b", ""), "a,b");
         // round-trips with join_lines_with for a simple case
-        assert_eq!(super::join_lines_with(&split_on_sep("a,b,c\n", ","), ","), "a,b,c\n");
+        assert_eq!(
+            super::join_lines_with(&split_on_sep("a,b,c\n", ","), ","),
+            "a,b,c\n"
+        );
     }
 
     #[test]
@@ -17103,7 +18969,10 @@ mod vim_set_tests {
         // on the space, fall back to the word just before
         assert_eq!(word_at_col("foo bar", 3).as_deref(), Some("foo"));
         // identifiers with underscores and digits
-        assert_eq!(word_at_col("let my_var2 = 1", 8).as_deref(), Some("my_var2"));
+        assert_eq!(
+            word_at_col("let my_var2 = 1", 8).as_deref(),
+            Some("my_var2")
+        );
         // cursor past the end falls back to the trailing word
         assert_eq!(word_at_col("end", 3).as_deref(), Some("end"));
         // no word here
@@ -17220,7 +19089,10 @@ mod vim_set_tests {
         // a real generated UUID has the right shape: 8-4-4-4-12, version 4, variant 8/9/a/b
         let u = format_uuid_v4(random_bytes_16());
         let parts: Vec<&str> = u.split('-').collect();
-        assert_eq!(parts.iter().map(|p| p.len()).collect::<Vec<_>>(), vec![8, 4, 4, 4, 12]);
+        assert_eq!(
+            parts.iter().map(|p| p.len()).collect::<Vec<_>>(),
+            vec![8, 4, 4, 4, 12]
+        );
         assert!(u.chars().all(|c| c.is_ascii_hexdigit() || c == '-'));
         assert_eq!(parts[2].as_bytes()[0], b'4');
         assert!(matches!(parts[3].as_bytes()[0], b'8' | b'9' | b'a' | b'b'));
@@ -17242,7 +19114,7 @@ mod vim_set_tests {
         assert!(eval_arith("1/0").is_err());
         assert!(eval_arith("2 3").is_err()); // trailing garbage
         assert!(eval_arith("(1+2").is_err()); // unbalanced
-        // formatting: integers are clean, fractions trimmed
+                                              // formatting: integers are clean, fractions trimmed
         assert_eq!(format_calc(14.0), "14");
         assert_eq!(format_calc(2.5), "2.5");
         assert_eq!(format_calc(7.0), "7");
@@ -17311,15 +19183,9 @@ mod vim_set_tests {
     fn sort_by_field_orders() {
         use super::sort_lines_by_field;
         // sort by the 2nd field
-        assert_eq!(
-            sort_lines_by_field("b 2\na 3\nc 1\n", 2),
-            "c 1\nb 2\na 3\n"
-        );
+        assert_eq!(sort_lines_by_field("b 2\na 3\nc 1\n", 2), "c 1\nb 2\na 3\n");
         // sort by the 1st field
-        assert_eq!(
-            sort_lines_by_field("b 2\na 3\nc 1\n", 1),
-            "a 3\nb 2\nc 1\n"
-        );
+        assert_eq!(sort_lines_by_field("b 2\na 3\nc 1\n", 1), "a 3\nb 2\nc 1\n");
         // no trailing newline preserved
         assert_eq!(sort_lines_by_field("x 9\ny 1", 2), "y 1\nx 9");
     }
@@ -17327,9 +19193,15 @@ mod vim_set_tests {
     #[test]
     fn sort_line_block_variants() {
         // plain ascending sort, trailing newline preserved
-        assert_eq!(sort_line_block("b\na\nc\n", false, false, false, false), "a\nb\nc\n");
+        assert_eq!(
+            sort_line_block("b\na\nc\n", false, false, false, false),
+            "a\nb\nc\n"
+        );
         // reverse (descending)
-        assert_eq!(sort_line_block("b\na\nc\n", true, false, false, false), "c\nb\na\n");
+        assert_eq!(
+            sort_line_block("b\na\nc\n", true, false, false, false),
+            "c\nb\na\n"
+        );
         // case-insensitive groups regardless of case
         assert_eq!(
             sort_line_block("B\na\nC\n", false, true, false, false),
@@ -17387,18 +19259,39 @@ mod vim_set_tests {
 
     #[test]
     fn translate_options() {
-        assert_eq!(tr("nu", false), ("line-number".into(), Value::String("absolute".into())));
-        assert_eq!(tr("rnu", false), ("line-number".into(), Value::String("relative".into())));
+        assert_eq!(
+            tr("nu", false),
+            ("line-number".into(), Value::String("absolute".into()))
+        );
+        assert_eq!(
+            tr("rnu", false),
+            ("line-number".into(), Value::String("relative".into()))
+        );
         assert_eq!(
             tr("norelativenumber", false),
             ("line-number".into(), Value::String("absolute".into()))
         );
-        assert_eq!(tr("tw=80", false), ("text-width".into(), Value::Number(80.into())));
-        assert_eq!(tr("nowrap", false), ("soft-wrap.enable".into(), Value::Bool(false)));
-        assert_eq!(tr("wrap", false), ("soft-wrap.enable".into(), Value::Bool(true)));
+        assert_eq!(
+            tr("tw=80", false),
+            ("text-width".into(), Value::Number(80.into()))
+        );
+        assert_eq!(
+            tr("nowrap", false),
+            ("soft-wrap.enable".into(), Value::Bool(false))
+        );
+        assert_eq!(
+            tr("wrap", false),
+            ("soft-wrap.enable".into(), Value::Bool(true))
+        );
         // toggle from current=false -> true
-        assert_eq!(tr("cursorline!", false), ("cursorline".into(), Value::Bool(true)));
-        assert_eq!(tr("scrolloff=5", false), ("scrolloff".into(), Value::Number(5.into())));
+        assert_eq!(
+            tr("cursorline!", false),
+            ("cursorline".into(), Value::Bool(true))
+        );
+        assert_eq!(
+            tr("scrolloff=5", false),
+            ("scrolloff".into(), Value::Number(5.into()))
+        );
         // unknown option -> None
         assert!(translate_vim_option("definitelynotanoption", |_| false).is_none());
     }
