@@ -11598,7 +11598,10 @@ fn select_textobject_then(
                     match ch {
                         'w' => textobject::textobject_word(text, range, objtype, count, false),
                         'W' => textobject::textobject_word(text, range, objtype, count, true),
-                        't' => textobject_treesitter("class", range),
+                        // vim `it`/`at`: change/select inside/around the enclosing
+                        // (X)HTML/XML tag. `C` keeps the type/class object.
+                        't' => textobject_treesitter("xml-element", range),
+                        'C' => textobject_treesitter("class", range),
                         'f' => textobject_treesitter("function", range),
                         'a' => textobject_treesitter("parameter", range),
                         'c' => textobject_treesitter("comment", range),
@@ -11646,7 +11649,8 @@ fn select_textobject_then(
         ("w", "Word"),
         ("W", "WORD"),
         ("p", "Paragraph"),
-        ("t", "Type definition (tree-sitter)"),
+        ("t", "Tag / (X)HTML element (tree-sitter)"),
+        ("C", "Type/class definition (tree-sitter)"),
         ("f", "Function (tree-sitter)"),
         ("a", "Argument/parameter (tree-sitter)"),
         ("c", "Comment (tree-sitter)"),
