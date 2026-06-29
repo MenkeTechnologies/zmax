@@ -65,6 +65,12 @@ pub struct EditorView {
     /// Active pane-divider drag: the view whose right edge is being dragged, and
     /// the last mouse column seen, so we can apply incremental resize deltas.
     resize_drag: Option<(zemacs_view::ViewId, u16)>,
+    /// Sticky-scroll cache: `(doc, doc len, scopes)` where each scope is
+    /// `(start_line, end_line, header_text)`. Recomputed only when the focused
+    /// document's length changes, so scrolling stays cheap.
+    sticky_cache: std::cell::RefCell<
+        Option<(zemacs_view::DocumentId, usize, Vec<(usize, usize, String)>)>,
+    >,
 }
 
 use super::ide::{Ide, IdeAction};
@@ -99,6 +105,7 @@ impl EditorView {
             bufferline_new: (0, 0),
             bufferline_y: 0,
             resize_drag: None,
+            sticky_cache: std::cell::RefCell::new(None),
         }
     }
 
@@ -157,6 +164,15 @@ impl EditorView {
             "Bottom panel maximized (toggle to restore)"
         } else {
             "Bottom panel restored"
+        });
+    }
+
+    pub fn toggle_drawer_mid(&mut self, cx: &mut crate::compositor::Context) {
+        let folded = self.ide.get_or_insert_with(Ide::new).toggle_mid_fold();
+        cx.editor.set_status(if folded {
+            "Middle drawer column folded"
+        } else {
+            "Middle drawer column shown"
         });
     }
 
@@ -273,6 +289,11 @@ impl EditorView {
                 let _ = context
                     .editor
                     .open(&path, zemacs_view::editor::Action::Replace);
+                None
+            }
+            IdeAction::OpenUrl(url) => {
+                let _ = open::that(&url);
+                context.editor.set_status(format!("opened {url}"));
                 None
             }
             IdeAction::OpenFileAt { path, line } => {
@@ -667,6 +688,11 @@ impl EditorView {
             decorations,
         );
 
+        // Sticky scroll: pin enclosing scope headers at the top of the viewport.
+        if is_focused {
+            self.render_sticky_context(doc, inner, view_offset.anchor, surface, theme, &loader);
+        }
+
         // if we're not at the edge of the screen, draw a right border
         if viewport.right() != view.area.right() {
             let x = area.right();
@@ -694,6 +720,71 @@ impl EditorView {
             statusline::RenderContext::new(editor, doc, view, is_focused, &self.spinners);
 
         statusline::render(&mut context, statusline_area, surface);
+    }
+
+    /// Sticky scroll: overlay the enclosing scope header lines (function/class
+    /// signatures whose opening scrolled above the viewport) at the top of the
+    /// text area. The outline is cached per document length so scrolling is cheap.
+    fn render_sticky_context(
+        &self,
+        doc: &Document,
+        inner: Rect,
+        anchor: usize,
+        surface: &mut Surface,
+        theme: &Theme,
+        loader: &syntax::Loader,
+    ) {
+        if inner.height < 6 || inner.width < 8 {
+            return;
+        }
+        let text = doc.text();
+        let key = (doc.id(), text.len_chars());
+        let mut cache = self.sticky_cache.borrow_mut();
+        if cache.as_ref().map(|c| (c.0, c.1)) != Some(key) {
+            let items = crate::commands::syntax::document_outline(doc, loader);
+            let mut scopes: Vec<(usize, usize, String)> = items
+                .iter()
+                .filter_map(|it| {
+                    let s = it.start.min(text.len_chars());
+                    let e = it.end.min(text.len_chars());
+                    let sl = text.char_to_line(s);
+                    let el = text.char_to_line(e);
+                    // only multi-line scopes are worth pinning
+                    (el > sl).then(|| {
+                        let line: String =
+                            text.line(sl).chars().filter(|c| !c.is_control()).collect();
+                        (sl, el, line)
+                    })
+                })
+                .collect();
+            scopes.sort_by_key(|s| s.0);
+            *cache = Some((key.0, key.1, scopes));
+        }
+        let scopes = &cache.as_ref().unwrap().2;
+
+        let top = text.char_to_line(anchor.min(text.len_chars()));
+        // Enclosing scopes that opened above the viewport, outermost first.
+        let mut ctx: Vec<&(usize, usize, String)> =
+            scopes.iter().filter(|(sl, el, _)| *sl < top && *el >= top).collect();
+        ctx.sort_by_key(|(sl, _, _)| *sl);
+        if ctx.is_empty() {
+            return;
+        }
+        // Keep at most a third of the viewport, innermost-closest to the content.
+        let max = ((inner.height as usize) / 3).clamp(1, 5);
+        if ctx.len() > max {
+            ctx = ctx.split_off(ctx.len() - max);
+        }
+
+        let hdr = theme.get("ui.statusline");
+        let marker = theme.get("comment");
+        for (i, (_, _, line)) in ctx.iter().enumerate() {
+            let y = inner.y + i as u16;
+            let w = inner.width.saturating_sub(1) as usize;
+            surface.set_style(Rect::new(inner.x, y, inner.width, 1), hdr);
+            surface.set_stringn(inner.x, y, line, w, hdr);
+            surface.set_stringn(inner.x + inner.width - 1, y, "▏", 1, marker);
+        }
     }
 
     pub fn render_rulers(
@@ -2273,20 +2364,32 @@ impl Component for EditorView {
             _ => self.ide.as_ref().is_some_and(Ide::visible),
         };
 
-        // -1 for commandline and -1 for bufferline
+        // The IDE workbench reserves a dedicated row for the open-file tabs above
+        // its button toolbar; outside IDE mode the bufferline sits at the top of
+        // the editor area (and must be clipped out of it).
+        let ide_visible = self.ide.as_ref().is_some_and(Ide::visible);
+        let ide_bufrow = self
+            .ide
+            .as_ref()
+            .map(Ide::bufferline_rect)
+            .filter(|r| r.height > 0);
+        let draw_bufferline = use_bufferline && (!ide_visible || ide_bufrow.is_some());
+
+        // -1 for commandline; -1 for the bufferline only when it lives inside `area`
         let mut editor_area = area.clip_bottom(1);
-        if use_bufferline {
+        if draw_bufferline && ide_bufrow.is_none() {
             editor_area = editor_area.clip_top(1);
         }
 
         // if the terminal size suddenly changed, we need to trigger a resize
         cx.editor.resize(editor_area);
 
-        if use_bufferline {
-            let (tabs, new_btn) = Self::render_bufferline(cx.editor, area.with_height(1), surface);
+        if draw_bufferline {
+            let bar = ide_bufrow.unwrap_or_else(|| area.with_height(1));
+            let (tabs, new_btn) = Self::render_bufferline(cx.editor, bar, surface);
             self.bufferline_tabs = tabs;
             self.bufferline_new = new_btn;
-            self.bufferline_y = area.y;
+            self.bufferline_y = bar.y;
         } else {
             self.bufferline_tabs.clear();
             self.bufferline_new = (0, 0);
@@ -2295,6 +2398,11 @@ impl Component for EditorView {
         for (view, is_focused) in cx.editor.tree.views() {
             let doc = cx.editor.document(view.doc).unwrap();
             self.render_view(cx.editor, doc, view, area, surface, is_focused);
+        }
+
+        // Overlay the IDE LSP/build progress card on top of the document.
+        if let Some(ide) = self.ide.as_ref() {
+            ide.render_progress_overlay(area, surface, &cx.editor.theme);
         }
 
         if config.auto_info {

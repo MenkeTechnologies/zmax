@@ -947,6 +947,7 @@ impl Application {
                                     self.lsp_progress.end_progress(server_id, &token);
                                     if !self.lsp_progress.is_progressing(server_id) {
                                         editor_view.spinners_mut().get_or_create(server_id).stop();
+                                        self.editor.lsp_progress = None;
                                     }
                                     self.editor.clear_status();
 
@@ -978,12 +979,35 @@ impl Application {
                             }
                         }
 
+                        // Mirror the structured progress onto the editor so UI
+                        // surfaces (the IDE workbench gauge) can render it,
+                        // independent of the display_progress_messages toggle.
+                        let server_name = language_server!().name().to_string();
                         match work {
                             lsp::WorkDoneProgress::Begin(begin_status) => {
+                                self.editor.lsp_progress =
+                                    Some(zemacs_view::editor::LspProgress {
+                                        server: server_name,
+                                        title: begin_status.title.clone(),
+                                        message: begin_status.message.clone(),
+                                        percentage: begin_status.percentage,
+                                    });
                                 self.lsp_progress
                                     .begin(server_id, token.clone(), begin_status);
                             }
                             lsp::WorkDoneProgress::Report(report_status) => {
+                                let title = self
+                                    .lsp_progress
+                                    .title(server_id, &token)
+                                    .cloned()
+                                    .unwrap_or_default();
+                                self.editor.lsp_progress =
+                                    Some(zemacs_view::editor::LspProgress {
+                                        server: server_name,
+                                        title,
+                                        message: report_status.message.clone(),
+                                        percentage: report_status.percentage,
+                                    });
                                 self.lsp_progress
                                     .update(server_id, token.clone(), report_status);
                             }
@@ -991,6 +1015,7 @@ impl Application {
                                 self.lsp_progress.end_progress(server_id, &token);
                                 if !self.lsp_progress.is_progressing(server_id) {
                                     editor_view.spinners_mut().get_or_create(server_id).stop();
+                                    self.editor.lsp_progress = None;
                                 };
                             }
                         }

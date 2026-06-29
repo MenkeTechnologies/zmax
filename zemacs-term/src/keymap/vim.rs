@@ -780,6 +780,14 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // bindings needing a typable (`:w` save, `:q` quit, `:bd`) are not yet
         // expressible in the keymap macro and remain tracked as absent.
         "," => repeat_find_char_reverse,   // vim , : repeat last f/t/F/T reversed
+        // Run / Debug function keys (IDE-style)
+        "F5" => run_active_config,             // F5      : run the active configuration
+        "S-F5" => dap_launch,                  // Shift-F5: start debugging
+        "F9" => dap_toggle_breakpoint,         // F9      : toggle breakpoint
+        "F10" => dap_next,                     // F10     : step over
+        "F11" => dap_step_in,                  // F11     : step in
+        "S-F11" => dap_step_out,               // Shift-F11: step out
+
         "space" => { "Leader (spacemacs SPC)"
             "space" => command_palette,            // SPC SPC : M-x
             "tab"   => goto_last_accessed_file,    // SPC TAB : alternate buffer
@@ -982,6 +990,18 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "n" => run_next_error,             // SPC R n : jump to next file:line in output
                 "p" => run_prev_error,             // SPC R p : jump to previous file:line in output
             },
+            "d" => { "Debug"
+                "d" => dap_launch,                 // SPC d d : start debugging
+                "b" => dap_toggle_breakpoint,      // SPC d b : toggle breakpoint
+                "c" => dap_continue,               // SPC d c : continue
+                "i" => dap_step_in,                // SPC d i : step in
+                "o" => dap_step_out,               // SPC d o : step out
+                "n" => dap_next,                   // SPC d n : step over
+                "p" => dap_pause,                  // SPC d p : pause
+                "r" => dap_restart,                // SPC d r : restart session
+                "v" => dap_variables,              // SPC d v : list variables
+                "q" => dap_terminate,              // SPC d q : end debug session
+            },
             "S" => settings_page,                  // SPC S : Preferences → Settings tab
             "," => preferences,                    // SPC , : open the unified Preferences window
             "z" => toggle_ide,                     // SPC z : toggle IDE workbench (Zen / focus mode)
@@ -1006,6 +1026,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "e" => focus_problems,             // SPC W e : focus problems/errors
                 "r" => focus_run_console,          // SPC W r : focus Run console (j/k scroll)
                 "g" => focus_git_panel,            // SPC W g : focus Git changes (j/k select, Enter opens)
+                "c" => focus_ci_panel,             // SPC W c : focus CI status (GitHub Actions; Enter opens)
+                "f" => toggle_drawer_mid,          // SPC W f : fold / unfold the middle drawer column
                 "m" => toggle_bottom_zoom,         // SPC W m : maximize / restore the bottom panel
             },
             "p" => { "Project"

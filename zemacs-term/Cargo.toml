@@ -71,9 +71,10 @@ notify = "6"
 
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "io-util", "io-std", "time", "process", "macros", "fs", "parking_lot"] }
 tui = { path = "../zemacs-tui", package = "zemacs-tui", default-features = false, features = ["termina", "crossterm"] }
-# ratatui widgets (List/Table/Scrollbar/Block) rendered offscreen and blitted onto the tui Surface
-# via ui::rat — backend-less, so it doesn't pull a second terminal backend.
-ratatui = { version = "0.29", default-features = false }
+# ratatui widgets (List/Table/Scrollbar/Block/Gauge/Chart/Canvas/Calendar) rendered offscreen and
+# blitted onto the tui Surface via ui::rat — backend-less, so it doesn't pull a second terminal
+# backend. `widget-calendar` enables the Calendar widget (used by the stats Dashboard).
+ratatui = { version = "0.29", default-features = false, features = ["widget-calendar"] }
 termina = { workspace = true, features = ["event-stream"] }
 signal-hook = "0.4"
 tokio-stream = "0.1"
@@ -105,7 +106,19 @@ toml.workspace = true
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 
+# CI status panel: GitHub Actions REST API over HTTP (blocking; called on a
+# spawn_blocking task). Already in the graph transitively, so no new TLS stack.
+ureq = "2"
+
 dashmap = "6.2"
+
+# System stats for the Preferences → Dashboard tab (CPU/memory/process/disks/net).
+sysinfo = "0.38"
+# `time::Date` for the Dashboard's Calendar widget.
+time = "0.3"
+# Integrated terminal: a real PTY (portable-pty) parsed into a screen grid (vt100).
+portable-pty = "0.8"
+vt100 = "0.15"
 
 parking_lot.workspace = true
 

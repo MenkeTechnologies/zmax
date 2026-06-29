@@ -54,6 +54,8 @@ pub struct Startify {
     header: Vec<String>,
     entries: Vec<Entry>,
     selected: usize,
+    /// Top file extensions in the project, by count — for the language BarChart.
+    lang_stats: Vec<(String, u64)>,
 }
 
 impl Startify {
@@ -120,10 +122,13 @@ impl Startify {
             action: EntryAction::Quit,
         });
 
+        let lang_stats = cwd.as_deref().map(scan_languages).unwrap_or_default();
+
         Startify {
             header,
             entries,
             selected: 0,
+            lang_stats,
         }
     }
 
@@ -150,6 +155,94 @@ impl Startify {
                 cx.editor.close(view_id);
             }),
         }
+    }
+
+    /// Right-hand dashboard shown on wide terminals: a ratatui [`Canvas`] logo
+    /// above a [`BarChart`] of the project's top file types.
+    fn render_dashboard(&self, surface: &mut Surface, theme: &zemacs_view::Theme, area: Rect) {
+        use crate::ui::rat::{render, to_rat_style};
+        use ratatui::style::{Color as RColor, Modifier as RMod};
+        use ratatui::symbols::Marker;
+        use ratatui::text::{Line, Span};
+        use ratatui::widgets::canvas::{Canvas, Line as CanvasLine, Rectangle};
+        use ratatui::widgets::{BarChart, Block, Borders};
+
+        // Only when there's room for a genuine second column.
+        if area.width < 72 || area.height < 12 {
+            return;
+        }
+        let rx = area.x + area.width / 2 + 2;
+        let rw = area.width.saturating_sub(area.width / 2 + 3);
+        if rw < 24 {
+            return;
+        }
+
+        let accent = to_rat_style(theme.get("function")).add_modifier(RMod::BOLD);
+        let dim = to_rat_style(theme.get("comment"));
+        let text = to_rat_style(theme.get("ui.text"));
+        let bg = theme.get("ui.background");
+        let stroke = dim.fg.unwrap_or(RColor::Gray);
+
+        // ── Canvas logo ────────────────────────────────────────────────────────
+        let logo_h = 7u16.min(area.height / 3);
+        let logo_rect = Rect::new(rx, area.y + 1, rw, logo_h);
+        surface.clear_with(logo_rect, bg);
+        let logo = Canvas::default()
+            .marker(Marker::Braille)
+            .x_bounds([0.0, 100.0])
+            .y_bounds([0.0, 100.0])
+            .paint(move |ctx| {
+                ctx.draw(&Rectangle {
+                    x: 1.0,
+                    y: 1.0,
+                    width: 97.0,
+                    height: 97.0,
+                    color: stroke,
+                });
+                // a stylized "Z" stroke inside the frame
+                for (x1, y1, x2, y2) in [
+                    (20.0, 76.0, 72.0, 76.0),
+                    (72.0, 76.0, 20.0, 24.0),
+                    (20.0, 24.0, 72.0, 24.0),
+                ] {
+                    ctx.draw(&CanvasLine { x1, y1, x2, y2, color: stroke });
+                }
+                ctx.print(10.0, 50.0, Line::from(Span::styled("zemacs", accent)));
+            });
+        render(logo, logo_rect, surface);
+
+        // ── Language BarChart ────────────────────────────────────────────────────
+        if self.lang_stats.is_empty() {
+            return;
+        }
+        let by = area.y + 1 + logo_h + 1;
+        let bottom = area.y + area.height;
+        if by + 4 > bottom {
+            return;
+        }
+        let bh = (bottom - by - 1).min(12);
+        let chart_rect = Rect::new(rx, by, rw, bh);
+        surface.clear_with(chart_rect, bg);
+
+        let data: Vec<(&str, u64)> = self
+            .lang_stats
+            .iter()
+            .map(|(e, c)| (e.as_str(), *c))
+            .collect();
+        let chart = BarChart::default()
+            .block(
+                Block::default()
+                    .borders(Borders::TOP)
+                    .border_style(dim)
+                    .title(Span::styled(" Languages ", accent)),
+            )
+            .data(data.as_slice())
+            .bar_width(6)
+            .bar_gap(1)
+            .bar_style(text)
+            .value_style(dim)
+            .label_style(text);
+        render(chart, chart_rect, surface);
     }
 }
 
@@ -255,11 +348,38 @@ impl Component for Startify {
             }
             y += 1;
         }
+
+        // Right-hand dashboard (Canvas logo + language BarChart) on wide terminals.
+        self.render_dashboard(surface, theme, area);
     }
 
     fn id(&self) -> Option<&'static str> {
         Some("startify")
     }
+}
+
+/// Count files by extension under `root` (respecting `.gitignore`), returning
+/// the top handful by frequency for the language BarChart. Capped so very large
+/// trees don't stall startup.
+fn scan_languages(root: &Path) -> Vec<(String, u64)> {
+    use std::collections::HashMap;
+    let mut counts: HashMap<String, u64> = HashMap::new();
+    let mut seen = 0u64;
+    for entry in ignore::WalkBuilder::new(root).build().flatten() {
+        if entry.file_type().is_some_and(|t| t.is_file()) {
+            if let Some(ext) = entry.path().extension().and_then(|e| e.to_str()) {
+                *counts.entry(ext.to_lowercase()).or_default() += 1;
+            }
+            seen += 1;
+            if seen >= 20_000 {
+                break;
+            }
+        }
+    }
+    let mut v: Vec<(String, u64)> = counts.into_iter().collect();
+    v.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    v.truncate(6);
+    v
 }
 
 /// Run `fortune | cowsay` for the header, falling back to a static cow.

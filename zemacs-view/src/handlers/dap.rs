@@ -45,7 +45,36 @@ pub async fn select_thread_id(editor: &mut Editor, thread_id: ThreadId, force: b
     let frame = debugger.stack_frames[&thread_id].first().cloned();
     if let Some(frame) = &frame {
         jump_to_stack_frame(editor, frame);
+        // Cache the top frame's variables so the IDE Debug tool window can show
+        // them without an async round-trip during render.
+        editor.dap_variables = fetch_frame_variables(editor, frame.id).await;
     }
+}
+
+/// Fetch all scopes + variables of `frame_id` into a flat `(name, value)` list
+/// for the Debug tool window. Scope headers are emitted as `[scope]` rows.
+pub async fn fetch_frame_variables(editor: &mut Editor, frame_id: usize) -> Vec<(String, String)> {
+    let Some(debugger) = editor.debug_adapters.get_active_client_mut() else {
+        return Vec::new();
+    };
+    let scopes = match debugger.scopes(frame_id).await {
+        Ok(s) => s,
+        Err(_) => return Vec::new(),
+    };
+    let mut out = Vec::new();
+    for scope in scopes {
+        out.push((format!("[{}]", scope.name), String::new()));
+        if let Ok(vars) = debugger.variables(scope.variables_reference).await {
+            for var in vars {
+                let value = match var.ty {
+                    Some(ty) => format!("{} : {ty}", var.value),
+                    None => var.value,
+                };
+                out.push((var.name, value));
+            }
+        }
+    }
+    out
 }
 
 pub async fn fetch_stack_trace(debugger: &mut Client, thread_id: ThreadId) {

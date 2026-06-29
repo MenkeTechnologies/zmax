@@ -144,6 +144,7 @@ where
         zemacs_view::editor::StatusLineElement::FileIndentStyle => render_file_indent_style,
         zemacs_view::editor::StatusLineElement::FileType => render_file_type,
         zemacs_view::editor::StatusLineElement::Diagnostics => render_diagnostics,
+        zemacs_view::editor::StatusLineElement::CiStatus => render_ci_status,
         zemacs_view::editor::StatusLineElement::WorkspaceDiagnostics => render_workspace_diagnostics,
         zemacs_view::editor::StatusLineElement::Selections => render_selections,
         zemacs_view::editor::StatusLineElement::PrimarySelectionLength => {
@@ -304,6 +305,19 @@ where
             .unwrap_or(" ")
             .into(),
     );
+}
+
+/// Latest CI run status (GitHub Actions): a `CI ✓/✗/●` badge, shown only once a
+/// fetch has populated the global cache (open the CI panel — SPC W c — to load).
+fn render_ci_status<'a, F>(context: &mut RenderContext<'a>, write: F)
+where
+    F: Fn(&mut RenderContext<'a>, Span<'a>) + Copy,
+{
+    if let Some((glyph, scope)) = crate::ci::latest_badge() {
+        write(context, Span::raw(" CI "));
+        write(context, Span::styled(glyph, context.editor.theme.get(scope)));
+        write(context, Span::raw(" "));
+    }
 }
 
 fn render_diagnostics<'a, F>(context: &mut RenderContext<'a>, write: F)

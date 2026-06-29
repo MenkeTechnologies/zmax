@@ -53,6 +53,50 @@ fn wrap_chunks(line: &str, w: usize) -> Vec<&str> {
     chunks
 }
 
+/// Find a `NN%` token in `line` (0..=100), e.g. cargo/test/webpack progress.
+/// Returns the first plausible percentage so a build LineGauge can reflect it.
+fn parse_percent(line: &str) -> Option<u32> {
+    let bytes = line.as_bytes();
+    for (i, &b) in bytes.iter().enumerate() {
+        if b == b'%' {
+            // walk back over the digits immediately preceding the '%'
+            let mut j = i;
+            while j > 0 && bytes[j - 1].is_ascii_digit() {
+                j -= 1;
+            }
+            if j < i {
+                if let Ok(n) = line[j..i].parse::<u32>() {
+                    if n <= 100 {
+                        return Some(n);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Count cargo-style test results streaming in the Run console: `(passed,
+/// total)` from `test <name> ... ok` / `... FAILED` lines. `None` when no test
+/// lines are present yet. Drives the run-console test gauge.
+fn parse_test_progress(lines: &[String]) -> Option<(u32, u32)> {
+    let mut passed = 0u32;
+    let mut failed = 0u32;
+    for l in lines {
+        let t = l.trim();
+        if t.starts_with("test ") && !t.starts_with("test result:") && t.contains(" ... ") {
+            if t.ends_with(" ok") {
+                passed += 1;
+            } else if t.contains("FAILED") {
+                failed += 1;
+            }
+            // "... ignored" lines are excluded from the pass ratio
+        }
+    }
+    let total = passed + failed;
+    (total > 0).then_some((passed, total))
+}
+
 #[derive(PartialEq, Clone, Copy)]
 enum Focus {
     Editor,
@@ -66,12 +110,14 @@ enum BottomTab {
     Problems,
     Run,
     Git,
+    Debug,
     Registers,
     Todo,
     Marks,
     Jumplist,
     Recent,
     Harpoon,
+    Ci,
 }
 
 #[derive(Clone, Copy)]
@@ -79,12 +125,14 @@ enum BottomHit {
     TabProblems,
     TabRun,
     TabGit,
+    TabDebug,
     TabRegisters,
     TabTodo,
     TabMarks,
     TabJumplist,
     TabRecent,
     TabHarpoon,
+    TabCi,
     Rerun,
     Stop,
     Clear,
@@ -93,6 +141,8 @@ enum BottomHit {
 pub enum IdeAction {
     None,
     OpenFile(PathBuf),
+    /// Open a URL in the system browser (CI run links).
+    OpenUrl(String),
     /// Open a file and place the cursor on a 1-based line (run-output jump).
     OpenFileAt { path: PathBuf, line: usize },
     Goto { from: usize, to: usize },
@@ -142,6 +192,7 @@ enum ToolHit {
     Configs,
     Settings,
     Help,
+    Locate,
 }
 
 struct OutlineRow {
@@ -191,23 +242,38 @@ pub struct Ide {
     problems: Vec<ProblemRow>,
     problems_sel: usize,
     problems_state: ratatui::widgets::TableState,
+    ci_state: ratatui::widgets::TableState,
     run: Option<crate::ui::run::Run>,
     registers: Vec<(char, String)>,
-    todos: Vec<(usize, String)>,
+    todos: Vec<(usize, String, &'static str)>,
     marks_list: Vec<(usize, String)>,
     /// Jumplist entries: (path if in another doc else None, char pos, label).
     jumplist_rows: Vec<(Option<PathBuf>, usize, String)>,
     /// Recently opened files (newest first).
     recent_rows: Vec<PathBuf>,
+    recent_times: Vec<u64>,
     /// Harpoon marks for the current project (pin order).
     harpoon_rows: Vec<PathBuf>,
-    bottom_tab: BottomTab,
+    bottom_tab: BottomTab,       // mirror of the focused column's active tab (keeps existing key/mouse logic working)
+    bottom_tabs: [BottomTab; 3], // active tab in each of the three columns
+    bottom_focus_col: usize,     // which column has keyboard focus (0 | 1 | 2)
+    bottom_splits: [u16; 2],     // the two divider positions as % of drawer width
+    bottom_div_x: [u16; 2],      // screen columns of the two dividers (0 = not laid out)
+    aux_sels: [usize; 3],        // per-column list selection (mirrored to aux_sel for the focused col)
+    resizing_div: Option<usize>, // which divider (0|1) is being dragged
+    bottom_mid_folded: bool,     // middle column collapsed → two-column layout
+    bottom_body_y: u16,          // top row of the drawer body (for the fold-button hit)
+    mid_fold_btn_x: u16,         // column of the fold/unfold chevron (0 = none)
     bottom_hits: Vec<(u16, u16, BottomHit)>,
     bottom_header_y: u16,
     bottom_divider_y: u16,
     toolbar_rect: Rect,
     toolbar_y: u16,
     toolbar_hits: Vec<(u16, u16, ToolHit)>,
+    /// Row reserved (above the toolbar) for the open-file tabs. The bufferline
+    /// itself is drawn by `EditorView` into this rect, so the two top bars stack
+    /// as: file tabs, then the run/debug button toolbar.
+    bufferline_rect: Rect,
     total_lines: usize,
     view_top_line: usize,
     /// Primary cursor's char offset (for the symbol breadcrumb).
@@ -223,6 +289,9 @@ pub struct Ide {
     harpoon_total: usize,
     /// Screen x-range of the toolbar breadcrumb, for click hit-testing.
     breadcrumb_hit: (u16, u16),
+    /// Hit region of the PROJECT header's "select opened file" button:
+    /// `(row, x0, x1)`. Zeroed when the project panel is hidden/collapsed.
+    locate_hit: (u16, u16, u16),
     view_lines: usize,
     /// Per source line: which columns hold a non-whitespace glyph (for the braille minimap).
     minimap_dots: Vec<Vec<bool>>,
@@ -255,6 +324,17 @@ pub struct Ide {
     // VCS / Git changes tab (JetBrains "Commit" tool window)
     git_changes: Vec<(String, String, std::path::PathBuf)>, // (XY code, display, abs path)
     git_sel: usize,
+    /// Commits ahead/behind the upstream (shown in the GIT tab label).
+    git_ahead: usize,
+    git_behind: usize,
+    /// Per-changed-file diffstat vs HEAD: (repo-relative path, additions, deletions).
+    git_diffstat: Vec<(String, u32, u32)>,
+    /// Recent per-commit churn (additions + deletions), oldest→newest, for the
+    /// git-panel sparkline.
+    git_churn: Vec<u64>,
+    /// Body rows consumed above the Git file list (the churn sparkline), so
+    /// click-to-open can map a clicked row back to a `git_changes` index.
+    git_list_offset: u16,
     git_last: Option<std::time::Instant>,
     /// Shared keyboard selection for the simple list tabs (Todo/Marks/Jumps/Recent).
     aux_sel: usize,
@@ -268,6 +348,24 @@ pub struct Ide {
 
     // Run console: total soft-wrapped visual rows last frame (for scroll clamping)
     run_total_vis: usize,
+
+    /// Latest LSP `$/progress` snapshot, mirrored from the editor for the
+    /// workbench progress gauge.
+    lsp_progress: Option<zemacs_view::editor::LspProgress>,
+    /// Build/run progress parsed from the Run console as `(fraction, label)`
+    /// when the output contains a parseable `NN%`; `None` otherwise.
+    build_progress: Option<(f64, String)>,
+    /// Rolling samples of Run-console output rate (lines appended per refresh
+    /// tick) for the run sparkline; newest at the back.
+    run_rate: std::collections::VecDeque<u64>,
+    /// Run-console line count at the previous refresh, to compute the rate delta.
+    run_last_len: usize,
+
+    /// One-line debug-session status for the Debug tab header.
+    dap_status: String,
+    /// Flattened Debug-tab rows: `(kind, text, jump target)` where kind is
+    /// 0=section header, 1=stack frame, 2=variable, 3=breakpoint.
+    dap_lines: Vec<(u8, String, Option<(PathBuf, usize)>)>,
 }
 
 fn empty_rect() -> Rect {
@@ -305,20 +403,32 @@ impl Ide {
             problems: Vec::new(),
             problems_sel: 0,
             problems_state: ratatui::widgets::TableState::default(),
+            ci_state: ratatui::widgets::TableState::default(),
             run: None,
             registers: Vec::new(),
             todos: Vec::new(),
             marks_list: Vec::new(),
             jumplist_rows: Vec::new(),
             recent_rows: Vec::new(),
+            recent_times: Vec::new(),
             harpoon_rows: Vec::new(),
             bottom_tab: BottomTab::Problems,
+            bottom_tabs: [BottomTab::Problems, BottomTab::Marks, BottomTab::Ci],
+            bottom_focus_col: 0,
+            bottom_splits: [33, 66],
+            bottom_div_x: [0, 0],
+            aux_sels: [0, 0, 0],
+            resizing_div: None,
+            bottom_mid_folded: false,
+            bottom_body_y: 0,
+            mid_fold_btn_x: 0,
             bottom_hits: Vec::new(),
             bottom_header_y: 0,
             bottom_divider_y: u16::MAX,
             toolbar_rect: empty_rect(),
             toolbar_y: 0,
             toolbar_hits: Vec::new(),
+            bufferline_rect: empty_rect(),
             total_lines: 1,
             view_top_line: 0,
             cursor_char: 0,
@@ -328,6 +438,7 @@ impl Ide {
             harpoon_slot: None,
             harpoon_total: 0,
             breadcrumb_hit: (0, 0),
+            locate_hit: (0, 0, 0),
             view_lines: 0,
             minimap_dots: Vec::new(),
             minimap_key: (None, usize::MAX),
@@ -352,12 +463,23 @@ impl Ide {
             status_branch_dir: None,
             git_changes: Vec::new(),
             git_sel: 0,
+            git_ahead: 0,
+            git_behind: 0,
+            git_diffstat: Vec::new(),
+            git_churn: Vec::new(),
+            git_list_offset: 0,
             aux_sel: 0,
             reg_sel: 0,
             run_row_src: Vec::new(),
             run_error_idx: usize::MAX,
             git_last: None,
             run_total_vis: 0,
+            lsp_progress: None,
+            build_progress: None,
+            run_rate: std::collections::VecDeque::new(),
+            run_last_len: 0,
+            dap_status: String::new(),
+            dap_lines: Vec::new(),
         }
     }
 
@@ -365,6 +487,16 @@ impl Ide {
     /// when files change outside the editor.
     pub fn refresh_tree(&mut self) {
         self.project.refresh();
+    }
+
+    /// The row reserved above the toolbar for the open-file tabs (empty when the
+    /// workbench is hidden or too short). `EditorView` draws the bufferline here.
+    pub fn bufferline_rect(&self) -> Rect {
+        if self.visible {
+            self.bufferline_rect
+        } else {
+            empty_rect()
+        }
     }
 
     /// True while a panel (not the editor) holds focus — editor cursor hidden, keys routed here.
@@ -393,7 +525,7 @@ impl Ide {
     /// Attach a running command to the Run tool window and reveal it.
     pub fn set_run(&mut self, run: crate::ui::run::Run) {
         self.run = Some(run);
-        self.bottom_tab = BottomTab::Run;
+        self.select_tab(BottomTab::Run);
         self.visible = true;
         self.fold_problems = false;
         self.run_error_idx = usize::MAX;
@@ -447,6 +579,17 @@ impl Ide {
         self.bottom_zoom
     }
 
+    /// Fold/unfold the middle drawer column (collapses to a two-column layout).
+    pub fn toggle_mid_fold(&mut self) -> bool {
+        self.bottom_mid_folded = !self.bottom_mid_folded;
+        if self.bottom_mid_folded && self.bottom_focus_col == 1 {
+            self.set_focus_col(0);
+        }
+        self.visible = true;
+        self.fold_problems = false;
+        self.bottom_mid_folded
+    }
+
     /// Re-run the last command (same cmd/cwd/shell), revealing the Run tab.
     /// Returns false when there's nothing to re-run.
     pub fn rerun_last(&mut self) -> bool {
@@ -454,7 +597,7 @@ impl Ide {
             return false;
         };
         self.run = Some(crate::ui::run::rerun(&r));
-        self.bottom_tab = BottomTab::Run;
+        self.select_tab(BottomTab::Run);
         self.visible = true;
         self.fold_problems = false;
         self.run_error_idx = usize::MAX;
@@ -471,7 +614,7 @@ impl Ide {
             s.scroll = 0;
             s.follow = true;
         }
-        self.bottom_tab = BottomTab::Run;
+        self.select_tab(BottomTab::Run);
         self.visible = true;
         self.fold_problems = false;
         true
@@ -495,17 +638,22 @@ impl Ide {
             }
             "problems" => {
                 self.fold_problems = false;
-                self.bottom_tab = BottomTab::Problems;
+                self.select_tab(BottomTab::Problems);
                 self.focus = Focus::Problems;
             }
             "run" => {
                 self.fold_problems = false;
-                self.bottom_tab = BottomTab::Run;
+                self.select_tab(BottomTab::Run);
                 self.focus = Focus::Problems;
             }
             "git" => {
                 self.fold_problems = false;
-                self.bottom_tab = BottomTab::Git;
+                self.select_tab(BottomTab::Git);
+                self.focus = Focus::Problems;
+            }
+            "ci" => {
+                self.fold_problems = false;
+                self.select_tab(BottomTab::Ci);
                 self.focus = Focus::Problems;
             }
             _ => self.focus = Focus::Editor,
@@ -531,6 +679,21 @@ impl Ide {
         self.left_collapsed = false;
         self.focus = Focus::Project;
         self.project.reveal(path);
+    }
+
+    /// JetBrains "Select Opened File": expand the left tree and reveal the file
+    /// currently being edited. Falls back to just focusing the tree when the
+    /// buffer has no path (e.g. a scratch buffer).
+    pub fn reveal_current(&mut self) {
+        match self.current_doc_path.clone() {
+            Some(path) => self.reveal(&path),
+            None => {
+                self.visible = true;
+                self.fold_project = false;
+                self.left_collapsed = false;
+                self.focus = Focus::Project;
+            }
+        }
     }
 
     /// Snapshot the drawer layout for session persistence.
@@ -711,15 +874,100 @@ impl Ide {
     }
 
     /// Cycle the active bottom-panel tab (`]` forward / `[` back).
+    /// Which column (0|1|2) a tab lives in. Tabs are distributed 3/3/4.
+    fn tab_col(t: BottomTab) -> usize {
+        match t {
+            BottomTab::Problems | BottomTab::Run | BottomTab::Git | BottomTab::Debug => 0,
+            BottomTab::Registers | BottomTab::Todo | BottomTab::Marks | BottomTab::Jumplist => 1,
+            BottomTab::Recent | BottomTab::Harpoon | BottomTab::Ci => 2,
+        }
+    }
+
+    /// Refresh the `bottom_tab` mirror from the focused column.
+    fn sync_bottom_tab(&mut self) {
+        self.bottom_tab = self.bottom_tabs[self.bottom_focus_col];
+    }
+
+    /// True when the CI panel is on screen (a column shows it, drawer open).
+    fn ci_visible(&self) -> bool {
+        self.visible && !self.fold_problems && self.bottom_tabs.contains(&BottomTab::Ci)
+    }
+
+    /// Move keyboard focus to column `c`, swapping the live `aux_sel` so each
+    /// column keeps its own list selection.
+    fn set_focus_col(&mut self, c: usize) {
+        let c = c.min(2);
+        if c != self.bottom_focus_col {
+            self.aux_sels[self.bottom_focus_col] = self.aux_sel;
+            self.bottom_focus_col = c;
+            self.aux_sel = self.aux_sels[c];
+        }
+    }
+
+    /// Show `t` in its column without moving keyboard focus.
+    fn show_tab(&mut self, t: BottomTab) {
+        self.bottom_tabs[Self::tab_col(t)] = t;
+        self.sync_bottom_tab();
+    }
+
+    /// Show `t` in its column and give that column keyboard focus.
+    fn select_tab(&mut self, t: BottomTab) {
+        let c = Self::tab_col(t);
+        if c == 1 {
+            self.bottom_mid_folded = false; // selecting a middle-column tab reveals it
+        }
+        self.set_focus_col(c);
+        self.bottom_tabs[c] = t;
+        self.aux_sel = 0;
+        self.aux_sels[c] = 0;
+        self.focus = Focus::Problems;
+        self.sync_bottom_tab();
+    }
+
+    fn render_tab_body(
+        &mut self,
+        tab: BottomTab,
+        surface: &mut Surface,
+        theme: &zemacs_view::Theme,
+        rect: Rect,
+    ) {
+        match tab {
+            BottomTab::Problems => self.render_problems_body(surface, theme, rect),
+            BottomTab::Run => self.render_run_body(surface, theme, rect),
+            BottomTab::Git => self.render_git_body(surface, theme, rect),
+            BottomTab::Debug => self.render_debug_body(surface, theme, rect),
+            BottomTab::Registers => self.render_registers_body(surface, theme, rect),
+            BottomTab::Todo => self.render_todo_body(surface, theme, rect),
+            BottomTab::Marks => self.render_marks_body(surface, theme, rect),
+            BottomTab::Jumplist => self.render_jumplist_body(surface, theme, rect),
+            BottomTab::Recent => self.render_recent_body(surface, theme, rect),
+            BottomTab::Harpoon => self.render_harpoon_body(surface, theme, rect),
+            BottomTab::Ci => self.render_ci_body(surface, theme, rect),
+        }
+    }
+
+    /// Cycle the focused column through its own tab group (`[` / `]`).
     fn cycle_bottom_tab(&mut self, forward: bool) {
         use BottomTab::*;
-        const ORDER: [BottomTab; 9] =
-            [Problems, Run, Git, Registers, Todo, Marks, Jumplist, Recent, Harpoon];
-        let cur = ORDER.iter().position(|t| *t == self.bottom_tab).unwrap_or(0);
-        let n = ORDER.len();
+        const G0: [BottomTab; 4] = [Problems, Run, Git, Debug];
+        const G1: [BottomTab; 4] = [Registers, Todo, Marks, Jumplist];
+        const G2: [BottomTab; 3] = [Recent, Harpoon, Ci];
+        let col = self.bottom_focus_col;
+        let order: &[BottomTab] = match col {
+            0 => &G0,
+            1 => &G1,
+            _ => &G2,
+        };
+        let cur = order
+            .iter()
+            .position(|t| *t == self.bottom_tabs[col])
+            .unwrap_or(0);
+        let n = order.len();
         let next = if forward { (cur + 1) % n } else { (cur + n - 1) % n };
-        self.bottom_tab = ORDER[next];
+        self.bottom_tabs[col] = order[next];
         self.aux_sel = 0;
+        self.aux_sels[col] = 0;
+        self.sync_bottom_tab();
     }
 
     /// Row count of the currently active simple-list tab (Todo/Marks/Jumps/Recent).
@@ -730,6 +978,7 @@ impl Ide {
             BottomTab::Jumplist => self.jumplist_rows.len(),
             BottomTab::Recent => self.recent_rows.len(),
             BottomTab::Harpoon => self.harpoon_rows.len(),
+            BottomTab::Ci => crate::ci::snapshot().len(),
             _ => 0,
         }
     }
@@ -740,7 +989,7 @@ impl Ide {
             BottomTab::Todo => self
                 .todos
                 .get(self.aux_sel)
-                .map(|(pos, _)| IdeAction::Goto { from: *pos, to: *pos })
+                .map(|(pos, _, _)| IdeAction::Goto { from: *pos, to: *pos })
                 .unwrap_or(IdeAction::None),
             BottomTab::Marks => self
                 .marks_list
@@ -769,6 +1018,10 @@ impl Ide {
                 }
                 _ => IdeAction::None,
             },
+            BottomTab::Ci => crate::ci::snapshot()
+                .get(self.aux_sel)
+                .map(|r| IdeAction::OpenUrl(r.url.clone()))
+                .unwrap_or(IdeAction::None),
             _ => IdeAction::None,
         }
     }
@@ -1075,6 +1328,10 @@ impl Ide {
                             self.rerun_last();
                             IdeAction::None
                         }
+                        Some(ToolHit::Locate) => {
+                            self.reveal_current();
+                            IdeAction::None
+                        }
                         None => {
                             // Clicking the breadcrumb reveals the current file in the tree.
                             let (bx0, bx1) = self.breadcrumb_hit;
@@ -1095,6 +1352,16 @@ impl Ide {
                 // grab the resize seam
                 if self.seam_x != u16::MAX && col == self.seam_x {
                     self.resizing_left = true;
+                    return IdeAction::None;
+                }
+                // "Select Opened File" button on the PROJECT header → reveal the
+                // current buffer in the tree (expanding/uncollapsing as needed).
+                if row == self.locate_hit.0
+                    && col >= self.locate_hit.1
+                    && col < self.locate_hit.2
+                    && self.locate_hit.2 > 0
+                {
+                    self.reveal_current();
                     return IdeAction::None;
                 }
                 // clicking a drawer's header row folds/unfolds it
@@ -1133,15 +1400,17 @@ impl Ide {
                         self.reg_sel = 0;
                     }
                     match bhit {
-                        Some(BottomHit::TabProblems) => self.bottom_tab = BottomTab::Problems,
-                        Some(BottomHit::TabRun) => self.bottom_tab = BottomTab::Run,
-                        Some(BottomHit::TabGit) => self.bottom_tab = BottomTab::Git,
-                        Some(BottomHit::TabRegisters) => self.bottom_tab = BottomTab::Registers,
-                        Some(BottomHit::TabTodo) => self.bottom_tab = BottomTab::Todo,
-                        Some(BottomHit::TabMarks) => self.bottom_tab = BottomTab::Marks,
-                        Some(BottomHit::TabJumplist) => self.bottom_tab = BottomTab::Jumplist,
-                        Some(BottomHit::TabRecent) => self.bottom_tab = BottomTab::Recent,
-                        Some(BottomHit::TabHarpoon) => self.bottom_tab = BottomTab::Harpoon,
+                        Some(BottomHit::TabProblems) => self.select_tab(BottomTab::Problems),
+                        Some(BottomHit::TabRun) => self.select_tab(BottomTab::Run),
+                        Some(BottomHit::TabGit) => self.select_tab(BottomTab::Git),
+                        Some(BottomHit::TabDebug) => self.select_tab(BottomTab::Debug),
+                        Some(BottomHit::TabRegisters) => self.select_tab(BottomTab::Registers),
+                        Some(BottomHit::TabTodo) => self.select_tab(BottomTab::Todo),
+                        Some(BottomHit::TabMarks) => self.select_tab(BottomTab::Marks),
+                        Some(BottomHit::TabJumplist) => self.select_tab(BottomTab::Jumplist),
+                        Some(BottomHit::TabRecent) => self.select_tab(BottomTab::Recent),
+                        Some(BottomHit::TabHarpoon) => self.select_tab(BottomTab::Harpoon),
+                        Some(BottomHit::TabCi) => self.select_tab(BottomTab::Ci),
                         Some(BottomHit::Stop) => {
                             if let Some(r) = &self.run {
                                 crate::ui::run::stop(r);
@@ -1177,14 +1446,66 @@ impl Ide {
                         return IdeAction::Goto { from: o.start, to: o.end };
                     }
                 }
+                // Three-column drawer: a body click focuses the column under the
+                // cursor (so the row handlers below act on that column's tab); a
+                // click on a vertical divider starts a resize.
+                if row > self.bottom_header_y && in_rect(&self.problems_rect, col, row) {
+                    let [d0, d1] = self.bottom_div_x;
+                    // the divider's top cell is the fold/unfold chevron
+                    if self.mid_fold_btn_x != 0
+                        && col == self.mid_fold_btn_x
+                        && row == self.bottom_body_y
+                    {
+                        self.bottom_mid_folded = !self.bottom_mid_folded;
+                        if self.bottom_mid_folded && self.bottom_focus_col == 1 {
+                            self.set_focus_col(0);
+                        }
+                        return IdeAction::None;
+                    }
+                    if d0 != 0 && col == d0 {
+                        self.resizing_div = Some(0);
+                        return IdeAction::None;
+                    }
+                    if d1 != 0 && col == d1 {
+                        self.resizing_div = Some(1);
+                        return IdeAction::None;
+                    }
+                    if d0 != 0 {
+                        let c = if self.bottom_mid_folded {
+                            if col > d0 { 2 } else { 0 }
+                        } else if col > d1 {
+                            2
+                        } else if col > d0 {
+                            1
+                        } else {
+                            0
+                        };
+                        self.set_focus_col(c);
+                    }
+                    self.focus = Focus::Problems;
+                    self.sync_bottom_tab();
+                }
                 if in_rect(&self.problems_rect, col, row)
                     && row > self.problems_rect.y
                     && self.bottom_tab == BottomTab::Todo
                 {
                     let idx = (row - self.problems_rect.y - 1) as usize;
-                    if let Some((pos, _)) = self.todos.get(idx) {
+                    if let Some((pos, _, _)) = self.todos.get(idx) {
                         self.aux_sel = idx;
                         return IdeAction::Goto { from: *pos, to: *pos };
+                    }
+                    return IdeAction::None;
+                }
+                // Debug tab: click a stack frame / breakpoint row to jump to it.
+                // Body row 0 is the status line, so the list starts 2 rows below.
+                if in_rect(&self.problems_rect, col, row)
+                    && row > self.problems_rect.y + 1
+                    && self.bottom_tab == BottomTab::Debug
+                {
+                    let idx = (row - self.problems_rect.y - 2) as usize;
+                    if let Some((_, _, Some((path, line)))) = self.dap_lines.get(idx) {
+                        self.focus = Focus::Editor;
+                        return IdeAction::OpenFileAt { path: path.clone(), line: *line };
                     }
                     return IdeAction::None;
                 }
@@ -1192,7 +1513,13 @@ impl Ide {
                     && row > self.problems_rect.y
                     && self.bottom_tab == BottomTab::Git
                 {
-                    let idx = (row - self.problems_rect.y - 1) as usize;
+                    // account for the churn sparkline above the file list
+                    let Some(idx) = (row - self.problems_rect.y - 1)
+                        .checked_sub(self.git_list_offset)
+                        .map(|v| v as usize)
+                    else {
+                        return IdeAction::None;
+                    };
                     if let Some((_, _, path)) = self.git_changes.get(idx) {
                         self.git_sel = idx;
                         if path.is_file() {
@@ -1389,6 +1716,19 @@ impl Ide {
                 self.bottom_height = panel_bottom.saturating_sub(row + 1).clamp(3, 40);
                 IdeAction::None
             }
+            MouseEventKind::Drag(MouseButton::Left) if self.resizing_div.is_some() => {
+                // dragging a vertical divider sets its position as a % of the drawer
+                if self.problems_rect.width > 2 {
+                    let rel = col.saturating_sub(self.problems_rect.x);
+                    let pct = (rel as u32 * 100 / self.problems_rect.width as u32) as u16;
+                    match self.resizing_div {
+                        Some(0) => self.bottom_splits[0] = pct.clamp(12, self.bottom_splits[1].saturating_sub(8).max(12)),
+                        Some(1) => self.bottom_splits[1] = pct.clamp(self.bottom_splits[0] + 8, 88),
+                        _ => {}
+                    }
+                }
+                IdeAction::None
+            }
             MouseEventKind::Drag(MouseButton::Left) if self.resizing_stripe => {
                 // Dragging the minimap past its half-way point (toward the right edge)
                 // folds it to the thin handle, mirroring the left drawer's collapse.
@@ -1402,6 +1742,7 @@ impl Ide {
             MouseEventKind::Up(MouseButton::Left) => {
                 self.resizing_left = false;
                 self.resizing_bottom = false;
+                self.resizing_div = None;
                 self.resizing_stripe = false;
                 IdeAction::None
             }
@@ -1488,11 +1829,20 @@ impl Ide {
             self.bottom_divider_y = u16::MAX;
         }
 
-        // top run/debug toolbar — a 1-row strip above the editor (always visible in IDE mode)
-        if rest.height > 3 {
+        // Two stacked top bars over the editor region: row 1 = open-file tabs
+        // (the bufferline, drawn by EditorView into `bufferline_rect`), row 2 =
+        // the run/debug button toolbar. Reserve both here so the file names sit
+        // above the buttons.
+        if rest.height > 4 {
+            self.bufferline_rect = Rect::new(rest.x, rest.y, rest.width, 1);
+            self.toolbar_rect = Rect::new(rest.x, rest.y + 1, rest.width, 1);
+            rest = Rect::new(rest.x, rest.y + 2, rest.width, rest.height - 2);
+        } else if rest.height > 3 {
+            self.bufferline_rect = empty_rect();
             self.toolbar_rect = Rect::new(rest.x, rest.y, rest.width, 1);
             rest = Rect::new(rest.x, rest.y + 1, rest.width, rest.height - 1);
         } else {
+            self.bufferline_rect = empty_rect();
             self.toolbar_rect = empty_rect();
         }
 
@@ -1505,6 +1855,20 @@ impl Ide {
         if self.project_rect.height > 0 {
             surface.clear_with(self.project_rect, theme.get("ui.background"));
             draw_header(surface, self.project_rect, "PROJECT", self.fold_project, self.focus == Focus::Project, theme);
+            // JetBrains-style "Select Opened File" button at the header's right
+            // edge: ◎ when "always select" is on, ⊙ for a one-shot reveal.
+            self.locate_hit = (0, 0, 0);
+            if self.project_rect.width > 8 {
+                let icon = if self.auto_reveal { "◎" } else { "⊙" };
+                let ix = self.project_rect.x + self.project_rect.width - 2;
+                let st = if self.auto_reveal {
+                    theme.get("function")
+                } else {
+                    theme.get("comment")
+                };
+                surface.set_stringn(ix, self.project_rect.y, icon, 1, st);
+                self.locate_hit = (self.project_rect.y, ix, ix + 1);
+            }
             if !self.fold_project && self.project_rect.height > 1 {
                 self.project.render(body_rect(self.project_rect), surface, theme);
             }
@@ -1722,6 +2086,88 @@ impl Ide {
             return;
         }
 
+        // CI: the panel can be on screen without ever being explicitly focused
+        // (it's a default column), so kick off the first fetch here. `loading`
+        // (set inside spawn_fetch) gates against re-spawning every frame.
+        if self.ci_visible() && !crate::ci::fetched() && !crate::ci::status().0 {
+            crate::ci::spawn_fetch(cx.jobs);
+        }
+
+        // ── Debug session snapshot (Debug tool window) ─────────────────────────
+        self.dap_lines.clear();
+        match cx.editor.debug_adapters.get_active_client() {
+            Some(c) => {
+                self.dap_status = match c.thread_id {
+                    Some(t) => format!("● stopped · thread {t}"),
+                    None => "▶ running".to_string(),
+                };
+                if let Some(t) = c.thread_id {
+                    if let Some(frames) = c.stack_frames.get(&t) {
+                        self.dap_lines.push((0, "CALL STACK".to_string(), None));
+                        for (i, f) in frames.iter().enumerate() {
+                            let target = f.source.as_ref().and_then(|s| s.path.clone()).map(|p| (p, f.line));
+                            let marker = if Some(i) == c.active_frame { "▶ " } else { "  " };
+                            self.dap_lines.push((1, format!("{marker}{}", f.name), target));
+                        }
+                    }
+                }
+                if !cx.editor.dap_variables.is_empty() {
+                    self.dap_lines.push((0, "VARIABLES".to_string(), None));
+                    for (name, val) in &cx.editor.dap_variables {
+                        let text = if val.is_empty() { name.clone() } else { format!("{name} = {val}") };
+                        self.dap_lines.push((2, text, None));
+                    }
+                }
+            }
+            None => self.dap_status = "no debug session — :dap-launch".to_string(),
+        }
+        // Breakpoints (shown whether or not a session is live).
+        let mut bps: Vec<(std::path::PathBuf, usize)> = Vec::new();
+        for (path, list) in &cx.editor.breakpoints {
+            for b in list {
+                bps.push((path.clone(), b.line));
+            }
+        }
+        if !bps.is_empty() {
+            bps.sort();
+            self.dap_lines.push((0, "BREAKPOINTS".to_string(), None));
+            for (p, line) in bps {
+                let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                self.dap_lines.push((3, format!("{name}:{}", line + 1), Some((p, line + 1))));
+            }
+        }
+
+        // ── LSP progress + run output-rate / build-progress (workbench gauges) ─
+        self.lsp_progress = cx.editor.lsp_progress.clone();
+        self.build_progress = None;
+        if let Some(run) = self.run.clone() {
+            if let Ok(s) = run.lock() {
+                // Output rate: lines appended since the previous refresh tick.
+                let len = s.lines.len();
+                let delta = len.saturating_sub(self.run_last_len) as u64;
+                self.run_last_len = len;
+                self.run_rate.push_back(delta);
+                while self.run_rate.len() > 64 {
+                    self.run_rate.pop_front();
+                }
+                // Build progress: the most recent output line carrying an `NN%`
+                // token, while the command is still running. Cargo's `\r` progress
+                // bar isn't captured, but many tools print a plain percentage.
+                if s.running {
+                    for line in s.lines.iter().rev().take(40) {
+                        if let Some(pct) = parse_percent(line) {
+                            let label = line.trim().chars().take(40).collect::<String>();
+                            self.build_progress = Some((pct as f64 / 100.0, label));
+                            break;
+                        }
+                    }
+                }
+            }
+        } else {
+            self.run_rate.clear();
+            self.run_last_len = 0;
+        }
+
         // LOTR (Lord Of The Registers): live snapshot of every register.
         self.registers = cx
             .editor
@@ -1783,13 +2229,13 @@ impl Ide {
                 })
                 .collect();
 
-            // TODO tool window: scan for TODO/FIXME/… markers.
-            const MARKERS: [&str; 6] = ["TODO", "FIXME", "HACK", "XXX", "BUG", "NOTE"];
+            // TODO tool window: scan for TODO/FIXME/… markers (word-boundary matched).
             self.todos.clear();
             for i in 0..text.len_lines() {
                 let line: String = text.line(i).chars().filter(|c| !c.is_control()).collect();
-                if MARKERS.iter().any(|m| line.contains(m)) {
-                    self.todos.push((text.line_to_char(i), format!("{}: {}", i + 1, line.trim())));
+                if let Some(marker) = todo_marker(&line) {
+                    self.todos
+                        .push((text.line_to_char(i), format!("{}: {}", i + 1, line.trim()), marker));
                 }
             }
 
@@ -1902,6 +2348,9 @@ impl Ide {
             if stale {
                 if let Some(dir) = self.status_branch_dir.clone() {
                     self.git_changes = git_status(&dir);
+                    (self.git_ahead, self.git_behind) = git_ahead_behind(&dir);
+                    self.git_diffstat = git_diffstat(&dir);
+                    self.git_churn = git_churn(&dir);
                 }
                 self.git_last = Some(std::time::Instant::now());
             }
@@ -1942,7 +2391,9 @@ impl Ide {
         // Recently opened files. Loaded every refresh (the store is a small file and
         // rendering is event-driven, not a constant tick) so the RECENT tab label can
         // show an always-current count.
-        self.recent_rows = crate::recent_files::load();
+        let recent = crate::recent_files::load_with_time();
+        self.recent_times = recent.iter().map(|(_, t)| *t).collect();
+        self.recent_rows = recent.into_iter().map(|(p, _)| p).collect();
     }
 
     fn render_structure(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme) {
@@ -2048,8 +2499,10 @@ impl Ide {
         let (lx, _) = surface.set_stringn(area.x, area.y, &label, area.width as usize, theme.get("function"));
         self.toolbar_hits.push((area.x, lx, ToolHit::Configs));
 
-        // run/debug + settings/help buttons RIGHT-aligned
-        let buttons: [(&str, _, ToolHit); 6] = [
+        // run/debug + settings/help buttons RIGHT-aligned. ⊙ Locate = JetBrains
+        // "Select Opened File" (reveals the current buffer in the tree).
+        let buttons: [(&str, _, ToolHit); 7] = [
+            (" ⊙ Locate ", theme.get("function"), ToolHit::Locate),
             (" ▶ Run ", theme.get("diff.plus"), ToolHit::Run),
             (" ◼ Stop ", theme.get("error"), ToolHit::Stop),
             (" ⟳ Rerun ", theme.get("function"), ToolHit::Rerun),
@@ -2161,6 +2614,31 @@ impl Ide {
         self.bottom_hits.push((x0, nx, BottomHit::TabProblems));
         x = nx + 1;
 
+        // run controls + status (left of the Run tab while a run exists)
+        let run_info = self.run.as_ref().map(|r| {
+            let s = r.lock().unwrap();
+            (s.running, s.exit_code)
+        });
+        if let Some((running, code)) = run_info {
+            surface.set_stringn(x, area.y, "⟳", 1, theme.get("function"));
+            self.bottom_hits.push((x, x + 1, BottomHit::Rerun));
+            x += 2;
+            surface.set_stringn(x, area.y, "◼", 1, theme.get("error"));
+            self.bottom_hits.push((x, x + 1, BottomHit::Stop));
+            x += 2;
+            surface.set_stringn(x, area.y, "⌦", 1, off);
+            self.bottom_hits.push((x, x + 1, BottomHit::Clear));
+            x += 2;
+            let status = if running {
+                "running…".to_string()
+            } else {
+                format!("exit {}", code.unwrap_or(-1))
+            };
+            let sw = status.chars().count() as u16;
+            surface.set_stringn(x, area.y, &status, area.width as usize, off);
+            x += sw + 1;
+        }
+
         // Run tab
         let rlabel = " RUN ";
         let rw = rlabel.chars().count() as u16;
@@ -2198,8 +2676,33 @@ impl Ide {
                 }
             }
         }
+        // ahead/behind the upstream
+        if self.git_ahead > 0 {
+            let (e, _) = surface.set_stringn(gx, area.y, &format!("↑{} ", self.git_ahead), area.width as usize, theme.get("diff.plus"));
+            gx = e;
+        }
+        if self.git_behind > 0 {
+            let (e, _) = surface.set_stringn(gx, area.y, &format!("↓{} ", self.git_behind), area.width as usize, theme.get("diff.minus"));
+            gx = e;
+        }
         self.bottom_hits.push((gx0, gx, BottomHit::TabGit));
         x = gx + 1;
+
+        // Debug tab — ● when a session is live, ⏺N breakpoint count
+        let dlabel_style = if self.bottom_tab == BottomTab::Debug { on } else { off };
+        let dx0 = x;
+        let (mut dx, _) = surface.set_stringn(x, area.y, " DEBUG ", area.width as usize, dlabel_style);
+        if !self.dap_status.starts_with("no ") {
+            let (e, _) = surface.set_stringn(dx, area.y, "● ", area.width as usize, theme.get("diff.plus"));
+            dx = e;
+        }
+        let bpn = self.dap_lines.iter().filter(|(k, _, _)| *k == 3).count();
+        if bpn > 0 {
+            let (e, _) = surface.set_stringn(dx, area.y, &format!("⏺{bpn} "), area.width as usize, theme.get("error"));
+            dx = e;
+        }
+        self.bottom_hits.push((dx0, dx, BottomHit::TabDebug));
+        x = dx + 1;
 
         // Registers tab (LOTR)
         let glabel = format!(" REGISTERS {} ", self.registers.len());
@@ -2243,45 +2746,132 @@ impl Ide {
         self.bottom_hits.push((x, x + hw, BottomHit::TabHarpoon));
         x += hw + 2;
 
-        // run controls + status
-        let run_info = self.run.as_ref().map(|r| {
-            let s = r.lock().unwrap();
-            (s.running, s.exit_code)
-        });
-        if let Some((running, code)) = run_info {
-            surface.set_stringn(x, area.y, "⟳", 1, theme.get("function"));
-            self.bottom_hits.push((x, x + 1, BottomHit::Rerun));
-            x += 2;
-            surface.set_stringn(x, area.y, "◼", 1, theme.get("error"));
-            self.bottom_hits.push((x, x + 1, BottomHit::Stop));
-            x += 2;
-            surface.set_stringn(x, area.y, "⌦", 1, off);
-            self.bottom_hits.push((x, x + 1, BottomHit::Clear));
-            x += 2;
-            let status = if running {
-                "running…".to_string()
-            } else {
-                format!("exit {}", code.unwrap_or(-1))
-            };
-            let avail = area.width.saturating_sub(x.saturating_sub(area.x)) as usize;
-            surface.set_stringn(x + 1, area.y, &status, avail, off);
-        }
+        // CI tab (GitHub Actions runs)
+        let cilabel = " CI ";
+        let ciw = cilabel.chars().count() as u16;
+        surface.set_stringn(x, area.y, cilabel, area.width as usize, if self.bottom_tab == BottomTab::Ci { on } else { off });
+        self.bottom_hits.push((x, x + ciw, BottomHit::TabCi));
+        x += ciw + 1;
 
         if self.fold_problems {
             return;
         }
-        let body = body_rect(area);
-        match self.bottom_tab {
-            BottomTab::Problems => self.render_problems_body(surface, theme, body),
-            BottomTab::Run => self.render_run_body(surface, theme, body),
-            BottomTab::Git => self.render_git_body(surface, theme, body),
-            BottomTab::Registers => self.render_registers_body(surface, theme, body),
-            BottomTab::Todo => self.render_todo_body(surface, theme, body),
-            BottomTab::Marks => self.render_marks_body(surface, theme, body),
-            BottomTab::Jumplist => self.render_jumplist_body(surface, theme, body),
-            BottomTab::Recent => self.render_recent_body(surface, theme, body),
-            BottomTab::Harpoon => self.render_harpoon_body(surface, theme, body),
+        // Body columns: col0 (Problems/Run/Git), col1 (Registers/Todo/Marks/Jumps),
+        // col2 (Recent/Harpoon/CI), separated by draggable dividers. The middle
+        // column is foldable -> a two-column layout. A divider's top cell is a
+        // fold/unfold chevron; the rest of it resizes.
+        let full = body_rect(area);
+        self.bottom_body_y = full.y;
+        let end = full.x + full.width;
+        let focus_st = theme.get("ui.text.focus");
+        let accent = theme.get("function");
+        if full.width < 12 {
+            // too narrow to split - fall back to the single focused tab
+            self.bottom_div_x = [0, 0];
+            self.mid_fold_btn_x = 0;
+            let t = self.bottom_tab;
+            self.render_tab_body(t, surface, theme, full);
+            return;
         }
+        let tabs = self.bottom_tabs;
+        if self.bottom_mid_folded {
+            // Two columns (col0 | col2); the middle is hidden behind the divider.
+            let s = self.bottom_splits[0].clamp(15, 85);
+            let d0 = full.x + (full.width as u32 * s as u32 / 100) as u16;
+            self.bottom_div_x = [d0, 0];
+            self.mid_fold_btn_x = d0;
+            let dst = if self.resizing_div == Some(0) { focus_st } else { off };
+            for yy in full.y..full.y + full.height {
+                surface.set_stringn(d0, yy, "\u{2502}", 1, dst);
+            }
+            surface.set_stringn(d0, full.y, "\u{25B8}", 1, accent); // unfold chevron
+            let c0 = Rect::new(full.x, full.y, d0.saturating_sub(full.x), full.height);
+            let c2 = Rect::new(d0 + 1, full.y, end.saturating_sub(d0 + 1), full.height);
+            self.render_tab_body(tabs[0], surface, theme, c0);
+            self.render_tab_body(tabs[2], surface, theme, c2);
+        } else {
+            let s0 = self.bottom_splits[0].clamp(12, 60);
+            let s1 = self.bottom_splits[1].clamp(s0 + 10, 88);
+            let d0 = full.x + (full.width as u32 * s0 as u32 / 100) as u16;
+            let d1 = full.x + (full.width as u32 * s1 as u32 / 100) as u16;
+            self.bottom_div_x = [d0, d1];
+            self.mid_fold_btn_x = d1;
+            for (dx, active) in [(d0, self.resizing_div == Some(0)), (d1, self.resizing_div == Some(1))] {
+                let dst = if active { focus_st } else { off };
+                for yy in full.y..full.y + full.height {
+                    surface.set_stringn(dx, yy, "\u{2502}", 1, dst);
+                }
+            }
+            surface.set_stringn(d1, full.y, "\u{25C2}", 1, accent); // fold chevron (right divider)
+            let c0 = Rect::new(full.x, full.y, d0.saturating_sub(full.x), full.height);
+            let c1 = Rect::new(d0 + 1, full.y, d1.saturating_sub(d0 + 1), full.height);
+            let c2 = Rect::new(d1 + 1, full.y, end.saturating_sub(d1 + 1), full.height);
+            self.render_tab_body(tabs[0], surface, theme, c0);
+            self.render_tab_body(tabs[1], surface, theme, c1);
+            self.render_tab_body(tabs[2], surface, theme, c2);
+        }
+    }
+
+    /// CI panel: a ratatui Table of recent GitHub Actions runs (icon · workflow
+    /// · branch · sha · age). Data comes from the global `crate::ci` cache,
+    /// populated asynchronously by `focus_ci_panel`.
+    fn render_ci_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
+        use ratatui::layout::Constraint;
+        use ratatui::style::Modifier as RMod;
+        use ratatui::widgets::{Block, Cell, Row, Table};
+        if body.height == 0 {
+            return;
+        }
+        let runs = crate::ci::snapshot();
+        if runs.is_empty() {
+            let (loading, error) = crate::ci::status();
+            let msg = if loading {
+                "  fetching CI runs…".to_string()
+            } else if let Some(e) = error {
+                format!("  CI error: {e}")
+            } else if crate::ci::fetched() {
+                "  no CI runs".to_string()
+            } else {
+                "  loading…".to_string()
+            };
+            surface.set_stringn(body.x, body.y, &msg, body.width as usize, theme.get("comment"));
+            return;
+        }
+        if self.aux_sel >= runs.len() {
+            self.aux_sel = runs.len().saturating_sub(1);
+        }
+        let base = crate::ui::rat::to_rat_style(theme.get("ui.text"));
+        let dim = crate::ui::rat::to_rat_style(theme.get("comment"));
+        let sel = crate::ui::rat::to_rat_style(theme.get("ui.selection")).add_modifier(RMod::BOLD);
+        let rows: Vec<Row> = runs
+            .iter()
+            .map(|r| {
+                let (glyph, scope) = r.icon();
+                Row::new(vec![
+                    Cell::from(glyph).style(crate::ui::rat::to_rat_style(theme.get(scope))),
+                    Cell::from(r.workflow.clone()).style(base),
+                    Cell::from(r.branch.clone()).style(dim),
+                    Cell::from(r.short_sha()).style(dim),
+                    Cell::from(r.age()).style(dim),
+                ])
+            })
+            .collect();
+        let table = Table::new(
+            rows,
+            [
+                Constraint::Length(1),
+                Constraint::Min(12),
+                Constraint::Length(16),
+                Constraint::Length(8),
+                Constraint::Length(9),
+            ],
+        )
+        .column_spacing(1)
+        .block(Block::default().style(crate::ui::rat::to_rat_style(theme.get("ui.background"))))
+        .row_highlight_style(sel)
+        .highlight_symbol("› ");
+        self.ci_state.select(Some(self.aux_sel));
+        crate::ui::rat::render_stateful(table, body, surface, &mut self.ci_state);
     }
 
     fn render_jumplist_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
@@ -2336,10 +2926,14 @@ impl Ide {
             let glyph = crate::ui::icons::file_icon(&name);
             let label = format!(" {glyph} {name}");
             let (nx, _) = surface.set_stringn(body.x, y, &label, body.width as usize, base);
-            // trailing dimmed parent directory
+            // trailing dimmed relative access time + parent directory
+            let age = match self.recent_times.get(i) {
+                Some(&t) if t > 0 => format!("· {} ", crate::recent_files::humanize_age(crate::recent_files::age_since(t))),
+                _ => String::new(),
+            };
             if let Some(parent) = path.parent().map(|p| p.to_string_lossy().into_owned()) {
                 let rem = body.width.saturating_sub(nx - body.x) as usize;
-                surface.set_stringn(nx + 1, y, &format!("· {parent}"), rem, dim);
+                surface.set_stringn(nx + 1, y, &format!("{age}· {parent}"), rem, dim);
             }
         }
     }
@@ -2384,10 +2978,9 @@ impl Ide {
             surface.set_stringn(body.x, body.y, "  no TODOs", body.width as usize, theme.get("comment"));
             return;
         }
-        let mark = theme.get("warning");
         let base = theme.get("ui.text");
         let focused = self.focus == Focus::Problems && self.bottom_tab == BottomTab::Todo;
-        for (i, (_, text)) in self.todos.iter().enumerate() {
+        for (i, (_, text, marker)) in self.todos.iter().enumerate() {
             if i >= height {
                 break;
             }
@@ -2395,6 +2988,7 @@ impl Ide {
             if focused && i == self.aux_sel {
                 surface.set_style(Rect::new(body.x, y, body.width, 1), theme.get("ui.selection"));
             }
+            let mark = theme.get(todo_marker_scope(marker));
             surface.set_stringn(body.x, y, " •", body.width as usize, mark);
             surface.set_stringn(body.x + 3, y, text, body.width.saturating_sub(3) as usize, base);
         }
@@ -2479,6 +3073,39 @@ impl Ide {
         }
     }
 
+    /// Debug tool window body: a status line, then Call Stack / Variables /
+    /// Breakpoints sections (built in `refresh`). Click a frame or breakpoint row
+    /// to jump to its source. Stepping uses the `dap_*` keybindings.
+    fn render_debug_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
+        if body.height == 0 {
+            return;
+        }
+        let base = theme.get("ui.text");
+        let dim = theme.get("comment");
+        let accent = theme.get("function");
+        let kw = theme.get("keyword");
+
+        // status line
+        let status_style = if self.dap_status.starts_with("no ") { dim } else { accent };
+        surface.set_stringn(body.x + 1, body.y, &self.dap_status, body.width.saturating_sub(1) as usize, status_style);
+        if body.height < 2 {
+            return;
+        }
+        let list = Rect::new(body.x, body.y + 1, body.width, body.height - 1);
+        for (i, (kind, text, _)) in self.dap_lines.iter().enumerate() {
+            if i >= list.height as usize {
+                break;
+            }
+            let y = list.y + i as u16;
+            let (style, indent) = match kind {
+                0 => (dim, 0u16),   // section header
+                3 => (kw, 1),       // breakpoint
+                _ => (base, 1),     // frame / variable
+            };
+            surface.set_stringn(list.x + indent, y, text, list.width.saturating_sub(indent) as usize, style);
+        }
+    }
+
     fn render_git_body(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme, body: Rect) {
         let height = body.height as usize;
         if height == 0 {
@@ -2497,27 +3124,92 @@ impl Ide {
             self.git_sel = self.git_changes.len().saturating_sub(1);
         }
         let base = theme.get("ui.text");
+        let dim = theme.get("comment");
         let sel_bg = theme.get("ui.selection");
+        let plus = theme.get("diff.plus");
+        let minus = theme.get("diff.minus");
         let focused = self.focus == Focus::Problems && self.bottom_tab == BottomTab::Git;
+
+        // Top row: per-commit churn sparkline (ratatui Sparkline), when we have
+        // history and at least a couple of rows of body to spare.
+        let mut list = body;
+        self.git_list_offset = 0;
+        if self.git_churn.iter().any(|&c| c > 0) && body.height >= 3 && body.width > 12 {
+            self.git_list_offset = 1;
+            use crate::ui::rat::{render, to_rat_style};
+            use ratatui::widgets::Sparkline;
+            surface.set_stringn(body.x + 1, body.y, "churn", 5, dim);
+            let spark = Sparkline::default()
+                .data(&self.git_churn)
+                .style(to_rat_style(theme.get("function")));
+            render(
+                spark,
+                Rect::new(body.x + 7, body.y, body.width.saturating_sub(8), 1),
+                surface,
+            );
+            list = Rect::new(body.x, body.y + 1, body.width, body.height - 1);
+        }
+
+        // Largest single-file churn, to scale the per-row diffstat bars.
+        let max_churn = self
+            .git_diffstat
+            .iter()
+            .map(|(_, a, d)| a + d)
+            .max()
+            .unwrap_or(1)
+            .max(1);
+        let list_h = list.height as usize;
+        // Reserve a right-hand strip for the "+A −D" counts and the bar.
+        let bar_w = 10u16.min(list.width / 5);
+        let stat_w = 12u16;
+        let name_w = list.width.saturating_sub(4 + stat_w + bar_w + 1) as usize;
         for (i, (code, disp, _)) in self.git_changes.iter().enumerate() {
-            if i >= height {
+            if i >= list_h {
                 break;
             }
-            let y = body.y + i as u16;
+            let y = list.y + i as u16;
             // highlight the keyboard-selected row when the panel holds focus
             if focused && i == self.git_sel {
-                surface.set_style(Rect::new(body.x, y, body.width, 1), sel_bg);
+                surface.set_style(Rect::new(list.x, y, list.width, 1), sel_bg);
             }
             // colour by status: added=green, modified=yellow, deleted=red, untracked=dim
             let st = match code.trim() {
-                "A" | "AM" => theme.get("diff.plus"),
-                "D" => theme.get("diff.minus"),
-                "??" => theme.get("comment"),
+                "A" | "AM" => plus,
+                "D" => minus,
+                "??" => dim,
                 _ => theme.get("diff.delta"),
             };
-            surface.set_stringn(body.x + 1, y, &code.replace(' ', "·"), 3, st);
-            let rest: String = disp.chars().skip(2).collect();
-            surface.set_stringn(body.x + 4, y, &rest, body.width.saturating_sub(4) as usize, base);
+            surface.set_stringn(list.x + 1, y, &code.replace(' ', "·"), 3, st);
+            // repo-relative path (after the "XY  " porcelain prefix)
+            let rel = disp.splitn(2, "  ").nth(1).unwrap_or("").trim();
+            surface.set_stringn(list.x + 4, y, rel, name_w.max(1), base);
+
+            // diffstat counts + proportional add/del bar, when numstat has the file
+            if let Some((a, d)) = self
+                .git_diffstat
+                .iter()
+                .find(|(p, _, _)| p == rel)
+                .map(|(_, a, d)| (*a, *d))
+            {
+                let sx = list.x + 4 + name_w as u16 + 1;
+                if bar_w > 0 && sx + stat_w + bar_w <= list.x + list.width {
+                    surface.set_stringn(sx, y, &format!("+{a}"), 6, plus);
+                    surface.set_stringn(sx + 6, y, &format!("-{d}"), 6, minus);
+                    let total = (a + d).max(0);
+                    let filled =
+                        ((total as u64 * bar_w as u64) / max_churn as u64) as u16;
+                    let adds_px = if total == 0 {
+                        0
+                    } else {
+                        ((a as u64 * filled as u64) / total as u64) as u16
+                    };
+                    let bx = sx + stat_w;
+                    for k in 0..filled {
+                        let style = if k < adds_px { plus } else { minus };
+                        surface.set_stringn(bx + k, y, "█", 1, style);
+                    }
+                }
+            }
         }
     }
 
@@ -2555,12 +3247,26 @@ impl Ide {
             return;
         };
         let s = run.lock().unwrap();
-        let height = body.height as usize;
+        let full_h = body.height as usize;
         let w = body.width.max(1) as usize;
-        if height == 0 {
+        if full_h == 0 {
             return;
         }
         let base = theme.get("ui.text");
+
+        // Header row: output-rate sparkline + test-pass gauge (when there's room).
+        let header_rows: usize = if full_h >= 4 { 1 } else { 0 };
+        if header_rows == 1 {
+            self.render_run_header(surface, theme, Rect::new(body.x, body.y, body.width, 1), &s);
+        }
+        // Output viewport sits below the header.
+        let out = Rect::new(
+            body.x,
+            body.y + header_rows as u16,
+            body.width,
+            (full_h - header_rows) as u16,
+        );
+        let height = out.height as usize;
 
         // Soft-wrap: every output line occupies ceil(width/w) visual rows (≥1).
         let line_vis = |line: &str| -> usize {
@@ -2573,8 +3279,10 @@ impl Ide {
         // tail-follow unless the user scrolled up
         let top = if s.follow { max_top } else { s.scroll.min(max_top) };
 
-        // (re)build the visible-row → source-line map for click-to-jump
-        self.run_row_src = vec![usize::MAX; height];
+        // (re)build the visible-row → source-line map for click-to-jump. Indexed
+        // by *body* row (0-based from body.y) so the header offset lines up with
+        // the click handler's `row - problems_rect.y - 1`.
+        self.run_row_src = vec![usize::MAX; full_h];
         let mut vis = 0usize;
         'lines: for (li, line) in s.lines.iter().enumerate() {
             for chunk in wrap_chunks(line, w) {
@@ -2583,8 +3291,8 @@ impl Ide {
                 }
                 if vis >= top {
                     let sr = vis - top;
-                    surface.set_stringn(body.x, body.y + sr as u16, chunk, w, base);
-                    self.run_row_src[sr] = li;
+                    surface.set_stringn(out.x, out.y + sr as u16, chunk, w, base);
+                    self.run_row_src[header_rows + sr] = li;
                 }
                 vis += 1;
             }
@@ -2595,101 +3303,277 @@ impl Ide {
         }
 
         // scrollbar thumb on the right edge when content overflows
-        if total_vis > height && body.width > 1 {
-            let track_x = body.x + body.width - 1;
+        if total_vis > height && out.width > 1 {
+            let track_x = out.x + out.width - 1;
             let thumb_h = (height * height / total_vis).max(1);
             let thumb_y = if max_top == 0 { 0 } else { top * (height - thumb_h) / max_top };
             let bar = theme.get("ui.selection");
             for k in 0..thumb_h {
-                surface.set_stringn(track_x, body.y + (thumb_y + k) as u16, "▐", 1, bar);
+                surface.set_stringn(track_x, out.y + (thumb_y + k) as u16, "▐", 1, bar);
             }
         }
     }
 
-    /// Right-pane minimap: a braille-rendered "tiny text" overview (each cell = a 2×4 dot grid, so
-    /// 2 source columns × 4 source lines per cell — the VSCode/Sublime code-shape look), with a
-    /// viewport box and diagnostic ticks (click to scrub).
+    /// Run-console header: a live output-rate [`Sparkline`] on the left and a
+    /// test-pass [`Gauge`] on the right (when the output contains cargo-style
+    /// `... ok` / `... FAILED` test lines).
+    fn render_run_header(
+        &self,
+        surface: &mut Surface,
+        theme: &zemacs_view::Theme,
+        area: Rect,
+        s: &crate::ui::run::RunState,
+    ) {
+        use crate::ui::rat::{render, to_rat_style};
+        use ratatui::text::Span;
+        use ratatui::widgets::{Gauge, Sparkline};
+
+        let dim = theme.get("comment");
+        surface.clear_with(area, theme.get("ui.background"));
+
+        // left: output-rate sparkline (lines/tick)
+        let lbl_x = area.x + 1;
+        surface.set_stringn(lbl_x, area.y, "out", 3, dim);
+        let spark_x = lbl_x + 4;
+        let spark_w = (area.width / 2).saturating_sub(6);
+        if spark_w > 0 && self.run_rate.iter().any(|&r| r > 0) {
+            let data: Vec<u64> = self.run_rate.iter().copied().collect();
+            let spark = Sparkline::default()
+                .data(&data)
+                .style(to_rat_style(theme.get("function")));
+            render(spark, Rect::new(spark_x, area.y, spark_w, 1), surface);
+        }
+
+        // right: test-pass gauge when test result lines are present
+        if let Some((passed, total)) = parse_test_progress(&s.lines) {
+            let gw = 20u16.min(area.width / 3);
+            if gw >= 8 && area.width > gw + 8 {
+                let gx = area.x + area.width - gw - 1;
+                let ratio = if total > 0 { passed as f64 / total as f64 } else { 0.0 };
+                let ok = passed == total;
+                let bar_scope = if ok { "diff.plus" } else { "diff.delta" };
+                let gauge = Gauge::default()
+                    .ratio(ratio.clamp(0.0, 1.0))
+                    .label(Span::styled(
+                        format!("{passed}/{total} tests"),
+                        to_rat_style(theme.get("ui.text")),
+                    ))
+                    .gauge_style(to_rat_style(theme.get(bar_scope)))
+                    .use_unicode(true);
+                render(gauge, Rect::new(gx, area.y, gw, 1), surface);
+            }
+        }
+    }
+
+    /// Right-pane minimap: a braille [`Canvas`] "tiny text" overview of the code
+    /// shape, with a viewport outline, diagnostic ticks (right edge), and
+    /// git-change bars (left edge). Each braille cell packs a 2×4 sub-grid, so
+    /// the canvas resolution is `width*2 × height*4` columns/sub-rows.
     fn render_stripe(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme) {
-        // braille dot bit per (subcol, subrow) within a cell (U+2800 base).
-        const DOT: [[u8; 4]; 2] = [[0x01, 0x02, 0x04, 0x40], [0x08, 0x10, 0x20, 0x80]];
+        use crate::ui::rat::{render, to_rat_color};
+        use ratatui::symbols::Marker;
+        use ratatui::widgets::canvas::{Canvas, Points, Rectangle};
+        use zemacs_view::graphics::Color as ZColor;
+
         let area = self.stripe_rect;
         let w = area.width as usize;
         let h = area.height as usize;
         if w == 0 || h == 0 {
             return;
         }
-        surface.clear_with(area, theme.get("ui.background"));
-        let total = self.total_lines.max(1);
-        let slots = h * 4; // vertical sub-rows across the whole pane
-        let last = area.y + area.height.saturating_sub(1);
+        let bg_style = theme.get("ui.background");
+        surface.clear_with(area, bg_style);
 
-        // source line -> vertical sub-row slot (1:1 when the file fits the slots, else downscale)
+        let total = self.total_lines.max(1);
+        let slots = h * 4; // vertical sub-rows
+        let cols = (w * 2) as f64; // horizontal sub-cols
         let slot_of = |line: usize| -> usize {
             if total <= slots {
-                line
+                line.min(slots.saturating_sub(1))
             } else {
                 line * slots / total
             }
         };
+        // Canvas y grows upward; source lines grow downward → flip.
+        let flip = |slot: usize| -> f64 { slots.saturating_sub(1).saturating_sub(slot) as f64 };
 
-        // viewport box (cell rows), drawn first so the dots sit on top
-        let vp = theme.get("ui.selection");
-        let mut yy = (slot_of(self.view_top_line) / 4) as u16;
-        let yend = ((slot_of(self.view_top_line + self.view_lines) / 4) as u16).min(h as u16 - 1);
-        while yy <= yend {
-            surface.set_style(Rect::new(area.x, area.y + yy, area.width, 1), vp);
-            yy += 1;
-        }
+        let dot_color = to_rat_color(theme.get("comment").fg.unwrap_or(ZColor::Gray));
+        let vp_color = to_rat_color(
+            theme
+                .get("ui.selection")
+                .bg
+                .or(theme.get("ui.selection").fg)
+                .unwrap_or(ZColor::Blue),
+        );
 
-        // braille density overview
-        let dim = theme.get("comment");
-        let mut buf = [0u8; 4];
-        for cy in 0..h {
-            for cx in 0..w {
-                let mut bits: u8 = 0;
-                for r in 0..4 {
-                    let slot = cy * 4 + r;
-                    let srcline = if total <= slots { slot } else { slot * total / slots };
-                    let Some(dots) = self.minimap_dots.get(srcline) else { continue };
-                    for c in 0..2 {
-                        if dots.get(cx * 2 + c).copied().unwrap_or(false) {
-                            bits |= DOT[c][r];
-                        }
-                    }
-                }
-                if bits != 0 {
-                    let ch = char::from_u32(0x2800 + bits as u32).unwrap_or(' ');
-                    surface.set_string(area.x + cx as u16, area.y + cy as u16, ch.encode_utf8(&mut buf), dim);
+        // code-shape points: sample one source line per vertical sub-row (bounded
+        // by the pane, not the file size).
+        let mut code_pts: Vec<(f64, f64)> = Vec::new();
+        for sub in 0..slots {
+            let srcline = if total <= slots { sub } else { sub * total / slots };
+            let Some(dots) = self.minimap_dots.get(srcline) else { continue };
+            let cy = flip(sub);
+            for (c, on) in dots.iter().enumerate() {
+                if *on && (c as f64) < cols {
+                    code_pts.push((c as f64, cy));
                 }
             }
         }
 
-        // diagnostic ticks on the right edge
-        let tick_x = area.x + area.width.saturating_sub(1);
-        for p in &self.problems {
-            let ty = (area.y + (slot_of(p.line) / 4) as u16).min(last);
-            let (_, style) = sev_mark(p.sev, theme);
-            surface.set_string(tick_x, ty, "▌", style);
-        }
+        // diagnostic ticks on the right edge, coloured by severity.
+        let diag_pts: Vec<(f64, f64, ratatui::style::Color)> = self
+            .problems
+            .iter()
+            .map(|p| {
+                let color = to_rat_color(sev_mark(p.sev, theme).1.fg.unwrap_or(ZColor::Red));
+                (cols - 1.0, flip(slot_of(p.line)), color)
+            })
+            .collect();
 
-        // git change overview on the left edge: a coloured bar per changed-line range
+        // git change bars on the left edge, coloured by kind.
+        let mut git_pts: Vec<(f64, f64, ratatui::style::Color)> = Vec::new();
         for &(start, end, kind) in &self.git_hunks {
-            let style = match kind {
-                0 => theme.get("diff.plus"),
-                2 => theme.get("diff.minus"),
-                _ => theme.get("diff.delta"),
+            let scope = match kind {
+                0 => "diff.plus",
+                2 => "diff.minus",
+                _ => "diff.delta",
             };
-            let r0 = (slot_of(start as usize) / 4) as u16;
-            let r1 = if end > start {
-                ((slot_of((end as usize).saturating_sub(1)) / 4) as u16).max(r0)
-            } else {
-                r0
-            };
-            let mut ry = r0;
-            while ry <= r1 && area.y + ry <= last {
-                surface.set_string(area.x, area.y + ry, "▏", style);
-                ry += 1;
+            let color = to_rat_color(theme.get(scope).fg.unwrap_or(ZColor::Yellow));
+            let s0 = slot_of(start as usize);
+            let s1 = slot_of((end as usize).saturating_sub(1).max(start as usize));
+            for s in s0..=s1.max(s0) {
+                git_pts.push((0.0, flip(s), color));
             }
+        }
+
+        // viewport outline in (flipped) slot space.
+        let vp_top = slot_of(self.view_top_line);
+        let vp_bot = slot_of(self.view_top_line + self.view_lines);
+        let vp_y = flip(vp_bot);
+        let vp_h = vp_bot.saturating_sub(vp_top) as f64;
+
+        let bg_color = bg_style.bg.map(to_rat_color);
+
+        let mut canvas = Canvas::default()
+            .marker(Marker::Braille)
+            .x_bounds([0.0, cols])
+            .y_bounds([0.0, slots as f64])
+            .paint(move |ctx| {
+                ctx.draw(&Points { coords: &code_pts, color: dot_color });
+                ctx.draw(&Rectangle {
+                    x: 0.0,
+                    y: vp_y,
+                    width: cols - 1.0,
+                    height: vp_h,
+                    color: vp_color,
+                });
+                for (x, y, color) in &diag_pts {
+                    ctx.draw(&Points { coords: &[(*x, *y)], color: *color });
+                }
+                for (x, y, color) in &git_pts {
+                    ctx.draw(&Points { coords: &[(*x, *y)], color: *color });
+                }
+            });
+        if let Some(bgc) = bg_color {
+            canvas = canvas.background_color(bgc);
+        }
+        render(canvas, area, surface);
+    }
+
+    /// Floating LSP/build progress card, anchored to the bottom-right of the
+    /// editor `area`. Rendered *after* the document (so it overlays it) by
+    /// `EditorView`. Shows an LSP indexing [`Gauge`] (determinate when the server
+    /// reports a percentage) and a build [`LineGauge`] driven by a parsed `NN%`.
+    pub fn render_progress_overlay(
+        &self,
+        area: Rect,
+        surface: &mut Surface,
+        theme: &zemacs_view::Theme,
+    ) {
+        use crate::ui::rat::{render, to_rat_style};
+        use ratatui::style::Modifier as RMod;
+        use ratatui::symbols;
+        use ratatui::text::Span;
+        use ratatui::widgets::{Block, Borders, Gauge, LineGauge, Paragraph};
+
+        if !self.visible {
+            return;
+        }
+        let has_lsp = self.lsp_progress.is_some();
+        let has_build = self.build_progress.is_some();
+        if !has_lsp && !has_build {
+            return;
+        }
+
+        let inner_h = (has_lsp as u16) * 2 + (has_build as u16) * 2;
+        let box_h = inner_h + 2;
+        let box_w = 46u16.min(area.width.saturating_sub(4)).max(24);
+        // Leave a margin and keep clear of the command/status line (bottom 2 rows).
+        if area.width < box_w + 2 || area.height < box_h + 3 {
+            return;
+        }
+        let bx = area.x + area.width - box_w - 1;
+        let by = area.y + area.height - box_h - 2;
+        let outer = Rect::new(bx, by, box_w, box_h);
+
+        let bg = theme.get("ui.popup");
+        let bg_rat = to_rat_style(bg);
+        let text = to_rat_style(theme.get("ui.text"));
+        let dim = to_rat_style(theme.get("comment"));
+        let accent = to_rat_style(theme.get("function")).add_modifier(RMod::BOLD);
+        let bar = to_rat_style(theme.get("ui.selection"));
+
+        surface.clear_with(outer, bg);
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(dim)
+            .title(Span::styled(" Progress ", accent))
+            .style(bg_rat);
+        render(block, outer, surface);
+
+        let inner = Rect::new(outer.x + 1, outer.y + 1, outer.width - 2, outer.height - 2);
+        let mut y = inner.y;
+
+        if let Some(p) = &self.lsp_progress {
+            let label = match &p.message {
+                Some(msg) if !msg.is_empty() => format!("{} · {} — {}", p.server, p.title, msg),
+                _ => format!("{} · {}", p.server, p.title),
+            };
+            render(
+                Paragraph::new(Span::styled(label, text)).style(bg_rat),
+                Rect::new(inner.x, y, inner.width, 1),
+                surface,
+            );
+            y += 1;
+            let ratio = p.percentage.unwrap_or(0).min(100) as f64 / 100.0;
+            let lbl = p
+                .percentage
+                .map(|n| format!("{n}%"))
+                .unwrap_or_else(|| "working…".to_string());
+            let gauge = Gauge::default()
+                .ratio(ratio)
+                .label(Span::styled(lbl, text))
+                .gauge_style(bar)
+                .style(bg_rat)
+                .use_unicode(true);
+            render(gauge, Rect::new(inner.x, y, inner.width, 1), surface);
+            y += 1;
+        }
+
+        if let Some((frac, label)) = &self.build_progress {
+            render(
+                Paragraph::new(Span::styled(label.clone(), dim)).style(bg_rat),
+                Rect::new(inner.x, y, inner.width, 1),
+                surface,
+            );
+            y += 1;
+            let lg = LineGauge::default()
+                .ratio(frac.clamp(0.0, 1.0))
+                .filled_style(bar)
+                .unfilled_style(dim)
+                .label(Span::styled(format!("{:.0}%", frac * 100.0), text))
+                .line_set(symbols::line::THICK);
+            render(lg, Rect::new(inner.x, y, inner.width, 1), surface);
         }
     }
 }
@@ -2968,6 +3852,63 @@ fn git_stage(path: &std::path::Path, stage: bool) {
     let _ = cmd.arg(path).output();
 }
 
+/// Commits (ahead, behind) the upstream via one `git rev-list` call. (0, 0) when
+/// there's no upstream configured.
+fn git_ahead_behind(dir: &std::path::Path) -> (usize, usize) {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(["rev-list", "--left-right", "--count", "@{u}...HEAD"])
+        .output();
+    if let Ok(o) = out {
+        if o.status.success() {
+            let s = String::from_utf8_lossy(&o.stdout);
+            let mut it = s.split_whitespace();
+            let behind = it.next().and_then(|x| x.parse().ok()).unwrap_or(0);
+            let ahead = it.next().and_then(|x| x.parse().ok()).unwrap_or(0);
+            return (ahead, behind);
+        }
+    }
+    (0, 0)
+}
+
+/// The TODO-style markers scanned for in the Todo tab, ordered by precedence.
+const TODO_MARKERS: [&str; 6] = ["FIXME", "BUG", "XXX", "HACK", "TODO", "NOTE"];
+
+/// Find a TODO-style marker in `line`, requiring a word boundary on both sides so
+/// identifiers like `update_todos`, `DENOTE`, or `AUTODOC` don't produce false hits.
+/// Returns the canonical marker name (the longest/highest-precedence match).
+fn todo_marker(line: &str) -> Option<&'static str> {
+    let bytes = line.as_bytes();
+    let boundary = |c: u8| !(c.is_ascii_alphanumeric() || c == b'_');
+    // Scan positions left-to-right; return the marker matching at the earliest spot.
+    for i in 0..bytes.len() {
+        if i > 0 && !boundary(bytes[i - 1]) {
+            continue;
+        }
+        for marker in TODO_MARKERS {
+            let mb = marker.as_bytes();
+            let end = i + mb.len();
+            if end <= bytes.len()
+                && &bytes[i..end] == mb
+                && (end >= bytes.len() || boundary(bytes[end]))
+            {
+                return Some(marker);
+            }
+        }
+    }
+    None
+}
+
+/// Theme scope for a marker's severity coloring.
+fn todo_marker_scope(marker: &str) -> &'static str {
+    match marker {
+        "FIXME" | "BUG" | "XXX" => "error",
+        "TODO" | "HACK" => "warning",
+        _ => "comment",
+    }
+}
+
 fn git_status(dir: &std::path::Path) -> Vec<(String, String, std::path::PathBuf)> {
     let out = std::process::Command::new("git")
         .arg("-C")
@@ -3000,9 +3941,130 @@ fn git_status(dir: &std::path::Path) -> Vec<(String, String, std::path::PathBuf)
         .collect()
 }
 
+/// Per-file diffstat of the working tree vs HEAD: `(repo-relative path,
+/// additions, deletions)`. Binary files (numstat `-`) report `(0, 0)`.
+fn git_diffstat(dir: &std::path::Path) -> Vec<(String, u32, u32)> {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(["diff", "--numstat", "HEAD"])
+        .output();
+    let Ok(out) = out else { return Vec::new() };
+    if !out.status.success() {
+        return Vec::new();
+    }
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|l| {
+            let mut it = l.split('\t');
+            let adds = it.next()?;
+            let dels = it.next()?;
+            let path = it.next()?.trim().to_string();
+            Some((path, adds.parse().unwrap_or(0), dels.parse().unwrap_or(0)))
+        })
+        .collect()
+}
+
+/// Per-commit churn (additions + deletions) for the last 30 commits, oldest →
+/// newest, powering the git-panel sparkline. A `0x01` record separator is
+/// emitted per commit via `--format`, followed by that commit's `--numstat`.
+fn git_churn(dir: &std::path::Path) -> Vec<u64> {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(["log", "-30", "--numstat", "--format=%x01"])
+        .output();
+    let Ok(out) = out else { return Vec::new() };
+    if !out.status.success() {
+        return Vec::new();
+    }
+    let text = String::from_utf8_lossy(&out.stdout);
+    let mut churn: Vec<u64> = Vec::new();
+    let mut cur: u64 = 0;
+    let mut started = false;
+    for line in text.lines() {
+        if line.starts_with('\u{1}') {
+            if started {
+                churn.push(cur);
+            }
+            cur = 0;
+            started = true;
+        } else if !line.trim().is_empty() {
+            let mut it = line.split('\t');
+            let a = it.next().and_then(|x| x.parse::<u64>().ok()).unwrap_or(0);
+            let d = it.next().and_then(|x| x.parse::<u64>().ok()).unwrap_or(0);
+            cur += a + d;
+        }
+    }
+    if started {
+        churn.push(cur);
+    }
+    churn.reverse(); // git log is newest→oldest; the sparkline wants oldest→newest
+    churn
+}
+
 #[cfg(test)]
 mod parse_tests {
-    use super::parse_file_line;
+    use super::{parse_file_line, parse_percent, parse_test_progress, todo_marker, todo_marker_scope};
+
+    #[test]
+    fn percent_token_parsing() {
+        assert_eq!(parse_percent("Building 72% done"), Some(72));
+        assert_eq!(parse_percent("[ 5%] compiling"), Some(5));
+        assert_eq!(parse_percent("done 100%"), Some(100));
+        // out-of-range and non-percent tokens are ignored
+        assert_eq!(parse_percent("temperature 250% off"), None);
+        assert_eq!(parse_percent("no percentage here"), None);
+        assert_eq!(parse_percent("just a % sign"), None);
+    }
+
+    #[test]
+    fn test_progress_counts_results() {
+        let lines: Vec<String> = [
+            "running 3 tests",
+            "test foo::a ... ok",
+            "test foo::b ... FAILED",
+            "test foo::c ... ok",
+            "test result: FAILED. 2 passed; 1 failed", // summary line must not be counted
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        assert_eq!(parse_test_progress(&lines), Some((2, 3)));
+        // ignored tests don't count toward the pass ratio
+        let ig = vec!["test x ... ignored".to_string()];
+        assert_eq!(parse_test_progress(&ig), None);
+        let empty: Vec<String> = Vec::new();
+        assert_eq!(parse_test_progress(&empty), None);
+    }
+
+    #[test]
+    fn todo_marker_word_boundary() {
+        // real markers in comment context
+        assert_eq!(todo_marker("// TODO: fix this"), Some("TODO"));
+        assert_eq!(todo_marker("    # FIXME later"), Some("FIXME"));
+        assert_eq!(todo_marker("/* HACK */"), Some("HACK"));
+        assert_eq!(todo_marker("NOTE at start"), Some("NOTE"));
+        assert_eq!(todo_marker("trailing BUG"), Some("BUG"));
+        // false positives that must NOT match (no word boundary)
+        assert_eq!(todo_marker("fn update_todos() {}"), None);
+        assert_eq!(todo_marker("let DENOTED = 1;"), None);
+        assert_eq!(todo_marker("AUTODOC generator"), None);
+        assert_eq!(todo_marker("the BUGGY code"), None);
+        assert_eq!(todo_marker("no markers here"), None);
+        // earliest marker wins when several appear
+        assert_eq!(todo_marker("FIXME and TODO"), Some("FIXME"));
+        assert_eq!(todo_marker("TODO before FIXME"), Some("TODO"));
+    }
+
+    #[test]
+    fn todo_marker_severity_scope() {
+        assert_eq!(todo_marker_scope("FIXME"), "error");
+        assert_eq!(todo_marker_scope("BUG"), "error");
+        assert_eq!(todo_marker_scope("TODO"), "warning");
+        assert_eq!(todo_marker_scope("HACK"), "warning");
+        assert_eq!(todo_marker_scope("NOTE"), "comment");
+    }
 
     #[test]
     fn parses_file_line_col() {

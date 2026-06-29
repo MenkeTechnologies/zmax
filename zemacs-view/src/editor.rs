@@ -714,6 +714,7 @@ impl Default for StatusLineConfig {
             center: vec![],
             right: vec![
                 E::Diagnostics,
+                E::CiStatus,
                 // airline-style warnings (only show when there's something to warn about)
                 E::TrailingWhitespace,
                 E::MixedIndent,
@@ -789,6 +790,9 @@ pub enum StatusLineElement {
 
     /// A summary of the number of errors and warnings
     Diagnostics,
+
+    /// Latest CI run status badge (GitHub Actions), config name `ci-status`
+    CiStatus,
 
     /// A summary of the number of errors and warnings on file and workspace
     WorkspaceDiagnostics,
@@ -1329,6 +1333,21 @@ use futures_util::stream::{Flatten, Once};
 
 type Diagnostics = BTreeMap<Uri, Vec<(lsp::Diagnostic, DiagnosticProvider)>>;
 
+/// A snapshot of the latest in-flight LSP `$/progress` work, mirrored onto the
+/// [`Editor`] so UI surfaces can render a determinate gauge when a percentage is
+/// reported (e.g. rust-analyzer indexing) or a spinner-style label otherwise.
+#[derive(Debug, Clone, Default)]
+pub struct LspProgress {
+    /// The language server's name (e.g. `rust-analyzer`).
+    pub server: String,
+    /// The work title (e.g. `Indexing`, `Building`).
+    pub title: String,
+    /// The latest detail message, if any.
+    pub message: Option<String>,
+    /// Reported completion in `0..=100`, if the server provides one.
+    pub percentage: Option<u32>,
+}
+
 pub struct Editor {
     /// Current editing mode.
     pub mode: Mode,
@@ -1376,6 +1395,16 @@ pub struct Editor {
 
     pub status_msg: Option<(Cow<'static, str>, Severity)>,
     pub autoinfo: Option<Info>,
+
+    /// Latest in-flight LSP `$/progress` work (indexing, building, etc.), mirrored
+    /// here by the event loop so UI surfaces (e.g. the IDE workbench gauge) can
+    /// render it. `None` when no server is currently progressing.
+    pub lsp_progress: Option<LspProgress>,
+
+    /// Variables of the active debug stack frame as `(name, value)`, fetched when
+    /// the debugger stops so the IDE Debug tool window can render them without an
+    /// async round-trip. Cleared when the debug session ends.
+    pub dap_variables: Vec<(String, String)>,
 
     pub config: Arc<dyn DynAccess<Config>>,
     pub auto_pairs: Option<AutoPairs>,
@@ -1523,6 +1552,8 @@ impl Editor {
             ))),
             status_msg: None,
             autoinfo: None,
+            lsp_progress: None,
+            dap_variables: Vec::new(),
             idle_timer: Box::pin(sleep(conf.idle_timeout)),
             redraw_timer: Box::pin(sleep(Duration::MAX)),
             last_motion: None,

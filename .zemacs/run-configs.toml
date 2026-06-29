@@ -1,2 +1,19 @@
-active = 0
-config = []
+active = 1
+
+[[config]]
+name = "gasdga"
+command = "cargo test"
+dir = ""
+env = ""
+
+[[config]]
+name = "dga"
+command = "cargo test"
+dir = ""
+env = ""
+
+[[config]]
+name = ""
+command = ""
+dir = ""
+env = ""

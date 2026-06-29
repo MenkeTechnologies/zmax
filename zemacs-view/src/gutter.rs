@@ -438,12 +438,14 @@ mod tests {
             Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
         );
 
-        assert_eq!(view.gutters.layout.len(), 5);
-        assert_eq!(view.gutters.layout[0].width(&view, &doc), 1);
-        assert_eq!(view.gutters.layout[1].width(&view, &doc), 1);
-        assert_eq!(view.gutters.layout[2].width(&view, &doc), 3);
-        assert_eq!(view.gutters.layout[3].width(&view, &doc), 1);
-        assert_eq!(view.gutters.layout[4].width(&view, &doc), 1);
+        // default layout: diagnostics, marks, spacer, line-numbers, spacer, diff
+        assert_eq!(view.gutters.layout.len(), 6);
+        assert_eq!(view.gutters.layout[0].width(&view, &doc), 1); // diagnostics
+        assert_eq!(view.gutters.layout[1].width(&view, &doc), 1); // marks
+        assert_eq!(view.gutters.layout[2].width(&view, &doc), 1); // spacer
+        assert_eq!(view.gutters.layout[3].width(&view, &doc), 3); // line numbers
+        assert_eq!(view.gutters.layout[4].width(&view, &doc), 1); // spacer
+        assert_eq!(view.gutters.layout[5].width(&view, &doc), 1); // diff
     }
 
     #[test]
