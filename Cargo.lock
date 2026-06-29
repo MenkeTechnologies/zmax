@@ -1807,11 +1807,11 @@ name = "elisprs"
 version = "0.1.1"
 dependencies = [
  "bincode",
+ "fancy-regex",
  "fusevm",
  "libc",
  "lsp-server",
  "lsp-types",
- "regex",
  "rkyv 0.7.46",
  "serde",
  "serde_json",
