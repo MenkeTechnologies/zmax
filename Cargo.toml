@@ -21,6 +21,14 @@ default-members = [
   "zemacs-term"
 ]
 
+# The embedded scripting interpreters (elisprs/vimlrs/awkrs/zshrs/strykelang)
+# are vendored as git submodules under vendor/ so CI can resolve the optional
+# path dependencies. They are independent crates/workspaces — exclude them from
+# this workspace so Cargo treats them purely as external path dependencies.
+exclude = [
+  "vendor",
+]
+
 [profile.release]
 lto = "thin"
 
@@ -66,7 +74,7 @@ quickcheck = { version = "1", default-features = false }
 [workspace.package]
 version = "0.2.3"
 edition = "2021"
-authors = ["Blaž Hrastnik <blaz@mxxn.io>"]
+authors = ["MenkeTechnologies"]
 categories = ["editor"]
 repository = "https://github.com/MenkeTechnologies/zemacs"
 homepage = "https://github.com/MenkeTechnologies/zemacs"

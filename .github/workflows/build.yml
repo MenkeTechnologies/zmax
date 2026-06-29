@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - uses: ./.github/actions/rust-setup
         with:
@@ -48,6 +50,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - uses: ./.github/actions/rust-setup
         with:
@@ -73,6 +77,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - uses: ./.github/actions/rust-setup
         with:
@@ -98,6 +104,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - uses: ./.github/actions/rust-setup
         with:
@@ -141,6 +149,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - name: Regenerate port report
         run: python3 scripts/gen_port_report.py | tee /tmp/port_report.out

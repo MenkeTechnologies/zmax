@@ -43,6 +43,8 @@ jobs:
             target: aarch64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       # The rust-toolchain action ignores rust-toolchain.toml; remove it so the
       # toolchain used to build matches the one the action installs.

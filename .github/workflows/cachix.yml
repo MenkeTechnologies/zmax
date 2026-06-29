@@ -18,6 +18,8 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v7
+      with:
+        submodules: recursive
 
     - name: Install nix
       uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
@@ -29,4 +31,6 @@ jobs:
         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
     - name: Build nix flake
-      run: nix build -L
+      # `?submodules=1` makes the flake include the vendored scripting submodules
+      # (Nix omits submodule contents from the git tree by default).
+      run: nix build -L '.?submodules=1'
