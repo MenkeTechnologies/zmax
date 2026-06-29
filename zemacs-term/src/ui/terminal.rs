@@ -157,7 +157,7 @@ impl Component for TerminalPanel {
         // another split is focused, fall through (Ignored) so the editor handles
         // keys; mouse events always fall through so a click on any pane (incl.
         // this one) reaches the editor's click-to-focus handler.
-        let focused = self.pane.map_or(true, |pane| cx.editor.tree.focus == pane);
+        let focused = self.pane.is_none_or(|pane| cx.editor.tree.focus == pane);
         match event {
             Event::Key(key) if focused => {
                 // F12 detaches without needing to exit the shell.
@@ -277,7 +277,7 @@ impl Component for TerminalPanel {
     ) -> (Option<zemacs_core::Position>, CursorKind) {
         // Only own the cursor while our pane is focused; otherwise yield so the
         // editor draws its cursor in the focused split.
-        let focused = self.pane.map_or(true, |pane| editor.tree.focus == pane);
+        let focused = self.pane.is_none_or(|pane| editor.tree.focus == pane);
         if focused {
             (self.caret, CursorKind::Block)
         } else {
