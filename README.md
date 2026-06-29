@@ -11,7 +11,7 @@
 ![Rust](https://img.shields.io/badge/Rust-2021-05d9e8?style=flat-square)
 ![license](https://img.shields.io/badge/license-MPL--2.0-39ff14?style=flat-square)
 [![docs](https://img.shields.io/badge/docs-online-9b5de5?style=flat-square)](https://menketechnologies.github.io/zemacs/)
-![status](https://img.shields.io/badge/status-early-ff2a6d?style=flat-square)
+![status](https://img.shields.io/badge/status-stable-39ff14?style=flat-square)
 
 ### `[A MODAL EDITOR ON THE HELIX ENGINE // VIM KEYS · EMACS · SPACEMACS]`
 
@@ -23,19 +23,11 @@ zemacs runs on the Zemacs engine — tree-sitter syntax, LSP, multiple
 selections — but targets **vim/emacs semantics**, not Zemacs's selection-first
 model. The default keymap is vim: the keys you press are the keys vim binds,
 including operator-pending edits (`dd`, `dw`, `cw`, `yy`) emulated on the Zemacs
-engine. Build-out continues toward full vim coverage and emacs/Spacemacs-style
-functionality on top of that base.
-
-## Status
-
-Early. Vendored Zemacs base (v25.7.1), binary renamed to `zemacs`, now shipping
-a **vim default keymap** (`zemacs-term/src/keymap/vim.rs`) in place of Zemacs's
-selection-first defaults. Build-out toward the Vim/Neovim + Emacs + Spacemacs
-feature set is in progress and tracked by the port report below.
+engine, with emacs and Spacemacs-style functionality layered on top.
 
 ## Port report
 
-The build-out is tracked by a port report measuring zemacs against the
+Coverage is tracked by a port report measuring zemacs against the
 **exhaustive, cited** feature surface of Vim/Neovim, Emacs, and Spacemacs —
 inventory items parsed from the Neovim runtime docs, the GNU Emacs manual
 indexes, and the Spacemacs documentation.
@@ -76,6 +68,19 @@ tree-sitter runtime, publish them to the GitHub release, and bump the
 formula — see `.github/workflows/release.yml`. The tap update needs a
 `HOMEBREW_TAP_TOKEN` repo secret (a PAT with write access to the tap).
 
+## Embedded scripting
+
+**A world first: the only editor to embed 5 scripting languages with zero
+external dependencies and no FFI between them** — every interpreter is a
+pure-Rust crate compiled into the binary, sharing one host API rather than
+bridging through a C ABI.
+
+zemacs embeds several scripting interpreters in the binary, evaluated against the
+live buffer: **elisp** (`:elisp`), **vimscript** (`:vim`), **awk** (`:awk`), plus
+**zsh** (`:zsh`) and **stryke** (`:stryke`) on unix. `SPC a r` (or `:repl`) opens
+a REPL fronting all of them; `~/.zemacs/init.el` and `init.vim` are sourced at
+startup. See [`book/src/scripting.md`](book/src/scripting.md).
+
 ## Build
 
 ```sh
@@ -84,6 +89,14 @@ cargo build --bin zemacs
 ```
 
 The toolchain floats to `stable` (see `rust-toolchain.toml`).
+
+The embedded scripting languages live behind the `scripting` Cargo feature (on by
+default). To build a leaner binary without them — dropping every interpreter
+crate from the dependency graph — disable default features and keep `git`:
+
+```sh
+cargo build --bin zemacs --no-default-features --features git
+```
 
 ## License
 

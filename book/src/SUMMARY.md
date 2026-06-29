@@ -15,6 +15,7 @@
   - [Keymap](./keymap.md)
   - [Command line](./command-line.md)
   - [Commands](./commands.md)
+  - [Embedded scripting](./scripting.md)
   - [Language servers](./lsp.md)
   - [Language support](./lang-support.md)
   - [Workspace trust](./workspace-trust.md)
