@@ -1,0 +1,13 @@
+{
+  "name": "zemacs",
+  "version": "0.2.3",
+  "private": true,
+  "description": "Task runner for the zemacs editor (wraps cargo + the repo scripts).",
+  "scripts": {
+    "dev": "cargo run -p zemacs-term",
+    "build": "cargo build --release -p zemacs-term",
+    "test": "cargo test --workspace && cargo integration-test",
+    "localinstall": "bash scripts/install.sh",
+    "update": "git submodule update --init --remote --recursive -- vendor"
+  }
+}

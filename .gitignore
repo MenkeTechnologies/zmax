@@ -5,5 +5,8 @@ result
 runtime/grammars
 .DS_Store
 
+# pnpm is used only as a task runner (see package.json scripts); no JS deps.
+node_modules/
+
 # This repo ships docs/ (overrides global ignore of docs/)
 !docs/
