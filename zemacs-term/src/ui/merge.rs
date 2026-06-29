@@ -902,12 +902,10 @@ impl Component for DiffView {
                         .arg(&path)
                         .status()
                     {
-                        Ok(status) if status.success() => {
-                            cx.editor.set_status("conflict resolved and staged (git add)")
-                        }
-                        Ok(_) | Err(_) => cx
+                        Ok(status) if status.success() => cx
                             .editor
-                            .set_status("conflict resolved; git add failed"),
+                            .set_status("conflict resolved and staged (git add)"),
+                        Ok(_) | Err(_) => cx.editor.set_status("conflict resolved; git add failed"),
                     }
                 });
                 return EventResult::Consumed(Some(apply));
@@ -928,9 +926,7 @@ impl Component for DiffView {
             key!('L') => self.resolve_all(Resolution::Left),
             key!('R') => self.resolve_all(Resolution::Right),
             // Conflict-mode only: take both sides / reset to unresolved.
-            key!('b') if self.kind == ViewKind::Conflict => {
-                self.resolve_selected(Resolution::Both)
-            }
+            key!('b') if self.kind == ViewKind::Conflict => self.resolve_selected(Resolution::Both),
             key!('u') | key!('x') if self.kind == ViewKind::Conflict => {
                 self.resolve_selected(Resolution::None)
             }
@@ -978,10 +974,8 @@ impl Component for DiffView {
         // Base pane: only in conflict mode, only when a base exists and the user
         // hasn't toggled it off, and only on terminals wide enough to fit a
         // readable 4th column (otherwise stay 3-pane).
-        let show_base_pane = self.kind == ViewKind::Conflict
-            && self.show_base
-            && self.has_base
-            && area.width >= 100;
+        let show_base_pane =
+            self.kind == ViewKind::Conflict && self.show_base && self.has_base && area.width >= 100;
 
         // Split `width - separators` into N equal panes, remainder to the earlier
         // panes so the columns exactly fill the area.
@@ -1078,8 +1072,20 @@ impl Component for DiffView {
         if let Some((base_x, base_w)) = base_col {
             surface.set_stringn(base_x, area.y + 1, " Base", base_w as usize, linenr_style);
         }
-        surface.set_stringn(left_x, area.y + 1, left_label, left_w as usize, linenr_style);
-        surface.set_stringn(center_x, area.y + 1, " Result", center_w as usize, linenr_style);
+        surface.set_stringn(
+            left_x,
+            area.y + 1,
+            left_label,
+            left_w as usize,
+            linenr_style,
+        );
+        surface.set_stringn(
+            center_x,
+            area.y + 1,
+            " Result",
+            center_w as usize,
+            linenr_style,
+        );
         surface.set_stringn(
             right_x,
             area.y + 1,
@@ -1253,7 +1259,10 @@ fn pane_line<'a>(
     match idx {
         Some(i) => {
             let num = format!("{:>width$} ", i + 1, width = gutter.saturating_sub(1));
-            let mut content: String = src.get(i).map(|s| s.replace('\t', "    ")).unwrap_or_default();
+            let mut content: String = src
+                .get(i)
+                .map(|s| s.replace('\t', "    "))
+                .unwrap_or_default();
             // Truncate/pad to the inner width so the styled background spans the pane.
             truncate_pad(&mut content, inner);
             Line::from(vec![
@@ -1317,8 +1326,10 @@ fn result_line<'a>(
     match idx {
         Some(i) => {
             let num = format!("{:>width$} ", i + 1, width = gutter.saturating_sub(1));
-            let mut content: String =
-                src.get(i).map(|s| s.replace('\t', "    ")).unwrap_or_default();
+            let mut content: String = src
+                .get(i)
+                .map(|s| s.replace('\t', "    "))
+                .unwrap_or_default();
             truncate_pad(&mut content, inner);
             prefix.push(Span::styled(num, to_rat_style(style.linenr)));
             prefix.push(Span::styled(content, to_rat_style(content_style)));
@@ -1393,7 +1404,10 @@ mod tests {
         );
         let removed = &rows[1];
         assert_eq!(removed.left, Some(1));
-        assert_eq!(removed.right, None, "deleted line has no working counterpart");
+        assert_eq!(
+            removed.right, None,
+            "deleted line has no working counterpart"
+        );
     }
 
     #[test]
@@ -1480,7 +1494,10 @@ mod tests {
     #[test]
     fn modification_left_is_head_right_is_working() {
         // "b" -> "B". Left keeps HEAD ("b"), Right keeps working ("B").
-        assert_eq!(merged("a\nb\nc\n", "a\nB\nc\n", &[Resolution::Left]), "a\nb\nc\n");
+        assert_eq!(
+            merged("a\nb\nc\n", "a\nB\nc\n", &[Resolution::Left]),
+            "a\nb\nc\n"
+        );
         assert_eq!(
             merged("a\nb\nc\n", "a\nB\nc\n", &[Resolution::Right]),
             "a\nB\nc\n"
@@ -1490,8 +1507,14 @@ mod tests {
     #[test]
     fn deletion_left_keeps_line_right_drops_it() {
         // "b" deleted in working. Left reverts (keeps "b"), Right drops it.
-        assert_eq!(merged("a\nb\nc\n", "a\nc\n", &[Resolution::Left]), "a\nb\nc\n");
-        assert_eq!(merged("a\nb\nc\n", "a\nc\n", &[Resolution::Right]), "a\nc\n");
+        assert_eq!(
+            merged("a\nb\nc\n", "a\nc\n", &[Resolution::Left]),
+            "a\nb\nc\n"
+        );
+        assert_eq!(
+            merged("a\nb\nc\n", "a\nc\n", &[Resolution::Right]),
+            "a\nc\n"
+        );
     }
 
     #[test]
@@ -1633,12 +1656,7 @@ mod tests {
     /// resolution with `resolutions[i]`, and return the resolved text.
     fn resolved_conflict(text: &str, resolutions: &[Resolution]) -> String {
         let segments = parse_conflicts(text).expect("expected conflict markers");
-        let view = DiffView::from_conflicts(
-            "f".to_string(),
-            DocumentId::default(),
-            None,
-            segments,
-        );
+        let view = DiffView::from_conflicts("f".to_string(), DocumentId::default(), None, segments);
         let mut blocks = view.blocks;
         assert_eq!(
             blocks.len(),
@@ -1655,7 +1673,10 @@ mod tests {
     fn conflict_ours_theirs_both() {
         let text = "x\n<<<<<<<\nours\n=======\ntheirs\n>>>>>>>\ny\n";
         assert_eq!(resolved_conflict(text, &[Resolution::Left]), "x\nours\ny\n");
-        assert_eq!(resolved_conflict(text, &[Resolution::Right]), "x\ntheirs\ny\n");
+        assert_eq!(
+            resolved_conflict(text, &[Resolution::Right]),
+            "x\ntheirs\ny\n"
+        );
         assert_eq!(
             resolved_conflict(text, &[Resolution::Both]),
             "x\nours\ntheirs\ny\n"
@@ -1697,8 +1718,7 @@ mod tests {
     #[test]
     fn from_conflicts_blocks_default_to_unresolved() {
         let segments = parse_conflicts("<<<<<<<\nA\n=======\nB\n>>>>>>>\n").unwrap();
-        let view =
-            DiffView::from_conflicts("f".into(), DocumentId::default(), None, segments);
+        let view = DiffView::from_conflicts("f".into(), DocumentId::default(), None, segments);
         assert_eq!(view.kind, ViewKind::Conflict);
         assert_eq!(view.blocks.len(), 1);
         assert_eq!(view.blocks[0].resolution, Resolution::None);
@@ -1824,7 +1844,10 @@ mod tests {
         // has zero blocks and its resolved text is just the merged content.
         let segs = diff3("a\nb\nc\n", "a\nB\nc\n", "a\nb\nc\n");
         let view = DiffView::from_conflicts("f".into(), DocumentId::default(), None, segs);
-        assert!(view.blocks.is_empty(), "auto-merge produces no conflict blocks");
+        assert!(
+            view.blocks.is_empty(),
+            "auto-merge produces no conflict blocks"
+        );
         assert_eq!(
             conflict_result_text(&view.segments, &view.blocks),
             "a\nB\nc\n"
@@ -1845,7 +1868,10 @@ mod tests {
         blocks[0].resolution = Resolution::Right;
         assert_eq!(conflict_result_text(&view.segments, &blocks), "a\nY\nc\n");
         blocks[0].resolution = Resolution::Both;
-        assert_eq!(conflict_result_text(&view.segments, &blocks), "a\nX\nY\nc\n");
+        assert_eq!(
+            conflict_result_text(&view.segments, &blocks),
+            "a\nX\nY\nc\n"
+        );
     }
 
     #[test]

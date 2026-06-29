@@ -1598,7 +1598,10 @@ fn merge(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
                 zemacs_loader::workspace_trust::TrustQuery::Git,
             )
             .is_trusted();
-        let stages = cx.editor.diff_providers.get_conflict_stages(p, trust_full)?;
+        let stages = cx
+            .editor
+            .diff_providers
+            .get_conflict_stages(p, trust_full)?;
         // Need at least ours + theirs to run a 3-way merge; missing base is fine
         // (add/add → "" base).
         let ours = stages.ours?;
