@@ -1292,6 +1292,14 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "t" => paredit_transpose,          // SPC k t : transpose sexps
                 "e" => paredit_splice_kill_forward,  // SPC k e : splice, killing forward
                 "E" => paredit_splice_kill_backward, // SPC k E : splice, killing backward
+                "(" => paredit_insert_sexp_before, // SPC k ( : insert sexp before current
+                ")" => paredit_insert_sexp_after,  // SPC k ) : insert sexp after current
+                "`" => { "Hybrid"
+                    "s" => paredit_slurp_forward,  // SPC k ` s : hybrid slurp forward
+                    "t" => paredit_transpose,      // SPC k ` t : hybrid transpose
+                    "p" => paredit_transpose,      // SPC k ` p : hybrid push (swap)
+                    "k" => [expand_selection, delete_selection], // SPC k ` k : hybrid delete sexp
+                },
                 "d" => { "Delete"
                     "x" => [expand_selection, delete_selection], // SPC k dx : delete sexp
                     "s" => [expand_selection, delete_selection], // SPC k ds : delete symbol
@@ -1571,9 +1579,22 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
     add_spacemacs_typables(&mut normal);
 
+    // Visual mode gets the whole SPC leader too. Spacemacs exposes the `SPC`
+    // menu in visual state, and zemacs previously only had it in Normal — so
+    // pressing space while a `v`-selection was active did nothing (mouse-drag
+    // selections stay in Normal mode, which is why the leader worked there but
+    // not after `v`). Graft Normal's leader subtree into Select; the
+    // visual-specific overrides below then win where they differ.
+    let space_key = chord("space")[0];
+    if let Some(leader) = normal.search(&[space_key]).cloned() {
+        if let Some(sel) = select.node_mut() {
+            sel.insert(space_key, leader);
+        }
+    }
+
     // Make git hunk-reset work on a visual selection too: SPC g r in select mode
-    // resets every hunk the selection touches (the leader is otherwise
-    // normal-mode only). `]c`/`[c` also navigate hunks while selecting.
+    // resets every hunk the selection touches. `]c`/`[c` also navigate hunks
+    // while selecting.
     if let KeyTrie::Node(sel) = &mut select {
         add_command(sel, &chord("space g r"), "Git", ":hunk-reset");
         add_command(sel, &chord("] c"), "Git", ":hunk-next");
@@ -1717,6 +1738,22 @@ mod tests {
             cmd_name(resolve(n, "space s s").unwrap()),
             Some("global_search")
         );
+    }
+
+    #[test]
+    fn visual_mode_has_spc_leader() {
+        // Regression: pressing SPC in Visual (Select) mode must open the same
+        // leader tree as Normal mode — it was previously Normal-only, so a
+        // `v`-selection couldn't reach the SPC menu (mouse-drag could, because
+        // it stays in Normal mode).
+        let km = default();
+        let s = &km[&Mode::Select];
+        assert_eq!(cmd_name(resolve(s, "space f f").unwrap()), Some("file_picker"));
+        assert_eq!(cmd_name(resolve(s, "space space").unwrap()), Some("command_palette"));
+        assert_eq!(cmd_name(resolve(s, "space w s").unwrap()), Some("hsplit"));
+        // the visual-specific override (:hunk-reset, a typable) still wins over
+        // the grafted Normal leaf (goto_reference): the leaf is no longer it.
+        assert_ne!(cmd_name(resolve(s, "space g r").unwrap()), Some("goto_reference"));
     }
 
     #[test]

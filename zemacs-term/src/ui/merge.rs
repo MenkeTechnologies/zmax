@@ -24,6 +24,7 @@
 //! `Enter`/`a` apply, `q`/`Esc` cancel. Mouse wheel scrolls too.
 
 use std::ops::Range;
+use std::path::PathBuf;
 
 use imara_diff::{sources::lines, Algorithm, Diff, InternedInput};
 
@@ -159,12 +160,178 @@ fn change_blocks(rows: &[DiffRow]) -> Vec<usize> {
 }
 
 /// Which side a change block resolves to in the Result.
+///
+/// In **diff** mode only `Left`/`Right` are used (slice 2). In **conflict**
+/// mode all four apply: `Left` = take ours, `Right` = take theirs, `Both` =
+/// ours then theirs, `None` = leave the region unresolved (markers preserved).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Resolution {
-    /// Take the HEAD (left) side — reverts the hunk.
+    /// Take the HEAD / ours (left) side — reverts the hunk.
     Left,
-    /// Keep the working-tree (right) side — the default.
+    /// Keep the working-tree / theirs (right) side — the diff-mode default.
     Right,
+    /// Conflict mode: emit ours then theirs.
+    Both,
+    /// Conflict mode: leave the conflict unresolved (re-emit the markers). The
+    /// default for a freshly-loaded conflict block.
+    None,
+}
+
+/// Whether the view is showing a working-tree diff (slice 2) or resolving git
+/// merge-conflict markers (slice 3). Controls labels, the default resolution,
+/// the header text, the available keys and the Apply behaviour.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum ViewKind {
+    /// Working-tree diff against HEAD (`:diff`).
+    Diff,
+    /// Merge-conflict resolver over `<<<<<<< ======= >>>>>>>` markers (`:merge`).
+    Conflict,
+}
+
+/// A parsed region of a conflicted file: either already-merged context lines or
+/// an unresolved conflict with its ours/base/theirs sides (lines have their
+/// trailing newline stripped). `base` is empty unless the file was produced
+/// with `merge.conflictStyle=diff3`/`zdiff3` (the `|||||||` section).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Segment {
+    /// Lines outside any conflict — already merged, shown in all three panes.
+    Context(Vec<String>),
+    /// One `<<<<<<< … >>>>>>>` region.
+    Conflict {
+        ours: Vec<String>,
+        base: Vec<String>,
+        theirs: Vec<String>,
+    },
+}
+
+/// Parse git merge-conflict markers out of `text`.
+///
+/// Returns `None` when the text contains no `<<<<<<<` marker (so the caller can
+/// report "no conflicts"). Otherwise returns the file split into ordered
+/// [`Segment`]s. Pure and unit-tested.
+///
+/// Handles multiple conflicts, the optional `|||||||` base section, CRLF line
+/// endings, a missing trailing newline, and markers that are exactly
+/// `<<<<<<<`/`|||||||`/`=======`/`>>>>>>>` optionally followed by a label.
+/// Nested conflicts are not handled (git never produces them).
+pub fn parse_conflicts(text: &str) -> Option<Vec<Segment>> {
+    // `split_lines` strips trailing newlines and `\r`, drops the phantom final
+    // entry, and matches how the rest of the module tokenises text — so marker
+    // detection works uniformly for LF/CRLF and for a missing final newline.
+    let lines = split_lines(text);
+    if !lines.iter().any(|l| l.starts_with("<<<<<<<")) {
+        return None;
+    }
+
+    let mut segments = Vec::new();
+    let mut context: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        if !lines[i].starts_with("<<<<<<<") {
+            context.push(lines[i].clone());
+            i += 1;
+            continue;
+        }
+
+        // Flush any pending context before starting a conflict.
+        if !context.is_empty() {
+            segments.push(Segment::Context(std::mem::take(&mut context)));
+        }
+
+        let mut ours = Vec::new();
+        let mut base = Vec::new();
+        let mut theirs = Vec::new();
+        i += 1; // skip the `<<<<<<<` marker line
+
+        // ours: up to `|||||||`, `=======` or (defensively) `>>>>>>>`.
+        while i < lines.len()
+            && !lines[i].starts_with("|||||||")
+            && !lines[i].starts_with("=======")
+            && !lines[i].starts_with(">>>>>>>")
+        {
+            ours.push(lines[i].clone());
+            i += 1;
+        }
+        // optional diff3 base section.
+        if i < lines.len() && lines[i].starts_with("|||||||") {
+            i += 1;
+            while i < lines.len()
+                && !lines[i].starts_with("=======")
+                && !lines[i].starts_with(">>>>>>>")
+            {
+                base.push(lines[i].clone());
+                i += 1;
+            }
+        }
+        // theirs: between `=======` and `>>>>>>>`.
+        if i < lines.len() && lines[i].starts_with("=======") {
+            i += 1;
+            while i < lines.len() && !lines[i].starts_with(">>>>>>>") {
+                theirs.push(lines[i].clone());
+                i += 1;
+            }
+        }
+        // closing marker.
+        if i < lines.len() && lines[i].starts_with(">>>>>>>") {
+            i += 1;
+        }
+
+        segments.push(Segment::Conflict { ours, base, theirs });
+    }
+    if !context.is_empty() {
+        segments.push(Segment::Context(context));
+    }
+    Some(segments)
+}
+
+/// Reconstruct the resolved text of a conflicted file from its parsed
+/// [`Segment`]s and the per-conflict resolutions held in `blocks` (one block
+/// per [`Segment::Conflict`], in order). Pure so it can be unit-tested.
+///
+/// `Left`→ours, `Right`→theirs, `Both`→ours then theirs, `None`→ the original
+/// conflict region with its markers preserved (so a partial resolution leaves
+/// the rest conflicted).
+fn conflict_result_text(segments: &[Segment], blocks: &[Block]) -> String {
+    fn emit(out: &mut String, lines: &[String]) {
+        for line in lines {
+            out.push_str(line);
+            out.push('\n');
+        }
+    }
+
+    let mut out = String::new();
+    let mut conflicts = blocks.iter();
+    for seg in segments {
+        match seg {
+            Segment::Context(lines) => emit(&mut out, lines),
+            Segment::Conflict { ours, base, theirs } => {
+                let res = conflicts
+                    .next()
+                    .map(|b| b.resolution)
+                    .unwrap_or(Resolution::None);
+                match res {
+                    Resolution::Left => emit(&mut out, ours),
+                    Resolution::Right => emit(&mut out, theirs),
+                    Resolution::Both => {
+                        emit(&mut out, ours);
+                        emit(&mut out, theirs);
+                    }
+                    Resolution::None => {
+                        out.push_str("<<<<<<<\n");
+                        emit(&mut out, ours);
+                        if !base.is_empty() {
+                            out.push_str("|||||||\n");
+                            emit(&mut out, base);
+                        }
+                        out.push_str("=======\n");
+                        emit(&mut out, theirs);
+                        out.push_str(">>>>>>>\n");
+                    }
+                }
+            }
+        }
+    }
+    out
 }
 
 /// A contiguous run of changed rows together with its chosen resolution.
@@ -234,7 +401,10 @@ fn result_text(
                     out.push('\n');
                 }
             }
-            Some(Resolution::Right) => {
+            // `Right` is the diff-mode default; `Both`/`None` never occur in
+            // diff mode (conflict mode uses `conflict_result_text`) but keep the
+            // match exhaustive by treating them as "keep the right side".
+            Some(Resolution::Right) | Some(Resolution::Both) | Some(Resolution::None) => {
                 if let Some(r) = row.right.and_then(|r| doc_lines.get(r)) {
                     out.push_str(r);
                     out.push('\n');
@@ -247,17 +417,25 @@ fn result_text(
 
 /// The full-screen interactive 3-pane merge overlay.
 pub struct DiffView {
+    /// Whether this is a working-tree diff or a conflict resolver.
+    kind: ViewKind,
     /// Display name of the file being diffed (shown in the header).
     file_name: String,
     /// Document the resolved Result is written back into on Apply.
     doc_id: DocumentId,
-    /// HEAD lines (left pane), trailing newline stripped.
+    /// Absolute path of the document, captured up front so Apply can write the
+    /// resolved file to disk and `git add` it (conflict mode only).
+    path: Option<PathBuf>,
+    /// HEAD / ours lines (left pane), trailing newline stripped.
     base_lines: Vec<String>,
-    /// Working-tree lines (right pane), trailing newline stripped.
+    /// Working-tree / theirs lines (right pane), trailing newline stripped.
     doc_lines: Vec<String>,
     rows: Vec<DiffRow>,
     /// Change blocks with their (mutable) per-block resolution.
     blocks: Vec<Block>,
+    /// Conflict mode only: the parsed segments, used to rebuild the resolved
+    /// text (with markers preserved for unresolved blocks). Empty in diff mode.
+    segments: Vec<Segment>,
     /// Index into `blocks` of the currently-focused block.
     selected: usize,
     /// Index of the top visible row.
@@ -273,12 +451,104 @@ impl DiffView {
         let rows = align(base, doc);
         let blocks = compute_blocks(&rows);
         DiffView {
+            kind: ViewKind::Diff,
             file_name,
             doc_id,
+            path: None,
             base_lines: split_lines(base),
             doc_lines: split_lines(doc),
             rows,
             blocks,
+            segments: Vec::new(),
+            selected: 0,
+            scroll: 0,
+            viewport: 1,
+        }
+    }
+
+    /// Construct a conflict resolver from the parsed [`Segment`]s of a
+    /// conflicted file. Context lines become `Unchanged` rows shown in all
+    /// three panes; each conflict becomes a [`Block`] (one per conflict, in
+    /// order) whose left side is the *ours* lines and right side the *theirs*
+    /// lines, padded so the panes stay aligned — exactly like [`align`]. Blocks
+    /// default to [`Resolution::None`] (unresolved). `path` is the document's
+    /// absolute path, captured for the `git add` step on Apply.
+    pub fn from_conflicts(
+        file_name: String,
+        doc_id: DocumentId,
+        path: Option<PathBuf>,
+        segments: Vec<Segment>,
+    ) -> Self {
+        let mut base_lines = Vec::new();
+        let mut doc_lines = Vec::new();
+        let mut rows = Vec::new();
+        let mut blocks = Vec::new();
+
+        for seg in &segments {
+            match seg {
+                Segment::Context(lines) => {
+                    for line in lines {
+                        let (bi, di) = (base_lines.len(), doc_lines.len());
+                        base_lines.push(line.clone());
+                        doc_lines.push(line.clone());
+                        rows.push(DiffRow {
+                            left: Some(bi),
+                            right: Some(di),
+                            kind: RowKind::Unchanged,
+                        });
+                    }
+                }
+                Segment::Conflict { ours, theirs, .. } => {
+                    let start = rows.len();
+                    let common = ours.len().min(theirs.len());
+                    for k in 0..common {
+                        let (bi, di) = (base_lines.len(), doc_lines.len());
+                        base_lines.push(ours[k].clone());
+                        doc_lines.push(theirs[k].clone());
+                        rows.push(DiffRow {
+                            left: Some(bi),
+                            right: Some(di),
+                            kind: RowKind::Changed,
+                        });
+                    }
+                    for line in &ours[common..] {
+                        let bi = base_lines.len();
+                        base_lines.push(line.clone());
+                        rows.push(DiffRow {
+                            left: Some(bi),
+                            right: None,
+                            kind: RowKind::Removed,
+                        });
+                    }
+                    for line in &theirs[common..] {
+                        let di = doc_lines.len();
+                        doc_lines.push(line.clone());
+                        rows.push(DiffRow {
+                            left: None,
+                            right: Some(di),
+                            kind: RowKind::Added,
+                        });
+                    }
+                    // One block per conflict, even if empty, so blocks stay 1:1
+                    // and in order with the conflict segments.
+                    blocks.push(Block {
+                        rows: start..rows.len(),
+                        resolution: Resolution::None,
+                    });
+                }
+            }
+        }
+
+        DiffView {
+            kind: ViewKind::Conflict,
+            file_name,
+            doc_id,
+            path,
+            base_lines,
+            doc_lines,
+            rows,
+            blocks,
+            segments,
             selected: 0,
             scroll: 0,
             viewport: 1,
@@ -290,12 +560,35 @@ impl DiffView {
         self.blocks.is_empty()
     }
 
-    /// Number of blocks resolved away from the default (`Right`), for the header.
+    /// Number of resolved blocks, for the header. In diff mode this counts
+    /// blocks taken to HEAD (`Left`, i.e. changed from the `Right` default); in
+    /// conflict mode it counts blocks resolved away from `None`.
     fn resolved_count(&self) -> usize {
+        match self.kind {
+            ViewKind::Diff => self
+                .blocks
+                .iter()
+                .filter(|b| b.resolution == Resolution::Left)
+                .count(),
+            ViewKind::Conflict => self
+                .blocks
+                .iter()
+                .filter(|b| b.resolution != Resolution::None)
+                .count(),
+        }
+    }
+
+    /// Conflict mode: number of still-unresolved conflict blocks.
+    fn unresolved_count(&self) -> usize {
         self.blocks
             .iter()
-            .filter(|b| b.resolution == Resolution::Left)
+            .filter(|b| b.resolution == Resolution::None)
             .count()
+    }
+
+    /// Conflict mode: true when every conflict has a chosen resolution.
+    fn all_resolved(&self) -> bool {
+        self.blocks.iter().all(|b| b.resolution != Resolution::None)
     }
 
     fn max_scroll(&self) -> usize {
@@ -355,7 +648,12 @@ impl DiffView {
 
     /// Build the resolved Result text from the current resolutions.
     fn result_text(&self) -> String {
-        result_text(&self.rows, &self.blocks, &self.base_lines, &self.doc_lines)
+        match self.kind {
+            ViewKind::Diff => {
+                result_text(&self.rows, &self.blocks, &self.base_lines, &self.doc_lines)
+            }
+            ViewKind::Conflict => conflict_result_text(&self.segments, &self.blocks),
+        }
     }
 }
 
@@ -382,9 +680,17 @@ impl Component for DiffView {
         match key {
             key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
             // Apply: write the resolved Result back into the document, then close.
+            // In conflict mode, once every conflict is resolved, also write the
+            // file to disk and `git add` it to mark the conflict resolved.
             key!(Enter) | key!('a') => {
+                // Compute everything the callback needs up front — it can't
+                // borrow `self`.
                 let result = self.result_text();
                 let doc_id = self.doc_id;
+                let is_conflict = self.kind == ViewKind::Conflict;
+                let all_resolved = self.all_resolved();
+                let remaining = self.unresolved_count();
+                let path = self.path.clone();
                 let apply: Callback = Box::new(move |compositor: &mut Compositor, cx| {
                     let (view, doc) = current!(cx.editor);
                     if doc.id() == doc_id {
@@ -395,6 +701,38 @@ impl Component for DiffView {
                         doc.append_changes_to_history(view);
                     }
                     compositor.pop();
+
+                    if !is_conflict {
+                        return;
+                    }
+                    if !all_resolved {
+                        cx.editor
+                            .set_status(format!("{remaining} conflicts remaining"));
+                        return;
+                    }
+                    let Some(path) = path else {
+                        cx.editor
+                            .set_status("conflicts resolved (no file path to stage)");
+                        return;
+                    };
+                    // The buffer now holds the fully-resolved text; mirror it to
+                    // disk so `git add` stages the resolution.
+                    if let Err(err) = std::fs::write(&path, &result) {
+                        cx.editor.set_status(format!("write failed: {err}"));
+                        return;
+                    }
+                    match std::process::Command::new("git")
+                        .args(["add", "--"])
+                        .arg(&path)
+                        .status()
+                    {
+                        Ok(status) if status.success() => {
+                            cx.editor.set_status("conflict resolved and staged (git add)")
+                        }
+                        Ok(_) | Err(_) => cx
+                            .editor
+                            .set_status("conflict resolved; git add failed"),
+                    }
                 });
                 return EventResult::Consumed(Some(apply));
             }
@@ -406,12 +744,20 @@ impl Component for DiffView {
             key!('G') | key!(End) => self.scroll = self.max_scroll(),
             key!('n') => self.next_change(),
             key!('p') => self.prev_change(),
-            // Resolve the selected block.
+            // Resolve the selected block. `,`/`[`/`h` take ours (HEAD/left),
+            // `.`/`]`/`l` take theirs (working/right).
             key!(',') | key!('[') | key!('h') => self.resolve_selected(Resolution::Left),
             key!('.') | key!(']') | key!('l') => self.resolve_selected(Resolution::Right),
             // Resolve all blocks one way.
             key!('L') => self.resolve_all(Resolution::Left),
             key!('R') => self.resolve_all(Resolution::Right),
+            // Conflict-mode only: take both sides / reset to unresolved.
+            key!('b') if self.kind == ViewKind::Conflict => {
+                self.resolve_selected(Resolution::Both)
+            }
+            key!('u') | key!('x') if self.kind == ViewKind::Conflict => {
+                self.resolve_selected(Resolution::None)
+            }
             _ => {}
         }
         // Stay modal: never let keys leak to the editor behind us.
@@ -467,13 +813,18 @@ impl Component for DiffView {
         let center_gutter = gutter + 2;
 
         // ── Header ──────────────────────────────────────────────────────────
-        let changes = self.blocks.len();
+        let count = self.blocks.len();
         let resolved = self.resolved_count();
+        let noun = match self.kind {
+            ViewKind::Diff => "change",
+            ViewKind::Conflict => "conflict",
+        };
         let header = format!(
-            " {}  —  {} change{} · {} resolved",
+            " {}  —  {} {}{} · {} resolved",
             self.file_name,
-            changes,
-            if changes == 1 { "" } else { "s" },
+            count,
+            noun,
+            if count == 1 { "" } else { "s" },
             resolved,
         );
         let title_style = theme.get("ui.text.focus");
@@ -484,14 +835,25 @@ impl Component for DiffView {
             area.width as usize,
             to_zstyle_bold(title_style),
         );
-        // Key hint + column labels on the second header row.
-        let hint = ", take HEAD   . take working   n/p nav   Enter apply   q cancel";
-        surface.set_stringn(left_x, area.y + 1, " HEAD", left_w as usize, linenr_style);
+        // Key hint + column labels on the second header row (mode-dependent).
+        let (hint, left_label, right_label) = match self.kind {
+            ViewKind::Diff => (
+                ", take HEAD   . take working   n/p nav   Enter apply   q cancel",
+                " HEAD",
+                " Working tree",
+            ),
+            ViewKind::Conflict => (
+                ", ours  . theirs  b both  u unresolve  n/p nav  Enter apply  q cancel",
+                " Current (ours)",
+                " Incoming (theirs)",
+            ),
+        };
+        surface.set_stringn(left_x, area.y + 1, left_label, left_w as usize, linenr_style);
         surface.set_stringn(center_x, area.y + 1, " Result", center_w as usize, linenr_style);
         surface.set_stringn(
             right_x,
             area.y + 1,
-            " Working tree",
+            right_label,
             right_w as usize,
             linenr_style,
         );
@@ -589,7 +951,10 @@ impl Component for DiffView {
     }
 
     fn id(&self) -> Option<&'static str> {
-        Some("diff")
+        match self.kind {
+            ViewKind::Diff => Some("diff"),
+            ViewKind::Conflict => Some("merge"),
+        }
     }
 }
 
@@ -677,13 +1042,17 @@ fn result_line<'a>(
         None => " ",
         Some(Resolution::Left) => "\u{25C0}",  // ◀
         Some(Resolution::Right) => "\u{25B6}", // ▶
+        Some(Resolution::Both) => "\u{25C6}",  // ◆
+        Some(Resolution::None) => "?",         // unresolved conflict
     };
-    // Which source line this row resolves to.
+    // Which source line this row previews. `Left`/`Right` pick a side; `Both`,
+    // unresolved (`Resolution::None`) and unchanged rows (outer `None`) preview
+    // whichever side this row carries.
     let (idx, src): (Option<usize>, &[String]) = match resolution {
-        None if row.right.is_some() => (row.right, doc_lines),
-        None => (row.left, base_lines),
         Some(Resolution::Left) => (row.left, base_lines),
         Some(Resolution::Right) => (row.right, doc_lines),
+        _ if row.right.is_some() => (row.right, doc_lines),
+        _ => (row.left, base_lines),
     };
 
     let content_style = if selected { selected_style } else { style.text };
@@ -901,5 +1270,185 @@ mod tests {
             merged(base, doc, &[Resolution::Left, Resolution::Right]),
             "a\nb\nc\nD\ne\n"
         );
+    }
+
+    // ── Conflict parsing (slice 3) ───────────────────────────────────────────
+
+    fn ctx(lines: &[&str]) -> Segment {
+        Segment::Context(lines.iter().map(|s| s.to_string()).collect())
+    }
+    fn conflict(ours: &[&str], base: &[&str], theirs: &[&str]) -> Segment {
+        Segment::Conflict {
+            ours: ours.iter().map(|s| s.to_string()).collect(),
+            base: base.iter().map(|s| s.to_string()).collect(),
+            theirs: theirs.iter().map(|s| s.to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn parse_no_markers_returns_none() {
+        assert_eq!(parse_conflicts("a\nb\nc\n"), None);
+        assert_eq!(parse_conflicts(""), None);
+    }
+
+    #[test]
+    fn parse_single_conflict() {
+        let text = "top\n\
+                    <<<<<<< HEAD\n\
+                    ours1\n\
+                    ours2\n\
+                    =======\n\
+                    theirs1\n\
+                    >>>>>>> branch\n\
+                    bottom\n";
+        assert_eq!(
+            parse_conflicts(text),
+            Some(vec![
+                ctx(&["top"]),
+                conflict(&["ours1", "ours2"], &[], &["theirs1"]),
+                ctx(&["bottom"]),
+            ])
+        );
+    }
+
+    #[test]
+    fn parse_multiple_conflicts() {
+        let text = "<<<<<<<\n\
+                    A\n\
+                    =======\n\
+                    B\n\
+                    >>>>>>>\n\
+                    mid\n\
+                    <<<<<<<\n\
+                    C\n\
+                    =======\n\
+                    D\n\
+                    >>>>>>>\n";
+        assert_eq!(
+            parse_conflicts(text),
+            Some(vec![
+                conflict(&["A"], &[], &["B"]),
+                ctx(&["mid"]),
+                conflict(&["C"], &[], &["D"]),
+            ])
+        );
+    }
+
+    #[test]
+    fn parse_diff3_base_section() {
+        let text = "<<<<<<< ours\n\
+                    o\n\
+                    ||||||| base\n\
+                    b1\n\
+                    b2\n\
+                    =======\n\
+                    t\n\
+                    >>>>>>> theirs\n";
+        assert_eq!(
+            parse_conflicts(text),
+            Some(vec![conflict(&["o"], &["b1", "b2"], &["t"])])
+        );
+    }
+
+    #[test]
+    fn parse_crlf_line_endings() {
+        let text = "top\r\n\
+                    <<<<<<< HEAD\r\n\
+                    ours\r\n\
+                    =======\r\n\
+                    theirs\r\n\
+                    >>>>>>> branch\r\n";
+        assert_eq!(
+            parse_conflicts(text),
+            Some(vec![ctx(&["top"]), conflict(&["ours"], &[], &["theirs"])])
+        );
+    }
+
+    #[test]
+    fn parse_missing_trailing_newline() {
+        // No final newline after the closing marker.
+        let text = "<<<<<<<\nours\n=======\ntheirs\n>>>>>>>";
+        assert_eq!(
+            parse_conflicts(text),
+            Some(vec![conflict(&["ours"], &[], &["theirs"])])
+        );
+    }
+
+    // ── Conflict result text (slice 3) ───────────────────────────────────────
+
+    /// Parse `text`, build a conflict view, override each conflict block's
+    /// resolution with `resolutions[i]`, and return the resolved text.
+    fn resolved_conflict(text: &str, resolutions: &[Resolution]) -> String {
+        let segments = parse_conflicts(text).expect("expected conflict markers");
+        let view = DiffView::from_conflicts(
+            "f".to_string(),
+            DocumentId::default(),
+            None,
+            segments,
+        );
+        let mut blocks = view.blocks;
+        assert_eq!(
+            blocks.len(),
+            resolutions.len(),
+            "test gave the wrong number of resolutions"
+        );
+        for (b, &r) in blocks.iter_mut().zip(resolutions) {
+            b.resolution = r;
+        }
+        conflict_result_text(&view.segments, &blocks)
+    }
+
+    #[test]
+    fn conflict_ours_theirs_both() {
+        let text = "x\n<<<<<<<\nours\n=======\ntheirs\n>>>>>>>\ny\n";
+        assert_eq!(resolved_conflict(text, &[Resolution::Left]), "x\nours\ny\n");
+        assert_eq!(resolved_conflict(text, &[Resolution::Right]), "x\ntheirs\ny\n");
+        assert_eq!(
+            resolved_conflict(text, &[Resolution::Both]),
+            "x\nours\ntheirs\ny\n"
+        );
+    }
+
+    #[test]
+    fn conflict_none_re_emits_markers() {
+        // An unresolved conflict re-emits the markers (normalised, base dropped
+        // when empty) so the file stays conflicted.
+        let text = "x\n<<<<<<<\nours\n=======\ntheirs\n>>>>>>>\ny\n";
+        assert_eq!(
+            resolved_conflict(text, &[Resolution::None]),
+            "x\n<<<<<<<\nours\n=======\ntheirs\n>>>>>>>\ny\n"
+        );
+    }
+
+    #[test]
+    fn conflict_none_preserves_diff3_base() {
+        let text = "<<<<<<<\nours\n|||||||\nbase\n=======\ntheirs\n>>>>>>>\n";
+        assert_eq!(
+            resolved_conflict(text, &[Resolution::None]),
+            "<<<<<<<\nours\n|||||||\nbase\n=======\ntheirs\n>>>>>>>\n"
+        );
+    }
+
+    #[test]
+    fn conflict_partial_resolution_leaves_rest_conflicted() {
+        // First conflict resolved to ours, second left unresolved.
+        let text = "<<<<<<<\nA\n=======\nB\n>>>>>>>\n\
+                    mid\n\
+                    <<<<<<<\nC\n=======\nD\n>>>>>>>\n";
+        assert_eq!(
+            resolved_conflict(text, &[Resolution::Left, Resolution::None]),
+            "A\nmid\n<<<<<<<\nC\n=======\nD\n>>>>>>>\n"
+        );
+    }
+
+    #[test]
+    fn from_conflicts_blocks_default_to_unresolved() {
+        let segments = parse_conflicts("<<<<<<<\nA\n=======\nB\n>>>>>>>\n").unwrap();
+        let view =
+            DiffView::from_conflicts("f".into(), DocumentId::default(), None, segments);
+        assert_eq!(view.kind, ViewKind::Conflict);
+        assert_eq!(view.blocks.len(), 1);
+        assert_eq!(view.blocks[0].resolution, Resolution::None);
+        assert!(!view.all_resolved());
     }
 }

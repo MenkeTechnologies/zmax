@@ -748,6 +748,8 @@ impl MappableCommand {
         paredit_transpose, "Paredit: transpose the s-expressions around point (SPC k t)",
         paredit_splice_kill_forward, "Paredit: splice, killing forward (SPC k e)",
         paredit_splice_kill_backward, "Paredit: splice, killing backward (SPC k E)",
+        paredit_insert_sexp_after, "Paredit: insert a new () sexp after the current one (SPC k ))",
+        paredit_insert_sexp_before, "Paredit: insert a new () sexp before the current one (SPC k ()",
         fold_next, "Move to next fold (zj)",
         fold_prev, "Move to previous fold (zk)",
         goto_line_last_nonblank, "Goto last non-blank on line (g_)",
@@ -11393,6 +11395,7 @@ fn kmacro_counter_add(n: i64) -> i64 {
     KMACRO_COUNTER.fetch_add(n, std::sync::atomic::Ordering::Relaxed) + n
 }
 
+#[cfg(test)]
 fn kmacro_counter_reset() {
     KMACRO_COUNTER.store(0, std::sync::atomic::Ordering::Relaxed);
 }
@@ -11608,6 +11611,26 @@ fn pe_splice_kill_backward(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)
     Some((out, o))
 }
 
+/// Insert a new empty `()` sibling after the enclosing s-expression; cursor lands
+/// between the new parens. `(a|)` → `(a) ()` with the cursor in the new pair.
+fn pe_insert_sexp_after(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (_o, c) = pe_enclosing(ch, pos)?;
+    let mut out = ch[..=c].to_vec();
+    out.extend([' ', '(', ')']);
+    out.extend_from_slice(&ch[c + 1..]);
+    Some((out, c + 3)) // between '(' (c+2) and ')' (c+3)
+}
+
+/// Insert a new empty `()` sibling before the enclosing s-expression; cursor lands
+/// between the new parens. `(a|)` → `() (a)` with the cursor in the new pair.
+fn pe_insert_sexp_before(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (o, _c) = pe_enclosing(ch, pos)?;
+    let mut out = ch[..o].to_vec();
+    out.extend(['(', ')', ' ']);
+    out.extend_from_slice(&ch[o..]);
+    Some((out, o + 1)) // between '(' (o) and ')' (o+1)
+}
+
 /// Raise: replace the enclosing s-expression with the child at point.
 /// `(a (b c) d)` with point in `(b c)` → `(b c)`.
 fn pe_raise(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
@@ -11694,6 +11717,14 @@ fn paredit_splice_kill_forward(cx: &mut Context) {
 }
 fn paredit_splice_kill_backward(cx: &mut Context) {
     apply_paredit(cx, pe_splice_kill_backward);
+}
+fn paredit_insert_sexp_after(cx: &mut Context) {
+    apply_paredit(cx, pe_insert_sexp_after);
+    enter_insert_mode(cx);
+}
+fn paredit_insert_sexp_before(cx: &mut Context) {
+    apply_paredit(cx, pe_insert_sexp_before);
+    enter_insert_mode(cx);
 }
 
 /// SPC b w: toggle the current buffer's read-only (writable) state.
@@ -13000,6 +13031,18 @@ mod insert_generator_tests {
         assert_eq!(
             paredit_run(pe_splice_kill_backward, "(as (bs |cs) ds)", '|').as_deref(),
             Some("(as cs ds)")
+        );
+    }
+
+    #[test]
+    fn paredit_insert_sibling_sexp() {
+        assert_eq!(
+            paredit_run(pe_insert_sexp_after, "(a|)", '|').as_deref(),
+            Some("(a) ()")
+        );
+        assert_eq!(
+            paredit_run(pe_insert_sexp_before, "(a|)", '|').as_deref(),
+            Some("() (a)")
         );
     }
 

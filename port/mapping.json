@@ -10326,5 +10326,53 @@
    "key:normal:space k D w"
   ],
   "note": "spacemacs spc_k_dUw -> delete word backward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_x_2",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k ("
+  ],
+  "note": "spacemacs spc_k_x_2 -> insert sexp before current"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_x_3",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k )"
+  ],
+  "note": "spacemacs spc_k_x_3 -> insert sexp after current"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_bt_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k ` s"
+  ],
+  "note": "spacemacs spc_k_bt_s -> hybrid slurp forward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_bt_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k ` t"
+  ],
+  "note": "spacemacs spc_k_bt_t -> hybrid transpose"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k ` p"
+  ],
+  "note": "spacemacs spc_k_p -> hybrid push (swap)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_bt_k",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k ` k"
+  ],
+  "note": "spacemacs spc_k_bt_k -> hybrid delete sexp"
  }
 ]

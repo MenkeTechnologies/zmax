@@ -1561,6 +1561,45 @@ fn diff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow
     Ok(())
 }
 
+/// `:merge` / `:resolve` — open the 3-pane merge-conflict resolver over the
+/// focused buffer's git conflict markers (`<<<<<<< ======= >>>>>>>`). Each
+/// conflict is shown with ours on the left, theirs on the right and a live
+/// resolved Result in the center; choosing ours/theirs/both/unresolved per
+/// conflict and pressing `Enter` writes the result back and, once every
+/// conflict is resolved, writes the file and `git add`s it. If the buffer has
+/// no conflict markers a status message is shown instead.
+fn merge(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    // Capture the focused doc's id, name, absolute path and text, then drop the
+    // borrow before touching `cx.editor` mutably.
+    let (doc_id, name, path, text) = {
+        let doc = doc!(cx.editor);
+        (
+            doc.id(),
+            doc.display_name().into_owned(),
+            doc.path().map(|p| p.to_path_buf()),
+            doc.text().to_string(),
+        )
+    };
+
+    let Some(segments) = crate::ui::merge::parse_conflicts(&text) else {
+        cx.editor.set_status("no conflict markers in this file");
+        return Ok(());
+    };
+
+    let view = crate::ui::merge::DiffView::from_conflicts(name, doc_id, path, segments);
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(view));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 /// `:terminal` / `:term` — open an integrated terminal (PTY shell). The panel is
 /// created inside the compositor callback so the PTY handle lives on the main
 /// thread (it isn't `Send`).
@@ -13232,6 +13271,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["gdiff"],
         doc: "Open a read-only side-by-side diff of the buffer vs. its git HEAD version.",
         fun: diff,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "merge",
+        aliases: &["resolve"],
+        doc: "Resolve the buffer's git merge conflicts in a 3-pane (ours/result/theirs) view.",
+        fun: merge,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

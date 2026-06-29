@@ -76,7 +76,6 @@ pub struct EditorView {
     bufferline_y: u16,
     /// Active pane-divider drag: the view whose right edge is being dragged, and
     /// the last mouse column seen, so we can apply incremental resize deltas.
-    #[allow(dead_code)] // wired by the in-progress pane-resize handling
     resize_drag: Option<(zemacs_view::ViewId, u16)>,
     /// Sticky-scroll cache: `(doc, doc len, scopes)` where each scope is
     /// `(start_line, end_line, header_text)`. Recomputed only when the focused
@@ -1860,6 +1859,14 @@ impl EditorView {
             MouseEventKind::Down(MouseButton::Left) => {
                 let editor = &mut cxt.editor;
 
+                // A press on a split divider (the vertical border between
+                // side-by-side panes) starts a drag-to-resize instead of moving
+                // the cursor. The divider sits at a view's right edge.
+                if let Some(view_id) = editor.tree.split_divider_at(column, row) {
+                    self.resize_drag = Some((view_id, column));
+                    return EventResult::Consumed(None);
+                }
+
                 if let Some((pos, view_id)) = pos_and_view(editor, row, column, true) {
                     editor.focus(view_id);
 
@@ -1930,6 +1937,17 @@ impl EditorView {
             }
 
             MouseEventKind::Drag(MouseButton::Left) => {
+                // If a divider drag is in progress, resize the pane by the column
+                // delta since the last event and keep dragging.
+                if let Some((view_id, last_col)) = self.resize_drag {
+                    let delta = column as i16 - last_col as i16;
+                    // resize_horizontal pins siblings and recalculates internally.
+                    if delta != 0 && cxt.editor.tree.resize_horizontal(view_id, delta) {
+                        self.resize_drag = Some((view_id, column));
+                    }
+                    return EventResult::Consumed(None);
+                }
+
                 let (view, doc) = current!(cxt.editor);
 
                 let pos = match view.pos_at_screen_coords(doc, row, column, true) {
@@ -1970,6 +1988,11 @@ impl EditorView {
             }
 
             MouseEventKind::Up(MouseButton::Left) => {
+                // End an in-progress pane-divider drag.
+                if self.resize_drag.take().is_some() {
+                    return EventResult::Consumed(None);
+                }
+
                 if !config.middle_click_paste {
                     return EventResult::Ignored(None);
                 }
