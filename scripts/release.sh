@@ -15,7 +15,8 @@
 #   scripts/release.sh --install-only      # only update submodules + build/install into ~/.cargo/bin
 #   scripts/release.sh --release-only      # only update submodules + tag/push (skip the local install)
 #   scripts/release.sh --no-submodule-update  # release exactly the currently-pinned submodule commits
-#   scripts/release.sh v1.2.3              # override the tag (default: workspace version)
+#   scripts/release.sh 1.2.3               # bump Cargo.toml to 1.2.3, then tag v1.2.3 + push
+#   scripts/release.sh v1.2.3              # same (the leading v is optional)
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,23 +24,26 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 install_only=0
 release_only=0
 update_submodules=1
-tag=""
+version=""
 for arg in "$@"; do
   case "$arg" in
     --install-only)        install_only=1 ;;
     --release-only)        release_only=1 ;;
     --no-submodule-update) update_submodules=0 ;;
-    v*)                    tag="$arg" ;;
+    v[0-9]*)               version="${arg#v}" ;;
+    [0-9]*)                version="$arg" ;;
     *) echo "unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
 
-# Default the tag to the workspace version declared in Cargo.toml.
-if [[ -z "$tag" ]]; then
-  version="$(grep -m1 '^version = ' "$repo/Cargo.toml" | sed -E 's/.*"([^"]+)".*/\1/')"
-  [[ -n "${version:-}" ]] || { echo "could not read version from Cargo.toml" >&2; exit 1; }
-  tag="v${version}"
-fi
+# Resolve the release version: an explicit `X.Y.Z` / `vX.Y.Z` argument, otherwise
+# the workspace version already in Cargo.toml. An explicit version that differs is
+# written into the manifest (and committed) before tagging, so the built binary's
+# version matches the tag.
+current_version="$(grep -m1 '^version = ' "$repo/Cargo.toml" | sed -E 's/.*"([^"]+)".*/\1/')"
+[[ -n "${current_version:-}" ]] || { echo "could not read version from Cargo.toml" >&2; exit 1; }
+version="${version:-$current_version}"
+tag="v${version}"
 
 # Pull the latest upstream commit for each vendored scripting submodule and
 # commit the pointer bumps. The CI release builds from the committed submodule
@@ -59,6 +63,24 @@ do_update_submodules() {
 
 do_install() {
   "$repo/scripts/install.sh"
+}
+
+# Bump the workspace version to $version (and the report's version refs), sync the
+# lockfile, and commit — only when an explicit version was given that differs from
+# Cargo.toml. No-op otherwise.
+do_bump_version() {
+  cd "$repo"
+  [[ "$version" == "$current_version" ]] && return 0
+  echo "bumping version ${current_version} -> ${version}"
+  # Rewrite the first `version = "..."` line (the [workspace.package] one).
+  awk -v v="$version" 'BEGIN{done=0} /^version = "/ && !done {sub(/"[^"]+"/, "\"" v "\""); done=1} {print}' \
+    Cargo.toml >Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+  # Keep the engineering report's version stamps in sync (best-effort).
+  perl -pi -e 's/v\d+\.\d+\.\d+/v'"$version"'/g' docs/report.html 2>/dev/null || true
+  # Sync the lockfile's workspace entries so CI's `cargo build --locked` matches.
+  cargo update --workspace --quiet 2>/dev/null || true
+  git add Cargo.toml Cargo.lock docs/report.html
+  git commit -m "release: v${version}"
 }
 
 do_release() {
@@ -81,10 +103,13 @@ do_release() {
 [[ "$update_submodules" -eq 1 ]] && do_update_submodules
 
 if [[ "$release_only" -eq 1 ]]; then
+  do_bump_version
   do_release
 elif [[ "$install_only" -eq 1 ]]; then
+  do_bump_version
   do_install
 else
+  do_bump_version
   do_install
   do_release
 fi
