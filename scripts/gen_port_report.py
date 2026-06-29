@@ -401,6 +401,168 @@ def pct(n, d):
     return (100.0 * n / d) if d else 0.0
 
 
+# --------------------------------------------------------------------------
+# strykelang HUD chrome (shared by both HTML reports).
+# --------------------------------------------------------------------------
+# Inline component <style> — these classes (stat-grid, file-table, bar-wrap,
+# feature-grid, …) are NOT in hud-static.css/tutorial.css, so every page must
+# embed this block verbatim.
+STRYKE_STYLE = """  <style>
+    .tutorial-main { max-width: 76rem; }
+    .bar-wrap { background:var(--bg-primary);border:1px solid var(--border);border-radius:2px;height:18px;position:relative;overflow:hidden; }
+    .bar-fill { height:100%;border-radius:1px;transition:width 1.2s cubic-bezier(.22,1,.36,1); }
+    .bar-fill.green  { background:linear-gradient(90deg,#39ff14,#20c00a);box-shadow:0 0 8px rgba(57,255,20,.4); }
+    .bar-fill.cyan   { background:linear-gradient(90deg,#05d9e8,#0891b2);box-shadow:0 0 8px rgba(5,217,232,.4); }
+    .bar-fill.yellow { background:linear-gradient(90deg,#ffb800,#e8a000);box-shadow:0 0 8px rgba(255,184,0,.35); }
+    .bar-fill.magenta{ background:linear-gradient(90deg,#d300c5,#a000a0);box-shadow:0 0 8px rgba(211,0,197,.35); }
+    .bar-pct { position:absolute;right:6px;top:0;line-height:18px;font-size:10px;font-weight:700;color:#fff;text-shadow:0 0 4px #000;font-family:'Orbitron',sans-serif; }
+
+    .file-table { width:100%;border-collapse:collapse;margin:0.6rem 0;font-size:12px; }
+    .file-table th { background:var(--bg-secondary);color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;text-align:left;padding:7px 10px;border:1px solid var(--border); }
+    .file-table td { padding:6px 10px;border:1px solid var(--border);color:var(--text-dim);vertical-align:middle; }
+    .file-table tr:hover td { background:var(--bg-hover); }
+    .file-table td:first-child { font-family:'Share Tech Mono',monospace;color:var(--accent-light);font-weight:600;white-space:nowrap; }
+    .file-table .num { text-align:right;font-family:'Share Tech Mono',monospace; }
+    .file-table .total-row td { background:var(--bg-secondary);font-weight:700;color:var(--text);border-top:2px solid var(--cyan); }
+    .file-table code { font-size:11px;color:var(--accent-light);background:var(--bg-primary);padding:1px 4px;border-radius:2px; }
+
+    .stat-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:0.75rem;margin:1.2rem 0; }
+    .stat-card { border:1px solid var(--border);border-top:3px solid var(--cyan);background:var(--bg-card);padding:1rem 1.2rem;border-radius:2px;text-align:center; }
+    .stat-card .stat-val { font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;color:var(--cyan);line-height:1.1;text-shadow:0 0 20px var(--cyan-glow); }
+    .stat-card .stat-val.accent { color:var(--accent);text-shadow:0 0 20px var(--accent-glow); }
+    .stat-card .stat-val.green  { color:var(--green);text-shadow:0 0 20px rgba(57,255,20,.3); }
+    .stat-card .stat-label { font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-top:0.5rem; }
+    @keyframes glow-pulse { 0%,100%{text-shadow:0 0 20px var(--cyan-glow)}50%{text-shadow:0 0 40px var(--cyan-glow),0 0 80px var(--cyan-dim)} }
+    .stat-card .stat-val { animation:glow-pulse 3s ease-in-out infinite; }
+
+    .mapping-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(20rem,1fr));gap:0.65rem;margin:0.8rem 0; }
+    .mapping-card { border:1px solid var(--border);border-left:3px solid var(--magenta);background:var(--bg-card);padding:0.6rem 0.9rem;border-radius:2px; }
+    .mapping-card h4 { font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--magenta);margin:0 0 0.3rem; }
+    .mapping-card p { margin:0;font-size:11px;color:var(--text-dim);line-height:1.5; }
+    .mapping-card code { font-size:10.5px;color:var(--accent-light);background:var(--bg-primary);padding:1px 4px;border-radius:2px; }
+
+    .section-rule { border:none;border-top:1px dashed var(--border);margin:2rem 0; }
+
+    .feature-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(22rem,1fr));gap:0.65rem;margin:0.8rem 0; }
+    .feature-card { border:1px solid var(--border);border-left:3px solid var(--cyan);background:var(--bg-card);padding:0.7rem 1rem;border-radius:2px; }
+    .feature-card h4 { font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin:0 0 0.3rem; }
+    .feature-card p { margin:0;font-size:11px;color:var(--text-dim);line-height:1.55; }
+    .feature-card code { font-size:10.5px;color:var(--accent-light);background:var(--bg-primary);padding:1px 4px;border-radius:2px; }
+    .feature-card ul { margin:0.3rem 0 0;padding-left:1.2rem;font-size:11px;color:var(--text-dim);line-height:1.6; }
+    .feature-card li code { font-size:10px; }
+  </style>"""
+
+# Theme/CRT/Neon toggle + bar-fill animation, appended after the footer.
+STRYKE_SCRIPT = """  <script>
+    const html = document.documentElement;
+    const btnTheme = document.getElementById('btnTheme');
+    const btnCrt = document.getElementById('btnCrt');
+    const btnNeon = document.getElementById('btnNeon');
+    const crtH = document.getElementById('crtH');
+    const crtV = document.getElementById('crtV');
+    btnTheme?.addEventListener('click', () => {
+      html.setAttribute('data-theme', html.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+    });
+    btnCrt?.addEventListener('click', () => {
+      btnCrt.classList.toggle('active');
+      const on = btnCrt.classList.contains('active');
+      if (crtH) crtH.style.display = on ? '' : 'none';
+      if (crtV) crtV.style.display = on ? '' : 'none';
+    });
+    btnNeon?.addEventListener('click', () => {
+      btnNeon.classList.toggle('active');
+      document.querySelector('.app')?.classList.toggle('neon-off');
+    });
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.bar-fill').forEach(bar => {
+        const w = bar.style.width;
+        bar.style.width = '0';
+        requestAnimationFrame(() => { requestAnimationFrame(() => { bar.style.width = w; }); });
+      });
+    });
+  </script>"""
+
+
+def stryke_head(title, desc):
+    """Full <!DOCTYPE>…</head> with the strykelang head + inline component style."""
+    return (
+        '<!DOCTYPE html>\n<html lang="en">\n<head>\n'
+        '  <meta charset="utf-8">\n'
+        '  <meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        '  <meta name="color-scheme" content="dark light">\n'
+        f'  <meta name="description" content="{desc}">\n'
+        f'  <title>{title}</title>\n'
+        '  <link rel="preconnect" href="https://fonts.googleapis.com">\n'
+        '  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+        '  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">\n'
+        '  <link rel="stylesheet" href="hud-static.css">\n'
+        '  <link rel="stylesheet" href="tutorial.css">\n'
+        + STRYKE_STYLE + '\n</head>'
+    )
+
+
+def stryke_header(brand, current, crumbs, subtitle):
+    """<body> opening through <main>: tutorial-header chrome + breadcrumbs + toolbar.
+
+    crumbs is a list of (label, href); http(s) hrefs open in a new tab.
+    """
+    nav = [f'<span class="current">{current}</span>']
+    for label, href in crumbs:
+        nav.append('<span class="sep">/</span>')
+        if href.startswith("http"):
+            nav.append(
+                f'<a href="{href}" target="_blank" rel="noopener noreferrer">{label}</a>'
+            )
+        else:
+            nav.append(f'<a href="{href}">{label}</a>')
+    nav_html = "\n            ".join(nav)
+    return (
+        '<body>\n'
+        '  <div class="app tutorial-app" id="reportApp">\n'
+        '    <div class="crt-scanline" id="crtH" aria-hidden="true"></div>\n'
+        '    <div class="crt-scanline-v" id="crtV" aria-hidden="true"></div>\n'
+        '    <header class="tutorial-header">\n'
+        '      <div class="tutorial-header-inner">\n'
+        '        <div>\n'
+        f'          <h1 class="tutorial-brand">{brand}</h1>\n'
+        '          <nav class="tutorial-crumbs" aria-label="Breadcrumb">\n'
+        f'            {nav_html}\n'
+        '          </nav>\n'
+        '          <p style="margin:0.35rem 0 0;font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--text-dim);letter-spacing:0.03em;opacity:0.75;">\n'
+        f'            {subtitle}\n'
+        '          </p>\n'
+        '        </div>\n'
+        '        <div class="tutorial-toolbar">\n'
+        '          <button type="button" class="btn btn-secondary" id="btnTheme" title="Toggle light/dark">Theme</button>\n'
+        '          <button type="button" class="btn btn-secondary active" id="btnCrt" title="CRT scanline overlay">CRT</button>\n'
+        '          <button type="button" class="btn btn-secondary active" id="btnNeon" title="Neon border pulse">Neon</button>\n'
+        '        </div>\n'
+        '      </div>\n'
+        '    </header>\n'
+        '    <main class="tutorial-main">'
+    )
+
+
+def stryke_footer(text):
+    """</main> + footer + theme/CRT/neon + bar-animation script, closing the doc."""
+    return (
+        '    </main>\n'
+        '    <footer style="text-align:center;padding:2rem;font-size:10px;color:var(--text-muted);font-family:\'Orbitron\',sans-serif;letter-spacing:2px;">\n'
+        f'      {text}\n'
+        '    </footer>\n'
+        '  </div>\n\n'
+        + STRYKE_SCRIPT + '\n</body>\n</html>'
+    )
+
+
+# Status -> inline color, used in table cells / detail summaries.
+STATUS_COLOR = {
+    "ported": "var(--green)",
+    "partial": "var(--accent)",
+    "absent": "var(--text-muted)",
+}
+
+
 def write_md(stats, src_agg, agg, broken):
     L = []
     L.append("# zemacs Port Report\n")
@@ -460,99 +622,103 @@ def write_html(stats, src_agg, agg, broken, rows):
     def bar(n, d):
         p = pct(n, d)
         return (
-            f'<div class="bar"><div class="fill" style="width:{p:.1f}%"></div>'
-            f'<span>{p:.1f}%</span></div>'
+            f'<div class="bar-wrap"><div class="bar-fill cyan" style="width:{p:.1f}%"></div>'
+            f'<span class="bar-pct">{p:.1f}%</span></div>'
         )
 
-    h = []
-    h.append("<!doctype html><html lang=en><head><meta charset=\"utf-8\">")
-    h.append("<meta name=\"viewport\" content='width=device-width,initial-scale=1'>")
-    h.append("<title>zemacs port report</title>")
+    h = [stryke_head(
+        "zemacs &mdash; Port Report",
+        "zemacs port report — coverage of the Vim/Neovim + Emacs + Spacemacs "
+        "feature surface, with a numerator re-derived from zemacs source on every run.",
+    )]
+    h.append(stryke_header(
+        "// ZEMACS &mdash; PORT REPORT",
+        "Port Report",
+        [
+            ("Home", "index.html"),
+            ("Engineering Report", "report.html"),
+            ("Keybinding Coverage", "keybinding_report.html"),
+            ("GitHub", "https://github.com/MenkeTechnologies/zemacs"),
+        ],
+        "Coverage of the Vim/Neovim + Emacs + Spacemacs feature surface; "
+        "numerator re-derived from source every run.",
+    ))
+
+    h.append('      <h2 class="tutorial-title"><span class="step-hash">&gt;_</span>HEADLINE</h2>')
     h.append(
-        "<style>"
-        "body{background:#0b0e14;color:#c5c8c6;font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;padding:2rem;max-width:1100px;margin:auto}"
-        "h1{color:#00e5ff;letter-spacing:.05em}h2{color:#ff2e88;margin-top:2rem;border-bottom:1px solid #1c2230;padding-bottom:.3rem}"
-        "a{color:#7af}.muted{color:#6b7280}"
-        "table{border-collapse:collapse;width:100%;margin:.5rem 0}"
-        "th,td{border:1px solid #1c2230;padding:.35rem .6rem;text-align:left}"
-        "th{background:#11151f;color:#9fb3c8}td.n{text-align:right}"
-        ".bar{position:relative;background:#11151f;border:1px solid #1c2230;height:18px;min-width:120px}"
-        ".fill{position:absolute;top:0;left:0;height:100%;background:linear-gradient(90deg,#00e5ff,#ff2e88)}"
-        ".bar span{position:relative;padding-left:.4rem;font-size:12px;color:#e6e6e6}"
-        ".ported{color:#3fb950}.partial{color:#d29922}.absent{color:#6b7280}.broken{color:#f85149;font-weight:bold}"
-        ".kpi{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0}"
-        ".card{background:#11151f;border:1px solid #1c2230;padding:.8rem 1.2rem;border-radius:6px}"
-        ".card b{display:block;font-size:1.6rem;color:#00e5ff}"
-        "details{margin:.4rem 0}summary{cursor:pointer;color:#9fb3c8}"
-        "</style></head><body>"
+        '      <p class="tutorial-subtitle">Auto-generated by <code>scripts/gen_port_report.py</code>. '
+        'Numerator re-derived from zemacs source on every run; denominator is the cited inventories under '
+        '<code>port/data/</code> (Vim/Neovim runtime docs, GNU Emacs manual indexes, Spacemacs documentation). '
+        'Headline coverage counts <strong>ported</strong> only.</p>'
     )
-    h.append("<h1>zemacs port report</h1>")
-    h.append(
-        "<p class=muted>Auto-generated by <code>scripts/gen_port_report.py</code>. "
-        "Numerator re-derived from zemacs source on every run; denominator is the "
-        "cited inventories under <code>port/data/</code> (Vim/Neovim runtime docs, "
-        "GNU Emacs manual indexes, Spacemacs documentation). Headline coverage counts "
-        "<b>ported</b> only.</p>"
-    )
-    h.append("<div class=kpi>")
-    h.append(f"<div class=card><b>{stats['total']}</b>feature items (denominator)</div>")
-    h.append(
-        f"<div class=card><b class=ported>{stats['ported']}</b>ported "
-        f"({pct(stats['ported'], stats['total']):.1f}%)</div>"
-    )
-    h.append(
-        f"<div class=card><b class=partial>{stats['partial']}</b>partial "
-        f"({pct(stats['partial'], stats['total']):.1f}%)</div>"
-    )
-    h.append(f"<div class=card><b class=absent>{stats['absent']}</b>absent</div>")
-    bc = "broken" if stats["broken"] else "ported"
-    h.append(f"<div class=card><b class={bc}>{stats['broken']}</b>broken mappings</div>")
-    h.append("</div>")
-    h.append(
-        "<p class=muted>zemacs surface: "
-        f"{stats['static_cmds']} static commands · {stats['typable_cmds']} typable "
-        f"commands · {stats['keybindings']} default keybindings</p>"
-    )
+    h.append('      <div class="stat-grid">')
+    h.append(f'        <div class="stat-card"><div class="stat-val">{stats["total"]}</div><div class="stat-label">Feature Items (Denominator)</div></div>')
+    h.append(f'        <div class="stat-card"><div class="stat-val green">{stats["ported"]}</div><div class="stat-label">Ported ({pct(stats["ported"], stats["total"]):.1f}%)</div></div>')
+    h.append(f'        <div class="stat-card"><div class="stat-val accent">{stats["partial"]}</div><div class="stat-label">Partial ({pct(stats["partial"], stats["total"]):.1f}%)</div></div>')
+    h.append(f'        <div class="stat-card"><div class="stat-val">{stats["absent"]}</div><div class="stat-label">Absent</div></div>')
+    bcls = "accent" if stats["broken"] else "green"
+    h.append(f'        <div class="stat-card"><div class="stat-val {bcls}">{stats["broken"]}</div><div class="stat-label">Broken Mappings</div></div>')
+    h.append(f'        <div class="stat-card"><div class="stat-val">{stats["static_cmds"]}</div><div class="stat-label">Static Commands</div></div>')
+    h.append(f'        <div class="stat-card"><div class="stat-val">{stats["typable_cmds"]}</div><div class="stat-label">Typable Commands</div></div>')
+    h.append(f'        <div class="stat-card"><div class="stat-val">{stats["keybindings"]}</div><div class="stat-label">Default Keybindings</div></div>')
+    h.append('      </div>')
 
     if broken:
-        h.append("<h2 class=broken>⚠ Broken mappings</h2>")
+        h.append('      <hr class="section-rule">')
+        h.append('      <h2 class="tutorial-title"><span class="step-hash">~</span>BROKEN MAPPINGS</h2>')
         h.append(
-            "<p>These mapping entries point at zemacs code that does not exist. "
-            "They are counted as <b>absent</b>. Fix the evidence or remove the entry.</p>"
+            '      <p class="tutorial-subtitle">These mapping entries point at zemacs code that does not exist. '
+            'They are counted as <strong>absent</strong>. Fix the evidence or remove the entry.</p>'
         )
-        h.append("<table><tr><th>spec_id</th><th>problem</th><th>evidence</th></tr>")
+        h.append('      <table class="file-table">')
+        h.append('        <thead><tr><th>spec_id</th><th>problem</th><th>evidence</th></tr></thead>')
+        h.append('        <tbody>')
         for sid, why, ev in broken:
             h.append(
-                f"<tr><td>{sid}</td><td class=broken>{why}</td><td>{ev}</td></tr>"
+                f'          <tr><td>{sid}</td>'
+                f'<td style="color:#f85149;font-weight:700;">{why}</td><td>{ev}</td></tr>'
             )
-        h.append("</table>")
+        h.append('        </tbody>')
+        h.append('      </table>')
 
-    h.append("<h2>Coverage by source</h2><table>")
-    h.append("<tr><th>Source</th><th>Total</th><th>Ported</th><th>Partial</th><th>Progress</th></tr>")
+    h.append('      <hr class="section-rule">')
+    h.append('      <h2 class="tutorial-title"><span class="step-hash">~</span>COVERAGE BY SOURCE</h2>')
+    h.append('      <p class="tutorial-subtitle">Ported and partial counts per upstream editor, against that editor\'s cited feature inventory.</p>')
+    h.append('      <table class="file-table">')
+    h.append('        <thead><tr><th>Source</th><th class="num">Total</th><th class="num">Ported</th><th class="num">Partial</th><th>Progress</th></tr></thead>')
+    h.append('        <tbody>')
     for src in sorted(src_agg):
         a = src_agg[src]
         h.append(
-            f"<tr><td>{src}</td><td class=n>{a['total']}</td>"
-            f"<td class='n ported'>{a['ported']}</td>"
-            f"<td class='n partial'>{a['partial']}</td>"
-            f"<td>{bar(a['ported'], a['total'])}</td></tr>"
+            f'          <tr><td>{src}</td><td class="num">{a["total"]}</td>'
+            f'<td class="num" style="color:var(--green);">{a["ported"]}</td>'
+            f'<td class="num" style="color:var(--accent);">{a["partial"]}</td>'
+            f'<td>{bar(a["ported"], a["total"])}</td></tr>'
         )
-    h.append("</table>")
+    h.append('        </tbody>')
+    h.append('      </table>')
 
-    h.append("<h2>Coverage by source / category</h2><table>")
-    h.append("<tr><th>Source</th><th>Category</th><th>Total</th><th>Ported</th><th>Partial</th><th>Progress</th></tr>")
+    h.append('      <hr class="section-rule">')
+    h.append('      <h2 class="tutorial-title"><span class="step-hash">~</span>COVERAGE BY SOURCE / CATEGORY</h2>')
+    h.append('      <p class="tutorial-subtitle">The same coverage, broken down by the category each feature belongs to.</p>')
+    h.append('      <table class="file-table">')
+    h.append('        <thead><tr><th>Source</th><th>Category</th><th class="num">Total</th><th class="num">Ported</th><th class="num">Partial</th><th>Progress</th></tr></thead>')
+    h.append('        <tbody>')
     for (src, cat) in sorted(agg):
         a = agg[(src, cat)]
         h.append(
-            f"<tr><td>{src}</td><td>{cat}</td><td class=n>{a['total']}</td>"
-            f"<td class='n ported'>{a['ported']}</td>"
-            f"<td class='n partial'>{a['partial']}</td>"
-            f"<td>{bar(a['ported'], a['total'])}</td></tr>"
+            f'          <tr><td>{src}</td><td>{cat}</td><td class="num">{a["total"]}</td>'
+            f'<td class="num" style="color:var(--green);">{a["ported"]}</td>'
+            f'<td class="num" style="color:var(--accent);">{a["partial"]}</td>'
+            f'<td>{bar(a["ported"], a["total"])}</td></tr>'
         )
-    h.append("</table>")
+    h.append('        </tbody>')
+    h.append('      </table>')
 
     # Per-category item detail (collapsible) — ported/partial first.
-    h.append("<h2>Item detail</h2>")
+    h.append('      <hr class="section-rule">')
+    h.append('      <h2 class="tutorial-title"><span class="step-hash">~</span>ITEM DETAIL</h2>')
+    h.append('      <p class="tutorial-subtitle">Per-category breakdown; ported and partial items first. Expand a category to see every item and its source reference.</p>')
     cats = defaultdict(list)
     for src, cat, name, status, ref in rows:
         cats[(src, cat)].append((name, status, ref))
@@ -562,23 +728,27 @@ def write_html(stats, src_agg, agg, broken, rows):
         nported = sum(1 for x in lst if x[1] == "ported")
         npart = sum(1 for x in lst if x[1] == "partial")
         h.append(
-            f"<details><summary>{src} / {cat} "
-            f"<span class=muted>({len(lst)} items · "
-            f"<span class=ported>{nported} ported</span> · "
-            f"<span class=partial>{npart} partial</span>)</span></summary>"
+            f'      <details><summary>{src} / {cat} '
+            f'<span style="color:var(--text-muted);">({len(lst)} items · '
+            f'<span style="color:var(--green);">{nported} ported</span> · '
+            f'<span style="color:var(--accent);">{npart} partial</span>)</span></summary>'
         )
-        h.append("<table><tr><th>Feature</th><th>Status</th><th>Source ref</th></tr>")
+        h.append('      <table class="file-table">')
+        h.append('        <thead><tr><th>Feature</th><th>Status</th><th>Source ref</th></tr></thead>')
+        h.append('        <tbody>')
         for name, status, ref in sorted(lst, key=lambda x: (order[x[1]], x[0])):
             esc = (
                 name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             )
             h.append(
-                f"<tr><td>{esc}</td><td class={status}>{status}</td>"
-                f"<td class=muted>{ref}</td></tr>"
+                f'          <tr><td>{esc}</td>'
+                f'<td style="color:{STATUS_COLOR[status]};">{status}</td>'
+                f'<td style="color:var(--text-muted);">{ref}</td></tr>'
             )
-        h.append("</table></details>")
+        h.append('        </tbody>')
+        h.append('      </table></details>')
 
-    h.append("</body></html>")
+    h.append(stryke_footer("ZEMACS &middot; PORT REPORT &middot; MENKETECHNOLOGIES"))
     open(OUT_HTML, "w", encoding="utf-8").write("\n".join(h))
 
 
@@ -653,73 +823,85 @@ def write_keybinding_report(rows):
     def bar(n, d):
         p = pct(n, d)
         return (
-            f'<div class="bar"><div class="fill" style="width:{p:.1f}%"></div>'
-            f'<span>{p:.1f}%</span></div>'
+            f'<div class="bar-wrap"><div class="bar-fill cyan" style="width:{p:.1f}%"></div>'
+            f'<span class="bar-pct">{p:.1f}%</span></div>'
         )
 
-    h = ["<!doctype html><html lang=en><head><meta charset=\"utf-8\">"]
-    h.append("<meta name=\"viewport\" content='width=device-width,initial-scale=1'>")
-    h.append("<title>zemacs keybinding coverage</title>")
+    h = [stryke_head(
+        "zemacs &mdash; Keybinding Coverage",
+        "zemacs keybinding coverage — the key-press subset of the port report: "
+        "vim/neovim, the GNU Emacs Key Index, and the Spacemacs SPC tree.",
+    )]
+    h.append(stryke_header(
+        "// ZEMACS &mdash; KEYBINDING COVERAGE",
+        "Keybinding Coverage",
+        [
+            ("Home", "index.html"),
+            ("Engineering Report", "report.html"),
+            ("Port Report", "port_report.html"),
+            ("GitHub", "https://github.com/MenkeTechnologies/zemacs"),
+        ],
+        "The key-press subset of the port report: which bindings are ported, "
+        "partial, or pending.",
+    ))
+
+    h.append('      <h2 class="tutorial-title"><span class="step-hash">&gt;_</span>HEADLINE</h2>')
     h.append(
-        "<style>"
-        "body{background:#0b0e14;color:#c5c8c6;font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;margin:auto;padding:2rem;max-width:1100px}"
-        "h1{color:#00e5ff;letter-spacing:.05em}h2{color:#ff2e88;margin-top:2rem;border-bottom:1px solid #1c2230;padding-bottom:.3rem}"
-        ".muted{color:#6b7280}a{color:#7af}"
-        "table{border-collapse:collapse;width:100%;margin:.5rem 0}"
-        "th,td{border:1px solid #1c2230;padding:.35rem .6rem;text-align:left}"
-        "th{background:#11151f;color:#9fb3c8}td.n{text-align:right}"
-        ".bar{position:relative;background:#11151f;border:1px solid #1c2230;height:18px;min-width:120px}"
-        ".fill{position:absolute;top:0;left:0;height:100%;background:linear-gradient(90deg,#00e5ff,#ff2e88)}"
-        ".bar span{position:relative;padding-left:.4rem;font-size:12px;color:#e6e6e6}"
-        ".ported{color:#3fb950}.partial{color:#d29922}.absent{color:#6b7280}"
-        ".kpi{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0}"
-        ".card{background:#11151f;border:1px solid #1c2230;padding:.8rem 1.2rem;border-radius:6px}"
-        ".card b{display:block;font-size:1.6rem;color:#00e5ff}"
-        "details{margin:.4rem 0}summary{cursor:pointer;color:#9fb3c8}"
-        "</style></head><body>"
+        '      <p class="tutorial-subtitle">The keybinding subset of the '
+        '<a href="port_report.html" style="color:var(--accent-light);">port report</a>. Counts only the key-press '
+        'surface — vim/neovim normal/visual/insert/cmdline keys, the GNU Emacs Key Index, and the Spacemacs '
+        '<code>SPC</code> tree. <strong>ported</strong> = the same key does the equivalent thing in zemacs.</p>'
     )
-    h.append("<h1>zemacs keybinding coverage</h1>")
-    h.append(
-        "<p class=muted>The keybinding subset of the "
-        "<a href='port_report.html'>port report</a>. Counts only the key-press "
-        "surface — vim/neovim normal/visual/insert/cmdline keys, the GNU Emacs "
-        "Key Index, and the Spacemacs <code>SPC</code> tree. <b>ported</b> = the "
-        "same key does the equivalent thing in zemacs.</p>"
-    )
-    h.append("<div class=kpi>")
-    h.append(f"<div class=card><b>{total}</b>cited keybindings</div>")
-    h.append(f"<div class=card><b class=ported>{ported}</b>ported ({pct(ported, total):.1f}%)</div>")
-    h.append(f"<div class=card><b class=partial>{partial}</b>partial ({pct(partial, total):.1f}%)</div>")
-    h.append(f"<div class=card><b class=absent>{total - ported - partial}</b>absent</div>")
-    h.append("</div>")
-    h.append("<h2>By source</h2><table>")
-    h.append("<tr><th>Source</th><th>Keybindings</th><th>Ported</th><th>Partial</th><th>Progress</th></tr>")
+    h.append('      <div class="stat-grid">')
+    h.append(f'        <div class="stat-card"><div class="stat-val">{total}</div><div class="stat-label">Cited Keybindings</div></div>')
+    h.append(f'        <div class="stat-card"><div class="stat-val green">{ported}</div><div class="stat-label">Ported ({pct(ported, total):.1f}%)</div></div>')
+    h.append(f'        <div class="stat-card"><div class="stat-val accent">{partial}</div><div class="stat-label">Partial ({pct(partial, total):.1f}%)</div></div>')
+    h.append(f'        <div class="stat-card"><div class="stat-val">{total - ported - partial}</div><div class="stat-label">Absent</div></div>')
+    h.append('      </div>')
+
+    h.append('      <hr class="section-rule">')
+    h.append('      <h2 class="tutorial-title"><span class="step-hash">~</span>BY SOURCE</h2>')
+    h.append('      <p class="tutorial-subtitle">Key-press coverage per upstream editor.</p>')
+    h.append('      <table class="file-table">')
+    h.append('        <thead><tr><th>Source</th><th class="num">Keybindings</th><th class="num">Ported</th><th class="num">Partial</th><th>Progress</th></tr></thead>')
+    h.append('        <tbody>')
     for src in sorted(src_agg):
         a = src_agg[src]
         h.append(
-            f"<tr><td>{src}</td><td class=n>{a['total']}</td>"
-            f"<td class='n ported'>{a['ported']}</td><td class='n partial'>{a['partial']}</td>"
-            f"<td>{bar(a['ported'], a['total'])}</td></tr>"
+            f'          <tr><td>{src}</td><td class="num">{a["total"]}</td>'
+            f'<td class="num" style="color:var(--green);">{a["ported"]}</td>'
+            f'<td class="num" style="color:var(--accent);">{a["partial"]}</td>'
+            f'<td>{bar(a["ported"], a["total"])}</td></tr>'
         )
-    h.append("</table>")
-    h.append("<h2>By source / category</h2><table>")
-    h.append("<tr><th>Source</th><th>Category</th><th>Keybindings</th><th>Ported</th><th>Partial</th><th>Progress</th></tr>")
+    h.append('        </tbody>')
+    h.append('      </table>')
+
+    h.append('      <hr class="section-rule">')
+    h.append('      <h2 class="tutorial-title"><span class="step-hash">~</span>BY SOURCE / CATEGORY</h2>')
+    h.append('      <p class="tutorial-subtitle">Broken down by the key mode / index each binding belongs to.</p>')
+    h.append('      <table class="file-table">')
+    h.append('        <thead><tr><th>Source</th><th>Category</th><th class="num">Keybindings</th><th class="num">Ported</th><th class="num">Partial</th><th>Progress</th></tr></thead>')
+    h.append('        <tbody>')
     for (src, cat) in sorted(cat_agg):
         a = cat_agg[(src, cat)]
         h.append(
-            f"<tr><td>{src}</td><td>{cat}</td><td class=n>{a['total']}</td>"
-            f"<td class='n ported'>{a['ported']}</td><td class='n partial'>{a['partial']}</td>"
-            f"<td>{bar(a['ported'], a['total'])}</td></tr>"
+            f'          <tr><td>{src}</td><td>{cat}</td><td class="num">{a["total"]}</td>'
+            f'<td class="num" style="color:var(--green);">{a["ported"]}</td>'
+            f'<td class="num" style="color:var(--accent);">{a["partial"]}</td>'
+            f'<td>{bar(a["ported"], a["total"])}</td></tr>'
         )
-    h.append("</table>")
+    h.append('        </tbody>')
+    h.append('      </table>')
     h.append(
-        "<p class=muted>Emacs is 0% because zemacs is a modal (vim) editor — "
-        "Emacs default chords (<code>C-x C-f</code>, …) are intentionally not "
-        "bound; the commands they invoke are tracked under the port report's "
-        "emacs <code>command</code> category.</p>"
+        '      <p class="tutorial-subtitle">Emacs is 0% because zemacs is a modal (vim) editor — '
+        'Emacs default chords (<code>C-x C-f</code>, …) are intentionally not bound; the commands they invoke '
+        'are tracked under the port report\'s emacs <code>command</code> category.</p>'
     )
+
     # per-category item detail
-    h.append("<h2>Keybinding detail</h2>")
+    h.append('      <hr class="section-rule">')
+    h.append('      <h2 class="tutorial-title"><span class="step-hash">~</span>KEYBINDING DETAIL</h2>')
+    h.append('      <p class="tutorial-subtitle">Every cited key, grouped by source and category; ported and partial first.</p>')
     cats = defaultdict(list)
     for src, cat, name, status, ref in kb:
         cats[(src, cat)].append((name, status, ref))
@@ -729,19 +911,24 @@ def write_keybinding_report(rows):
         np_ = sum(1 for x in lst if x[1] == "ported")
         pa_ = sum(1 for x in lst if x[1] == "partial")
         h.append(
-            f"<details><summary>{src} / {cat} <span class=muted>({len(lst)} keys · "
-            f"<span class=ported>{np_} ported</span> · <span class=partial>{pa_} partial</span>)"
-            "</span></summary>"
+            f'      <details><summary>{src} / {cat} '
+            f'<span style="color:var(--text-muted);">({len(lst)} keys · '
+            f'<span style="color:var(--green);">{np_} ported</span> · '
+            f'<span style="color:var(--accent);">{pa_} partial</span>)</span></summary>'
         )
-        h.append("<table><tr><th>Key</th><th>Status</th><th>Source ref</th></tr>")
+        h.append('      <table class="file-table">')
+        h.append('        <thead><tr><th>Key</th><th>Status</th><th>Source ref</th></tr></thead>')
+        h.append('        <tbody>')
         for name, status, ref in sorted(lst, key=lambda x: (order[x[1]], x[0])):
             esc = name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             h.append(
-                f"<tr><td>{esc}</td><td class={status}>{status}</td>"
-                f"<td class=muted>{ref}</td></tr>"
+                f'          <tr><td>{esc}</td>'
+                f'<td style="color:{STATUS_COLOR[status]};">{status}</td>'
+                f'<td style="color:var(--text-muted);">{ref}</td></tr>'
             )
-        h.append("</table></details>")
-    h.append("</body></html>")
+        h.append('        </tbody>')
+        h.append('      </table></details>')
+    h.append(stryke_footer("ZEMACS &middot; KEYBINDING COVERAGE &middot; MENKETECHNOLOGIES"))
     open(KB_HTML, "w", encoding="utf-8").write("\n".join(h))
     return total, ported, partial
 
