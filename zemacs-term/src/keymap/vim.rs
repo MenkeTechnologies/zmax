@@ -1565,7 +1565,7 @@ mod tests {
         // ge/gn/gN carry vim meaning, not the zemacs bindings they collided with.
         assert_eq!(
             cmd_name(resolve(n, "g e").unwrap()),
-            Some("move_prev_word_end")
+            Some("vim_move_prev_word_end")
         );
         assert_eq!(cmd_name(resolve(n, "g n").unwrap()), Some("search_next"));
         assert_eq!(cmd_name(resolve(n, "g N").unwrap()), Some("search_prev"));

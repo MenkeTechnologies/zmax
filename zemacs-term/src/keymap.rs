@@ -455,7 +455,7 @@ mod tests {
         // `ge`, so it keeps the vim binding (back to end of previous word).
         assert_eq!(
             keymap.search(&[key!('g'), key!('e')]).unwrap(),
-            &KeyTrie::MappableCommand(MappableCommand::move_prev_word_end),
+            &KeyTrie::MappableCommand(MappableCommand::vim_move_prev_word_end),
             "Old leaves in subnode should be present in merged node"
         );
 
