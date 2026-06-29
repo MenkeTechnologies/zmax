@@ -21,6 +21,7 @@ use tui::buffer::Buffer as Surface;
 use zemacs_view::{
     graphics::{Color, CursorKind, Modifier, Rect, Style},
     input::{KeyCode, KeyEvent, KeyModifiers},
+    ViewId,
 };
 
 use crate::compositor::{Component, Compositor, Context, Event, EventResult};
@@ -35,6 +36,12 @@ pub struct TerminalPanel {
     rows: u16,
     cols: u16,
     caret: Option<zemacs_core::Position>,
+    /// The editor pane this terminal lives in, captured on first render. The
+    /// terminal stays pinned here (it doesn't follow `tree.focus`, which would
+    /// make it appear to jump panes), and only takes keystrokes while this pane
+    /// is the focused one — so clicking another split moves focus to the editor
+    /// and clicking back returns focus to the terminal.
+    pane: Option<ViewId>,
 }
 
 impl TerminalPanel {
@@ -103,6 +110,7 @@ impl TerminalPanel {
             rows,
             cols,
             caret: None,
+            pane: None,
         })
     }
 
@@ -144,9 +152,14 @@ impl Drop for TerminalPanel {
 }
 
 impl Component for TerminalPanel {
-    fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
+        // Only capture input while the terminal's pane is the focused one. When
+        // another split is focused, fall through (Ignored) so the editor handles
+        // keys; mouse events always fall through so a click on any pane (incl.
+        // this one) reaches the editor's click-to-focus handler.
+        let focused = self.pane.map_or(true, |pane| cx.editor.tree.focus == pane);
         match event {
-            Event::Key(key) => {
+            Event::Key(key) if focused => {
                 // F12 detaches without needing to exit the shell.
                 if key.code == KeyCode::F(12) {
                     return Self::close();
@@ -160,7 +173,7 @@ impl Component for TerminalPanel {
                 }
                 EventResult::Consumed(None)
             }
-            Event::Paste(s) => {
+            Event::Paste(s) if focused => {
                 self.send(s.as_bytes());
                 EventResult::Consumed(None)
             }
@@ -169,14 +182,16 @@ impl Component for TerminalPanel {
     }
 
     fn render(&mut self, screen: Rect, surface: &mut Surface, ctx: &mut Context) {
-        // Confine the terminal to the focused editor pane rather than the whole
-        // screen, so other splits and the statusline stay visible (vim/emacs
-        // `:term` opens in the current window). Fall back to the full area if the
-        // focused view can't be resolved.
+        // Pin to a single editor pane (captured the first time we render, while
+        // that pane is focused) and always draw there. Confining to one pane —
+        // rather than following `tree.focus` — keeps other splits and the
+        // statusline visible and stops the terminal from appearing to swap panes
+        // when focus moves. Fall back to the full area if the pane is gone.
+        let pane = *self.pane.get_or_insert(ctx.editor.tree.focus);
         let area = ctx
             .editor
             .tree
-            .try_get(ctx.editor.tree.focus)
+            .try_get(pane)
             .map(|view| view.area)
             .unwrap_or(screen);
 
@@ -258,9 +273,16 @@ impl Component for TerminalPanel {
     fn cursor(
         &self,
         _area: Rect,
-        _editor: &zemacs_view::editor::Editor,
+        editor: &zemacs_view::editor::Editor,
     ) -> (Option<zemacs_core::Position>, CursorKind) {
-        (self.caret, CursorKind::Block)
+        // Only own the cursor while our pane is focused; otherwise yield so the
+        // editor draws its cursor in the focused split.
+        let focused = self.pane.map_or(true, |pane| editor.tree.focus == pane);
+        if focused {
+            (self.caret, CursorKind::Block)
+        } else {
+            (None, CursorKind::Hidden)
+        }
     }
 
     fn id(&self) -> Option<&'static str> {
