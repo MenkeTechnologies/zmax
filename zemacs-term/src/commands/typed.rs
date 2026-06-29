@@ -1494,6 +1494,25 @@ fn run_command(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// `:terminal` / `:term` — open an integrated terminal (PTY shell). The panel is
+/// created inside the compositor callback so the PTY handle lives on the main
+/// thread (it isn't `Send`).
+fn terminal(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            match crate::ui::terminal::TerminalPanel::new() {
+                Ok(panel) => compositor.push(Box::new(panel)),
+                Err(e) => editor.set_error(format!("terminal: {e}")),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 /// Wrap `s` in single quotes for safe inclusion in a `/bin/sh -c` command line,
 /// escaping any embedded single quotes. Pure — unit tested.
 fn shell_single_quote(s: &str) -> String {
@@ -13119,6 +13138,17 @@ const WRITE_NO_CODE_ACTIONS_FLAG: Flag = Flag {
 };
 
 pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
+    TypableCommand {
+        name: "terminal",
+        aliases: &["term"],
+        doc: "Open an integrated terminal (PTY shell) running $SHELL.",
+        fun: terminal,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
     TypableCommand {
         name: "exit",
         aliases: &["x", "xit"],
