@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-16745065.js";
+            window.path_to_searchindex_js = "searchindex-46de4b71.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-c0d3b1d1.js"></script>
@@ -195,6 +195,8 @@
 <tr><th>Name</th><th>Description</th></tr>
 </thead>
 <tbody>
+<tr><td><code>:terminal</code>, <code>:term</code></td><td>Open an integrated terminal (PTY shell) running $SHELL.</td></tr>
+<tr><td><code>:ide</code>, <code>:workbench</code></td><td>Enter IDE mode (file-tree sidebar + panels, like <code>--ide</code> / F2).</td></tr>
 <tr><td><code>:exit</code>, <code>:x</code>, <code>:xit</code></td><td>Write changes to disk if the buffer is modified and then quit. Accepts an optional path (:exit some/path.txt).</td></tr>
 <tr><td><code>:exit!</code>, <code>:x!</code>, <code>:xit!</code></td><td>Force write changes to disk, creating necessary subdirectories, if the buffer is modified and then quit. Accepts an optional path (:exit! some/path.txt).</td></tr>
 <tr><td><code>:quit</code>, <code>:q</code></td><td>Close the current view.</td></tr>
@@ -495,6 +497,7 @@
 <tr><td><code>:reflow</code></td><td>Hard-wrap the current selection of lines to a given width.</td></tr>
 <tr><td><code>:tree-sitter-subtree</code>, <code>:ts-subtree</code></td><td>Display the smallest tree-sitter subtree that spans the primary selection, primarily for debugging queries.</td></tr>
 <tr><td><code>:config-reload</code></td><td>Refresh user config.</td></tr>
+<tr><td><code>:keymap</code></td><td>Switch the active keymap preset: vim, helix, or emacs.</td></tr>
 <tr><td><code>:config-open</code></td><td>Open the user config.toml file.</td></tr>
 <tr><td><code>:config-open-workspace</code></td><td>Open the workspace config.toml file.</td></tr>
 <tr><td><code>:log-open</code></td><td>Open the zemacs log file.</td></tr>
@@ -551,18 +554,26 @@
 <tr><td><code>extend_visual_line_down</code></td><td>Extend down</td><td>select: <code>j</code>, <code>&lt;down&gt;</code></td></tr>
 <tr><td><code>copy_selection_on_next_line</code></td><td>Copy selection on next line</td><td>select: <code>&lt;C-v&gt;</code></td></tr>
 <tr><td><code>copy_selection_on_prev_line</code></td><td>Copy selection on previous line</td><td></td></tr>
-<tr><td><code>move_next_word_start</code></td><td>Move to start of next word</td><td>normal: <code>w</code>, <code>&lt;A-f&gt;</code>, <code>&lt;C-right&gt;</code>, <code>&lt;S-right&gt;</code>, insert: <code>&lt;A-f&gt;</code>, <code>&lt;C-right&gt;</code>, <code>&lt;S-right&gt;</code></td></tr>
-<tr><td><code>move_prev_word_start</code></td><td>Move to start of previous word</td><td>normal: <code>b</code>, <code>&lt;A-b&gt;</code>, <code>&lt;C-left&gt;</code>, <code>&lt;S-left&gt;</code>, insert: <code>&lt;A-b&gt;</code>, <code>&lt;C-left&gt;</code>, <code>&lt;S-left&gt;</code></td></tr>
-<tr><td><code>move_next_word_end</code></td><td>Move to end of next word</td><td>normal: <code>e</code></td></tr>
-<tr><td><code>move_prev_word_end</code></td><td>Move to end of previous word</td><td>normal: <code>ge</code></td></tr>
-<tr><td><code>move_next_long_word_start</code></td><td>Move to start of next long word</td><td>normal: <code>W</code></td></tr>
-<tr><td><code>move_prev_long_word_start</code></td><td>Move to start of previous long word</td><td>normal: <code>B</code></td></tr>
-<tr><td><code>move_next_long_word_end</code></td><td>Move to end of next long word</td><td>normal: <code>E</code></td></tr>
-<tr><td><code>move_prev_long_word_end</code></td><td>Move to end of previous long word</td><td>normal: <code>gE</code></td></tr>
+<tr><td><code>move_next_word_start</code></td><td>Move to start of next word</td><td>normal: <code>&lt;A-f&gt;</code>, <code>&lt;C-right&gt;</code>, <code>&lt;S-right&gt;</code>, insert: <code>&lt;A-f&gt;</code>, <code>&lt;C-right&gt;</code>, <code>&lt;S-right&gt;</code></td></tr>
+<tr><td><code>move_prev_word_start</code></td><td>Move to start of previous word</td><td>normal: <code>&lt;A-b&gt;</code>, <code>&lt;C-left&gt;</code>, <code>&lt;S-left&gt;</code>, insert: <code>&lt;A-b&gt;</code>, <code>&lt;C-left&gt;</code>, <code>&lt;S-left&gt;</code></td></tr>
+<tr><td><code>move_next_word_end</code></td><td>Move to end of next word</td><td></td></tr>
+<tr><td><code>move_prev_word_end</code></td><td>Move to end of previous word</td><td></td></tr>
+<tr><td><code>move_next_long_word_start</code></td><td>Move to start of next long word</td><td></td></tr>
+<tr><td><code>move_prev_long_word_start</code></td><td>Move to start of previous long word</td><td></td></tr>
+<tr><td><code>move_next_long_word_end</code></td><td>Move to end of next long word</td><td></td></tr>
+<tr><td><code>move_prev_long_word_end</code></td><td>Move to end of previous long word</td><td></td></tr>
 <tr><td><code>move_next_sub_word_start</code></td><td>Move to start of next sub word</td><td></td></tr>
 <tr><td><code>move_prev_sub_word_start</code></td><td>Move to start of previous sub word</td><td></td></tr>
 <tr><td><code>move_next_sub_word_end</code></td><td>Move to end of next sub word</td><td></td></tr>
 <tr><td><code>move_prev_sub_word_end</code></td><td>Move to end of previous sub word</td><td></td></tr>
+<tr><td><code>vim_move_next_word_start</code></td><td>Move to start of next word (vim caret)</td><td>normal: <code>w</code></td></tr>
+<tr><td><code>vim_move_prev_word_start</code></td><td>Move to start of previous word (vim caret)</td><td>normal: <code>b</code></td></tr>
+<tr><td><code>vim_move_next_word_end</code></td><td>Move to end of next word (vim caret)</td><td>normal: <code>e</code></td></tr>
+<tr><td><code>vim_move_prev_word_end</code></td><td>Move to end of previous word (vim caret)</td><td>normal: <code>ge</code></td></tr>
+<tr><td><code>vim_move_next_long_word_start</code></td><td>Move to start of next long word (vim caret)</td><td>normal: <code>W</code></td></tr>
+<tr><td><code>vim_move_prev_long_word_start</code></td><td>Move to start of previous long word (vim caret)</td><td>normal: <code>B</code></td></tr>
+<tr><td><code>vim_move_next_long_word_end</code></td><td>Move to end of next long word (vim caret)</td><td>normal: <code>E</code></td></tr>
+<tr><td><code>vim_move_prev_long_word_end</code></td><td>Move to end of previous long word (vim caret)</td><td>normal: <code>gE</code></td></tr>
 <tr><td><code>move_parent_node_end</code></td><td>Move to end of the parent node</td><td>normal: <code>&lt;space&gt;k$</code></td></tr>
 <tr><td><code>move_parent_node_start</code></td><td>Move to beginning of the parent node</td><td>normal: <code>&lt;space&gt;k0</code></td></tr>
 <tr><td><code>extend_next_word_start</code></td><td>Extend to start of next word</td><td>select: <code>w</code></td></tr>
