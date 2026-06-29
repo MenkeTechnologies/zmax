@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "../searchindex-d84bda58.js";
+            window.path_to_searchindex_js = "../searchindex-1505604d.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-5c17ed36.js"></script>
+        <script src="../toc-c0d3b1d1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -185,13 +185,13 @@
                         <h2 id="adding-tags-queries"><a class="header" href="#adding-tags-queries">Adding tags queries</a></h2>
 <p>See tree-sitter’s documentation on <a href="https://tree-sitter.github.io/tree-sitter/4-code-navigation.html">Code Navigation Systems</a> for more
 background on tags queries.</p>
-<p>Helix provides LSP-like features such as document and workspace symbol pickers
+<p>Zemacs provides LSP-like features such as document and workspace symbol pickers
 out-of-the-box for languages with <code>tags.scm</code> queries based on syntax trees. To
 be analyzed a language must have a tree-sitter grammar and a <code>tags.scm</code> query
 file which pattern matches interesting nodes from syntax trees.</p>
 <p>Query files should be placed in <code>runtime/queries/{language}/tags.scm</code>
-when contributing to Helix. You may place these under your local runtime
-directory (<code>~/.config/helix/runtime</code> in Linux for example) for the sake of
+when contributing to Zemacs. You may place these under your local runtime
+directory (<code>~/.config/zemacs/runtime</code> in Linux for example) for the sake of
 testing.</p>
 <h2 id="captures"><a class="header" href="#captures">Captures</a></h2>
 <h3 id="definition"><a class="header" href="#definition"><code>@definition.*</code></a></h3>
@@ -237,7 +237,7 @@ the common variants. As with definitions, <code>@name</code> captures the identi
 <pre><code class="language-scm">(call
   function: (identifier) @name) @reference.call
 </code></pre>
-<p><a href="https://github.com/search?q=repo%3Ahelix-editor%2Fhelix+path%3A%2A%2A/tags.scm&amp;type=Code">Example query files</a> can be found in the Helix GitHub
+<p><a href="https://github.com/search?q=repo%3Ahelix-editor%2Fhelix+path%3A%2A%2A/tags.scm&amp;type=Code">Example query files</a> can be found in the Zemacs GitHub
 repository.</p>
 
                     </main>
