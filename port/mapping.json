@@ -10230,5 +10230,61 @@
    "key:normal:space k J"
   ],
   "note": "spacemacs spc_k_jU -> join sexp (join lines)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k s"
+  ],
+  "note": "spacemacs spc_k_s -> slurp forward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_b",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k b"
+  ],
+  "note": "spacemacs spc_k_b -> barf forward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_sU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k S"
+  ],
+  "note": "spacemacs spc_k_sU -> slurp backward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_bU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k B"
+  ],
+  "note": "spacemacs spc_k_bU -> barf backward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_wU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k W"
+  ],
+  "note": "spacemacs spc_k_wU -> unwrap (splice) sexp"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_r",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k r"
+  ],
+  "note": "spacemacs spc_k_r -> raise sexp"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k t"
+  ],
+  "note": "spacemacs spc_k_t -> transpose sexps"
  }
 ]

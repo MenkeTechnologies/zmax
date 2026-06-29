@@ -1283,6 +1283,13 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "L" => select_next_sibling,        // SPC k L : forward to next sexp
                 "H" => select_prev_sibling,        // SPC k H : backward to previous sexp
                 "J" => join_selections,            // SPC k J : join sexp (join lines)
+                "s" => paredit_slurp_forward,      // SPC k s : slurp forward
+                "b" => paredit_barf_forward,       // SPC k b : barf forward
+                "S" => paredit_slurp_backward,     // SPC k S : slurp backward
+                "B" => paredit_barf_backward,      // SPC k B : barf backward
+                "W" => paredit_splice,             // SPC k W : unwrap (splice) sexp
+                "r" => paredit_raise,              // SPC k r : raise sexp
+                "t" => paredit_transpose,          // SPC k t : transpose sexps
                 "d" => { "Delete"
                     "x" => [expand_selection, delete_selection], // SPC k dx : delete sexp
                     "s" => [expand_selection, delete_selection], // SPC k ds : delete symbol

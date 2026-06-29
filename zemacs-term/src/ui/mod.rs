@@ -11,6 +11,7 @@ pub mod keymap_editor;
 pub mod lsp;
 mod markdown;
 pub mod menu;
+pub mod merge;
 pub mod overlay;
 pub mod picker;
 pub mod popup;
