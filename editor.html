@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d84bda58.js";
+            window.path_to_searchindex_js = "searchindex-1505604d.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-5c17ed36.js"></script>
+        <script src="toc-c0d3b1d1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -229,7 +229,7 @@
 <tr><td><code>line-number</code></td><td>Line number display: <code>absolute</code> simply shows each line’s number, while <code>relative</code> shows the distance from the current line. When unfocused or in insert mode, <code>relative</code> will still show absolute line numbers</td><td><code>"absolute"</code></td></tr>
 <tr><td><code>cursorline</code></td><td>Highlight all lines with a cursor</td><td><code>false</code></td></tr>
 <tr><td><code>cursorcolumn</code></td><td>Highlight all columns with a cursor</td><td><code>false</code></td></tr>
-<tr><td><code>continue-comments</code></td><td>if helix should automatically add a line comment token if you create a new line inside a comment.</td><td><code>true</code></td></tr>
+<tr><td><code>continue-comments</code></td><td>if zemacs should automatically add a line comment token if you create a new line inside a comment.</td><td><code>true</code></td></tr>
 <tr><td><code>gutters</code></td><td>Gutters to display: Available are <code>diagnostics</code> and <code>diff</code> and <code>line-numbers</code> and <code>spacer</code> and <code>code-action-hint</code>, note that <code>diagnostics</code> also includes other features like breakpoints, 1-width padding will be inserted if gutters is non-empty</td><td><code>["diagnostics", "spacer", "line-numbers", "spacer", "diff"]</code></td></tr>
 <tr><td><code>auto-completion</code></td><td>Enable automatic pop up of auto-completion</td><td><code>true</code></td></tr>
 <tr><td><code>path-completion</code></td><td>Enable filepath completion. Show files and directories if an existing path at the cursor was recognized, either absolute or relative to the current opened document or current working directory (if the buffer is not yet saved). Defaults to true.</td><td><code>true</code></td></tr>
@@ -246,7 +246,7 @@
 <tr><td><code>bufferline</code></td><td>Renders a line at the top of the editor displaying open buffers. Can be <code>always</code>, <code>never</code> or <code>multiple</code> (only shown if more than one buffer is in use)</td><td><code>"never"</code></td></tr>
 <tr><td><code>color-modes</code></td><td>Whether to color the mode indicator with different colors depending on the mode itself</td><td><code>false</code></td></tr>
 <tr><td><code>text-width</code></td><td>Maximum line length. Used for the <code>:reflow</code> command and soft-wrapping if <code>soft-wrap.wrap-at-text-width</code> is set</td><td><code>80</code></td></tr>
-<tr><td><code>workspace-lsp-roots</code></td><td>Directories relative to the workspace root that are treated as LSP roots. Should only be set in <code>.helix/config.toml</code></td><td><code>[]</code></td></tr>
+<tr><td><code>workspace-lsp-roots</code></td><td>Directories relative to the workspace root that are treated as LSP roots. Should only be set in <code>.zemacs/config.toml</code></td><td><code>[]</code></td></tr>
 <tr><td><code>default-line-ending</code></td><td>The line ending to use for new documents. Can be <code>native</code>, <code>lf</code>, <code>crlf</code>, <code>ff</code>, <code>cr</code> or <code>nel</code>. <code>native</code> uses the platform’s native line ending (<code>crlf</code> on Windows, otherwise <code>lf</code>).</td><td><code>"native"</code></td></tr>
 <tr><td><code>insert-final-newline</code></td><td>Whether to automatically insert a trailing line-ending on write if missing</td><td><code>true</code></td></tr>
 <tr><td><code>atomic-save</code></td><td>Whether to use atomic operations to write documents to disk. This prevents data loss if the editor is interrupted while writing the file, but may confuse some file watching/hot reloading programs.</td><td><code>true</code></td></tr>
@@ -264,13 +264,13 @@
 </table>
 </div>
 <h3 id="editorclipboard-provider-section"><a class="header" href="#editorclipboard-provider-section"><code>[editor.clipboard-provider]</code> Section</a></h3>
-<p>Helix can be configured either to use a builtin clipboard configuration or to use
+<p>Zemacs can be configured either to use a builtin clipboard configuration or to use
 a provided command.</p>
 <p>For instance, setting it to use OSC 52 termcodes, the configuration would be:</p>
 <pre><code class="language-toml">[editor]
 clipboard-provider = "termcode"
 </code></pre>
-<p>Alternatively, Helix can be configured to use arbitrary commands for clipboard integration:</p>
+<p>Alternatively, Zemacs can be configured to use arbitrary commands for clipboard integration:</p>
 <pre><code class="language-toml">[editor.clipboard-provider.custom]
 yank = { command = "cat",  args = ["test.txt"] }
 paste = { command = "tee",  args = ["test.txt"] }
@@ -389,7 +389,7 @@ change shape.</p>
 </div>
 <h3 id="editorfile-picker-section"><a class="header" href="#editorfile-picker-section"><code>[editor.file-picker]</code> Section</a></h3>
 <p>Set options for file picker and global search. Ignoring a file means it is
-not visible in the Helix file picker and global search.</p>
+not visible in the Zemacs file picker and global search.</p>
 <p>All git related options are only enabled in a git repository.</p>
 <div class="table-wrapper">
 <table>
@@ -410,10 +410,10 @@ not visible in the Helix file picker and global search.</p>
 </table>
 </div>
 <p>Ignore files can be placed locally as <code>.ignore</code> or put in your home directory as <code>~/.ignore</code>. They support the usual ignore and negative ignore (unignore) rules used in <code>.gitignore</code> files.</p>
-<p>Additionally, you can use Helix-specific ignore files by creating a local <code>.helix/ignore</code> file in the current workspace or a global <code>ignore</code> file located in your Helix config directory:</p>
+<p>Additionally, you can use Zemacs-specific ignore files by creating a local <code>.zemacs/ignore</code> file in the current workspace or a global <code>ignore</code> file located in your Zemacs config directory:</p>
 <ul>
-<li>Linux and Mac: <code>~/.config/helix/ignore</code></li>
-<li>Windows: <code>%AppData%\helix\ignore</code></li>
+<li>Linux and Mac: <code>~/.config/zemacs/ignore</code></li>
+<li>Windows: <code>%AppData%\zemacs\ignore</code></li>
 </ul>
 <p>Example:</p>
 <pre><code class="language-ini"># unignore in file picker and global search
@@ -423,7 +423,7 @@ not visible in the Helix file picker and global search.</p>
 </code></pre>
 <h3 id="editorfile-explorer-section"><a class="header" href="#editorfile-explorer-section"><code>[editor.file-explorer]</code> Section</a></h3>
 <p>In addition to the options for the file picker and global search, a similar set of options is presented to configure the file explorer separately. However, unlike the file picker, the defaults are set to avoid ignoring most files.</p>
-<p>Note that the ignore files consulted by the file explorer when <code>ignore</code> is set to true are the same ones used by the file picker, including the aforementioned Helix-specific ignore files.</p>
+<p>Note that the ignore files consulted by the file explorer when <code>ignore</code> is set to true are the same ones used by the file picker, including the aforementioned Zemacs-specific ignore files.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -737,11 +737,11 @@ prompt = false
 
 # "none":     prompt for every workspace.
 # "servers":  trust LSP and DAP launches but still gate local config and git;
-#             .helix/config.toml, .helix/languages.toml, etc. need :workspace-trust.
+#             .zemacs/config.toml, .zemacs/languages.toml, etc. need :workspace-trust.
 # "insecure": trust everything (discouraged).
 level = "servers"
 
-# Discouraged: skips .helix/ change detection and trusts anything that lands
+# Discouraged: skips .zemacs/ change detection and trusts anything that lands
 # under a matching path. `~` and environment variables are expanded.
 trusted = ["~/src/github.com/me/*"]
 </code></pre>
@@ -754,7 +754,7 @@ trusted = ["~/src/github.com/me/*"]
 <p>By default, a progress spinner is shown in the statusline beside the file path. <a href="#fr-1-1">↩</a> <a href="#fr-1-2">↩2</a></p>
 </li>
 <li id="footnote-2">
-<p>You may also have to activate them in the language server config for them to appear, not just in Helix. Inlay hints in Helix are still being improved on and may be a little bit laggy/janky under some circumstances. Please report any bugs you see so we can fix them! <a href="#fr-2-1">↩</a></p>
+<p>You may also have to activate them in the language server config for them to appear, not just in Zemacs. Inlay hints in Zemacs are still being improved on and may be a little bit laggy/janky under some circumstances. Please report any bugs you see so we can fix them! <a href="#fr-2-1">↩</a></p>
 </li>
 </ol>
 

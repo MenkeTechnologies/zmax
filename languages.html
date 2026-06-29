@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d84bda58.js";
+            window.path_to_searchindex_js = "searchindex-1505604d.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-5c17ed36.js"></script>
+        <script src="toc-c0d3b1d1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -189,7 +189,7 @@ in <code>languages.toml</code> files.</p>
 <p>There are three possible locations for a <code>languages.toml</code> file:</p>
 <ol>
 <li>
-<p>In the Helix source code, which lives in the
+<p>In the Zemacs source code, which lives in the
 <a href="https://github.com/helix-editor/helix/blob/master/languages.toml">Helix repository</a>.
 It provides the default configurations for languages and language servers.</p>
 </li>
@@ -197,7 +197,7 @@ It provides the default configurations for languages and language servers.</p>
 <p>In your <a href="./configuration.html">configuration directory</a>. This overrides values
 from the built-in language configuration. For example, to disable
 auto-formatting for Rust:</p>
-<pre><code class="language-toml"># in &lt;config_dir&gt;/helix/languages.toml
+<pre><code class="language-toml"># in &lt;config_dir&gt;/zemacs/languages.toml
 
 [language-server.mylang-lsp]
 command = "mylang-lsp"
@@ -208,9 +208,9 @@ auto-format = false
 </code></pre>
 </li>
 <li>
-<p>In a <code>.helix</code> folder in your project. Language configuration may also be
+<p>In a <code>.zemacs</code> folder in your project. Language configuration may also be
 overridden local to a project by creating a <code>languages.toml</code> file in a
-<code>.helix</code> folder. Its settings will be merged with the language configuration
+<code>.zemacs</code> folder. Its settings will be merged with the language configuration
 in the configuration directory and the built-in configuration.</p>
 </li>
 </ol>
@@ -240,7 +240,7 @@ language-servers = [ "mylang-lsp" ]
 <tr><td><code>injection-regex</code></td><td>regex pattern that will be tested against a language name in order to determine whether this language should be used for a potential <a href="https://tree-sitter.github.io/tree-sitter/3-syntax-highlighting.html#language-injection">language injection</a> site.</td></tr>
 <tr><td><code>file-types</code></td><td>The filetypes of the language, for example <code>["yml", "yaml"]</code>. See the file-type detection section below.</td></tr>
 <tr><td><code>shebangs</code></td><td>The interpreters from the shebang line, for example <code>["sh", "bash"]</code></td></tr>
-<tr><td><code>roots</code></td><td>A set of marker files used for LSP working directory selection. Helix starts at the file, walks upward, and remembers the <em>topmost</em> i.e. <em>last</em> directory that contains a marker file. For example Cargo.lock, yarn.lock</td></tr>
+<tr><td><code>roots</code></td><td>A set of marker files used for LSP working directory selection. Zemacs starts at the file, walks upward, and remembers the <em>topmost</em> i.e. <em>last</em> directory that contains a marker file. For example Cargo.lock, yarn.lock</td></tr>
 <tr><td><code>auto-format</code></td><td>Whether to autoformat this language when saving</td></tr>
 <tr><td><code>diagnostic-severity</code></td><td>Minimal severity of diagnostic for it to be displayed. (Allowed values: <code>error</code>, <code>warning</code>, <code>info</code>, <code>hint</code>)</td></tr>
 <tr><td><code>comment-tokens</code></td><td>The tokens to use as a comment token, either a single token <code>"//"</code> or an array <code>["//", "///", "//!"]</code> (the first token will be used for commenting). Also configurable as <code>comment-token</code> for backwards compatibility</td></tr>
@@ -254,22 +254,22 @@ language-servers = [ "mylang-lsp" ]
 <tr><td><code>rulers</code></td><td>Overrides the <code>editor.rulers</code> config key for the language.</td></tr>
 <tr><td><code>path-completion</code></td><td>Overrides the <code>editor.path-completion</code> config key for the language.</td></tr>
 <tr><td><code>word-completion</code></td><td>Overrides the <a href="./editor.html#editorword-completion-section"><code>editor.word-completion</code></a> configuration for the language.</td></tr>
-<tr><td><code>workspace-lsp-roots</code></td><td>Directories (relative to the workspace root) that stop the upward root search early. Meant for project-specific hard overrides in a local <code>.helix/config.toml</code>;</td></tr>
-<tr><td><code>persistent-diagnostic-sources</code></td><td>An array of LSP diagnostic sources assumed unchanged when the language server resends the same set of diagnostics. Helix can track the position for these diagnostics internally instead. Useful for diagnostics that are recomputed on save.</td></tr>
+<tr><td><code>workspace-lsp-roots</code></td><td>Directories (relative to the workspace root) that stop the upward root search early. Meant for project-specific hard overrides in a local <code>.zemacs/config.toml</code>;</td></tr>
+<tr><td><code>persistent-diagnostic-sources</code></td><td>An array of LSP diagnostic sources assumed unchanged when the language server resends the same set of diagnostics. Zemacs can track the position for these diagnostics internally instead. Useful for diagnostics that are recomputed on save.</td></tr>
 <tr><td><code>rainbow-brackets</code></td><td>Overrides the <code>editor.rainbow-brackets</code> config key for the language</td></tr>
 <tr><td><code>code-actions-on-save</code></td><td>List of LSP code actions to be run in order on save, for example <code>["source.organizeImports"]</code></td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="project-and-lsp-root-selection"><a class="header" href="#project-and-lsp-root-selection">Project and LSP root selection</a></h2>
-<p>This is the model Helix uses:</p>
+<p>This is the model Zemacs uses:</p>
 <ul>
 <li>The <strong>workspace root</strong> is found once by walking upward from the current
 working directory and picking the first directory that contains <code>.git</code>, <code>.svn</code>,
-<code>.jj</code>, or <code>.helix</code>. If none are found, the current working directory is the
+<code>.jj</code>, or <code>.zemacs</code>. If none are found, the current working directory is the
 workspace root.</li>
 <li>Root markers (<code>roots</code>) are used only for LSP root selection and are found by
-starting at the <strong>file</strong>, not the folder Helix was opened in.</li>
+starting at the <strong>file</strong>, not the folder Zemacs was opened in.</li>
 <li>We use the <strong>topmost</strong> directory that has a root marker (we stop the search at
 the workspace root).</li>
 <li>In most cases, root markers are enough. In some repos there are multiple
@@ -277,21 +277,21 @@ nested root markers and whether you want the inner or outer one is project
 specific. For these situations, use <code>workspace-lsp-roots</code> to stop the search
 early in a particular directory.</li>
 <li><code>workspace-lsp-roots</code> is meant to be set in the <strong>project-specific</strong> config:
-<code>$PROJECT/.helix/config.toml</code>.</li>
+<code>$PROJECT/.zemacs/config.toml</code>.</li>
 </ul>
 <p>Interaction with <code>required-root-patterns</code> (a language_server configuration key):</p>
 <ul>
-<li>After the LSP root is selected, Helix checks for <code>required-root-patterns</code> in
+<li>After the LSP root is selected, Zemacs checks for <code>required-root-patterns</code> in
 that directory. If none match, the server is not started.</li>
 <li>This is validation, not root detection.</li>
 </ul>
 <h3 id="file-type-detection-and-the-file-types-key"><a class="header" href="#file-type-detection-and-the-file-types-key">File-type detection and the <code>file-types</code> key</a></h3>
-<p>Helix determines which language configuration to use based on the <code>file-types</code> key
+<p>Zemacs determines which language configuration to use based on the <code>file-types</code> key
 from the above section. <code>file-types</code> is a list of strings or tables, for
 example:</p>
 <pre><code class="language-toml">file-types = ["toml", { glob = "Makefile" }, { glob = ".git/config" }, { glob = ".github/workflows/*.yaml" } ]
 </code></pre>
-<p>When determining a language configuration to use, Helix searches the file-types
+<p>When determining a language configuration to use, Zemacs searches the file-types
 with the following priorities:</p>
 <ol>
 <li>Glob: values in <code>glob</code> tables are checked against the full path of the given
@@ -374,7 +374,7 @@ For example, with typescript:</p>
 config = { format = { "semicolons" = "insert", "insertSpaceBeforeFunctionParenthesis" = true } }
 </code></pre>
 <h3 id="configuring-language-servers-for-a-language"><a class="header" href="#configuring-language-servers-for-a-language">Configuring Language Servers for a language</a></h3>
-<p>The <code>language-servers</code> attribute in a language tells helix which language servers are used for this language.</p>
+<p>The <code>language-servers</code> attribute in a language tells zemacs which language servers are used for this language.</p>
 <p>They have to be defined in the <code>[language-server]</code> table as described in the previous section.</p>
 <p>Different languages can use the same language server instance, e.g. <code>typescript-language-server</code> is used for javascript, jsx, tsx and typescript by default.</p>
 <p>The definition order of language servers affects the order in the results list of code action menu.</p>

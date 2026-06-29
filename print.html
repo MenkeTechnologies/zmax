@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d84bda58.js";
+            window.path_to_searchindex_js = "searchindex-1505604d.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-5c17ed36.js"></script>
+        <script src="toc-c0d3b1d1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -180,7 +180,7 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="helix"><a class="header" href="#helix">Helix</a></h1>
+                        <h1 id="zemacs"><a class="header" href="#zemacs">Zemacs</a></h1>
 <div class="version-tiles">
   <a class="version-tile" href="/">
     <strong>Stable</strong>
@@ -192,22 +192,22 @@
   </a>
 </div>
 
-<p>See the <a href="#using-helix">usage</a> section for a quick overview of the editor, <a href="#keymap-1">keymap</a>
+<p>See the <a href="#using-zemacs">usage</a> section for a quick overview of the editor, <a href="#keymap-1">keymap</a>
 section for all available keybindings and the <a href="#configuration-2">configuration</a> section
 for defining custom keybindings, setting themes, etc.
-For everything else (e.g., how to install supported language servers), see the <a href="https://github.com/helix-editor/helix/wiki">Helix Wiki</a>.</p>
+For everything else (e.g., how to install supported language servers), see the [Zemacs Wiki].</p>
 <p>Refer the <a href="https://github.com/helix-editor/helix/wiki/FAQ">FAQ</a> for common questions.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="installing-helix"><a class="header" href="#installing-helix">Installing Helix</a></h1>
-<p>The typical way to install Helix is via <a href="#package-managers-1">your operating system’s package manager</a>.</p>
+<h1 id="installing-zemacs"><a class="header" href="#installing-zemacs">Installing Zemacs</a></h1>
+<p>The typical way to install Zemacs is via <a href="#package-managers-1">your operating system’s package manager</a>.</p>
 <p>Note that:</p>
 <ul>
 <li>
-<p>To get the latest nightly version of Helix, you need to
+<p>To get the latest nightly version of Zemacs, you need to
 <a href="#building-from-source-1">build from source</a>.</p>
 </li>
 <li>
-<p>To take full advantage of Helix, install the language servers for your
+<p>To take full advantage of Zemacs, install the language servers for your
 preferred programming languages. See the
 <a href="https://github.com/helix-editor/helix/wiki/Language-Server-Configurations">wiki</a>
 for instructions.</p>
@@ -216,12 +216,12 @@ for instructions.</p>
 <h2 id="pre-built-binaries"><a class="header" href="#pre-built-binaries">Pre-built binaries</a></h2>
 <p>Download pre-built binaries from the <a href="https://github.com/helix-editor/helix/releases">GitHub Releases page</a>.
 The tarball contents include an <code>hx</code> binary and a <code>runtime</code> directory.
-To set up Helix:</p>
+To set up Zemacs:</p>
 <ol>
 <li>Add the <code>hx</code> binary to your system’s <code>$PATH</code> to allow it to be used from the command line.</li>
-<li>Copy the <code>runtime</code> directory to a location that <code>hx</code> searches for runtime files. A typical location on Linux/macOS is <code>~/.config/helix/runtime</code>.</li>
+<li>Copy the <code>runtime</code> directory to a location that <code>hx</code> searches for runtime files. A typical location on Linux/macOS is <code>~/.config/zemacs/runtime</code>.</li>
 </ol>
-<p>To see the runtime directories that <code>hx</code> searches, run <code>hx --health</code>. If necessary, you can override the default runtime location by setting the <code>HELIX_RUNTIME</code> environment variable.</p>
+<p>To see the runtime directories that <code>hx</code> searches, run <code>hx --health</code>. If necessary, you can override the default runtime location by setting the <code>ZEMACS_RUNTIME</code> environment variable.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="package-managers-1"><a href="#package-managers-1" class="header">Package Managers</a></h1>
 <h2 id="package-managers"><a class="header" href="#package-managers">Package managers</a></h2>
@@ -255,7 +255,7 @@ To set up Helix:</p>
 </ul>
 </li>
 </ul>
-<p><a href="https://repology.org/project/helix-editor/versions"><img src="https://repology.org/badge/vertical-allrepos/helix-editor.svg" alt="Packaging status"></a></p>
+<p><a href="https://repology.org/project/zemacs-editor/versions"><img src="https://repology.org/badge/vertical-allrepos/zemacs-editor.svg" alt="Packaging status"></a></p>
 <h2 id="linux"><a class="header" href="#linux">Linux</a></h2>
 <p>The following third party repositories are available:</p>
 <h3 id="debian"><a class="header" href="#debian">Debian</a></h3>
@@ -268,51 +268,51 @@ To set up Helix:</p>
 <p>If you are running a system older than Ubuntu 22.04, Mint 21, or Debian 12, you can build the <code>.deb</code> file locally
 <a href="#building-the-debian-package">from source</a>.</p>
 <h3 id="fedorarhel"><a class="header" href="#fedorarhel">Fedora/RHEL</a></h3>
-<pre><code class="language-sh">sudo dnf install helix
+<pre><code class="language-sh">sudo dnf install zemacs
 </code></pre>
 <h3 id="arch-linux-extra"><a class="header" href="#arch-linux-extra">Arch Linux extra</a></h3>
 <p>Releases are available in the <code>extra</code> repository:</p>
-<pre><code class="language-sh">sudo pacman -S helix
+<pre><code class="language-sh">sudo pacman -S zemacs
 </code></pre>
 <blockquote>
-<p>💡 When installed from the <code>extra</code> repository, run Helix with <code>helix</code> instead of <code>hx</code>.</p>
+<p>💡 When installed from the <code>extra</code> repository, run Zemacs with <code>zemacs</code> instead of <code>hx</code>.</p>
 <p>For example:</p>
-<pre><code class="language-sh">helix --health
+<pre><code class="language-sh">zemacs --health
 </code></pre>
 <p>to check health</p>
 </blockquote>
-<p>Additionally, a <a href="https://aur.archlinux.org/packages/helix-git/">helix-git</a> package is available
+<p>Additionally, a <a href="https://aur.archlinux.org/packages/zemacs-git/">zemacs-git</a> package is available
 in the AUR, which builds the master branch.</p>
 <h3 id="nixos"><a class="header" href="#nixos">NixOS</a></h3>
-<p>Helix is available in <a href="https://github.com/nixos/nixpkgs">nixpkgs</a> through the <code>helix</code> attribute,
+<p>Zemacs is available in <a href="https://github.com/nixos/nixpkgs">nixpkgs</a> through the <code>zemacs</code> attribute,
 the unstable channel usually carries the latest release.</p>
-<p>Helix is also available as a <a href="https://wiki.nixos.org/wiki/Flakes">flake</a> in the project
+<p>Zemacs is also available as a <a href="https://wiki.nixos.org/wiki/Flakes">flake</a> in the project
 root. Use <code>nix develop</code> to spin up a reproducible development shell. Outputs are
 cached for each push to master using <a href="https://www.cachix.org/">Cachix</a>. The
 flake is configured to automatically make use of this cache assuming the user
 accepts the new settings on first use.</p>
 <p>If you are using a version of Nix without flakes enabled,
 <a href="https://docs.cachix.org/installation">install Cachix CLI</a> and use
-<code>cachix use helix</code> to configure Nix to use cached outputs when possible.</p>
+<code>cachix use zemacs</code> to configure Nix to use cached outputs when possible.</p>
 <h3 id="flatpak"><a class="header" href="#flatpak">Flatpak</a></h3>
-<p>Helix is available on <a href="https://flathub.org/en-GB/apps/com.helix_editor.Helix">Flathub</a>:</p>
-<pre><code class="language-sh">flatpak install flathub com.helix_editor.Helix
-flatpak run com.helix_editor.Helix
+<p>Zemacs is available on <a href="https://flathub.org/en-GB/apps/com.helix_editor.Zemacs">Flathub</a>:</p>
+<pre><code class="language-sh">flatpak install flathub com.helix_editor.Zemacs
+flatpak run com.helix_editor.Zemacs
 </code></pre>
 <h3 id="snap"><a class="header" href="#snap">Snap</a></h3>
-<p>Helix is available on <a href="https://snapcraft.io/helix">Snapcraft</a> and can be installed with:</p>
-<pre><code class="language-sh">snap install --classic helix
+<p>Zemacs is available on <a href="https://snapcraft.io/zemacs">Snapcraft</a> and can be installed with:</p>
+<pre><code class="language-sh">snap install --classic zemacs
 </code></pre>
-<p>This will install Helix as both <code>/snap/bin/helix</code> and <code>/snap/bin/hx</code>, so make sure <code>/snap/bin</code> is in your <code>PATH</code>.</p>
+<p>This will install Zemacs as both <code>/snap/bin/zemacs</code> and <code>/snap/bin/hx</code>, so make sure <code>/snap/bin</code> is in your <code>PATH</code>.</p>
 <h3 id="appimage"><a class="header" href="#appimage">AppImage</a></h3>
-<p>Install Helix using the Linux <a href="https://appimage.org/">AppImage</a> format.
+<p>Install Zemacs using the Linux <a href="https://appimage.org/">AppImage</a> format.
 Download the official Helix AppImage from the <a href="https://github.com/helix-editor/helix/releases/latest">latest releases</a> page.</p>
-<pre><code class="language-sh">chmod +x helix-*.AppImage # change permission for executable mode
-./helix-*.AppImage # run helix
+<pre><code class="language-sh">chmod +x zemacs-*.AppImage # change permission for executable mode
+./zemacs-*.AppImage # run zemacs
 </code></pre>
-<p>You can optionally <a href="#configure-the-desktop-shortcut">add the <code>.desktop</code> file</a>. Helix must be installed in <code>PATH</code> with the name <code>hx</code>. For example:</p>
+<p>You can optionally <a href="#configure-the-desktop-shortcut">add the <code>.desktop</code> file</a>. Zemacs must be installed in <code>PATH</code> with the name <code>hx</code>. For example:</p>
 <pre><code class="language-sh">mkdir -p "$HOME/.local/bin"
-mv helix-*.AppImage "$HOME/.local/bin/hx"
+mv zemacs-*.AppImage "$HOME/.local/bin/hx"
 </code></pre>
 <p>and make sure <code>~/.local/bin</code> is in your <code>PATH</code>.</p>
 <h3 id="linux-homebrew-core"><a class="header" href="#linux-homebrew-core">Linux Homebrew Core</a></h3>
@@ -320,13 +320,13 @@ mv helix-*.AppImage "$HOME/.local/bin/hx"
 <h2 id="macos"><a class="header" href="#macos">macOS</a></h2>
 <h3 id="homebrew-core"><a class="header" href="#homebrew-core">Homebrew Core</a></h3>
 <p>Install the latest release:</p>
-<pre><code class="language-sh">brew install helix
+<pre><code class="language-sh">brew install zemacs
 </code></pre>
 <p>Or, install the latest nightly version:</p>
-<pre><code class="language-sh">brew install --HEAD helix
+<pre><code class="language-sh">brew install --HEAD zemacs
 </code></pre>
 <h3 id="macports"><a class="header" href="#macports">MacPorts</a></h3>
-<pre><code class="language-sh">sudo port install helix
+<pre><code class="language-sh">sudo port install zemacs
 </code></pre>
 <h2 id="windows"><a class="header" href="#windows">Windows</a></h2>
 <p>Install on Windows using <a href="https://learn.microsoft.com/en-us/windows/package-manager/winget/">Winget</a>, <a href="https://scoop.sh/">Scoop</a>, <a href="https://chocolatey.org/">Chocolatey</a>, <a href="https://www.packably.com.br/">Packably</a>
@@ -334,26 +334,26 @@ or <a href="https://msys2.org/">MSYS2</a>.</p>
 <h3 id="winget"><a class="header" href="#winget">Winget</a></h3>
 <p>Windows Package Manager winget command-line tool is by default available on Windows 11 and modern versions of Windows 10 as a part of the App Installer.
 You can get <a href="https://www.microsoft.com/p/app-installer/9nblggh4nns1#activetab=pivot:overviewtab">App Installer from the Microsoft Store</a>. If it’s already installed, make sure it is updated with the latest version.</p>
-<pre><code class="language-sh">winget install Helix.Helix
+<pre><code class="language-sh">winget install Zemacs.Zemacs
 </code></pre>
 <h3 id="scoop"><a class="header" href="#scoop">Scoop</a></h3>
-<pre><code class="language-sh">scoop install helix
+<pre><code class="language-sh">scoop install zemacs
 </code></pre>
 <h3 id="chocolatey"><a class="header" href="#chocolatey">Chocolatey</a></h3>
-<pre><code class="language-sh">choco install helix
+<pre><code class="language-sh">choco install zemacs
 </code></pre>
 <h3 id="packably"><a class="header" href="#packably">Packably</a></h3>
-<pre><code class="language-sh">packl install helix
+<pre><code class="language-sh">packl install zemacs
 </code></pre>
 <h3 id="msys2"><a class="header" href="#msys2">MSYS2</a></h3>
 <p>For 64-bit Windows 8.1 or above:</p>
-<pre><code class="language-sh">pacman -S mingw-w64-ucrt-x86_64-helix
+<pre><code class="language-sh">pacman -S mingw-w64-ucrt-x86_64-zemacs
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="building-from-source-1"><a href="#building-from-source-1" class="header">Building from source</a></h1>
 <h2 id="building-from-source"><a class="header" href="#building-from-source">Building from source</a></h2>
 <ul>
-<li><a href="#configuring-helixs-runtime-files">Configuring Helix’s runtime files</a>
+<li><a href="#configuring-helixs-runtime-files">Configuring Zemacs’s runtime files</a>
 <ul>
 <li><a href="#linux-and-macos">Linux and macOS</a></li>
 <li><a href="#windows-1">Windows</a></li>
@@ -366,7 +366,7 @@ You can get <a href="https://www.microsoft.com/p/app-installer/9nblggh4nns1#acti
 <li><a href="#building-the-debian-package">Building the Debian package</a></li>
 </ul>
 <p>Requirements:</p>
-<p>Clone the Helix GitHub repository into a directory of your choice. The
+<p>Clone the Zemacs GitHub repository into a directory of your choice. The
 examples in this documentation assume installation into either <code>~/src/</code> on
 Linux and macOS, or <code>%userprofile%\src\</code> on Windows.</p>
 <ul>
@@ -381,19 +381,19 @@ Linux and macOS, or <code>%userprofile%\src\</code> on Windows.</p>
 <li>
 <p>Clone the repository:</p>
 <pre><code class="language-sh">git clone https://github.com/helix-editor/helix
-cd helix
+cd zemacs
 </code></pre>
 </li>
 <li>
 <p>Compile from source:</p>
 <pre><code class="language-sh"># Reproducible
-cargo install --path helix-term --locked
+cargo install --path zemacs-term --locked
 </code></pre>
 <pre><code class="language-sh"># Optimized
 cargo install \
    --profile opt \
    --config 'build.rustflags=["-C", "target-cpu=native"]' \
-   --path helix-term \
+   --path zemacs-term \
    --locked
 </code></pre>
 <p>Either command will create the <code>hx</code> executable and construct the tree-sitter
@@ -401,47 +401,71 @@ grammars in the local <code>runtime</code> folder.</p>
 </li>
 </ol>
 <blockquote>
-<p>💡 If you do not want to fetch or build grammars, set an environment variable <code>HELIX_DISABLE_AUTO_GRAMMAR_BUILD</code></p>
+<p>💡 If you do not want to fetch or build grammars, set an environment variable <code>ZEMACS_DISABLE_AUTO_GRAMMAR_BUILD</code></p>
 </blockquote>
 <blockquote>
 <p>💡 Tree-sitter grammars can be fetched and compiled if not pre-packaged. Fetch
 grammars with <code>hx --grammar fetch</code> and compile them with
 <code>hx --grammar build</code>. This will install them in
-the <code>runtime</code> directory within the user’s helix config directory (more
+the <code>runtime</code> directory within the user’s zemacs config directory (more
 <a href="#multiple-runtime-directories">details below</a>).</p>
 </blockquote>
 <blockquote>
 <p>💡 If you only want to build <em>some</em> grammars, see <a href="#choosing-grammars"><code>use-grammars</code></a></p>
 </blockquote>
-<h3 id="configuring-helixs-runtime-files"><a class="header" href="#configuring-helixs-runtime-files">Configuring Helix’s runtime files</a></h3>
+<h3 id="cargo-features"><a class="header" href="#cargo-features">Cargo features</a></h3>
+<p>The <code>zemacs-term</code> crate exposes a few Cargo features (all set on <code>--release</code>/<code>opt</code>
+builds by default):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Default</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>git</code></td><td>yes</td><td>Git integration in the VCS gutter/diff layer (<code>zemacs-vcs/git</code>).</td></tr>
+<tr><td><code>scripting</code></td><td>yes</td><td>The <a href="#embedded-scripting">embedded scripting languages</a> and the REPL — elisp, vimscript and awk, plus zsh and stryke on unix. Pulls in the interpreter crates.</td></tr>
+<tr><td><code>unicode-lines</code></td><td>no</td><td>Treat Unicode line separators (e.g. <code>U+2028</code>) as line breaks.</td></tr>
+</tbody>
+</table>
+</div>
+<p>To build <strong>without the embedded scripting languages</strong> — dropping every
+interpreter crate (<code>elisprs</code>, <code>vimlrs</code>, <code>awkrs</code>, <code>zshrs</code>, <code>strykelang</code>) from the
+dependency graph for a leaner, faster build — disable default features and re-add
+just the ones you want:</p>
+<pre><code class="language-sh">cargo install --path zemacs-term --locked --no-default-features --features git
+</code></pre>
+<p>In a scripting-less build the <code>:elisp</code>/<code>:vim</code>/<code>:awk</code>/<code>:zsh</code>/<code>:stryke</code> commands and
+the REPL still exist but report that scripting was not compiled in; <code>init.el</code> /
+<code>init.vim</code> are not loaded.</p>
+<h3 id="configuring-zemacss-runtime-files"><a class="header" href="#configuring-zemacss-runtime-files">Configuring Zemacs’s runtime files</a></h3>
 <h4 id="linux-and-macos"><a class="header" href="#linux-and-macos">Linux and macOS</a></h4>
-<p>The <strong>runtime</strong> directory is one below the Helix source, so either export a
-<code>HELIX_RUNTIME</code> environment variable to point to that directory and add it to
+<p>The <strong>runtime</strong> directory is one below the Zemacs source, so either export a
+<code>ZEMACS_RUNTIME</code> environment variable to point to that directory and add it to
 your <code>~/.bashrc</code> or equivalent:</p>
-<pre><code class="language-sh">export HELIX_RUNTIME=~/src/helix/runtime
+<pre><code class="language-sh">export ZEMACS_RUNTIME=~/src/zemacs/runtime
 </code></pre>
 <p>Or, create a symbolic link:</p>
-<pre><code class="language-sh">ln -Tsf $PWD/runtime ~/.config/helix/runtime
+<pre><code class="language-sh">ln -Tsf $PWD/runtime ~/.config/zemacs/runtime
 </code></pre>
 <h4 id="windows-1"><a class="header" href="#windows-1">Windows</a></h4>
-<p>Either set the <code>HELIX_RUNTIME</code> environment variable to point to the runtime files using the Windows setting (search for
+<p>Either set the <code>ZEMACS_RUNTIME</code> environment variable to point to the runtime files using the Windows setting (search for
 <code>Edit environment variables for your account</code>) or use the <code>setx</code> command in
 Cmd:</p>
-<pre><code class="language-sh">setx HELIX_RUNTIME "%userprofile%\src\helix\runtime"
+<pre><code class="language-sh">setx ZEMACS_RUNTIME "%userprofile%\src\zemacs\runtime"
 </code></pre>
 <blockquote>
 <p>💡 <code>%userprofile%</code> resolves to your user directory like
 <code>C:\Users\Your-Name\</code> for example.</p>
 </blockquote>
-<p>Or, create a symlink in <code>%appdata%\helix\</code> that links to the source code directory:</p>
+<p>Or, create a symlink in <code>%appdata%\zemacs\</code> that links to the source code directory:</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Method</th><th>Command</th></tr>
 </thead>
 <tbody>
-<tr><td>PowerShell</td><td><code>New-Item -ItemType Junction -Target "runtime" -Path "$Env:AppData\helix\runtime"</code></td></tr>
-<tr><td>Cmd</td><td><code>cd %appdata%\helix</code> <br /> <code>mklink /D runtime "%userprofile%\src\helix\runtime"</code></td></tr>
+<tr><td>PowerShell</td><td><code>New-Item -ItemType Junction -Target "runtime" -Path "$Env:AppData\zemacs\runtime"</code></td></tr>
+<tr><td>Cmd</td><td><code>cd %appdata%\zemacs</code> <br /> <code>mklink /D runtime "%userprofile%\src\zemacs\runtime"</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -450,37 +474,37 @@ Cmd:</p>
 Cmd as an administrator.</p>
 </blockquote>
 <h4 id="multiple-runtime-directories"><a class="header" href="#multiple-runtime-directories">Multiple runtime directories</a></h4>
-<p>When Helix finds multiple runtime directories it will search through them for files in the
+<p>When Zemacs finds multiple runtime directories it will search through them for files in the
 following order:</p>
 <ol>
 <li><code>runtime/</code> sibling directory to <code>$CARGO_MANIFEST_DIR</code> directory (this is intended for
-developing and testing helix only).</li>
-<li><code>runtime/</code> subdirectory of OS-dependent helix user config directory.</li>
-<li><code>$HELIX_RUNTIME</code></li>
+developing and testing zemacs only).</li>
+<li><code>runtime/</code> subdirectory of OS-dependent zemacs user config directory.</li>
+<li><code>$ZEMACS_RUNTIME</code></li>
 <li>Distribution-specific fallback directory (set at compile time—not run time—
-with the <code>HELIX_DEFAULT_RUNTIME</code> environment variable)</li>
-<li><code>runtime/</code> subdirectory of path to Helix executable.</li>
+with the <code>ZEMACS_DEFAULT_RUNTIME</code> environment variable)</li>
+<li><code>runtime/</code> subdirectory of path to Zemacs executable.</li>
 </ol>
 <p>This order also sets the priority for selecting which file will be used if multiple runtime
 directories have files with the same name.</p>
 <h4 id="note-to-packagers"><a class="header" href="#note-to-packagers">Note to packagers</a></h4>
-<p>If you are making a package of Helix for end users, to provide a good out of
-the box experience, you should set the <code>HELIX_DEFAULT_RUNTIME</code> environment
+<p>If you are making a package of Zemacs for end users, to provide a good out of
+the box experience, you should set the <code>ZEMACS_DEFAULT_RUNTIME</code> environment
 variable at build time (before invoking <code>cargo build</code>) to a directory which
 will store the final runtime files after installation. For example, say you want
-to package the runtime into <code>/usr/lib/helix/runtime</code>. The rough steps a build
+to package the runtime into <code>/usr/lib/zemacs/runtime</code>. The rough steps a build
 script could follow are:</p>
 <ol>
-<li><code>export HELIX_DEFAULT_RUNTIME=/usr/lib/helix/runtime</code></li>
+<li><code>export ZEMACS_DEFAULT_RUNTIME=/usr/lib/zemacs/runtime</code></li>
 <li><code>cargo build --profile opt --locked</code></li>
-<li><code>cp -r runtime $BUILD_DIR/usr/lib/helix/</code></li>
+<li><code>cp -r runtime $BUILD_DIR/usr/lib/zemacs/</code></li>
 <li><code>cp target/opt/hx $BUILD_DIR/usr/bin/hx</code></li>
 </ol>
 <p>This way the resulting <code>hx</code> binary will always look for its runtime directory in
-<code>/usr/lib/helix/runtime</code> if the user has no custom runtime in <code>~/.config/helix</code>
-or <code>HELIX_RUNTIME</code>.</p>
+<code>/usr/lib/zemacs/runtime</code> if the user has no custom runtime in <code>~/.config/zemacs</code>
+or <code>ZEMACS_RUNTIME</code>.</p>
 <h3 id="validating-the-installation"><a class="header" href="#validating-the-installation">Validating the installation</a></h3>
-<p>To make sure everything is set up as expected you should run the Helix health
+<p>To make sure everything is set up as expected you should run the Zemacs health
 check:</p>
 <pre><code class="language-sh">hx --health
 </code></pre>
@@ -489,19 +513,19 @@ check:</p>
 <h3 id="configure-the-desktop-shortcut"><a class="header" href="#configure-the-desktop-shortcut">Configure the desktop shortcut</a></h3>
 <p>If your desktop environment supports the
 <a href="https://specifications.freedesktop.org/menu-spec/menu-spec-latest.html">XDG desktop menu</a>
-you can configure Helix to show up in the application menu by copying the
+you can configure Zemacs to show up in the application menu by copying the
 provided <code>.desktop</code> and icon files to their correct folders:</p>
-<pre><code class="language-sh">cp contrib/Helix.desktop ~/.local/share/applications
-cp contrib/helix.png ~/.icons # or ~/.local/share/icons
+<pre><code class="language-sh">cp contrib/Zemacs.desktop ~/.local/share/applications
+cp contrib/zemacs.png ~/.icons # or ~/.local/share/icons
 </code></pre>
 <p>It is recommended to convert the links in the <code>.desktop</code> file to absolute paths to avoid potential problems:</p>
 <pre><code class="language-sh">sed -i -e "s|Exec=hx %F|Exec=$(readlink -f ~/.cargo/bin/hx) %F|g" \
-  -e "s|Icon=helix|Icon=$(readlink -f ~/.icons/helix.png)|g" ~/.local/share/applications/Helix.desktop
+  -e "s|Icon=zemacs|Icon=$(readlink -f ~/.icons/zemacs.png)|g" ~/.local/share/applications/Zemacs.desktop
 </code></pre>
 <p>To use another terminal than the system default, you can modify the <code>.desktop</code>
 file. For example, to use <code>kitty</code>:</p>
-<pre><code class="language-sh">sed -i "s|Exec=hx %F|Exec=kitty hx %F|g" ~/.local/share/applications/Helix.desktop
-sed -i "s|Terminal=true|Terminal=false|g" ~/.local/share/applications/Helix.desktop
+<pre><code class="language-sh">sed -i "s|Exec=hx %F|Exec=kitty hx %F|g" ~/.local/share/applications/Zemacs.desktop
+sed -i "s|Terminal=true|Terminal=false|g" ~/.local/share/applications/Zemacs.desktop
 </code></pre>
 <h3 id="building-the-debian-package"><a class="header" href="#building-the-debian-package">Building the Debian package</a></h3>
 <p>If the <code>.deb</code> file provided on the release page uses a <code>libc</code> version higher
@@ -510,12 +534,12 @@ from source to match your system’s dependencies.</p>
 <p>Install <code>cargo-deb</code>, the tool used for building the <code>.deb</code> file:</p>
 <pre><code class="language-sh">cargo install cargo-deb
 </code></pre>
-<p>After cloning and entering the Helix repository as previously described,
+<p>After cloning and entering the Zemacs repository as previously described,
 use the following command to build the release binary and package it into a <code>.deb</code> file in a single step.</p>
 <pre><code class="language-sh">cargo deb -- --locked
 </code></pre>
 <blockquote>
-<p>💡 This locks you into the <code>--release</code> profile. But you can also build helix in any way you like.
+<p>💡 This locks you into the <code>--release</code> profile. But you can also build zemacs in any way you like.
 As long as you leave a <code>target/release/hx</code> file, it will get packaged with <code>cargo deb --no-build</code></p>
 </blockquote>
 <blockquote>
@@ -529,12 +553,12 @@ so far the dependency deriving seams very good, even if some of the grammar file
 <ul>
 <li>completions for bash, fish, zsh</li>
 <li>.desktop file</li>
-<li>icon (though desktop environments might use their own since the name of the package is correctly <code>helix</code>)</li>
+<li>icon (though desktop environments might use their own since the name of the package is correctly <code>zemacs</code>)</li>
 <li>launcher to the binary with the runtime</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="using-helix"><a class="header" href="#using-helix">Using Helix</a></h1>
-<p>For a full interactive introduction to Helix, refer to the
+<h1 id="using-zemacs"><a class="header" href="#using-zemacs">Using Zemacs</a></h1>
+<p>For a full interactive introduction to Zemacs, refer to the
 <a href="https://github.com/helix-editor/helix/blob/master/runtime/tutor">tutor</a> which
 can be accessed via the command <code>hx --tutor</code> or <code>:tutor</code>.</p>
 <blockquote>
@@ -542,7 +566,7 @@ can be accessed via the command <code>hx --tutor</code> or <code>:tutor</code>.<
 <a href="#keymap-1">key mappings</a> list.</p>
 </blockquote>
 <h2 id="modes"><a class="header" href="#modes">Modes</a></h2>
-<p>Helix is a modal editor, meaning it has different modes for different tasks. The main modes are:</p>
+<p>Zemacs is a modal editor, meaning it has different modes for different tasks. The main modes are:</p>
 <ul>
 <li><a href="#normal-mode">Normal mode</a>: For navigation and editing commands. This is the default mode.</li>
 <li><a href="#insert-mode">Insert mode</a>: For typing text directly into the document. Access by typing <code>i</code> in normal mode.</li>
@@ -551,9 +575,9 @@ can be accessed via the command <code>hx --tutor</code> or <code>:tutor</code>.<
 <h2 id="buffers"><a class="header" href="#buffers">Buffers</a></h2>
 <p>Buffers are in-memory representations of files. You can have multiple buffers open at once. Use <a href="#pickers">pickers</a> or commands like <code>:buffer-next</code> and <code>:buffer-previous</code> to open buffers or switch between them.</p>
 <h2 id="selection-first-editing"><a class="header" href="#selection-first-editing">Selection-first editing</a></h2>
-<p>Inspired by <a href="http://kakoune.org/">Kakoune</a>, Helix follows the <code>selection → action</code> model. This means that whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action itself (delete, change, yank, etc.) comes second. A cursor is simply a single width selection.</p>
+<p>Inspired by <a href="http://kakoune.org/">Kakoune</a>, Zemacs follows the <code>selection → action</code> model. This means that whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action itself (delete, change, yank, etc.) comes second. A cursor is simply a single width selection.</p>
 <h2 id="multiple-selections"><a class="header" href="#multiple-selections">Multiple selections</a></h2>
-<p>Also inspired by Kakoune, multiple selections are a core mode of interaction in Helix. For example, the standard way of replacing multiple instances of a word is to first select all instances (so there is one selection per instance) and then use the change action (<code>c</code>) to edit them all at the same time.</p>
+<p>Also inspired by Kakoune, multiple selections are a core mode of interaction in Zemacs. For example, the standard way of replacing multiple instances of a word is to first select all instances (so there is one selection per instance) and then use the change action (<code>c</code>) to edit them all at the same time.</p>
 <h2 id="motions"><a class="header" href="#motions">Motions</a></h2>
 <p>Motions are commands that move the cursor or modify selections. They’re used for navigation and text manipulation. Examples include <code>w</code> to move to the next word, or <code>f</code> to find a character. See the <a href="#movement">Movement</a> section of the keymap for more motions.</p>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -564,12 +588,12 @@ can be accessed via the command <code>hx --tutor</code> or <code>:tutor</code>.<
 <li><a href="#default-registers">Default registers</a></li>
 <li><a href="#special-registers">Special registers</a></li>
 </ul>
-<p>In Helix, registers are storage locations for text and other data, such as the
+<p>In Zemacs, registers are storage locations for text and other data, such as the
 result of a search. Registers can be used to cut, copy, and paste text, similar
 to the clipboard in other text editors. Usage is similar to Vim, with <code>"</code> being
 used to select a register.</p>
 <h3 id="user-defined-registers"><a class="header" href="#user-defined-registers">User-defined registers</a></h3>
-<p>Helix allows you to create your own named registers for storing text, for
+<p>Zemacs allows you to create your own named registers for storing text, for
 example:</p>
 <ul>
 <li><code>"ay</code> - Yank the current selection to register <code>a</code>.</li>
@@ -615,12 +639,12 @@ These registers are used as defaults:</p>
 </div>
 <p>When yanking multiple selections to the clipboard registers, the selections
 are joined with newlines. Pasting from these registers will paste multiple
-selections if the clipboard was last yanked to by the Helix session. Otherwise
+selections if the clipboard was last yanked to by the Zemacs session. Otherwise
 the clipboard contents are pasted as one selection.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="surround-1"><a href="#surround-1" class="header">Surround</a></h1>
 <h2 id="surround"><a class="header" href="#surround">Surround</a></h2>
-<p>Helix includes built-in functionality similar to <a href="https://github.com/tpope/vim-surround">vim-surround</a>.
+<p>Zemacs includes built-in functionality similar to <a href="https://github.com/tpope/vim-surround">vim-surround</a>.
 The keymappings have been inspired from <a href="https://github.com/machakann/vim-sandwich">vim-sandwich</a>:</p>
 <p><img src="https://user-images.githubusercontent.com/23398472/122865801-97073180-d344-11eb-8142-8f43809982c6.gif" alt="Surround demo"></p>
 <div class="table-wrapper">
@@ -647,7 +671,7 @@ The keymappings have been inspired from <a href="https://github.com/machakann/vi
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="textobjects"><a href="#textobjects" class="header">Textobjects</a></h1>
 <h2 id="selecting-and-manipulating-text-with-textobjects"><a class="header" href="#selecting-and-manipulating-text-with-textobjects">Selecting and manipulating text with textobjects</a></h2>
-<p>In Helix, textobjects are a way to select, manipulate and operate on a piece of
+<p>In Zemacs, textobjects are a way to select, manipulate and operate on a piece of
 text in a structured way. They allow you to refer to blocks of text based on
 their structure or purpose, such as a word, sentence, paragraph, or even a
 function or block of code.</p>
@@ -749,18 +773,18 @@ selection to the “func” <code>identifier</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="pickers"><a href="#pickers" class="header">Pickers</a></h1>
 <h2 id="using-pickers"><a class="header" href="#using-pickers">Using pickers</a></h2>
-<p>Helix has a variety of pickers, which are interactive windows used to select various kinds of items. These include a file picker, global search picker, and more. Most pickers are accessed via keybindings in <a href="#space-mode">space mode</a>. Pickers have their own <a href="#picker">keymap</a> for navigation.</p>
+<p>Zemacs has a variety of pickers, which are interactive windows used to select various kinds of items. These include a file picker, global search picker, and more. Most pickers are accessed via keybindings in <a href="#space-mode">space mode</a>. Pickers have their own <a href="#picker">keymap</a> for navigation.</p>
 <h3 id="filtering-picker-results"><a class="header" href="#filtering-picker-results">Filtering Picker Results</a></h3>
 <p>Most pickers perform fuzzy matching using <a href="https://github.com/junegunn/fzf?tab=readme-ov-file#search-syntax">fzf syntax</a>. Two exceptions are the global search picker, which uses regex, and the workspace symbol picker, which passes search terms to the language server. Note that OR operations (<code>|</code>) are not currently supported.</p>
-<p>If a picker shows multiple columns, you may apply the filter to a specific column by prefixing the column name with <code>%</code>. Column names can be shortened to any prefix, so <code>%p</code>, <code>%pa</code> or <code>%pat</code> all mean the same as <code>%path</code>. For example, a query of <code>helix %p .toml !lang</code> in the global search picker searches for the term “helix” within files with paths ending in “.toml” but not including “lang”.</p>
+<p>If a picker shows multiple columns, you may apply the filter to a specific column by prefixing the column name with <code>%</code>. Column names can be shortened to any prefix, so <code>%p</code>, <code>%pa</code> or <code>%pat</code> all mean the same as <code>%path</code>. For example, a query of <code>zemacs %p .toml !lang</code> in the global search picker searches for the term “zemacs” within files with paths ending in “.toml” but not including “lang”.</p>
 <p>You can insert the contents of a <a href="#registers-1">register</a> using <code>Ctrl-r</code> followed by a register name. For example, one could insert the currently selected text using <code>Ctrl-r</code>-<code>.</code>, or the directory of the current file using <code>Ctrl-r</code>-<code>%</code> followed by <code>Ctrl-w</code> to remove the last path section. The global search picker will use the contents of the <a href="#default-registers">search register</a> if you press <code>Enter</code> without typing a filter. For example, pressing <code>*</code>-<code>Space-/</code>-<code>Enter</code> will start a global search for the currently selected text.</p>
 <h3 id="file-explorer"><a class="header" href="#file-explorer">File explorer</a></h3>
 <p><code>Space-e</code> opens an interactive file explorer for browsing and opening files, rooted at the workspace; <code>Space-.</code> opens one rooted at the current buffer’s directory. Unlike the file picker, the explorer does not ignore most files by default; its ignore behaviour is configured separately in the <a href="#editorfile-explorer-section"><code>[editor.file-explorer]</code></a> section.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="jumplist"><a href="#jumplist" class="header">Jumplist</a></h1>
 <h2 id="using-the-jumplist"><a class="header" href="#using-the-jumplist">Using the jumplist</a></h2>
-<p>To help with quick navigation, Helix maintains a list of “jumps” called the jumplist.
-Whenever you make a significant movement (see next section), Helix stores your selections from before the move as a jump.
+<p>To help with quick navigation, Zemacs maintains a list of “jumps” called the jumplist.
+Whenever you make a significant movement (see next section), Zemacs stores your selections from before the move as a jump.
 A jump serves as a kind of checkpoint, allowing you to jump to a separate location, make edits, and return to where you were with your previous selections.
 This way, the jumplist tracks both your previous location and your selections.
 You can manually save a jump by using <code>Ctrl-s</code>.
@@ -853,7 +877,7 @@ To jump backward in the jumplist, use <code>Ctrl-o</code>; to go forward, use <c
 <p>⚠️ Some terminals’ default key mappings conflict with Helix’s. If any of the mappings described on this page do not work as expected, check your terminal’s mappings to ensure they do not conflict. See the <a href="https://github.com/helix-editor/helix/wiki/Terminal-Support">wiki</a> for known conflicts.</p>
 </blockquote>
 <h2 id="normal-mode"><a class="header" href="#normal-mode">Normal mode</a></h2>
-<p>Normal mode is the default mode when you launch helix. You can return to it from other modes by pressing the <code>Escape</code> key.</p>
+<p>Normal mode is the default mode when you launch zemacs. You can return to it from other modes by pressing the <code>Escape</code> key.</p>
 <h3 id="movement"><a class="header" href="#movement">Movement</a></h3>
 <blockquote>
 <p>NOTE: Unlike Vim, <code>f</code>, <code>F</code>, <code>t</code> and <code>T</code> are not confined to the current line.</p>
@@ -933,7 +957,7 @@ To jump backward in the jumplist, use <code>Ctrl-o</code>; to go forward, use <c
 <tr><td><code>Ctrl-x</code></td><td>Decrement object (number) under cursor</td><td><code>decrement</code></td></tr>
 <tr><td><code>Q</code></td><td>Start/stop macro recording to the selected register (experimental)</td><td><code>record_macro</code></td></tr>
 <tr><td><code>q</code></td><td>Play back a recorded macro from the selected register (experimental)</td><td><code>replay_macro</code></td></tr>
-<tr><td><code>Ctrl-z</code></td><td>Suspend Helix and return to the shell (resume with <code>fg</code>)</td><td><code>suspend</code></td></tr>
+<tr><td><code>Ctrl-z</code></td><td>Suspend Zemacs and return to the shell (resume with <code>fg</code>)</td><td><code>suspend</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -1270,7 +1294,7 @@ useful when you’re simply looking over text and not actively editing it.</p>
 </div>
 <h2 id="insert-mode"><a class="header" href="#insert-mode">Insert mode</a></h2>
 <p>Accessed by typing <code>i</code> in <a href="#normal-mode">normal mode</a>.</p>
-<p>Insert mode bindings are minimal by default. Helix is designed to
+<p>Insert mode bindings are minimal by default. Zemacs is designed to
 be a modal editor, and this is reflected in the user experience and internal
 mechanics. Changes to the text are only saved for undos when
 escaping from insert mode to normal mode.</p>
@@ -1416,14 +1440,14 @@ See the documentation page on <a href="#pickers">pickers</a> for more info.
 <p>Command flags are optional switches that can be used to alter the behavior of a command. For example the <code>:sort</code> command accepts an optional <code>--reverse</code> (or <code>-r</code> for short) flag which causes the sort command to reverse the sorting direction. Typing the <code>-</code> character shows completions for the current command’s flags, if any.</p>
 <p>The <code>--</code> flag specifies the end of flags. All arguments after <code>--</code> are treated as positional arguments: <code>:open -- -a.txt</code> opens a file called <code>-a.txt</code>.</p>
 <h2 id="expansions"><a class="header" href="#expansions">Expansions</a></h2>
-<p>Expansions are patterns that Helix recognizes and replaces within the command line. Helix recognizes anything starting with a percent token (<code>%</code>) as an expansion, for example <code>%sh{echo hi!}</code>. Expansions are particularly useful when used in commands like <code>:echo</code> or <code>:noop</code> for executing simple scripts. For example:</p>
+<p>Expansions are patterns that Zemacs recognizes and replaces within the command line. Zemacs recognizes anything starting with a percent token (<code>%</code>) as an expansion, for example <code>%sh{echo hi!}</code>. Expansions are particularly useful when used in commands like <code>:echo</code> or <code>:noop</code> for executing simple scripts. For example:</p>
 <pre><code class="language-toml">[keys.normal]
 # Print the current line's git blame information to the statusline.
 space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 </code></pre>
 <p>Expansions take the form <code>%[&lt;kind&gt;]&lt;open&gt;&lt;contents&gt;&lt;close&gt;</code>. In <code>%sh{echo hi!}</code>, for example, the kind is <code>sh</code> - the shell expansion - and the contents are “echo hi!”, with <code>{</code> and <code>}</code> acting as opening and closing delimiters. The following open/close characters are recognized as expansion delimiter pairs: <code>(</code>/<code>)</code>, <code>[</code>/<code>]</code>, <code>{</code>/<code>}</code> and <code>&lt;</code>/<code>&gt;</code>. Plus the single characters <code>'</code>, <code>"</code> or <code>|</code> may be used instead: <code>%{cursor_line}</code> is equivalent to <code>%&lt;cursor_line&gt;</code>, <code>%[cursor_line]</code> or <code>%|cursor_line|</code>.</p>
 <p>To escape a percent character instead of treating it as an expansion, use two percent characters consecutively. To execute a shell command like <code>date -u +'%Y-%m-%d'</code>, double the percent characters: <code>:echo %sh{date -u +'%%Y-%%m-%%d'}</code>.</p>
-<p>When no <code>&lt;kind&gt;</code> is provided, Helix will expand a <strong>variable</strong>. For example <code>%{cursor_line}</code> can be used as in argument to insert the line number. <code>:echo %{cursor_line}</code> for instance may print <code>1</code> to the statusline.</p>
+<p>When no <code>&lt;kind&gt;</code> is provided, Zemacs will expand a <strong>variable</strong>. For example <code>%{cursor_line}</code> can be used as in argument to insert the line number. <code>:echo %{cursor_line}</code> for instance may print <code>1</code> to the statusline.</p>
 <p>The following variables are supported:</p>
 <div class="table-wrapper">
 <table>
@@ -1437,7 +1461,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>file_path_absolute</code></td><td>The absolute path of the currently focused document. For scratch buffers this will default to the current working directory.</td></tr>
 <tr><td><code>line_ending</code></td><td>A string containing the line ending of the currently focused document. For example on Unix systems this is usually a line-feed character (<code>\n</code>) but on Windows systems this may be a carriage-return plus a line-feed (<code>\r\n</code>). The line ending kind of the currently focused document can be inspected with the <code>:line-ending</code> command.</td></tr>
 <tr><td><code>current_working_directory</code></td><td>Current working directory</td></tr>
-<tr><td><code>workspace_directory</code></td><td>Nearest ancestor directory of the current working directory that contains <code>.git</code>, <code>.svn</code>, <code>jj</code> or <code>.helix</code></td></tr>
+<tr><td><code>workspace_directory</code></td><td>Nearest ancestor directory of the current working directory that contains <code>.git</code>, <code>.svn</code>, <code>jj</code> or <code>.zemacs</code></td></tr>
 <tr><td><code>language</code></td><td>A string containing the language name of the currently focused document.</td></tr>
 <tr><td><code>selection</code></td><td>A string containing the contents of the primary selection of the currently focused document.</td></tr>
 <tr><td><code>selection_line_start</code></td><td>The line number of the start of the primary selection in the currently focused document, starting at 1.</td></tr>
@@ -1567,7 +1591,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:config-reload</code></td><td>Refresh user config.</td></tr>
 <tr><td><code>:config-open</code></td><td>Open the user config.toml file.</td></tr>
 <tr><td><code>:config-open-workspace</code></td><td>Open the workspace config.toml file.</td></tr>
-<tr><td><code>:log-open</code></td><td>Open the helix log file.</td></tr>
+<tr><td><code>:log-open</code></td><td>Open the zemacs log file.</td></tr>
 <tr><td><code>:insert-output</code></td><td>Run shell command, inserting output before each selection.</td></tr>
 <tr><td><code>:append-output</code></td><td>Run shell command, appending output after each selection.</td></tr>
 <tr><td><code>:pipe</code>, <code>:|</code></td><td>Pipe each selection to the shell command.</td></tr>
@@ -1914,14 +1938,75 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 </table>
 </div>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="embedded-scripting"><a class="header" href="#embedded-scripting">Embedded scripting</a></h1>
+<p>zemacs embeds several scripting interpreters directly in the editor binary, so
+you can evaluate scripts against the live buffer with no external process. Each
+language drives the editor through one uniform host API.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Language</th><th>Command(s)</th><th>Interpreter</th><th>Platforms</th></tr>
+</thead>
+<tbody>
+<tr><td>Emacs Lisp</td><td><code>:elisp</code> (<code>:eval-expression</code>, <code>:el</code>)</td><td><code>elisprs</code></td><td>all</td></tr>
+<tr><td>Vimscript (VimL)</td><td><code>:vim</code> (<code>:viml</code>, <code>:vimscript</code>)</td><td><code>vimlrs</code></td><td>all</td></tr>
+<tr><td>AWK</td><td><code>:awk</code> (<code>:awk-filter</code>)</td><td><code>awkrs</code></td><td>all</td></tr>
+<tr><td>zsh</td><td><code>:zsh</code> (<code>:zshell</code>)</td><td><code>zshrs</code></td><td>unix only</td></tr>
+<tr><td>stryke</td><td><code>:stryke</code> (<code>:st</code>)</td><td><code>strykelang</code></td><td>unix only</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<p>💡 These are gated behind the <code>scripting</code> Cargo feature, which is <strong>on by
+default</strong>. A build made with <code>--no-default-features</code> (see
+<a href="#cargo-features">Building from source</a>) omits all of
+them — the commands below then report that scripting was not compiled in.</p>
+</blockquote>
+<h2 id="commands-1"><a class="header" href="#commands-1">Commands</a></h2>
+<ul>
+<li><strong><code>:elisp &lt;code&gt;</code></strong> — evaluate an Emacs Lisp expression against the editor;
+the result is shown on the status line. A subset of the editor is exposed as
+elisp builtins (point/region, buffer access, <code>message</code>, running typable
+commands, etc.).</li>
+<li><strong><code>:vim &lt;code&gt;</code></strong> — evaluate Vimscript; captured <code>:echo</code> output and the
+trailing expression value are shown. Globals and functions persist across
+calls.</li>
+<li><strong><code>:awk &lt;program&gt;</code></strong> — filter the current selection (or the whole buffer when
+there is no selection) through an AWK program, replacing it with the program’s
+output as a single undo step.</li>
+<li><strong><code>:zsh &lt;command&gt;</code></strong> — run a command line in the embedded shell; its captured
+output is shown in a popup. Shell state (variables, functions, <code>cwd</code>) persists
+across calls. <em>Note: <code>cd</code>/<code>export</code> mutate the real editor process.</em></li>
+<li><strong><code>:stryke &lt;code&gt;</code></strong> — evaluate stryke (strykelang) source; state persists
+across calls.</li>
+</ul>
+<h2 id="repl"><a class="header" href="#repl">REPL</a></h2>
+<p><code>SPC a r</code> (or <code>:repl [lang]</code>) opens a full-screen REPL panel fronting all of the
+embedded languages behind one read-eval-print loop:</p>
+<ul>
+<li><strong>Enter</strong> evaluates, <strong>Alt-Enter</strong> inserts a newline.</li>
+<li><strong>Tab</strong> / <strong>Shift-Tab</strong> cycle the active language.</li>
+<li><strong>↑/↓</strong> or <strong>C-p/C-n</strong> browse per-language history.</li>
+<li><strong>C-l</strong> clears the transcript, <strong>PgUp/PgDn</strong> scroll, <strong>Esc</strong> closes.</li>
+</ul>
+<p><code>:repl awk</code> (etc.) opens directly on a given language. Per-language input history
+is persisted to <code>~/.zemacs/repl-history.toml</code>.</p>
+<h2 id="startup-scripts"><a class="header" href="#startup-scripts">Startup scripts</a></h2>
+<p>At startup zemacs loads these files from the config directory (<code>~/.zemacs/</code>) if
+they exist, best-effort (errors surface on the status line):</p>
+<ul>
+<li><code>init.el</code> — evaluated as Emacs Lisp.</li>
+<li><code>init.vim</code> — evaluated as Vimscript.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="language-servers"><a class="header" href="#language-servers">Language servers</a></h1>
-<p>Helix has built-in support for the <a href="https://microsoft.github.io/language-server-protocol/">Language Server Protocol</a>, providing
+<p>Zemacs has built-in support for the <a href="https://microsoft.github.io/language-server-protocol/">Language Server Protocol</a>, providing
 IDE-like features — diagnostics, completion, goto-definition, rename and more,
 for any language that has a server configured. Language servers are separate
 programs you install yourself: the <a href="#language-support-1">language support</a> page
 lists which languages ship with a server configured, and the
 <a href="https://github.com/helix-editor/helix/wiki/Language-Server-Configurations">language server configuration wiki</a> has per-server installation notes.</p>
-<p>Run <code>hx --health &lt;language&gt;</code> to check whether Helix found the configured server
+<p>Run <code>hx --health &lt;language&gt;</code> to check whether Zemacs found the configured server
 for a language. After changing a server’s configuration, <code>:lsp-restart</code> reloads
 it and <code>:lsp-stop</code> stops it; <code>:lsp-workspace-command</code> runs a command the server
 exposes for the workspace.</p>
@@ -1965,7 +2050,7 @@ server’s features can be limited with <code>only-features</code> / <code>excep
 <p>The following languages and Language Servers are supported. To use
 Language Server features, you must first <a href="https://github.com/helix-editor/helix/wiki/Language-Server-Configurations">configure</a> the
 appropriate Language Server.</p>
-<p>You can check the language support in your installed helix version with <code>hx --health</code>.</p>
+<p>You can check the language support in your installed zemacs version with <code>hx --health</code>.</p>
 <p>Also see the <a href="#languages-1">Language Configuration</a> docs and the <a href="#adding-languages">Adding
 Languages</a> guide for more language configuration information.</p>
 <div class="table-wrapper">
@@ -2313,25 +2398,25 @@ Languages</a> guide for more language configuration information.</p>
 </div>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="workspace-trust"><a class="header" href="#workspace-trust">Workspace trust</a></h1>
-<p>Helix has several features that can execute arbitrary code:</p>
+<p>Zemacs has several features that can execute arbitrary code:</p>
 <ul>
 <li>Language servers (LSP)</li>
 <li>Debug adapters (DAP)</li>
-<li>Local workspace configuration (<code>.helix/config.toml</code>, <code>.helix/languages.toml</code>)</li>
+<li>Local workspace configuration (<code>.zemacs/config.toml</code>, <code>.zemacs/languages.toml</code>)</li>
 <li>Git integration (filters and other commands in a repository’s <code>.git/config</code>)</li>
 </ul>
 <p>To protect against malicious projects (a checked-out PR, a freshly cloned
-repository, etc.) Helix gates these behind explicit per-workspace trust.
+repository, etc.) Zemacs gates these behind explicit per-workspace trust.
 By default language servers start automatically (their binaries come from
 <code>$PATH</code>, not from the workspace) and debug adapters may be launched, but
-loading <code>.helix/config.toml</code> or <code>.helix/languages.toml</code> and trusting a
+loading <code>.zemacs/config.toml</code> or <code>.zemacs/languages.toml</code> and trusting a
 repository’s <code>.git/config</code> requires opting in. Note that debug adapters
 are never started automatically — you launch them yourself — but the same
 trust level still gates whether they may run. The model is intentionally
 similar to <a href="https://direnv.net/">direnv</a>: you run <code>:workspace-trust</code> once
-per workspace and Helix remembers across sessions.</p>
+per workspace and Zemacs remembers across sessions.</p>
 <h2 id="granting-trust"><a class="header" href="#granting-trust">Granting trust</a></h2>
-<p>When Helix opens a file inside a workspace it has never seen before, a
+<p>When Zemacs opens a file inside a workspace it has never seen before, a
 modal trust prompt asks:</p>
 <ul>
 <li><strong>Trust</strong> — allow the workspace permanently.</li>
@@ -2339,7 +2424,7 @@ modal trust prompt asks:</p>
 </ul>
 <p><code>&lt;Esc&gt;</code> (or any other dismissal) caches “untrusted for this session” so
 the prompt doesn’t re-fire for every file you open in the workspace. The
-next time you start Helix in that workspace, it’ll prompt again.</p>
+next time you start Zemacs in that workspace, it’ll prompt again.</p>
 <p>A small <code>[⚠]</code> indicator appears in the bottom-right of the editor (next
 to the macro-recording <code>[@]</code>) whenever the workspace is in restricted mode
 <em>and</em> running <code>:workspace-trust</code> would change observable behavior — i.e.
@@ -2350,16 +2435,16 @@ when there’s a local config to load or an LSP that would start.</p>
 <p>Run <code>:workspace-untrust</code> to revoke a workspace’s trust grant. The next time
 you open a file in that workspace, you’re back to the untrusted hint.</p>
 <h2 id="detecting-changes-after-trust-was-granted"><a class="header" href="#detecting-changes-after-trust-was-granted">Detecting changes after trust was granted</a></h2>
-<p>When you trust a workspace, Helix records a hash of every file under
-<code>.helix/</code>. If those files change afterwards (a malicious checkout, an
-inadvertent rebase, etc.) Helix detects the mismatch on the next open and
+<p>When you trust a workspace, Zemacs records a hash of every file under
+<code>.zemacs/</code>. If those files change afterwards (a malicious checkout, an
+inadvertent rebase, etc.) Zemacs detects the mismatch on the next open and
 reports the workspace as <em>stale</em>:</p>
-<pre><code>Workspace `.helix/` config changed since `:workspace-trust`. Local config
+<pre><code>Workspace `.zemacs/` config changed since `:workspace-trust`. Local config
 not loaded. Run `:workspace-trust` to re-allow.
 </code></pre>
 <p>In the stale state, language servers continue to run (they use the
 globally-configured binaries on <code>$PATH</code>, which are unchanged), but
-<code>.helix/config.toml</code> and <code>.helix/languages.toml</code> are not loaded. Run
+<code>.zemacs/config.toml</code> and <code>.zemacs/languages.toml</code> are not loaded. Run
 <code>:workspace-trust</code> again to re-pin the new hash.</p>
 <h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <p>Trust grants live in <code>data_dir()/workspace_trust/</code>, one small file per
@@ -2370,10 +2455,10 @@ hash = sha256:abc123...
 excluded = false
 </code></pre>
 <ul>
-<li>Linux, macOS: <code>~/.local/share/helix/workspace_trust/</code></li>
-<li>Windows: <code>%AppData%\Roaming\helix\workspace_trust\</code></li>
+<li>Linux, macOS: <code>~/.local/share/zemacs/workspace_trust/</code></li>
+<li>Windows: <code>%AppData%\Roaming\zemacs\workspace_trust\</code></li>
 </ul>
-<p>The one-file-per-workspace shape is safe under multiple concurrent Helix
+<p>The one-file-per-workspace shape is safe under multiple concurrent Zemacs
 instances — different workspaces never write the same file.</p>
 <h2 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h2>
 <p>Settings live under <code>[editor.workspace-trust]</code>:</p>
@@ -2398,7 +2483,7 @@ prompt = true
 <p>Language servers start automatically in every workspace — their binaries
 come from <code>$PATH</code> and are not workspace-controlled — and debug adapters
 you launch are allowed to run. The modal only appears when opening a file
-in a workspace whose <code>.helix/config.toml</code> or <code>.helix/languages.toml</code> would
+in a workspace whose <code>.zemacs/config.toml</code> or <code>.zemacs/languages.toml</code> would
 unlock something. Trust everything else with one keystroke per workspace,
 deny with another.</p>
 <p><strong>Maximum security: never prompt, trust each workspace by hand.</strong></p>
@@ -2416,7 +2501,7 @@ deliberate action than dismiss a dialog.</p>
 <p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
 <p><code>level = "insecure"</code> is highly discouraged. It implicitly trusts every
 workspace you open, which defeats the protection entirely: a
-checked-out PR with a malicious <code>.helix/config.toml</code> would get its
+checked-out PR with a malicious <code>.zemacs/config.toml</code> would get its
 configuration loaded and any language server it defines launched, with
 no prompt and no indicator. Only set this if you accept full
 responsibility for what’s in every project directory you <code>cd</code> into.</p>
@@ -2437,7 +2522,7 @@ are expanded.</p>
 <blockquote class="blockquote-tag blockquote-tag-warning">
 <p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
 <p>This is weaker than an explicit grant and is discouraged. It skips the
-<code>.helix/</code> change detection entirely (a malicious checkout under a
+<code>.zemacs/</code> change detection entirely (a malicious checkout under a
 matched directory is never flagged as stale), and it trusts <em>any</em>
 repository that later lands under a matching path — including one you
 clone into <code>~/src/github.com/me/</code> from an untrusted source. Prefer
@@ -2446,7 +2531,7 @@ genuinely disruptive to your workflow. An explicit <code>:workspace-exclude</cod
 still overrides a matching pattern.</p>
 </blockquote>
 <h2 id="git-trust"><a class="header" href="#git-trust">Git trust</a></h2>
-<p>Workspace trust also gates how Helix opens git repositories. Untrusted
+<p>Workspace trust also gates how Zemacs opens git repositories. Untrusted
 workspaces are opened in <a href="https://github.com/Byron/gitoxide">gix</a>’s
 <code>Trust::Reduced</code> mode; trusted workspaces use <code>Trust::Full</code>.</p>
 <p>Under <code>Trust::Reduced</code>, gix still runs the full filter pipeline (so
@@ -2455,13 +2540,13 @@ configuration coming from the untrusted, repository-local <code>.git/config</cod
 That means <code>filter.*.clean</code> / <code>filter.*.smudge</code> drivers and similar
 keys that would otherwise execute external programs are dropped until you
 trust the workspace.</p>
-<p>Helix forces this trust level explicitly rather than letting gix infer it
+<p>Zemacs forces this trust level explicitly rather than letting gix infer it
 from <code>.git</code> directory ownership — a malicious <code>.git/config</code> in a directory
 you happen to own is still treated as untrusted until you run
 <code>:workspace-trust</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="ecosystem"><a class="header" href="#ecosystem">Ecosystem</a></h1>
-<p>This section has information related to the wider Helix ecosystem.</p>
+<p>This section has information related to the wider Zemacs ecosystem.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="migrating-from-vim"><a class="header" href="#migrating-from-vim">Migrating from Vim</a></h1>
 <ul>
@@ -2471,137 +2556,137 @@ you happen to own is still treated as untrusted until you run
 <li><a href="#comment-lines-completion-search">Comment lines, Completion, Search</a></li>
 <li><a href="#file-actions">File actions</a></li>
 </ul>
-<p>Helix’s editing model is strongly inspired from Vim and Kakoune, and a notable
-difference from Vim (and the most striking similarity to Kakoune) is that Helix
+<p>Zemacs’s editing model is strongly inspired from Vim and Kakoune, and a notable
+difference from Vim (and the most striking similarity to Kakoune) is that Zemacs
 follows the <code>selection → action</code> model. This means that whatever you are
 going to act on (a word, a paragraph, a line, etc.) is selected first and the
 action itself (delete, change, yank, etc.) comes second. A cursor is simply a
 single width selection.</p>
-<p><em>Note:</em> As Helix is inspired by Vim and <a href="https://github.com/mawww/kakoune">Kakoune</a>, the keybindings are similar but also have some differences. The content of this page is inspired by <a href="https://github.com/mawww/kakoune/wiki/Migrating-from-Vim">Kakoune Wiki</a>.</p>
+<p><em>Note:</em> As Zemacs is inspired by Vim and <a href="https://github.com/mawww/kakoune">Kakoune</a>, the keybindings are similar but also have some differences. The content of this page is inspired by <a href="https://github.com/mawww/kakoune/wiki/Migrating-from-Vim">Kakoune Wiki</a>.</p>
 <p>NOTE: Unlike vim, <code>f</code>, <code>F</code>, <code>t</code> and <code>T</code> are not confined to the current line.</p>
 <h2 id="deletechange-commands"><a class="header" href="#deletechange-commands">Delete/Change Commands</a></h2>
 <p>delete a word:</p>
 <ul>
 <li>vim: <code>dw</code></li>
-<li>helix: <code>wd</code></li>
+<li>zemacs: <code>wd</code></li>
 </ul>
 <p>change a word:</p>
 <ul>
 <li>vim: <code>cw</code></li>
-<li>helix: <code>ec</code> or <code>wc</code> (includes the whitespace after the word)</li>
+<li>zemacs: <code>ec</code> or <code>wc</code> (includes the whitespace after the word)</li>
 </ul>
 <p>delete a character:</p>
 <ul>
 <li>vim: <code>x</code></li>
-<li>helix: <code>d</code> or <code>;d</code> (<code>;</code> reduces the selection to a single char)</li>
+<li>zemacs: <code>d</code> or <code>;d</code> (<code>;</code> reduces the selection to a single char)</li>
 </ul>
 <p>copy a line:</p>
 <ul>
 <li>vim: <code>yy</code></li>
-<li>helix: <code>Xy</code> (<code>X</code> extends all selections to whole lines)</li>
+<li>zemacs: <code>Xy</code> (<code>X</code> extends all selections to whole lines)</li>
 </ul>
 <p>global replace:</p>
 <ul>
 <li>vim: <code>:%s/word/replacement/g&lt;ret&gt;</code></li>
-<li>helix: <code>%sword&lt;ret&gt;creplacement&lt;esc&gt;</code></li>
+<li>zemacs: <code>%sword&lt;ret&gt;creplacement&lt;esc&gt;</code></li>
 </ul>
 <p>Explanation: <code>%</code> selects the entire buffer, <code>s</code> opens a prompt for a regex, <code>&lt;ret&gt;</code> validates the regex and reduces the selection to each match (hence, all occurrences of word are selected). <code>c</code> deletes the selection contents and enter insert mode, replacement is typed and then <code>&lt;esc&gt;</code> goes back to normal mode.</p>
 <h2 id="navigation"><a class="header" href="#navigation">Navigation</a></h2>
 <p>go to first line:</p>
 <ul>
 <li>vim: <code>gg</code></li>
-<li>helix: <code>gg</code></li>
+<li>zemacs: <code>gg</code></li>
 </ul>
 <p>go to last line:</p>
 <ul>
 <li>vim: <code>G</code></li>
-<li>helix: <code>ge</code></li>
+<li>zemacs: <code>ge</code></li>
 </ul>
 <p>go to line start:</p>
 <ul>
 <li>vim: <code>0</code></li>
-<li>helix: <code>gh</code></li>
+<li>zemacs: <code>gh</code></li>
 </ul>
 <p>go to line first non-blank character:</p>
 <ul>
 <li>vim: <code>^</code></li>
-<li>helix: <code>gs</code></li>
+<li>zemacs: <code>gs</code></li>
 </ul>
 <p>go to line end:</p>
 <ul>
 <li>vim: <code>$</code></li>
-<li>helix: <code>gl</code></li>
+<li>zemacs: <code>gl</code></li>
 </ul>
 <p>jump to matching bracket:</p>
 <ul>
 <li>vim: <code>%</code></li>
-<li>helix: <code>mm</code></li>
+<li>zemacs: <code>mm</code></li>
 </ul>
 <h2 id="line-deletes"><a class="header" href="#line-deletes">Line Deletes</a></h2>
 <p>delete to line end:</p>
 <ul>
 <li>vim: <code>D</code></li>
-<li>helix: <code>vgld</code> or <code>t&lt;ret&gt;d</code></li>
+<li>zemacs: <code>vgld</code> or <code>t&lt;ret&gt;d</code></li>
 </ul>
 <p>Note: <code>v</code> is used along with <code>gl</code> (go to line end), because <a href="https://github.com/helix-editor/helix/issues/1630"><code>gl</code> does not select text</a>.
 <code>t&lt;ret&gt;</code> selects “’til” the newline represented by <code>&lt;ret&gt;</code>.</p>
 <p>delete entire line:</p>
 <ul>
 <li>vim: <code>dd</code></li>
-<li>helix: <code>xd</code></li>
+<li>zemacs: <code>xd</code></li>
 </ul>
 <p>Note: <code>x</code> selects the entire line under the cursor</p>
 <h2 id="comment-lines-completion-search"><a class="header" href="#comment-lines-completion-search">Comment lines, Completion, Search</a></h2>
 <p>auto complete:</p>
 <ul>
 <li>vim: <code>C-p</code></li>
-<li>helix: <code>C-x</code></li>
+<li>zemacs: <code>C-x</code></li>
 </ul>
 <p>comment lines:</p>
 <ul>
 <li>vim: <code>gc</code></li>
-<li>helix: <code>Space-c</code></li>
+<li>zemacs: <code>Space-c</code></li>
 </ul>
 <p>search for the word under the cursor:</p>
 <ul>
 <li>vim: <code>*</code></li>
-<li>helix: <code>A-o*n</code> (if there’s a tree-sitter grammar or LSP) or <code>be*n</code></li>
+<li>zemacs: <code>A-o*n</code> (if there’s a tree-sitter grammar or LSP) or <code>be*n</code></li>
 </ul>
 <p>Explanation: if there’s a grammar or LSP, <code>A-o</code> expands selection to the parent syntax node (which would be the word in our case). Then <code>*</code> uses the current selection as the search pattern, and <code>n</code> goes to the next occurrence. <code>b</code> selects to the beginning of the word, and <code>e</code> selects to the end of the word, effectively selecting the whole word.</p>
 <p>block selection:</p>
 <ul>
 <li>vim: <code>C-v</code>, then expand your selection vertically and horizontally</li>
-<li>helix: There’s no “block selection” mode, so instead you’d use multiple cursors. Expand your block selection vertically by adding new cursors on the line below with <code>C</code>, and horizontally using standard movements</li>
+<li>zemacs: There’s no “block selection” mode, so instead you’d use multiple cursors. Expand your block selection vertically by adding new cursors on the line below with <code>C</code>, and horizontally using standard movements</li>
 </ul>
 <p>search “foo” and replace with “bar” in the current selection:</p>
 <ul>
 <li>vim: <code>:s/foo/bar/g&lt;ret&gt;</code></li>
-<li>helix: <code>sfoo&lt;ret&gt;cbar&lt;esc&gt;,</code></li>
+<li>zemacs: <code>sfoo&lt;ret&gt;cbar&lt;esc&gt;,</code></li>
 </ul>
 <p>Explanation: <code>s</code> will open a prompt in the command line for a regex, and select all matches inside the selection (effectively adding a new cursor on each match). Pressing enter will then finalise this step, and allow the <code>c</code> to change the selections to “bar”. When done, go back to normal mode with <code>&lt;esc&gt;</code>, and keep only the primary selection with <code>,</code> (remove all the additional cursors).</p>
 <h2 id="file-actions"><a class="header" href="#file-actions">File actions</a></h2>
 <p>select the whole file:</p>
 <ul>
 <li>vim: <code>ggVG</code></li>
-<li>helix: <code>%</code></li>
+<li>zemacs: <code>%</code></li>
 </ul>
 <p>reload a file from disk:</p>
 <ul>
 <li>vim: <code>:e&lt;ret&gt;</code></li>
-<li>helix: <code>:reload&lt;ret&gt;</code> (or <code>:reload-all&lt;ret&gt;</code> to reload all the buffers)</li>
+<li>zemacs: <code>:reload&lt;ret&gt;</code> (or <code>:reload-all&lt;ret&gt;</code> to reload all the buffers)</li>
 </ul>
 <p>run shell command:</p>
 <ul>
 <li>vim: <code>:!command</code></li>
-<li>helix: <code>:sh command</code> (or <code>!command</code> to insert its output into the buffer)</li>
+<li>zemacs: <code>:sh command</code> (or <code>!command</code> to insert its output into the buffer)</li>
 </ul>
 <p>setting a bookmark (bookmarking a location):</p>
 <ul>
 <li>vim: <code>ma</code> to set bookmark with name a. Use <code>`a</code> to go back to this bookmarked location.</li>
-<li>helix: there are no named bookmarks, but you can save a location in the jumplist with <code>C-s</code>, then jump back to that location by opening the jumplist picker with <code>&lt;space&gt;-j</code>, or back in the jumplist with <code>C-o</code> and forward with <code>C-i</code></li>
+<li>zemacs: there are no named bookmarks, but you can save a location in the jumplist with <code>C-s</code>, then jump back to that location by opening the jumplist picker with <code>&lt;space&gt;-j</code>, or back in the jumplist with <code>C-o</code> and forward with <code>C-i</code></li>
 </ul>
 <p>Helix allows <a href="https://docs.helix-editor.com/keymap.html#insert-mode">some limited movement in <code>insert</code> mode</a> without switching to <code>normal</code> mode.</p>
-<p>Unlike Vim, under Helix, the cursor shape is the same (block) in insert mode and normal mode by default.
+<p>Unlike Vim, under Zemacs, the cursor shape is the same (block) in insert mode and normal mode by default.
 This can be adjusted in configuration:</p>
 <pre><code class="language-toml">[editor.cursor-shape]
 insert = "bar"
@@ -2610,23 +2695,23 @@ insert = "bar"
 <p>TODO: Mention textobjects, surround, registers</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="helix-mode-in-other-software"><a class="header" href="#helix-mode-in-other-software">Helix mode in other software</a></h1>
-<p>Helix’ keymap and interaction model (<a href="#using-helix">Using Helix</a>) is easier to adopt if it can be used consistently in many editing contexts. Yet, certain use cases cannot easily be addressed directly in Helix. Similar to vim, this leads to the creation of “Helix mode” in various other software products, allowing Helix-style editing for a greater variety of use cases.</p>
-<p>“Helix mode” is frequently still in early stages or missing entirely. For such cases, we also link to relevant bugs or discussions.</p>
+<h1 id="zemacs-mode-in-other-software"><a class="header" href="#zemacs-mode-in-other-software">Zemacs mode in other software</a></h1>
+<p>Zemacs’ keymap and interaction model (<a href="#using-zemacs">Using Zemacs</a>) is easier to adopt if it can be used consistently in many editing contexts. Yet, certain use cases cannot easily be addressed directly in Zemacs. Similar to vim, this leads to the creation of “Zemacs mode” in various other software products, allowing Zemacs-style editing for a greater variety of use cases.</p>
+<p>“Zemacs mode” is frequently still in early stages or missing entirely. For such cases, we also link to relevant bugs or discussions.</p>
 <h2 id="other-editors"><a class="header" href="#other-editors">Other editors</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Editor</th><th>Plugin or feature providing Helix editing</th><th>Comments</th></tr>
+<tr><th>Editor</th><th>Plugin or feature providing Zemacs editing</th><th>Comments</th></tr>
 </thead>
 <tbody>
-<tr><td><a href="https://www.vim.org/">Vim</a></td><td><a href="https://github.com/chtenb/helix.vim">helix.vim</a> config</td><td></td></tr>
-<tr><td><a href="https://www.jetbrains.com/idea/">IntelliJ IDEA</a> / <a href="https://developer.android.com/studio">Android Studio</a></td><td><a href="https://plugins.jetbrains.com/plugin/164-ideavim">IdeaVim</a> plugin + <a href="https://github.com/chtenb/helix.vim">helix.idea.vim</a> config</td><td>Minimum recommended version is IdeaVim 2.19.0.</td></tr>
-<tr><td><a href="https://visualstudio.microsoft.com/">Visual Studio</a></td><td><a href="https://marketplace.visualstudio.com/items?itemName=JaredParMSFT.VsVim">VsVim</a> plugin + <a href="https://github.com/chtenb/helix.vim">helix.vs.vim</a> config</td><td></td></tr>
-<tr><td><a href="https://code.visualstudio.com/">Visual Studio Code</a></td><td><a href="https://marketplace.visualstudio.com/items?itemName=gregoire.dance">Dance</a> extension, or its <a href="https://marketplace.visualstudio.com/items?itemName=kend.dancehelixkey">Helix fork</a></td><td>The Helix fork has diverged. You can also use the original Dance and tweak its keybindings directly (try <a href="https://github.com/71/dance/issues/299#issuecomment-1655509531">this config</a>).</td></tr>
-<tr><td><a href="https://code.visualstudio.com/">Visual Studio Code</a></td><td><a href="https://marketplace.visualstudio.com/items?itemName=jasew.vscode-helix-emulation">Helix for VS Code</a> extension</td><td></td></tr>
+<tr><td><a href="https://www.vim.org/">Vim</a></td><td><a href="https://github.com/chtenb/zemacs.vim">zemacs.vim</a> config</td><td></td></tr>
+<tr><td><a href="https://www.jetbrains.com/idea/">IntelliJ IDEA</a> / <a href="https://developer.android.com/studio">Android Studio</a></td><td><a href="https://plugins.jetbrains.com/plugin/164-ideavim">IdeaVim</a> plugin + <a href="https://github.com/chtenb/zemacs.vim">zemacs.idea.vim</a> config</td><td>Minimum recommended version is IdeaVim 2.19.0.</td></tr>
+<tr><td><a href="https://visualstudio.microsoft.com/">Visual Studio</a></td><td><a href="https://marketplace.visualstudio.com/items?itemName=JaredParMSFT.VsVim">VsVim</a> plugin + <a href="https://github.com/chtenb/zemacs.vim">zemacs.vs.vim</a> config</td><td></td></tr>
+<tr><td><a href="https://code.visualstudio.com/">Visual Studio Code</a></td><td><a href="https://marketplace.visualstudio.com/items?itemName=gregoire.dance">Dance</a> extension, or its <a href="https://marketplace.visualstudio.com/items?itemName=kend.dancehelixkey">Zemacs fork</a></td><td>The Zemacs fork has diverged. You can also use the original Dance and tweak its keybindings directly (try <a href="https://github.com/71/dance/issues/299#issuecomment-1655509531">this config</a>).</td></tr>
+<tr><td><a href="https://code.visualstudio.com/">Visual Studio Code</a></td><td><a href="https://marketplace.visualstudio.com/items?itemName=jasew.vscode-zemacs-emulation">Zemacs for VS Code</a> extension</td><td></td></tr>
 <tr><td><a href="https://zed.dev/">Zed</a></td><td>native via keybindings (<a href="https://github.com/zed-industries/zed/issues/4642">Bug</a>)</td><td></td></tr>
-<tr><td><a href="https://codemirror.net/">CodeMirror</a></td><td><a href="https://gitlab.com/_rvidal/codemirror-helix">codemirror-helix</a></td><td></td></tr>
+<tr><td><a href="https://codemirror.net/">CodeMirror</a></td><td><a href="https://gitlab.com/_rvidal/codemirror-zemacs">codemirror-zemacs</a></td><td></td></tr>
 <tr><td><a href="https://lite-xl.com/">Lite XL</a></td><td><a href="https://codeberg.org/Mandarancio/lite-modal-hx">lite-modal-hx</a></td><td></td></tr>
 <tr><td><a href="https://lap.dev/lapce/">Lapce</a></td><td></td><td>Requested: https://github.com/lapce/lapce/issues/281</td></tr>
 </tbody>
@@ -2636,12 +2721,12 @@ insert = "bar"
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Shell</th><th>Plugin or feature providing Helix editing</th></tr>
+<tr><th>Shell</th><th>Plugin or feature providing Zemacs editing</th></tr>
 </thead>
 <tbody>
 <tr><td>Fish</td><td><a href="https://github.com/fish-shell/fish-shell/issues/7748">Feature Request</a></td></tr>
-<tr><td>Fish</td><td><a href="https://github.com/sshilovsky/fish-helix/tree/main">fish-helix</a></td></tr>
-<tr><td>Zsh</td><td><a href="https://github.com/john-h-k/helix-zsh">helix-zsh</a> or <a href="https://github.com/Multirious/zsh-helix-mode">zsh-helix-mode</a></td></tr>
+<tr><td>Fish</td><td><a href="https://github.com/sshilovsky/fish-zemacs/tree/main">fish-zemacs</a></td></tr>
+<tr><td>Zsh</td><td><a href="https://github.com/john-h-k/zemacs-zsh">zemacs-zsh</a> or <a href="https://github.com/Multirious/zsh-zemacs-mode">zsh-zemacs-mode</a></td></tr>
 <tr><td>Nushell</td><td><a href="https://github.com/nushell/reedline/issues/639">Feature Request</a></td></tr>
 </tbody>
 </table>
@@ -2650,10 +2735,10 @@ insert = "bar"
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Software</th><th>Plugin or feature providing Helix editing.</th><th>Comments</th></tr>
+<tr><th>Software</th><th>Plugin or feature providing Zemacs editing.</th><th>Comments</th></tr>
 </thead>
 <tbody>
-<tr><td><a href="https://obsidian.md/">Obsidian</a></td><td><a href="https://github.com/Sinono3/obsidian-helix">Obsidian-Helix</a></td><td>Uses <code>codemirror-helix</code> listed above.</td></tr>
+<tr><td><a href="https://obsidian.md/">Obsidian</a></td><td><a href="https://github.com/Sinono3/obsidian-zemacs">Obsidian-Zemacs</a></td><td>Uses <code>codemirror-zemacs</code> listed above.</td></tr>
 </tbody>
 </table>
 </div>
@@ -2661,11 +2746,11 @@ insert = "bar"
 <h1 id="configuration-2"><a class="header" href="#configuration-2">Configuration</a></h1>
 <p>To override global configuration parameters, create a <code>config.toml</code> file located in your config directory:</p>
 <ul>
-<li>Linux and Mac: <code>~/.config/helix/config.toml</code></li>
-<li>Windows: <code>%AppData%\helix\config.toml</code></li>
+<li>Linux and Mac: <code>~/.config/zemacs/config.toml</code></li>
+<li>Windows: <code>%AppData%\zemacs\config.toml</code></li>
 </ul>
 <blockquote>
-<p>💡 You can easily open the config file by typing <code>:config-open</code> within Helix normal mode.</p>
+<p>💡 You can easily open the config file by typing <code>:config-open</code> within Zemacs normal mode.</p>
 </blockquote>
 <p>Example config:</p>
 <pre><code class="language-toml">theme = "onedark"
@@ -2685,8 +2770,8 @@ hidden = false
 <p>You can use a custom configuration file by specifying it with the <code>-c</code> or
 <code>--config</code> command line argument, for example <code>hx -c path/to/custom-config.toml</code>.
 You can reload the config file by issuing the <code>:config-reload</code> command. Alternatively, on Unix operating systems, you can reload it by sending the USR1
-signal to the Helix process, such as by using the command <code>pkill -USR1 hx</code>.</p>
-<p>Finally, you can have a <code>config.toml</code> and a <code>languages.toml</code> local to a project by putting it under a <code>.helix</code> directory in your repository.
+signal to the Zemacs process, such as by using the command <code>pkill -USR1 hx</code>.</p>
+<p>Finally, you can have a <code>config.toml</code> and a <code>languages.toml</code> local to a project by putting it under a <code>.zemacs</code> directory in your repository.
 Its settings will be merged with the configuration directory and the built-in configuration.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="editor-1"><a href="#editor-1" class="header">Editor</a></h1>
@@ -2737,7 +2822,7 @@ Its settings will be merged with the configuration directory and the built-in co
 <tr><td><code>line-number</code></td><td>Line number display: <code>absolute</code> simply shows each line’s number, while <code>relative</code> shows the distance from the current line. When unfocused or in insert mode, <code>relative</code> will still show absolute line numbers</td><td><code>"absolute"</code></td></tr>
 <tr><td><code>cursorline</code></td><td>Highlight all lines with a cursor</td><td><code>false</code></td></tr>
 <tr><td><code>cursorcolumn</code></td><td>Highlight all columns with a cursor</td><td><code>false</code></td></tr>
-<tr><td><code>continue-comments</code></td><td>if helix should automatically add a line comment token if you create a new line inside a comment.</td><td><code>true</code></td></tr>
+<tr><td><code>continue-comments</code></td><td>if zemacs should automatically add a line comment token if you create a new line inside a comment.</td><td><code>true</code></td></tr>
 <tr><td><code>gutters</code></td><td>Gutters to display: Available are <code>diagnostics</code> and <code>diff</code> and <code>line-numbers</code> and <code>spacer</code> and <code>code-action-hint</code>, note that <code>diagnostics</code> also includes other features like breakpoints, 1-width padding will be inserted if gutters is non-empty</td><td><code>["diagnostics", "spacer", "line-numbers", "spacer", "diff"]</code></td></tr>
 <tr><td><code>auto-completion</code></td><td>Enable automatic pop up of auto-completion</td><td><code>true</code></td></tr>
 <tr><td><code>path-completion</code></td><td>Enable filepath completion. Show files and directories if an existing path at the cursor was recognized, either absolute or relative to the current opened document or current working directory (if the buffer is not yet saved). Defaults to true.</td><td><code>true</code></td></tr>
@@ -2754,7 +2839,7 @@ Its settings will be merged with the configuration directory and the built-in co
 <tr><td><code>bufferline</code></td><td>Renders a line at the top of the editor displaying open buffers. Can be <code>always</code>, <code>never</code> or <code>multiple</code> (only shown if more than one buffer is in use)</td><td><code>"never"</code></td></tr>
 <tr><td><code>color-modes</code></td><td>Whether to color the mode indicator with different colors depending on the mode itself</td><td><code>false</code></td></tr>
 <tr><td><code>text-width</code></td><td>Maximum line length. Used for the <code>:reflow</code> command and soft-wrapping if <code>soft-wrap.wrap-at-text-width</code> is set</td><td><code>80</code></td></tr>
-<tr><td><code>workspace-lsp-roots</code></td><td>Directories relative to the workspace root that are treated as LSP roots. Should only be set in <code>.helix/config.toml</code></td><td><code>[]</code></td></tr>
+<tr><td><code>workspace-lsp-roots</code></td><td>Directories relative to the workspace root that are treated as LSP roots. Should only be set in <code>.zemacs/config.toml</code></td><td><code>[]</code></td></tr>
 <tr><td><code>default-line-ending</code></td><td>The line ending to use for new documents. Can be <code>native</code>, <code>lf</code>, <code>crlf</code>, <code>ff</code>, <code>cr</code> or <code>nel</code>. <code>native</code> uses the platform’s native line ending (<code>crlf</code> on Windows, otherwise <code>lf</code>).</td><td><code>"native"</code></td></tr>
 <tr><td><code>insert-final-newline</code></td><td>Whether to automatically insert a trailing line-ending on write if missing</td><td><code>true</code></td></tr>
 <tr><td><code>atomic-save</code></td><td>Whether to use atomic operations to write documents to disk. This prevents data loss if the editor is interrupted while writing the file, but may confuse some file watching/hot reloading programs.</td><td><code>true</code></td></tr>
@@ -2772,13 +2857,13 @@ Its settings will be merged with the configuration directory and the built-in co
 </table>
 </div>
 <h3 id="editorclipboard-provider-section"><a class="header" href="#editorclipboard-provider-section"><code>[editor.clipboard-provider]</code> Section</a></h3>
-<p>Helix can be configured either to use a builtin clipboard configuration or to use
+<p>Zemacs can be configured either to use a builtin clipboard configuration or to use
 a provided command.</p>
 <p>For instance, setting it to use OSC 52 termcodes, the configuration would be:</p>
 <pre><code class="language-toml">[editor]
 clipboard-provider = "termcode"
 </code></pre>
-<p>Alternatively, Helix can be configured to use arbitrary commands for clipboard integration:</p>
+<p>Alternatively, Zemacs can be configured to use arbitrary commands for clipboard integration:</p>
 <pre><code class="language-toml">[editor.clipboard-provider.custom]
 yank = { command = "cat",  args = ["test.txt"] }
 paste = { command = "tee",  args = ["test.txt"] }
@@ -2897,7 +2982,7 @@ change shape.</p>
 </div>
 <h3 id="editorfile-picker-section"><a class="header" href="#editorfile-picker-section"><code>[editor.file-picker]</code> Section</a></h3>
 <p>Set options for file picker and global search. Ignoring a file means it is
-not visible in the Helix file picker and global search.</p>
+not visible in the Zemacs file picker and global search.</p>
 <p>All git related options are only enabled in a git repository.</p>
 <div class="table-wrapper">
 <table>
@@ -2918,10 +3003,10 @@ not visible in the Helix file picker and global search.</p>
 </table>
 </div>
 <p>Ignore files can be placed locally as <code>.ignore</code> or put in your home directory as <code>~/.ignore</code>. They support the usual ignore and negative ignore (unignore) rules used in <code>.gitignore</code> files.</p>
-<p>Additionally, you can use Helix-specific ignore files by creating a local <code>.helix/ignore</code> file in the current workspace or a global <code>ignore</code> file located in your Helix config directory:</p>
+<p>Additionally, you can use Zemacs-specific ignore files by creating a local <code>.zemacs/ignore</code> file in the current workspace or a global <code>ignore</code> file located in your Zemacs config directory:</p>
 <ul>
-<li>Linux and Mac: <code>~/.config/helix/ignore</code></li>
-<li>Windows: <code>%AppData%\helix\ignore</code></li>
+<li>Linux and Mac: <code>~/.config/zemacs/ignore</code></li>
+<li>Windows: <code>%AppData%\zemacs\ignore</code></li>
 </ul>
 <p>Example:</p>
 <pre><code class="language-ini"># unignore in file picker and global search
@@ -2931,7 +3016,7 @@ not visible in the Helix file picker and global search.</p>
 </code></pre>
 <h3 id="editorfile-explorer-section"><a class="header" href="#editorfile-explorer-section"><code>[editor.file-explorer]</code> Section</a></h3>
 <p>In addition to the options for the file picker and global search, a similar set of options is presented to configure the file explorer separately. However, unlike the file picker, the defaults are set to avoid ignoring most files.</p>
-<p>Note that the ignore files consulted by the file explorer when <code>ignore</code> is set to true are the same ones used by the file picker, including the aforementioned Helix-specific ignore files.</p>
+<p>Note that the ignore files consulted by the file explorer when <code>ignore</code> is set to true are the same ones used by the file picker, including the aforementioned Zemacs-specific ignore files.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -3245,11 +3330,11 @@ prompt = false
 
 # "none":     prompt for every workspace.
 # "servers":  trust LSP and DAP launches but still gate local config and git;
-#             .helix/config.toml, .helix/languages.toml, etc. need :workspace-trust.
+#             .zemacs/config.toml, .zemacs/languages.toml, etc. need :workspace-trust.
 # "insecure": trust everything (discouraged).
 level = "servers"
 
-# Discouraged: skips .helix/ change detection and trusts anything that lands
+# Discouraged: skips .zemacs/ change detection and trusts anything that lands
 # under a matching path. `~` and environment variables are expanded.
 trusted = ["~/src/github.com/me/*"]
 </code></pre>
@@ -3262,7 +3347,7 @@ trusted = ["~/src/github.com/me/*"]
 <p>By default, a progress spinner is shown in the statusline beside the file path. <a href="#fr-1-1">↩</a> <a href="#fr-1-2">↩2</a></p>
 </li>
 <li id="footnote-2">
-<p>You may also have to activate them in the language server config for them to appear, not just in Helix. Inlay hints in Helix are still being improved on and may be a little bit laggy/janky under some circumstances. Please report any bugs you see so we can fix them! <a href="#fr-2-1">↩</a></p>
+<p>You may also have to activate them in the language server config for them to appear, not just in Zemacs. Inlay hints in Zemacs are still being improved on and may be a little bit laggy/janky under some circumstances. Please report any bugs you see so we can fix them! <a href="#fr-2-1">↩</a></p>
 </li>
 </ol>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -3278,7 +3363,7 @@ light = "catppuccin_latte"
 # fallback = "catppuccin_frappe"
 </code></pre>
 <h2 id="creating-a-theme"><a class="header" href="#creating-a-theme">Creating a theme</a></h2>
-<p>Create a file with the name of your theme as the file name (i.e <code>mytheme.toml</code>) and place it in your <code>themes</code> directory (i.e <code>~/.config/helix/themes</code> or <code>%AppData%\helix\themes</code> on Windows). The directory might have to be created beforehand.</p>
+<p>Create a file with the name of your theme as the file name (i.e <code>mytheme.toml</code>) and place it in your <code>themes</code> directory (i.e <code>~/.config/zemacs/themes</code> or <code>%AppData%\zemacs\themes</code> on Windows). The directory might have to be created beforehand.</p>
 <blockquote>
 <p>💡 The names “default” and “base16_default” are reserved for built-in themes
 and cannot be overridden by user-defined themes.</p>
@@ -3298,7 +3383,7 @@ key = "#ffffff"
 </code></pre>
 <p>Color values must be either a <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/hex-color">CSS hex RGB string</a> or a name declared in the <a href="#color-palettes"><code>palette</code></a>.</p>
 <blockquote>
-<p>💡 Note that Helix doesn’t support transparency (alpha channel).</p>
+<p>💡 Note that Zemacs doesn’t support transparency (alpha channel).</p>
 </blockquote>
 <p>For inspiration, you can find the default <code>theme.toml</code>
 <a href="https://github.com/helix-editor/helix/blob/master/theme.toml">here</a> and
@@ -3750,7 +3835,7 @@ See also <a href="https://github.com/helix-editor/helix/issues/2380">#2380</a></
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="key-remapping-1"><a href="#key-remapping-1" class="header">Key remapping</a></h1>
 <h2 id="key-remapping"><a class="header" href="#key-remapping">Key remapping</a></h2>
-<p>Helix currently supports one-way key remapping through a simple TOML configuration
+<p>Zemacs currently supports one-way key remapping through a simple TOML configuration
 file. (More powerful solutions such as rebinding via commands will be
 available in the future).</p>
 <p>There are three kinds of commands that can be used in keymaps:</p>
@@ -3771,8 +3856,8 @@ are not allowed in keybinding sequences due to limitations in the way that
 command sequences are executed. Modifier keys (e.g. Alt+o) can be used
 like <code>"&lt;A-o&gt;"</code>, e.g. <code>"@miw&lt;A-o&gt;"</code></li>
 </ul>
-<p>To remap keys, create a <code>config.toml</code> file in your <code>helix</code> configuration
-directory (default <code>~/.config/helix</code> on Linux systems) with a structure like
+<p>To remap keys, create a <code>config.toml</code> file in your <code>zemacs</code> configuration
+directory (default <code>~/.config/zemacs</code> on Linux systems) with a structure like
 this:</p>
 <blockquote>
 <p>💡 To set a modifier + key as a keymap, type <code>A-X = ...</code> or  <code>C-X = ...</code> for Alt + X or Ctrl + X. Combine with Shift using a dash, e.g. <code>C-S-esc</code>.
@@ -3781,7 +3866,7 @@ Within macros, wrap them in <code>&lt;&gt;</code>, e.g. <code>&lt;A-X&gt;</code>
 <pre><code class="language-toml"># At most one section each of 'keys.normal', 'keys.insert' and 'keys.select'
 [keys.normal]
 C-s = ":w" # Maps Ctrl-s to the typable command :w which is an alias for :write (save file)
-C-o = ":open ~/.config/helix/config.toml" # Maps Ctrl-o to opening of the helix config file
+C-o = ":open ~/.config/zemacs/config.toml" # Maps Ctrl-o to opening of the zemacs config file
 a = "move_char_left" # Maps the 'a' key to the move_char_left command
 w = "move_line_up" # Maps the 'w' key move_line_up
 "C-S-esc" = "extend_line" # Maps Ctrl-Shift-Escape to extend_line
@@ -3870,7 +3955,7 @@ in <code>languages.toml</code> files.</p>
 <p>There are three possible locations for a <code>languages.toml</code> file:</p>
 <ol>
 <li>
-<p>In the Helix source code, which lives in the
+<p>In the Zemacs source code, which lives in the
 <a href="https://github.com/helix-editor/helix/blob/master/languages.toml">Helix repository</a>.
 It provides the default configurations for languages and language servers.</p>
 </li>
@@ -3878,7 +3963,7 @@ It provides the default configurations for languages and language servers.</p>
 <p>In your <a href="#configuration-2">configuration directory</a>. This overrides values
 from the built-in language configuration. For example, to disable
 auto-formatting for Rust:</p>
-<pre><code class="language-toml"># in &lt;config_dir&gt;/helix/languages.toml
+<pre><code class="language-toml"># in &lt;config_dir&gt;/zemacs/languages.toml
 
 [language-server.mylang-lsp]
 command = "mylang-lsp"
@@ -3889,9 +3974,9 @@ auto-format = false
 </code></pre>
 </li>
 <li>
-<p>In a <code>.helix</code> folder in your project. Language configuration may also be
+<p>In a <code>.zemacs</code> folder in your project. Language configuration may also be
 overridden local to a project by creating a <code>languages.toml</code> file in a
-<code>.helix</code> folder. Its settings will be merged with the language configuration
+<code>.zemacs</code> folder. Its settings will be merged with the language configuration
 in the configuration directory and the built-in configuration.</p>
 </li>
 </ol>
@@ -3921,7 +4006,7 @@ language-servers = [ "mylang-lsp" ]
 <tr><td><code>injection-regex</code></td><td>regex pattern that will be tested against a language name in order to determine whether this language should be used for a potential <a href="https://tree-sitter.github.io/tree-sitter/3-syntax-highlighting.html#language-injection">language injection</a> site.</td></tr>
 <tr><td><code>file-types</code></td><td>The filetypes of the language, for example <code>["yml", "yaml"]</code>. See the file-type detection section below.</td></tr>
 <tr><td><code>shebangs</code></td><td>The interpreters from the shebang line, for example <code>["sh", "bash"]</code></td></tr>
-<tr><td><code>roots</code></td><td>A set of marker files used for LSP working directory selection. Helix starts at the file, walks upward, and remembers the <em>topmost</em> i.e. <em>last</em> directory that contains a marker file. For example Cargo.lock, yarn.lock</td></tr>
+<tr><td><code>roots</code></td><td>A set of marker files used for LSP working directory selection. Zemacs starts at the file, walks upward, and remembers the <em>topmost</em> i.e. <em>last</em> directory that contains a marker file. For example Cargo.lock, yarn.lock</td></tr>
 <tr><td><code>auto-format</code></td><td>Whether to autoformat this language when saving</td></tr>
 <tr><td><code>diagnostic-severity</code></td><td>Minimal severity of diagnostic for it to be displayed. (Allowed values: <code>error</code>, <code>warning</code>, <code>info</code>, <code>hint</code>)</td></tr>
 <tr><td><code>comment-tokens</code></td><td>The tokens to use as a comment token, either a single token <code>"//"</code> or an array <code>["//", "///", "//!"]</code> (the first token will be used for commenting). Also configurable as <code>comment-token</code> for backwards compatibility</td></tr>
@@ -3935,22 +4020,22 @@ language-servers = [ "mylang-lsp" ]
 <tr><td><code>rulers</code></td><td>Overrides the <code>editor.rulers</code> config key for the language.</td></tr>
 <tr><td><code>path-completion</code></td><td>Overrides the <code>editor.path-completion</code> config key for the language.</td></tr>
 <tr><td><code>word-completion</code></td><td>Overrides the <a href="#editorword-completion-section"><code>editor.word-completion</code></a> configuration for the language.</td></tr>
-<tr><td><code>workspace-lsp-roots</code></td><td>Directories (relative to the workspace root) that stop the upward root search early. Meant for project-specific hard overrides in a local <code>.helix/config.toml</code>;</td></tr>
-<tr><td><code>persistent-diagnostic-sources</code></td><td>An array of LSP diagnostic sources assumed unchanged when the language server resends the same set of diagnostics. Helix can track the position for these diagnostics internally instead. Useful for diagnostics that are recomputed on save.</td></tr>
+<tr><td><code>workspace-lsp-roots</code></td><td>Directories (relative to the workspace root) that stop the upward root search early. Meant for project-specific hard overrides in a local <code>.zemacs/config.toml</code>;</td></tr>
+<tr><td><code>persistent-diagnostic-sources</code></td><td>An array of LSP diagnostic sources assumed unchanged when the language server resends the same set of diagnostics. Zemacs can track the position for these diagnostics internally instead. Useful for diagnostics that are recomputed on save.</td></tr>
 <tr><td><code>rainbow-brackets</code></td><td>Overrides the <code>editor.rainbow-brackets</code> config key for the language</td></tr>
 <tr><td><code>code-actions-on-save</code></td><td>List of LSP code actions to be run in order on save, for example <code>["source.organizeImports"]</code></td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="project-and-lsp-root-selection"><a class="header" href="#project-and-lsp-root-selection">Project and LSP root selection</a></h2>
-<p>This is the model Helix uses:</p>
+<p>This is the model Zemacs uses:</p>
 <ul>
 <li>The <strong>workspace root</strong> is found once by walking upward from the current
 working directory and picking the first directory that contains <code>.git</code>, <code>.svn</code>,
-<code>.jj</code>, or <code>.helix</code>. If none are found, the current working directory is the
+<code>.jj</code>, or <code>.zemacs</code>. If none are found, the current working directory is the
 workspace root.</li>
 <li>Root markers (<code>roots</code>) are used only for LSP root selection and are found by
-starting at the <strong>file</strong>, not the folder Helix was opened in.</li>
+starting at the <strong>file</strong>, not the folder Zemacs was opened in.</li>
 <li>We use the <strong>topmost</strong> directory that has a root marker (we stop the search at
 the workspace root).</li>
 <li>In most cases, root markers are enough. In some repos there are multiple
@@ -3958,21 +4043,21 @@ nested root markers and whether you want the inner or outer one is project
 specific. For these situations, use <code>workspace-lsp-roots</code> to stop the search
 early in a particular directory.</li>
 <li><code>workspace-lsp-roots</code> is meant to be set in the <strong>project-specific</strong> config:
-<code>$PROJECT/.helix/config.toml</code>.</li>
+<code>$PROJECT/.zemacs/config.toml</code>.</li>
 </ul>
 <p>Interaction with <code>required-root-patterns</code> (a language_server configuration key):</p>
 <ul>
-<li>After the LSP root is selected, Helix checks for <code>required-root-patterns</code> in
+<li>After the LSP root is selected, Zemacs checks for <code>required-root-patterns</code> in
 that directory. If none match, the server is not started.</li>
 <li>This is validation, not root detection.</li>
 </ul>
 <h3 id="file-type-detection-and-the-file-types-key"><a class="header" href="#file-type-detection-and-the-file-types-key">File-type detection and the <code>file-types</code> key</a></h3>
-<p>Helix determines which language configuration to use based on the <code>file-types</code> key
+<p>Zemacs determines which language configuration to use based on the <code>file-types</code> key
 from the above section. <code>file-types</code> is a list of strings or tables, for
 example:</p>
 <pre><code class="language-toml">file-types = ["toml", { glob = "Makefile" }, { glob = ".git/config" }, { glob = ".github/workflows/*.yaml" } ]
 </code></pre>
-<p>When determining a language configuration to use, Helix searches the file-types
+<p>When determining a language configuration to use, Zemacs searches the file-types
 with the following priorities:</p>
 <ol>
 <li>Glob: values in <code>glob</code> tables are checked against the full path of the given
@@ -4055,7 +4140,7 @@ For example, with typescript:</p>
 config = { format = { "semicolons" = "insert", "insertSpaceBeforeFunctionParenthesis" = true } }
 </code></pre>
 <h3 id="configuring-language-servers-for-a-language"><a class="header" href="#configuring-language-servers-for-a-language">Configuring Language Servers for a language</a></h3>
-<p>The <code>language-servers</code> attribute in a language tells helix which language servers are used for this language.</p>
+<p>The <code>language-servers</code> attribute in a language tells zemacs which language servers are used for this language.</p>
 <p>They have to be defined in the <code>[language-server]</code> table as described in the previous section.</p>
 <p>Different languages can use the same language server instance, e.g. <code>typescript-language-server</code> is used for javascript, jsx, tsx and typescript by default.</p>
 <p>The definition order of language servers affects the order in the results list of code action menu.</p>
@@ -4146,13 +4231,13 @@ use-grammars = { except = [ "yaml", "json" ] }
 <p>When omitted, all grammars are fetched and built.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="guides"><a class="header" href="#guides">Guides</a></h1>
-<p>This section contains guides for adding new languages to Helix: language and
+<p>This section contains guides for adding new languages to Zemacs: language and
 grammar configuration, and the tree-sitter query files that drive highlighting,
 power indentation, textobjects, symbol tags, and other features.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="adding-languages"><a href="#adding-languages" class="header">Adding languages</a></h1>
-<h2 id="adding-new-languages-to-helix"><a class="header" href="#adding-new-languages-to-helix">Adding new languages to Helix</a></h2>
-<p>In order to add a new language to Helix, you will need to follow the steps
+<h2 id="adding-new-languages-to-zemacs"><a class="header" href="#adding-new-languages-to-zemacs">Adding new languages to Zemacs</a></h2>
+<p>In order to add a new language to Zemacs, you will need to follow the steps
 below.</p>
 <h2 id="language-configuration-1"><a class="header" href="#language-configuration-1">Language configuration</a></h2>
 <ol>
@@ -4201,7 +4286,7 @@ match the most specific scope that fits, capture the leaf node you mean, and
 remember that the last matching pattern (and the innermost node) wins.</p>
 </li>
 <li>
-<p>Helix loads several query files from that directory; only <code>highlights.scm</code> is
+<p>Zemacs loads several query files from that directory; only <code>highlights.scm</code> is
 required:</p>
 <div class="table-wrapper">
 <table>
@@ -4226,13 +4311,13 @@ are valid against the grammar.</p>
 </ol>
 <h2 id="common-issues"><a class="header" href="#common-issues">Common issues</a></h2>
 <ul>
-<li>If you encounter errors when running Helix after switching branches, you may
+<li>If you encounter errors when running Zemacs after switching branches, you may
 need to update the tree-sitter grammars. Run the command <code>hx --grammar fetch</code>
 to fetch the grammars and <code>hx --grammar build</code> to build any out-of-date
 grammars.</li>
 <li>If a parser is causing a segfault, or you want to remove it, make sure to
 remove the compiled parser located at <code>runtime/grammars/&lt;name&gt;.so</code>.</li>
-<li>If you are attempting to add queries and Helix is unable to locate them, ensure that the environment variable <code>HELIX_RUNTIME</code> is set to the location of the <code>runtime</code> folder you’re developing in.</li>
+<li>If you are attempting to add queries and Zemacs is unable to locate them, ensure that the environment variable <code>ZEMACS_RUNTIME</code> is set to the location of the <code>runtime</code> folder you’re developing in.</li>
 <li>Validate queries with <code>cargo xtask query-check [language]</code> (every query file
 must compile against the grammar). <code>highlight-check</code> and <code>indent-check</code>
 additionally run the real highlighter and indenter over the test fixtures catch mistakes.</li>
@@ -4244,7 +4329,7 @@ additionally run the real highlighter and indenter over the test fixtures catch 
 <code>@keyword</code>, …) to nodes in the syntax tree; the theme then maps each scope to a
 colour. Highlighting is the one query file that every language needs.</p>
 <p>Query files should be placed in <code>runtime/queries/{language}/highlights.scm</code> when
-contributing to Helix.</p>
+contributing to Zemacs.</p>
 <h2 id="scopes-1"><a class="header" href="#scopes-1">Scopes</a></h2>
 <p>The full list of highlight scopes, and what each is for, is documented on the
 <a href="https://docs.helix-editor.com/themes.html#scopes">themes page</a>. Match the most specific scope that fits the node — for example a
@@ -4281,13 +4366,13 @@ per span for an arbitrary file.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="adding-locals-queries-1"><a href="#adding-locals-queries-1" class="header">Adding locals queries</a></h1>
 <h2 id="adding-locals-queries"><a class="header" href="#adding-locals-queries">Adding Locals Queries</a></h2>
-<p><code>locals.scm</code> queries teach Helix about variable scopes and definitions so that
+<p><code>locals.scm</code> queries teach Zemacs about variable scopes and definitions so that
 local variables can be highlighted distinctly from global ones. When a
 <code>@local.reference</code> identifier is resolved to a <code>@local.definition</code>, it inherits
 the highlight class of that definition rather than the class assigned by
 <code>highlights.scm</code>.</p>
 <p>Query files should be placed in <code>runtime/queries/{language}/locals.scm</code> when
-contributing to Helix. Like other query files, <code>locals.scm</code> may reuse another
+contributing to Zemacs. Like other query files, <code>locals.scm</code> may reuse another
 language’s with <code>; inherits: &lt;lang&gt;</code> on the first line. Locals are resolved in
 their own pass with their own precedence, independently of <code>highlights.scm</code>.</p>
 <h2 id="captures"><a class="header" href="#captures">Captures</a></h2>
@@ -4315,7 +4400,7 @@ causes matching references to be highlighted as <code>variable.parameter</code>.
 <code>function</code>, <code>namespace</code>, <code>type</code>, <code>constant</code>, etc.</p>
 <h3 id="localreference"><a class="header" href="#localreference"><code>@local.reference</code></a></h3>
 <p>Marks an identifier node as a potential reference to a local definition.
-Helix searches enclosing scopes for a matching definition and, if found,
+Zemacs searches enclosing scopes for a matching definition and, if found,
 highlights the reference with that definition’s class instead.</p>
 <pre><code class="language-scm">(identifier) @local.reference
 </code></pre>
@@ -4337,7 +4422,7 @@ reference resolution for nodes it matches.</p>
 <p>The convention is to use a capture name beginning with an underscore (e.g. <code>@_</code>,
 <code>@_keyword</code>) to make the discard intent clear, but any non-<code>@local.*</code> name works.</p>
 <h2 id="how-definitions-and-references-are-matched"><a class="header" href="#how-definitions-and-references-are-matched">How definitions and references are matched</a></h2>
-<p>Helix matches references to definitions by comparing the text of the reference
+<p>Zemacs matches references to definitions by comparing the text of the reference
 node against the text of definitions visible from the current scope. Definitions
 in inner scopes shadow those in outer scopes. If no definition is found the
 reference is left with its <code>highlights.scm</code> highlight.</p>
@@ -4351,15 +4436,15 @@ effect on <code>highlights.scm</code> results.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="adding-textobject-queries-1"><a href="#adding-textobject-queries-1" class="header">Adding textobject queries</a></h1>
 <h2 id="adding-textobject-queries"><a class="header" href="#adding-textobject-queries">Adding textobject queries</a></h2>
-<p>Helix supports textobjects that are language specific, such as functions, classes, etc.
+<p>Zemacs supports textobjects that are language specific, such as functions, classes, etc.
 These textobjects require an accompanying tree-sitter grammar and a <code>textobjects.scm</code> query file
 to work properly. Tree-sitter allows us to query the source code syntax tree
 and capture specific parts of it. The queries are written in a lisp dialect.
 More information on how to write queries can be found in the <a href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/1-syntax.html">official tree-sitter
 documentation</a>.</p>
 <p>Query files should be placed in <code>runtime/queries/{language}/textobjects.scm</code>
-when contributing to Helix. Note that to test the query files locally you should put
-them under your local runtime directory (<code>~/.config/helix/runtime</code> on Linux
+when contributing to Zemacs. Note that to test the query files locally you should put
+them under your local runtime directory (<code>~/.config/zemacs/runtime</code> on Linux
 for example).</p>
 <p>The following <a href="https://tree-sitter.github.io/tree-sitter/using-parsers/queries/2-operators.html#capturing-nodes">captures</a> are recognized:</p>
 <div class="table-wrapper">
@@ -4385,9 +4470,9 @@ for example).</p>
 </tbody>
 </table>
 </div>
-<p><a href="https://github.com/search?q=repo%3Ahelix-editor%2Fhelix+path%3A%2A%2A/textobjects.scm&amp;type=Code&amp;ref=advsearch&amp;l=&amp;l=">Example query files</a> can be found in the helix GitHub repository.</p>
+<p><a href="https://github.com/search?q=repo%3Ahelix-editor%2Fhelix+path%3A%2A%2A/textobjects.scm&amp;type=Code&amp;ref=advsearch&amp;l=&amp;l=">Example query files</a> can be found in the zemacs GitHub repository.</p>
 <h2 id="queries-for-textobject-based-navigation"><a class="header" href="#queries-for-textobject-based-navigation">Queries for textobject based navigation</a></h2>
-<p>Tree-sitter based navigation in Helix is done using captures in the
+<p>Tree-sitter based navigation in Zemacs is done using captures in the
 following order:</p>
 <ul>
 <li><code>object.movement</code></li>
@@ -4401,7 +4486,7 @@ doesn’t make sense in a navigation context.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="adding-indent-queries-1"><a href="#adding-indent-queries-1" class="header">Adding indent queries</a></h1>
 <h2 id="adding-indent-queries"><a class="header" href="#adding-indent-queries">Adding indent queries</a></h2>
-<p>Helix uses tree-sitter to correctly indent new lines. This requires a
+<p>Zemacs uses tree-sitter to correctly indent new lines. This requires a
 tree-sitter grammar and an <code>indent.scm</code> query file placed in
 <code>runtime/queries/{language}/indents.scm</code>.</p>
 <p>The indent level of a line is <strong>the number of <code>@indent</code> scopes that contain
@@ -4412,7 +4497,7 @@ level, <code>@align</code> aligns to a column, etc. (see <a href="#capture-types
 <p>Note that it matters where these scopes <em>begin</em>: multiple scopes that open on
 the same physical line only increase the indent by 1 (the same-line rule). See
 <a href="#capture-types">Capture types</a>.</p>
-<p>By default, Helix uses the <code>hybrid</code> indentation heuristic. This means that
+<p>By default, Zemacs uses the <code>hybrid</code> indentation heuristic. This means that
 indent queries are not used to compute the expected absolute indentation of a
 line but rather the expected difference in indentation between the new and an
 already existing line. This difference is then added to the actual indentation
@@ -4421,7 +4506,7 @@ harder to find, it is recommended to disable it when testing via
 <code>:set indent-heuristic tree-sitter</code>. The rest of this guide assumes that
 the <code>tree-sitter</code> heuristic is used.</p>
 <h2 id="indent-queries"><a class="header" href="#indent-queries">Indent queries</a></h2>
-<p>When Helix is inserting a new line through <code>o</code>, <code>O</code>, or <code>&lt;ret&gt;</code>, to determine
+<p>When Zemacs is inserting a new line through <code>o</code>, <code>O</code>, or <code>&lt;ret&gt;</code>, to determine
 the indent level for the new line, the query in <code>indents.scm</code> is run on the
 document. The starting position of the query is the end of the line above where
 a new line will be inserted.</p>
@@ -4588,7 +4673,7 @@ whitespace-sensitive.</p>
 the cursor on a line feed ends up being the entire inside of the class. Because
 of this, it will miss the entire function node and its indent capture, leading
 to an indent level one too small.</p>
-<p>To address this case, <code>@extend</code> tells helix to “extend” the captured node’s span
+<p>To address this case, <code>@extend</code> tells zemacs to “extend” the captured node’s span
 to the line feed and every consecutive line that has a greater indent level than
 the line of the node.</p>
 <pre><code class="language-scm">(parenthesized_expression) @indent
@@ -4782,8 +4867,8 @@ wrong the other is caught.</p>
 <h2 id="adding-injection-queries"><a class="header" href="#adding-injection-queries">Adding Injection Queries</a></h2>
 <p>Writing language injection queries allows one to highlight a specific node as a different language.
 In addition to the <a href="https://tree-sitter.github.io/tree-sitter/3-syntax-highlighting.html#language-injection">standard</a> language injection options used by tree-sitter, there
-are a few Helix specific extensions that allow for more control.</p>
-<p>Injection drives more than highlighting: within an injected region Helix also
+are a few Zemacs specific extensions that allow for more control.</p>
+<p>Injection drives more than highlighting: within an injected region Zemacs also
 uses the injected language’s own indentation, textobjects, and comment tokens —
 so, for example, editing JavaScript inside an HTML <code>&lt;script&gt;</code> indents and
 comments as JavaScript.</p>
@@ -4808,9 +4893,9 @@ Marks the content to be highlighted as the language captured with <code>@injecti
 </li>
 <li>
 <p><code>@injection.filename</code> (extension):
-The captured node may contain a filename with a file-extension known to Helix,
+The captured node may contain a filename with a file-extension known to Zemacs,
 highlighting <code>@injection.content</code> as that language. This uses the language extensions defined in
-both the default languages.toml distributed with Helix, as well as user defined languages.</p>
+both the default languages.toml distributed with Zemacs, as well as user defined languages.</p>
 </li>
 <li>
 <p><code>@injection.shebang</code> (extension):
@@ -4861,13 +4946,13 @@ The first argument (a capture) must be one of the other arguments (strings).</p>
 <h2 id="adding-tags-queries"><a class="header" href="#adding-tags-queries">Adding tags queries</a></h2>
 <p>See tree-sitter’s documentation on <a href="https://tree-sitter.github.io/tree-sitter/4-code-navigation.html">Code Navigation Systems</a> for more
 background on tags queries.</p>
-<p>Helix provides LSP-like features such as document and workspace symbol pickers
+<p>Zemacs provides LSP-like features such as document and workspace symbol pickers
 out-of-the-box for languages with <code>tags.scm</code> queries based on syntax trees. To
 be analyzed a language must have a tree-sitter grammar and a <code>tags.scm</code> query
 file which pattern matches interesting nodes from syntax trees.</p>
 <p>Query files should be placed in <code>runtime/queries/{language}/tags.scm</code>
-when contributing to Helix. You may place these under your local runtime
-directory (<code>~/.config/helix/runtime</code> in Linux for example) for the sake of
+when contributing to Zemacs. You may place these under your local runtime
+directory (<code>~/.config/zemacs/runtime</code> in Linux for example) for the sake of
 testing.</p>
 <h2 id="captures-1"><a class="header" href="#captures-1">Captures</a></h2>
 <h3 id="definition"><a class="header" href="#definition"><code>@definition.*</code></a></h3>
@@ -4913,11 +4998,11 @@ the common variants. As with definitions, <code>@name</code> captures the identi
 <pre><code class="language-scm">(call
   function: (identifier) @name) @reference.call
 </code></pre>
-<p><a href="https://github.com/search?q=repo%3Ahelix-editor%2Fhelix+path%3A%2A%2A/tags.scm&amp;type=Code">Example query files</a> can be found in the Helix GitHub
+<p><a href="https://github.com/search?q=repo%3Ahelix-editor%2Fhelix+path%3A%2A%2A/tags.scm&amp;type=Code">Example query files</a> can be found in the Zemacs GitHub
 repository.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="adding-rainbow-bracket-queries"><a class="header" href="#adding-rainbow-bracket-queries">Adding Rainbow Bracket Queries</a></h1>
-<p>Helix uses <code>rainbows.scm</code> tree-sitter query files to provide rainbow bracket
+<p>Zemacs uses <code>rainbows.scm</code> tree-sitter query files to provide rainbow bracket
 functionality.</p>
 <p>Tree-sitter queries are documented in the tree-sitter online documentation.
 If you’re writing queries for the first time, be sure to check out the section
@@ -5022,12 +5107,12 @@ languages. It is only necessary when the node that increments the nesting level
 <p>Auto-generated by <code>scripts/gen_port_report.py</code>. Numerator is re-derived from zemacs source on every run; denominator is the cited inventories under <code>port/data/</code>. Do not edit by hand.</p>
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
-<li>Denominator (cited feature items): <strong>5743</strong></li>
-<li>Ported: <strong>329</strong> (5.7%)</li>
-<li>Partial: <strong>91</strong> (1.6%)</li>
-<li>Absent: <strong>5323</strong></li>
+<li>Denominator (cited feature items): <strong>6056</strong></li>
+<li>Ported: <strong>773</strong> (12.8%)</li>
+<li>Partial: <strong>426</strong> (7.0%)</li>
+<li>Absent: <strong>4857</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 338 static commands, 232 typable <code>:</code> commands, 419 default keybindings</li>
+<li>zemacs source surface: 444 static commands, 282 typable <code>:</code> commands, 1162 default keybindings</li>
 </ul>
 <h2 id="coverage-by-source"><a class="header" href="#coverage-by-source">Coverage by source</a></h2>
 <div class="table-wrapper">
@@ -5036,9 +5121,10 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><th>Source</th><th style="text-align: right">Total</th><th style="text-align: right">Ported</th><th style="text-align: right">Partial</th><th style="text-align: right">Ported %</th></tr>
 </thead>
 <tbody>
-<tr><td>emacs</td><td style="text-align: right">3008</td><td style="text-align: right">12</td><td style="text-align: right">1</td><td style="text-align: right">0.4%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">239</td><td style="text-align: right">90</td><td style="text-align: right">11.5%</td></tr>
-<tr><td>spacemacs</td><td style="text-align: right">658</td><td style="text-align: right">78</td><td style="text-align: right">0</td><td style="text-align: right">11.9%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3008</td><td style="text-align: right">39</td><td style="text-align: right">3</td><td style="text-align: right">1.3%</td></tr>
+<tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">17</td><td style="text-align: right">5</td><td style="text-align: right">65.4%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">506</td><td style="text-align: right">285</td><td style="text-align: right">24.4%</td></tr>
+<tr><td>spacemacs</td><td style="text-align: right">945</td><td style="text-align: right">211</td><td style="text-align: right">133</td><td style="text-align: right">22.3%</td></tr>
 </tbody>
 </table>
 </div>
@@ -5050,15 +5136,16 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">12</td><td style="text-align: right">1</td><td style="text-align: right">0.6%</td></tr>
-<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1124</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
-<tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
-<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">50</td><td style="text-align: right">11</td><td style="text-align: right">8.9%</td></tr>
+<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1124</td><td style="text-align: right">27</td><td style="text-align: right">2</td><td style="text-align: right">2.4%</td></tr>
+<tr><td>fzf.vim</td><td>command</td><td style="text-align: right">26</td><td style="text-align: right">17</td><td style="text-align: right">5</td><td style="text-align: right">65.4%</td></tr>
+<tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">34</td><td style="text-align: right">1</td><td style="text-align: right">64.2%</td></tr>
+<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">51</td><td style="text-align: right">14</td><td style="text-align: right">9.1%</td></tr>
 <tr><td>neovim</td><td>function</td><td style="text-align: right">451</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
-<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">20</td><td style="text-align: right">0</td><td style="text-align: right">20.4%</td></tr>
-<tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">140</td><td style="text-align: right">31</td><td style="text-align: right">29.2%</td></tr>
-<tr><td>neovim</td><td>option</td><td style="text-align: right">350</td><td style="text-align: right">10</td><td style="text-align: right">10</td><td style="text-align: right">2.9%</td></tr>
-<tr><td>neovim</td><td>visual-mode</td><td style="text-align: right">85</td><td style="text-align: right">19</td><td style="text-align: right">38</td><td style="text-align: right">22.4%</td></tr>
-<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">415</td><td style="text-align: right">78</td><td style="text-align: right">0</td><td style="text-align: right">18.8%</td></tr>
+<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">46</td><td style="text-align: right">24</td><td style="text-align: right">46.9%</td></tr>
+<tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">319</td><td style="text-align: right">124</td><td style="text-align: right">66.6%</td></tr>
+<tr><td>neovim</td><td>option</td><td style="text-align: right">350</td><td style="text-align: right">15</td><td style="text-align: right">80</td><td style="text-align: right">4.3%</td></tr>
+<tr><td>neovim</td><td>visual-mode</td><td style="text-align: right">85</td><td style="text-align: right">41</td><td style="text-align: right">42</td><td style="text-align: right">48.2%</td></tr>
+<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">702</td><td style="text-align: right">211</td><td style="text-align: right">133</td><td style="text-align: right">30.1%</td></tr>
 <tr><td>spacemacs</td><td>layer</td><td style="text-align: right">243</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
 </tbody>
 </table>
@@ -5068,10 +5155,10 @@ languages. It is only necessary when the node that increments the nesting level
 <p>Auto-generated by <code>scripts/gen_port_report.py</code> — the keybinding subset of the <a href="generated/port_report.html">port report</a>. Counts only the <strong>key-press surface</strong> (vim/neovim normal/visual/insert/cmdline keys, the GNU Emacs Key Index, and the Spacemacs <code>SPC</code> tree); ex-commands, options, functions, layers and <code>M-x</code> commands are excluded. <code>ported</code> means the same key, pressed in zemacs, does the equivalent thing. Do not edit by hand.</p>
 <h2 id="headline-1"><a class="header" href="#headline-1">Headline</a></h2>
 <ul>
-<li>Cited keybindings (denominator): <strong>2254</strong></li>
-<li>Ported: <strong>257</strong> (11.4%)</li>
-<li>Partial: <strong>69</strong> (3.1%)</li>
-<li>Absent: <strong>1928</strong></li>
+<li>Cited keybindings (denominator): <strong>2541</strong></li>
+<li>Ported: <strong>678</strong> (26.7%)</li>
+<li>Partial: <strong>326</strong> (12.8%)</li>
+<li>Absent: <strong>1537</strong></li>
 </ul>
 <h2 id="by-source"><a class="header" href="#by-source">By source</a></h2>
 <div class="table-wrapper">
@@ -5080,9 +5167,9 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><th>Source</th><th style="text-align: right">Keybindings</th><th style="text-align: right">Ported</th><th style="text-align: right">Partial</th><th style="text-align: right">Ported %</th></tr>
 </thead>
 <tbody>
-<tr><td>emacs</td><td style="text-align: right">1124</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">715</td><td style="text-align: right">179</td><td style="text-align: right">69</td><td style="text-align: right">25.0%</td></tr>
-<tr><td>spacemacs</td><td style="text-align: right">415</td><td style="text-align: right">78</td><td style="text-align: right">0</td><td style="text-align: right">18.8%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">1124</td><td style="text-align: right">27</td><td style="text-align: right">2</td><td style="text-align: right">2.4%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">715</td><td style="text-align: right">440</td><td style="text-align: right">191</td><td style="text-align: right">61.5%</td></tr>
+<tr><td>spacemacs</td><td style="text-align: right">702</td><td style="text-align: right">211</td><td style="text-align: right">133</td><td style="text-align: right">30.1%</td></tr>
 </tbody>
 </table>
 </div>
@@ -5093,16 +5180,16 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><th>Source</th><th>Category</th><th style="text-align: right">Keybindings</th><th style="text-align: right">Ported</th><th style="text-align: right">Partial</th><th style="text-align: right">Ported %</th></tr>
 </thead>
 <tbody>
-<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1124</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
-<tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">0</td><td style="text-align: right">0</td><td style="text-align: right">0.0%</td></tr>
-<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">20</td><td style="text-align: right">0</td><td style="text-align: right">20.4%</td></tr>
-<tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">140</td><td style="text-align: right">31</td><td style="text-align: right">29.2%</td></tr>
-<tr><td>neovim</td><td>visual-mode</td><td style="text-align: right">85</td><td style="text-align: right">19</td><td style="text-align: right">38</td><td style="text-align: right">22.4%</td></tr>
-<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">415</td><td style="text-align: right">78</td><td style="text-align: right">0</td><td style="text-align: right">18.8%</td></tr>
+<tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1124</td><td style="text-align: right">27</td><td style="text-align: right">2</td><td style="text-align: right">2.4%</td></tr>
+<tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">34</td><td style="text-align: right">1</td><td style="text-align: right">64.2%</td></tr>
+<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">46</td><td style="text-align: right">24</td><td style="text-align: right">46.9%</td></tr>
+<tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">319</td><td style="text-align: right">124</td><td style="text-align: right">66.6%</td></tr>
+<tr><td>neovim</td><td>visual-mode</td><td style="text-align: right">85</td><td style="text-align: right">41</td><td style="text-align: right">42</td><td style="text-align: right">48.2%</td></tr>
+<tr><td>spacemacs</td><td>keybinding</td><td style="text-align: right">702</td><td style="text-align: right">211</td><td style="text-align: right">133</td><td style="text-align: right">30.1%</td></tr>
 </tbody>
 </table>
 </div>
-<p>Emacs shows 0% because zemacs is a modal (vim) editor — Emacs’s default chord bindings (<code>C-x C-f</code>, …) are intentionally not bound; the <em>commands</em> they invoke are tracked under the port report’s emacs <code>command</code> category.</p>
+<p>Emacs coverage is low because zemacs is a modal (vim) editor — most Emacs chord bindings (<code>C-x C-f</code>, …) are intentionally not bound. What <em>is</em> counted are the global readline-style editing keys that genuinely work here (e.g. <code>C-a</code>/<code>C-e</code>/<code>C-k</code>, <code>M-f</code>/<code>M-b</code>/<code>M-d</code>, <code>M-x</code>, <code>C-s</code>); the remaining Emacs <em>commands</em> are tracked under the port report’s emacs <code>command</code> category.</p>
 
                     </main>
 
