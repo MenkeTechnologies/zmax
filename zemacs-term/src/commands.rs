@@ -1,5 +1,12 @@
 pub(crate) mod dap;
 pub(crate) mod lsp;
+/// Embedded scripting host. The real `scripting/` module (which pulls the
+/// interpreter crates) is compiled only with the `scripting` feature; otherwise
+/// a stub exposing the same entry points reports that scripting was not built in.
+#[cfg(feature = "scripting")]
+pub mod scripting;
+#[cfg(not(feature = "scripting"))]
+#[path = "commands/scripting_stub.rs"]
 pub mod scripting;
 pub(crate) mod syntax;
 pub(crate) mod typed;
@@ -660,6 +667,9 @@ impl MappableCommand {
         yank_file_path_with_line, "Yank current file path:line to clipboard",
         yank_file_path_with_line_col, "Yank current file path:line:col to clipboard",
         yank_file_dir, "Yank current file's directory to clipboard",
+        copy_remote_url, "Copy web permalink (host/blob/<sha>/path#Ln) for current line",
+        duplicate_selection_down, "Duplicate current line(s) downward",
+        duplicate_selection_up, "Duplicate current line(s) upward",
         count_selection, "Count chars/words/lines in selection",
         match_brackets, "Goto matching bracket",
         match_brackets_or_goto_percent, "Goto matching bracket, or {count} percent through the file",
@@ -1393,6 +1403,103 @@ fn yank_file_path_with_line_col(cx: &mut Context) {
 }
 fn yank_file_dir(cx: &mut Context) {
     yank_file_path_kind(cx, FilePathKind::Dir);
+}
+
+/// Convert a git remote URL (ssh, scp-like, git://, or http[s] form) to its base
+/// web URL: `git@github.com:o/r.git` / `https://github.com/o/r.git` → `https://github.com/o/r`.
+fn git_remote_to_web_base(remote: &str) -> Option<String> {
+    let r = remote.trim();
+    let r = r.strip_suffix(".git").unwrap_or(r);
+    if let Some(rest) = r.strip_prefix("git@") {
+        // scp-like: git@host:owner/repo
+        if let Some((host, path)) = rest.split_once(':') {
+            return Some(format!("https://{host}/{path}"));
+        }
+    }
+    if let Some(rest) = r.strip_prefix("ssh://") {
+        let rest = rest.strip_prefix("git@").unwrap_or(rest);
+        // ssh://[git@]host[:port]/owner/repo
+        if let Some((hostport, path)) = rest.split_once('/') {
+            let host = hostport.split(':').next().unwrap_or(hostport);
+            return Some(format!("https://{host}/{path}"));
+        }
+    }
+    if r.starts_with("https://") || r.starts_with("http://") {
+        return Some(r.to_string());
+    }
+    if let Some(rest) = r.strip_prefix("git://") {
+        return Some(format!("https://{rest}"));
+    }
+    None
+}
+
+/// Build a web permalink to `rel_path` at `git_ref`, line `line`, from a base web
+/// URL. GitHub/GitLab use `/blob/<ref>/<path>#L<n>`; Bitbucket uses
+/// `/src/<ref>/<path>#lines-<n>`.
+fn build_permalink(web_base: &str, git_ref: &str, rel_path: &str, line: usize) -> String {
+    let rel = rel_path.trim_start_matches('/');
+    if web_base.contains("bitbucket") {
+        format!("{web_base}/src/{git_ref}/{rel}#lines-{line}")
+    } else {
+        format!("{web_base}/blob/{git_ref}/{rel}#L{line}")
+    }
+}
+
+fn git_out(dir: &std::path::Path, args: &[&str]) -> Option<String> {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(args)
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
+}
+
+/// Copy a web permalink (host/blob/<sha>/<path>#L<line>) for the current line to
+/// the clipboard — GitLens "Copy permalink" analogue. Pins to the exact HEAD
+/// commit so the link stays valid as the branch moves.
+fn copy_remote_url(cx: &mut Context) {
+    let (path, line) = {
+        let (view, doc) = current!(cx.editor);
+        let Some(path) = doc.path().map(|p| p.to_path_buf()) else {
+            cx.editor.set_error("buffer has no file path");
+            return;
+        };
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor) + 1;
+        (path, line)
+    };
+    let dir = path.parent().unwrap_or_else(|| std::path::Path::new("."));
+    let Some(remote) = git_out(dir, &["remote", "get-url", "origin"]) else {
+        cx.editor.set_error("no git remote 'origin'");
+        return;
+    };
+    let Some(web_base) = git_remote_to_web_base(&remote) else {
+        cx.editor.set_error(format!("unsupported remote URL: {remote}"));
+        return;
+    };
+    let Some(root) = git_out(dir, &["rev-parse", "--show-toplevel"]) else {
+        cx.editor.set_error("not in a git repository");
+        return;
+    };
+    let git_ref = git_out(dir, &["rev-parse", "HEAD"]).unwrap_or_else(|| "HEAD".into());
+    let rel = path
+        .strip_prefix(root.as_str())
+        .unwrap_or(&path)
+        .to_string_lossy()
+        .replace('\\', "/");
+    let url = build_permalink(&web_base, &git_ref, &rel, line);
+    let _ = cx.editor.registers.write('+', vec![url.clone()]);
+    cx.editor.set_status(format!("Yanked permalink: {url}"));
 }
 
 // spacemacs `SPC x c`: count characters / words / lines in the selection.
@@ -2957,6 +3064,52 @@ fn copy_selection_on_prev_line(cx: &mut Context) {
 
 fn copy_selection_on_next_line(cx: &mut Context) {
     copy_selection_on_line(cx, Direction::Forward)
+}
+
+/// Given the full text of the line-block being duplicated, return the string to
+/// insert so the copy lands on its own line(s). Ensures a separating newline when
+/// the block (the file's last line) has no trailing one.
+fn duplicate_block_insert(block: &str, downward: bool) -> String {
+    if block.ends_with('\n') {
+        block.to_string()
+    } else if downward {
+        format!("\n{block}")
+    } else {
+        format!("{block}\n")
+    }
+}
+
+/// Duplicate the whole line(s) spanned by the primary selection above or below
+/// it (VS Code's Shift-Alt-Up/Down). Honours the editor count for N copies.
+fn duplicate_selection_impl(cx: &mut Context, downward: bool) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let range = doc.selection(view.id).primary();
+    let start_line = slice.char_to_line(range.from());
+    let last_char = range.to().saturating_sub(1).max(range.from());
+    let end_line = slice.char_to_line(last_char);
+    let block_start = slice.line_to_char(start_line);
+    let block_end = if end_line + 1 < slice.len_lines() {
+        slice.line_to_char(end_line + 1)
+    } else {
+        slice.len_chars()
+    };
+    let block: String = slice.slice(block_start..block_end).to_string();
+    let insert = duplicate_block_insert(&block, downward).repeat(count);
+    let pos = if downward { block_end } else { block_start };
+    let transaction = Transaction::change(text, std::iter::once((pos, pos, Some(insert.into()))));
+    doc.apply(&transaction, view.id);
+    exit_select_mode(cx);
+}
+
+fn duplicate_selection_down(cx: &mut Context) {
+    duplicate_selection_impl(cx, true)
+}
+
+fn duplicate_selection_up(cx: &mut Context) {
+    duplicate_selection_impl(cx, false)
 }
 
 fn select_all(cx: &mut Context) {
@@ -9583,5 +9736,49 @@ mod path_yank_tests {
         assert_eq!(count_region(""), (0, 0, 0));
         assert_eq!(count_region("hello world"), (11, 2, 1));
         assert_eq!(count_region("a b\nc d\n"), (8, 4, 3));
+    }
+
+    #[test]
+    fn remote_url_normalizes() {
+        use super::git_remote_to_web_base as b;
+        assert_eq!(b("git@github.com:owner/repo.git").as_deref(), Some("https://github.com/owner/repo"));
+        assert_eq!(b("git@github.com:owner/repo").as_deref(), Some("https://github.com/owner/repo"));
+        assert_eq!(b("https://github.com/owner/repo.git").as_deref(), Some("https://github.com/owner/repo"));
+        assert_eq!(b("https://gitlab.com/g/sub/repo.git").as_deref(), Some("https://gitlab.com/g/sub/repo"));
+        assert_eq!(b("ssh://git@github.com/owner/repo.git").as_deref(), Some("https://github.com/owner/repo"));
+        assert_eq!(b("ssh://git@ssh.github.com:443/owner/repo.git").as_deref(), Some("https://ssh.github.com/owner/repo"));
+        assert_eq!(b("git://github.com/owner/repo.git").as_deref(), Some("https://github.com/owner/repo"));
+        assert_eq!(b("not a url"), None);
+    }
+
+    #[test]
+    fn duplicate_block_newline() {
+        use super::duplicate_block_insert as d;
+        // normal block (ends with newline): inserted verbatim, both directions
+        assert_eq!(d("foo\n", true), "foo\n");
+        assert_eq!(d("foo\n", false), "foo\n");
+        assert_eq!(d("a\nb\n", true), "a\nb\n");
+        // last line without trailing newline: a separator newline is synthesized
+        assert_eq!(d("foo", true), "\nfoo");
+        assert_eq!(d("foo", false), "foo\n");
+    }
+
+    #[test]
+    fn permalink_formats() {
+        use super::build_permalink as p;
+        assert_eq!(
+            p("https://github.com/o/r", "abc123", "src/main.rs", 42),
+            "https://github.com/o/r/blob/abc123/src/main.rs#L42"
+        );
+        // leading slash on the path is trimmed
+        assert_eq!(
+            p("https://gitlab.com/o/r", "deadbeef", "/lib/x.rs", 7),
+            "https://gitlab.com/o/r/blob/deadbeef/lib/x.rs#L7"
+        );
+        // bitbucket uses a different anchor scheme
+        assert_eq!(
+            p("https://bitbucket.org/o/r", "feed", "a.py", 3),
+            "https://bitbucket.org/o/r/src/feed/a.py#lines-3"
+        );
     }
 }

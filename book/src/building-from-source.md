@@ -60,6 +60,30 @@ RUSTFLAGS="-C target-feature=-crt-static"
 
 > 💡 If you only want to build _some_ grammars, see [`use-grammars`](./languages.md#choosing-grammars)
 
+### Cargo features
+
+The `zemacs-term` crate exposes a few Cargo features (all set on `--release`/`opt`
+builds by default):
+
+| Feature     | Default | Effect |
+| ----------- | ------- | ------ |
+| `git`       | yes     | Git integration in the VCS gutter/diff layer (`zemacs-vcs/git`). |
+| `scripting` | yes     | The [embedded scripting languages](./scripting.md) and the REPL — elisp, vimscript and awk, plus zsh and stryke on unix. Pulls in the interpreter crates. |
+| `unicode-lines` | no  | Treat Unicode line separators (e.g. `U+2028`) as line breaks. |
+
+To build **without the embedded scripting languages** — dropping every
+interpreter crate (`elisprs`, `vimlrs`, `awkrs`, `zshrs`, `strykelang`) from the
+dependency graph for a leaner, faster build — disable default features and re-add
+just the ones you want:
+
+```sh
+cargo install --path zemacs-term --locked --no-default-features --features git
+```
+
+In a scripting-less build the `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke` commands and
+the REPL still exist but report that scripting was not compiled in; `init.el` /
+`init.vim` are not loaded.
+
 ### Configuring Zemacs's runtime files
 
 #### Linux and macOS

@@ -31,10 +31,16 @@ assets = [
 ]
 
 [features]
-default = ["git"]
+default = ["git", "scripting"]
 unicode-lines = ["zemacs-core/unicode-lines", "zemacs-view/unicode-lines"]
 integration = ["zemacs-event/integration_test"]
 git = ["zemacs-vcs/git"]
+# Embedded scripting languages (elisp/viml/awk, plus unix-only zsh/stryke) wired
+# into `commands::scripting` and the REPL. On by default. Drop it (e.g.
+# `cargo build --no-default-features --features git`) to build zemacs without any
+# of the interpreter crates: the `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke` commands
+# and the REPL then report that scripting wasn't compiled in.
+scripting = ["dep:elisprs", "dep:vimlrs", "dep:awkrs", "dep:tempfile", "dep:zsh", "dep:stryke"]
 
 [[bin]]
 name = "zemacs"
@@ -53,11 +59,11 @@ zemacs-loader = { path = "../zemacs-loader" }
 # Embedded scripting engines wired into the `commands::scripting` host. They
 # live as sibling meta-repo submodules, consumed by path so local edits are
 # picked up. Both run on fusevm (0.14.x, unified via semver).
-elisprs = { path = "../../elisprs" }                          # Emacs Lisp
-vimlrs = { path = "../../vimlrs", package = "zemacs-viml" }   # Vimscript (VimL)
-awkrs = { path = "../../awkrs" }                              # AWK (region/buffer filter)
+elisprs = { path = "../../elisprs", optional = true }                          # Emacs Lisp
+vimlrs = { path = "../../vimlrs", package = "zemacs-viml", optional = true }    # Vimscript (VimL)
+awkrs = { path = "../../awkrs", optional = true }                              # AWK (region/buffer filter)
 # zsh (embedded shell command runner) is unix-only; see the target deps below.
-tempfile.workspace = true                                    # zsh output capture (temp-file fd redirect)
+tempfile = { workspace = true, optional = true }            # zsh output capture (temp-file fd redirect)
 
 anyhow = "1"
 once_cell = "1.21"
@@ -109,8 +115,8 @@ crossterm = { version = "0.28", features = ["event-stream"] }
 [target.'cfg(not(windows))'.dependencies]  # https://github.com/vorner/signal-hook/issues/100
 signal-hook-tokio = { version = "0.4", features = ["futures-v0_3"] }
 libc = "0.2.186"
-zsh = { path = "../../zshrs", package = "zshrs" }            # embedded zsh shell (unix only)
-stryke = { path = "../../strykelang", package = "strykelang" } # embedded Perl (unix only; pulls zshrs)
+zsh = { path = "../../zshrs", package = "zshrs", optional = true }            # embedded zsh shell (unix only)
+stryke = { path = "../../strykelang", package = "strykelang", optional = true } # embedded Perl (unix only; pulls zshrs)
 
 [build-dependencies]
 zemacs-loader = { path = "../zemacs-loader" }
