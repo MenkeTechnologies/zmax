@@ -905,6 +905,7 @@ impl Ide {
     }
 
     /// Show `t` in its column without moving keyboard focus.
+    #[allow(dead_code)] // companion to select_tab; kept for the bottom-tab API
     fn show_tab(&mut self, t: BottomTab) {
         self.bottom_tabs[Self::tab_col(t)] = t;
         self.sync_bottom_tab();
@@ -2751,7 +2752,6 @@ impl Ide {
         let ciw = cilabel.chars().count() as u16;
         surface.set_stringn(x, area.y, cilabel, area.width as usize, if self.bottom_tab == BottomTab::Ci { on } else { off });
         self.bottom_hits.push((x, x + ciw, BottomHit::TabCi));
-        x += ciw + 1;
 
         if self.fold_problems {
             return;

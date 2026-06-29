@@ -618,8 +618,16 @@ impl MappableCommand {
         encode_html, "HTML-escape the selection (& < > \" ')",
         decode_html, "Decode HTML entities in the selection",
         title_case_selection, "Title-case the selection (capitalize each word)",
+        insert_toc, "Insert a markdown table of contents from the buffer's headings",
         slugify_selection, "Slugify the selection (lowercase, hyphen-separated)",
         strip_ansi_selection, "Strip ANSI/VT escape codes from the selection",
+        json_escape_selection, "JSON-escape the selection (for a string literal)",
+        json_unescape_selection, "JSON-unescape the selection",
+        to_hex_selection, "Encode the selection as hex bytes",
+        from_hex_selection, "Decode hex bytes in the selection back to text",
+        format_table_selection, "Align the selected markdown table's columns",
+        csv_to_table_selection, "Convert the selected CSV/TSV to a markdown table",
+        table_to_csv_selection, "Convert the selected markdown table to CSV",
         insert_digraph, "Insert a digraph by two-character mnemonic (CTRL-K)",
         copy_char_below, "Insert the character below the cursor (i_CTRL-E)",
         copy_char_above, "Insert the character above the cursor (i_CTRL-Y)",
@@ -3116,6 +3124,66 @@ fn title_case_selection(cx: &mut Context) {
     });
 }
 
+/// GitHub-style heading anchor: lowercase, alphanumerics kept, spaces and hyphens
+/// become `-`, underscores kept, all other punctuation dropped (no run collapsing,
+/// matching GitHub's slug algorithm). Pure — unit tested.
+fn github_anchor(title: &str) -> String {
+    let mut out = String::with_capacity(title.len());
+    for c in title.chars() {
+        if c.is_alphanumeric() {
+            out.extend(c.to_lowercase());
+        } else if c == ' ' || c == '-' {
+            out.push('-');
+        } else if c == '_' {
+            out.push('_');
+        }
+    }
+    out
+}
+
+/// Build a markdown table of contents (nested `- [title](#anchor)` list) from the
+/// ATX (`#`) headings in `text`, skipping fenced code blocks. Pure — unit tested.
+fn markdown_toc(text: &str) -> String {
+    let mut out = String::new();
+    let mut in_fence = false;
+    for line in text.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+            in_fence = !in_fence;
+            continue;
+        }
+        if in_fence {
+            continue;
+        }
+        let hashes = trimmed.chars().take_while(|&c| c == '#').count();
+        if (1..=6).contains(&hashes) && trimmed[hashes..].starts_with(' ') {
+            let title = trimmed[hashes..].trim();
+            if !title.is_empty() {
+                let indent = "  ".repeat(hashes - 1);
+                let anchor = github_anchor(title);
+                out.push_str(&format!("{indent}- [{title}](#{anchor})\n"));
+            }
+        }
+    }
+    out
+}
+
+/// `:toc` — insert a markdown table of contents (from the buffer's headings) at
+/// the cursor.
+fn insert_toc(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text: String = doc.text().slice(..).chunks().collect();
+    let toc = markdown_toc(&text);
+    if toc.is_empty() {
+        cx.editor.set_error("no markdown headings found");
+        return;
+    }
+    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let transaction = Transaction::change(doc.text(), std::iter::once((pos, pos, Some(toc.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+}
+
 fn slugify_selection(cx: &mut Context) {
     switch_case_impl(cx, |slice| {
         let s: String = slice.chunks().collect();
@@ -3171,6 +3239,268 @@ fn strip_ansi_selection(cx: &mut Context) {
     switch_case_impl(cx, |slice| {
         let s: String = slice.chunks().collect();
         strip_ansi(&s).into()
+    });
+}
+
+/// Escape text for use inside a JSON string literal (does not add the surrounding
+/// quotes). Pure — unit tested.
+fn json_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 8);
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\u{08}' => out.push_str("\\b"),
+            '\u{0c}' => out.push_str("\\f"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// Unescape JSON-string escape sequences (`\n \t \" \\ \uXXXX` …), leaving any
+/// unrecognized escape verbatim. Pure — unit tested.
+fn json_unescape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '\\' {
+            out.push(c);
+            continue;
+        }
+        match chars.next() {
+            Some('"') => out.push('"'),
+            Some('\\') => out.push('\\'),
+            Some('/') => out.push('/'),
+            Some('n') => out.push('\n'),
+            Some('r') => out.push('\r'),
+            Some('t') => out.push('\t'),
+            Some('b') => out.push('\u{08}'),
+            Some('f') => out.push('\u{0c}'),
+            Some('u') => {
+                let hex: String = (0..4).filter_map(|_| chars.next()).collect();
+                match u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32) {
+                    Some(ch) => out.push(ch),
+                    None => {
+                        out.push_str("\\u");
+                        out.push_str(&hex);
+                    }
+                }
+            }
+            Some(other) => {
+                out.push('\\');
+                out.push(other);
+            }
+            None => out.push('\\'),
+        }
+    }
+    out
+}
+
+fn json_escape_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        json_escape(&s).into()
+    });
+}
+
+fn json_unescape_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        json_unescape(&s).into()
+    });
+}
+
+/// Render text as space-separated lowercase hex of its UTF-8 bytes. Pure — unit tested.
+fn to_hex(s: &str) -> String {
+    s.bytes().map(|b| format!("{b:02x}")).collect::<Vec<_>>().join(" ")
+}
+
+/// Decode hex back to text: every pair of hex digits becomes a byte, ignoring any
+/// non-hex characters (spaces, newlines). Lossy UTF-8. Pure — unit tested.
+fn from_hex(s: &str) -> String {
+    let digits: Vec<u32> = s.chars().filter_map(|c| c.to_digit(16)).collect();
+    let mut bytes = Vec::with_capacity(digits.len() / 2);
+    for pair in digits.chunks(2) {
+        if pair.len() == 2 {
+            bytes.push((pair[0] * 16 + pair[1]) as u8);
+        }
+    }
+    String::from_utf8_lossy(&bytes).into_owned()
+}
+
+fn to_hex_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        to_hex(&s).into()
+    });
+}
+
+fn from_hex_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        from_hex(&s).into()
+    });
+}
+
+/// Is `cells` a markdown table separator row (e.g. `---`, `:--`, `:-:`)?
+fn is_table_separator(cells: &[String]) -> bool {
+    !cells.is_empty()
+        && cells.iter().all(|c| {
+            let t = c.trim();
+            !t.is_empty() && t.contains('-') && t.chars().all(|ch| ch == '-' || ch == ':')
+        })
+}
+
+/// Re-align a markdown pipe table: pad every column to its widest cell, normalize
+/// the `| a | b |` spacing, and rebuild the separator row to match (preserving
+/// alignment colons). Left-aligns data cells. Pure — unit tested.
+fn format_markdown_table(block: &str) -> String {
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<&str> = block.split('\n').collect();
+    if had_trailing {
+        lines.pop();
+    }
+    // Parse each row into trimmed cells, dropping the empty edges from outer pipes.
+    let rows: Vec<Vec<String>> = lines
+        .iter()
+        .map(|line| {
+            let t = line.trim();
+            let t = t.strip_prefix('|').unwrap_or(t);
+            let t = t.strip_suffix('|').unwrap_or(t);
+            t.split('|').map(|c| c.trim().to_string()).collect()
+        })
+        .collect();
+    let ncol = rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    if ncol == 0 {
+        return block.to_string();
+    }
+    // Column widths from non-separator rows (min 3 so `---` fits).
+    let mut widths = vec![3usize; ncol];
+    for row in &rows {
+        if is_table_separator(row) {
+            continue;
+        }
+        for (i, cell) in row.iter().enumerate() {
+            widths[i] = widths[i].max(cell.chars().count());
+        }
+    }
+    let mut out_lines = Vec::with_capacity(rows.len());
+    for row in &rows {
+        let sep = is_table_separator(row);
+        let cells: Vec<String> = (0..ncol)
+            .map(|i| {
+                let cell = row.get(i).map(|s| s.as_str()).unwrap_or("");
+                if sep {
+                    let lc = cell.starts_with(':');
+                    let rc = cell.ends_with(':') && cell.len() > 1;
+                    let dashes = widths[i].saturating_sub(lc as usize + rc as usize).max(1);
+                    let mut s = String::new();
+                    if lc {
+                        s.push(':');
+                    }
+                    s.push_str(&"-".repeat(dashes));
+                    if rc {
+                        s.push(':');
+                    }
+                    s
+                } else {
+                    format!("{:<width$}", cell, width = widths[i])
+                }
+            })
+            .collect();
+        out_lines.push(format!("| {} |", cells.join(" | ")));
+    }
+    let out = out_lines.join("\n");
+    if had_trailing {
+        format!("{out}\n")
+    } else {
+        out
+    }
+}
+
+fn format_table_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        format_markdown_table(&s).into()
+    });
+}
+
+/// Convert CSV/TSV text to an aligned markdown table (first row is the header).
+/// The delimiter is a tab if any tab is present, otherwise a comma. Pure — unit tested.
+fn csv_to_markdown_table(block: &str) -> String {
+    let lines: Vec<&str> = block.lines().filter(|l| !l.trim().is_empty()).collect();
+    if lines.is_empty() {
+        return block.to_string();
+    }
+    let delim = if block.contains('\t') { '\t' } else { ',' };
+    let mut rows: Vec<String> = Vec::with_capacity(lines.len() + 1);
+    for (i, line) in lines.iter().enumerate() {
+        let cells: Vec<&str> = line.split(delim).map(|c| c.trim()).collect();
+        rows.push(format!("| {} |", cells.join(" | ")));
+        if i == 0 {
+            let sep = vec!["---"; cells.len()].join(" | ");
+            rows.push(format!("| {sep} |"));
+        }
+    }
+    let raw = rows.join("\n");
+    // reuse the aligner; keep the input's trailing-newline shape
+    let table = format_markdown_table(&raw);
+    if block.ends_with('\n') {
+        format!("{table}\n")
+    } else {
+        table
+    }
+}
+
+fn csv_to_table_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        csv_to_markdown_table(&s).into()
+    });
+}
+
+/// Quote a CSV field if it contains a comma, quote, or newline (RFC 4180).
+fn csv_quote(cell: &str) -> String {
+    if cell.contains([',', '"', '\n']) {
+        format!("\"{}\"", cell.replace('"', "\"\""))
+    } else {
+        cell.to_string()
+    }
+}
+
+/// Convert a markdown pipe table back to CSV, dropping the separator row. Pure —
+/// unit tested.
+fn markdown_table_to_csv(block: &str) -> String {
+    let mut out_lines = Vec::new();
+    for line in block.lines() {
+        let t = line.trim();
+        if t.is_empty() || !t.contains('|') {
+            continue;
+        }
+        let t = t.strip_prefix('|').unwrap_or(t);
+        let t = t.strip_suffix('|').unwrap_or(t);
+        let cells: Vec<String> = t.split('|').map(|c| c.trim().to_string()).collect();
+        if is_table_separator(&cells) {
+            continue;
+        }
+        out_lines.push(cells.iter().map(|c| csv_quote(c)).collect::<Vec<_>>().join(","));
+    }
+    let mut res = out_lines.join("\n");
+    if block.ends_with('\n') && !res.is_empty() {
+        res.push('\n');
+    }
+    res
+}
+
+fn table_to_csv_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        markdown_table_to_csv(&s).into()
     });
 }
 
@@ -5946,6 +6276,7 @@ fn line_starts_with(line: RopeSlice, marker: &str) -> bool {
 enum ConflictSide {
     Ours,
     Theirs,
+    #[allow(dead_code)] // keep-both resolution not yet wired to a command
     Both,
 }
 
@@ -10308,6 +10639,101 @@ mod path_yank_tests {
         assert_eq!(strip_ansi("café\u{1b}[0m"), "café");
         // plain text untouched
         assert_eq!(strip_ansi("plain text"), "plain text");
+    }
+
+    #[test]
+    fn table_becomes_csv() {
+        use super::markdown_table_to_csv;
+        assert_eq!(
+            markdown_table_to_csv("| name | age |\n| --- | --- |\n| Alice | 30 |\n"),
+            "name,age\nAlice,30\n"
+        );
+        // a cell containing a comma gets quoted (RFC 4180)
+        assert_eq!(
+            markdown_table_to_csv("| a | b |\n|---|---|\n| x, y | z |\n"),
+            "a,b\n\"x, y\",z\n"
+        );
+        // round-trips with csv_to_markdown_table for a simple table
+        let csv = "h1,h2\nv1,v2\n";
+        assert_eq!(markdown_table_to_csv(&super::csv_to_markdown_table(csv)), csv);
+    }
+
+    #[test]
+    fn csv_becomes_table() {
+        use super::csv_to_markdown_table;
+        assert_eq!(
+            csv_to_markdown_table("name,age\nAlice,30\nBob,5\n"),
+            "| name  | age |\n| ----- | --- |\n| Alice | 30  |\n| Bob   | 5   |\n"
+        );
+        // tab-separated input is auto-detected
+        assert_eq!(
+            csv_to_markdown_table("a\tbb\n1\t2"),
+            "| a   | bb  |\n| --- | --- |\n| 1   | 2   |"
+        );
+    }
+
+    #[test]
+    fn markdown_table_aligns() {
+        use super::format_markdown_table;
+        // columns pad to their widest cell (min 3 so the separator stays `---`)
+        let input = "| a | bb |\n|-|-|\n| 1 | 2 |\n";
+        let expected = "| a   | bb  |\n| --- | --- |\n| 1   | 2   |\n";
+        assert_eq!(format_markdown_table(input), expected);
+        // alignment colons in the separator are preserved
+        let input2 = "| x | y |\n|:-|-:|\n| 100 | z |\n";
+        let expected2 = "| x   | y   |\n| :-- | --: |\n| 100 | z   |\n";
+        assert_eq!(format_markdown_table(input2), expected2);
+        // ragged rows are padded to the column count
+        let input3 = "| a | b | c |\n| 1 | 2 |\n";
+        let expected3 = "| a   | b   | c   |\n| 1   | 2   |     |\n";
+        assert_eq!(format_markdown_table(input3), expected3);
+    }
+
+    #[test]
+    fn hex_encode_decode() {
+        use super::{from_hex, to_hex};
+        assert_eq!(to_hex("AB"), "41 42");
+        assert_eq!(to_hex("é"), "c3 a9"); // UTF-8 bytes
+        assert_eq!(from_hex("41 42"), "AB");
+        assert_eq!(from_hex("4142"), "AB"); // spaces optional
+        assert_eq!(from_hex("c3a9"), "é");
+        // non-hex chars (and an odd trailing nibble) are ignored
+        assert_eq!(from_hex("41 42 zz"), "AB");
+        // round-trip
+        let s = "Hex! 世界";
+        assert_eq!(from_hex(&to_hex(s)), s);
+    }
+
+    #[test]
+    fn json_escape_unescape() {
+        use super::{json_escape, json_unescape};
+        assert_eq!(json_escape("he said \"hi\"\n\ttab"), "he said \\\"hi\\\"\\n\\ttab");
+        assert_eq!(json_escape("back\\slash"), "back\\\\slash");
+        // control char → \u escape
+        assert_eq!(json_escape("\u{01}"), "\\u0001");
+        // unescape inverts escape
+        assert_eq!(json_unescape("a\\nb\\t\\\"c\\\""), "a\nb\t\"c\"");
+        assert_eq!(json_unescape("\\u0041\\u00e9"), "Aé");
+        // round-trip including a quote, backslash, and newline
+        let s = "path \"C:\\\\x\"\nline2";
+        assert_eq!(json_unescape(&json_escape(s)), s);
+    }
+
+    #[test]
+    fn markdown_toc_builds() {
+        use super::{github_anchor, markdown_toc};
+        // GitHub anchor rules
+        assert_eq!(github_anchor("Hello, World!"), "hello-world");
+        assert_eq!(github_anchor("Foo & Bar"), "foo--bar"); // & dropped, both spaces → -
+        assert_eq!(github_anchor("snake_case Title"), "snake_case-title");
+        // nested TOC from headings, skipping a fenced code block
+        let md = "# Title\n\n## Section One\n```\n## not a heading\n```\n### Deep\n#nope\n";
+        assert_eq!(
+            markdown_toc(md),
+            "- [Title](#title)\n  - [Section One](#section-one)\n    - [Deep](#deep)\n"
+        );
+        // no headings → empty
+        assert_eq!(markdown_toc("just text\nmore text\n"), "");
     }
 
     #[test]

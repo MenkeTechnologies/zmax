@@ -4830,6 +4830,125 @@ fn split_on(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
     Ok(())
 }
 
+/// Remove consecutive duplicate lines from `block` (Unix `uniq`: only adjacent
+/// repeats collapse; non-adjacent repeats are kept). Preserves the trailing
+/// newline shape. Pure — unit tested.
+/// Collapse runs of blank (whitespace-only) lines in `block` to a single blank
+/// line (`cat -s`), preserving the trailing-newline shape. Pure — unit tested.
+fn squeeze_blank_lines(block: &str) -> String {
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<&str> = block.split('\n').collect();
+    if had_trailing {
+        lines.pop();
+    }
+    let mut out: Vec<&str> = Vec::with_capacity(lines.len());
+    let mut prev_blank = false;
+    for l in lines {
+        let blank = l.trim().is_empty();
+        if blank && prev_blank {
+            continue;
+        }
+        out.push(l);
+        prev_blank = blank;
+    }
+    let joined = out.join("\n");
+    if had_trailing {
+        format!("{joined}\n")
+    } else {
+        joined
+    }
+}
+
+/// `:squeeze-blank-lines` — collapse consecutive blank lines in the selection to
+/// one (`cat -s`), unlike `:delete-blank-lines` which removes them all.
+fn squeeze_blank_lines_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let (first, last) = primary_line_range(doc, view.id);
+    let region_start = slice.line_to_char(first);
+    let region_end = if last + 1 < total {
+        slice.line_to_char(last + 1)
+    } else {
+        slice.len_chars()
+    };
+    if region_start >= region_end {
+        return Ok(());
+    }
+    let block: String = slice.slice(region_start..region_end).chunks().collect();
+    let squeezed = squeeze_blank_lines(&block);
+    if squeezed == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(squeezed.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn dedup_adjacent_lines(block: &str) -> String {
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<&str> = block.split('\n').collect();
+    if had_trailing {
+        lines.pop();
+    }
+    let mut out_lines: Vec<&str> = Vec::with_capacity(lines.len());
+    for l in lines {
+        if out_lines.last() != Some(&l) {
+            out_lines.push(l);
+        }
+    }
+    let out = out_lines.join("\n");
+    if had_trailing {
+        format!("{out}\n")
+    } else {
+        out
+    }
+}
+
+/// `:dedup-adjacent` — collapse consecutive duplicate lines in the selection
+/// (Unix `uniq`), unlike `:uniquify-lines` which removes all duplicates.
+fn dedup_adjacent(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let (first, last) = primary_line_range(doc, view.id);
+    let region_start = slice.line_to_char(first);
+    let region_end = if last + 1 < total {
+        slice.line_to_char(last + 1)
+    } else {
+        slice.len_chars()
+    };
+    if region_start >= region_end {
+        return Ok(());
+    }
+    let block: String = slice.slice(region_start..region_end).chunks().collect();
+    let deduped = dedup_adjacent_lines(&block);
+    if deduped == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(deduped.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 /// Prepend `start`-based, right-aligned line numbers (`"{n}. "`) to each line of
 /// `block`, preserving its trailing-newline shape. Pure — unit tested.
 fn number_lines(block: &str, start: usize) -> String {
@@ -5189,6 +5308,50 @@ fn insert_at_cursors(cx: &mut compositor::Context, text: String) {
     });
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
+}
+
+/// The classic lorem-ipsum word corpus (lowercase).
+const LOREM_WORDS: &str = "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod \
+tempor incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud exercitation \
+ullamco laboris nisi aliquip ex ea commodo consequat duis aute irure in reprehenderit voluptate \
+velit esse cillum eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt \
+culpa qui officia deserunt mollit anim id est laborum";
+
+/// Generate `n` words of lorem ipsum (cycling the corpus if needed), as a single
+/// sentence: first word capitalized, terminated with a period. Pure — unit tested.
+fn lorem(n: usize) -> String {
+    if n == 0 {
+        return String::new();
+    }
+    let words: Vec<&str> = LOREM_WORDS.split_whitespace().collect();
+    let mut out = String::new();
+    for i in 0..n {
+        if i > 0 {
+            out.push(' ');
+        }
+        let w = words[i % words.len()];
+        if i == 0 {
+            let mut cs = w.chars();
+            if let Some(first) = cs.next() {
+                out.extend(first.to_uppercase());
+                out.push_str(cs.as_str());
+            }
+        } else {
+            out.push_str(w);
+        }
+    }
+    out.push('.');
+    out
+}
+
+/// `:lorem [n]` — insert `n` words (default 30) of lorem-ipsum placeholder text.
+fn lorem_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: usize = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(30);
+    insert_at_cursors(cx, lorem(n));
+    Ok(())
 }
 
 /// `:date` — insert the current UTC date (`YYYY-MM-DD`).
@@ -6013,6 +6176,40 @@ fn mkdir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
 
     std::fs::create_dir_all(&target).map_err(|err| anyhow!("could not create directory: {err}"))?;
     cx.editor.set_status(format!("Created {}", target.display()));
+    Ok(())
+}
+
+/// Add the execute bit (`a+x`, i.e. `0o111`) to a Unix permission mode. Pure —
+/// unit tested.
+fn with_exec_bits(mode: u32) -> u32 {
+    mode | 0o111
+}
+
+/// `:chmod-x` — make the current buffer's file executable (`chmod a+x`, vim-eunuch
+/// `:Chmod +x`). Unix only.
+fn chmod_x(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = doc!(cx.editor)
+        .path()
+        .map(ToOwned::to_owned)
+        .context("buffer has no file")?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&path)?.permissions();
+        perms.set_mode(with_exec_bits(perms.mode()));
+        std::fs::set_permissions(&path, perms)
+            .map_err(|err| anyhow!("could not set permissions: {err}"))?;
+        cx.editor.set_status(format!("made executable: {}", path.display()));
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        bail!("chmod is only supported on Unix");
+    }
     Ok(())
 }
 
@@ -7555,6 +7752,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "lorem",
+        aliases: &["lipsum"],
+        doc: "Insert N words (default 30) of lorem-ipsum placeholder text.",
+        fun: lorem_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "date",
         aliases: &[],
         doc: "Insert the current UTC date (YYYY-MM-DD) at each cursor.",
@@ -7628,6 +7836,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "squeeze-blank-lines",
+        aliases: &["squeeze"],
+        doc: "Collapse consecutive blank lines in the selection to one (cat -s).",
+        fun: squeeze_blank_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dedup-adjacent",
+        aliases: &["uniq-adjacent"],
+        doc: "Collapse consecutive duplicate lines in the selection (Unix uniq).",
+        fun: dedup_adjacent,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
@@ -7988,6 +8218,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["remove-file"],
         doc: "Delete the current buffer's file from disk and close the buffer (vim-eunuch :Delete).",
         fun: delete_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "chmod-x",
+        aliases: &["chmodx", "make-executable"],
+        doc: "Make the current file executable (chmod a+x). Unix only.",
+        fun: chmod_x,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
@@ -8763,6 +9004,29 @@ mod vim_set_tests {
     }
 
     #[test]
+    fn squeeze_blank_collapses() {
+        use super::squeeze_blank_lines;
+        assert_eq!(squeeze_blank_lines("a\n\n\n\nb\n"), "a\n\nb\n");
+        // whitespace-only lines count as blank and collapse
+        assert_eq!(squeeze_blank_lines("a\n  \n\t\nb\n"), "a\n  \nb\n");
+        // nothing to collapse
+        assert_eq!(squeeze_blank_lines("a\nb\n"), "a\nb\n");
+        // leading run collapses to one
+        assert_eq!(squeeze_blank_lines("\n\nx\n"), "\nx\n");
+    }
+
+    #[test]
+    fn dedup_adjacent_collapses() {
+        use super::dedup_adjacent_lines;
+        // adjacent repeats collapse; the non-adjacent `a` at the end is kept
+        assert_eq!(dedup_adjacent_lines("a\na\nb\nb\na\n"), "a\nb\na\n");
+        // nothing to collapse
+        assert_eq!(dedup_adjacent_lines("x\ny\nz\n"), "x\ny\nz\n");
+        // no trailing newline preserved
+        assert_eq!(dedup_adjacent_lines("p\np\nq"), "p\nq");
+    }
+
+    #[test]
     fn number_lines_prefixes() {
         use super::number_lines;
         assert_eq!(number_lines("a\nb\nc\n", 1), "1. a\n2. b\n3. c\n");
@@ -8857,6 +9121,20 @@ mod vim_set_tests {
     }
 
     #[test]
+    fn lorem_generates() {
+        use super::lorem;
+        assert_eq!(lorem(0), "");
+        assert_eq!(lorem(1), "Lorem.");
+        assert_eq!(lorem(3), "Lorem ipsum dolor.");
+        // exactly N words (counted by spaces + 1) and ends with a period
+        let text = lorem(50);
+        assert_eq!(text.trim_end_matches('.').split(' ').count(), 50);
+        assert!(text.ends_with('.'));
+        // first word is capitalized
+        assert!(text.starts_with("Lorem"));
+    }
+
+    #[test]
     fn format_utc_dates() {
         use super::format_utc;
         assert_eq!(format_utc(0, false), "1970-01-01");
@@ -8909,6 +9187,17 @@ mod vim_set_tests {
         assert_eq!(format_calc(14.0), "14");
         assert_eq!(format_calc(2.5), "2.5");
         assert_eq!(format_calc(7.0), "7");
+    }
+
+    #[test]
+    fn exec_bits_added() {
+        use super::with_exec_bits;
+        // rw-r--r-- (0o644) → rwxr-xr-x (0o755)
+        assert_eq!(with_exec_bits(0o644), 0o755);
+        // already executable stays executable
+        assert_eq!(with_exec_bits(0o755), 0o755);
+        // rw------- (0o600) → rwx--x--x (0o711)
+        assert_eq!(with_exec_bits(0o600), 0o711);
     }
 
     #[test]
