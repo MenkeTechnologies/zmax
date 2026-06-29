@@ -1494,6 +1494,24 @@ fn run_command(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// `:ide` — enter IDE mode (the file-tree sidebar + tool panels you get from
+/// `zemacs --ide`). Toggles the workbench like `F2` / `SPC z`: the first call
+/// boots and shows it, the next hides it for distraction-free editing.
+fn ide(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                view.toggle_ide();
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 /// `:terminal` / `:term` — open an integrated terminal (PTY shell). The panel is
 /// created inside the compositor callback so the PTY handle lives on the main
 /// thread (it isn't `Send`).
@@ -13143,6 +13161,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["term"],
         doc: "Open an integrated terminal (PTY shell) running $SHELL.",
         fun: terminal,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ide",
+        aliases: &["workbench"],
+        doc: "Enter IDE mode (file-tree sidebar + panels, like `--ide` / F2).",
+        fun: ide,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
