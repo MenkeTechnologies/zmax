@@ -50,6 +50,12 @@ pub struct RunConfigPanel {
     field_hits: Vec<(u16, u16, u16, usize)>,
 }
 
+impl Default for RunConfigPanel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RunConfigPanel {
     pub const ID: &'static str = "run-config-panel";
 

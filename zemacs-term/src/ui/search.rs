@@ -520,8 +520,8 @@ impl Component for SearchPanel {
             dim,
         );
 
-        // caret in the focused input
-        let cx = if self.field == Field::Query { qx } else { qx };
+        // caret in the focused input (both fields share the same left column)
+        let cx = qx;
         let cy = if self.field == Field::Query { qy } else { ry };
         self.caret = Some(zemacs_core::Position::new(
             cy as usize,

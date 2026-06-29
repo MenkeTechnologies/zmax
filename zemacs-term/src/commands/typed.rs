@@ -9982,7 +9982,7 @@ pub(crate) fn do_substitute(
         let sel = doc.selection(view.id).primary();
         (
             slice.char_to_line(sel.from()),
-            slice.char_to_line(sel.to().min(slice.len_chars().saturating_sub(1).max(0))),
+            slice.char_to_line(sel.to().min(slice.len_chars().saturating_sub(1))),
         )
     };
 
@@ -10161,7 +10161,7 @@ fn do_global(
 
     let transaction = Transaction::change(doc.text(), changes.into_iter());
     doc.apply(&transaction, view.id);
-    doc.set_selection(view.id, Selection::point(0.min(doc.text().len_chars())));
+    doc.set_selection(view.id, Selection::point(0));
     doc.append_changes_to_history(view);
     Ok(())
 }

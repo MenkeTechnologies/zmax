@@ -187,6 +187,21 @@ pub fn suggest(word: &str) -> Vec<String> {
     out
 }
 
+/// Apply `model`'s capitalization (all-caps or Title-case) to `candidate`.
+fn match_case(model: &str, candidate: &str) -> String {
+    if model.chars().all(|c| c.is_uppercase()) && model.chars().any(|c| c.is_alphabetic()) {
+        candidate.to_uppercase()
+    } else if model.chars().next().is_some_and(|c| c.is_uppercase()) {
+        let mut cs = candidate.chars();
+        match cs.next() {
+            Some(f) => f.to_uppercase().collect::<String>() + cs.as_str(),
+            None => candidate.to_string(),
+        }
+    } else {
+        candidate.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -208,20 +223,5 @@ mod tests {
         // capitalization is preserved
         assert_eq!(match_case("Teh", "the"), "The");
         assert_eq!(match_case("TEH", "the"), "THE");
-    }
-}
-
-/// Apply `model`'s capitalization (all-caps or Title-case) to `candidate`.
-fn match_case(model: &str, candidate: &str) -> String {
-    if model.chars().all(|c| c.is_uppercase()) && model.chars().any(|c| c.is_alphabetic()) {
-        candidate.to_uppercase()
-    } else if model.chars().next().is_some_and(|c| c.is_uppercase()) {
-        let mut cs = candidate.chars();
-        match cs.next() {
-            Some(f) => f.to_uppercase().collect::<String>() + cs.as_str(),
-            None => candidate.to_string(),
-        }
-    } else {
-        candidate.to_string()
     }
 }

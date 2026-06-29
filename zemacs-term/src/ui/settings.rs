@@ -270,6 +270,12 @@ pub struct SettingsPanel {
     btn_hits: Vec<(u16, u16, u16, u8)>,
 }
 
+impl Default for SettingsPanel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SettingsPanel {
     pub fn new() -> Self {
         Self {

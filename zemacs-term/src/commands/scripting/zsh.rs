@@ -1,7 +1,7 @@
 //! zsh binding: an embedded shell command runner over zshrs.
 //!
 //! zsh writes to the real process fds (no in-process capture API), which would
-//! corrupt the TUI, so output is captured via [`super::capture`]. Shell state
+//! corrupt the TUI, so output is captured via `super::capture`. Shell state
 //! (variables, functions, cwd) persists across calls via a thread-local
 //! `ShellExecutor`.
 //!

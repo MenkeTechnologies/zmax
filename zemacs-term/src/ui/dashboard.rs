@@ -62,6 +62,12 @@ pub struct DashboardPanel {
     pid: u32,
 }
 
+impl Default for DashboardPanel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DashboardPanel {
     pub fn new() -> Self {
         Self {

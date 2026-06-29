@@ -216,6 +216,10 @@ struct ProblemRow {
     msg: String,
 }
 
+/// Flattened Debug-tab row: `(kind, text, jump target)` where kind is
+/// 0=section header, 1=stack frame, 2=variable, 3=breakpoint.
+type DapLine = (u8, String, Option<(PathBuf, usize)>);
+
 pub struct Ide {
     project: FileTree,
     focus: Focus,
@@ -371,7 +375,7 @@ pub struct Ide {
     dap_status: String,
     /// Flattened Debug-tab rows: `(kind, text, jump target)` where kind is
     /// 0=section header, 1=stack frame, 2=variable, 3=breakpoint.
-    dap_lines: Vec<(u8, String, Option<(PathBuf, usize)>)>,
+    dap_lines: Vec<DapLine>,
 }
 
 fn empty_rect() -> Rect {
@@ -1262,8 +1266,8 @@ impl Ide {
         }
         // Harpoon: K/J reorder the selected mark up/down (other keys fall through
         // to the shared list nav below).
-        if !structure && self.bottom_tab == BottomTab::Harpoon {
-            if matches!(key.code, KeyCode::Char('K') | KeyCode::Char('J')) {
+        if !structure && self.bottom_tab == BottomTab::Harpoon
+            && matches!(key.code, KeyCode::Char('K') | KeyCode::Char('J')) {
                 let up = matches!(key.code, KeyCode::Char('K'));
                 if let Some(path) = self.harpoon_rows.get(self.aux_sel).cloned() {
                     if crate::harpoon::move_mark(&path, up) {
@@ -1277,7 +1281,6 @@ impl Ide {
                 }
                 return IdeAction::None;
             }
-        }
         // Simple list tabs (Todo/Marks/Jumps/Recent): j/k select, Enter activates.
         if !structure
             && matches!(
@@ -2214,7 +2217,7 @@ impl Ide {
             }
             let avail = (right_edge - x) as usize;
             surface.set_stringn(x, area.y, text, avail, *style);
-            x += (disp_width(text) as u16).min(right_edge - x);
+            x += disp_width(text).min(right_edge - x);
             if x >= right_edge {
                 break;
             }
@@ -2233,7 +2236,7 @@ impl Ide {
         let mut rx = right_edge;
         for i in (0..right.len()).rev() {
             let (text, style) = &right[i];
-            let w = disp_width(text) as u16;
+            let w = disp_width(text);
             if rx <= x + w {
                 break; // would collide with the left cluster
             }
@@ -2528,7 +2531,7 @@ impl Ide {
         self.status_sel_lines = sel
             .ranges()
             .iter()
-            .filter(|r| r.len() > 0)
+            .filter(|r| !r.is_empty())
             .map(|r| {
                 let a = text.char_to_line(r.from());
                 let b = text.char_to_line(r.to().saturating_sub(1).max(r.from()));
@@ -2558,7 +2561,7 @@ impl Ide {
         if self.bottom_tab == BottomTab::Git {
             let stale = self
                 .git_last
-                .map_or(true, |t| t.elapsed().as_millis() > 800);
+                .is_none_or(|t| t.elapsed().as_millis() > 800);
             if stale {
                 if let Some(dir) = self.status_branch_dir.clone() {
                     self.git_changes = git_status(&dir);
@@ -3699,7 +3702,7 @@ impl Ide {
             };
             surface.set_stringn(list.x + 1, y, &code.replace(' ', "·"), 3, st);
             // repo-relative path (after the "XY  " porcelain prefix)
-            let rel = disp.splitn(2, "  ").nth(1).unwrap_or("").trim();
+            let rel = disp.split_once("  ").map(|x| x.1).unwrap_or("").trim();
             surface.set_stringn(list.x + 4, y, rel, name_w.max(1), base);
 
             // diffstat counts + proportional add/del bar, when numstat has the file
@@ -3713,7 +3716,7 @@ impl Ide {
                 if bar_w > 0 && sx + stat_w + bar_w <= list.x + list.width {
                     surface.set_stringn(sx, y, &format!("+{a}"), 6, plus);
                     surface.set_stringn(sx + 6, y, &format!("-{d}"), 6, minus);
-                    let total = (a + d).max(0);
+                    let total = a + d;
                     let filled = ((total as u64 * bar_w as u64) / max_churn as u64) as u16;
                     let adds_px = if total == 0 {
                         0
@@ -3852,11 +3855,7 @@ impl Ide {
         if total_vis > height && out.width > 1 {
             let track_x = out.x + out.width - 1;
             let thumb_h = (height * height / total_vis).max(1);
-            let thumb_y = if max_top == 0 {
-                0
-            } else {
-                top * (height - thumb_h) / max_top
-            };
+            let thumb_y = (top * (height - thumb_h)).checked_div(max_top).unwrap_or(0);
             let bar = theme.get("ui.selection");
             for k in 0..thumb_h {
                 surface.set_stringn(track_x, out.y + (thumb_y + k) as u16, "▐", 1, bar);
@@ -3864,8 +3863,8 @@ impl Ide {
         }
     }
 
-    /// Run-console header: a live output-rate [`Sparkline`] on the left and a
-    /// test-pass [`Gauge`] on the right (when the output contains cargo-style
+    /// Run-console header: a live output-rate `Sparkline` on the left and a
+    /// test-pass `Gauge` on the right (when the output contains cargo-style
     /// `... ok` / `... FAILED` test lines).
     fn render_run_header(
         &self,
@@ -3919,7 +3918,7 @@ impl Ide {
         }
     }
 
-    /// Right-pane minimap: a braille [`Canvas`] "tiny text" overview of the code
+    /// Right-pane minimap: a braille `Canvas` "tiny text" overview of the code
     /// shape, with a viewport outline, diagnostic ticks (right edge), and
     /// git-change bars (left edge). Each braille cell packs a 2×4 sub-grid, so
     /// the canvas resolution is `width*2 × height*4` columns/sub-rows.
@@ -4051,8 +4050,8 @@ impl Ide {
 
     /// Floating LSP/build progress card, anchored to the bottom-right of the
     /// editor `area`. Rendered *after* the document (so it overlays it) by
-    /// `EditorView`. Shows an LSP indexing [`Gauge`] (determinate when the server
-    /// reports a percentage) and a build [`LineGauge`] driven by a parsed `NN%`.
+    /// `EditorView`. Shows an LSP indexing `Gauge` (determinate when the server
+    /// reports a percentage) and a build `LineGauge` driven by a parsed `NN%`.
     pub fn render_progress_overlay(
         &self,
         area: Rect,

@@ -137,8 +137,8 @@ mod tests {
 
     #[test]
     fn slot_lookup_is_one_based() {
-        let v = vec![PathBuf::from("/a"), PathBuf::from("/b")];
-        assert_eq!(v.iter().nth(1 - 1), Some(&PathBuf::from("/a")));
-        assert_eq!(v.iter().nth(2 - 1), Some(&PathBuf::from("/b")));
+        let v = [PathBuf::from("/a"), PathBuf::from("/b")];
+        assert_eq!(v.get(1 - 1), Some(&PathBuf::from("/a")));
+        assert_eq!(v.get(2 - 1), Some(&PathBuf::from("/b")));
     }
 }

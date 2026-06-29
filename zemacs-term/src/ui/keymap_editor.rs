@@ -103,6 +103,12 @@ fn all_bindings() -> Vec<(String, String, String)> {
     out
 }
 
+impl Default for KeymapEditor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl KeymapEditor {
     pub fn new() -> Self {
         let (cfg, binds) = load_binds();
@@ -483,8 +489,8 @@ impl Component for KeymapEditor {
                 self.btop = self.bsel + 1 - bh as usize;
             }
             let last = (self.btop + bh as usize).min(matched.len());
-            for pos in self.btop..last {
-                let (m, chord, cmd) = &self.all_binds[matched[pos]];
+            for (pos, &mi) in matched.iter().enumerate().take(last).skip(self.btop) {
+                let (m, chord, cmd) = &self.all_binds[mi];
                 let y = by + (pos - self.btop) as u16;
                 let is_sel = pos == self.bsel;
                 if is_sel {

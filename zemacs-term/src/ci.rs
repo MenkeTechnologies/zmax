@@ -167,11 +167,7 @@ fn parse_slug(url: &str) -> Option<String> {
         r
     } else if let Some(r) = s.strip_prefix("https://github.com/") {
         r
-    } else if let Some(r) = s.strip_prefix("ssh://git@github.com/") {
-        r
-    } else {
-        return None;
-    };
+    } else { s.strip_prefix("ssh://git@github.com/")? };
     let mut it = rest.split('/');
     let owner = it.next()?;
     let repo = it.next()?;

@@ -1472,7 +1472,7 @@ fn yank_file_dir(cx: &mut Context) {
     yank_file_path_kind(cx, FilePathKind::Dir);
 }
 
-/// Convert a git remote URL (ssh, scp-like, git://, or http[s] form) to its base
+/// Convert a git remote URL (ssh, scp-like, git://, or `http[s]` form) to its base
 /// web URL: `git@github.com:o/r.git` / `https://github.com/o/r.git` → `https://github.com/o/r`.
 fn git_remote_to_web_base(remote: &str) -> Option<String> {
     let r = remote.trim();
@@ -1530,7 +1530,7 @@ fn git_out(dir: &std::path::Path, args: &[&str]) -> Option<String> {
     }
 }
 
-/// Copy a web permalink (host/blob/<sha>/<path>#L<line>) for the current line to
+/// Copy a web permalink (`host/blob/<sha>/<path>#L<line>`) for the current line to
 /// the clipboard — GitLens "Copy permalink" analogue. Pins to the exact HEAD
 /// commit so the link stays valid as the branch moves.
 /// Compute the web permalink for the primary cursor's line, or an error message
@@ -2717,23 +2717,20 @@ fn sneak_jump(cx: &mut Context, c1: char, c2: char, direction: Direction) {
             Direction::Forward => {
                 let start = (cursor + 1).min(text.len_chars());
                 let mut prev: Option<char> = None;
-                let mut pos = start;
                 let mut found = None;
-                for c in text.chars_at(start) {
+                for (pos, c) in (start..).zip(text.chars_at(start)) {
                     if prev == Some(c1) && c == c2 {
                         found = Some(pos - 1);
                         break;
                     }
                     prev = Some(c);
-                    pos += 1;
                 }
                 found
             }
             Direction::Backward => {
                 let mut prev: Option<char> = None;
-                let mut pos = 0usize;
                 let mut last = None;
-                for c in text.chars() {
+                for (pos, c) in text.chars().enumerate() {
                     if pos > cursor {
                         break;
                     }
@@ -2741,7 +2738,6 @@ fn sneak_jump(cx: &mut Context, c1: char, c2: char, direction: Direction) {
                         last = Some(pos - 1);
                     }
                     prev = Some(c);
-                    pos += 1;
                 }
                 last
             }
@@ -3153,7 +3149,7 @@ fn base64_val(c: u8) -> Option<u32> {
 /// JWTs and URLs.
 fn base64url_encode(input: &str) -> String {
     let bytes = input.as_bytes();
-    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
         let b1 = chunk.get(1).copied();
         let b2 = chunk.get(2).copied();
@@ -3174,7 +3170,7 @@ fn base64url_encode(input: &str) -> String {
 /// Standard base64-encode a string's UTF-8 bytes (with `=` padding).
 fn base64_encode(input: &str) -> String {
     let bytes = input.as_bytes();
-    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
         let b1 = chunk.get(1).copied();
         let b2 = chunk.get(2).copied();
@@ -10603,7 +10599,7 @@ fn document_stats(cx: &mut Context) {
         let mut sel_words = 0;
         let mut sel_lines = 0;
         for r in sel.ranges() {
-            if r.len() == 0 {
+            if r.is_empty() {
                 continue;
             }
             sel_words += count_words(slice.slice(r.from()..r.to()));

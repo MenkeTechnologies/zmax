@@ -35,6 +35,14 @@ use zemacs_view::{
 
 use tui::{buffer::Buffer as Surface, text::Span};
 
+/// Bufferline tab hit regions: `(x_start, x_end, close_x, doc)` per tab.
+type BufferlineTabs = Vec<(u16, u16, u16, zemacs_view::DocumentId)>;
+
+/// Sticky-scroll cache: `(doc, doc len, scopes)` where each scope is
+/// `(start_line, end_line, header_text)`.
+type StickyCache =
+    std::cell::RefCell<Option<(zemacs_view::DocumentId, usize, Vec<(usize, usize, String)>)>>;
+
 pub struct EditorView {
     pub keymaps: Keymaps,
     on_next_key: Option<(OnKeyCallback, OnKeyCallbackKind)>,
@@ -58,7 +66,7 @@ pub struct EditorView {
     /// IDE workbench (file tree + structure + problems + error stripe). None until opened.
     ide: Option<Ide>,
     /// Tab strip hit regions `(x_start, x_end, doc)` and its row, for click-to-switch.
-    bufferline_tabs: Vec<(u16, u16, u16, zemacs_view::DocumentId)>,
+    bufferline_tabs: BufferlineTabs,
     /// `(x_start, x_end)` of the trailing `+` new-buffer button.
     bufferline_new: (u16, u16),
     bufferline_y: u16,
@@ -69,8 +77,7 @@ pub struct EditorView {
     /// Sticky-scroll cache: `(doc, doc len, scopes)` where each scope is
     /// `(start_line, end_line, header_text)`. Recomputed only when the focused
     /// document's length changes, so scrolling stays cheap.
-    sticky_cache:
-        std::cell::RefCell<Option<(zemacs_view::DocumentId, usize, Vec<(usize, usize, String)>)>>,
+    sticky_cache: StickyCache,
 }
 
 use super::ide::{Ide, IdeAction};
@@ -1218,7 +1225,7 @@ impl EditorView {
         editor: &Editor,
         viewport: Rect,
         surface: &mut Surface,
-    ) -> (Vec<(u16, u16, u16, zemacs_view::DocumentId)>, (u16, u16)) {
+    ) -> (BufferlineTabs, (u16, u16)) {
         let scratch = PathBuf::from(SCRATCH_BUFFER_NAME); // default filename to use for scratch buffer
         surface.clear_with(
             viewport,

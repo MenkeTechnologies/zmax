@@ -33,7 +33,7 @@ async fn main_impl() -> Result<i32> {
     if args.display_help {
         print!(
             "\
-{} {}
+zemacs {}
 {}
 {}
 
@@ -65,7 +65,6 @@ FLAGS:
     +[N]                           Open the first given file at line number N, or the last line, if
                                    N is not specified.
 ",
-            "zemacs",
             VERSION_AND_GIT_HASH,
             env!("CARGO_PKG_AUTHORS"),
             env!("CARGO_PKG_DESCRIPTION"),

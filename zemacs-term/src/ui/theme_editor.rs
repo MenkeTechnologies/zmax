@@ -109,6 +109,12 @@ pub struct ThemeEditor {
     btn_hits: Vec<(u16, u16, u16, u8)>, // 0 = save
 }
 
+impl Default for ThemeEditor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ThemeEditor {
     pub fn new() -> Self {
         let themes = crate::commands::typed::all_theme_names();

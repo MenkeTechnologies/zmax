@@ -45,7 +45,7 @@ struct Entry {
     /// Whether `label` is a path that should be drawn dir-dim / filename-bright.
     is_path: bool,
     /// Optional section break drawn before this entry: a blank line, plus a label
-    /// when non-empty (e.g. "MRU", "MRU <cwd>").
+    /// when non-empty (e.g. "MRU", "MRU `<cwd>`").
     section: Option<String>,
     action: EntryAction,
 }
@@ -56,6 +56,12 @@ pub struct Startify {
     selected: usize,
     /// Top file extensions in the project, by count — for the language BarChart.
     lang_stats: Vec<(String, u64)>,
+}
+
+impl Default for Startify {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Startify {
@@ -157,8 +163,8 @@ impl Startify {
         }
     }
 
-    /// Right-hand dashboard shown on wide terminals: a ratatui [`Canvas`] logo
-    /// above a [`BarChart`] of the project's top file types.
+    /// Right-hand dashboard shown on wide terminals: a ratatui `Canvas` logo
+    /// above a `BarChart` of the project's top file types.
     fn render_dashboard(&self, surface: &mut Surface, theme: &zemacs_view::Theme, area: Rect) {
         use crate::ui::rat::{render, to_rat_style};
         use ratatui::style::{Color as RColor, Modifier as RMod};

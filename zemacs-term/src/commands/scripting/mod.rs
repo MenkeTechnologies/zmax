@@ -6,12 +6,12 @@
 //! state, so the editor can't be captured in a closure — instead the active
 //! command [`compositor::Context`] is published through a thread-local raw
 //! pointer for the duration of a single, synchronous, on-editor-thread eval
-//! (installed by [`CxGuard`], cleared on drop). Each language binding marshals
+//! (installed by `CxGuard`, cleared on drop). Each language binding marshals
 //! its own value type and registers these `api_*` helpers under idiomatic
 //! names; the helpers are language-agnostic.
 //!
 //! Re-entrancy contract: an `api_*` helper must not itself trigger another
-//! script eval while it holds the `&mut compositor::Context` from [`with_cx`].
+//! script eval while it holds the `&mut compositor::Context` from `with_cx`.
 //! Nested evals (a future feature) restore the previous pointer via the guard
 //! stack, but two live `&mut` borrows of the same context would alias.
 

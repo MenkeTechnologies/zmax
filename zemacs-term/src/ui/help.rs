@@ -210,6 +210,12 @@ pub struct HelpPanel {
     row_hits: Vec<(u16, u16, u16, usize)>, // maps screen row -> filtered index
 }
 
+impl Default for HelpPanel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HelpPanel {
     pub fn new() -> Self {
         let keys = key_index();
@@ -242,7 +248,7 @@ impl HelpPanel {
                 doc: body.to_string(),
             });
         }
-        entries.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
+        entries.sort_by_key(|a| a.title.to_lowercase());
         Self {
             entries,
             cat: Cat::All,
@@ -441,8 +447,8 @@ impl Component for HelpPanel {
             self.top = self.sel + 1 - body_h as usize;
         }
         let last = (self.top + body_h as usize).min(matched.len());
-        for pos in self.top..last {
-            let e = &self.entries[matched[pos]];
+        for (pos, &m) in matched.iter().enumerate().take(last).skip(self.top) {
+            let e = &self.entries[m];
             let y = body_y + (pos - self.top) as u16;
             let is_sel = pos == self.sel;
             if is_sel {

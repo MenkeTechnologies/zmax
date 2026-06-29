@@ -90,7 +90,7 @@ fn write_entries(entries: &[Entry]) {
 /// Load the recent-files list, newest first (pure recency / MRU order).
 pub fn load() -> Vec<PathBuf> {
     let mut entries = load_entries();
-    entries.sort_by(|a, b| b.time.cmp(&a.time));
+    entries.sort_by_key(|b| std::cmp::Reverse(b.time));
     entries.truncate(MAX_ENTRIES);
     entries.into_iter().map(|e| e.path).collect()
 }
@@ -100,7 +100,7 @@ pub fn load() -> Vec<PathBuf> {
 /// tab with a relative-age column.
 pub fn load_with_time() -> Vec<(PathBuf, u64)> {
     let mut entries = load_entries();
-    entries.sort_by(|a, b| b.time.cmp(&a.time));
+    entries.sort_by_key(|b| std::cmp::Reverse(b.time));
     entries.truncate(MAX_ENTRIES);
     entries.into_iter().map(|e| (e.path, e.time)).collect()
 }
@@ -170,7 +170,7 @@ pub fn record(path: &Path) {
     }
 
     // Persist newest-first, capped.
-    entries.sort_by(|a, b| b.time.cmp(&a.time));
+    entries.sort_by_key(|b| std::cmp::Reverse(b.time));
     entries.truncate(MAX_ENTRIES);
     write_entries(&entries);
 }

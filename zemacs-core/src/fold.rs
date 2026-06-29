@@ -8,7 +8,7 @@
 //! line ranges, each with an open/closed flag.
 //!
 //! This module is the pure fold *model* and its operations. Rendering and motion
-//! consult [`Folds::is_line_hidden`] / [`Folds::closed_fold_containing`] to skip
+//! consult [`Folds::is_line_hidden`] / [`Folds::closed_fold_starting_at`] to skip
 //! hidden lines. The model is engine-agnostic and fully unit tested; edit
 //! remapping is intentionally conservative (see [`Folds::clamp`]).
 
@@ -27,6 +27,11 @@ impl Fold {
     /// Number of lines spanned (inclusive).
     pub fn len(&self) -> usize {
         self.end - self.start + 1
+    }
+
+    /// A fold always spans at least one line, so it is never empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     fn contains(&self, line: usize) -> bool {

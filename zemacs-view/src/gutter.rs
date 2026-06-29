@@ -135,7 +135,7 @@ pub fn marks<'doc>(
 
     // `'` / `` ` `` — position before the most recent jump in this buffer.
     let doc_id = doc.id();
-    if let Some((_, sel)) = view.jumps.iter().filter(|(id, _)| *id == doc_id).last() {
+    if let Some((_, sel)) = view.jumps.iter().rfind(|(id, _)| *id == doc_id) {
         put(
             text.char_to_line(sel.primary().cursor(slice).min(len)),
             '\'',
