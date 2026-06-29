@@ -613,21 +613,61 @@ impl MappableCommand {
         rot13, "ROT13-encode the selection (g?)",
         url_encode, "Percent-encode (URL-encode) the selection",
         url_decode, "Percent-decode (URL-decode) the selection",
+        parse_query_selection, "Expand a URL query string into decoded key=value lines",
+        build_query_selection, "Build a URL query string from key=value lines",
+        url_info_selection, "Break the selected URL into scheme/host/port/path/query lines",
         encode_base64, "Base64-encode the selection",
         decode_base64, "Base64-decode the selection",
+        encode_base64url, "URL-safe base64-encode the selection (no padding)",
+        decode_base64url, "URL-safe base64-decode the selection (JWT-friendly)",
+        jwt_decode_selection, "Decode the selected JWT into pretty header + payload JSON",
         encode_html, "HTML-escape the selection (& < > \" ')",
         decode_html, "Decode HTML entities in the selection",
+        html_to_text_selection, "Strip HTML tags and decode entities to plain text",
         title_case_selection, "Title-case the selection (capitalize each word)",
+        sentence_case_selection, "Capitalize the first letter of each sentence in the selection",
+        straighten_quotes_selection, "Convert smart quotes/dashes in the selection to plain ASCII",
+        hex_to_rgb_selection, "Convert a #hex color in the selection to rgb(r, g, b)",
+        rgb_to_hex_selection, "Convert an rgb(r, g, b) color in the selection to #hex",
+        to_roman_selection, "Convert the selected integer to a Roman numeral",
+        from_roman_selection, "Convert the selected Roman numeral to an integer",
+        add_commas_selection, "Add thousands separators to numbers in the selection",
+        strip_commas_selection, "Remove thousands separators from numbers in the selection",
+        swap_quotes_selection, "Swap ' and \" quote characters in the selection",
+        strip_quotes_selection, "Remove surrounding quotes from the selection",
+        reverse_words_selection, "Reverse the word order within each selected line",
+        unwrap_tag_selection, "Strip the outermost <tag>…</tag> wrapper from the selection",
+        sort_paragraphs_selection, "Sort blank-line-separated paragraphs in the selection",
+        lighten_selection, "Lighten the hex color in the selection by 10%",
+        darken_selection, "Darken the hex color in the selection by 10%",
+        contrast_text, "Recommend black/white text for the selected hex background color",
+        toggle_value_selection, "Toggle the boolean/keyword in the selection (true<->false, …)",
+        normalize_whitespace_selection, "Collapse internal whitespace runs in the selection",
         insert_toc, "Insert a markdown table of contents from the buffer's headings",
         slugify_selection, "Slugify the selection (lowercase, hyphen-separated)",
+        humanize_selection, "Humanize a slug/identifier into a Title-Cased label",
+        transpose_csv_selection, "Transpose the selected CSV/TSV table (rows <-> columns)",
+        csv_to_json_selection, "Convert the selected CSV/TSV to a JSON array of objects",
+        regex_escape_selection, "Escape regex metacharacters in the selection",
+        blockquote_selection, "Prefix each selected line with \"> \" (markdown blockquote)",
+        unblockquote_selection, "Strip a leading \"> \" from each selected line",
+        bullet_list_selection, "Make a markdown bullet list from the selected lines",
+        unbullet_selection, "Strip a leading bullet (- * +) from each selected line",
         strip_ansi_selection, "Strip ANSI/VT escape codes from the selection",
+        html_escape_selection, "HTML-escape the selection (& < > \" ' to entities)",
+        html_unescape_selection, "HTML-unescape entities in the selection back to characters",
+        reverse_chars_selection, "Reverse the characters in the selection",
         json_escape_selection, "JSON-escape the selection (for a string literal)",
+        to_json_string_selection, "Wrap the selection in quotes as a JSON string literal",
         json_unescape_selection, "JSON-unescape the selection",
         to_hex_selection, "Encode the selection as hex bytes",
         from_hex_selection, "Decode hex bytes in the selection back to text",
         format_table_selection, "Align the selected markdown table's columns",
         csv_to_table_selection, "Convert the selected CSV/TSV to a markdown table",
         table_to_csv_selection, "Convert the selected markdown table to CSV",
+        json_pretty_selection, "Pretty-print the selected JSON (preserves key order)",
+        json_minify_selection, "Minify the selected JSON",
+        xml_pretty_selection, "Pretty-print the selected XML/HTML",
         insert_digraph, "Insert a digraph by two-character mnemonic (CTRL-K)",
         copy_char_below, "Insert the character below the cursor (i_CTRL-E)",
         copy_char_above, "Insert the character above the cursor (i_CTRL-Y)",
@@ -692,6 +732,7 @@ impl MappableCommand {
         yank_file_dir, "Yank current file's directory to clipboard",
         copy_remote_url, "Copy web permalink (host/blob/<sha>/path#Ln) for current line",
         open_remote_url, "Open current line's web permalink in the browser",
+        open_url_under_cursor, "Open the URL under the cursor in the browser",
         duplicate_selection_down, "Duplicate current line(s) downward",
         duplicate_selection_up, "Duplicate current line(s) upward",
         move_text_line_down, "Move current line(s) down past the next line",
@@ -1555,6 +1596,71 @@ fn open_remote_url(cx: &mut Context) {
             Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
         },
         Err(e) => cx.editor.set_error(e),
+    }
+}
+
+/// Find the URL (`http(s)://…` or `www.…`) at char column `col` in `line`, or
+/// `None`. Trailing sentence punctuation is trimmed. Pure — unit tested.
+fn url_at(line: &str, col: usize) -> Option<String> {
+    let chars: Vec<char> = line.chars().collect();
+    if chars.is_empty() {
+        return None;
+    }
+    let is_url_char =
+        |c: char| !c.is_whitespace() && !matches!(c, '<' | '>' | '"' | '\'' | '(' | ')' | '`');
+    let mut i = col.min(chars.len() - 1);
+    if !is_url_char(chars[i]) {
+        if i > 0 && is_url_char(chars[i - 1]) {
+            i -= 1;
+        } else {
+            return None;
+        }
+    }
+    let mut start = i;
+    while start > 0 && is_url_char(chars[start - 1]) {
+        start -= 1;
+    }
+    let mut end = i;
+    while end < chars.len() && is_url_char(chars[end]) {
+        end += 1;
+    }
+    let token: String = chars[start..end].iter().collect();
+    let token = token.trim_end_matches(['.', ',', ';', ':', '!', '?']);
+    if token.starts_with("http://") || token.starts_with("https://") || token.starts_with("www.") {
+        Some(token.to_string())
+    } else {
+        None
+    }
+}
+
+/// `:open-url` — open the URL under the cursor in the OS browser.
+fn open_url_under_cursor(cx: &mut Context) {
+    let (line, col) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line_idx = text.char_to_line(cursor);
+        let col = cursor - text.line_to_char(line_idx);
+        let line: String = text
+            .line(line_idx)
+            .chars()
+            .filter(|c| *c != '\n' && *c != '\r')
+            .collect();
+        (line, col)
+    };
+    match url_at(&line, col) {
+        Some(u) => {
+            let url = if u.starts_with("www.") {
+                format!("https://{u}")
+            } else {
+                u
+            };
+            match open_in_browser(&url) {
+                Ok(()) => cx.editor.set_status(format!("Opening {url}")),
+                Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
+            }
+        }
+        None => cx.editor.set_error("no URL under cursor"),
     }
 }
 
@@ -2918,20 +3024,141 @@ fn url_decode(cx: &mut Context) {
     });
 }
 
+/// Expand a URL query string into one decoded `key=value` per line. Handles a
+/// leading `?`, `+` as space, and percent-decoding of keys and values. Pure —
+/// unit tested.
+fn parse_query_string(s: &str) -> String {
+    let decode = |part: &str| percent_decode(&part.replace('+', " "));
+    s.trim()
+        .trim_start_matches('?')
+        .split('&')
+        .filter(|p| !p.is_empty())
+        .map(|pair| match pair.split_once('=') {
+            Some((k, v)) => format!("{}={}", decode(k), decode(v)),
+            None => decode(pair),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn parse_query_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        parse_query_string(&s).into()
+    });
+}
+
+/// Build a URL query string from `key=value` lines, percent-encoding each key and
+/// value and joining with `&`. The inverse of [`parse_query_string`]. Pure — unit tested.
+fn build_query_string(s: &str) -> String {
+    s.lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|line| match line.split_once('=') {
+            Some((k, v)) => format!("{}={}", percent_encode(k.trim()), percent_encode(v.trim())),
+            None => percent_encode(line.trim()),
+        })
+        .collect::<Vec<_>>()
+        .join("&")
+}
+
+fn build_query_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        build_query_string(&s).into()
+    });
+}
+
+/// Break a URL into labeled `scheme`/`host`/`port`/`path`/`query` lines, with the
+/// query expanded to decoded `key=value` pairs (via [`parse_query_string`]).
+/// Pure — unit tested.
+fn url_info(s: &str) -> String {
+    let s = s.trim();
+    let mut out = String::new();
+    let rest = match s.find("://") {
+        Some(i) => {
+            out.push_str(&format!("scheme: {}\n", &s[..i]));
+            &s[i + 3..]
+        }
+        None => s,
+    };
+    let (before_query, query) = match rest.split_once('?') {
+        Some((b, q)) => (b, Some(q)),
+        None => (rest, None),
+    };
+    let (authority, path) = match before_query.find('/') {
+        Some(i) => (&before_query[..i], &before_query[i..]),
+        None => (before_query, ""),
+    };
+    let authority = authority.rsplit('@').next().unwrap_or(authority); // drop userinfo
+    let (host, port) = match authority.rsplit_once(':') {
+        Some((h, p)) if !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()) => (h, Some(p)),
+        _ => (authority, None),
+    };
+    if !host.is_empty() {
+        out.push_str(&format!("host: {host}\n"));
+    }
+    if let Some(p) = port {
+        out.push_str(&format!("port: {p}\n"));
+    }
+    if !path.is_empty() {
+        out.push_str(&format!("path: {path}\n"));
+    }
+    if let Some(q) = query {
+        out.push_str("query:\n");
+        for line in parse_query_string(q).lines() {
+            out.push_str(&format!("  {line}\n"));
+        }
+    }
+    out.trim_end().to_string()
+}
+
+fn url_info_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        url_info(&s).into()
+    });
+}
+
 const BASE64_ALPHABET: &[u8; 64] =
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-/// The 6-bit value of a standard base64 character, or `None` for padding,
-/// whitespace, or any other byte (so decode can skip them leniently).
+const BASE64URL_ALPHABET: &[u8; 64] =
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+/// The 6-bit value of a base64 character (standard `+/` *and* URL-safe `-_`), or
+/// `None` for padding, whitespace, or any other byte (so decode skips them
+/// leniently — and handles both standard and URL-safe input, e.g. JWT segments).
 fn base64_val(c: u8) -> Option<u32> {
     match c {
         b'A'..=b'Z' => Some((c - b'A') as u32),
         b'a'..=b'z' => Some((c - b'a' + 26) as u32),
         b'0'..=b'9' => Some((c - b'0' + 52) as u32),
-        b'+' => Some(62),
-        b'/' => Some(63),
+        b'+' | b'-' => Some(62),
+        b'/' | b'_' => Some(63),
         _ => None,
     }
+}
+
+/// URL-safe base64-encode (`-_` alphabet, no `=` padding) — the encoding used by
+/// JWTs and URLs.
+fn base64url_encode(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    for chunk in bytes.chunks(3) {
+        let b1 = chunk.get(1).copied();
+        let b2 = chunk.get(2).copied();
+        let n =
+            ((chunk[0] as u32) << 16) | ((b1.unwrap_or(0) as u32) << 8) | (b2.unwrap_or(0) as u32);
+        out.push(BASE64URL_ALPHABET[((n >> 18) & 63) as usize] as char);
+        out.push(BASE64URL_ALPHABET[((n >> 12) & 63) as usize] as char);
+        if b1.is_some() {
+            out.push(BASE64URL_ALPHABET[((n >> 6) & 63) as usize] as char);
+        }
+        if b2.is_some() {
+            out.push(BASE64URL_ALPHABET[(n & 63) as usize] as char);
+        }
+    }
+    out
 }
 
 /// Standard base64-encode a string's UTF-8 bytes (with `=` padding).
@@ -2995,6 +3222,43 @@ fn decode_base64(cx: &mut Context) {
     switch_case_impl(cx, |slice| {
         let s: String = slice.chunks().collect();
         base64_decode(&s).into()
+    });
+}
+
+fn encode_base64url(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        base64url_encode(&s).into()
+    });
+}
+
+fn decode_base64url(cx: &mut Context) {
+    // base64_decode already accepts both the standard and URL-safe alphabets.
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        base64_decode(&s).into()
+    });
+}
+
+/// Decode a JWT (`header.payload.signature`) into its pretty-printed header and
+/// payload JSON. Returns the input unchanged if it isn't JWT-shaped. Composes
+/// base64url-decode (via [`base64_decode`]) with [`pretty_json`]. Pure — unit tested.
+fn jwt_decode(token: &str) -> String {
+    let parts: Vec<&str> = token.trim().split('.').collect();
+    if parts.len() < 2 {
+        return token.to_string();
+    }
+    format!(
+        "// header\n{}\n\n// payload\n{}",
+        pretty_json(&base64_decode(parts[0]), "  "),
+        pretty_json(&base64_decode(parts[1]), "  ")
+    )
+}
+
+fn jwt_decode_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        jwt_decode(&s).into()
     });
 }
 
@@ -3076,6 +3340,28 @@ fn decode_html(cx: &mut Context) {
     });
 }
 
+/// Strip HTML tags (`<…>`) and decode entities to plain text. Pure — unit tested.
+fn strip_html(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut in_tag = false;
+    for c in s.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    html_decode(&out)
+}
+
+fn html_to_text_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        strip_html(&s).into()
+    });
+}
+
 /// Convert text to a URL/file slug: lowercase ASCII alphanumerics kept, every
 /// other run collapsed to a single `-`, with no leading/trailing hyphen.
 fn slugify(s: &str) -> String {
@@ -3117,10 +3403,513 @@ fn title_case(s: &str) -> String {
     out
 }
 
+/// Parse a `#rgb` or `#rrggbb` hex color into `(r, g, b)` bytes. Pure.
+fn parse_hex_rgb(s: &str) -> Option<(u8, u8, u8)> {
+    let h = s.trim().trim_start_matches('#');
+    match h.len() {
+        3 => Some((
+            u8::from_str_radix(&h[0..1].repeat(2), 16).ok()?,
+            u8::from_str_radix(&h[1..2].repeat(2), 16).ok()?,
+            u8::from_str_radix(&h[2..3].repeat(2), 16).ok()?,
+        )),
+        6 => Some((
+            u8::from_str_radix(&h[0..2], 16).ok()?,
+            u8::from_str_radix(&h[2..4], 16).ok()?,
+            u8::from_str_radix(&h[4..6], 16).ok()?,
+        )),
+        _ => None,
+    }
+}
+
+/// Convert a `#rgb` or `#rrggbb` hex color to `rgb(r, g, b)`. Returns `None` if it
+/// isn't a valid hex color. Pure — unit tested.
+fn hex_to_rgb(s: &str) -> Option<String> {
+    let (r, g, b) = parse_hex_rgb(s)?;
+    Some(format!("rgb({r}, {g}, {b})"))
+}
+
+/// Adjust a hex color toward white (`lighten`) or black by `pct` percent.
+/// Returns `None` for non-hex input. Pure — unit tested.
+fn adjust_lightness(hex: &str, pct: u32, lighten: bool) -> Option<String> {
+    let (r, g, b) = parse_hex_rgb(hex)?;
+    let f = pct as f64 / 100.0;
+    let adj = |c: u8| -> u8 {
+        let c = c as f64;
+        let new = if lighten { c + (255.0 - c) * f } else { c * (1.0 - f) };
+        new.round().clamp(0.0, 255.0) as u8
+    };
+    Some(format!("#{:02x}{:02x}{:02x}", adj(r), adj(g), adj(b)))
+}
+
+/// Convert `rgb(r, g, b)` (or `r, g, b` / `r g b`) to `#rrggbb`. Returns `None`
+/// if it doesn't contain three 0–255 components. Pure — unit tested.
+fn rgb_to_hex(s: &str) -> Option<String> {
+    let nums: Vec<u8> = s
+        .trim()
+        .trim_start_matches("rgb")
+        .split([',', ' ', '(', ')'])
+        .filter_map(|t| {
+            let t = t.trim();
+            if t.is_empty() {
+                None
+            } else {
+                t.parse::<u8>().ok()
+            }
+        })
+        .collect();
+    if nums.len() < 3 {
+        return None;
+    }
+    Some(format!("#{:02x}{:02x}{:02x}", nums[0], nums[1], nums[2]))
+}
+
+fn hex_to_rgb_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        hex_to_rgb(&s).unwrap_or(s).into()
+    });
+}
+
+fn rgb_to_hex_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        rgb_to_hex(&s).unwrap_or(s).into()
+    });
+}
+
+/// Convert an integer (1–3999) to a Roman numeral, or `None` if out of range.
+/// Pure — unit tested.
+fn to_roman(mut n: u32) -> Option<String> {
+    if n == 0 || n > 3999 {
+        return None;
+    }
+    const TABLE: [(u32, &str); 13] = [
+        (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"),
+        (90, "XC"), (50, "L"), (40, "XL"), (10, "X"), (9, "IX"),
+        (5, "V"), (4, "IV"), (1, "I"),
+    ];
+    let mut out = String::new();
+    for (v, sym) in TABLE {
+        while n >= v {
+            out.push_str(sym);
+            n -= v;
+        }
+    }
+    Some(out)
+}
+
+/// Parse a Roman numeral into an integer, or `None` if malformed. Pure — unit tested.
+fn from_roman(s: &str) -> Option<u32> {
+    let val = |c: char| match c {
+        'I' => 1, 'V' => 5, 'X' => 10, 'L' => 50, 'C' => 100, 'D' => 500, 'M' => 1000, _ => 0,
+    };
+    let digits: Vec<i64> = s.trim().to_uppercase().chars().map(val).collect();
+    if digits.is_empty() || digits.contains(&0) {
+        return None;
+    }
+    let mut total = 0i64;
+    for i in 0..digits.len() {
+        if i + 1 < digits.len() && digits[i] < digits[i + 1] {
+            total -= digits[i];
+        } else {
+            total += digits[i];
+        }
+    }
+    if (1..=3999).contains(&total) {
+        Some(total as u32)
+    } else {
+        None
+    }
+}
+
+fn to_roman_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        s.trim()
+            .parse::<u32>()
+            .ok()
+            .and_then(to_roman)
+            .unwrap_or_else(|| s.clone())
+            .into()
+    });
+}
+
+fn from_roman_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        from_roman(&s)
+            .map(|n| n.to_string())
+            .unwrap_or_else(|| s.clone())
+            .into()
+    });
+}
+
+/// Group a run of digits with commas every three from the right (`1234567` →
+/// `1,234,567`).
+fn group_thousands(digits: &str) -> String {
+    let bytes = digits.as_bytes();
+    let len = bytes.len();
+    let mut out = String::with_capacity(len + len / 3);
+    for (idx, &b) in bytes.iter().enumerate() {
+        if idx > 0 && (len - idx).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(b as char);
+    }
+    out
+}
+
+/// Add thousands separators to every integer run in `s`. Pure — unit tested.
+fn add_thousands(s: &str) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i].is_ascii_digit() {
+            let start = i;
+            while i < chars.len() && chars[i].is_ascii_digit() {
+                i += 1;
+            }
+            let digits: String = chars[start..i].iter().collect();
+            out.push_str(&group_thousands(&digits));
+        } else {
+            out.push(chars[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
+/// Remove commas that sit between two digits (thousands separators). Pure — unit tested.
+fn strip_thousands(s: &str) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut out = String::with_capacity(s.len());
+    for (i, &c) in chars.iter().enumerate() {
+        if c == ','
+            && i > 0
+            && i + 1 < chars.len()
+            && chars[i - 1].is_ascii_digit()
+            && chars[i + 1].is_ascii_digit()
+        {
+            continue;
+        }
+        out.push(c);
+    }
+    out
+}
+
+fn add_commas_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        add_thousands(&s).into()
+    });
+}
+
+fn strip_commas_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        strip_thousands(&s).into()
+    });
+}
+
+/// Swap single and double quote characters (`'` ↔ `"`) — switch a string's quote
+/// style. Pure — unit tested.
+fn swap_quotes(s: &str) -> String {
+    s.chars()
+        .map(|c| match c {
+            '\'' => '"',
+            '"' => '\'',
+            c => c,
+        })
+        .collect()
+}
+
+fn swap_quotes_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        swap_quotes(&s).into()
+    });
+}
+
+/// Remove a matching pair of surrounding quotes (`"`, `'`, or `` ` ``) from the
+/// trimmed text, returning the inner content. Unchanged if not quoted. Pure —
+/// unit tested.
+fn strip_quotes(s: &str) -> String {
+    let t = s.trim();
+    let mut cs = t.chars();
+    if let (Some(first), Some(last)) = (cs.next(), t.chars().last()) {
+        if t.chars().count() >= 2 && first == last && matches!(first, '"' | '\'' | '`') {
+            return t[first.len_utf8()..t.len() - last.len_utf8()].to_string();
+        }
+    }
+    s.to_string()
+}
+
+fn strip_quotes_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        strip_quotes(&s).into()
+    });
+}
+
+/// Reverse the word order within each line, preserving leading indentation and
+/// collapsing internal whitespace to single spaces. Pure — unit tested.
+fn reverse_words(block: &str) -> String {
+    map_lines(block, |l| {
+        let indent: String = l.chars().take_while(|c| c.is_whitespace()).collect();
+        let words: Vec<&str> = l.split_whitespace().collect();
+        format!("{indent}{}", words.into_iter().rev().collect::<Vec<_>>().join(" "))
+    })
+}
+
+fn reverse_words_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        reverse_words(&s).into()
+    });
+}
+
+/// Strip the outermost `<tag>…</tag>` wrapper, returning the inner content (the
+/// inverse of wrapping). Returns the input unchanged if not tag-wrapped. Pure —
+/// unit tested.
+fn unwrap_tag(s: &str) -> String {
+    let t = s.trim();
+    if !t.starts_with('<') || !t.ends_with('>') {
+        return s.to_string();
+    }
+    let Some(open_end) = t.find('>') else {
+        return s.to_string();
+    };
+    let Some(close_start) = t.rfind("</") else {
+        return s.to_string();
+    };
+    if close_start <= open_end {
+        return s.to_string();
+    }
+    t[open_end + 1..close_start].to_string()
+}
+
+fn unwrap_tag_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        unwrap_tag(&s).into()
+    });
+}
+
+/// Sort blank-line-separated paragraphs alphabetically, rejoining them with a
+/// single blank line. Pure — unit tested.
+fn sort_paragraphs(block: &str) -> String {
+    let mut paras: Vec<String> = Vec::new();
+    let mut current: Vec<&str> = Vec::new();
+    for line in block.lines() {
+        if line.trim().is_empty() {
+            if !current.is_empty() {
+                paras.push(current.join("\n"));
+                current.clear();
+            }
+        } else {
+            current.push(line);
+        }
+    }
+    if !current.is_empty() {
+        paras.push(current.join("\n"));
+    }
+    paras.sort();
+    paras.join("\n\n")
+}
+
+fn sort_paragraphs_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        sort_paragraphs(&s).into()
+    });
+}
+
+fn lighten_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        adjust_lightness(s.trim(), 10, true).unwrap_or(s).into()
+    });
+}
+
+fn darken_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        adjust_lightness(s.trim(), 10, false).unwrap_or(s).into()
+    });
+}
+
+/// For a hex background color, report its perceived luminance (0–1) and whether
+/// black or white text reads better on it. `None` for non-hex input. Pure — unit tested.
+fn contrast_recommendation(hex: &str) -> Option<String> {
+    let (r, g, b) = parse_hex_rgb(hex)?;
+    let lum = (0.299 * r as f64 + 0.587 * g as f64 + 0.114 * b as f64) / 255.0;
+    let text = if lum > 0.5 { "#000000 (black)" } else { "#ffffff (white)" };
+    Some(format!("luminance {lum:.2} → use {text} text"))
+}
+
+fn contrast_text(cx: &mut Context) {
+    let s: String = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let sel = doc.selection(view.id).primary();
+        text.slice(sel.from()..sel.to()).chunks().collect()
+    };
+    match contrast_recommendation(s.trim()) {
+        Some(msg) => cx.editor.set_status(msg),
+        None => cx.editor.set_error(format!("not a hex color: {}", s.trim())),
+    }
+}
+
+/// Recase `replacement` to match the casing pattern of `original`
+/// (ALL CAPS / Capitalized / lowercase). Pure — unit tested.
+fn match_case(original: &str, replacement: &str) -> String {
+    let has_upper = original.chars().any(|c| c.is_uppercase());
+    let has_lower = original.chars().any(|c| c.is_lowercase());
+    if has_upper && !has_lower {
+        replacement.to_uppercase()
+    } else if original.chars().next().is_some_and(|c| c.is_uppercase()) {
+        let mut cs = replacement.chars();
+        match cs.next() {
+            Some(f) => f.to_uppercase().chain(cs).collect(),
+            None => String::new(),
+        }
+    } else {
+        replacement.to_string()
+    }
+}
+
+/// Toggle a boolean/opposite keyword (`true`↔`false`, `yes`↔`no`, `min`↔`max`, …),
+/// preserving the original casing. Returns `None` if the word has no opposite.
+/// Pure — unit tested.
+fn toggle_word(word: &str) -> Option<String> {
+    const PAIRS: [(&str, &str); 16] = [
+        ("true", "false"),
+        ("yes", "no"),
+        ("on", "off"),
+        ("enabled", "disabled"),
+        ("enable", "disable"),
+        ("left", "right"),
+        ("up", "down"),
+        ("min", "max"),
+        ("show", "hide"),
+        ("first", "last"),
+        ("before", "after"),
+        ("start", "end"),
+        ("open", "close"),
+        ("width", "height"),
+        ("horizontal", "vertical"),
+        ("public", "private"),
+    ];
+    let lower = word.to_lowercase();
+    for (a, b) in PAIRS {
+        if lower == a {
+            return Some(match_case(word, b));
+        }
+        if lower == b {
+            return Some(match_case(word, a));
+        }
+    }
+    None
+}
+
+fn toggle_value_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        match toggle_word(s.trim()) {
+            Some(t) => t.into(),
+            None => s.into(),
+        }
+    });
+}
+
+/// Collapse runs of internal spaces/tabs in `s` to a single space and trim
+/// trailing whitespace, while preserving each line's leading indentation and the
+/// line structure. Pure — unit tested.
+fn normalize_whitespace(s: &str) -> String {
+    let had_trailing = s.ends_with('\n');
+    let mut lines: Vec<&str> = s.split('\n').collect();
+    if had_trailing {
+        lines.pop();
+    }
+    let normalized: Vec<String> = lines
+        .iter()
+        .map(|line| {
+            let indent: String = line.chars().take_while(|c| *c == ' ' || *c == '\t').collect();
+            let body = line[indent.len()..].split_whitespace().collect::<Vec<_>>().join(" ");
+            format!("{indent}{body}")
+        })
+        .collect();
+    let out = normalized.join("\n");
+    if had_trailing {
+        format!("{out}\n")
+    } else {
+        out
+    }
+}
+
+fn normalize_whitespace_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        normalize_whitespace(&s).into()
+    });
+}
+
 fn title_case_selection(cx: &mut Context) {
     switch_case_impl(cx, |slice| {
         let s: String = slice.chunks().collect();
         title_case(&s).into()
+    });
+}
+
+/// Capitalize the first letter of each sentence (after `.`/`!`/`?` and at the
+/// start), leaving the rest of the text untouched (non-destructive — preserves
+/// acronyms etc.). Pure — unit tested.
+fn sentence_case(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut capitalize_next = true;
+    for c in s.chars() {
+        if capitalize_next && c.is_alphabetic() {
+            out.extend(c.to_uppercase());
+            capitalize_next = false;
+        } else {
+            out.push(c);
+            if matches!(c, '.' | '!' | '?') {
+                capitalize_next = true;
+            }
+        }
+    }
+    out
+}
+
+fn sentence_case_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        sentence_case(&s).into()
+    });
+}
+
+/// Convert smart/curly typography to plain ASCII: curly quotes → `'`/`"`, en/em
+/// dashes → `-`, ellipsis → `...`, non-breaking space → space. Pure — unit tested.
+fn straighten_quotes(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '\u{2018}' | '\u{2019}' | '\u{201A}' | '\u{201B}' => out.push('\''),
+            '\u{201C}' | '\u{201D}' | '\u{201E}' | '\u{201F}' => out.push('"'),
+            '\u{2013}' | '\u{2014}' => out.push('-'),
+            '\u{2026}' => out.push_str("..."),
+            '\u{00A0}' => out.push(' '),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+fn straighten_quotes_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        straighten_quotes(&s).into()
     });
 }
 
@@ -3191,6 +3980,200 @@ fn slugify_selection(cx: &mut Context) {
     });
 }
 
+/// Turn a slug/identifier (`foo-bar`, `my_file`) into a readable Title-Cased
+/// label (`Foo Bar`, `My File`) — the inverse of slugify. Pure — unit tested.
+fn humanize(s: &str) -> String {
+    s.split(['-', '_', ' '])
+        .filter(|w| !w.is_empty())
+        .map(|w| {
+            let mut cs = w.chars();
+            match cs.next() {
+                Some(f) => f.to_uppercase().chain(cs).collect::<String>(),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn humanize_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        humanize(&s).into()
+    });
+}
+
+/// Transpose a delimited table (rows ↔ columns). The delimiter is a tab if any
+/// tab is present, otherwise a comma. Ragged rows are padded with empties. Pure —
+/// unit tested.
+fn transpose_csv(s: &str) -> String {
+    let delim = if s.contains('\t') { '\t' } else { ',' };
+    let rows: Vec<Vec<&str>> = s
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| l.split(delim).collect())
+        .collect();
+    if rows.is_empty() {
+        return s.to_string();
+    }
+    let ncol = rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    let sep = delim.to_string();
+    (0..ncol)
+        .map(|c| {
+            rows.iter()
+                .map(|r| r.get(c).copied().unwrap_or(""))
+                .collect::<Vec<_>>()
+                .join(&sep)
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn transpose_csv_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        transpose_csv(&s).into()
+    });
+}
+
+/// Convert CSV/TSV (first row = headers) to a pretty JSON array of objects. All
+/// values are strings (JSON-escaped). Pure — unit tested.
+fn csv_to_json(s: &str) -> String {
+    let delim = if s.contains('\t') { '\t' } else { ',' };
+    let lines: Vec<&str> = s.lines().filter(|l| !l.trim().is_empty()).collect();
+    if lines.len() < 2 {
+        return s.to_string();
+    }
+    let headers: Vec<&str> = lines[0].split(delim).map(|h| h.trim()).collect();
+    let objs: Vec<String> = lines[1..]
+        .iter()
+        .map(|line| {
+            let fields: Vec<&str> = line.split(delim).collect();
+            let pairs: Vec<String> = headers
+                .iter()
+                .enumerate()
+                .map(|(i, h)| {
+                    let v = fields.get(i).map(|f| f.trim()).unwrap_or("");
+                    format!("\"{}\": \"{}\"", json_escape(h), json_escape(v))
+                })
+                .collect();
+            format!("  {{{}}}", pairs.join(", "))
+        })
+        .collect();
+    format!("[\n{}\n]", objs.join(",\n"))
+}
+
+fn csv_to_json_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        csv_to_json(&s).into()
+    });
+}
+
+/// Backslash-escape regex metacharacters so the text can be searched literally.
+/// Pure — unit tested.
+fn regex_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if matches!(
+            c,
+            '.' | '^' | '$' | '*' | '+' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '|' | '\\'
+        ) {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
+fn regex_escape_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        regex_escape(&s).into()
+    });
+}
+
+/// Apply `f` to each line of `block`, preserving the trailing-newline shape.
+fn map_lines(block: &str, f: impl Fn(&str) -> String) -> String {
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<&str> = block.split('\n').collect();
+    if had_trailing {
+        lines.pop();
+    }
+    let out = lines.iter().map(|l| f(l)).collect::<Vec<_>>().join("\n");
+    if had_trailing {
+        format!("{out}\n")
+    } else {
+        out
+    }
+}
+
+/// Prefix each line with `"> "` (markdown blockquote). Pure — unit tested.
+fn blockquote(block: &str) -> String {
+    map_lines(block, |l| format!("> {l}"))
+}
+
+/// Strip a leading `"> "` (or `">"`) from each line. Pure — unit tested.
+fn unblockquote(block: &str) -> String {
+    map_lines(block, |l| {
+        l.strip_prefix("> ")
+            .or_else(|| l.strip_prefix('>'))
+            .unwrap_or(l)
+            .to_string()
+    })
+}
+
+fn blockquote_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        blockquote(&s).into()
+    });
+}
+
+fn unblockquote_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        unblockquote(&s).into()
+    });
+}
+
+/// Prefix each non-empty line with `"- "` (markdown bullet list); blank lines are
+/// left blank. Pure — unit tested.
+fn bullet_list(block: &str) -> String {
+    map_lines(block, |l| {
+        if l.trim().is_empty() {
+            l.to_string()
+        } else {
+            format!("- {l}")
+        }
+    })
+}
+
+/// Strip a leading `"- "`, `"* "`, or `"+ "` bullet from each line. Pure — unit tested.
+fn unbullet(block: &str) -> String {
+    map_lines(block, |l| {
+        l.strip_prefix("- ")
+            .or_else(|| l.strip_prefix("* "))
+            .or_else(|| l.strip_prefix("+ "))
+            .unwrap_or(l)
+            .to_string()
+    })
+}
+
+fn bullet_list_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        bullet_list(&s).into()
+    });
+}
+
+fn unbullet_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        unbullet(&s).into()
+    });
+}
+
 /// Remove ANSI/VT escape sequences (CSI `ESC[…`, OSC `ESC]…BEL/ST`, and lone
 /// `ESC`) from `s`, leaving plain text. Multi-byte text is preserved.
 fn strip_ansi(s: &str) -> String {
@@ -3239,6 +4222,91 @@ fn strip_ansi_selection(cx: &mut Context) {
     switch_case_impl(cx, |slice| {
         let s: String = slice.chunks().collect();
         strip_ansi(&s).into()
+    });
+}
+
+/// Escape the five HTML-significant characters (`& < > " '`) into their entity
+/// forms so text can be embedded safely in markup. Pure — unit tested.
+fn html_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// Decode HTML entities back to characters: the named five (`amp lt gt quot
+/// apos`) plus decimal (`&#NN;`) and hex (`&#xHH;`) numeric references. Unknown
+/// entities are left verbatim. Pure — unit tested.
+fn html_unescape(s: &str) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '&' {
+            if let Some(semi) = chars[i + 1..].iter().position(|&c| c == ';') {
+                let entity: String = chars[i + 1..i + 1 + semi].iter().collect();
+                let replacement = match entity.as_str() {
+                    "amp" => Some('&'),
+                    "lt" => Some('<'),
+                    "gt" => Some('>'),
+                    "quot" => Some('"'),
+                    "apos" | "#39" => Some('\''),
+                    _ => {
+                        if let Some(hex) = entity.strip_prefix("#x").or_else(|| entity.strip_prefix("#X")) {
+                            u32::from_str_radix(hex, 16).ok().and_then(char::from_u32)
+                        } else if let Some(dec) = entity.strip_prefix('#') {
+                            dec.parse::<u32>().ok().and_then(char::from_u32)
+                        } else {
+                            None
+                        }
+                    }
+                };
+                if let Some(ch) = replacement {
+                    out.push(ch);
+                    i += semi + 2;
+                    continue;
+                }
+            }
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    out
+}
+
+fn html_escape_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        html_escape(&s).into()
+    });
+}
+
+fn html_unescape_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        html_unescape(&s).into()
+    });
+}
+
+/// Reverse the characters of `s` (distinct from reversing line order). Operates on
+/// Unicode scalar values, so precomposed accented characters are preserved. Pure —
+/// unit tested.
+fn reverse_chars(s: &str) -> String {
+    s.chars().rev().collect()
+}
+
+fn reverse_chars_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        reverse_chars(&s).into()
     });
 }
 
@@ -3305,6 +4373,19 @@ fn json_escape_selection(cx: &mut Context) {
     switch_case_impl(cx, |slice| {
         let s: String = slice.chunks().collect();
         json_escape(&s).into()
+    });
+}
+
+/// Wrap text in double quotes and JSON-escape its contents, producing a complete
+/// JSON string literal (newlines become `\n`). Pure — unit tested.
+fn to_json_string(s: &str) -> String {
+    format!("\"{}\"", json_escape(s))
+}
+
+fn to_json_string_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        to_json_string(&s).into()
     });
 }
 
@@ -3501,6 +4582,201 @@ fn table_to_csv_selection(cx: &mut Context) {
     switch_case_impl(cx, |slice| {
         let s: String = slice.chunks().collect();
         markdown_table_to_csv(&s).into()
+    });
+}
+
+/// Pretty-print JSON by reformatting only the whitespace *outside* string
+/// literals — so key order and all values are preserved exactly (no parse/
+/// re-serialize round-trip). `indent` is one indentation unit. Pure — unit tested.
+fn pretty_json(s: &str, indent: &str) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut out = String::with_capacity(s.len() + s.len() / 2);
+    let mut depth = 0usize;
+    let mut in_str = false;
+    let mut esc = false;
+    let newline = |out: &mut String, depth: usize| {
+        out.push('\n');
+        for _ in 0..depth {
+            out.push_str(indent);
+        }
+    };
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        if in_str {
+            out.push(c);
+            if esc {
+                esc = false;
+            } else if c == '\\' {
+                esc = true;
+            } else if c == '"' {
+                in_str = false;
+            }
+            i += 1;
+            continue;
+        }
+        match c {
+            '"' => {
+                in_str = true;
+                out.push('"');
+            }
+            '{' | '[' => {
+                let close = if c == '{' { '}' } else { ']' };
+                let mut j = i + 1;
+                while j < chars.len() && chars[j].is_whitespace() {
+                    j += 1;
+                }
+                if j < chars.len() && chars[j] == close {
+                    out.push(c);
+                    out.push(close);
+                    i = j + 1;
+                    continue;
+                }
+                out.push(c);
+                depth += 1;
+                newline(&mut out, depth);
+            }
+            '}' | ']' => {
+                depth = depth.saturating_sub(1);
+                newline(&mut out, depth);
+                out.push(c);
+            }
+            ',' => {
+                out.push(',');
+                newline(&mut out, depth);
+            }
+            ':' => out.push_str(": "),
+            c if c.is_whitespace() => {}
+            c => out.push(c),
+        }
+        i += 1;
+    }
+    out
+}
+
+/// Minify JSON by removing all whitespace outside string literals. Pure — unit tested.
+fn minify_json(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut in_str = false;
+    let mut esc = false;
+    for c in s.chars() {
+        if in_str {
+            out.push(c);
+            if esc {
+                esc = false;
+            } else if c == '\\' {
+                esc = true;
+            } else if c == '"' {
+                in_str = false;
+            }
+        } else if c == '"' {
+            in_str = true;
+            out.push('"');
+        } else if !c.is_whitespace() {
+            out.push(c);
+        }
+    }
+    out
+}
+
+fn json_pretty_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        pretty_json(&s, "  ").into()
+    });
+}
+
+fn json_minify_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        minify_json(&s).into()
+    });
+}
+
+/// Pretty-print XML/HTML: one tag per line, indented by nesting depth. Handles
+/// closing/self-closing tags, comments, declarations, and `>` inside quoted
+/// attributes; text runs are trimmed onto their own line. Pure — unit tested.
+fn pretty_xml(s: &str, indent: &str) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut out = String::with_capacity(s.len() + s.len() / 2);
+    let mut depth = 0usize;
+    let mut i = 0;
+    let emit_indent = |out: &mut String, depth: usize| {
+        if !out.is_empty() {
+            out.push('\n');
+        }
+        for _ in 0..depth {
+            out.push_str(indent);
+        }
+    };
+    while i < chars.len() {
+        while i < chars.len() && chars[i].is_whitespace() {
+            i += 1;
+        }
+        if i >= chars.len() {
+            break;
+        }
+        if chars[i] == '<' {
+            // comment <!-- ... -->
+            if chars[i..].starts_with(&['<', '!', '-', '-']) {
+                let mut j = i + 4;
+                while j + 2 < chars.len() && !(chars[j] == '-' && chars[j + 1] == '-' && chars[j + 2] == '>') {
+                    j += 1;
+                }
+                let end = (j + 3).min(chars.len());
+                emit_indent(&mut out, depth);
+                out.extend(&chars[i..end]);
+                i = end;
+                continue;
+            }
+            // regular tag: find '>' while respecting quotes
+            let mut j = i + 1;
+            let mut quote: Option<char> = None;
+            while j < chars.len() {
+                let c = chars[j];
+                match quote {
+                    Some(q) if c == q => quote = None,
+                    Some(_) => {}
+                    None if c == '"' || c == '\'' => quote = Some(c),
+                    None if c == '>' => break,
+                    None => {}
+                }
+                j += 1;
+            }
+            let end = (j + 1).min(chars.len());
+            let tag: String = chars[i..end].iter().collect();
+            let is_close = tag.starts_with("</");
+            let is_self = tag.ends_with("/>");
+            let is_decl = tag.starts_with("<?") || tag.starts_with("<!");
+            if is_close {
+                depth = depth.saturating_sub(1);
+            }
+            emit_indent(&mut out, depth);
+            out.push_str(&tag);
+            if !is_close && !is_self && !is_decl {
+                depth += 1;
+            }
+            i = end;
+        } else {
+            let start = i;
+            while i < chars.len() && chars[i] != '<' {
+                i += 1;
+            }
+            let text: String = chars[start..i].iter().collect();
+            let trimmed = text.trim();
+            if !trimmed.is_empty() {
+                emit_indent(&mut out, depth);
+                out.push_str(trimmed);
+            }
+        }
+    }
+    out
+}
+
+fn xml_pretty_selection(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        pretty_xml(&s, "  ").into()
     });
 }
 
@@ -10615,6 +11891,21 @@ mod path_yank_tests {
     }
 
     #[test]
+    fn url_under_cursor() {
+        use super::url_at;
+        let line = "see https://example.com/path for more.";
+        // cursor anywhere inside the URL finds it
+        assert_eq!(url_at(line, 4).as_deref(), Some("https://example.com/path"));
+        assert_eq!(url_at(line, 20).as_deref(), Some("https://example.com/path"));
+        // cursor in plain text → None
+        assert_eq!(url_at(line, 0), None);
+        // trailing punctuation trimmed
+        assert_eq!(url_at("(http://x.io).", 5).as_deref(), Some("http://x.io"));
+        // www. without scheme is recognized
+        assert_eq!(url_at("go www.foo.com now", 6).as_deref(), Some("www.foo.com"));
+    }
+
+    #[test]
     fn remote_url_normalizes() {
         use super::git_remote_to_web_base as b;
         assert_eq!(b("git@github.com:owner/repo.git").as_deref(), Some("https://github.com/owner/repo"));
@@ -10639,6 +11930,67 @@ mod path_yank_tests {
         assert_eq!(strip_ansi("café\u{1b}[0m"), "café");
         // plain text untouched
         assert_eq!(strip_ansi("plain text"), "plain text");
+    }
+
+    #[test]
+    fn html_escape_roundtrip() {
+        use super::{html_escape, html_unescape};
+        let raw = r#"a < b && c > "d" 'e'"#;
+        let escaped = r#"a &lt; b &amp;&amp; c &gt; &quot;d&quot; &#39;e&#39;"#;
+        assert_eq!(html_escape(raw), escaped);
+        // escape then unescape is the identity
+        assert_eq!(html_unescape(&html_escape(raw)), raw);
+        // named, decimal, and hex numeric references all decode
+        assert_eq!(html_unescape("&lt;&apos;&#64;&#x41;&gt;"), "<'@A>");
+        // unknown entity left verbatim
+        assert_eq!(html_unescape("a &bogus; b"), "a &bogus; b");
+    }
+
+    #[test]
+    fn reverse_chars_reverses() {
+        use super::reverse_chars;
+        assert_eq!(reverse_chars("abc"), "cba");
+        assert_eq!(reverse_chars("a b"), "b a");
+        // precomposed accented character preserved (not byte-reversed into mojibake)
+        assert_eq!(reverse_chars("héllo"), "olléh");
+        // double reverse is the identity
+        assert_eq!(reverse_chars(&reverse_chars("hello world")), "hello world");
+    }
+
+    #[test]
+    fn xml_pretty_prints() {
+        use super::pretty_xml;
+        assert_eq!(
+            pretty_xml("<a><b>x</b></a>", "  "),
+            "<a>\n  <b>\n    x\n  </b>\n</a>"
+        );
+        // self-closing tags don't increase depth
+        assert_eq!(pretty_xml("<r><br/><br/></r>", "  "), "<r>\n  <br/>\n  <br/>\n</r>");
+        // a `>` inside a quoted attribute does not end the tag early
+        assert_eq!(
+            pretty_xml(r#"<a x="1>2"><c/></a>"#, "  "),
+            "<a x=\"1>2\">\n  <c/>\n</a>"
+        );
+        // comments and declarations are passed through, not nested
+        assert_eq!(
+            pretty_xml("<!-- hi --><x/>", "  "),
+            "<!-- hi -->\n<x/>"
+        );
+    }
+
+    #[test]
+    fn json_pretty_and_minify() {
+        use super::{minify_json, pretty_json};
+        let compact = r#"{"a":1,"b":[2,3],"c":{}}"#;
+        let pretty = "{\n  \"a\": 1,\n  \"b\": [\n    2,\n    3\n  ],\n  \"c\": {}\n}";
+        assert_eq!(pretty_json(compact, "  "), pretty);
+        // minify is the inverse (for already-compact-friendly input)
+        assert_eq!(minify_json(pretty), compact);
+        // commas/colons/braces inside string literals are NOT treated as structure
+        let s = r#"{"k":"a, b: {c}"}"#;
+        assert_eq!(minify_json(&pretty_json(s, "  ")), s);
+        // key order is preserved (z before a)
+        assert!(pretty_json(r#"{"z":1,"a":2}"#, "  ").find("\"z\"").unwrap() < pretty_json(r#"{"z":1,"a":2}"#, "  ").find("\"a\"").unwrap());
     }
 
     #[test]
@@ -10705,6 +12057,18 @@ mod path_yank_tests {
     }
 
     #[test]
+    fn to_json_string_wraps() {
+        use super::{json_unescape, to_json_string};
+        assert_eq!(to_json_string("hi"), "\"hi\"");
+        // quotes and newlines escaped inside the wrapping quotes
+        assert_eq!(to_json_string("a\"b\nc"), "\"a\\\"b\\nc\"");
+        // stripping the wrapping quotes + unescaping round-trips to the original
+        let s = "multi\nline \"quoted\"";
+        let wrapped = to_json_string(s);
+        assert_eq!(json_unescape(&wrapped[1..wrapped.len() - 1]), s);
+    }
+
+    #[test]
     fn json_escape_unescape() {
         use super::{json_escape, json_unescape};
         assert_eq!(json_escape("he said \"hi\"\n\ttab"), "he said \\\"hi\\\"\\n\\ttab");
@@ -10737,6 +12101,186 @@ mod path_yank_tests {
     }
 
     #[test]
+    fn normalize_whitespace_collapses() {
+        use super::normalize_whitespace;
+        // internal runs collapse to one space; trailing trimmed
+        assert_eq!(normalize_whitespace("a   b\t c  \n"), "a b c\n");
+        // leading indentation preserved
+        assert_eq!(normalize_whitespace("    a    b\n"), "    a b\n");
+        // multiple lines, no trailing newline
+        assert_eq!(normalize_whitespace("x  y\n  z   w"), "x y\n  z w");
+        // already-clean text unchanged
+        assert_eq!(normalize_whitespace("clean text\n"), "clean text\n");
+    }
+
+    #[test]
+    fn toggle_word_pairs() {
+        use super::{match_case, toggle_word};
+        // case preservation
+        assert_eq!(match_case("TRUE", "false"), "FALSE");
+        assert_eq!(match_case("True", "false"), "False");
+        assert_eq!(match_case("true", "false"), "false");
+        // both directions
+        assert_eq!(toggle_word("true").as_deref(), Some("false"));
+        assert_eq!(toggle_word("FALSE").as_deref(), Some("TRUE"));
+        assert_eq!(toggle_word("Yes").as_deref(), Some("No"));
+        assert_eq!(toggle_word("min").as_deref(), Some("max"));
+        assert_eq!(toggle_word("disabled").as_deref(), Some("enabled"));
+        // no opposite
+        assert_eq!(toggle_word("banana"), None);
+    }
+
+    #[test]
+    fn contrast_recommends_text() {
+        use super::contrast_recommendation;
+        // light background → black text
+        assert!(contrast_recommendation("#ffffff").unwrap().contains("#000000"));
+        // dark background → white text
+        assert!(contrast_recommendation("#000000").unwrap().contains("#ffffff"));
+        // a light yellow → black text
+        assert!(contrast_recommendation("#ffff00").unwrap().contains("#000000"));
+        assert_eq!(contrast_recommendation("notacolor"), None);
+    }
+
+    #[test]
+    fn lighten_darken_colors() {
+        use super::adjust_lightness;
+        // mid-gray ±50%
+        assert_eq!(adjust_lightness("#808080", 50, true).as_deref(), Some("#c0c0c0"));
+        assert_eq!(adjust_lightness("#808080", 50, false).as_deref(), Some("#404040"));
+        // black lightened 50% → mid-gray; white darkened 50% → mid-gray
+        assert_eq!(adjust_lightness("#000000", 50, true).as_deref(), Some("#808080"));
+        assert_eq!(adjust_lightness("#ffffff", 50, false).as_deref(), Some("#808080"));
+        // short form accepted; non-hex → None
+        assert_eq!(adjust_lightness("#fff", 0, true).as_deref(), Some("#ffffff"));
+        assert_eq!(adjust_lightness("nope", 10, true), None);
+    }
+
+    #[test]
+    fn sort_paragraphs_orders() {
+        use super::sort_paragraphs;
+        assert_eq!(
+            sort_paragraphs("b\nb2\n\na\na2\n"),
+            "a\na2\n\nb\nb2"
+        );
+        // multiple blank lines between paragraphs are normalized to one
+        assert_eq!(sort_paragraphs("z\n\n\n\na\n"), "a\n\nz");
+        // single paragraph unchanged
+        assert_eq!(sort_paragraphs("only\nlines"), "only\nlines");
+    }
+
+    #[test]
+    fn unwrap_tag_strips() {
+        use super::unwrap_tag;
+        assert_eq!(unwrap_tag("<b>text</b>"), "text");
+        assert_eq!(unwrap_tag("<div>a & b</div>"), "a & b");
+        // not tag-wrapped → unchanged
+        assert_eq!(unwrap_tag("plain"), "plain");
+        // empty element
+        assert_eq!(unwrap_tag("<br></br>"), "");
+    }
+
+    #[test]
+    fn reverse_words_per_line() {
+        use super::reverse_words;
+        assert_eq!(reverse_words("the quick brown\n"), "brown quick the\n");
+        // leading indentation preserved
+        assert_eq!(reverse_words("  a b c"), "  c b a");
+        // multiple lines
+        assert_eq!(reverse_words("one two\nthree four\n"), "two one\nfour three\n");
+    }
+
+    #[test]
+    fn strip_quotes_unwraps() {
+        use super::strip_quotes;
+        assert_eq!(strip_quotes("\"hello\""), "hello");
+        assert_eq!(strip_quotes("'x'"), "x");
+        assert_eq!(strip_quotes("`code`"), "code");
+        // not quoted, or mismatched → unchanged
+        assert_eq!(strip_quotes("plain"), "plain");
+        assert_eq!(strip_quotes("\"mismatch'"), "\"mismatch'");
+        // a lone quote is not a pair
+        assert_eq!(strip_quotes("\""), "\"");
+    }
+
+    #[test]
+    fn swap_quotes_toggles() {
+        use super::swap_quotes;
+        assert_eq!(swap_quotes("'a' \"b\""), "\"a\" 'b'");
+        assert_eq!(swap_quotes("print('hi')"), "print(\"hi\")");
+        assert_eq!(swap_quotes("no quotes"), "no quotes");
+    }
+
+    #[test]
+    fn thousands_separators() {
+        use super::{add_thousands, strip_thousands};
+        assert_eq!(add_thousands("1234567"), "1,234,567");
+        assert_eq!(add_thousands("price: 1000000 yen"), "price: 1,000,000 yen");
+        assert_eq!(add_thousands("12"), "12");
+        assert_eq!(strip_thousands("1,234,567"), "1234567");
+        // a comma not between digits is preserved
+        assert_eq!(strip_thousands("a, b"), "a, b");
+        // round-trip
+        assert_eq!(strip_thousands(&add_thousands("9876543")), "9876543");
+    }
+
+    #[test]
+    fn roman_numerals() {
+        use super::{from_roman, to_roman};
+        assert_eq!(to_roman(4).as_deref(), Some("IV"));
+        assert_eq!(to_roman(2024).as_deref(), Some("MMXXIV"));
+        assert_eq!(to_roman(0), None);
+        assert_eq!(to_roman(4000), None);
+        assert_eq!(from_roman("IV"), Some(4));
+        assert_eq!(from_roman("mmxxiv"), Some(2024)); // case-insensitive
+        assert_eq!(from_roman("foo"), None);
+        // round-trip for a range of values
+        for n in [1u32, 9, 49, 444, 1994, 3888] {
+            assert_eq!(from_roman(&to_roman(n).unwrap()), Some(n));
+        }
+    }
+
+    #[test]
+    fn hex_rgb_conversions() {
+        use super::{hex_to_rgb, rgb_to_hex};
+        assert_eq!(hex_to_rgb("#ff8800").as_deref(), Some("rgb(255, 136, 0)"));
+        // short #rgb form expands each nibble
+        assert_eq!(hex_to_rgb("#f80").as_deref(), Some("rgb(255, 136, 0)"));
+        assert_eq!(hex_to_rgb("not-a-color"), None);
+        assert_eq!(rgb_to_hex("rgb(255, 136, 0)").as_deref(), Some("#ff8800"));
+        // bare comma/space forms also parse
+        assert_eq!(rgb_to_hex("255, 136, 0").as_deref(), Some("#ff8800"));
+        assert_eq!(rgb_to_hex("12 34").as_deref(), None); // too few components
+        // round-trip
+        assert_eq!(rgb_to_hex(&hex_to_rgb("#1e90ff").unwrap()).as_deref(), Some("#1e90ff"));
+    }
+
+    #[test]
+    fn straighten_quotes_to_ascii() {
+        use super::straighten_quotes;
+        // curly double/single quotes → straight
+        assert_eq!(straighten_quotes("\u{201C}hi\u{201D} it\u{2019}s"), "\"hi\" it's");
+        // em dash → -, ellipsis → ...
+        assert_eq!(straighten_quotes("a\u{2014}b\u{2026}"), "a-b...");
+        // non-breaking space → space; plain text untouched
+        assert_eq!(straighten_quotes("x\u{00A0}y"), "x y");
+        assert_eq!(straighten_quotes("plain 'text'"), "plain 'text'");
+    }
+
+    #[test]
+    fn sentence_case_capitalizes() {
+        use super::sentence_case;
+        assert_eq!(
+            sentence_case("hello world. how are you? fine."),
+            "Hello world. How are you? Fine."
+        );
+        // acronyms / mid-sentence casing left untouched (non-destructive)
+        assert_eq!(sentence_case("use the API now. it works."), "Use the API now. It works.");
+        // already-capitalized stays
+        assert_eq!(sentence_case("Hi."), "Hi.");
+    }
+
+    #[test]
     fn title_case_words() {
         use super::title_case;
         assert_eq!(title_case("hello world"), "Hello World");
@@ -10746,6 +12290,69 @@ mod path_yank_tests {
         // hyphens/underscores are word boundaries; punctuation preserved
         assert_eq!(title_case("foo-bar_baz"), "Foo-Bar_Baz");
         assert_eq!(title_case("a.b c"), "A.B C");
+    }
+
+    #[test]
+    fn bullet_list_roundtrip() {
+        use super::{bullet_list, unbullet};
+        assert_eq!(bullet_list("a\nb\n"), "- a\n- b\n");
+        // blank lines stay blank
+        assert_eq!(bullet_list("x\n\ny\n"), "- x\n\n- y\n");
+        // unbullet tolerates *, +, - bullets and leaves plain lines
+        assert_eq!(unbullet("- a\n* b\n+ c\nplain"), "a\nb\nc\nplain");
+        // round-trip
+        assert_eq!(unbullet(&bullet_list("one\ntwo")), "one\ntwo");
+    }
+
+    #[test]
+    fn blockquote_roundtrip() {
+        use super::{blockquote, unblockquote};
+        assert_eq!(blockquote("a\nb\n"), "> a\n> b\n");
+        assert_eq!(unblockquote("> a\n> b\n"), "a\nb\n");
+        // unblockquote tolerates a bare '>' and leaves unquoted lines alone
+        assert_eq!(unblockquote(">x\nplain"), "x\nplain");
+        // round-trip
+        assert_eq!(unblockquote(&blockquote("hello\nworld")), "hello\nworld");
+    }
+
+    #[test]
+    fn regex_escapes_metachars() {
+        use super::regex_escape;
+        assert_eq!(regex_escape("a.b(c)"), "a\\.b\\(c\\)");
+        assert_eq!(regex_escape("1+1=2?"), "1\\+1=2\\?");
+        assert_eq!(regex_escape("a\\b"), "a\\\\b"); // backslash itself escaped
+        assert_eq!(regex_escape("plain text"), "plain text");
+    }
+
+    #[test]
+    fn csv_to_json_objects() {
+        use super::csv_to_json;
+        assert_eq!(
+            csv_to_json("name,age\nAlice,30\nBob,5"),
+            "[\n  {\"name\": \"Alice\", \"age\": \"30\"},\n  {\"name\": \"Bob\", \"age\": \"5\"}\n]"
+        );
+        // fewer than 2 lines → unchanged
+        assert_eq!(csv_to_json("just headers"), "just headers");
+    }
+
+    #[test]
+    fn transpose_csv_grid() {
+        use super::transpose_csv;
+        assert_eq!(transpose_csv("a,b,c\n1,2,3"), "a,1\nb,2\nc,3");
+        // tab-separated auto-detected (transposed rows joined by newline)
+        assert_eq!(transpose_csv("x\ty\n1\t2"), "x\t1\ny\t2");
+        // ragged rows padded with empties
+        assert_eq!(transpose_csv("a,b\n1"), "a,1\nb,");
+    }
+
+    #[test]
+    fn humanize_slugs() {
+        use super::humanize;
+        assert_eq!(humanize("foo-bar-baz"), "Foo Bar Baz");
+        assert_eq!(humanize("my_file_name"), "My File Name");
+        assert_eq!(humanize("hello"), "Hello");
+        // mixed separators and extra dashes collapse
+        assert_eq!(humanize("a--b_c"), "A B C");
     }
 
     #[test]
@@ -10773,6 +12380,17 @@ mod path_yank_tests {
     }
 
     #[test]
+    fn html_to_text_strips() {
+        use super::strip_html;
+        assert_eq!(strip_html("<b>Hello</b> &amp; <i>world</i>"), "Hello & world");
+        // attributes and self-closing tags removed
+        assert_eq!(strip_html(r#"<a href="x">link</a><br/>end"#), "linkend");
+        // entities decoded; plain text untouched
+        assert_eq!(strip_html("5 &lt; 10"), "5 < 10");
+        assert_eq!(strip_html("no tags here"), "no tags here");
+    }
+
+    #[test]
     fn html_encode_decode() {
         use super::{html_decode, html_encode};
         assert_eq!(html_encode("a<b>&\"'"), "a&lt;b&gt;&amp;&quot;&#39;");
@@ -10786,6 +12404,37 @@ mod path_yank_tests {
         assert_eq!(html_decode("a & b"), "a & b");
         // ampersand-encoding must come first so it doesn't double-escape
         assert_eq!(html_decode(&html_encode("<a href=\"?x=1&y=2\">")), "<a href=\"?x=1&y=2\">");
+    }
+
+    #[test]
+    fn jwt_decodes() {
+        use super::{base64url_encode, jwt_decode};
+        let token = format!(
+            "{}.{}.signature",
+            base64url_encode(r#"{"alg":"HS256"}"#),
+            base64url_encode(r#"{"sub":"42"}"#)
+        );
+        let decoded = jwt_decode(&token);
+        assert!(decoded.starts_with("// header"));
+        assert!(decoded.contains("\"alg\": \"HS256\"")); // pretty-printed
+        assert!(decoded.contains("// payload"));
+        assert!(decoded.contains("\"sub\": \"42\""));
+        // not JWT-shaped → unchanged
+        assert_eq!(jwt_decode("notajwt"), "notajwt");
+    }
+
+    #[test]
+    fn base64url_roundtrip() {
+        use super::{base64_decode, base64url_encode};
+        // url-safe alphabet uses '-' (62) where standard uses '+'; no padding
+        assert_eq!(base64url_encode(">>>"), "Pj4-");
+        assert_eq!(base64url_encode("foob"), "Zm9vYg"); // no '=' padding
+        // decode accepts both alphabets (so it handles JWT/URL base64)
+        assert_eq!(base64_decode("Pj4-"), ">>>");
+        assert_eq!(base64_decode("Zm9vYg"), "foob");
+        // round-trip including bytes that map to 62/63
+        let s = "??>~ data";
+        assert_eq!(base64_decode(&base64url_encode(s)), s);
     }
 
     #[test]
@@ -10807,6 +12456,48 @@ mod path_yank_tests {
         // round-trip including multi-byte UTF-8
         let s = "Hello, 世界! 🌍";
         assert_eq!(base64_decode(&base64_encode(s)), s);
+    }
+
+    #[test]
+    fn url_info_breakdown() {
+        use super::url_info;
+        assert_eq!(
+            url_info("https://api.example.com:8080/v1/users?name=John%20Doe&limit=10"),
+            "scheme: https\nhost: api.example.com\nport: 8080\npath: /v1/users\nquery:\n  name=John Doe\n  limit=10"
+        );
+        // minimal URL: just host
+        assert_eq!(url_info("http://example.com"), "scheme: http\nhost: example.com");
+        // no scheme, with path
+        assert_eq!(url_info("example.com/path"), "host: example.com\npath: /path");
+    }
+
+    #[test]
+    fn query_string_builds() {
+        use super::{build_query_string, parse_query_string};
+        assert_eq!(
+            build_query_string("name=John Doe\nage=30"),
+            "name=John%20Doe&age=30"
+        );
+        // keys/values are trimmed before encoding; blank lines skipped
+        assert_eq!(build_query_string(" a = 1 \n\n b = 2 "), "a=1&b=2");
+        // round-trips with parse_query_string
+        let q = "x=hello%20world&y=a%2Fb";
+        assert_eq!(build_query_string(&parse_query_string(q)), q);
+    }
+
+    #[test]
+    fn query_string_parses() {
+        use super::parse_query_string;
+        assert_eq!(
+            parse_query_string("name=John%20Doe&age=30"),
+            "name=John Doe\nage=30"
+        );
+        // leading '?' stripped, '+' decoded as space
+        assert_eq!(parse_query_string("?q=a+b&x=1"), "q=a b\nx=1");
+        // a key with no '=' is kept (decoded)
+        assert_eq!(parse_query_string("flag&y=2"), "flag\ny=2");
+        // empty pairs are skipped
+        assert_eq!(parse_query_string("a=1&&b=2"), "a=1\nb=2");
     }
 
     #[test]

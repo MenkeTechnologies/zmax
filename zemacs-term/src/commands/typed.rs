@@ -1555,6 +1555,4781 @@ fn grep(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
+/// `:shell-quote` — wrap the selection in safe shell single-quotes (for pasting a
+/// path or string into a shell command). Reuses [`shell_single_quote`].
+fn shell_quote_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let quoted = shell_single_quote(&s);
+    if quoted == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(quoted.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Wrap `content` in `<tag>…</tag>`. Pure — unit tested.
+fn wrap_in_tag(content: &str, tag: &str) -> String {
+    format!("<{tag}>{content}</{tag}>")
+}
+
+/// `:wrap-tag <tag>` — wrap each selection in `<tag>…</tag>` (HTML/JSX/XML).
+fn wrap_tag_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tag = args.join("").trim().to_string();
+    if tag.is_empty() {
+        bail!("usage: :wrap-tag <tag>");
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let selection = doc.selection(view.id).clone();
+    let transaction = Transaction::change_by_selection(text, &selection, |range| {
+        let content: String = text.slice(..).slice(range.from()..range.to()).chunks().collect();
+        (range.from(), range.to(), Some(wrap_in_tag(&content, &tag).into()))
+    });
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Extract the 1-based `col`-th field from each line of a delimited table (tab if
+/// any tab is present, else comma), trimmed, one per line. Pure — unit tested.
+fn csv_column(s: &str, col: usize) -> String {
+    let delim = if s.contains('\t') { '\t' } else { ',' };
+    s.lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| {
+            l.split(delim)
+                .nth(col.saturating_sub(1))
+                .unwrap_or("")
+                .trim()
+                .to_string()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// `:csv-column <n>` — replace the selected CSV/TSV with just its Nth column.
+fn csv_column_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let col: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .filter(|n| *n >= 1)
+        .context("usage: :csv-column <n> (1-based)")?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = csv_column(&s, col);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Wrap `content` in a fenced Markdown code block with optional `lang`. Trailing
+/// newlines on the body are trimmed so the closing fence sits flush. Pure — unit tested.
+fn code_fence(content: &str, lang: &str) -> String {
+    let body = content.trim_end_matches('\n');
+    format!("```{lang}\n{body}\n```")
+}
+
+fn code_fence_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let lang = args.first().map(|a| a.trim()).unwrap_or("");
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = code_fence(&s, lang);
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Pretty-print a GitHub-flavored Markdown pipe table: trims cells, pads every
+/// column to its widest cell, and regenerates the `---` separator row to match
+/// (honoring `:` alignment markers — left/right/center). Returns the input
+/// unchanged if the second line isn't a separator row. Pure — unit tested.
+fn format_md_table(s: &str) -> String {
+    let lines: Vec<&str> = s.lines().filter(|l| l.contains('|')).collect();
+    if lines.len() < 2 {
+        return s.to_string();
+    }
+    let split_row = |line: &str| -> Vec<String> {
+        let t = line.trim();
+        let t = t.strip_prefix('|').unwrap_or(t);
+        let t = t.strip_suffix('|').unwrap_or(t);
+        t.split('|').map(|c| c.trim().to_string()).collect()
+    };
+    let rows: Vec<Vec<String>> = lines.iter().map(|l| split_row(l)).collect();
+    let is_sep_cell = |c: &str| {
+        let c = c.trim();
+        c.contains('-') && c.chars().all(|ch| ch == '-' || ch == ':')
+    };
+    let sep_idx = 1;
+    if !rows[sep_idx].iter().all(|c| is_sep_cell(c)) {
+        return s.to_string();
+    }
+    let ncols = rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    // Alignment per column: 0 = left, 1 = right, 2 = center.
+    let mut align = vec![0u8; ncols];
+    for (i, c) in rows[sep_idx].iter().enumerate() {
+        let left = c.starts_with(':');
+        let right = c.ends_with(':');
+        align[i] = match (left, right) {
+            (true, true) => 2,
+            (false, true) => 1,
+            _ => 0,
+        };
+    }
+    // Column widths from content rows (skip the separator); min 3 for "---".
+    let mut widths = vec![3usize; ncols];
+    for (ri, row) in rows.iter().enumerate() {
+        if ri == sep_idx {
+            continue;
+        }
+        for (ci, cell) in row.iter().enumerate() {
+            let len = cell.chars().count();
+            if len > widths[ci] {
+                widths[ci] = len;
+            }
+        }
+    }
+    let pad = |cell: &str, w: usize, a: u8| -> String {
+        let total = w.saturating_sub(cell.chars().count());
+        match a {
+            1 => format!("{}{}", " ".repeat(total), cell),
+            2 => {
+                let l = total / 2;
+                format!("{}{}{}", " ".repeat(l), cell, " ".repeat(total - l))
+            }
+            _ => format!("{}{}", cell, " ".repeat(total)),
+        }
+    };
+    let mut out = Vec::new();
+    for (ri, row) in rows.iter().enumerate() {
+        let cells: Vec<String> = (0..ncols)
+            .map(|ci| {
+                if ri == sep_idx {
+                    let w = widths[ci];
+                    match align[ci] {
+                        1 => format!("{}:", "-".repeat(w.saturating_sub(1))),
+                        2 => format!(":{}:", "-".repeat(w.saturating_sub(2))),
+                        _ => "-".repeat(w),
+                    }
+                } else {
+                    pad(row.get(ci).map(|s| s.as_str()).unwrap_or(""), widths[ci], align[ci])
+                }
+            })
+            .collect();
+        out.push(format!("| {} |", cells.join(" | ")));
+    }
+    out.join("\n")
+}
+
+fn md_table_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = format_md_table(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// jq-lite: navigate `input` (a JSON document) by a dot-separated `path` and return
+/// the addressed sub-value, pretty-printed. Object keys index by name, arrays by
+/// 0-based integer. Empty path segments are ignored, so a leading `.` is allowed.
+/// Pure — unit tested.
+fn json_query(input: &str, path: &str) -> anyhow::Result<String> {
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let mut cur = &root;
+    for seg in path.split('.').filter(|s| !s.is_empty()) {
+        cur = match cur {
+            Value::Object(map) => map.get(seg).with_context(|| format!("no key '{seg}'"))?,
+            Value::Array(arr) => {
+                let idx: usize = seg
+                    .parse()
+                    .with_context(|| format!("'{seg}' is not an array index"))?;
+                arr.get(idx)
+                    .with_context(|| format!("index {idx} out of range (len {})", arr.len()))?
+            }
+            _ => anyhow::bail!("cannot descend into a scalar with '{seg}'"),
+        };
+    }
+    Ok(serde_json::to_string_pretty(cur)?)
+}
+
+fn json_query_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ");
+    let path = path.trim();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_query(&s, path)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Flatten a JSON document into one `path = value` line per leaf, where `path` is
+/// the dot-path (arrays indexed by integer) and `value` is the leaf rendered as
+/// compact JSON. Empty objects/arrays emit `path = {}` / `path = []`. The result
+/// round-trips through [`json_query`]. Pure — unit tested.
+fn json_flatten(input: &str) -> anyhow::Result<String> {
+    fn walk(prefix: &str, v: &Value, out: &mut Vec<String>) {
+        match v {
+            Value::Object(map) if !map.is_empty() => {
+                for (k, val) in map {
+                    let p = if prefix.is_empty() { k.clone() } else { format!("{prefix}.{k}") };
+                    walk(&p, val, out);
+                }
+            }
+            Value::Array(arr) if !arr.is_empty() => {
+                for (i, val) in arr.iter().enumerate() {
+                    let p = if prefix.is_empty() { i.to_string() } else { format!("{prefix}.{i}") };
+                    walk(&p, val, out);
+                }
+            }
+            // scalars, plus empty {} / [] which Display renders as `{}` / `[]`
+            leaf => out.push(format!("{prefix} = {leaf}")),
+        }
+    }
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let mut out = Vec::new();
+    walk("", &root, &mut out);
+    Ok(out.join("\n"))
+}
+
+fn json_flatten_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_flatten(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert a JSON array of objects into CSV. The header row is the sorted union of
+/// every object's keys; missing fields become empty cells; string values are
+/// unquoted unless they need RFC-4180 escaping (comma, quote, newline). The inverse
+/// of `:csv-to-json`. Pure — unit tested.
+fn json_to_csv(input: &str) -> anyhow::Result<String> {
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let arr = root.as_array().context("expected a JSON array of objects")?;
+    let mut headers: Vec<String> = Vec::new();
+    for item in arr {
+        let obj = item.as_object().context("every array element must be a JSON object")?;
+        for k in obj.keys() {
+            if !headers.iter().any(|h| h == k) {
+                headers.push(k.clone());
+            }
+        }
+    }
+    headers.sort();
+    fn esc(s: &str) -> String {
+        if s.contains([',', '"', '\n']) {
+            format!("\"{}\"", s.replace('"', "\"\""))
+        } else {
+            s.to_string()
+        }
+    }
+    fn cell(v: &Value) -> String {
+        match v {
+            Value::String(s) => s.clone(),
+            Value::Null => String::new(),
+            other => other.to_string(),
+        }
+    }
+    let mut lines = vec![headers.iter().map(|h| esc(h)).collect::<Vec<_>>().join(",")];
+    for item in arr {
+        let obj = item.as_object().expect("validated above");
+        let row: Vec<String> = headers
+            .iter()
+            .map(|h| obj.get(h).map(|v| esc(&cell(v))).unwrap_or_default())
+            .collect();
+        lines.push(row.join(","));
+    }
+    Ok(lines.join("\n"))
+}
+
+fn json_to_csv_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_to_csv(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Insert `val` into `node` at the dot-path `segs`, growing objects/arrays as
+/// needed. A segment that parses as an integer addresses an array index; anything
+/// else is an object key. Errors if an existing node has a conflicting type.
+fn json_insert_path(node: &mut Value, segs: &[&str], val: Value) -> anyhow::Result<()> {
+    let Some((seg, rest)) = segs.split_first() else {
+        *node = val;
+        return Ok(());
+    };
+    if let Ok(idx) = seg.parse::<usize>() {
+        if node.is_null() {
+            *node = Value::Array(Vec::new());
+        }
+        let arr = node.as_array_mut().context("expected an array")?;
+        if arr.len() <= idx {
+            arr.resize(idx + 1, Value::Null);
+        }
+        json_insert_path(&mut arr[idx], rest, val)
+    } else {
+        if node.is_null() {
+            *node = Value::Object(serde_json::Map::new());
+        }
+        let obj = node.as_object_mut().context("expected an object")?;
+        let entry = obj.entry(seg.to_string()).or_insert(Value::Null);
+        json_insert_path(entry, rest, val)
+    }
+}
+
+/// Rebuild nested JSON from `path = value` lines (the inverse of `:json-flatten`).
+/// Each value is parsed as JSON; integer path segments become array indices, all
+/// other segments object keys. Blank lines are skipped. Pure — unit tested.
+fn json_unflatten(input: &str) -> anyhow::Result<String> {
+    let mut root = Value::Null;
+    for (i, raw) in input.lines().enumerate() {
+        let line = raw.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let (path, valstr) = line
+            .split_once(" = ")
+            .with_context(|| format!("line {}: expected `path = value`", i + 1))?;
+        let val: Value = serde_json::from_str(valstr.trim())
+            .with_context(|| format!("line {}: value is not valid JSON", i + 1))?;
+        let segs: Vec<&str> = path.trim().split('.').filter(|s| !s.is_empty()).collect();
+        json_insert_path(&mut root, &segs, val)
+            .with_context(|| format!("line {}: conflicting path '{}'", i + 1, path.trim()))?;
+    }
+    Ok(serde_json::to_string_pretty(&root)?)
+}
+
+fn json_unflatten_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_unflatten(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert a TOML document to pretty-printed JSON. Pure — unit tested.
+fn toml_to_json(input: &str) -> anyhow::Result<String> {
+    let v: toml::Value = toml::from_str(input.trim()).context("selection is not valid TOML")?;
+    Ok(serde_json::to_string_pretty(&v)?)
+}
+
+/// Convert a JSON document to pretty-printed TOML. Errors when the value has no
+/// TOML representation (e.g. a `null`, or a non-table value at the top level).
+/// The inverse of [`toml_to_json`]. Pure — unit tested.
+fn json_to_toml(input: &str) -> anyhow::Result<String> {
+    let v: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    toml::to_string_pretty(&v)
+        .context("value has no TOML representation (null, or non-table at top level)")
+}
+
+fn toml_to_json_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = toml_to_json(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn json_to_toml_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_to_toml(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Type-rank for ordering JSON values of differing types (null < bool < number <
+/// string < array < object), used as a fallback when two values aren't the same
+/// scalar type.
+fn json_type_rank(v: Option<&Value>) -> u8 {
+    match v {
+        Some(Value::Null) | None => 0,
+        Some(Value::Bool(_)) => 1,
+        Some(Value::Number(_)) => 2,
+        Some(Value::String(_)) => 3,
+        Some(Value::Array(_)) => 4,
+        Some(Value::Object(_)) => 5,
+    }
+}
+
+/// Compare two optional JSON values: numbers numerically, strings/bools naturally,
+/// otherwise by type rank. Total and panic-free (NaN compares Equal).
+fn json_cmp(a: Option<&Value>, b: Option<&Value>) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+    match (a, b) {
+        (Some(Value::Number(x)), Some(Value::Number(y))) => {
+            x.as_f64().partial_cmp(&y.as_f64()).unwrap_or(Ordering::Equal)
+        }
+        (Some(Value::String(x)), Some(Value::String(y))) => x.cmp(y),
+        (Some(Value::Bool(x)), Some(Value::Bool(y))) => x.cmp(y),
+        _ => json_type_rank(a).cmp(&json_type_rank(b)),
+    }
+}
+
+/// Sort a JSON array in place and pretty-print it. With `key`, elements are
+/// expected to be objects and are ordered by that field; without, the elements
+/// themselves are compared. Stable sort. Pure — unit tested.
+fn json_sort_array(input: &str, key: Option<&str>) -> anyhow::Result<String> {
+    let mut root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let arr = root.as_array_mut().context("expected a JSON array")?;
+    arr.sort_by(|a, b| match key {
+        Some(k) => json_cmp(a.get(k), b.get(k)),
+        None => json_cmp(Some(a), Some(b)),
+    });
+    Ok(serde_json::to_string_pretty(&root)?)
+}
+
+fn json_sort_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let key = args.join(" ");
+    let key = key.trim();
+    let key = (!key.is_empty()).then_some(key);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_sort_array(&s, key)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Project a JSON value to only the named `keys` (SQL `SELECT`-style). An object
+/// keeps just those keys (in the requested order, skipping absent ones); an array
+/// projects each element; other values pass through unchanged. Pure — unit tested.
+fn json_pick(input: &str, keys: &[&str]) -> anyhow::Result<String> {
+    fn pick(v: &Value, keys: &[&str]) -> Value {
+        match v {
+            Value::Object(map) => {
+                let mut out = serde_json::Map::new();
+                for k in keys {
+                    if let Some(val) = map.get(*k) {
+                        out.insert((*k).to_string(), val.clone());
+                    }
+                }
+                Value::Object(out)
+            }
+            other => other.clone(),
+        }
+    }
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let result = match &root {
+        Value::Array(arr) => Value::Array(arr.iter().map(|v| pick(v, keys)).collect()),
+        other => pick(other, keys),
+    };
+    Ok(serde_json::to_string_pretty(&result)?)
+}
+
+fn json_pick_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut keys: Vec<String> = Vec::new();
+    for a in args {
+        let t = a.trim();
+        if !t.is_empty() {
+            keys.push(t.to_string());
+        }
+    }
+    if keys.is_empty() {
+        anyhow::bail!("usage: :json-pick <key>...");
+    }
+    let key_refs: Vec<&str> = keys.iter().map(String::as_str).collect();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_pick(&s, &key_refs)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Drop the named `keys` from a JSON value (the inverse of [`json_pick`]). An
+/// object keeps every key except those listed; an array applies this to each
+/// element; other values pass through unchanged. Pure — unit tested.
+fn json_omit(input: &str, keys: &[&str]) -> anyhow::Result<String> {
+    fn omit(v: &Value, keys: &[&str]) -> Value {
+        match v {
+            Value::Object(map) => {
+                let kept: serde_json::Map<String, Value> = map
+                    .iter()
+                    .filter(|(k, _)| !keys.iter().any(|drop| drop == k))
+                    .map(|(k, val)| (k.clone(), val.clone()))
+                    .collect();
+                Value::Object(kept)
+            }
+            other => other.clone(),
+        }
+    }
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let result = match &root {
+        Value::Array(arr) => Value::Array(arr.iter().map(|v| omit(v, keys)).collect()),
+        other => omit(other, keys),
+    };
+    Ok(serde_json::to_string_pretty(&result)?)
+}
+
+fn json_omit_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut keys: Vec<String> = Vec::new();
+    for a in args {
+        let t = a.trim();
+        if !t.is_empty() {
+            keys.push(t.to_string());
+        }
+    }
+    if keys.is_empty() {
+        anyhow::bail!("usage: :json-omit <key>...");
+    }
+    let key_refs: Vec<&str> = keys.iter().map(String::as_str).collect();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_omit(&s, &key_refs)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Remove duplicate elements from a JSON array, preserving the first occurrence of
+/// each. Without `key`, identity is the element's canonical JSON; with `key`,
+/// elements are deduplicated by that object field. Pure — unit tested.
+fn json_unique(input: &str, key: Option<&str>) -> anyhow::Result<String> {
+    let mut root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let arr = root.as_array_mut().context("expected a JSON array")?;
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut out: Vec<Value> = Vec::new();
+    for item in arr.drain(..) {
+        let id = match key {
+            Some(k) => item.get(k).map(|v| v.to_string()).unwrap_or_default(),
+            None => item.to_string(),
+        };
+        if seen.insert(id) {
+            out.push(item);
+        }
+    }
+    Ok(serde_json::to_string_pretty(&Value::Array(out))?)
+}
+
+fn json_unique_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let key = args.join(" ");
+    let key = key.trim();
+    let key = (!key.is_empty()).then_some(key);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_unique(&s, key)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Group a JSON array of objects by `key` into an object mapping each distinct
+/// field value to the array of matching elements. The grouping label is the raw
+/// string for string fields, the canonical JSON otherwise, and `null` when the
+/// field is absent. Pure — unit tested.
+fn json_group_by(input: &str, key: &str) -> anyhow::Result<String> {
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let arr = root.as_array().context("expected a JSON array")?;
+    let mut groups: serde_json::Map<String, Value> = serde_json::Map::new();
+    for item in arr {
+        let label = match item.get(key) {
+            Some(Value::String(s)) => s.clone(),
+            Some(v) => v.to_string(),
+            None => "null".to_string(),
+        };
+        groups
+            .entry(label)
+            .or_insert_with(|| Value::Array(Vec::new()))
+            .as_array_mut()
+            .expect("group entries are always arrays")
+            .push(item.clone());
+    }
+    Ok(serde_json::to_string_pretty(&Value::Object(groups))?)
+}
+
+fn json_group_by_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let key = args.join(" ");
+    let key = key.trim();
+    if key.is_empty() {
+        anyhow::bail!("usage: :json-group-by <key>");
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_group_by(&s, key)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Extract every regex match in `input`, one per line (like `grep -o`). If the
+/// pattern has a capture group, the first group's text is emitted instead of the
+/// whole match; matches where that group didn't participate are skipped. Pure —
+/// unit tested.
+fn extract_matches(input: &str, pattern: &str) -> anyhow::Result<String> {
+    let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let has_group = re.captures_len() > 1;
+    let mut out = Vec::new();
+    for caps in re.captures_iter(input) {
+        if has_group {
+            if let Some(m) = caps.get(1) {
+                out.push(m.as_str().to_string());
+            }
+        } else if let Some(m) = caps.get(0) {
+            out.push(m.as_str().to_string());
+        }
+    }
+    Ok(out.join("\n"))
+}
+
+fn extract_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        anyhow::bail!("usage: :extract <regex>");
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = extract_matches(&s, pattern)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Keep (or, when `keep` is false, drop) the lines of `input` that match `pattern`
+/// — the in-buffer equivalent of `grep` / `grep -v`. Pure — unit tested.
+fn filter_lines(input: &str, pattern: &str, keep: bool) -> anyhow::Result<String> {
+    let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let out: Vec<&str> = input.lines().filter(|line| re.is_match(line) == keep).collect();
+    Ok(out.join("\n"))
+}
+
+fn filter_reject_impl(cx: &mut compositor::Context, args: Args, event: PromptEvent, keep: bool) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        anyhow::bail!("usage: :{} <regex>", if keep { "filter" } else { "reject" });
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = filter_lines(&s, pattern, keep)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn filter_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    filter_reject_impl(cx, args, event, true)
+}
+
+fn reject_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    filter_reject_impl(cx, args, event, false)
+}
+
+/// Count regex matches in `input`: returns (total matches, number of lines with at
+/// least one match). Pure — unit tested.
+fn count_matches(input: &str, pattern: &str) -> anyhow::Result<(usize, usize)> {
+    let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let total = re.find_iter(input).count();
+    let lines = input.lines().filter(|l| re.is_match(l)).count();
+    Ok((total, lines))
+}
+
+fn count_matches_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        anyhow::bail!("usage: :count-matches <regex>");
+    }
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id).primary();
+    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let (total, lines) = count_matches(&s, pattern)?;
+    cx.editor
+        .set_status(format!("{total} match(es) on {lines} line(s) for /{pattern}/"));
+    Ok(())
+}
+
+/// Collapse `input` to `count line` rows — the `sort | uniq -c | sort -rn` idiom.
+/// Rows are ordered by descending count, ties broken by first appearance. Pure —
+/// unit tested.
+fn uniq_count(input: &str) -> String {
+    let mut counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+    let mut order: Vec<&str> = Vec::new();
+    for line in input.lines() {
+        let n = counts.entry(line).or_insert(0);
+        if *n == 0 {
+            order.push(line);
+        }
+        *n += 1;
+    }
+    let mut items: Vec<(&str, usize)> = order.iter().map(|l| (*l, counts[*l])).collect();
+    // stable sort by count desc keeps first-seen order for equal counts
+    items.sort_by_key(|&(_, c)| std::cmp::Reverse(c));
+    items
+        .iter()
+        .map(|(l, c)| format!("{c} {l}"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn uniq_count_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = uniq_count(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Format a float compactly: integers without a decimal point, otherwise to 4
+/// decimal places with trailing zeros trimmed.
+fn fmt_stat(x: f64) -> String {
+    if x.is_finite() && x == x.trunc() {
+        format!("{}", x as i64)
+    } else {
+        let s = format!("{x:.4}");
+        s.trim_end_matches('0').trim_end_matches('.').to_string()
+    }
+}
+
+/// Summary statistics over `nums`: (count, sum, mean, min, max). `None` for an
+/// empty slice. Pure — unit tested.
+fn number_stats(nums: &[f64]) -> Option<(usize, f64, f64, f64, f64)> {
+    if nums.is_empty() {
+        return None;
+    }
+    let n = nums.len();
+    let sum: f64 = nums.iter().sum();
+    let mean = sum / n as f64;
+    let min = nums.iter().copied().fold(f64::INFINITY, f64::min);
+    let max = nums.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    Some((n, sum, mean, min, max))
+}
+
+fn stats_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id).primary();
+    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let nums = extract_numbers(&s);
+    match number_stats(&nums) {
+        Some((n, sum, mean, min, max)) => cx.editor.set_status(format!(
+            "n={} sum={} mean={} min={} max={}",
+            n,
+            fmt_stat(sum),
+            fmt_stat(mean),
+            fmt_stat(min),
+            fmt_stat(max),
+        )),
+        None => cx.editor.set_status("no numbers in selection".to_string()),
+    }
+    Ok(())
+}
+
+/// Generate the inclusive integer sequence from `start` toward `end` stepping by
+/// `step`, one value per line. Errors on a zero step or a range exceeding a sanity
+/// cap. An empty range (direction disagrees with sign of step) yields "". Pure —
+/// unit tested.
+fn gen_seq(start: i64, end: i64, step: i64) -> anyhow::Result<String> {
+    if step == 0 {
+        anyhow::bail!("step must be non-zero");
+    }
+    let mut out: Vec<String> = Vec::new();
+    let mut v = start;
+    while (step > 0 && v <= end) || (step < 0 && v >= end) {
+        out.push(v.to_string());
+        if out.len() > 1_000_000 {
+            anyhow::bail!("range too large (over 1,000,000 items)");
+        }
+        v += step;
+    }
+    Ok(out.join("\n"))
+}
+
+fn seq_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let argv: Vec<String> = args.into_iter().map(|a| a.trim().to_string()).collect();
+    let start: i64 = argv
+        .first()
+        .and_then(|s| s.parse().ok())
+        .context("usage: :seq <start> <end> [step]")?;
+    let end: i64 = argv
+        .get(1)
+        .and_then(|s| s.parse().ok())
+        .context("usage: :seq <start> <end> [step]")?;
+    let step: i64 = match argv.get(2) {
+        Some(s) => s.parse().context("step must be an integer")?,
+        None => {
+            if end >= start {
+                1
+            } else {
+                -1
+            }
+        }
+    };
+    let new = gen_seq(start, end, step)?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Keep only the `n`th whitespace-delimited field (1-based) of each line, like
+/// `awk '{print $n}'`. Runs of whitespace collapse; lines without an `n`th field
+/// become empty. Pure — unit tested.
+fn cut_field(input: &str, n: usize) -> String {
+    let idx = n.saturating_sub(1);
+    input
+        .lines()
+        .map(|line| line.split_whitespace().nth(idx).unwrap_or(""))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn field_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .filter(|n| *n >= 1)
+        .context("usage: :field <n> (1-based)")?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = cut_field(&s, n);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Replace each numeric line with the running (cumulative) total so far. Lines
+/// that don't parse as a number pass through unchanged and don't affect the
+/// accumulator. Pure — unit tested.
+fn running_total(input: &str) -> String {
+    let mut acc = 0.0_f64;
+    input
+        .lines()
+        .map(|line| match line.trim().parse::<f64>() {
+            Ok(n) => {
+                acc += n;
+                fmt_stat(acc)
+            }
+            Err(_) => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn running_total_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = running_total(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Replace each numeric line with its difference from the previous numeric line
+/// (the inverse of [`running_total`]). The first numeric value is kept as-is;
+/// non-numeric lines pass through and don't update the reference. Pure — unit tested.
+fn diff_lines(input: &str) -> String {
+    let mut prev: Option<f64> = None;
+    input
+        .lines()
+        .map(|line| match line.trim().parse::<f64>() {
+            Ok(n) => {
+                let out = match prev {
+                    Some(p) => fmt_stat(n - p),
+                    None => fmt_stat(n),
+                };
+                prev = Some(n);
+                out
+            }
+            Err(_) => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn diff_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = diff_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Sum the `n`th whitespace field (1-based) across every line, skipping lines
+/// whose field is missing or non-numeric. Returns (sum, count of summed values).
+/// Pure — unit tested.
+fn sum_column(input: &str, n: usize) -> (f64, usize) {
+    let idx = n.saturating_sub(1);
+    let mut sum = 0.0_f64;
+    let mut count = 0usize;
+    for line in input.lines() {
+        if let Some(Ok(v)) = line.split_whitespace().nth(idx).map(str::parse::<f64>) {
+            sum += v;
+            count += 1;
+        }
+    }
+    (sum, count)
+}
+
+fn sum_column_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .filter(|n| *n >= 1)
+        .context("usage: :sum-column <n> (1-based)")?;
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id).primary();
+    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let (sum, count) = sum_column(&s, n);
+    cx.editor
+        .set_status(format!("sum of column {n} = {} (over {count} value(s))", fmt_stat(sum)));
+    Ok(())
+}
+
+/// Randomly reorder the lines of `input` using a Fisher-Yates shuffle driven by a
+/// seeded xorshift64 RNG. Deterministic for a given `seed` (so it is unit-testable);
+/// the command seeds from the wall clock. Pure — unit tested.
+fn shuffle_lines(input: &str, seed: u64) -> String {
+    let mut lines: Vec<&str> = input.lines().collect();
+    let mut state = seed | 1; // avoid the all-zero state
+    let mut next = || {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        state
+    };
+    for i in (1..lines.len()).rev() {
+        let j = (next() % (i as u64 + 1)) as usize;
+        lines.swap(i, j);
+    }
+    lines.join("\n")
+}
+
+fn shuffle_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let seed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0x9E37_79B9_7F4A_7C15);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = shuffle_lines(&s, seed);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Keep `n` randomly chosen lines from `input`, preserving their original relative
+/// order (so the result is a subsequence). Returns the input unchanged when `n` is
+/// at least the line count. Seeded for determinism. Pure — unit tested.
+fn sample_lines(input: &str, n: usize, seed: u64) -> String {
+    let lines: Vec<&str> = input.lines().collect();
+    if n >= lines.len() {
+        return input.to_string();
+    }
+    let mut idx: Vec<usize> = (0..lines.len()).collect();
+    let mut state = seed | 1;
+    let mut next = || {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        state
+    };
+    // partial Fisher-Yates: pick the first `n` of a shuffle
+    for i in 0..n {
+        let j = i + (next() as usize) % (lines.len() - i);
+        idx.swap(i, j);
+    }
+    let mut chosen: Vec<usize> = idx[..n].to_vec();
+    chosen.sort_unstable();
+    chosen.iter().map(|&i| lines[i]).collect::<Vec<_>>().join("\n")
+}
+
+fn sample_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .filter(|n| *n >= 1)
+        .context("usage: :sample <n> (number of lines to keep)")?;
+    let seed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0x9E37_79B9_7F4A_7C15);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = sample_lines(&s, n, seed);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert JSONL/NDJSON (one JSON value per line) into a pretty JSON array. Blank
+/// lines are skipped. Pure — unit tested.
+fn jsonl_to_json(input: &str) -> anyhow::Result<String> {
+    let mut arr: Vec<Value> = Vec::new();
+    for (i, line) in input.lines().enumerate() {
+        let t = line.trim();
+        if t.is_empty() {
+            continue;
+        }
+        let v: Value = serde_json::from_str(t).with_context(|| format!("line {}: invalid JSON", i + 1))?;
+        arr.push(v);
+    }
+    Ok(serde_json::to_string_pretty(&Value::Array(arr))?)
+}
+
+/// Convert a JSON array into JSONL: each element serialized compactly on its own
+/// line. The inverse of [`jsonl_to_json`]. Pure — unit tested.
+fn json_to_jsonl(input: &str) -> anyhow::Result<String> {
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let arr = root.as_array().context("expected a JSON array")?;
+    let lines = arr.iter().map(serde_json::to_string).collect::<Result<Vec<_>, _>>()?;
+    Ok(lines.join("\n"))
+}
+
+fn jsonl_to_json_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = jsonl_to_json(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn json_to_jsonl_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_to_jsonl(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Keep the first `n` lines of `input` (like `head -n`). Pure — unit tested.
+fn head_lines(input: &str, n: usize) -> String {
+    input.lines().take(n).collect::<Vec<_>>().join("\n")
+}
+
+/// Keep the last `n` lines of `input` (like `tail -n`). Pure — unit tested.
+fn tail_lines(input: &str, n: usize) -> String {
+    let lines: Vec<&str> = input.lines().collect();
+    let start = lines.len().saturating_sub(n);
+    lines[start..].join("\n")
+}
+
+fn head_tail_impl(cx: &mut compositor::Context, args: Args, event: PromptEvent, head: bool) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .filter(|n| *n >= 1)
+        .with_context(|| format!("usage: :{} <n>", if head { "head" } else { "tail" }))?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = if head { head_lines(&s, n) } else { tail_lines(&s, n) };
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn head_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    head_tail_impl(cx, args, event, true)
+}
+
+fn tail_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    head_tail_impl(cx, args, event, false)
+}
+
+/// Reverse the characters of each line independently (Unix `rev`), preserving line
+/// order. Distinct from reversing the whole selection or the line order. Operates
+/// on Unicode scalar values. Pure — unit tested.
+fn rev_each_line(input: &str) -> String {
+    input
+        .lines()
+        .map(|l| l.chars().rev().collect::<String>())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn rev_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = rev_each_line(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Render a JSON array of objects as a column-aligned plain-text table for viewing
+/// in-buffer. Header row is the sorted union of keys; each column is left-padded to
+/// its widest cell; a `---` rule separates the header. Scalars render bare, strings
+/// unquoted, null/missing as empty. Pure — unit tested.
+fn json_to_table(input: &str) -> anyhow::Result<String> {
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let arr = root.as_array().context("expected a JSON array of objects")?;
+    let mut headers: Vec<String> = Vec::new();
+    for item in arr {
+        let obj = item.as_object().context("every array element must be a JSON object")?;
+        for k in obj.keys() {
+            if !headers.iter().any(|h| h == k) {
+                headers.push(k.clone());
+            }
+        }
+    }
+    headers.sort();
+    fn cell(v: &Value) -> String {
+        match v {
+            Value::String(s) => s.clone(),
+            Value::Null => String::new(),
+            other => other.to_string(),
+        }
+    }
+    let rows: Vec<Vec<String>> = arr
+        .iter()
+        .map(|item| {
+            let obj = item.as_object().expect("validated above");
+            headers.iter().map(|h| obj.get(h).map(cell).unwrap_or_default()).collect()
+        })
+        .collect();
+    let mut widths: Vec<usize> = headers.iter().map(|h| h.chars().count()).collect();
+    for row in &rows {
+        for (i, c) in row.iter().enumerate() {
+            widths[i] = widths[i].max(c.chars().count());
+        }
+    }
+    let fmt_row = |cells: &[String]| {
+        cells
+            .iter()
+            .enumerate()
+            .map(|(i, c)| format!("{:<width$}", c, width = widths[i]))
+            .collect::<Vec<_>>()
+            .join("  ")
+            .trim_end()
+            .to_string()
+    };
+    let sep: Vec<String> = widths.iter().map(|w| "-".repeat(*w)).collect();
+    let mut out = vec![fmt_row(&headers), fmt_row(&sep)];
+    for row in &rows {
+        out.push(fmt_row(row));
+    }
+    Ok(out.join("\n"))
+}
+
+fn json_table_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_to_table(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Render `input`'s UTF-8 bytes as an `xxd`-style hex dump: an 8-digit offset, 16
+/// space-separated hex bytes per row (short rows padded so the gutter aligns), then
+/// the ASCII gutter with non-printables shown as `.`. Pure — unit tested.
+fn hexdump(input: &str) -> String {
+    let bytes = input.as_bytes();
+    if bytes.is_empty() {
+        return String::new();
+    }
+    let mut out = Vec::new();
+    for (i, chunk) in bytes.chunks(16).enumerate() {
+        let mut hex = String::new();
+        for j in 0..16 {
+            match chunk.get(j) {
+                Some(b) => hex.push_str(&format!("{b:02x} ")),
+                None => hex.push_str("   "),
+            }
+        }
+        let ascii: String = chunk
+            .iter()
+            .map(|&b| if (0x20..0x7f).contains(&b) { b as char } else { '.' })
+            .collect();
+        out.push(format!("{:08x}  {hex}|{ascii}|", i * 16));
+    }
+    out.join("\n")
+}
+
+fn hexdump_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = hexdump(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Remove all duplicate lines globally, keeping the first occurrence and the
+/// original order (unlike adjacent-only dedup, this needs no pre-sorting). Pure —
+/// unit tested.
+fn dedup_all_lines(input: &str) -> String {
+    let mut seen = std::collections::HashSet::new();
+    input
+        .lines()
+        .filter(|l| seen.insert(l.to_string()))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn dedup_all_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = dedup_all_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Caesar-shift the ASCII letters of `input` by `shift` (wrapping within each case,
+/// non-letters untouched). Negative and large shifts are normalized mod 26, so this
+/// generalizes ROT13 (`shift == 13`). Pure — unit tested.
+fn caesar(input: &str, shift: i32) -> String {
+    let s = shift.rem_euclid(26) as u8;
+    input
+        .chars()
+        .map(|c| {
+            if c.is_ascii_uppercase() {
+                (((c as u8 - b'A' + s) % 26) + b'A') as char
+            } else if c.is_ascii_lowercase() {
+                (((c as u8 - b'a' + s) % 26) + b'a') as char
+            } else {
+                c
+            }
+        })
+        .collect()
+}
+
+fn caesar_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let shift: i32 = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .context("usage: :caesar <n> (letter shift; n may be negative)")?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = caesar(&s, shift);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+const BASE32_ALPHABET: &[u8; 32] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+/// Base32-encode `input`'s UTF-8 bytes per RFC 4648 (standard alphabet, `=`
+/// padding). Pure — unit tested.
+fn base32_encode(input: &str) -> String {
+    let mut out = String::new();
+    let mut bits = 0u32;
+    let mut nbits = 0u32;
+    for &byte in input.as_bytes() {
+        bits = (bits << 8) | byte as u32;
+        nbits += 8;
+        while nbits >= 5 {
+            nbits -= 5;
+            out.push(BASE32_ALPHABET[((bits >> nbits) & 0x1f) as usize] as char);
+        }
+    }
+    if nbits > 0 {
+        out.push(BASE32_ALPHABET[((bits << (5 - nbits)) & 0x1f) as usize] as char);
+    }
+    // pad to a multiple of 8 characters
+    while !out.len().is_multiple_of(8) {
+        out.push('=');
+    }
+    out
+}
+
+/// Base32-decode `input` per RFC 4648, ignoring padding and ASCII whitespace and
+/// accepting either letter case. Errors on invalid characters or non-UTF-8 output.
+/// The inverse of [`base32_encode`]. Pure — unit tested.
+fn base32_decode(input: &str) -> anyhow::Result<String> {
+    let mut bits = 0u32;
+    let mut nbits = 0u32;
+    let mut out: Vec<u8> = Vec::new();
+    for b in input.bytes() {
+        if b == b'=' || b.is_ascii_whitespace() {
+            continue;
+        }
+        let v = BASE32_ALPHABET
+            .iter()
+            .position(|&x| x == b.to_ascii_uppercase())
+            .with_context(|| format!("invalid base32 character '{}'", b as char))? as u32;
+        bits = (bits << 5) | v;
+        nbits += 5;
+        if nbits >= 8 {
+            nbits -= 8;
+            out.push((bits >> nbits) as u8);
+        }
+    }
+    String::from_utf8(out).context("decoded bytes are not valid UTF-8")
+}
+
+fn base32_encode_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = base32_encode(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn base32_decode_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = base32_decode(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Compute the IEEE CRC32 checksum of `input`'s UTF-8 bytes (reflected, poly
+/// 0xEDB88320, init/final 0xFFFFFFFF) — the zlib/PNG variant. Pure — unit tested.
+fn crc32(input: &str) -> u32 {
+    let mut crc: u32 = 0xFFFF_FFFF;
+    for &byte in input.as_bytes() {
+        crc ^= byte as u32;
+        for _ in 0..8 {
+            let mask = (crc & 1).wrapping_neg();
+            crc = (crc >> 1) ^ (0xEDB8_8320 & mask);
+        }
+    }
+    !crc
+}
+
+fn crc32_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id).primary();
+    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let crc = crc32(&s);
+    cx.editor.set_status(format!("CRC32: {crc:08x} ({crc})"));
+    Ok(())
+}
+
+/// ROT47: rotate every printable-ASCII character (`!`..=`~`, 0x21–0x7e) by 47
+/// within that 94-glyph range, leaving spaces and other bytes alone. Self-inverse.
+/// Pure — unit tested.
+fn rot47(input: &str) -> String {
+    input
+        .chars()
+        .map(|c| {
+            let b = c as u32;
+            if (33..=126).contains(&b) {
+                char::from_u32(33 + (b - 33 + 47) % 94).unwrap_or(c)
+            } else {
+                c
+            }
+        })
+        .collect()
+}
+
+fn rot47_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = rot47(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// International Morse code for A–Z and 0–9.
+const MORSE: &[(char, &str)] = &[
+    ('A', ".-"), ('B', "-..."), ('C', "-.-."), ('D', "-.."), ('E', "."), ('F', "..-."),
+    ('G', "--."), ('H', "...."), ('I', ".."), ('J', ".---"), ('K', "-.-"), ('L', ".-.."),
+    ('M', "--"), ('N', "-."), ('O', "---"), ('P', ".--."), ('Q', "--.-"), ('R', ".-."),
+    ('S', "..."), ('T', "-"), ('U', "..-"), ('V', "...-"), ('W', ".--"), ('X', "-..-"),
+    ('Y', "-.--"), ('Z', "--.."), ('0', "-----"), ('1', ".----"), ('2', "..---"),
+    ('3', "...--"), ('4', "....-"), ('5', "....."), ('6', "-...."), ('7', "--..."),
+    ('8', "---.."), ('9', "----."),
+];
+
+/// Encode text to Morse: letters separated by spaces, words by ` / `. Unknown
+/// characters are dropped; case is ignored. Pure — unit tested.
+fn morse_encode(input: &str) -> String {
+    input
+        .split_whitespace()
+        .map(|word| {
+            word.chars()
+                .filter_map(|c| {
+                    let uc = c.to_ascii_uppercase();
+                    MORSE.iter().find(|(ch, _)| *ch == uc).map(|(_, code)| *code)
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .filter(|w| !w.is_empty())
+        .collect::<Vec<_>>()
+        .join(" / ")
+}
+
+/// Decode Morse (letters space-separated, words ` / `-separated) back to uppercase
+/// text. Unknown codes are dropped. The inverse of [`morse_encode`] for A–Z/0–9.
+/// Pure — unit tested.
+fn morse_decode(input: &str) -> String {
+    input
+        .split(" / ")
+        .map(|word| {
+            word.split_whitespace()
+                .filter_map(|code| MORSE.iter().find(|(_, c)| *c == code).map(|(ch, _)| *ch))
+                .collect::<String>()
+        })
+        .filter(|w| !w.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn morse_encode_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = morse_encode(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn morse_decode_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = morse_decode(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Format a byte count as a human-readable binary size (e.g. 1536 → "1.5 KiB").
+/// Whole bytes show no decimal; larger units use one decimal place. Pure — unit tested.
+fn human_bytes(n: f64) -> String {
+    const UNITS: &[&str] = &["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
+    let sign = if n < 0.0 { "-" } else { "" };
+    let mut v = n.abs();
+    let mut i = 0;
+    while v >= 1024.0 && i < UNITS.len() - 1 {
+        v /= 1024.0;
+        i += 1;
+    }
+    if i == 0 {
+        format!("{sign}{} B", v as u64)
+    } else {
+        format!("{sign}{v:.1} {}", UNITS[i])
+    }
+}
+
+/// Replace each line that is a bare number (byte count) with its human-readable
+/// size; non-numeric lines pass through. Pure — unit tested.
+fn humanize_lines(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| match line.trim().parse::<f64>() {
+            Ok(n) => human_bytes(n),
+            Err(_) => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn human_bytes_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = humanize_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// English ordinal suffix for `n` ("st"/"nd"/"rd"/"th"), with the 11–13 exception.
+/// Pure — unit tested.
+fn ordinal_suffix(n: i64) -> &'static str {
+    let abs = (n % 100).abs();
+    if (11..=13).contains(&abs) {
+        "th"
+    } else {
+        match abs % 10 {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th",
+        }
+    }
+}
+
+/// Replace each line that is a bare integer with its ordinal (e.g. 22 → "22nd");
+/// non-integer lines pass through. Pure — unit tested.
+fn ordinalize_lines(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| match line.trim().parse::<i64>() {
+            Ok(n) => format!("{n}{}", ordinal_suffix(n)),
+            Err(_) => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn ordinal_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = ordinalize_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Split an identifier into lowercased words, recognizing snake_case, kebab-case,
+/// space, and camelCase/PascalCase boundaries (including acronym → word, e.g.
+/// "HTTPSConnection" → ["https","connection"]). Pure — unit tested.
+fn split_identifier_words(s: &str) -> Vec<String> {
+    let chars: Vec<char> = s.chars().collect();
+    let mut words: Vec<String> = Vec::new();
+    let mut cur = String::new();
+    for (i, &c) in chars.iter().enumerate() {
+        if c == '_' || c == '-' || c == ' ' {
+            if !cur.is_empty() {
+                words.push(std::mem::take(&mut cur));
+            }
+            continue;
+        }
+        if c.is_uppercase() && !cur.is_empty() {
+            let prev = chars[i - 1];
+            let next_lower = chars.get(i + 1).is_some_and(|n| n.is_lowercase());
+            if prev.is_lowercase() || prev.is_ascii_digit() || (prev.is_uppercase() && next_lower) {
+                words.push(std::mem::take(&mut cur));
+            }
+        }
+        cur.extend(c.to_lowercase());
+    }
+    if !cur.is_empty() {
+        words.push(cur);
+    }
+    words
+}
+
+/// Uppercase the first character of `w`, leaving the rest unchanged.
+fn ucfirst(w: &str) -> String {
+    let mut it = w.chars();
+    match it.next() {
+        Some(f) => f.to_uppercase().collect::<String>() + it.as_str(),
+        None => String::new(),
+    }
+}
+
+fn to_snake(s: &str) -> String {
+    split_identifier_words(s).join("_")
+}
+
+fn to_kebab(s: &str) -> String {
+    split_identifier_words(s).join("-")
+}
+
+fn to_camel(s: &str) -> String {
+    split_identifier_words(s)
+        .iter()
+        .enumerate()
+        .map(|(i, w)| if i == 0 { w.clone() } else { ucfirst(w) })
+        .collect()
+}
+
+fn to_pascal(s: &str) -> String {
+    split_identifier_words(s).iter().map(|w| ucfirst(w)).collect()
+}
+
+fn to_constant(s: &str) -> String {
+    split_identifier_words(s)
+        .iter()
+        .map(|w| w.to_uppercase())
+        .collect::<Vec<_>>()
+        .join("_")
+}
+
+fn convert_case_impl(
+    cx: &mut compositor::Context,
+    event: PromptEvent,
+    f: fn(&str) -> String,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = f(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn to_snake_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    convert_case_impl(cx, event, to_snake)
+}
+
+fn to_kebab_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    convert_case_impl(cx, event, to_kebab)
+}
+
+fn to_camel_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    convert_case_impl(cx, event, to_camel)
+}
+
+fn to_pascal_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    convert_case_impl(cx, event, to_pascal)
+}
+
+fn to_constant_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    convert_case_impl(cx, event, to_constant)
+}
+
+/// Render each UTF-8 byte of `input` as an 8-bit binary group, space-separated.
+/// Pure — unit tested.
+fn to_binary(input: &str) -> String {
+    input
+        .bytes()
+        .map(|b| format!("{b:08b}"))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Parse whitespace-separated binary byte groups back into text. Errors on invalid
+/// digits or non-UTF-8 output. The inverse of [`to_binary`]. Pure — unit tested.
+fn from_binary(input: &str) -> anyhow::Result<String> {
+    let bytes = input
+        .split_whitespace()
+        .map(|tok| u8::from_str_radix(tok, 2))
+        .collect::<Result<Vec<u8>, _>>()
+        .context("invalid binary (expected space-separated 8-bit groups)")?;
+    String::from_utf8(bytes).context("decoded bytes are not valid UTF-8")
+}
+
+fn to_binary_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = to_binary(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn from_binary_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = from_binary(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Compare two strings in "natural" order: contiguous digit runs are compared by
+/// numeric value (leading zeros ignored, overflow-safe via length+lex), other
+/// characters by code point. So "file2" < "file10". Pure — unit tested.
+fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+    let mut ai = a.chars().peekable();
+    let mut bi = b.chars().peekable();
+    loop {
+        match (ai.peek().copied(), bi.peek().copied()) {
+            (None, None) => return Ordering::Equal,
+            (None, Some(_)) => return Ordering::Less,
+            (Some(_), None) => return Ordering::Greater,
+            (Some(ca), Some(cb)) if ca.is_ascii_digit() && cb.is_ascii_digit() => {
+                let mut na = String::new();
+                while ai.peek().is_some_and(|c| c.is_ascii_digit()) {
+                    na.push(ai.next().unwrap());
+                }
+                let mut nb = String::new();
+                while bi.peek().is_some_and(|c| c.is_ascii_digit()) {
+                    nb.push(bi.next().unwrap());
+                }
+                let va = na.trim_start_matches('0');
+                let vb = nb.trim_start_matches('0');
+                let ord = va.len().cmp(&vb.len()).then_with(|| va.cmp(vb)).then_with(|| na.len().cmp(&nb.len()));
+                if ord != Ordering::Equal {
+                    return ord;
+                }
+            }
+            (Some(ca), Some(cb)) => {
+                if ca != cb {
+                    return ca.cmp(&cb);
+                }
+                ai.next();
+                bi.next();
+            }
+        }
+    }
+}
+
+/// Sort the lines of `input` in natural order (see [`natural_cmp`]). Stable. Pure —
+/// unit tested.
+fn natural_sort_lines(input: &str) -> String {
+    let mut lines: Vec<&str> = input.lines().collect();
+    lines.sort_by(|a, b| natural_cmp(a, b));
+    lines.join("\n")
+}
+
+fn natural_sort_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = natural_sort_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Pad each line to a minimum `width` (measured in characters). When `left` is
+/// true the text is left-justified (padding on the right); otherwise it is
+/// right-justified. Lines already at least `width` wide are untouched. Pure —
+/// unit tested.
+fn pad_lines(input: &str, width: usize, left: bool) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let len = line.chars().count();
+            if len >= width {
+                line.to_string()
+            } else {
+                let pad = " ".repeat(width - len);
+                if left {
+                    format!("{line}{pad}")
+                } else {
+                    format!("{pad}{line}")
+                }
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn pad_lines_impl(cx: &mut compositor::Context, args: Args, event: PromptEvent, left: bool) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let width: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .with_context(|| format!("usage: :{} <width>", if left { "pad-right" } else { "pad-left" }))?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = pad_lines(&s, width, left);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn pad_right_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    pad_lines_impl(cx, args, event, true)
+}
+
+fn pad_left_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    pad_lines_impl(cx, args, event, false)
+}
+
+/// Append the not-yet-seen keys of `map` to `keys`, preserving order.
+fn push_keys(map: &serde_json::Map<String, Value>, keys: &mut Vec<String>) {
+    for k in map.keys() {
+        if !keys.iter().any(|e| e == k) {
+            keys.push(k.clone());
+        }
+    }
+}
+
+/// List the keys of a JSON object — or the union of keys across a JSON array of
+/// objects — one per line. Errors on a scalar value. Pure — unit tested.
+fn json_keys(input: &str) -> anyhow::Result<String> {
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let mut keys: Vec<String> = Vec::new();
+    match &root {
+        Value::Object(map) => push_keys(map, &mut keys),
+        Value::Array(arr) => {
+            for item in arr {
+                if let Value::Object(map) = item {
+                    push_keys(map, &mut keys);
+                }
+            }
+        }
+        _ => anyhow::bail!("expected a JSON object or array of objects"),
+    }
+    Ok(keys.join("\n"))
+}
+
+fn json_keys_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_keys(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Describe the top-level JSON type and size of `input` (e.g. "object (3 keys)",
+/// "array (5 elements)"). Errors on invalid JSON. Pure — unit tested.
+fn json_describe(input: &str) -> anyhow::Result<String> {
+    let v: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    Ok(match &v {
+        Value::Null => "null".to_string(),
+        Value::Bool(b) => format!("boolean ({b})"),
+        Value::Number(n) => format!("number ({n})"),
+        Value::String(s) => format!("string (len {})", s.chars().count()),
+        Value::Array(a) => format!("array ({} elements)", a.len()),
+        Value::Object(o) => format!("object ({} keys)", o.len()),
+    })
+}
+
+fn json_type_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id).primary();
+    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let desc = json_describe(&s)?;
+    cx.editor.set_status(format!("JSON: {desc}"));
+    Ok(())
+}
+
+/// For each line, keep the text after (or, when `keep_after` is false, before) the
+/// first occurrence of `delim`. Lines without the delimiter are kept whole. Pure —
+/// unit tested.
+fn cut_lines(input: &str, delim: &str, keep_after: bool) -> String {
+    input
+        .lines()
+        .map(|line| match line.split_once(delim) {
+            Some((before, after)) => {
+                if keep_after {
+                    after
+                } else {
+                    before
+                }
+            }
+            None => line,
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn cut_lines_impl(cx: &mut compositor::Context, args: Args, event: PromptEvent, keep_after: bool) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let delim = args.join(" ");
+    let delim = delim.trim();
+    if delim.is_empty() {
+        anyhow::bail!("usage: :{} <delimiter>", if keep_after { "after" } else { "before" });
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = cut_lines(&s, delim, keep_after);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn after_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    cut_lines_impl(cx, args, event, true)
+}
+
+fn before_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    cut_lines_impl(cx, args, event, false)
+}
+
+/// Invert the case of every character: uppercase ↔ lowercase, others unchanged.
+/// Self-inverse. Pure — unit tested.
+fn swapcase(input: &str) -> String {
+    input
+        .chars()
+        .flat_map(|c| {
+            if c.is_uppercase() {
+                c.to_lowercase().collect::<Vec<_>>()
+            } else if c.is_lowercase() {
+                c.to_uppercase().collect::<Vec<_>>()
+            } else {
+                vec![c]
+            }
+        })
+        .collect()
+}
+
+fn swapcase_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = swapcase(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Strip zero-width / invisible Unicode characters often hidden in pasted text:
+/// ZWSP, ZWNJ, ZWJ, word joiner, BOM/ZWNBSP, and the soft hyphen. Pure — unit tested.
+fn strip_zero_width(input: &str) -> String {
+    input
+        .chars()
+        .filter(|&c| {
+            !matches!(
+                c,
+                '\u{200B}' | '\u{200C}' | '\u{200D}' | '\u{2060}' | '\u{FEFF}' | '\u{00AD}'
+            )
+        })
+        .collect()
+}
+
+fn strip_invisible_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = strip_zero_width(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Turn each line of `input` into a JSON string element of a pretty array. Pure —
+/// unit tested.
+fn lines_to_json_array(input: &str) -> String {
+    let arr: Vec<Value> = input.lines().map(|l| Value::String(l.to_string())).collect();
+    serde_json::to_string_pretty(&Value::Array(arr)).unwrap_or_else(|_| "[]".to_string())
+}
+
+/// Turn a JSON array into lines: string elements unquoted, others rendered as
+/// compact JSON. The inverse of [`lines_to_json_array`] for string arrays. Pure —
+/// unit tested.
+fn json_array_to_lines(input: &str) -> anyhow::Result<String> {
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let arr = root.as_array().context("expected a JSON array")?;
+    let lines: Vec<String> = arr
+        .iter()
+        .map(|v| match v {
+            Value::String(s) => s.clone(),
+            other => other.to_string(),
+        })
+        .collect();
+    Ok(lines.join("\n"))
+}
+
+fn lines_to_json_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = lines_to_json_array(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn json_to_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_array_to_lines(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Turn each non-blank line into a Markdown task-list item (`- [ ] item`),
+/// stripping any leading bullet so existing bullet lists convert cleanly. Pure —
+/// unit tested.
+fn checkbox_list(input: &str) -> String {
+    input
+        .lines()
+        .map(|l| {
+            if l.trim().is_empty() {
+                l.to_string()
+            } else {
+                let content = l.trim_start();
+                let content = content.strip_prefix("- ").unwrap_or(content);
+                format!("- [ ] {content}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn checkbox_list_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = checkbox_list(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Join hard-wrapped lines: consecutive non-blank lines (trimmed) are joined with a
+/// single space, and blank lines are preserved as paragraph breaks. The inverse of
+/// hard-wrapping. Pure — unit tested.
+fn unwrap_paragraphs(input: &str) -> String {
+    let mut out: Vec<String> = Vec::new();
+    let mut para: Vec<&str> = Vec::new();
+    for line in input.lines() {
+        if line.trim().is_empty() {
+            if !para.is_empty() {
+                out.push(para.join(" "));
+                para.clear();
+            }
+            out.push(String::new());
+        } else {
+            para.push(line.trim());
+        }
+    }
+    if !para.is_empty() {
+        out.push(para.join(" "));
+    }
+    out.join("\n")
+}
+
+fn unwrap_paragraphs_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = unwrap_paragraphs(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Build a SQL `IN`-list — `('a', 'b', 'c')` — from the non-blank selected lines,
+/// single-quoting each (doubling any embedded `'`). Pure — unit tested.
+fn sql_in_list(input: &str) -> String {
+    let items: Vec<String> = input
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .map(|l| format!("'{}'", l.replace('\'', "''")))
+        .collect();
+    format!("({})", items.join(", "))
+}
+
+fn sql_in_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = sql_in_list(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert each line that is a decimal integer to lowercase hex (sign preserved);
+/// non-numeric lines pass through. Pure — unit tested.
+fn dec_to_hex_lines(input: &str) -> String {
+    input
+        .lines()
+        .map(|l| match l.trim().parse::<i64>() {
+            Ok(n) if n < 0 => format!("-{:x}", -n),
+            Ok(n) => format!("{n:x}"),
+            Err(_) => l.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Convert each line that is a hex integer (optional `0x`/`-` prefix) to decimal;
+/// non-hex lines pass through. The inverse of [`dec_to_hex_lines`]. Pure — unit tested.
+fn hex_to_dec_lines(input: &str) -> String {
+    input
+        .lines()
+        .map(|l| {
+            let t = l.trim();
+            let (sign, digits) = match t.strip_prefix('-') {
+                Some(rest) => (-1i64, rest),
+                None => (1, t),
+            };
+            let digits = digits.strip_prefix("0x").or_else(|| digits.strip_prefix("0X")).unwrap_or(digits);
+            match i64::from_str_radix(digits, 16) {
+                Ok(n) => (sign * n).to_string(),
+                Err(_) => l.to_string(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn dec_to_hex_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = dec_to_hex_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn hex_to_dec_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = hex_to_dec_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Replace each non-ASCII character with a `\u{XXXX}` escape; ASCII passes through.
+/// Pure — unit tested.
+fn unicode_escape(input: &str) -> String {
+    input
+        .chars()
+        .map(|c| {
+            if c.is_ascii() {
+                c.to_string()
+            } else {
+                format!("\\u{{{:x}}}", c as u32)
+            }
+        })
+        .collect()
+}
+
+/// Decode `\u{XXXX}` and 4-digit `\uXXXX` escapes back to characters; everything
+/// else is copied verbatim. The inverse of [`unicode_escape`]. Pure — unit tested.
+fn unicode_unescape(input: &str) -> String {
+    let chars: Vec<char> = input.chars().collect();
+    let mut out = String::new();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '\\' && chars.get(i + 1) == Some(&'u') {
+            // \u{XXXX}
+            if chars.get(i + 2) == Some(&'{') {
+                if let Some(close) = chars[i + 3..].iter().position(|&c| c == '}') {
+                    let hex: String = chars[i + 3..i + 3 + close].iter().collect();
+                    if let Some(c) = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32) {
+                        out.push(c);
+                        i += 3 + close + 1;
+                        continue;
+                    }
+                }
+            } else if i + 6 <= chars.len() {
+                // \uXXXX (exactly four hex digits)
+                let hex: String = chars[i + 2..i + 6].iter().collect();
+                if hex.chars().all(|c| c.is_ascii_hexdigit()) {
+                    if let Some(c) = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32) {
+                        out.push(c);
+                        i += 6;
+                        continue;
+                    }
+                }
+            }
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    out
+}
+
+fn unicode_escape_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = unicode_escape(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn unicode_unescape_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = unicode_unescape(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Sort the lines of `input` by character length (shortest first), breaking ties
+/// lexically for determinism. Pure — unit tested.
+fn sort_by_length(input: &str) -> String {
+    let mut lines: Vec<&str> = input.lines().collect();
+    lines.sort_by(|a, b| a.chars().count().cmp(&b.chars().count()).then_with(|| a.cmp(b)));
+    lines.join("\n")
+}
+
+fn sort_by_length_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = sort_by_length(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Count distinct vs total lines: returns (unique, total). Pure — unit tested.
+fn count_unique(input: &str) -> (usize, usize) {
+    let lines: Vec<&str> = input.lines().collect();
+    let total = lines.len();
+    let unique: std::collections::HashSet<&str> = lines.into_iter().collect();
+    (unique.len(), total)
+}
+
+fn count_unique_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id).primary();
+    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let (unique, total) = count_unique(&s);
+    cx.editor.set_status(format!("{unique} unique / {total} total line(s)"));
+    Ok(())
+}
+
+/// Cyclically rotate the lines of `input` by `n`: positive moves the first `n`
+/// lines to the bottom, negative rotates the other way. `n` is taken modulo the
+/// line count. Pure — unit tested.
+fn rotate_lines(input: &str, n: i64) -> String {
+    let lines: Vec<&str> = input.lines().collect();
+    if lines.is_empty() {
+        return String::new();
+    }
+    let len = lines.len() as i64;
+    let shift = (((n % len) + len) % len) as usize;
+    let mut rotated: Vec<&str> = lines[shift..].to_vec();
+    rotated.extend_from_slice(&lines[..shift]);
+    rotated.join("\n")
+}
+
+fn rotate_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: i64 = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .context("usage: :rotate-lines <n> (negative rotates the other way)")?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = rotate_lines(&s, n);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Remove a single pair of surrounding matching quotes (`"`, `'`, or `` ` ``) from
+/// each line independently (unlike the whole-selection strip). Lines without
+/// matched surrounding quotes are unchanged. Pure — unit tested.
+fn unquote_each_line(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let first = line.chars().next();
+            let last = line.chars().last();
+            if line.chars().count() >= 2 && first == last && matches!(first, Some('"' | '\'' | '`')) {
+                let q = first.unwrap().len_utf8();
+                line[q..line.len() - q].to_string()
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn unquote_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = unquote_each_line(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Wrap each line in double quotes, backslash-escaping any `\` and `"` so the
+/// result is a valid string literal. The inverse of [`unquote_each_line`] for
+/// double-quoted input. Pure — unit tested.
+fn quote_each_line(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| format!("\"{}\"", line.replace('\\', "\\\\").replace('"', "\\\"")))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn quote_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = quote_each_line(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn repeat_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .context("usage: :repeat <n> (number of copies)")?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = s.repeat(n);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Uppercase the first alphabetic character of each line, leaving the rest (and any
+/// leading indentation or bullet) untouched. Pure — unit tested.
+fn capitalize_lines(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let mut done = false;
+            line.chars()
+                .map(|c| {
+                    if !done && c.is_alphabetic() {
+                        done = true;
+                        c.to_uppercase().collect::<String>()
+                    } else {
+                        c.to_string()
+                    }
+                })
+                .collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn capitalize_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = capitalize_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Drop every blank (whitespace-only) line, unlike the squeeze that collapses runs
+/// to one. Pure — unit tested.
+fn remove_blank_lines(input: &str) -> String {
+    input
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn remove_blank_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = remove_blank_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Trim leading and trailing whitespace from each line, preserving internal spacing
+/// (unlike normalize-whitespace, which collapses internal runs and keeps the
+/// leading indent). Pure — unit tested.
+fn trim_lines(input: &str) -> String {
+    input.lines().map(str::trim).collect::<Vec<_>>().join("\n")
+}
+
+fn trim_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = trim_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert `key=value` / `key: value` config or env lines into a JSON object, with
+/// values kept as strings. Blank lines and `#` comments are skipped; the split uses
+/// the first `=` or `:`. Errors on a line with neither. Pure — unit tested.
+fn kv_to_json(input: &str) -> anyhow::Result<String> {
+    let mut map = serde_json::Map::new();
+    for line in input.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        match line.find(['=', ':']) {
+            Some(p) => {
+                let key = line[..p].trim().to_string();
+                let val = line[p + 1..].trim().to_string();
+                map.insert(key, Value::String(val));
+            }
+            None => anyhow::bail!("line has no '=' or ':': {line}"),
+        }
+    }
+    Ok(serde_json::to_string_pretty(&Value::Object(map))?)
+}
+
+fn kv_to_json_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = kv_to_json(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert a JSON object into `key=value` lines (string values unquoted, others as
+/// compact JSON). The inverse of [`kv_to_json`] for string values. Pure — unit tested.
+fn json_to_kv(input: &str) -> anyhow::Result<String> {
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let obj = root.as_object().context("expected a JSON object")?;
+    let lines: Vec<String> = obj
+        .iter()
+        .map(|(k, v)| {
+            let val = match v {
+                Value::String(s) => s.clone(),
+                other => other.to_string(),
+            };
+            format!("{k}={val}")
+        })
+        .collect();
+    Ok(lines.join("\n"))
+}
+
+fn json_to_kv_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_to_kv(&s)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Extract one field's value from every object in a JSON array, one per line (jq
+/// `.[].key`): string values unquoted, others compact JSON, missing fields blank.
+/// Pure — unit tested.
+fn json_pluck(input: &str, key: &str) -> anyhow::Result<String> {
+    let root: Value = serde_json::from_str(input.trim()).context("selection is not valid JSON")?;
+    let arr = root.as_array().context("expected a JSON array")?;
+    let vals: Vec<String> = arr
+        .iter()
+        .map(|item| match item.get(key) {
+            Some(Value::String(s)) => s.clone(),
+            Some(v) => v.to_string(),
+            None => String::new(),
+        })
+        .collect();
+    Ok(vals.join("\n"))
+}
+
+fn json_pluck_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let key = args.join(" ");
+    let key = key.trim();
+    if key.is_empty() {
+        anyhow::bail!("usage: :json-pluck <key>");
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = json_pluck(&s, key)?;
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert the non-blank lines of `input` into an HTML `<ul>` list, one `<li>` per
+/// line with `&`, `<`, `>` escaped. Pure — unit tested.
+fn to_html_list(input: &str) -> String {
+    let items: Vec<String> = input
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| {
+            let esc = l.trim().replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
+            format!("  <li>{esc}</li>")
+        })
+        .collect();
+    format!("<ul>\n{}\n</ul>", items.join("\n"))
+}
+
+fn to_html_list_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = to_html_list(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Extract the text of each `<li>…</li>` item from HTML, one per line, unescaping
+/// `&lt;`/`&gt;`/`&amp;`. The inverse of [`to_html_list`]. Pure — unit tested.
+fn from_html_list(input: &str) -> String {
+    let re = regex::Regex::new(r"(?s)<li[^>]*>(.*?)</li>").expect("valid regex");
+    re.captures_iter(input)
+        .map(|c| {
+            c[1].trim()
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&amp;", "&")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn from_html_list_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = from_html_list(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert CSV/TSV (first row = headers) into an HTML `<table>`; cell text is
+/// HTML-escaped. Tab is auto-detected as the delimiter when present. Pure — unit
+/// tested.
+fn csv_to_html_table(input: &str) -> String {
+    let rows: Vec<&str> = input.lines().filter(|l| !l.trim().is_empty()).collect();
+    if rows.is_empty() {
+        return String::new();
+    }
+    let delim = if input.contains('\t') { '\t' } else { ',' };
+    let esc = |s: &str| s.trim().replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
+    let mut out = String::from("<table>");
+    for (i, row) in rows.iter().enumerate() {
+        let tag = if i == 0 { "th" } else { "td" };
+        let cells: String = row.split(delim).map(|c| format!("<{tag}>{}</{tag}>", esc(c))).collect();
+        out.push_str(&format!("\n  <tr>{cells}</tr>"));
+    }
+    out.push_str("\n</table>");
+    out
+}
+
+fn csv_to_html_table_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = csv_to_html_table(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Slugify one line: lowercase, runs of non-alphanumeric characters become a single
+/// hyphen, with leading/trailing hyphens trimmed. Pure — unit tested.
+fn slugify_line(s: &str) -> String {
+    let mut out = String::new();
+    let mut prev_dash = false;
+    for c in s.chars() {
+        if c.is_alphanumeric() {
+            out.extend(c.to_lowercase());
+            prev_dash = false;
+        } else if !prev_dash && !out.is_empty() {
+            out.push('-');
+            prev_dash = true;
+        }
+    }
+    out.trim_end_matches('-').to_string()
+}
+
+/// Slugify each line independently (unlike whole-selection slugify). Pure — unit
+/// tested.
+fn slugify_lines(input: &str) -> String {
+    input.lines().map(slugify_line).collect::<Vec<_>>().join("\n")
+}
+
+fn slugify_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = slugify_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Join the lines of `input` into a single CSV row, RFC-4180 quoting any field that
+/// contains a comma, quote, or newline (embedded quotes doubled). Pure — unit tested.
+fn lines_to_csv_row(input: &str) -> String {
+    input
+        .lines()
+        .map(|l| {
+            if l.contains([',', '"', '\n']) {
+                format!("\"{}\"", l.replace('"', "\"\""))
+            } else {
+                l.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn lines_to_csv_row_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = lines_to_csv_row(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Split one CSV row into its fields, one per line, honoring RFC-4180 quoting
+/// (quoted fields may contain commas; `""` is an escaped quote). The inverse of
+/// [`lines_to_csv_row`]. Pure — unit tested.
+fn csv_row_to_lines(input: &str) -> String {
+    let mut fields: Vec<String> = Vec::new();
+    let mut cur = String::new();
+    let mut in_quotes = false;
+    let mut chars = input.trim_end_matches(['\n', '\r']).chars().peekable();
+    while let Some(c) = chars.next() {
+        if in_quotes {
+            if c == '"' {
+                if chars.peek() == Some(&'"') {
+                    cur.push('"');
+                    chars.next();
+                } else {
+                    in_quotes = false;
+                }
+            } else {
+                cur.push(c);
+            }
+        } else {
+            match c {
+                '"' => in_quotes = true,
+                ',' => fields.push(std::mem::take(&mut cur)),
+                _ => cur.push(c),
+            }
+        }
+    }
+    fields.push(cur);
+    fields.join("\n")
+}
+
+fn csv_row_to_lines_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = csv_row_to_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Turn a slug into a readable title: split each line on `-`/`_`/space and
+/// title-case the words. Pure — unit tested.
+fn deslugify(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            line.split(['-', '_', ' '])
+                .filter(|w| !w.is_empty())
+                .map(|w| {
+                    let mut c = w.chars();
+                    match c.next() {
+                        Some(f) => format!("{}{}", f.to_uppercase().collect::<String>(), c.as_str().to_lowercase()),
+                        None => String::new(),
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn deslugify_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = deslugify(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert CSV to TSV one row per line: each row is parsed quote-aware (so a quoted
+/// `a,b` stays a single cell) and re-joined with tabs. Pure — unit tested.
+fn csv_to_tsv(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| csv_row_to_lines(line).replace('\n', "\t"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn csv_to_tsv_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = csv_to_tsv(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert TSV to CSV one row per line: split on tabs and RFC-4180-quote any cell
+/// containing a comma, quote, or newline. The inverse of [`csv_to_tsv`]. Pure —
+/// unit tested.
+fn tsv_to_csv(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            line.split('\t')
+                .map(|cell| {
+                    if cell.contains([',', '"', '\n']) {
+                        format!("\"{}\"", cell.replace('"', "\"\""))
+                    } else {
+                        cell.to_string()
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(",")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn tsv_to_csv_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = tsv_to_csv(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Strip a leading line number from each line: optional indent, digits, an optional
+/// `.`/`:`/`)`/`|`/tab separator, then following spaces. Lines without a leading
+/// number are unchanged. Pure — unit tested.
+fn strip_line_numbers(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let trimmed = line.trim_start();
+            let after_digits = trimmed.trim_start_matches(|c: char| c.is_ascii_digit());
+            if after_digits.len() == trimmed.len() {
+                return line.to_string();
+            }
+            let rest = after_digits.strip_prefix(['.', ':', ')', '|', '\t']).unwrap_or(after_digits);
+            rest.trim_start().to_string()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn strip_line_numbers_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = strip_line_numbers(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Wrap `text` as a Markdown link `[text](url)`. Pure — unit tested.
+fn markdown_link(text: &str, url: &str) -> String {
+    format!("[{text}]({url})")
+}
+
+fn markdown_link_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let url = args.join(" ");
+    let url = url.trim();
+    if url.is_empty() {
+        anyhow::bail!("usage: :markdown-link <url>");
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = markdown_link(&s, url);
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Extract every http(s) URL from `input`, one per line, in order of appearance.
+/// Pure — unit tested.
+fn extract_urls(input: &str) -> String {
+    let re = regex::Regex::new(r#"https?://[^\s<>()\[\]"]+"#).expect("valid regex");
+    re.find_iter(input)
+        .map(|m| m.as_str().to_string())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn extract_urls_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = extract_urls(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Extract every email-like address from `input`, one per line, in order. Pure —
+/// unit tested.
+fn extract_emails(input: &str) -> String {
+    let re = regex::Regex::new(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}").expect("valid regex");
+    re.find_iter(input)
+        .map(|m| m.as_str().to_string())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn extract_emails_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = extract_emails(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Extract IPv4-looking addresses (`d.d.d.d`) from `input`, one per line, in order.
+/// Octet ranges aren't validated. Pure — unit tested.
+fn extract_ips(input: &str) -> String {
+    let re = regex::Regex::new(r"\b(?:\d{1,3}\.){3}\d{1,3}\b").expect("valid regex");
+    re.find_iter(input)
+        .map(|m| m.as_str().to_string())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn extract_ips_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = extract_ips(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Extract the contents of double-quoted strings from `input`, one per line. Escaped
+/// quotes inside a string are handled. Pure — unit tested.
+fn extract_quoted(input: &str) -> String {
+    let re = regex::Regex::new(r#""([^"\\]*(?:\\.[^"\\]*)*)""#).expect("valid regex");
+    re.captures_iter(input)
+        .map(|c| c[1].to_string())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn extract_quoted_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = extract_quoted(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Extract each substring found between the `start` and `end` delimiters, one per
+/// line, scanning left to right without overlaps. Pure — unit tested.
+fn extract_between(input: &str, start: &str, end: &str) -> String {
+    let mut out: Vec<String> = Vec::new();
+    let mut rest = input;
+    while let Some(i) = rest.find(start) {
+        let after = &rest[i + start.len()..];
+        match after.find(end) {
+            Some(j) => {
+                out.push(after[..j].to_string());
+                rest = &after[j + end.len()..];
+            }
+            None => break,
+        }
+    }
+    out.join("\n")
+}
+
+fn extract_between_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let argv: Vec<String> = args.into_iter().map(|a| a.trim().to_string()).collect();
+    let (Some(start), Some(end)) = (argv.first(), argv.get(1)) else {
+        anyhow::bail!("usage: :extract-between <start> <end>");
+    };
+    if start.is_empty() || end.is_empty() {
+        anyhow::bail!("usage: :extract-between <start> <end>");
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = extract_between(&s, start, end);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Wrap `text` with `wrapper` on both sides. Pure — unit tested.
+fn wrap_with(text: &str, wrapper: &str) -> String {
+    format!("{wrapper}{text}{wrapper}")
+}
+
+fn wrap_with_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let wrapper = args.join(" ");
+    let wrapper = wrapper.trim();
+    if wrapper.is_empty() {
+        anyhow::bail!("usage: :wrap-with <text>");
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = wrap_with(&s, wrapper);
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Extract signed integers and decimals from `input`, one per line, in order. Pure
+/// — unit tested.
+fn extract_numbers_lines(input: &str) -> String {
+    let re = regex::Regex::new(r"-?\d+(?:\.\d+)?").expect("valid regex");
+    re.find_iter(input)
+        .map(|m| m.as_str().to_string())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn extract_numbers_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = extract_numbers_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Validate that `input` is well-formed JSON, returning the parse error message
+/// (with line/column) on failure. Pure — unit tested.
+fn json_validate(input: &str) -> Result<(), String> {
+    serde_json::from_str::<Value>(input.trim()).map(|_| ()).map_err(|e| e.to_string())
+}
+
+fn json_validate_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id).primary();
+    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    match json_validate(&s) {
+        Ok(()) => cx.editor.set_status("valid JSON"),
+        Err(e) => cx.editor.set_status(format!("invalid JSON: {e}")),
+    }
+    Ok(())
+}
+
+/// Count CSV fields in one row (quote-aware: commas inside `"..."` don't split).
+fn csv_field_count(row: &str) -> usize {
+    let mut count = 1;
+    let mut in_quotes = false;
+    let mut chars = row.chars().peekable();
+    while let Some(c) = chars.next() {
+        if in_quotes {
+            if c == '"' {
+                if chars.peek() == Some(&'"') {
+                    chars.next();
+                } else {
+                    in_quotes = false;
+                }
+            }
+        } else if c == '"' {
+            in_quotes = true;
+        } else if c == ',' {
+            count += 1;
+        }
+    }
+    count
+}
+
+/// Check that every non-blank CSV row has the same field count. Returns that count
+/// on success, or a message naming the first offending line. Pure — unit tested.
+fn csv_validate(input: &str) -> Result<usize, String> {
+    let rows: Vec<(usize, &str)> = input.lines().enumerate().filter(|(_, l)| !l.trim().is_empty()).collect();
+    let Some((_, first)) = rows.first() else {
+        return Err("no rows".to_string());
+    };
+    let expected = csv_field_count(first);
+    for (i, row) in &rows {
+        let n = csv_field_count(row);
+        if n != expected {
+            return Err(format!("line {} has {n} fields, expected {expected}", i + 1));
+        }
+    }
+    Ok(expected)
+}
+
+fn csv_validate_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id).primary();
+    let s: String = doc.text().slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    match csv_validate(&s) {
+        Ok(n) => cx.editor.set_status(format!("valid CSV: {n} columns")),
+        Err(e) => cx.editor.set_status(format!("CSV mismatch: {e}")),
+    }
+    Ok(())
+}
+
+/// Turn the non-blank lines into a Markdown ordered list (`1. item`, `2. item`…),
+/// stripping a leading bullet so bullet lists convert cleanly. Blank lines are kept
+/// and don't advance the counter. Pure — unit tested.
+fn ordered_list(input: &str) -> String {
+    let mut n = 0;
+    input
+        .lines()
+        .map(|line| {
+            if line.trim().is_empty() {
+                line.to_string()
+            } else {
+                n += 1;
+                let content = line.trim_start();
+                let content = content.strip_prefix("- ").unwrap_or(content);
+                format!("{n}. {content}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn ordered_list_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = ordered_list(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Strip a leading Markdown list marker from each line: task checkbox
+/// (`- [ ] `/`- [x] `), bullet (`- `/`* `/`+ `), or ordered (`N. `/`N) `). Lines
+/// without a marker are unchanged. Pure — unit tested.
+fn strip_list_markers(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let t = line.trim_start();
+            if let Some(rest) = t
+                .strip_prefix("- [ ] ")
+                .or_else(|| t.strip_prefix("- [x] "))
+                .or_else(|| t.strip_prefix("- [X] "))
+            {
+                rest.to_string()
+            } else if let Some(rest) =
+                t.strip_prefix("- ").or_else(|| t.strip_prefix("* ")).or_else(|| t.strip_prefix("+ "))
+            {
+                rest.to_string()
+            } else {
+                let after_digits = t.trim_start_matches(|c: char| c.is_ascii_digit());
+                if after_digits.len() != t.len() {
+                    after_digits
+                        .strip_prefix(". ")
+                        .or_else(|| after_digits.strip_prefix(") "))
+                        .unwrap_or(t)
+                        .to_string()
+                } else {
+                    t.to_string()
+                }
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn strip_list_markers_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = strip_list_markers(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Sort the whitespace-separated words within each line (ascending), collapsing
+/// runs of whitespace to single spaces. Pure — unit tested.
+fn sort_words(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let mut words: Vec<&str> = line.split_whitespace().collect();
+            words.sort_unstable();
+            words.join(" ")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn sort_words_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = sort_words(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Remove duplicate whitespace-separated words within each line, keeping the first
+/// occurrence and original order. Pure — unit tested.
+fn unique_words(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let mut seen = std::collections::HashSet::new();
+            line.split_whitespace()
+                .filter(|w| seen.insert(*w))
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn unique_words_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = unique_words(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Replace each line with the sum of its numeric whitespace fields (a row total);
+/// non-numeric fields are ignored. Pure — unit tested.
+fn sum_fields(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let sum: f64 = line.split_whitespace().filter_map(|w| w.parse::<f64>().ok()).sum();
+            fmt_stat(sum)
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn sum_fields_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = sum_fields(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Replace each line with the mean of its numeric whitespace fields; lines with no
+/// numbers pass through unchanged. Pure — unit tested.
+fn avg_fields(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let nums: Vec<f64> = line.split_whitespace().filter_map(|w| w.parse::<f64>().ok()).collect();
+            if nums.is_empty() {
+                line.to_string()
+            } else {
+                fmt_stat(nums.iter().sum::<f64>() / nums.len() as f64)
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn avg_fields_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = avg_fields(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Replace each line with the max (or, when `max` is false, min) of its numeric
+/// whitespace fields; lines with no numbers pass through. Pure — unit tested.
+fn reduce_fields(input: &str, max: bool) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let nums: Vec<f64> = line.split_whitespace().filter_map(|w| w.parse::<f64>().ok()).collect();
+            if nums.is_empty() {
+                return line.to_string();
+            }
+            let v = if max {
+                nums.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+            } else {
+                nums.iter().copied().fold(f64::INFINITY, f64::min)
+            };
+            fmt_stat(v)
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn reduce_fields_impl(cx: &mut compositor::Context, event: PromptEvent, max: bool) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = reduce_fields(&s, max);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn max_fields_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    reduce_fields_impl(cx, event, true)
+}
+
+fn min_fields_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    reduce_fields_impl(cx, event, false)
+}
+
+/// Replace each line with the range (max − min) of its numeric whitespace fields;
+/// lines with no numbers pass through. Pure — unit tested.
+fn range_fields(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let nums: Vec<f64> = line.split_whitespace().filter_map(|w| w.parse::<f64>().ok()).collect();
+            if nums.is_empty() {
+                return line.to_string();
+            }
+            let max = nums.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+            let min = nums.iter().copied().fold(f64::INFINITY, f64::min);
+            fmt_stat(max - min)
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn range_fields_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = range_fields(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Prefix each `KEY=value` line with `export ` (turning a `.env` into shell export
+/// statements). Blank lines, `#` comments, and already-`export`ed lines are left
+/// alone, as are lines without `=`. Pure — unit tested.
+fn to_env_export(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let t = line.trim();
+            if t.is_empty() || t.starts_with('#') || t.starts_with("export ") || !t.contains('=') {
+                line.to_string()
+            } else {
+                format!("export {t}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn to_env_export_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = to_env_export(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Remove a leading `export ` from each line (preserving indentation); the inverse
+/// of [`to_env_export`]. Lines without the prefix are unchanged. Pure — unit tested.
+fn strip_export(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let indent_len = line.len() - line.trim_start().len();
+            let (indent, rest) = line.split_at(indent_len);
+            match rest.strip_prefix("export ") {
+                Some(after) => format!("{indent}{after}"),
+                None => line.to_string(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn strip_export_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = strip_export(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert CRLF (and lone CR) line endings to LF. Pure — unit tested.
+fn dos2unix(input: &str) -> String {
+    input.replace("\r\n", "\n").replace('\r', "\n")
+}
+
+/// Convert LF line endings to CRLF (normalizing any existing CRLF first). Pure —
+/// unit tested.
+fn unix2dos(input: &str) -> String {
+    input.replace("\r\n", "\n").replace('\n', "\r\n")
+}
+
+fn line_ending_impl(cx: &mut compositor::Context, event: PromptEvent, to_dos: bool) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = if to_dos { unix2dos(&s) } else { dos2unix(&s) };
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn dos2unix_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    line_ending_impl(cx, event, false)
+}
+
+fn unix2dos_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    line_ending_impl(cx, event, true)
+}
+
+/// Replace each numeric line with its percentage of the total of all numeric lines.
+/// Non-numeric lines pass through; if the total is zero, nothing changes. Pure —
+/// unit tested.
+fn percent_of_total(input: &str) -> String {
+    let nums: Vec<Option<f64>> = input.lines().map(|l| l.trim().parse::<f64>().ok()).collect();
+    let total: f64 = nums.iter().flatten().sum();
+    input
+        .lines()
+        .zip(nums.iter())
+        .map(|(line, n)| match n {
+            Some(v) if total != 0.0 => format!("{}%", fmt_stat(v / total * 100.0)),
+            _ => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn percent_of_total_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = percent_of_total(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Replace each numeric line with the running maximum seen so far (a high-water
+/// mark); non-numeric lines pass through and don't update the running value. Pure —
+/// unit tested.
+fn running_max(input: &str) -> String {
+    let mut acc: Option<f64> = None;
+    input
+        .lines()
+        .map(|line| match line.trim().parse::<f64>() {
+            Ok(n) => {
+                let m = acc.map_or(n, |a| a.max(n));
+                acc = Some(m);
+                fmt_stat(m)
+            }
+            Err(_) => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn running_max_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = running_max(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Replace each numeric line with the running minimum seen so far (a low-water
+/// mark); non-numeric lines pass through and don't update the running value. Pure —
+/// unit tested.
+fn running_min(input: &str) -> String {
+    let mut acc: Option<f64> = None;
+    input
+        .lines()
+        .map(|line| match line.trim().parse::<f64>() {
+            Ok(n) => {
+                let m = acc.map_or(n, |a| a.min(n));
+                acc = Some(m);
+                fmt_stat(m)
+            }
+            Err(_) => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn running_min_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = running_min(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Format each numeric line to `n` decimal places; non-numeric lines pass through.
+/// Pure — unit tested.
+fn to_fixed(input: &str, n: usize) -> String {
+    input
+        .lines()
+        .map(|line| match line.trim().parse::<f64>() {
+            Ok(v) => format!("{v:.n$}"),
+            Err(_) => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn to_fixed_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .context("usage: :to-fixed <decimals>")?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = to_fixed(&s, n);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Clamp each numeric line to `[lo, hi]`; non-numeric lines pass through. Pure —
+/// unit tested.
+fn clamp_lines(input: &str, lo: f64, hi: f64) -> String {
+    input
+        .lines()
+        .map(|line| match line.trim().parse::<f64>() {
+            Ok(v) => fmt_stat(v.clamp(lo, hi)),
+            Err(_) => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn clamp_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let argv: Vec<String> = args.into_iter().map(|a| a.trim().to_string()).collect();
+    let lo: f64 = argv
+        .first()
+        .and_then(|a| a.parse().ok())
+        .context("usage: :clamp <min> <max>")?;
+    let hi: f64 = argv
+        .get(1)
+        .and_then(|a| a.parse().ok())
+        .context("usage: :clamp <min> <max>")?;
+    if lo > hi {
+        anyhow::bail!("min ({lo}) must not exceed max ({hi})");
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = clamp_lines(&s, lo, hi);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Multiply each numeric line by `factor`; non-numeric lines pass through. Pure —
+/// unit tested.
+fn scale_lines(input: &str, factor: f64) -> String {
+    input
+        .lines()
+        .map(|line| match line.trim().parse::<f64>() {
+            Ok(v) => fmt_stat(v * factor),
+            Err(_) => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn scale_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let factor: f64 = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .context("usage: :scale <factor>")?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = scale_lines(&s, factor);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Add `delta` to each numeric line; non-numeric lines pass through. Pure — unit
+/// tested.
+fn offset_lines(input: &str, delta: f64) -> String {
+    input
+        .lines()
+        .map(|line| match line.trim().parse::<f64>() {
+            Ok(v) => fmt_stat(v + delta),
+            Err(_) => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn offset_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let delta: f64 = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .context("usage: :offset <n>")?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = offset_lines(&s, delta);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Replace each numeric line with its absolute value; non-numeric lines pass
+/// through. Pure — unit tested.
+fn abs_lines(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| match line.trim().parse::<f64>() {
+            Ok(v) => fmt_stat(v.abs()),
+            Err(_) => line.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn abs_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = abs_lines(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Wrap each bare http(s) URL in Markdown link syntax `[url](url)`. Pure — unit
+/// tested.
+fn linkify(input: &str) -> String {
+    let re = regex::Regex::new(r#"https?://[^\s<>()\[\]"]+"#).expect("valid regex");
+    re.replace_all(input, "[$0]($0)").to_string()
+}
+
+fn linkify_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = linkify(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Replace each `[text](url)` Markdown link with just its `text` (markdown → plain).
+/// Pure — unit tested.
+fn strip_markdown_links(input: &str) -> String {
+    let re = regex::Regex::new(r"\[([^\]]*)\]\([^)]*\)").expect("valid regex");
+    re.replace_all(input, "$1").to_string()
+}
+
+fn strip_markdown_links_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = strip_markdown_links(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Remove paired Markdown emphasis markers — bold (`**`/`__`), italic (`*`/`_`), and
+/// inline code (`` ` ``) — leaving the inner text. Double markers are handled before
+/// single ones. Pure — unit tested.
+fn strip_emphasis(input: &str) -> String {
+    let mut s = input.to_string();
+    for pat in [r"\*\*([^*]+)\*\*", r"__([^_]+)__", r"\*([^*]+)\*", r"_([^_]+)_", r"`([^`]+)`"] {
+        let re = regex::Regex::new(pat).expect("valid regex");
+        s = re.replace_all(&s, "$1").to_string();
+    }
+    s
+}
+
+fn strip_emphasis_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = strip_emphasis(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Remove `<!-- ... -->` HTML/Markdown comments, including multi-line ones, from
+/// `input`. Pure — unit tested.
+fn strip_html_comments(input: &str) -> String {
+    let re = regex::Regex::new(r"(?s)<!--.*?-->").expect("valid regex");
+    re.replace_all(input, "").to_string()
+}
+
+fn strip_html_comments_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = strip_html_comments(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Remove trailing commas that appear just before a closing `}` or `]` (turning
+/// JSON5/JS into strict JSON). Pure — unit tested.
+fn remove_trailing_commas(input: &str) -> String {
+    let re = regex::Regex::new(r",(\s*[}\]])").expect("valid regex");
+    re.replace_all(input, "$1").to_string()
+}
+
+fn remove_trailing_commas_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = remove_trailing_commas(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Add a trailing comma before a closing `}` or `]` when the last value doesn't
+/// already have one (cleaner git diffs in JS/JSON5). Empty `{}`/`[]` are left alone.
+/// Idempotent. Pure — unit tested.
+fn add_trailing_commas(input: &str) -> String {
+    let re = regex::Regex::new(r"([^\s,{\[(])(\s*[}\]])").expect("valid regex");
+    re.replace_all(input, "$1,$2").to_string()
+}
+
+fn add_trailing_commas_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = add_trailing_commas(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Convert straight quotes to typographic curly quotes: a quote after whitespace or
+/// an opening bracket becomes an opening quote, otherwise a closing quote (so
+/// apostrophes become `’`). The inverse of `:straighten-quotes`. Pure — unit tested.
+fn smart_quotes(input: &str) -> String {
+    let chars: Vec<char> = input.chars().collect();
+    let mut out = String::new();
+    for (i, &c) in chars.iter().enumerate() {
+        let opening = i == 0 || chars[i - 1].is_whitespace() || matches!(chars[i - 1], '(' | '[' | '{');
+        match c {
+            '"' => out.push(if opening { '\u{201C}' } else { '\u{201D}' }),
+            '\'' => out.push(if opening { '\u{2018}' } else { '\u{2019}' }),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+fn smart_quotes_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = smart_quotes(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Apply typographic substitutions: `---` → em dash, `--` → en dash, `...` →
+/// ellipsis (longest sequences first). Pure — unit tested.
+fn typographic_dashes(input: &str) -> String {
+    input
+        .replace("---", "\u{2014}")
+        .replace("--", "\u{2013}")
+        .replace("...", "\u{2026}")
+}
+
+fn typographic_dashes_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = typographic_dashes(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Normalize typographic punctuation back to ASCII: curly quotes → `"`/`'`, em dash
+/// → `---`, en dash → `--`, ellipsis → `...`. Pure — unit tested.
+fn de_typography(input: &str) -> String {
+    input
+        .replace(['\u{201C}', '\u{201D}'], "\"")
+        .replace(['\u{2018}', '\u{2019}'], "'")
+        .replace('\u{2014}', "---")
+        .replace('\u{2013}', "--")
+        .replace('\u{2026}', "...")
+}
+
+fn de_typography_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = de_typography(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Transliterate common accented Latin characters to their ASCII equivalents (e.g.
+/// `é`→`e`, `ß`→`ss`, `æ`→`ae`); other characters are left as-is. Pure — unit tested.
+fn to_ascii(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for c in input.chars() {
+        let repl: &str = match c {
+            'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ā' => "a",
+            'è' | 'é' | 'ê' | 'ë' | 'ē' => "e",
+            'ì' | 'í' | 'î' | 'ï' | 'ī' => "i",
+            'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ø' | 'ō' => "o",
+            'ù' | 'ú' | 'û' | 'ü' | 'ū' => "u",
+            'ñ' => "n",
+            'ç' => "c",
+            'ý' | 'ÿ' => "y",
+            'À' | 'Á' | 'Â' | 'Ã' | 'Ä' | 'Å' => "A",
+            'È' | 'É' | 'Ê' | 'Ë' => "E",
+            'Ì' | 'Í' | 'Î' | 'Ï' => "I",
+            'Ò' | 'Ó' | 'Ô' | 'Õ' | 'Ö' | 'Ø' => "O",
+            'Ù' | 'Ú' | 'Û' | 'Ü' => "U",
+            'Ñ' => "N",
+            'Ç' => "C",
+            'ß' => "ss",
+            'æ' => "ae",
+            'Æ' => "AE",
+            'œ' => "oe",
+            'Œ' => "OE",
+            other => {
+                out.push(other);
+                continue;
+            }
+        };
+        out.push_str(repl);
+    }
+    out
+}
+
+fn to_ascii_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = to_ascii(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// NATO phonetic alphabet for A–Z and 0–9.
+const NATO: &[(char, &str)] = &[
+    ('a', "Alfa"), ('b', "Bravo"), ('c', "Charlie"), ('d', "Delta"), ('e', "Echo"),
+    ('f', "Foxtrot"), ('g', "Golf"), ('h', "Hotel"), ('i', "India"), ('j', "Juliett"),
+    ('k', "Kilo"), ('l', "Lima"), ('m', "Mike"), ('n', "November"), ('o', "Oscar"),
+    ('p', "Papa"), ('q', "Quebec"), ('r', "Romeo"), ('s', "Sierra"), ('t', "Tango"),
+    ('u', "Uniform"), ('v', "Victor"), ('w', "Whiskey"), ('x', "Xray"), ('y', "Yankee"), ('z', "Zulu"),
+    ('0', "Zero"), ('1', "One"), ('2', "Two"), ('3', "Three"), ('4', "Four"),
+    ('5', "Five"), ('6', "Six"), ('7', "Seven"), ('8', "Eight"), ('9', "Nine"),
+];
+
+/// Spell `input` in the NATO phonetic alphabet (case-insensitive), space-joined.
+/// Characters not in the alphabet are dropped. Pure — unit tested.
+fn nato_spell(input: &str) -> String {
+    input
+        .chars()
+        .filter_map(|c| {
+            let lc = c.to_ascii_lowercase();
+            NATO.iter().find(|(ch, _)| *ch == lc).map(|(_, w)| *w)
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn nato_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = nato_spell(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Transpose a whitespace-separated grid: row `i`, column `j` becomes row `j`,
+/// column `i`. Short rows are padded with empty cells. Pure — unit tested.
+fn transpose_grid(input: &str) -> String {
+    let rows: Vec<Vec<&str>> = input.lines().map(|l| l.split_whitespace().collect()).collect();
+    let cols = rows.iter().map(Vec::len).max().unwrap_or(0);
+    (0..cols)
+        .map(|c| rows.iter().map(|r| r.get(c).copied().unwrap_or("")).collect::<Vec<_>>().join(" "))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn transpose_grid_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = transpose_grid(&s);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Repeat each line `n` times consecutively. Pure — unit tested.
+fn repeat_lines(input: &str, n: usize) -> String {
+    input
+        .lines()
+        .flat_map(|l| (0..n).map(move |_| l))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn repeat_lines_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .filter(|n| *n >= 1)
+        .context("usage: :repeat-lines <n>")?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = repeat_lines(&s, n);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+
 /// `:grep-word` — search the project for the whole word under the cursor (a
 /// lightweight "find references"), jumpable in the Run console.
 fn grep_word(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -2194,6 +6969,52 @@ pub(crate) fn git_stash_pop(cx: &mut compositor::Context, args: Args, event: Pro
         Err(e) => cx.editor.set_error(format!("git stash pop: {e}")),
     }
     Ok(())
+}
+
+/// Run `git <git_args> -- <current file>` in the file's directory and report
+/// `<verb> <path>` (or the git error). Shared by `:git-stage`/`:git-unstage`.
+fn git_on_current_file(
+    cx: &mut compositor::Context,
+    git_args: &[&str],
+    verb: &str,
+) -> anyhow::Result<()> {
+    let path = doc!(cx.editor)
+        .path()
+        .map(ToOwned::to_owned)
+        .context("buffer has no file")?;
+    let dir = path
+        .parent()
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let mut cmd = std::process::Command::new("git");
+    cmd.arg("-C").arg(&dir);
+    for a in git_args {
+        cmd.arg(a);
+    }
+    cmd.arg("--").arg(&path);
+    let out = cmd.output().map_err(|e| anyhow!("git: {e}"))?;
+    if out.status.success() {
+        cx.editor.set_status(format!("{verb} {}", path.display()));
+        Ok(())
+    } else {
+        bail!("git {verb}: {}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+}
+
+/// `:git-stage` — stage the current buffer's file (`git add`).
+fn git_stage(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    git_on_current_file(cx, &["add"], "staged")
+}
+
+/// `:git-unstage` — unstage the current buffer's file (`git reset HEAD`).
+fn git_unstage(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    git_on_current_file(cx, &["reset", "-q", "HEAD"], "unstaged")
 }
 
 /// Reload all open documents from disk (after an external working-tree change
@@ -4625,6 +9446,30 @@ fn leading_number(line: &str) -> f64 {
 /// Sort the lines of `block`, preserving its trailing-newline shape. The sort is
 /// stable on ties. `numeric` orders by each line's leading number; `insensitive`
 /// folds case; `reverse` flips the result; `unique` drops duplicate lines.
+/// Sort the lines of `block` by their `field`-th whitespace-separated field
+/// (1-based), stably, ties broken by the whole line. Lines with fewer fields sort
+/// by an empty key (first). Preserves the trailing-newline shape. Pure — unit tested.
+fn sort_lines_by_field(block: &str, field: usize) -> String {
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<&str> = block.split('\n').collect();
+    if had_trailing {
+        lines.pop();
+    }
+    let key = |l: &str| -> String {
+        l.split_whitespace()
+            .nth(field.saturating_sub(1))
+            .unwrap_or("")
+            .to_string()
+    };
+    lines.sort_by(|a, b| key(a).cmp(&key(b)).then_with(|| a.cmp(b)));
+    let out = lines.join("\n");
+    if had_trailing {
+        format!("{out}\n")
+    } else {
+        out
+    }
+}
+
 fn sort_line_block(
     block: &str,
     reverse: bool,
@@ -4660,6 +9505,40 @@ fn sort_line_block(
         out.push('\n');
     }
     out
+}
+
+/// `:sort-by-field <n>` — sort the selected lines by their Nth whitespace field.
+fn sort_by_field(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let field: usize = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(1).max(1);
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let (first, last) = primary_line_range(doc, view.id);
+    let region_start = slice.line_to_char(first);
+    let region_end = if last + 1 < total {
+        slice.line_to_char(last + 1)
+    } else {
+        slice.len_chars()
+    };
+    if region_start >= region_end {
+        return Ok(());
+    }
+    let block: String = slice.slice(region_start..region_end).chunks().collect();
+    let sorted = sort_lines_by_field(&block, field);
+    if sorted == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(sorted.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
 }
 
 fn sort_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -5351,6 +10230,170 @@ fn lorem_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     }
     let n: usize = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(30);
     insert_at_cursors(cx, lorem(n));
+    Ok(())
+}
+
+/// Clamp a target char offset to a valid cursor position in a buffer of `len`
+/// chars (a cursor may sit on the final EOF position). Pure — unit tested.
+fn clamp_offset(n: usize, len: usize) -> usize {
+    n.min(len)
+}
+
+/// `:goto-offset <n>` — move the cursor to absolute character offset `n` (useful
+/// when a tool reports a char offset). Clamped to the buffer.
+fn goto_offset(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .context("usage: :goto-offset <n>")?;
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    let pos = clamp_offset(n, doc.text().len_chars());
+    doc.set_selection(view.id, zemacs_core::Selection::point(pos));
+    view.ensure_cursor_in_view(doc, scrolloff);
+    Ok(())
+}
+
+/// Parse an integer in any common notation: `0x`/`0X` hex, `0b`/`0B` binary,
+/// `0o`/`0O` octal, or plain decimal, with an optional leading `-`. Pure — unit tested.
+fn parse_int_any(s: &str) -> Option<i64> {
+    let t = s.trim();
+    let (neg, t) = match t.strip_prefix('-') {
+        Some(rest) => (true, rest),
+        None => (false, t),
+    };
+    let v = if let Some(h) = t.strip_prefix("0x").or_else(|| t.strip_prefix("0X")) {
+        i64::from_str_radix(h, 16).ok()?
+    } else if let Some(b) = t.strip_prefix("0b").or_else(|| t.strip_prefix("0B")) {
+        i64::from_str_radix(b, 2).ok()?
+    } else if let Some(o) = t.strip_prefix("0o").or_else(|| t.strip_prefix("0O")) {
+        i64::from_str_radix(o, 8).ok()?
+    } else {
+        t.parse::<i64>().ok()?
+    };
+    Some(if neg { -v } else { v })
+}
+
+/// Format an integer's decimal/hex/octal/binary representations. Pure — unit tested.
+fn format_bases(n: i64) -> String {
+    format!("{n} = 0x{n:x} = 0o{n:o} = 0b{n:b}")
+}
+
+/// `:bases` — show the selected integer in decimal, hex, octal, and binary.
+fn show_bases(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let s = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let sel = doc.selection(view.id).primary();
+        text.slice(sel.from()..sel.to()).chunks().collect::<String>()
+    };
+    match parse_int_any(&s) {
+        Some(n) => cx.editor.set_status(format_bases(n)),
+        None => bail!("not an integer: {}", s.trim()),
+    }
+    Ok(())
+}
+
+/// Add `delta` to every unsigned-integer run in `s`, leaving the rest of the text
+/// intact (e.g. `v1.2.3` +1 → `v2.3.4`). Pure — unit tested.
+fn increment_numbers(s: &str, delta: i64) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i].is_ascii_digit() {
+            let start = i;
+            while i < chars.len() && chars[i].is_ascii_digit() {
+                i += 1;
+            }
+            let num: i64 = chars[start..i].iter().collect::<String>().parse().unwrap_or(0);
+            out.push_str(&(num + delta).to_string());
+        } else {
+            out.push(chars[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
+/// Zero-pad every integer run in `s` to at least `width` digits (never truncates).
+/// Pure — unit tested.
+fn pad_numbers(s: &str, width: usize) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i].is_ascii_digit() {
+            let start = i;
+            while i < chars.len() && chars[i].is_ascii_digit() {
+                i += 1;
+            }
+            let num: String = chars[start..i].iter().collect();
+            out.push_str(&format!("{num:0>width$}"));
+        } else {
+            out.push(chars[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
+/// `:pad-numbers <width>` — zero-pad every integer in the selection to `width`
+/// digits (so e.g. `1,2,10` sort correctly).
+fn pad_numbers_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let width: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .context("usage: :pad-numbers <width>")?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = pad_numbers(&s, width);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// `:increment-numbers [n]` — add `n` (default 1; negative to decrement) to every
+/// integer in the selection.
+fn increment_numbers_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let delta: i64 = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(1);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let s: String = text.slice(..).slice(sel.from()..sel.to()).chunks().collect();
+    let new = increment_numbers(&s, delta);
+    if new == s {
+        return Ok(());
+    }
+    let transaction = Transaction::change(text, std::iter::once((sel.from(), sel.to(), Some(new.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
     Ok(())
 }
 
@@ -6942,6 +11985,1513 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "shell-quote",
+        aliases: &["sh-quote"],
+        doc: "Wrap the selection in safe shell single-quotes.",
+        fun: shell_quote_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "wrap-tag",
+        aliases: &["tag"],
+        doc: "Wrap each selection in <tag>…</tag>.",
+        fun: wrap_tag_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "csv-column",
+        aliases: &["csv-col"],
+        doc: "Replace the selected CSV/TSV with just its Nth column (1-based).",
+        fun: csv_column_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "code-fence",
+        aliases: &["fence"],
+        doc: "Wrap the selection in a fenced Markdown code block with optional language.",
+        fun: code_fence_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "md-table",
+        aliases: &["table-fmt"],
+        doc: "Align the selected Markdown pipe table (pad columns, rebuild separator row).",
+        fun: md_table_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-query",
+        aliases: &["json-get"],
+        doc: "Replace the selected JSON with the value at a dot-path (e.g. users.0.name).",
+        fun: json_query_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-flatten",
+        aliases: &["json-paths"],
+        doc: "Flatten the selected JSON into greppable `path = value` lines.",
+        fun: json_flatten_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-to-csv",
+        aliases: &["json-csv"],
+        doc: "Convert the selected JSON array of objects to CSV (sorted header union).",
+        fun: json_to_csv_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-unflatten",
+        aliases: &["json-unpaths"],
+        doc: "Rebuild nested JSON from `path = value` lines (inverse of :json-flatten).",
+        fun: json_unflatten_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "toml-to-json",
+        aliases: &["toml-json"],
+        doc: "Convert the selected TOML to pretty-printed JSON.",
+        fun: toml_to_json_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-to-toml",
+        aliases: &["json-toml"],
+        doc: "Convert the selected JSON to pretty-printed TOML.",
+        fun: json_to_toml_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-sort",
+        aliases: &["json-sort-array"],
+        doc: "Sort the selected JSON array (optionally by an object field: :json-sort name).",
+        fun: json_sort_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-pick",
+        aliases: &["json-select"],
+        doc: "Keep only the named keys in the selected JSON object/array (e.g. :json-pick name age).",
+        fun: json_pick_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-omit",
+        aliases: &["json-drop"],
+        doc: "Drop the named keys from the selected JSON object/array (e.g. :json-omit password).",
+        fun: json_omit_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-unique",
+        aliases: &["json-uniq"],
+        doc: "Remove duplicate elements from the selected JSON array (optionally by a field).",
+        fun: json_unique_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-group-by",
+        aliases: &["json-group"],
+        doc: "Group the selected JSON array of objects by a field (e.g. :json-group-by city).",
+        fun: json_group_by_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extract",
+        aliases: &["matches"],
+        doc: "Replace the selection with every regex match, one per line (group 1 if present).",
+        fun: extract_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filter",
+        aliases: &["keep-lines"],
+        doc: "Keep only the selected lines matching a regex (in-buffer grep).",
+        fun: filter_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "reject",
+        aliases: &["remove-lines"],
+        doc: "Drop the selected lines matching a regex (in-buffer grep -v).",
+        fun: reject_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "count-matches",
+        aliases: &["count-regex"],
+        doc: "Report how many regex matches (and matching lines) are in the selection.",
+        fun: count_matches_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "uniq-count",
+        aliases: &["frequency"],
+        doc: "Collapse the selected lines to `count line`, sorted by frequency (uniq -c | sort -rn).",
+        fun: uniq_count_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "stats",
+        aliases: &["describe"],
+        doc: "Show count/sum/mean/min/max of the numbers in the selection (non-destructive).",
+        fun: stats_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "seq",
+        aliases: &["sequence"],
+        doc: "Insert an integer sequence, one per line: :seq <start> <end> [step].",
+        fun: seq_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(3)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "field",
+        aliases: &["cut"],
+        doc: "Keep only the Nth whitespace field of each selected line (awk '{print $N}').",
+        fun: field_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "running-total",
+        aliases: &["cumsum"],
+        doc: "Replace each numeric line with the cumulative total so far.",
+        fun: running_total_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "diff-lines",
+        aliases: &["deltas"],
+        doc: "Replace each numeric line with its delta from the previous (inverse of running-total).",
+        fun: diff_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sum-column",
+        aliases: &["sumcol"],
+        doc: "Sum the Nth whitespace field across the selected lines (non-destructive).",
+        fun: sum_column_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shuffle",
+        aliases: &["shuf"],
+        doc: "Randomly reorder the selected lines (Fisher-Yates).",
+        fun: shuffle_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sample",
+        aliases: &["random-lines"],
+        doc: "Keep N random lines from the selection, preserving order (:sample 10).",
+        fun: sample_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "jsonl-to-json",
+        aliases: &["jsonl-json"],
+        doc: "Convert the selected JSONL/NDJSON (one value per line) to a JSON array.",
+        fun: jsonl_to_json_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-to-jsonl",
+        aliases: &["json-jsonl"],
+        doc: "Convert the selected JSON array to JSONL (one compact value per line).",
+        fun: json_to_jsonl_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "head",
+        aliases: &["first-lines"],
+        doc: "Keep only the first N lines of the selection (:head 10).",
+        fun: head_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tail",
+        aliases: &["last-lines"],
+        doc: "Keep only the last N lines of the selection (:tail 10).",
+        fun: tail_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rev",
+        aliases: &["reverse-each-line"],
+        doc: "Reverse the characters of each selected line independently (Unix rev).",
+        fun: rev_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-table",
+        aliases: &["json-tbl"],
+        doc: "Render the selected JSON array of objects as an aligned plain-text table.",
+        fun: json_table_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "hexdump",
+        aliases: &["xxd"],
+        doc: "Render the selection as an xxd-style hex dump (offset, hex bytes, ASCII).",
+        fun: hexdump_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dedup",
+        aliases: &["unique-lines"],
+        doc: "Remove all duplicate lines globally, keeping first occurrence and order.",
+        fun: dedup_all_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "caesar",
+        aliases: &["shift-letters"],
+        doc: "Caesar-shift the selection's letters by N (e.g. :caesar 13 = ROT13; N may be negative).",
+        fun: caesar_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "base32-encode",
+        aliases: &["base32"],
+        doc: "Base32-encode the selection (RFC 4648).",
+        fun: base32_encode_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "base32-decode",
+        aliases: &["unbase32"],
+        doc: "Base32-decode the selection (RFC 4648).",
+        fun: base32_decode_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "crc32",
+        aliases: &["checksum"],
+        doc: "Show the CRC32 (IEEE) checksum of the selection in hex and decimal (non-destructive).",
+        fun: crc32_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rot47",
+        aliases: &["rot-47"],
+        doc: "Apply ROT47 to the selection (rotates all printable ASCII; self-inverse).",
+        fun: rot47_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "morse-encode",
+        aliases: &["morse"],
+        doc: "Encode the selection (A-Z, 0-9) to Morse code (words separated by /).",
+        fun: morse_encode_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "morse-decode",
+        aliases: &["unmorse"],
+        doc: "Decode Morse code in the selection back to text.",
+        fun: morse_decode_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "human-bytes",
+        aliases: &["humanize-size"],
+        doc: "Convert each numeric line (a byte count) to a human-readable size like 1.5 KiB.",
+        fun: human_bytes_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ordinal",
+        aliases: &["ordinalize"],
+        doc: "Convert each numeric line to its ordinal (1 → 1st, 22 → 22nd).",
+        fun: ordinal_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "to-snake",
+        aliases: &["snake-case"],
+        doc: "Convert the selected identifier to snake_case.",
+        fun: to_snake_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "to-kebab",
+        aliases: &["kebab-case"],
+        doc: "Convert the selected identifier to kebab-case.",
+        fun: to_kebab_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "to-camel",
+        aliases: &["camel-case"],
+        doc: "Convert the selected identifier to camelCase.",
+        fun: to_camel_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "to-pascal",
+        aliases: &["pascal-case"],
+        doc: "Convert the selected identifier to PascalCase.",
+        fun: to_pascal_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "to-constant",
+        aliases: &["screaming-snake", "upper-snake"],
+        doc: "Convert the selected identifier to CONSTANT_CASE.",
+        fun: to_constant_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "to-binary",
+        aliases: &["text-to-binary"],
+        doc: "Convert the selection to space-separated 8-bit binary.",
+        fun: to_binary_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "from-binary",
+        aliases: &["binary-to-text"],
+        doc: "Convert space-separated binary in the selection back to text.",
+        fun: from_binary_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "natural-sort",
+        aliases: &["sort-natural"],
+        doc: "Sort the selected lines in natural order (file2 before file10).",
+        fun: natural_sort_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pad-right",
+        aliases: &["ljust"],
+        doc: "Left-justify each selected line, padding with spaces to a minimum width.",
+        fun: pad_right_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pad-left",
+        aliases: &["rjust"],
+        doc: "Right-justify each selected line, padding with spaces to a minimum width.",
+        fun: pad_left_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-keys",
+        aliases: &["json-fields"],
+        doc: "List the keys of the selected JSON object (or union across an array of objects).",
+        fun: json_keys_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-type",
+        aliases: &["json-describe"],
+        doc: "Show the JSON type and size of the selection in the status line (non-destructive).",
+        fun: json_type_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "after",
+        aliases: &["cut-after"],
+        doc: "Keep the text after the first <delimiter> on each selected line.",
+        fun: after_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "before",
+        aliases: &["cut-before"],
+        doc: "Keep the text before the first <delimiter> on each selected line.",
+        fun: before_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "swapcase",
+        aliases: &["invert-case"],
+        doc: "Invert the case of each character in the selection (Hello → hELLO).",
+        fun: swapcase_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "strip-invisible",
+        aliases: &["strip-zero-width"],
+        doc: "Remove zero-width / invisible Unicode characters from the selection.",
+        fun: strip_invisible_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "lines-to-json",
+        aliases: &["lines-to-array"],
+        doc: "Wrap the selected lines into a JSON array of strings.",
+        fun: lines_to_json_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-to-lines",
+        aliases: &["array-to-lines"],
+        doc: "Unwrap a JSON array in the selection into one line per element.",
+        fun: json_to_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "checkbox-list",
+        aliases: &["task-list"],
+        doc: "Turn the selected lines into a Markdown task list (- [ ] item).",
+        fun: checkbox_list_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unwrap-paragraphs",
+        aliases: &["unhardwrap"],
+        doc: "Join hard-wrapped lines within each paragraph into single lines.",
+        fun: unwrap_paragraphs_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sql-in",
+        aliases: &["sql-in-list"],
+        doc: "Build a SQL IN-list ('a', 'b', 'c') from the selected lines.",
+        fun: sql_in_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dec-to-hex",
+        aliases: &["to-hex-num"],
+        doc: "Convert each decimal number line to hexadecimal.",
+        fun: dec_to_hex_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "hex-to-dec",
+        aliases: &["from-hex-num"],
+        doc: "Convert each hexadecimal number line to decimal.",
+        fun: hex_to_dec_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unicode-escape",
+        aliases: &["u-escape"],
+        doc: "Escape non-ASCII characters in the selection as \\u{XXXX}.",
+        fun: unicode_escape_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unicode-unescape",
+        aliases: &["u-unescape"],
+        doc: "Decode \\u{XXXX} and \\uXXXX escapes in the selection back to characters.",
+        fun: unicode_unescape_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sort-by-length",
+        aliases: &["sortlen"],
+        doc: "Sort the selected lines by length (shortest first).",
+        fun: sort_by_length_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "count-unique",
+        aliases: &["distinct-count"],
+        doc: "Report the number of distinct vs total selected lines (non-destructive).",
+        fun: count_unique_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rotate-lines",
+        aliases: &["rotate"],
+        doc: "Cyclically rotate the selected lines by N (negative rotates the other way).",
+        fun: rotate_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unquote-lines",
+        aliases: &["strip-quotes-lines"],
+        doc: "Remove surrounding quotes from each selected line independently.",
+        fun: unquote_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "quote-lines",
+        aliases: &["quote-each"],
+        doc: "Wrap each selected line in double quotes (escaping \\ and \").",
+        fun: quote_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "repeat",
+        aliases: &["repeat-text"],
+        doc: "Repeat the selected text N times (:repeat 3).",
+        fun: repeat_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "capitalize-lines",
+        aliases: &["capitalize"],
+        doc: "Uppercase the first letter of each selected line.",
+        fun: capitalize_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "remove-blank-lines",
+        aliases: &["remove-empty"],
+        doc: "Remove all blank (whitespace-only) lines from the selection.",
+        fun: remove_blank_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "trim-lines",
+        aliases: &["trim"],
+        doc: "Trim leading and trailing whitespace from each selected line.",
+        fun: trim_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "kv-to-json",
+        aliases: &["env-to-json"],
+        doc: "Convert key=value / key: value lines in the selection to a JSON object.",
+        fun: kv_to_json_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-to-kv",
+        aliases: &["json-to-env"],
+        doc: "Convert the selected JSON object to key=value lines.",
+        fun: json_to_kv_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-pluck",
+        aliases: &["json-values-of"],
+        doc: "Extract one field's value from each object in a JSON array, one per line.",
+        fun: json_pluck_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "to-html-list",
+        aliases: &["html-list"],
+        doc: "Convert the selected lines into an HTML <ul> list.",
+        fun: to_html_list_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "from-html-list",
+        aliases: &["html-list-to-lines"],
+        doc: "Extract <li> item text from an HTML list in the selection, one per line.",
+        fun: from_html_list_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "csv-to-html-table",
+        aliases: &["csv-to-html"],
+        doc: "Convert the selected CSV/TSV (first row = headers) to an HTML <table>.",
+        fun: csv_to_html_table_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "slugify-lines",
+        aliases: &["slug-lines"],
+        doc: "Slugify each selected line independently (URL-friendly).",
+        fun: slugify_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "lines-to-csv-row",
+        aliases: &["join-csv"],
+        doc: "Join the selected lines into one CSV row (RFC-4180 quoting).",
+        fun: lines_to_csv_row_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "csv-row-to-lines",
+        aliases: &["split-csv"],
+        doc: "Split a CSV row in the selection into one field per line (quote-aware).",
+        fun: csv_row_to_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "deslugify",
+        aliases: &["unslugify"],
+        doc: "Turn a slug back into a Title Cased phrase (hyphens/underscores to spaces).",
+        fun: deslugify_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "csv-to-tsv",
+        aliases: &["csv-tsv"],
+        doc: "Convert the selected CSV to tab-separated values (quote-aware).",
+        fun: csv_to_tsv_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tsv-to-csv",
+        aliases: &["tsv-csv"],
+        doc: "Convert the selected TSV to CSV (RFC-4180 quoting).",
+        fun: tsv_to_csv_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "strip-line-numbers",
+        aliases: &["unnumber"],
+        doc: "Remove a leading line number (and separator) from each selected line.",
+        fun: strip_line_numbers_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "markdown-link",
+        aliases: &["md-link"],
+        doc: "Wrap the selected text as a Markdown link [text](url).",
+        fun: markdown_link_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extract-urls",
+        aliases: &["urls"],
+        doc: "Replace the selection with the http(s) URLs found in it, one per line.",
+        fun: extract_urls_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extract-emails",
+        aliases: &["emails"],
+        doc: "Replace the selection with the email addresses found in it, one per line.",
+        fun: extract_emails_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extract-ips",
+        aliases: &["ips"],
+        doc: "Replace the selection with the IPv4 addresses found in it, one per line.",
+        fun: extract_ips_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extract-quoted",
+        aliases: &["quoted-strings"],
+        doc: "Replace the selection with the contents of double-quoted strings, one per line.",
+        fun: extract_quoted_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extract-between",
+        aliases: &["between"],
+        doc: "Extract substrings between <start> and <end> delimiters, one per line.",
+        fun: extract_between_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "wrap-with",
+        aliases: &["surround-with"],
+        doc: "Wrap the selection with the given text on both sides (:wrap-with **).",
+        fun: wrap_with_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extract-numbers",
+        aliases: &["numbers"],
+        doc: "Replace the selection with the numbers found in it, one per line.",
+        fun: extract_numbers_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "json-validate",
+        aliases: &["json-check"],
+        doc: "Report whether the selection is valid JSON (with error location) — non-destructive.",
+        fun: json_validate_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "csv-validate",
+        aliases: &["csv-check"],
+        doc: "Check all CSV rows have the same field count (non-destructive).",
+        fun: csv_validate_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ordered-list",
+        aliases: &["numbered-list"],
+        doc: "Turn the selected lines into a Markdown ordered list (1. 2. 3.).",
+        fun: ordered_list_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "strip-list-markers",
+        aliases: &["unlist"],
+        doc: "Strip leading bullet/number/checkbox list markers from each selected line.",
+        fun: strip_list_markers_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sort-words",
+        aliases: &["sort-fields"],
+        doc: "Sort the whitespace-separated words within each selected line.",
+        fun: sort_words_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unique-words",
+        aliases: &["dedup-words"],
+        doc: "Remove duplicate words within each selected line (first occurrence kept).",
+        fun: unique_words_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sum-fields",
+        aliases: &["row-sum"],
+        doc: "Replace each line with the sum of its numeric fields (row total).",
+        fun: sum_fields_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "avg-fields",
+        aliases: &["row-avg"],
+        doc: "Replace each line with the mean of its numeric fields.",
+        fun: avg_fields_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "max-fields",
+        aliases: &["row-max"],
+        doc: "Replace each line with the maximum of its numeric fields.",
+        fun: max_fields_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "min-fields",
+        aliases: &["row-min"],
+        doc: "Replace each line with the minimum of its numeric fields.",
+        fun: min_fields_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "range-fields",
+        aliases: &["row-range"],
+        doc: "Replace each line with the range (max - min) of its numeric fields.",
+        fun: range_fields_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "to-env-export",
+        aliases: &["export-vars"],
+        doc: "Prefix each KEY=value line with `export ` (turn a .env into shell exports).",
+        fun: to_env_export_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "strip-export",
+        aliases: &["unexport"],
+        doc: "Remove a leading `export ` from each selected line.",
+        fun: strip_export_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dos2unix",
+        aliases: &["crlf-to-lf"],
+        doc: "Convert CRLF/CR line endings in the selection to LF.",
+        fun: dos2unix_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unix2dos",
+        aliases: &["lf-to-crlf"],
+        doc: "Convert LF line endings in the selection to CRLF.",
+        fun: unix2dos_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "percent-of-total",
+        aliases: &["percentages"],
+        doc: "Replace each numeric line with its percentage of the column total.",
+        fun: percent_of_total_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "running-max",
+        aliases: &["cummax"],
+        doc: "Replace each numeric line with the running maximum so far.",
+        fun: running_max_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "running-min",
+        aliases: &["cummin"],
+        doc: "Replace each numeric line with the running minimum so far.",
+        fun: running_min_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "to-fixed",
+        aliases: &["round-to"],
+        doc: "Format each numeric line to N decimal places (:to-fixed 2).",
+        fun: to_fixed_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "clamp",
+        aliases: &["clip"],
+        doc: "Clamp each numeric line to the [min, max] range (:clamp 0 100).",
+        fun: clamp_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "scale",
+        aliases: &["multiply-by"],
+        doc: "Multiply each numeric line by a factor (:scale 1.5).",
+        fun: scale_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "offset",
+        aliases: &["add-to-each"],
+        doc: "Add N to each numeric line (:offset 10; negative subtracts).",
+        fun: offset_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "abs",
+        aliases: &["absolute-value"],
+        doc: "Replace each numeric line with its absolute value.",
+        fun: abs_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "linkify",
+        aliases: &["auto-link"],
+        doc: "Wrap bare URLs in the selection with Markdown link syntax [url](url).",
+        fun: linkify_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "strip-markdown-links",
+        aliases: &["unlink"],
+        doc: "Replace [text](url) Markdown links with just their text.",
+        fun: strip_markdown_links_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "strip-emphasis",
+        aliases: &["strip-md-emphasis"],
+        doc: "Remove Markdown bold/italic/code emphasis markers from the selection.",
+        fun: strip_emphasis_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "strip-html-comments",
+        aliases: &["strip-comments-html"],
+        doc: "Remove <!-- ... --> HTML/Markdown comments from the selection.",
+        fun: strip_html_comments_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "remove-trailing-commas",
+        aliases: &["fix-trailing-commas"],
+        doc: "Remove trailing commas before } or ] (JSON5/JS to strict JSON).",
+        fun: remove_trailing_commas_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "add-trailing-commas",
+        aliases: &["trailing-commas"],
+        doc: "Add trailing commas before } or ] (cleaner JS/JSON5 diffs).",
+        fun: add_trailing_commas_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "smart-quotes",
+        aliases: &["curly-quotes"],
+        doc: "Convert straight quotes to typographic curly quotes (context-aware).",
+        fun: smart_quotes_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "typographic-dashes",
+        aliases: &["em-dash"],
+        doc: "Convert --- to em dash, -- to en dash, ... to ellipsis.",
+        fun: typographic_dashes_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "de-typography",
+        aliases: &["ascii-punctuation"],
+        doc: "Normalize curly quotes/dashes/ellipsis back to ASCII punctuation.",
+        fun: de_typography_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "to-ascii",
+        aliases: &["transliterate"],
+        doc: "Transliterate accented Latin characters to ASCII (café → cafe).",
+        fun: to_ascii_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nato",
+        aliases: &["phonetic"],
+        doc: "Spell the selection in the NATO phonetic alphabet (A → Alfa).",
+        fun: nato_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transpose-grid",
+        aliases: &["transpose-ws"],
+        doc: "Transpose a whitespace-separated grid (rows become columns).",
+        fun: transpose_grid_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "repeat-lines",
+        aliases: &["duplicate-each"],
+        doc: "Repeat each selected line N times (:repeat-lines 3).",
+        fun: repeat_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "rename-word",
         aliases: &["rename-local"],
         doc: "Rename every whole-word occurrence of the symbol under the cursor in this buffer.",
@@ -7210,6 +13760,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["rla"],
         doc: "Discard changes and reload all documents from the source files.",
         fun: reload_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "git-stage",
+        aliases: &["stage", "git-add"],
+        doc: "Stage the current buffer's file (git add).",
+        fun: git_stage,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "git-unstage",
+        aliases: &["unstage"],
+        doc: "Unstage the current buffer's file (git reset HEAD).",
+        fun: git_unstage,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
@@ -7752,6 +14324,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "goto-offset",
+        aliases: &["goto-char"],
+        doc: "Move the cursor to an absolute character offset.",
+        fun: goto_offset,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pad-numbers",
+        aliases: &["zero-pad"],
+        doc: "Zero-pad every integer in the selection to <width> digits.",
+        fun: pad_numbers_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "increment-numbers",
+        aliases: &["incr-numbers"],
+        doc: "Add N (default 1; negative to decrement) to every integer in the selection.",
+        fun: increment_numbers_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bases",
+        aliases: &["base-info"],
+        doc: "Show the selected integer in decimal, hex, octal, and binary.",
+        fun: show_bases,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "lorem",
         aliases: &["lipsum"],
         doc: "Insert N words (default 30) of lorem-ipsum placeholder text.",
@@ -7877,6 +14493,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["tabularize"],
         doc: "Align the selected lines on a delimiter (default `=`) so it shares a column.",
         fun: align_delimiter,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sort-by-field",
+        aliases: &["sortf"],
+        doc: "Sort the selected lines by their Nth whitespace field (default 1).",
+        fun: sort_by_field,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
@@ -8986,6 +15613,1397 @@ mod vim_set_tests {
     use super::*;
 
     #[test]
+    fn csv_column_extracts() {
+        use super::csv_column;
+        assert_eq!(csv_column("a,b,c\n1,2,3", 2), "b\n2");
+        assert_eq!(csv_column("a,b,c\n1,2,3", 1), "a\n1");
+        // tab-separated auto-detected; cells trimmed
+        assert_eq!(csv_column("x\ty\n1\t 2 ", 2), "y\n2");
+        // out-of-range column → empty cells
+        assert_eq!(csv_column("a,b\n1,2", 5), "\n");
+    }
+
+    #[test]
+    fn code_fence_wraps() {
+        use super::code_fence;
+        assert_eq!(code_fence("let x = 1;", "rust"), "```rust\nlet x = 1;\n```");
+        // no language → bare fence
+        assert_eq!(code_fence("plain", ""), "```\nplain\n```");
+        // trailing newlines on the body are trimmed so the closing fence is flush
+        assert_eq!(code_fence("a\nb\n\n", "sh"), "```sh\na\nb\n```");
+    }
+
+    #[test]
+    fn md_table_aligns() {
+        use super::format_md_table;
+        // ragged input → padded columns, regenerated separator
+        assert_eq!(
+            format_md_table("| a | b |\n|---|---|\n| 1 | 22 |"),
+            "| a   | b   |\n| --- | --- |\n| 1   | 22  |"
+        );
+        // right-align marker preserved and applied
+        assert_eq!(
+            format_md_table("| x |\n| --: |\n| 1 |"),
+            "|   x |\n| --: |\n|   1 |"
+        );
+        // not a table (no separator row) → unchanged
+        assert_eq!(format_md_table("hello\nworld"), "hello\nworld");
+    }
+
+    #[test]
+    fn json_query_navigates() {
+        use super::json_query;
+        let j = r#"{"users":[{"name":"Alice"},{"name":"Bob"}],"count":2}"#;
+        // scalar leaf
+        assert_eq!(json_query(j, "count").unwrap(), "2");
+        // array index + nested key; string leaf keeps its JSON quotes
+        assert_eq!(json_query(j, "users.1.name").unwrap(), "\"Bob\"");
+        // leading dot tolerated; object leaf pretty-printed
+        assert_eq!(json_query(j, ".users.0").unwrap(), "{\n  \"name\": \"Alice\"\n}");
+        // missing key, bad index, and descending into a scalar all error
+        assert!(json_query(j, "nope").is_err());
+        assert!(json_query(j, "users.9").is_err());
+        assert!(json_query(j, "count.x").is_err());
+        // invalid JSON input errors rather than panics
+        assert!(json_query("not json", "a").is_err());
+    }
+
+    #[test]
+    fn json_flatten_leaves() {
+        use super::json_flatten;
+        let j = r#"{"users":[{"name":"Alice"}],"count":2,"ok":true,"meta":{},"tags":[]}"#;
+        // compare as a sorted set so the assertion is independent of key order
+        let mut got: Vec<String> = json_flatten(j).unwrap().lines().map(String::from).collect();
+        got.sort();
+        let mut want = vec![
+            "users.0.name = \"Alice\"".to_string(),
+            "count = 2".to_string(),
+            "ok = true".to_string(),
+            "meta = {}".to_string(),
+            "tags = []".to_string(),
+        ];
+        want.sort();
+        assert_eq!(got, want);
+        // invalid JSON errors rather than panicking
+        assert!(json_flatten("nope").is_err());
+    }
+
+    #[test]
+    fn json_to_csv_converts() {
+        use super::json_to_csv;
+        let j = r#"[{"name":"Alice","age":30},{"name":"Bob","city":"NYC"}]"#;
+        // header = sorted union (age, city, name); missing fields → empty cells
+        assert_eq!(json_to_csv(j).unwrap(), "age,city,name\n30,,Alice\n,NYC,Bob");
+        // values needing RFC-4180 escaping get quoted/doubled
+        let q = r#"[{"note":"a,b","say":"he \"hi\""}]"#;
+        assert_eq!(json_to_csv(q).unwrap(), "note,say\n\"a,b\",\"he \"\"hi\"\"\"");
+        // non-array and non-object-element inputs error
+        assert!(json_to_csv(r#"{"a":1}"#).is_err());
+        assert!(json_to_csv(r#"[1,2]"#).is_err());
+    }
+
+    #[test]
+    fn json_unflatten_rebuilds() {
+        use super::{json_flatten, json_unflatten};
+        let flat = "users.0.name = \"Alice\"\nusers.1.name = \"Bob\"\ncount = 2\nok = true";
+        let json = json_unflatten(flat).unwrap();
+        let v: Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["count"], serde_json::json!(2));
+        assert_eq!(v["ok"], serde_json::json!(true));
+        assert_eq!(v["users"][0]["name"], serde_json::json!("Alice"));
+        assert_eq!(v["users"][1]["name"], serde_json::json!("Bob"));
+        // round-trips against json_flatten (compare as sorted line sets)
+        let mut reflat: Vec<String> = json_flatten(&json).unwrap().lines().map(String::from).collect();
+        let mut orig: Vec<String> = flat.lines().map(String::from).collect();
+        reflat.sort();
+        orig.sort();
+        assert_eq!(reflat, orig);
+        // malformed line, bad value, and type-conflicting paths all error
+        assert!(json_unflatten("no equals here").is_err());
+        assert!(json_unflatten("a = nope").is_err());
+        assert!(json_unflatten("a = 1\na.b = 2").is_err());
+    }
+
+    #[test]
+    fn toml_json_roundtrip() {
+        use super::{json_to_toml, toml_to_json};
+        let t = "name = \"zemacs\"\ncount = 3\n\n[server]\nport = 8080\n";
+        let json = toml_to_json(t).unwrap();
+        let v: Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["name"], serde_json::json!("zemacs"));
+        assert_eq!(v["count"], serde_json::json!(3));
+        assert_eq!(v["server"]["port"], serde_json::json!(8080));
+        // back to TOML, parse again → structure preserved
+        let back = json_to_toml(&json).unwrap();
+        let v2: toml::Value = toml::from_str(&back).unwrap();
+        assert_eq!(v2["server"]["port"].as_integer(), Some(8080));
+        // invalid inputs error
+        assert!(toml_to_json("= = =").is_err());
+        assert!(json_to_toml("not json").is_err());
+        // JSON null has no TOML representation
+        assert!(json_to_toml(r#"{"x": null}"#).is_err());
+    }
+
+    #[test]
+    fn json_sort_orders() {
+        use super::json_sort_array;
+        // scalar numbers ascending
+        assert_eq!(json_sort_array("[3,1,2]", None).unwrap(), "[\n  1,\n  2,\n  3\n]");
+        // strings lexically
+        assert_eq!(
+            json_sort_array(r#"["banana","apple"]"#, None).unwrap(),
+            "[\n  \"apple\",\n  \"banana\"\n]"
+        );
+        // array of objects by field
+        let j = r#"[{"n":"b","a":2},{"n":"a","a":1}]"#;
+        let v: Value = serde_json::from_str(&json_sort_array(j, Some("n")).unwrap()).unwrap();
+        assert_eq!(v[0]["n"], serde_json::json!("a"));
+        assert_eq!(v[1]["n"], serde_json::json!("b"));
+        // sort by a numeric field
+        let v2: Value = serde_json::from_str(&json_sort_array(j, Some("a")).unwrap()).unwrap();
+        assert_eq!(v2[0]["a"], serde_json::json!(1));
+        // non-array and invalid inputs error
+        assert!(json_sort_array("{}", None).is_err());
+        assert!(json_sort_array("nope", None).is_err());
+    }
+
+    #[test]
+    fn json_pick_projects() {
+        use super::json_pick;
+        let j = r#"[{"name":"Alice","age":30,"city":"NYC"},{"name":"Bob","age":5}]"#;
+        let v: Value = serde_json::from_str(&json_pick(j, &["name", "age"]).unwrap()).unwrap();
+        // array projected: only requested keys survive
+        assert_eq!(v[0]["name"], serde_json::json!("Alice"));
+        assert_eq!(v[0]["age"], serde_json::json!(30));
+        assert!(v[0].get("city").is_none());
+        assert_eq!(v[1]["name"], serde_json::json!("Bob"));
+        // single object projected; absent key silently skipped
+        let o = r#"{"a":1,"b":2,"c":3}"#;
+        let v2: Value = serde_json::from_str(&json_pick(o, &["a", "c", "z"]).unwrap()).unwrap();
+        assert_eq!(v2["a"], serde_json::json!(1));
+        assert_eq!(v2["c"], serde_json::json!(3));
+        assert!(v2.get("b").is_none());
+        assert!(v2.get("z").is_none());
+        // invalid JSON errors
+        assert!(json_pick("nope", &["a"]).is_err());
+    }
+
+    #[test]
+    fn json_omit_drops() {
+        use super::{json_omit, json_pick};
+        let j = r#"[{"name":"Alice","age":30,"pw":"x"},{"name":"Bob","age":5,"pw":"y"}]"#;
+        let v: Value = serde_json::from_str(&json_omit(j, &["pw"]).unwrap()).unwrap();
+        // dropped key gone, others retained
+        assert!(v[0].get("pw").is_none());
+        assert_eq!(v[0]["name"], serde_json::json!("Alice"));
+        assert_eq!(v[1]["age"], serde_json::json!(5));
+        // omit is the complement of pick: omitting all-but-one == picking that one
+        let o = r#"{"a":1,"b":2,"c":3}"#;
+        assert_eq!(json_omit(o, &["b", "c"]).unwrap(), json_pick(o, &["a"]).unwrap());
+        // invalid JSON errors
+        assert!(json_omit("nope", &["a"]).is_err());
+    }
+
+    #[test]
+    fn json_unique_dedups() {
+        use super::json_unique;
+        // scalar dedup preserves first-seen order
+        assert_eq!(json_unique("[1,2,2,3,1]", None).unwrap(), "[\n  1,\n  2,\n  3\n]");
+        // dedup by field: first occurrence of each key wins
+        let j = r#"[{"id":1,"v":"a"},{"id":1,"v":"b"},{"id":2,"v":"c"}]"#;
+        let v: Value = serde_json::from_str(&json_unique(j, Some("id")).unwrap()).unwrap();
+        assert_eq!(v.as_array().unwrap().len(), 2);
+        assert_eq!(v[0]["v"], serde_json::json!("a"));
+        assert_eq!(v[1]["id"], serde_json::json!(2));
+        // non-array and invalid inputs error
+        assert!(json_unique("{}", None).is_err());
+        assert!(json_unique("nope", None).is_err());
+    }
+
+    #[test]
+    fn json_group_by_buckets() {
+        use super::json_group_by;
+        let j = r#"[{"city":"NYC","n":"a"},{"city":"LA","n":"b"},{"city":"NYC","n":"c"}]"#;
+        let v: Value = serde_json::from_str(&json_group_by(j, "city").unwrap()).unwrap();
+        // two buckets; NYC keeps both members in input order
+        assert_eq!(v["NYC"].as_array().unwrap().len(), 2);
+        assert_eq!(v["LA"].as_array().unwrap().len(), 1);
+        assert_eq!(v["NYC"][0]["n"], serde_json::json!("a"));
+        assert_eq!(v["NYC"][1]["n"], serde_json::json!("c"));
+        // missing field groups under "null"
+        let v2: Value = serde_json::from_str(&json_group_by(r#"[{"x":1},{"y":2}]"#, "x").unwrap()).unwrap();
+        assert_eq!(v2["1"].as_array().unwrap().len(), 1);
+        assert_eq!(v2["null"].as_array().unwrap().len(), 1);
+        // non-array and invalid inputs error
+        assert!(json_group_by("{}", "x").is_err());
+        assert!(json_group_by("nope", "x").is_err());
+    }
+
+    #[test]
+    fn extract_matches_lists() {
+        use super::extract_matches;
+        // no capture group → whole matches, one per line
+        assert_eq!(extract_matches("a1 b2 c3", r"\d").unwrap(), "1\n2\n3");
+        // capture group → group 1 text
+        assert_eq!(extract_matches("key=val; x=y", r"(\w+)=").unwrap(), "key\nx");
+        // no matches → empty
+        assert_eq!(extract_matches("abc", r"\d").unwrap(), "");
+        // invalid pattern errors rather than panicking
+        assert!(extract_matches("x", r"(").is_err());
+    }
+
+    #[test]
+    fn filter_lines_keeps_and_drops() {
+        use super::filter_lines;
+        let text = "apple\nbanana\ncherry\napricot";
+        // keep matching (grep)
+        assert_eq!(filter_lines(text, "^a", true).unwrap(), "apple\napricot");
+        // drop matching (grep -v)
+        assert_eq!(filter_lines(text, "^a", false).unwrap(), "banana\ncherry");
+        // no keep-matches → empty
+        assert_eq!(filter_lines(text, "zzz", true).unwrap(), "");
+        // invalid pattern errors
+        assert!(filter_lines(text, "(", true).is_err());
+    }
+
+    #[test]
+    fn count_matches_counts() {
+        use super::count_matches;
+        // 4 digit matches across the first two of three lines
+        let (m, l) = count_matches("a1 b2\nc3 d4\nxx", r"\d").unwrap();
+        assert_eq!(m, 4);
+        assert_eq!(l, 2);
+        // no matches
+        assert_eq!(count_matches("abc", r"\d").unwrap(), (0, 0));
+        // invalid pattern errors
+        assert!(count_matches("x", "(").is_err());
+    }
+
+    #[test]
+    fn uniq_count_tallies() {
+        use super::uniq_count;
+        let t = "apple\nbanana\napple\ncherry\napple\nbanana";
+        // sorted by count desc; ties (none here) would keep first-seen order
+        assert_eq!(uniq_count(t), "3 apple\n2 banana\n1 cherry");
+        // empty input → empty output
+        assert_eq!(uniq_count(""), "");
+        // tie keeps first-seen order (x before y)
+        assert_eq!(uniq_count("x\ny\nx\ny"), "2 x\n2 y");
+    }
+
+    #[test]
+    fn number_stats_summarizes() {
+        use super::{fmt_stat, number_stats};
+        let s = number_stats(&[1.0, 2.0, 3.0, 4.0, 5.0]).unwrap();
+        assert_eq!(s, (5, 15.0, 3.0, 1.0, 5.0));
+        // empty slice → None
+        assert!(number_stats(&[]).is_none());
+        // compact float formatting: integers bare, fractions trimmed
+        assert_eq!(fmt_stat(3.0), "3");
+        assert_eq!(fmt_stat(3.5), "3.5");
+        assert_eq!(fmt_stat(10.0 / 3.0), "3.3333");
+    }
+
+    #[test]
+    fn gen_seq_generates() {
+        use super::gen_seq;
+        assert_eq!(gen_seq(1, 5, 1).unwrap(), "1\n2\n3\n4\n5");
+        assert_eq!(gen_seq(0, 10, 5).unwrap(), "0\n5\n10");
+        // descending
+        assert_eq!(gen_seq(5, 1, -2).unwrap(), "5\n3\n1");
+        // single element when start == end
+        assert_eq!(gen_seq(3, 3, 1).unwrap(), "3");
+        // direction disagrees with step sign → empty
+        assert_eq!(gen_seq(5, 1, 1).unwrap(), "");
+        // zero step errors
+        assert!(gen_seq(1, 5, 0).is_err());
+    }
+
+    #[test]
+    fn cut_field_extracts() {
+        use super::cut_field;
+        assert_eq!(cut_field("a b c\n1 2 3", 2), "b\n2");
+        // runs of whitespace collapse; leading space ignored
+        assert_eq!(cut_field("  x   y  ", 1), "x");
+        assert_eq!(cut_field("  x   y  ", 2), "y");
+        // out-of-range field → empty line
+        assert_eq!(cut_field("only\na b", 3), "\n");
+    }
+
+    #[test]
+    fn running_total_accumulates() {
+        use super::running_total;
+        assert_eq!(running_total("1\n2\n3\n4"), "1\n3\n6\n10");
+        // negatives and a fractional result
+        assert_eq!(running_total("10\n-3\n5"), "10\n7\n12");
+        assert_eq!(running_total("1.5\n2.5"), "1.5\n4");
+        // non-numeric line passes through and doesn't affect the accumulator
+        assert_eq!(running_total("1\nfoo\n2"), "1\nfoo\n3");
+    }
+
+    #[test]
+    fn diff_lines_deltas() {
+        use super::{diff_lines, running_total};
+        // exact inverse of running_total
+        assert_eq!(diff_lines("1\n3\n6\n10"), "1\n2\n3\n4");
+        assert_eq!(diff_lines("10\n7\n12"), "10\n-3\n5");
+        // round-trips: diff then cumulative-sum restores the original
+        assert_eq!(running_total(&diff_lines("5\n9\n2\n8")), "5\n9\n2\n8");
+        // non-numeric passes through; reference stays at previous numeric
+        assert_eq!(diff_lines("1\nfoo\n3"), "1\nfoo\n2");
+    }
+
+    #[test]
+    fn sum_column_totals() {
+        use super::sum_column;
+        assert_eq!(sum_column("a 1\nb 2\nc 3", 2), (6.0, 3));
+        // non-numeric and missing cells are skipped, not counted
+        assert_eq!(sum_column("x 10\ny notnum\nz 5", 2), (15.0, 2));
+        assert_eq!(sum_column("a\nb", 2), (0.0, 0));
+        // first column
+        assert_eq!(sum_column("3 x\n4 y", 1), (7.0, 2));
+    }
+
+    #[test]
+    fn shuffle_lines_permutes() {
+        use super::shuffle_lines;
+        let input = "a\nb\nc\nd\ne\nf\ng";
+        let out = shuffle_lines(input, 12345);
+        // result is a permutation: same multiset of lines
+        let mut got: Vec<&str> = out.lines().collect();
+        let mut orig: Vec<&str> = input.lines().collect();
+        got.sort_unstable();
+        orig.sort_unstable();
+        assert_eq!(got, orig);
+        // deterministic for a fixed seed
+        assert_eq!(shuffle_lines(input, 12345), out);
+        // different seed generally reorders differently (these two seeds differ here)
+        assert_ne!(shuffle_lines(input, 999), shuffle_lines(input, 12345));
+        // single line is unchanged
+        assert_eq!(shuffle_lines("x", 7), "x");
+    }
+
+    #[test]
+    fn sample_lines_subsets() {
+        use super::sample_lines;
+        let input = "a\nb\nc\nd\ne\nf";
+        let out = sample_lines(input, 3, 42);
+        // exactly n lines, all drawn from the input
+        let orig: Vec<&str> = input.lines().collect();
+        let got: Vec<&str> = out.lines().collect();
+        assert_eq!(got.len(), 3);
+        assert!(got.iter().all(|l| orig.contains(l)));
+        // order is preserved (result is a subsequence): indices strictly increasing
+        let positions: Vec<usize> = got.iter().map(|l| orig.iter().position(|o| o == l).unwrap()).collect();
+        assert!(positions.windows(2).all(|w| w[0] < w[1]));
+        // deterministic for a fixed seed
+        assert_eq!(sample_lines(input, 3, 42), out);
+        // n >= line count → unchanged
+        assert_eq!(sample_lines(input, 10, 1), input);
+    }
+
+    #[test]
+    fn jsonl_json_roundtrip() {
+        use super::{json_to_jsonl, jsonl_to_json};
+        let jsonl = "{\"a\":1}\n{\"a\":2}\n\n{\"a\":3}";
+        let json = jsonl_to_json(jsonl).unwrap();
+        let v: Value = serde_json::from_str(&json).unwrap();
+        // blank line skipped → 3 elements
+        assert_eq!(v.as_array().unwrap().len(), 3);
+        assert_eq!(v[1]["a"], serde_json::json!(2));
+        // back to JSONL: compact, one per line (blank line not reproduced)
+        assert_eq!(json_to_jsonl(&json).unwrap(), "{\"a\":1}\n{\"a\":2}\n{\"a\":3}");
+        // errors: bad JSON line, and non-array input to the inverse
+        assert!(jsonl_to_json("{not json}").is_err());
+        assert!(json_to_jsonl("{}").is_err());
+    }
+
+    #[test]
+    fn head_tail_truncate() {
+        use super::{head_lines, tail_lines};
+        let t = "a\nb\nc\nd\ne";
+        assert_eq!(head_lines(t, 2), "a\nb");
+        assert_eq!(tail_lines(t, 2), "d\ne");
+        // n exceeding the line count returns everything
+        assert_eq!(head_lines("a\nb", 5), "a\nb");
+        assert_eq!(tail_lines("a\nb", 5), "a\nb");
+        // head n + tail (len-n) together reconstruct the whole
+        assert_eq!(format!("{}\n{}", head_lines(t, 2), tail_lines(t, 3)), t);
+    }
+
+    #[test]
+    fn rev_each_line_reverses() {
+        use super::rev_each_line;
+        // each line reversed independently; line order preserved
+        assert_eq!(rev_each_line("abc\ndef"), "cba\nfed");
+        // precomposed accent preserved
+        assert_eq!(rev_each_line("héllo"), "olléh");
+        // double application is the identity
+        assert_eq!(rev_each_line(&rev_each_line("hello\nworld")), "hello\nworld");
+    }
+
+    #[test]
+    fn json_to_table_aligns() {
+        use super::json_to_table;
+        let j = r#"[{"name":"Alice","age":30},{"name":"Bob","age":5}]"#;
+        // headers = sorted union (age, name); columns left-aligned to widest cell
+        assert_eq!(
+            json_to_table(j).unwrap(),
+            "age  name\n---  -----\n30   Alice\n5    Bob"
+        );
+        // non-array and non-object-element inputs error
+        assert!(json_to_table(r#"{"a":1}"#).is_err());
+        assert!(json_to_table("[1,2]").is_err());
+    }
+
+    #[test]
+    fn hexdump_formats() {
+        use super::hexdump;
+        let d = hexdump("hello");
+        assert!(d.starts_with("00000000  68 65 6c 6c 6f"));
+        assert!(d.ends_with("|hello|"));
+        assert_eq!(d.lines().count(), 1);
+        // non-printable bytes render as '.' in the gutter
+        let d2 = hexdump("a\tb");
+        assert!(d2.contains("61 09 62"));
+        assert!(d2.ends_with("|a.b|"));
+        // 17 bytes wrap to a second row at offset 00000010
+        let d3 = hexdump("0123456789abcdefX");
+        assert_eq!(d3.lines().count(), 2);
+        assert!(d3.lines().nth(1).unwrap().starts_with("00000010"));
+        assert!(d3.lines().nth(1).unwrap().ends_with("|X|"));
+        // empty input → empty output
+        assert_eq!(hexdump(""), "");
+    }
+
+    #[test]
+    fn dedup_all_lines_global() {
+        use super::dedup_all_lines;
+        // non-adjacent duplicates removed; first occurrence + order kept
+        assert_eq!(dedup_all_lines("a\nb\na\nc\nb"), "a\nb\nc");
+        assert_eq!(dedup_all_lines("x\nx\nx"), "x");
+        // already-unique input unchanged
+        assert_eq!(dedup_all_lines("a\nb\nc"), "a\nb\nc");
+    }
+
+    #[test]
+    fn caesar_shifts() {
+        use super::caesar;
+        assert_eq!(caesar("abc", 1), "bcd");
+        assert_eq!(caesar("xyz", 3), "abc"); // wraps within case
+        // shift 13 == ROT13, case + punctuation preserved
+        assert_eq!(caesar("Hello, World!", 13), "Uryyb, Jbeyq!");
+        // identity and negative shifts (normalized mod 26)
+        assert_eq!(caesar("abc", 0), "abc");
+        assert_eq!(caesar("bcd", -1), "abc");
+        // shift then unshift is the identity, digits untouched
+        assert_eq!(caesar(&caesar("Test123", 5), -5), "Test123");
+    }
+
+    #[test]
+    fn base32_roundtrip() {
+        use super::{base32_decode, base32_encode};
+        // RFC 4648 test vector
+        assert_eq!(base32_encode("foobar"), "MZXW6YTBOI======");
+        assert_eq!(base32_decode("MZXW6YTBOI======").unwrap(), "foobar");
+        // round-trips arbitrary text
+        assert_eq!(base32_decode(&base32_encode("Hello, World!")).unwrap(), "Hello, World!");
+        // decode tolerates lowercase and whitespace/padding
+        assert_eq!(base32_decode("mzxw6ytb oi======").unwrap(), "foobar");
+        // empty, and invalid char errors
+        assert_eq!(base32_encode(""), "");
+        assert!(base32_decode("11111111").is_err());
+    }
+
+    #[test]
+    fn crc32_known_vectors() {
+        use super::crc32;
+        assert_eq!(crc32(""), 0);
+        // canonical CRC32 check value
+        assert_eq!(crc32("123456789"), 0xCBF4_3926);
+        // pangram vector
+        assert_eq!(crc32("The quick brown fox jumps over the lazy dog"), 0x414F_A339);
+    }
+
+    #[test]
+    fn rot47_rotates() {
+        use super::rot47;
+        assert_eq!(rot47("Hello"), "w6==@");
+        // self-inverse over mixed printable text
+        assert_eq!(rot47(&rot47("Hello, World! 123")), "Hello, World! 123");
+        // spaces are left untouched
+        assert!(rot47("a b").contains(' '));
+        assert_eq!(rot47(""), "");
+    }
+
+    #[test]
+    fn morse_roundtrip() {
+        use super::{morse_decode, morse_encode};
+        assert_eq!(morse_encode("SOS"), "... --- ...");
+        assert_eq!(morse_decode("... --- ..."), "SOS");
+        // word separator ` / ` and case-insensitive encode
+        assert_eq!(morse_encode("Hi there"), ".... .. / - .... . .-. .");
+        // round-trips uppercase words and digits
+        assert_eq!(morse_decode(&morse_encode("HELLO WORLD 42")), "HELLO WORLD 42");
+        assert_eq!(morse_encode(""), "");
+    }
+
+    #[test]
+    fn human_bytes_formats() {
+        use super::{human_bytes, humanize_lines};
+        assert_eq!(human_bytes(0.0), "0 B");
+        assert_eq!(human_bytes(512.0), "512 B");
+        assert_eq!(human_bytes(1024.0), "1.0 KiB");
+        assert_eq!(human_bytes(1536.0), "1.5 KiB");
+        assert_eq!(human_bytes(1048576.0), "1.0 MiB");
+        assert_eq!(human_bytes(1073741824.0), "1.0 GiB");
+        // per-line: numbers converted, others passed through
+        assert_eq!(humanize_lines("2048\nfoo\n1073741824"), "2.0 KiB\nfoo\n1.0 GiB");
+    }
+
+    #[test]
+    fn ordinal_suffixes() {
+        use super::{ordinal_suffix, ordinalize_lines};
+        assert_eq!(ordinal_suffix(1), "st");
+        assert_eq!(ordinal_suffix(2), "nd");
+        assert_eq!(ordinal_suffix(3), "rd");
+        assert_eq!(ordinal_suffix(4), "th");
+        // 11-13 are always "th" despite ending in 1/2/3
+        assert_eq!(ordinal_suffix(11), "th");
+        assert_eq!(ordinal_suffix(12), "th");
+        assert_eq!(ordinal_suffix(13), "th");
+        // ...but 21/22/23/111 follow the normal rule / exception correctly
+        assert_eq!(ordinal_suffix(21), "st");
+        assert_eq!(ordinal_suffix(112), "th");
+        assert_eq!(ordinal_suffix(121), "st");
+        // per-line, non-numeric passes through
+        assert_eq!(ordinalize_lines("1\n2\n22\nfoo"), "1st\n2nd\n22nd\nfoo");
+    }
+
+    #[test]
+    fn case_conversions() {
+        use super::{split_identifier_words, to_camel, to_kebab, to_pascal, to_snake};
+        // word splitting across all input conventions
+        assert_eq!(split_identifier_words("myVariableName"), ["my", "variable", "name"]);
+        assert_eq!(split_identifier_words("my_variable_name"), ["my", "variable", "name"]);
+        assert_eq!(split_identifier_words("my-variable-name"), ["my", "variable", "name"]);
+        assert_eq!(split_identifier_words("MyVariableName"), ["my", "variable", "name"]);
+        assert_eq!(split_identifier_words("my variable name"), ["my", "variable", "name"]);
+        // acronym followed by a word splits correctly
+        assert_eq!(split_identifier_words("HTTPSConnection"), ["https", "connection"]);
+        // rendering into each target case (from any source form)
+        assert_eq!(to_snake("myVariableName"), "my_variable_name");
+        assert_eq!(to_kebab("MyVariableName"), "my-variable-name");
+        assert_eq!(to_camel("my_variable_name"), "myVariableName");
+        assert_eq!(to_pascal("my-variable-name"), "MyVariableName");
+        // round-trip snake -> camel -> snake
+        assert_eq!(to_snake(&to_camel("foo_bar_baz")), "foo_bar_baz");
+    }
+
+    #[test]
+    fn to_constant_case() {
+        use super::to_constant;
+        assert_eq!(to_constant("myVariableName"), "MY_VARIABLE_NAME");
+        assert_eq!(to_constant("my-var"), "MY_VAR");
+        assert_eq!(to_constant("already_snake"), "ALREADY_SNAKE");
+    }
+
+    #[test]
+    fn binary_roundtrip() {
+        use super::{from_binary, to_binary};
+        assert_eq!(to_binary("A"), "01000001");
+        assert_eq!(to_binary("AB"), "01000001 01000010");
+        assert_eq!(from_binary("01000001 01000010").unwrap(), "AB");
+        // round-trips arbitrary text (incl. punctuation)
+        assert_eq!(from_binary(&to_binary("Hi!")).unwrap(), "Hi!");
+        // invalid binary digit errors
+        assert!(from_binary("01000002").is_err());
+    }
+
+    #[test]
+    fn natural_sort_orders() {
+        use super::natural_sort_lines;
+        // numbers compared by value, not lexically
+        assert_eq!(natural_sort_lines("file10\nfile2\nfile1"), "file1\nfile2\nfile10");
+        assert_eq!(natural_sort_lines("img12\nimg2\nimg1\nimg100"), "img1\nimg2\nimg12\nimg100");
+        // shorter prefix sorts first ("a" < "a2" < "b")
+        assert_eq!(natural_sort_lines("b\na2\na"), "a\na2\nb");
+        // leading zeros: equal value, fewer digits first
+        assert_eq!(natural_sort_lines("x010\nx10\nx9"), "x9\nx10\nx010");
+    }
+
+    #[test]
+    fn pad_lines_justifies() {
+        use super::pad_lines;
+        // left-justify (pad on the right)
+        assert_eq!(pad_lines("a\nbb\nccc", 3, true), "a  \nbb \nccc");
+        // right-justify (pad on the left)
+        assert_eq!(pad_lines("a\nbb", 3, false), "  a\n bb");
+        // lines already at/over width are untouched
+        assert_eq!(pad_lines("toolong", 3, true), "toolong");
+    }
+
+    #[test]
+    fn json_keys_lists() {
+        use super::json_keys;
+        // single object: keys (BTreeMap-sorted), one per line
+        assert_eq!(json_keys(r#"{"name":"a","age":1}"#).unwrap(), "age\nname");
+        // array of objects: union of keys, first-seen order across elements
+        assert_eq!(json_keys(r#"[{"a":1},{"b":2},{"a":3}]"#).unwrap(), "a\nb");
+        // array of non-objects yields no keys
+        assert_eq!(json_keys("[1,2]").unwrap(), "");
+        // scalar errors
+        assert!(json_keys("42").is_err());
+    }
+
+    #[test]
+    fn json_describe_types() {
+        use super::json_describe;
+        assert_eq!(json_describe("42").unwrap(), "number (42)");
+        assert_eq!(json_describe("[1,2,3]").unwrap(), "array (3 elements)");
+        assert_eq!(json_describe(r#"{"a":1,"b":2}"#).unwrap(), "object (2 keys)");
+        assert_eq!(json_describe(r#""hi""#).unwrap(), "string (len 2)");
+        assert_eq!(json_describe("true").unwrap(), "boolean (true)");
+        assert_eq!(json_describe("null").unwrap(), "null");
+        assert!(json_describe("nope").is_err());
+    }
+
+    #[test]
+    fn cut_lines_splits() {
+        use super::cut_lines;
+        // keep after the first delimiter
+        assert_eq!(cut_lines("key=val\nfoo=bar", "=", true), "val\nbar");
+        // keep before
+        assert_eq!(cut_lines("key=val\nfoo=bar", "=", false), "key\nfoo");
+        // only the FIRST occurrence splits
+        assert_eq!(cut_lines("a:b:c", ":", true), "b:c");
+        assert_eq!(cut_lines("a:b:c", ":", false), "a");
+        // lines without the delimiter are kept whole
+        assert_eq!(cut_lines("nodelim", "=", true), "nodelim");
+        // multi-char delimiter
+        assert_eq!(cut_lines("a -> b", " -> ", true), "b");
+    }
+
+    #[test]
+    fn swapcase_inverts() {
+        use super::swapcase;
+        assert_eq!(swapcase("Hello World"), "hELLO wORLD");
+        // digits and symbols pass through
+        assert_eq!(swapcase("ABC abc 123!"), "abc ABC 123!");
+        // self-inverse
+        assert_eq!(swapcase(&swapcase("MixedCase42")), "MixedCase42");
+    }
+
+    #[test]
+    fn strip_zero_width_cleans() {
+        use super::strip_zero_width;
+        // ZWSP and BOM removed, visible text intact
+        assert_eq!(strip_zero_width("a\u{200B}b\u{FEFF}c"), "abc");
+        // soft hyphen and zero-width joiner removed
+        assert_eq!(strip_zero_width("co\u{00AD}de\u{200D}x"), "codex");
+        // clean text untouched
+        assert_eq!(strip_zero_width("normal text"), "normal text");
+    }
+
+    #[test]
+    fn lines_json_array_roundtrip() {
+        use super::{json_array_to_lines, lines_to_json_array};
+        assert_eq!(lines_to_json_array("a\nb"), "[\n  \"a\",\n  \"b\"\n]");
+        assert_eq!(json_array_to_lines(r#"["a","b"]"#).unwrap(), "a\nb");
+        // non-string elements render as compact JSON
+        assert_eq!(json_array_to_lines("[1,2,3]").unwrap(), "1\n2\n3");
+        // string round-trip
+        assert_eq!(json_array_to_lines(&lines_to_json_array("x\ny")).unwrap(), "x\ny");
+        // non-array errors
+        assert!(json_array_to_lines("{}").is_err());
+    }
+
+    #[test]
+    fn checkbox_list_builds() {
+        use super::checkbox_list;
+        assert_eq!(checkbox_list("buy milk\nwalk dog"), "- [ ] buy milk\n- [ ] walk dog");
+        // an existing bullet is stripped, not doubled
+        assert_eq!(checkbox_list("- existing"), "- [ ] existing");
+        // blank lines stay blank
+        assert_eq!(checkbox_list("a\n\nb"), "- [ ] a\n\n- [ ] b");
+    }
+
+    #[test]
+    fn unwrap_paragraphs_joins() {
+        use super::unwrap_paragraphs;
+        // lines within a paragraph join with a space; blank line separates paragraphs
+        assert_eq!(unwrap_paragraphs("a\nb\n\nc\nd"), "a b\n\nc d");
+        // single paragraph
+        assert_eq!(unwrap_paragraphs("one\ntwo\nthree"), "one two three");
+        // leading/trailing whitespace on wrapped lines is trimmed before joining
+        assert_eq!(unwrap_paragraphs("a  \n  b"), "a b");
+    }
+
+    #[test]
+    fn sql_in_list_builds() {
+        use super::sql_in_list;
+        assert_eq!(sql_in_list("a\nb\nc"), "('a', 'b', 'c')");
+        // embedded single quote is doubled (SQL escaping)
+        assert_eq!(sql_in_list("O'Brien"), "('O''Brien')");
+        // blank lines are skipped, surrounding whitespace trimmed
+        assert_eq!(sql_in_list("x\n\n  y  "), "('x', 'y')");
+    }
+
+    #[test]
+    fn dec_hex_line_conversion() {
+        use super::{dec_to_hex_lines, hex_to_dec_lines};
+        assert_eq!(dec_to_hex_lines("255\n16\n10"), "ff\n10\na");
+        assert_eq!(hex_to_dec_lines("ff\n10\n0xa"), "255\n16\n10");
+        // negative and non-numeric handling
+        assert_eq!(dec_to_hex_lines("-255\nfoo"), "-ff\nfoo");
+        assert_eq!(hex_to_dec_lines("-ff\nfoo"), "-255\nfoo");
+        // round-trip
+        assert_eq!(hex_to_dec_lines(&dec_to_hex_lines("4096\n42")), "4096\n42");
+    }
+
+    #[test]
+    fn unicode_escape_roundtrip() {
+        use super::{unicode_escape, unicode_unescape};
+        assert_eq!(unicode_escape("café"), "caf\\u{e9}");
+        assert_eq!(unicode_unescape("caf\\u{e9}"), "café");
+        // 4-digit \uXXXX form also decodes
+        assert_eq!(unicode_unescape("caf\\u00e9"), "café");
+        // ASCII passes through unchanged
+        assert_eq!(unicode_escape("ascii 123"), "ascii 123");
+        // round-trips mixed text incl. an astral character
+        assert_eq!(unicode_unescape(&unicode_escape("héllo→🎉")), "héllo→🎉");
+    }
+
+    #[test]
+    fn sort_by_length_orders() {
+        use super::sort_by_length;
+        assert_eq!(sort_by_length("ccc\na\nbb"), "a\nbb\nccc");
+        // equal-length lines break ties lexically (aa before bb)
+        assert_eq!(sort_by_length("bb\nc\naa"), "c\naa\nbb");
+    }
+
+    #[test]
+    fn count_unique_counts() {
+        use super::count_unique;
+        assert_eq!(count_unique("a\nb\na\nc"), (3, 4));
+        assert_eq!(count_unique("x\nx\nx"), (1, 3));
+        assert_eq!(count_unique(""), (0, 0));
+    }
+
+    #[test]
+    fn rotate_lines_cycles() {
+        use super::rotate_lines;
+        assert_eq!(rotate_lines("a\nb\nc\nd", 1), "b\nc\nd\na");
+        // negative rotates the other way
+        assert_eq!(rotate_lines("a\nb\nc\nd", -1), "d\na\nb\nc");
+        // full rotation and zero are identities; large n wraps (mod len)
+        assert_eq!(rotate_lines("a\nb\nc", 3), "a\nb\nc");
+        assert_eq!(rotate_lines("a\nb\nc", 0), "a\nb\nc");
+        assert_eq!(rotate_lines("a\nb\nc", 4), "b\nc\na");
+    }
+
+    #[test]
+    fn unquote_each_line_strips() {
+        use super::unquote_each_line;
+        // each line independently: double, single, and backtick quotes
+        assert_eq!(unquote_each_line("\"a\"\n'b'\n`c`"), "a\nb\nc");
+        // unquoted and mismatched lines pass through
+        assert_eq!(unquote_each_line("\"x\"\nplain\n\"unmatched"), "x\nplain\n\"unmatched");
+        // empty quotes collapse to empty
+        assert_eq!(unquote_each_line("\"\""), "");
+    }
+
+    #[test]
+    fn quote_each_line_wraps() {
+        use super::{quote_each_line, unquote_each_line};
+        assert_eq!(quote_each_line("a\nb"), "\"a\"\n\"b\"");
+        // embedded quote and backslash are escaped
+        assert_eq!(quote_each_line("say \"hi\""), "\"say \\\"hi\\\"\"");
+        assert_eq!(quote_each_line("path\\x"), "\"path\\\\x\"");
+        // plain text round-trips through unquote
+        assert_eq!(unquote_each_line(&quote_each_line("plain")), "plain");
+    }
+
+    #[test]
+    fn capitalize_lines_uppercases_first() {
+        use super::capitalize_lines;
+        assert_eq!(capitalize_lines("hello\nworld"), "Hello\nWorld");
+        // leading indentation/bullet is skipped to the first letter
+        assert_eq!(capitalize_lines("  indented"), "  Indented");
+        assert_eq!(capitalize_lines("- item"), "- Item");
+        // only the first letter changes; rest of the line is untouched
+        assert_eq!(capitalize_lines("hello WORLD"), "Hello WORLD");
+    }
+
+    #[test]
+    fn remove_blank_lines_drops_all() {
+        use super::remove_blank_lines;
+        // every blank/whitespace-only line removed (not just collapsed)
+        assert_eq!(remove_blank_lines("a\n\nb\n  \nc"), "a\nb\nc");
+        // no blanks → unchanged
+        assert_eq!(remove_blank_lines("a\nb"), "a\nb");
+    }
+
+    #[test]
+    fn trim_lines_both_ends() {
+        use super::trim_lines;
+        assert_eq!(trim_lines("  a  \n\tb\t"), "a\nb");
+        // internal whitespace is preserved (unlike normalize-whitespace)
+        assert_eq!(trim_lines("  x  y  "), "x  y");
+    }
+
+    #[test]
+    fn kv_to_json_builds_object() {
+        use super::kv_to_json;
+        let v: Value =
+            serde_json::from_str(&kv_to_json("a=1\nb: two\n# comment\n\nc = three").unwrap()).unwrap();
+        assert_eq!(v["a"], serde_json::json!("1"));
+        assert_eq!(v["b"], serde_json::json!("two"));
+        assert_eq!(v["c"], serde_json::json!("three"));
+        assert!(v.get("# comment").is_none());
+        // value containing a colon keeps everything after the first '='
+        let v2: Value = serde_json::from_str(&kv_to_json("url=http://x").unwrap()).unwrap();
+        assert_eq!(v2["url"], serde_json::json!("http://x"));
+        // a line with no separator errors
+        assert!(kv_to_json("noseparator").is_err());
+    }
+
+    #[test]
+    fn json_to_kv_pairs() {
+        use super::{json_to_kv, kv_to_json};
+        // BTreeMap-sorted keys; string values unquoted
+        assert_eq!(json_to_kv(r#"{"a":"1","b":"two"}"#).unwrap(), "a=1\nb=two");
+        // non-string values render as compact JSON
+        assert_eq!(json_to_kv(r#"{"n":42,"ok":true}"#).unwrap(), "n=42\nok=true");
+        // round-trips string values through kv_to_json
+        let v: Value = serde_json::from_str(&kv_to_json(&json_to_kv(r#"{"x":"y"}"#).unwrap()).unwrap()).unwrap();
+        assert_eq!(v["x"], serde_json::json!("y"));
+        // non-object errors
+        assert!(json_to_kv("[1,2]").is_err());
+    }
+
+    #[test]
+    fn json_pluck_extracts_field() {
+        use super::json_pluck;
+        let j = r#"[{"name":"Alice","age":30},{"name":"Bob","age":5}]"#;
+        assert_eq!(json_pluck(j, "name").unwrap(), "Alice\nBob");
+        // numeric field values rendered compactly
+        assert_eq!(json_pluck(j, "age").unwrap(), "30\n5");
+        // missing field → blank line for that element
+        assert_eq!(json_pluck(r#"[{"a":1},{"b":2}]"#, "a").unwrap(), "1\n");
+        // non-array errors
+        assert!(json_pluck("{}", "x").is_err());
+    }
+
+    #[test]
+    fn to_html_list_builds() {
+        use super::to_html_list;
+        assert_eq!(
+            to_html_list("apple\nbanana"),
+            "<ul>\n  <li>apple</li>\n  <li>banana</li>\n</ul>"
+        );
+        // content is HTML-escaped; blank lines skipped
+        assert_eq!(to_html_list("a < b\n\nx & y"), "<ul>\n  <li>a &lt; b</li>\n  <li>x &amp; y</li>\n</ul>");
+    }
+
+    #[test]
+    fn from_html_list_extracts() {
+        use super::{from_html_list, to_html_list};
+        assert_eq!(from_html_list("<ul>\n  <li>apple</li>\n  <li>banana</li>\n</ul>"), "apple\nbanana");
+        // entities are unescaped
+        assert_eq!(from_html_list("<li>a &lt; b</li>"), "a < b");
+        // round-trips with to_html_list
+        assert_eq!(from_html_list(&to_html_list("x\ny")), "x\ny");
+    }
+
+    #[test]
+    fn csv_to_html_table_builds() {
+        use super::csv_to_html_table;
+        let html = csv_to_html_table("name,age\nAlice,30");
+        assert!(html.starts_with("<table>"));
+        assert!(html.ends_with("</table>"));
+        // header row uses <th>, body rows use <td>
+        assert!(html.contains("<tr><th>name</th><th>age</th></tr>"));
+        assert!(html.contains("<tr><td>Alice</td><td>30</td></tr>"));
+        // empty input → empty output
+        assert_eq!(csv_to_html_table(""), "");
+    }
+
+    #[test]
+    fn slugify_lines_each() {
+        use super::slugify_lines;
+        assert_eq!(slugify_lines("Hello World\nFoo Bar!"), "hello-world\nfoo-bar");
+        // runs of non-alphanumerics collapse; leading/trailing trimmed
+        assert_eq!(slugify_lines("  Multiple   Spaces  "), "multiple-spaces");
+        // numbers retained
+        assert_eq!(slugify_lines("Top 10 Tips"), "top-10-tips");
+    }
+
+    #[test]
+    fn lines_to_csv_row_joins() {
+        use super::lines_to_csv_row;
+        assert_eq!(lines_to_csv_row("a\nb\nc"), "a,b,c");
+        // a field containing a comma is quoted; an embedded quote is doubled
+        assert_eq!(lines_to_csv_row("a,b\nplain\nsay \"hi\""), "\"a,b\",plain,\"say \"\"hi\"\"\"");
+    }
+
+    #[test]
+    fn csv_row_to_lines_splits() {
+        use super::{csv_row_to_lines, lines_to_csv_row};
+        assert_eq!(csv_row_to_lines("a,b,c"), "a\nb\nc");
+        // quoted field with an embedded comma stays whole
+        assert_eq!(csv_row_to_lines("\"a,b\",plain"), "a,b\nplain");
+        // doubled quote decodes to a single quote
+        assert_eq!(csv_row_to_lines("\"say \"\"hi\"\"\",x"), "say \"hi\"\nx");
+        // round-trips with lines_to_csv_row
+        assert_eq!(csv_row_to_lines(&lines_to_csv_row("p\nq,r\ns")), "p\nq,r\ns");
+    }
+
+    #[test]
+    fn deslugify_titleizes() {
+        use super::deslugify;
+        assert_eq!(deslugify("hello-world"), "Hello World");
+        assert_eq!(deslugify("my_cool_post"), "My Cool Post");
+        // numbers retained; mixed separators handled
+        assert_eq!(deslugify("top-10-tips"), "Top 10 Tips");
+        // per-line
+        assert_eq!(deslugify("a-b\nc_d"), "A B\nC D");
+    }
+
+    #[test]
+    fn csv_to_tsv_converts() {
+        use super::csv_to_tsv;
+        assert_eq!(csv_to_tsv("a,b,c"), "a\tb\tc");
+        // quoted comma stays within one cell
+        assert_eq!(csv_to_tsv("\"a,b\",c"), "a,b\tc");
+        // multiple rows
+        assert_eq!(csv_to_tsv("x,y\n1,2"), "x\ty\n1\t2");
+    }
+
+    #[test]
+    fn tsv_to_csv_converts() {
+        use super::{csv_to_tsv, tsv_to_csv};
+        assert_eq!(tsv_to_csv("a\tb\tc"), "a,b,c");
+        // a cell containing a comma gets quoted
+        assert_eq!(tsv_to_csv("a,b\tc"), "\"a,b\",c");
+        // round-trips with csv_to_tsv
+        assert_eq!(tsv_to_csv(&csv_to_tsv("p,q\n\"r,s\",t")), "p,q\n\"r,s\",t");
+    }
+
+    #[test]
+    fn strip_line_numbers_removes_prefix() {
+        use super::strip_line_numbers;
+        assert_eq!(strip_line_numbers("1. apple\n2. banana"), "apple\nbanana");
+        // indented gutter numbers, and ':' / ')' separators
+        assert_eq!(strip_line_numbers("  10  code"), "code");
+        assert_eq!(strip_line_numbers("42: line\n3) item"), "line\nitem");
+        // lines without a leading number are untouched
+        assert_eq!(strip_line_numbers("noprefix"), "noprefix");
+    }
+
+    #[test]
+    fn markdown_link_wraps() {
+        use super::markdown_link;
+        assert_eq!(markdown_link("Google", "https://google.com"), "[Google](https://google.com)");
+        assert_eq!(markdown_link("", "u"), "[](u)");
+    }
+
+    #[test]
+    fn extract_urls_finds() {
+        use super::extract_urls;
+        assert_eq!(
+            extract_urls("see https://a.com and http://b.org/x here"),
+            "https://a.com\nhttp://b.org/x"
+        );
+        // no URLs → empty
+        assert_eq!(extract_urls("no links here"), "");
+    }
+
+    #[test]
+    fn extract_emails_finds() {
+        use super::extract_emails;
+        assert_eq!(extract_emails("contact a@b.com or c.d@e.org!"), "a@b.com\nc.d@e.org");
+        // no emails → empty
+        assert_eq!(extract_emails("nothing here"), "");
+    }
+
+    #[test]
+    fn extract_ips_finds() {
+        use super::extract_ips;
+        assert_eq!(extract_ips("from 192.168.1.1 to 10.0.0.255 done"), "192.168.1.1\n10.0.0.255");
+        // no IPs → empty
+        assert_eq!(extract_ips("no ips here"), "");
+    }
+
+    #[test]
+    fn extract_quoted_finds() {
+        use super::extract_quoted;
+        assert_eq!(extract_quoted(r#"a "hello" b "world""#), "hello\nworld");
+        // escaped quote inside a string is kept within that string
+        assert_eq!(extract_quoted(r#"x "a \"b\" c" y"#), r#"a \"b\" c"#);
+        // no quotes → empty
+        assert_eq!(extract_quoted("no quotes"), "");
+    }
+
+    #[test]
+    fn extract_between_finds() {
+        use super::extract_between;
+        assert_eq!(extract_between("a(1)b(2)c", "(", ")"), "1\n2");
+        // multi-char delimiters
+        assert_eq!(extract_between("<x>foo</x><x>bar</x>", "<x>", "</x>"), "foo\nbar");
+        // unterminated start is ignored; no matches → empty
+        assert_eq!(extract_between("a[1] b[", "[", "]"), "1");
+        assert_eq!(extract_between("none", "[", "]"), "");
+    }
+
+    #[test]
+    fn wrap_with_surrounds() {
+        use super::wrap_with;
+        assert_eq!(wrap_with("bold", "**"), "**bold**");
+        assert_eq!(wrap_with("x", "~"), "~x~");
+        assert_eq!(wrap_with("", "|"), "||");
+    }
+
+    #[test]
+    fn extract_numbers_lines_finds() {
+        use super::extract_numbers_lines;
+        assert_eq!(extract_numbers_lines("a1 b2.5 c-3 d"), "1\n2.5\n-3");
+        assert_eq!(extract_numbers_lines("price: $19.99!"), "19.99");
+        // no numbers → empty
+        assert_eq!(extract_numbers_lines("none"), "");
+    }
+
+    #[test]
+    fn json_validate_checks() {
+        use super::json_validate;
+        assert!(json_validate(r#"{"a":1}"#).is_ok());
+        assert!(json_validate("[1, 2, 3]").is_ok());
+        assert!(json_validate("{bad}").is_err());
+        assert!(json_validate("").is_err());
+    }
+
+    #[test]
+    fn csv_validate_checks_columns() {
+        use super::csv_validate;
+        assert_eq!(csv_validate("a,b,c\n1,2,3\n4,5,6").unwrap(), 3);
+        // a quoted comma does not inflate the field count
+        assert_eq!(csv_validate("\"a,b\",c\n1,2").unwrap(), 2);
+        // mismatched row count → error
+        assert!(csv_validate("a,b\n1,2,3").is_err());
+        assert!(csv_validate("").is_err());
+    }
+
+    #[test]
+    fn ordered_list_numbers() {
+        use super::ordered_list;
+        assert_eq!(ordered_list("apple\nbanana\ncherry"), "1. apple\n2. banana\n3. cherry");
+        // an existing bullet is replaced, not doubled
+        assert_eq!(ordered_list("- existing"), "1. existing");
+        // blank lines kept and don't advance the counter
+        assert_eq!(ordered_list("a\n\nb"), "1. a\n\n2. b");
+    }
+
+    #[test]
+    fn strip_list_markers_cleans() {
+        use super::strip_list_markers;
+        assert_eq!(strip_list_markers("- apple\n* banana\n+ cherry"), "apple\nbanana\ncherry");
+        assert_eq!(strip_list_markers("1. one\n2) two"), "one\ntwo");
+        assert_eq!(strip_list_markers("- [ ] todo\n- [x] done"), "todo\ndone");
+        // lines without a marker are untouched
+        assert_eq!(strip_list_markers("plain"), "plain");
+    }
+
+    #[test]
+    fn sort_words_orders_within_line() {
+        use super::sort_words;
+        assert_eq!(sort_words("banana apple cherry"), "apple banana cherry");
+        // per-line; whitespace runs collapse
+        assert_eq!(sort_words("z  a  m\n3 1 2"), "a m z\n1 2 3");
+    }
+
+    #[test]
+    fn unique_words_dedups_within_line() {
+        use super::unique_words;
+        assert_eq!(unique_words("a b a c b"), "a b c");
+        assert_eq!(unique_words("x x x"), "x");
+        // per-line, order preserved
+        assert_eq!(unique_words("foo bar\nbaz baz qux"), "foo bar\nbaz qux");
+    }
+
+    #[test]
+    fn sum_fields_totals_rows() {
+        use super::sum_fields;
+        assert_eq!(sum_fields("1 2 3\n10 20"), "6\n30");
+        // non-numeric fields are ignored
+        assert_eq!(sum_fields("a 5 b 3"), "8");
+        // no numbers → 0
+        assert_eq!(sum_fields("none"), "0");
+    }
+
+    #[test]
+    fn avg_fields_averages_rows() {
+        use super::avg_fields;
+        assert_eq!(avg_fields("1 2 3\n10 20"), "2\n15");
+        // non-numeric ignored
+        assert_eq!(avg_fields("a 4 b 6"), "5");
+        // no numbers → line unchanged
+        assert_eq!(avg_fields("none"), "none");
+    }
+
+    #[test]
+    fn reduce_fields_max_min() {
+        use super::reduce_fields;
+        assert_eq!(reduce_fields("1 5 3\n10 2", true), "5\n10");
+        assert_eq!(reduce_fields("1 5 3\n10 2", false), "1\n2");
+        // negatives handled; no-number line unchanged
+        assert_eq!(reduce_fields("-4 -1 -9", true), "-1");
+        assert_eq!(reduce_fields("none", false), "none");
+    }
+
+    #[test]
+    fn range_fields_spread() {
+        use super::range_fields;
+        assert_eq!(range_fields("1 5 3\n10 2"), "4\n8");
+        // single value → 0; no-number line unchanged
+        assert_eq!(range_fields("7"), "0");
+        assert_eq!(range_fields("none"), "none");
+    }
+
+    #[test]
+    fn to_env_export_prefixes() {
+        use super::to_env_export;
+        assert_eq!(to_env_export("FOO=bar\nBAZ=qux"), "export FOO=bar\nexport BAZ=qux");
+        // comments, already-exported, and non-assignments are left alone
+        assert_eq!(to_env_export("# c\nexport X=1\nplain"), "# c\nexport X=1\nplain");
+    }
+
+    #[test]
+    fn strip_export_removes_prefix() {
+        use super::{strip_export, to_env_export};
+        assert_eq!(strip_export("export FOO=bar\nexport X=1"), "FOO=bar\nX=1");
+        // lines without the prefix are unchanged
+        assert_eq!(strip_export("plain\nexport A=2"), "plain\nA=2");
+        // round-trips with to_env_export
+        assert_eq!(strip_export(&to_env_export("K=v")), "K=v");
+    }
+
+    #[test]
+    fn line_ending_conversion() {
+        use super::{dos2unix, unix2dos};
+        assert_eq!(dos2unix("a\r\nb\r\nc"), "a\nb\nc");
+        assert_eq!(unix2dos("a\nb"), "a\r\nb");
+        // lone CR (old Mac) also normalized
+        assert_eq!(dos2unix("x\ry"), "x\ny");
+        // round-trip
+        assert_eq!(dos2unix(&unix2dos("p\nq\nr")), "p\nq\nr");
+    }
+
+    #[test]
+    fn percent_of_total_distributes() {
+        use super::percent_of_total;
+        assert_eq!(percent_of_total("25\n25\n50"), "25%\n25%\n50%");
+        assert_eq!(percent_of_total("1\n3"), "25%\n75%");
+        // non-numeric lines pass through; zero total leaves all unchanged
+        assert_eq!(percent_of_total("a\nb"), "a\nb");
+    }
+
+    #[test]
+    fn running_max_high_water() {
+        use super::running_max;
+        assert_eq!(running_max("1\n3\n2\n5\n4"), "1\n3\n3\n5\n5");
+        assert_eq!(running_max("5\n2\n8"), "5\n5\n8");
+        // non-numeric line passes through and doesn't affect the running max
+        assert_eq!(running_max("3\nfoo\n2"), "3\nfoo\n3");
+    }
+
+    #[test]
+    fn running_min_low_water() {
+        use super::running_min;
+        assert_eq!(running_min("5\n3\n4\n1\n2"), "5\n3\n3\n1\n1");
+        assert_eq!(running_min("2\n8\n1"), "2\n2\n1");
+        // non-numeric line passes through unchanged
+        assert_eq!(running_min("4\nfoo\n6"), "4\nfoo\n4");
+    }
+
+    #[test]
+    fn to_fixed_formats_decimals() {
+        use super::to_fixed;
+        assert_eq!(to_fixed("3.14159\n2", 2), "3.14\n2.00");
+        // rounds; non-numeric passes through
+        assert_eq!(to_fixed("1.7\nfoo", 0), "2\nfoo");
+    }
+
+    #[test]
+    fn clamp_lines_bounds() {
+        use super::clamp_lines;
+        assert_eq!(clamp_lines("5\n-3\n10\n7", 0.0, 8.0), "5\n0\n8\n7");
+        // non-numeric passes through
+        assert_eq!(clamp_lines("foo\n2", 0.0, 1.0), "foo\n1");
+    }
+
+    #[test]
+    fn scale_lines_multiplies() {
+        use super::scale_lines;
+        assert_eq!(scale_lines("1\n2\n3", 10.0), "10\n20\n30");
+        // fractional factor; non-numeric passes through
+        assert_eq!(scale_lines("5\nfoo", 0.5), "2.5\nfoo");
+    }
+
+    #[test]
+    fn offset_lines_adds() {
+        use super::offset_lines;
+        assert_eq!(offset_lines("1\n2\n3", 10.0), "11\n12\n13");
+        // negative offset subtracts; non-numeric passes through
+        assert_eq!(offset_lines("5\nfoo", -2.0), "3\nfoo");
+    }
+
+    #[test]
+    fn abs_lines_absolute() {
+        use super::abs_lines;
+        assert_eq!(abs_lines("-3\n5\n-2.5"), "3\n5\n2.5");
+        // non-numeric passes through
+        assert_eq!(abs_lines("foo\n-1"), "foo\n1");
+    }
+
+    #[test]
+    fn linkify_wraps_urls() {
+        use super::linkify;
+        assert_eq!(
+            linkify("see https://a.com here"),
+            "see [https://a.com](https://a.com) here"
+        );
+        // multiple URLs; text without URLs unchanged
+        assert_eq!(linkify("a http://x.io b"), "a [http://x.io](http://x.io) b");
+        assert_eq!(linkify("no links"), "no links");
+    }
+
+    #[test]
+    fn strip_markdown_links_to_text() {
+        use super::{linkify, strip_markdown_links};
+        assert_eq!(strip_markdown_links("see [Google](https://g.com) now"), "see Google now");
+        assert_eq!(strip_markdown_links("[a](u) and [b](v)"), "a and b");
+        // text without links unchanged; round-trips a linkified bare URL back to bare
+        assert_eq!(strip_markdown_links("plain"), "plain");
+        assert_eq!(strip_markdown_links(&linkify("x https://a.com y")), "x https://a.com y");
+    }
+
+    #[test]
+    fn strip_emphasis_plain() {
+        use super::strip_emphasis;
+        assert_eq!(strip_emphasis("**bold** and *italic* and `code`"), "bold and italic and code");
+        assert_eq!(strip_emphasis("__b__ and _i_"), "b and i");
+        // text without paired markers is unchanged (single underscore kept)
+        assert_eq!(strip_emphasis("plain snake_case"), "plain snake_case");
+    }
+
+    #[test]
+    fn strip_html_comments_removes() {
+        use super::strip_html_comments;
+        assert_eq!(strip_html_comments("a<!-- x -->b"), "ab");
+        // multi-line comment removed
+        assert_eq!(strip_html_comments("<!--\nmulti\n-->c"), "c");
+        // no comments → unchanged
+        assert_eq!(strip_html_comments("no comments"), "no comments");
+    }
+
+    #[test]
+    fn remove_trailing_commas_strict() {
+        use super::remove_trailing_commas;
+        assert_eq!(remove_trailing_commas("[1, 2, 3,]"), "[1, 2, 3]");
+        // trailing comma before a newline + brace
+        assert_eq!(remove_trailing_commas("{\"a\": 1,\n}"), "{\"a\": 1\n}");
+        // valid input unchanged
+        assert_eq!(remove_trailing_commas("[1, 2]"), "[1, 2]");
+    }
+
+    #[test]
+    fn add_trailing_commas_adds() {
+        use super::{add_trailing_commas, remove_trailing_commas};
+        assert_eq!(add_trailing_commas("[1, 2]"), "[1, 2,]");
+        assert_eq!(add_trailing_commas("{\"a\": 1\n}"), "{\"a\": 1,\n}");
+        // empty containers untouched; idempotent (already has comma → unchanged)
+        assert_eq!(add_trailing_commas("[]"), "[]");
+        assert_eq!(add_trailing_commas("[1, 2,]"), "[1, 2,]");
+        // add then remove returns the original
+        assert_eq!(remove_trailing_commas(&add_trailing_commas("[1, 2]")), "[1, 2]");
+    }
+
+    #[test]
+    fn smart_quotes_curlies() {
+        use super::smart_quotes;
+        assert_eq!(smart_quotes("\"hi\""), "\u{201C}hi\u{201D}");
+        // apostrophe after a letter becomes a closing single quote
+        assert_eq!(smart_quotes("it's"), "it\u{2019}s");
+        assert_eq!(smart_quotes("'quoted'"), "\u{2018}quoted\u{2019}");
+    }
+
+    #[test]
+    fn typographic_dashes_substitutes() {
+        use super::typographic_dashes;
+        assert_eq!(typographic_dashes("a--b"), "a\u{2013}b");
+        // longest first: --- becomes an em dash, not en-dash + hyphen
+        assert_eq!(typographic_dashes("a---b"), "a\u{2014}b");
+        assert_eq!(typographic_dashes("wait..."), "wait\u{2026}");
+    }
+
+    #[test]
+    fn de_typography_to_ascii() {
+        use super::de_typography;
+        assert_eq!(de_typography("\u{201C}hi\u{201D}"), "\"hi\"");
+        assert_eq!(de_typography("it\u{2019}s"), "it's");
+        assert_eq!(de_typography("a\u{2014}b and c\u{2013}d"), "a---b and c--d");
+        assert_eq!(de_typography("wait\u{2026}"), "wait...");
+    }
+
+    #[test]
+    fn to_ascii_transliterates() {
+        use super::to_ascii;
+        assert_eq!(to_ascii("café"), "cafe");
+        assert_eq!(to_ascii("naïve Müller Señor"), "naive Muller Senor");
+        // multi-char expansions
+        assert_eq!(to_ascii("straße"), "strasse");
+        assert_eq!(to_ascii("Æsop œuvre"), "AEsop oeuvre");
+        // plain ASCII unchanged
+        assert_eq!(to_ascii("plain"), "plain");
+    }
+
+    #[test]
+    fn nato_spells() {
+        use super::nato_spell;
+        assert_eq!(nato_spell("AB1"), "Alfa Bravo One");
+        // case-insensitive; unknown chars dropped
+        assert_eq!(nato_spell("Hi!"), "Hotel India");
+        assert_eq!(nato_spell(""), "");
+    }
+
+    #[test]
+    fn transpose_grid_swaps() {
+        use super::transpose_grid;
+        assert_eq!(transpose_grid("1 2 3\n4 5 6"), "1 4\n2 5\n3 6");
+        assert_eq!(transpose_grid("a b\nc d\ne f"), "a c e\nb d f");
+        // double transpose is the identity for a full grid
+        assert_eq!(transpose_grid(&transpose_grid("1 2\n3 4")), "1 2\n3 4");
+    }
+
+    #[test]
+    fn repeat_lines_replicates() {
+        use super::repeat_lines;
+        assert_eq!(repeat_lines("a\nb", 2), "a\na\nb\nb");
+        assert_eq!(repeat_lines("x", 3), "x\nx\nx");
+        // n=1 leaves the input unchanged
+        assert_eq!(repeat_lines("a\nb", 1), "a\nb");
+    }
+
+
+    #[test]
+    fn wrap_in_tag_wraps() {
+        use super::wrap_in_tag;
+        assert_eq!(wrap_in_tag("text", "b"), "<b>text</b>");
+        assert_eq!(wrap_in_tag("a & b", "div"), "<div>a & b</div>");
+        assert_eq!(wrap_in_tag("", "br"), "<br></br>");
+    }
+
+    #[test]
     fn grep_command_builds() {
         use super::grep_command;
         // pattern is single-quoted, present in both the rg and grep fallback,
@@ -9121,6 +17139,47 @@ mod vim_set_tests {
     }
 
     #[test]
+    fn clamp_offset_bounds() {
+        use super::clamp_offset;
+        assert_eq!(clamp_offset(5, 10), 5);
+        assert_eq!(clamp_offset(10, 10), 10); // EOF position allowed
+        assert_eq!(clamp_offset(99, 10), 10); // clamped to len
+        assert_eq!(clamp_offset(0, 0), 0); // empty buffer
+    }
+
+    #[test]
+    fn pad_numbers_zero_pads() {
+        use super::pad_numbers;
+        assert_eq!(pad_numbers("a1 b22 c333", 3), "a001 b022 c333");
+        assert_eq!(pad_numbers("file9", 2), "file09");
+        // never truncates a longer number
+        assert_eq!(pad_numbers("1234", 2), "1234");
+        assert_eq!(pad_numbers("no digits", 3), "no digits");
+    }
+
+    #[test]
+    fn increment_numbers_in_text() {
+        use super::increment_numbers;
+        assert_eq!(increment_numbers("v1.2.3", 1), "v2.3.4");
+        assert_eq!(increment_numbers("a 9 b 10", 1), "a 10 b 11");
+        assert_eq!(increment_numbers("count: 5", -1), "count: 4");
+        // no digits → unchanged
+        assert_eq!(increment_numbers("none here", 1), "none here");
+    }
+
+    #[test]
+    fn parse_int_and_bases() {
+        use super::{format_bases, parse_int_any};
+        assert_eq!(parse_int_any("255"), Some(255));
+        assert_eq!(parse_int_any("0xff"), Some(255));
+        assert_eq!(parse_int_any("0b11111111"), Some(255));
+        assert_eq!(parse_int_any("0o377"), Some(255));
+        assert_eq!(parse_int_any("-0x10"), Some(-16));
+        assert_eq!(parse_int_any("notanumber"), None);
+        assert_eq!(format_bases(255), "255 = 0xff = 0o377 = 0b11111111");
+    }
+
+    #[test]
     fn lorem_generates() {
         use super::lorem;
         assert_eq!(lorem(0), "");
@@ -9246,6 +17305,23 @@ mod vim_set_tests {
             align_on_delim(&["a => 1", "bbb => 2"], "=>"),
             vec!["a   => 1", "bbb => 2"]
         );
+    }
+
+    #[test]
+    fn sort_by_field_orders() {
+        use super::sort_lines_by_field;
+        // sort by the 2nd field
+        assert_eq!(
+            sort_lines_by_field("b 2\na 3\nc 1\n", 2),
+            "c 1\nb 2\na 3\n"
+        );
+        // sort by the 1st field
+        assert_eq!(
+            sort_lines_by_field("b 2\na 3\nc 1\n", 1),
+            "a 3\nb 2\nc 1\n"
+        );
+        // no trailing newline preserved
+        assert_eq!(sort_lines_by_field("x 9\ny 1", 2), "y 1\nx 9");
     }
 
     #[test]
