@@ -55,33 +55,55 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      # Two binaries per target: the full default build (all embedded scripting
+      # languages) and a "minimal" build with the `scripting` feature off, which
+      # drops every interpreter crate (elisprs/vimlrs/awkrs/zshrs/strykelang) for
+      # a smaller binary. Each cargo build writes the same target/.../zemacs path,
+      # so stash each before the next.
+      #
       # build.rs fetches + compiles the tree-sitter grammars for ${target} into
       # runtime/grammars during the build (Cargo.lock is gitignored, no --locked).
-      - name: Build zemacs
-        run: cargo build --locked --release --bin zemacs --target ${{ matrix.target }}
+      - name: Build zemacs (full)
+        run: |
+          cargo build --locked --release --bin zemacs --target ${{ matrix.target }}
+          cp "target/${{ matrix.target }}/release/zemacs" zemacs-full
 
-      - name: Package (binary + runtime)
+      - name: Build zemacs (minimal — no embedded scripting)
+        run: |
+          cargo build --locked --release --bin zemacs \
+            --no-default-features --features git --target ${{ matrix.target }}
+          cp "target/${{ matrix.target }}/release/zemacs" zemacs-minimal
+
+      - name: Package (binaries + runtime)
         shell: bash
         env:
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -eu
           target="${{ matrix.target }}"
-          pkg="zemacs-${TAG}-${target}"
-          mkdir -p "$pkg"
-          cp "target/${target}/release/zemacs" "$pkg/zemacs"
-          strip "$pkg/zemacs" 2>/dev/null || true
           # Bundle the runtime tree (target-compiled grammars + queries/themes/
-          # tutor). Drop grammar sources — only the compiled libs are needed.
+          # tutor) once and share it between both variants. Drop grammar sources
+          # — only the compiled libs are needed.
           rm -rf runtime/grammars/sources
-          cp -r runtime "$pkg/runtime"
-          cp LICENSE README.md ATTRIBUTION.md "$pkg/" 2>/dev/null || true
-          tar czf "${pkg}.tar.gz" "$pkg"
+          package() {
+            local suffix="$1" binary="$2"
+            local pkg="zemacs-${TAG}-${target}${suffix}"
+            mkdir -p "$pkg"
+            cp "$binary" "$pkg/zemacs"
+            strip "$pkg/zemacs" 2>/dev/null || true
+            cp -r runtime "$pkg/runtime"
+            cp LICENSE README.md ATTRIBUTION.md "$pkg/" 2>/dev/null || true
+            tar czf "${pkg}.tar.gz" "$pkg"
+          }
+          # Full keeps the canonical name (Homebrew + install.sh consume it);
+          # minimal gets a `-minimal` suffix.
+          package ""         zemacs-full
+          package "-minimal" zemacs-minimal
 
       - uses: actions/upload-artifact@v4
         with:
           name: zemacs-${{ matrix.target }}
-          path: zemacs-${{ inputs.tag || github.ref_name }}-${{ matrix.target }}.tar.gz
+          path: zemacs-${{ inputs.tag || github.ref_name }}-${{ matrix.target }}*.tar.gz
 
   publish:
     name: Publish GitHub Release
