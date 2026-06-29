@@ -736,6 +736,9 @@ impl MappableCommand {
         fold_delete, "Delete fold under cursor (zd)",
         fold_delete_all, "Delete all folds (zE)",
         narrow_to_region, "Narrow the view to the selected region (SPC n r)",
+        kmacro_add_counter, "Add [count] to the keyboard-macro counter (SPC K c a)",
+        kmacro_insert_counter, "Insert the macro counter value, then increment (SPC K c c)",
+        toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
         fold_next, "Move to next fold (zj)",
         fold_prev, "Move to previous fold (zk)",
         goto_line_last_nonblank, "Goto last non-blank on line (g_)",
@@ -11365,6 +11368,47 @@ fn narrow_to_region(cx: &mut Context) {
         .set_status(format!("narrowed to lines {}-{}", start + 1, end + 1));
 }
 
+// --- keyboard-macro counter (spacemacs SPC K c) ------------------------------
+// A process-global integer counter, mirroring Emacs `kmacro-*-counter`. Recording
+// a macro that runs `kmacro_insert_counter` and replaying it (@reg) inserts an
+// incrementing number each time — which is exactly what the counter is for.
+
+static KMACRO_COUNTER: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+
+fn kmacro_counter_value() -> i64 {
+    KMACRO_COUNTER.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Add `n` to the counter and return the new value.
+fn kmacro_counter_add(n: i64) -> i64 {
+    KMACRO_COUNTER.fetch_add(n, std::sync::atomic::Ordering::Relaxed) + n
+}
+
+fn kmacro_counter_reset() {
+    KMACRO_COUNTER.store(0, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// SPC K c a: add [count] (default 1) to the macro counter.
+fn kmacro_add_counter(cx: &mut Context) {
+    let v = kmacro_counter_add(cx.count() as i64);
+    cx.editor.set_status(format!("macro counter = {v}"));
+}
+
+/// SPC K c c: insert the current counter value at the cursor, then increment it.
+fn kmacro_insert_counter(cx: &mut Context) {
+    let v = kmacro_counter_value();
+    insert_generated(cx, &v.to_string());
+    kmacro_counter_add(1);
+}
+
+/// SPC b w: toggle the current buffer's read-only (writable) state.
+fn toggle_readonly(cx: &mut Context) {
+    let (_view, doc) = current!(cx.editor);
+    doc.readonly = !doc.readonly;
+    let state = if doc.readonly { "read-only" } else { "writable" };
+    cx.editor.set_status(format!("buffer is now {state}"));
+}
+
 fn scroll_up(cx: &mut Context) {
     scroll(cx, cx.count(), Direction::Backward, false);
 }
@@ -12567,6 +12611,17 @@ mod insert_generator_tests {
         let mut got: Vec<&str> = words.split(' ').collect();
         got.sort_unstable();
         assert_eq!(got, vec!["four", "one", "three", "two"]);
+    }
+
+    #[test]
+    fn kmacro_counter_add_and_reset() {
+        kmacro_counter_reset();
+        assert_eq!(kmacro_counter_value(), 0);
+        assert_eq!(kmacro_counter_add(1), 1);
+        assert_eq!(kmacro_counter_add(5), 6);
+        assert_eq!(kmacro_counter_value(), 6);
+        kmacro_counter_reset();
+        assert_eq!(kmacro_counter_value(), 0);
     }
 
     #[test]

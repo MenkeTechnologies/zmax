@@ -816,6 +816,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     },
                 },
             },
+            "K" => { "Macros"
+                "c" => { "Counter"
+                    "a" => kmacro_add_counter,     // SPC K c a : increment macro counter
+                    "c" => kmacro_insert_counter,  // SPC K c c : insert counter value, then increment
+                },
+            },
 
             "T" => { "Themes"
                 "c" => theme_picker,               // SPC T c : fzf theme picker w/ live preview (:Colors)
@@ -894,6 +900,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "h" => dashboard,                  // SPC b h : home buffer (dashboard)
                 "H" => help,                       // SPC b H : *Help* buffer (inline Help browser)
                 "u" => reopen_last_closed,         // SPC b u : reopen the most recently killed buffer
+                "w" => toggle_readonly,            // SPC b w : toggle read-only (writable state)
             },
             // Kept identical to the `C-w` window submap (see aliased-modes test).
             "w" => { "Window"
