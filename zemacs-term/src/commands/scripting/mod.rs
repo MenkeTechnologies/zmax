@@ -23,8 +23,12 @@ use zemacs_core::{Selection, Tendril, Transaction};
 use crate::compositor;
 use crate::ui::prompt::PromptEvent;
 
+pub mod awk;
+mod capture;
 pub mod elisp;
+pub mod stryke;
 pub mod viml;
+pub mod zsh;
 
 thread_local! {
     /// Type-erased pointer to the `compositor::Context` of the in-flight eval.
@@ -198,6 +202,67 @@ pub fn eval_viml(cx: &mut compositor::Context, src: &str) -> Result<String, Stri
     viml::eval(src)
 }
 
+/// Filter the primary selection (or the whole buffer, if the selection is
+/// empty) through an awk `program`, replacing it with the program's output as
+/// one undo step. Returns a short status message.
+pub fn run_awk_filter(cx: &mut compositor::Context, program: &str) -> Result<String, String> {
+    let _guard = CxGuard::new(cx);
+
+    // Read the target range and its text.
+    let (from, to, input) = with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let sel = doc.selection(view.id).primary();
+        let (f, t) = (sel.from(), sel.to());
+        if f == t {
+            (0usize, text.len_chars(), text.to_string())
+        } else {
+            (f, t, text.slice(f..t).to_string())
+        }
+    })?;
+
+    // Run awk outside any editor borrow (it must not re-enter the context).
+    let output = awk::run(program, &input)?;
+
+    // Replace the range with the output.
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let tendril: Tendril = output.as_str().into();
+        let tx = Transaction::change(doc.text(), std::iter::once((from, to, Some(tendril))));
+        doc.apply(&tx, view.id);
+    })?;
+
+    Ok(format!("awk: filtered {} chars", to.saturating_sub(from)))
+}
+
+/// Evaluate stryke source via the embedded strykelang interpreter. Returns
+/// captured `print` output or the last expression value. State persists across
+/// calls. Does not touch the editor (no host-fn bridge yet), so no context guard.
+pub fn eval_stryke(_cx: &mut compositor::Context, code: &str) -> Result<String, String> {
+    stryke::eval(code)
+}
+
+/// Run a zsh command line through the embedded shell, capturing stdout+stderr.
+/// Shell state (vars/functions/cwd) persists across calls. Returns (exit
+/// status, captured output). Does not touch the editor, so no context guard is
+/// needed.
+pub fn run_zsh(cmd: &str) -> Result<(i32, String), String> {
+    zsh::run(cmd)
+}
+
+/// Run an awk `program` against the current buffer's text and RETURN its output
+/// without modifying the buffer — the REPL counterpart to [`run_awk_filter`],
+/// which replaces the selection in place. Used by the embedded-language REPL.
+pub fn repl_awk(cx: &mut compositor::Context, program: &str) -> Result<String, String> {
+    let _guard = CxGuard::new(cx);
+    let input = with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let _ = view;
+        doc.text().to_string()
+    })?;
+    awk::run(program, &input)
+}
+
 /// Load embedded-scripting init files if present (best-effort; errors go to the
 /// status line). Called once at startup after the editor is constructed.
 pub fn load_init_scripts(cx: &mut compositor::Context) {
@@ -250,5 +315,34 @@ mod tests {
     fn viml_state_persists() {
         super::viml::eval("let g:zz = 41").unwrap();
         assert_eq!(super::viml::eval("g:zz + 1").unwrap(), "42");
+    }
+
+    /// The embedded awkrs interpreter filters string input → string output.
+    #[test]
+    fn awk_filter_runs() {
+        assert_eq!(super::awk::run("{print $1}", "a b\nc d\n").unwrap(), "a\nc\n");
+        assert_eq!(super::awk::run("BEGIN{print 1+2}", "").unwrap(), "3\n");
+    }
+
+    /// The embedded zshrs shell runs a command and its output is captured (not
+    /// leaked to the terminal); shell state persists across calls.
+    #[cfg(unix)]
+    #[test]
+    fn zsh_runs_and_persists() {
+        let (status, out) = super::zsh::run("echo hello").unwrap();
+        assert_eq!(status, 0);
+        assert!(out.contains("hello"), "captured output: {out:?}");
+        super::zsh::run("ZV=42").unwrap();
+        assert!(super::zsh::run("echo $ZV").unwrap().1.contains("42"));
+    }
+
+    /// The embedded strykelang interpreter evaluates expressions (value-based
+    /// display) and persists state across calls.
+    #[cfg(unix)]
+    #[test]
+    fn stryke_eval_and_persist() {
+        assert_eq!(super::stryke::eval("2 + 3 * 4").unwrap(), "14");
+        super::stryke::eval("$pv = 41").unwrap();
+        assert_eq!(super::stryke::eval("$pv + 1").unwrap(), "42");
     }
 }
