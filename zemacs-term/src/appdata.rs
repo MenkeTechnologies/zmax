@@ -56,3 +56,53 @@ pub fn save(data: &AppData) {
     }
     let _ = std::fs::write(path, contents);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ide_layout_survives_toml_round_trip() {
+        let data = AppData {
+            theme: Some("nord".into()),
+            ide: IdeLayout {
+                open: true,
+                left_width: 40,
+                left_collapsed: true,
+                fold_project: false,
+                fold_structure: true,
+                fold_problems: false,
+                fold_minimap: true,
+                bottom_height: 12,
+                bottom_zoom: true,
+                bottom_splits: [20, 60],
+                bottom_mid_folded: true,
+            },
+            ..Default::default()
+        };
+        let serialized = toml::to_string_pretty(&data).unwrap();
+        let parsed: AppData = toml::from_str(&serialized).unwrap();
+        assert_eq!(parsed.theme.as_deref(), Some("nord"));
+        assert_eq!(parsed.ide.left_width, 40);
+        assert!(parsed.ide.left_collapsed);
+        assert!(parsed.ide.fold_minimap);
+        assert_eq!(parsed.ide.bottom_height, 12);
+        assert!(parsed.ide.bottom_zoom);
+        assert_eq!(parsed.ide.bottom_splits, [20, 60]);
+        assert!(parsed.ide.bottom_mid_folded);
+    }
+
+    #[test]
+    fn old_appdata_without_new_ide_fields_still_loads() {
+        // A pre-existing appdata.toml that predates the bottom-* drawer fields must
+        // still parse (serde defaults fill them in), so an upgrade never wipes a
+        // user's session.
+        let parsed: AppData =
+            toml::from_str("theme = \"base16\"\n[ide]\nopen = true\nleft_width = 30\n").unwrap();
+        assert!(parsed.ide.open);
+        assert_eq!(parsed.ide.left_width, 30);
+        assert_eq!(parsed.ide.bottom_height, 0);
+        assert_eq!(parsed.ide.bottom_splits, [0, 0]);
+        assert!(!parsed.ide.bottom_mid_folded);
+    }
+}

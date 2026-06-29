@@ -34,7 +34,9 @@ use zemacs_view::input::KeyEvent;
 const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space f s", "Files",   ":write"),            // SPC f s : save
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all
+    ("space a c", "Applications", ":calc"),        // SPC a c : calc-dispatch
     ("space f R", "Files",   ":move"),             // SPC f R : rename file
+    ("space f D", "Files",   ":delete-file"),      // SPC f D : delete file + buffer
     ("space b d", "Buffers", ":buffer-close"),     // SPC b d : kill buffer
     ("space b D", "Buffers", ":buffer-close-others"), // SPC b C-d / others
     ("space b R", "Buffers", ":reload"),           // SPC b R : revert
@@ -87,6 +89,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("[ x",         "Git",     ":conflict-prev"),                        // previous conflict
     ("space g f l", "Git",     "git_file_log_picker"),                   // SPC g f l : commits log for current file (:BCommits)
     ("space g L",   "Git",     "git_repo_log_picker"),                   // SPC g L : repo commit log (:Commits)
+    ("space g S",   "Git",     ":git-stage"),                           // SPC g S : stage current file
+    ("space g U",   "Git",     ":git-unstage"),                         // SPC g U : unstage current file
     ("space f e d", "Files",   ":config-open"),                          // SPC f e d : open dotfile/config
     ("space q f",   "Quit",    ":quit"),                                 // SPC q f : kill frame
     ("space b s",   "Buffers", ":new"),                                  // SPC b s : scratch buffer
@@ -805,6 +809,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "r" => repl,                       // SPC a r : embedded-language REPL (elisp/viml/stryke/awk/zsh)
                 "d" => file_explorer,              // SPC a d : dired (file manager)
                 "f" => file_explorer,              // SPC a f : file tree
+                "t" => { "Ranger"
+                    "r" => { "deer/dirvish"
+                        "r" => file_explorer,      // SPC a t r r : ranger full layout
+                        "d" => file_explorer,      // SPC a t r d : deer single column
+                    },
+                },
             },
 
             "T" => { "Themes"
@@ -839,6 +849,23 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             },
             "i" => { "Insert"
                 "u" => unicode_picker,             // SPC i u : search unicode chars and insert (helm-unicode)
+                "U" => { "UUID"
+                    "1" => insert_uuid_v1,         // SPC i U 1 : time-based UUIDv1
+                    "4" => insert_uuid_v4,         // SPC i U 4 : random UUIDv4
+                    "U" => insert_uuid_v4,         // SPC i U U : random UUIDv4
+                },
+                "l" => { "Lorem ipsum"
+                    "s" => insert_lorem_sentence,  // SPC i l s
+                    "p" => insert_lorem_paragraph, // SPC i l p
+                    "l" => insert_lorem_list,      // SPC i l l
+                },
+                "p" => { "Password"
+                    "1" => insert_password_simple,    // SPC i p 1
+                    "2" => insert_password_strong,    // SPC i p 2
+                    "3" => insert_password_paranoid,  // SPC i p 3
+                    "n" => insert_password_numerical, // SPC i p n
+                    "p" => insert_password_phonetic,  // SPC i p p
+                },
             },
             "b" => { "Buffers"
                 "b" => buffer_picker,              // SPC b b
@@ -864,6 +891,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 },
                 "P" => [select_all, replace_with_yanked], // SPC b P : paste-replace buffer
                 "Y" => [select_all, yank_to_clipboard, collapse_selection], // SPC b Y
+                "h" => dashboard,                  // SPC b h : home buffer (dashboard)
+                "H" => help,                       // SPC b H : *Help* buffer (inline Help browser)
+                "u" => reopen_last_closed,         // SPC b u : reopen the most recently killed buffer
             },
             // Kept identical to the `C-w` window submap (see aliased-modes test).
             "w" => { "Window"
@@ -914,6 +944,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "/" => vsplit,
                 "+" => resize_view_taller,
                 "-" => resize_view_shorter,
+                "[" => resize_view_narrower,      // SPC w [ : shrink window horizontally
+                "{" => resize_view_shorter,       // SPC w { : shrink window vertically
                 "=" => resize_view_equalize,
                 "c" => wclose,
                 "m" => wonly,
@@ -932,12 +964,29 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "j" => jump_view_down,
                     "k" => jump_view_up,
                     "l" => jump_view_right,
+                    "H" => swap_view_left,         // SPC w . H : move window left
+                    "J" => swap_view_down,         // SPC w . J : move window down
+                    "K" => swap_view_up,           // SPC w . K : move window up
+                    "L" => swap_view_right,        // SPC w . L : move window right
                     "/" => vsplit,
                     "-" => hsplit,
+                    "s" => hsplit,                 // SPC w . s : horizontal split
+                    "S" => hsplit,                 // SPC w . S : horizontal split + focus
+                    "v" => vsplit,                 // SPC w . v : vertical split
+                    "V" => vsplit,                 // SPC w . V : vertical split + focus
+                    "r" => rotate_view,            // SPC w . r : rotate windows forward
+                    "R" => rotate_view_reverse,    // SPC w . R : rotate windows backward
+                    "w" => rotate_view,            // SPC w . w : focus other window
                     "d" => wclose,
                     "D" => wonly,
                     "o" => rotate_view,
                     "z" => align_view_center,
+                    "[" => resize_view_narrower,   // SPC w . [ : shrink horizontally
+                    "]" => resize_view_wider,      // SPC w . ] : enlarge horizontally
+                    "{" => resize_view_shorter,    // SPC w . { : shrink vertically
+                    "}" => resize_view_taller,     // SPC w . } : enlarge vertically
+                    "_" => wonly,                  // SPC w . _ : maximize horizontally
+                    "|" => wonly,                  // SPC w . | : maximize vertically
                 },
             },
             "s" => { "Search"
@@ -1048,6 +1097,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "g" => symbol_picker,              // SPC p g : find tags
                 "o" => global_search,              // SPC p o : multi-occur
                 "a" => goto_next_test,             // SPC p a : toggle implementation/test
+                "'" => terminal,                   // SPC p ' : open a shell in the project root
+                "c" => run_active_config,          // SPC p c : compile project (run active config)
+                "u" => run_active_config,          // SPC p u : run project (run active config)
+                "i" => run_config_manager,         // SPC p i : install project (manage run/build targets)
             },
             "e" => { "Errors"
                 "l" => diagnostics_picker,             // SPC e l
@@ -1072,6 +1125,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "L" => toggle_line_comments,       // SPC c L : invert/toggle comment lines
                 "T" => toggle_comments,            // SPC c T : invert comment to line
                 "Y" => [yank, toggle_comments],    // SPC c Y : invert comment and yank
+                "P" => toggle_comments,            // SPC c P : invert comment paragraphs
+                "C" => run_active_config,          // SPC c C : compile (run active config)
+                "r" => rerun_last_run,             // SPC c r : recompile (re-run last)
+                "m" => run_config_manager,         // SPC c m : pick a build/run target (helm-make)
             },
             "j" => { "Jump"
                 "i" => symbol_picker,              // SPC j i
@@ -1102,6 +1159,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "=" => increment,                  // SPC n = : increase number under point
                 "-" => decrement,                  // SPC n - : decrease number under point
                 "_" => decrement,                  // SPC n _ : decrease number under point
+                "r" => narrow_to_region,           // SPC n r : narrow buffer to selection (fold outside)
+                "w" => fold_open_all,              // SPC n w : widen (show whole buffer again)
             },
             "g" => { "Goto (LSP)"
                 "d" => goto_definition,
@@ -1110,6 +1169,18 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "i" => goto_implementation,
                 "y" => goto_type_definition,
                 "b" => git_blame_line,             // SPC g b : git blame current line (spacemacs magit-blame)
+                "s" => focus_git_panel,            // SPC g s : git status (focus Git changes panel)
+                "m" => focus_git_panel,            // SPC g m : magit dispatch (focus Git panel)
+                "t" => git_file_log_picker,        // SPC g t : git time machine (browse file history)
+                "M" => git_blame_line,             // SPC g M : last commit message of current line
+                "l" => { "Links"
+                    "l" => open_remote_url,        // SPC g l l : browse to file at current line
+                    "c" => open_remote_url,        // SPC g l c : browse to file at a commit
+                    "p" => open_remote_url,        // SPC g l p : browse using permalink
+                    "L" => copy_remote_url,        // SPC g l L : copy link to selected lines
+                    "C" => copy_remote_url,        // SPC g l C : copy link at a commit
+                    "P" => copy_remote_url,        // SPC g l P : copy permalink to lines
+                },
                 "c" => { "Conflict"
                     // o/t/b (single resolve) come from the pre-existing :conflict-*
                     // typables (space g c o/t/b); only the bulk ops are added here.
@@ -1128,9 +1199,19 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "x" => { "Text"
                 "c" => count_selection,            // SPC x c : count chars/words/lines
                 "u" => switch_to_lowercase,        // SPC x u : lowercase
+                "U" => switch_to_uppercase,        // SPC x U : uppercase the selection
                 "o" => goto_file,                  // SPC x o : open link in frame (avy)
+                "i" => { "Symbol style"
+                    "C" => symbol_upper_camel,     // SPC x i C : UpperCamelCase
+                    "U" => symbol_up_case,         // SPC x i U : UP_CASE
+                    "_" => symbol_under_score,     // SPC x i _ : under_score
+                },
+                "l" => { "Lines"
+                    "r" => randomize_lines_in_region, // SPC x l r : randomize lines
+                },
                 "w" => { "Words"
                     "c" => count_selection,        // SPC x w c : count occurrences per word
+                    "r" => randomize_words_in_region, // SPC x w r : randomize words
                 },
                 "j" => { "Justify"
                     "l" => format_selections,      // SPC x j l : justify left (reflow)

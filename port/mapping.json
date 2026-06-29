@@ -2701,7 +2701,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -9598,5 +9598,525 @@
    "key:normal:space g L"
   ],
   "note": "magit-repolist -> repo commit log picker"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_u_1",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i U 1"
+  ],
+  "note": "spacemacs spc_i_u_1 -> insert time-based UUIDv1"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_u_4",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i U 4"
+  ],
+  "note": "spacemacs spc_i_u_4 -> insert random UUIDv4"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_u_u",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i U U"
+  ],
+  "note": "spacemacs spc_i_u_u -> insert random UUIDv4"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_l_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i l s"
+  ],
+  "note": "spacemacs spc_i_l_s -> insert lorem-ipsum sentence"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_l_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i l p"
+  ],
+  "note": "spacemacs spc_i_l_p -> insert lorem-ipsum paragraph"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_l_l",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i l l"
+  ],
+  "note": "spacemacs spc_i_l_l -> insert lorem-ipsum list"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_p_1",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i p 1"
+  ],
+  "note": "spacemacs spc_i_p_1 -> insert simple password"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_p_2",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i p 2"
+  ],
+  "note": "spacemacs spc_i_p_2 -> insert stronger password"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_p_3",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i p 3"
+  ],
+  "note": "spacemacs spc_i_p_3 -> insert password for paranoids"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_p_n",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i p n"
+  ],
+  "note": "spacemacs spc_i_p_n -> insert numerical password"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_i_p_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space i p p"
+  ],
+  "note": "spacemacs spc_i_p_p -> insert phonetic password"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_uU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x U"
+  ],
+  "note": "spacemacs spc_x_uU -> uppercase the selection"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_i_cU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x i C"
+  ],
+  "note": "spacemacs spc_x_i_cU -> change symbol style to UpperCamelCase"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_i_uU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x i U"
+  ],
+  "note": "spacemacs spc_x_i_uU -> change symbol style to UP_CASE"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_i_x",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x i _"
+  ],
+  "note": "spacemacs spc_x_i_x -> change symbol style to under_score"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_l_r",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x l r"
+  ],
+  "note": "spacemacs spc_x_l_r -> randomize lines in region"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_w_r",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x w r"
+  ],
+  "note": "spacemacs spc_x_w_r -> randomize words in region"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_hU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . H"
+  ],
+  "note": "spacemacs spc_w_x_hU -> move window left"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_jU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . J"
+  ],
+  "note": "spacemacs spc_w_x_jU -> move window down"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_kU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . K"
+  ],
+  "note": "spacemacs spc_w_x_kU -> move window up"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_lU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . L"
+  ],
+  "note": "spacemacs spc_w_x_lU -> move window right"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_rU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . R"
+  ],
+  "note": "spacemacs spc_w_x_rU -> rotate windows backward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_r",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . r"
+  ],
+  "note": "spacemacs spc_w_x_r -> rotate windows forward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_sU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . S"
+  ],
+  "note": "spacemacs spc_w_x_sU -> horizontal split and focus"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_vU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . V"
+  ],
+  "note": "spacemacs spc_w_x_vU -> vertical split and focus"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . s"
+  ],
+  "note": "spacemacs spc_w_x_s -> horizontal split"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_v",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . v"
+  ],
+  "note": "spacemacs spc_w_x_v -> vertical split"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_w",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . w"
+  ],
+  "note": "spacemacs spc_w_x_w -> focus other window"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_x_3",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . ["
+  ],
+  "note": "spacemacs spc_w_x_x_3 -> shrink window horizontally"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_x_4",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . ]"
+  ],
+  "note": "spacemacs spc_w_x_x_4 -> enlarge window horizontally"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_x_5",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . {"
+  ],
+  "note": "spacemacs spc_w_x_x_5 -> shrink window vertically"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_x_6",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . }"
+  ],
+  "note": "spacemacs spc_w_x_x_6 -> enlarge window vertically"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_x_2",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . _"
+  ],
+  "note": "spacemacs spc_w_x_x_2 -> maximize window horizontally"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_x",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . |"
+  ],
+  "note": "spacemacs spc_w_x_x -> maximize window vertically"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_4",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w ["
+  ],
+  "note": "spacemacs spc_w_x_4 -> shrink window horizontally"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_6",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w {"
+  ],
+  "note": "spacemacs spc_w_x_6 -> shrink window vertically"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_c_cU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space c C"
+  ],
+  "note": "spacemacs spc_c_cU -> compile (run active config)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_c_r",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space c r"
+  ],
+  "note": "spacemacs spc_c_r -> recompile (re-run last)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_c_m",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space c m"
+  ],
+  "note": "spacemacs spc_c_m -> pick build/run target (helm-make)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_c_pU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space c P"
+  ],
+  "note": "spacemacs spc_c_pU -> invert comment paragraphs"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_f_dU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space f D"
+  ],
+  "note": "spacemacs spc_f_dU -> delete file + buffer"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g s"
+  ],
+  "note": "spacemacs spc_g_s -> git status (focus Git panel)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g t"
+  ],
+  "note": "spacemacs spc_g_t -> git time machine (file history)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_mU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g M"
+  ],
+  "note": "spacemacs spc_g_mU -> last commit message of current line"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_sU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g S"
+  ],
+  "note": "spacemacs spc_g_sU -> stage current file"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_uU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g U"
+  ],
+  "note": "spacemacs spc_g_uU -> unstage current file"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_b_h",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b h"
+  ],
+  "note": "spacemacs spc_b_h -> home buffer (dashboard)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_b_hU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b H"
+  ],
+  "note": "spacemacs spc_b_hU -> Help buffer (inline Help browser)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_a_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a c"
+  ],
+  "note": "spacemacs spc_a_c -> calc-dispatch"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_a_t_r_r",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a t r r"
+  ],
+  "note": "spacemacs spc_a_t_r_r -> ranger full layout (file explorer)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_a_t_r_d",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a t r d"
+  ],
+  "note": "spacemacs spc_a_t_r_d -> deer single column (file explorer)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_m",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g m"
+  ],
+  "note": "spacemacs spc_g_m -> magit dispatch (focus Git panel)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_l_l",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g l l"
+  ],
+  "note": "spacemacs spc_g_l_l -> browse to file at current line"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_l_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g l c"
+  ],
+  "note": "spacemacs spc_g_l_c -> browse to file at a commit"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_l_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g l p"
+  ],
+  "note": "spacemacs spc_g_l_p -> browse using permalink"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_l_lU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g l L"
+  ],
+  "note": "spacemacs spc_g_l_lU -> copy link to selected lines"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_l_cU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g l C"
+  ],
+  "note": "spacemacs spc_g_l_cU -> copy link at a commit"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_l_pU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g l P"
+  ],
+  "note": "spacemacs spc_g_l_pU -> copy permalink to lines"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_b_u",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b u"
+  ],
+  "note": "spacemacs spc_b_u -> reopen most recently killed buffer"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space p '"
+  ],
+  "note": "spacemacs spc_p -> open shell in project root"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_p_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space p c"
+  ],
+  "note": "spacemacs spc_p_c -> compile project (run active config)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_p_u",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space p u"
+  ],
+  "note": "spacemacs spc_p_u -> run project (run active config)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_p_i",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space p i"
+  ],
+  "note": "spacemacs spc_p_i -> install project (run config manager)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_n_r",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space n r"
+  ],
+  "note": "spacemacs spc_n_r -> narrow buffer to selection (visual, via folds)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_n_w",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space n w"
+  ],
+  "note": "spacemacs spc_n_w -> widen (show whole buffer again)"
  }
 ]

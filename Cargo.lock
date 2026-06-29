@@ -9240,6 +9240,7 @@ dependencies = [
  "crossterm 0.28.1",
  "dashmap",
  "elisprs",
+ "fastrand",
  "futures-util",
  "grep-matcher",
  "grep-regex",
