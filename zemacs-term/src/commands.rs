@@ -746,6 +746,8 @@ impl MappableCommand {
         paredit_splice, "Paredit: splice/unwrap the enclosing s-expression (SPC k W)",
         paredit_raise, "Paredit: raise the current s-expression (SPC k r)",
         paredit_transpose, "Paredit: transpose the s-expressions around point (SPC k t)",
+        paredit_splice_kill_forward, "Paredit: splice, killing forward (SPC k e)",
+        paredit_splice_kill_backward, "Paredit: splice, killing backward (SPC k E)",
         fold_next, "Move to next fold (zj)",
         fold_prev, "Move to previous fold (zk)",
         goto_line_last_nonblank, "Goto last non-blank on line (g_)",
@@ -11590,6 +11592,22 @@ fn pe_splice(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
     Some((out, cursor))
 }
 
+/// Splice killing forward: splice the enclosing list, discarding everything from
+/// point to its close. `(as (bs| cs) ds)` → `(as bs ds)`.
+fn pe_splice_kill_forward(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (o, c) = pe_enclosing(ch, pos)?;
+    let out = pe_vec(&ch[..o], ch[o + 1..pos].iter().copied(), &ch[c + 1..]);
+    Some((out, pos.saturating_sub(1)))
+}
+
+/// Splice killing backward: splice the enclosing list, discarding everything from
+/// its open to point. `(as (bs |cs) ds)` → `(as cs ds)`.
+fn pe_splice_kill_backward(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (o, c) = pe_enclosing(ch, pos)?;
+    let out = pe_vec(&ch[..o], ch[pos..c].iter().copied(), &ch[c + 1..]);
+    Some((out, o))
+}
+
 /// Raise: replace the enclosing s-expression with the child at point.
 /// `(a (b c) d)` with point in `(b c)` → `(b c)`.
 fn pe_raise(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
@@ -11670,6 +11688,12 @@ fn paredit_raise(cx: &mut Context) {
 }
 fn paredit_transpose(cx: &mut Context) {
     apply_paredit(cx, pe_transpose);
+}
+fn paredit_splice_kill_forward(cx: &mut Context) {
+    apply_paredit(cx, pe_splice_kill_forward);
+}
+fn paredit_splice_kill_backward(cx: &mut Context) {
+    apply_paredit(cx, pe_splice_kill_backward);
 }
 
 /// SPC b w: toggle the current buffer's read-only (writable) state.
@@ -12964,6 +12988,18 @@ mod insert_generator_tests {
         assert_eq!(
             paredit_run(pe_transpose, "(a |b)", '|').as_deref(),
             Some("(b a)")
+        );
+    }
+
+    #[test]
+    fn paredit_splice_killing() {
+        assert_eq!(
+            paredit_run(pe_splice_kill_forward, "(as (bs| cs) ds)", '|').as_deref(),
+            Some("(as bs ds)")
+        );
+        assert_eq!(
+            paredit_run(pe_splice_kill_backward, "(as (bs |cs) ds)", '|').as_deref(),
+            Some("(as cs ds)")
         );
     }
 

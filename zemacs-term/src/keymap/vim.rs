@@ -1290,10 +1290,17 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "W" => paredit_splice,             // SPC k W : unwrap (splice) sexp
                 "r" => paredit_raise,              // SPC k r : raise sexp
                 "t" => paredit_transpose,          // SPC k t : transpose sexps
+                "e" => paredit_splice_kill_forward,  // SPC k e : splice, killing forward
+                "E" => paredit_splice_kill_backward, // SPC k E : splice, killing backward
                 "d" => { "Delete"
                     "x" => [expand_selection, delete_selection], // SPC k dx : delete sexp
                     "s" => [expand_selection, delete_selection], // SPC k ds : delete symbol
                     "w" => [collapse_selection, extend_next_word_start, delete_selection], // SPC k dw
+                },
+                "D" => { "Delete backward"
+                    "x" => [expand_selection, delete_selection], // SPC k Dx : delete sexp backward
+                    "s" => [expand_selection, delete_selection], // SPC k Ds : delete symbol backward
+                    "w" => [collapse_selection, extend_prev_word_start, delete_selection], // SPC k Dw
                 },
             },
             "h" => { "Help"

@@ -10286,5 +10286,45 @@
    "key:normal:space k t"
   ],
   "note": "spacemacs spc_k_t -> transpose sexps"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_e",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k e"
+  ],
+  "note": "spacemacs spc_k_e -> splice, killing forward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_eU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k E"
+  ],
+  "note": "spacemacs spc_k_eU -> splice, killing backward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_dUx",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k D x"
+  ],
+  "note": "spacemacs spc_k_dUx -> delete sexp backward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_dUs",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k D s"
+  ],
+  "note": "spacemacs spc_k_dUs -> delete symbol backward"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_dUw",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k D w"
+  ],
+  "note": "spacemacs spc_k_dUw -> delete word backward"
  }
 ]
