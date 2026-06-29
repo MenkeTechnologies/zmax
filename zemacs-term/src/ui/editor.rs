@@ -76,7 +76,10 @@ pub struct EditorView {
     bufferline_y: u16,
     /// Active pane-divider drag: the view whose right edge is being dragged, and
     /// the last mouse column seen, so we can apply incremental resize deltas.
-    resize_drag: Option<(zemacs_view::ViewId, u16)>,
+    /// Active split-divider drag: `(view, vertical_divider, last_col, last_row)`.
+    /// `vertical_divider` is true for a left/right border (resize width) and false
+    /// for a top/bottom border (resize height).
+    resize_drag: Option<(zemacs_view::ViewId, bool, u16, u16)>,
     /// Sticky-scroll cache: `(doc, doc len, scopes)` where each scope is
     /// `(start_line, end_line, header_text)`. Recomputed only when the focused
     /// document's length changes, so scrolling stays cheap.
@@ -478,6 +481,25 @@ impl EditorView {
                     .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
                 let cmd = format!("git blame '{}'", path.display());
                 self.start_run(context, cmd, cwd);
+                None
+            }
+            IdeAction::ResolveConflict(path) => {
+                // Open the conflicted file, then run the same `:merge` flow the
+                // `merge`/`resolve` typable command uses, dropping into the 3-pane
+                // ours/result/theirs resolver on the just-opened buffer.
+                if context
+                    .editor
+                    .open(&path, zemacs_view::editor::Action::Replace)
+                    .is_ok()
+                {
+                    if let Some(cmd) = crate::commands::typed::TYPABLE_COMMAND_MAP.get("merge") {
+                        let _ = (cmd.fun)(
+                            context,
+                            zemacs_core::command_line::Args::default(),
+                            crate::ui::PromptEvent::Validate,
+                        );
+                    }
+                }
                 None
             }
             IdeAction::RunConfigManager => Some(Box::new(|compositor, _cx| {
@@ -1859,11 +1881,11 @@ impl EditorView {
             MouseEventKind::Down(MouseButton::Left) => {
                 let editor = &mut cxt.editor;
 
-                // A press on a split divider (the vertical border between
-                // side-by-side panes) starts a drag-to-resize instead of moving
-                // the cursor. The divider sits at a view's right edge.
-                if let Some(view_id) = editor.tree.split_divider_at(column, row) {
-                    self.resize_drag = Some((view_id, column));
+                // A press on a split divider (the border between panes — vertical
+                // between side-by-side panes, horizontal between stacked panes)
+                // starts a drag-to-resize instead of moving the cursor.
+                if let Some((view_id, vertical)) = editor.tree.split_divider_at(column, row) {
+                    self.resize_drag = Some((view_id, vertical, column, row));
                     return EventResult::Consumed(None);
                 }
 
@@ -1937,13 +1959,20 @@ impl EditorView {
             }
 
             MouseEventKind::Drag(MouseButton::Left) => {
-                // If a divider drag is in progress, resize the pane by the column
-                // delta since the last event and keep dragging.
-                if let Some((view_id, last_col)) = self.resize_drag {
-                    let delta = column as i16 - last_col as i16;
-                    // resize_horizontal pins siblings and recalculates internally.
-                    if delta != 0 && cxt.editor.tree.resize_horizontal(view_id, delta) {
-                        self.resize_drag = Some((view_id, column));
+                // If a divider drag is in progress, resize the pane by the delta
+                // since the last event (column delta for a vertical divider, row
+                // delta for a horizontal one) and keep dragging. The resize fns
+                // pin siblings and recalculate internally.
+                if let Some((view_id, vertical, last_col, last_row)) = self.resize_drag {
+                    let resized = if vertical {
+                        let delta = column as i16 - last_col as i16;
+                        delta != 0 && cxt.editor.tree.resize_horizontal(view_id, delta)
+                    } else {
+                        let delta = row as i16 - last_row as i16;
+                        delta != 0 && cxt.editor.tree.resize_vertical(view_id, delta)
+                    };
+                    if resized {
+                        self.resize_drag = Some((view_id, vertical, column, row));
                     }
                     return EventResult::Consumed(None);
                 }

@@ -575,6 +575,10 @@ pub struct DiffView {
     selected: usize,
     /// Index of the top visible row.
     scroll: usize,
+    /// Horizontal scroll offset in display columns, applied to every pane's
+    /// content (the line-number gutter stays fixed). Clamped to the longest
+    /// line's width by [`DiffView::hscroll_by`].
+    hscroll: usize,
     /// Number of body rows visible in the last render (for page scrolling).
     viewport: usize,
 }
@@ -602,6 +606,7 @@ impl DiffView {
             segments: Vec::new(),
             selected: 0,
             scroll: 0,
+            hscroll: 0,
             viewport: 1,
         }
     }
@@ -727,6 +732,7 @@ impl DiffView {
             segments,
             selected: 0,
             scroll: 0,
+            hscroll: 0,
             viewport: 1,
         }
     }
@@ -774,6 +780,25 @@ impl DiffView {
     fn scroll_by(&mut self, delta: isize) {
         let next = self.scroll as isize + delta;
         self.scroll = next.clamp(0, self.max_scroll() as isize) as usize;
+    }
+
+    /// Widest line (in display columns, tabs expanded) across all panes — the
+    /// clamp ceiling for horizontal scrolling.
+    fn max_line_width(&self) -> usize {
+        self.base_lines
+            .iter()
+            .chain(self.doc_lines.iter())
+            .chain(self.base_pane_lines.iter())
+            .map(|s| line_width(s))
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Scroll horizontally by `delta` columns, clamped to `[0, max_line_width]`.
+    fn hscroll_by(&mut self, delta: isize) {
+        let max = self.max_line_width() as isize;
+        let next = self.hscroll as isize + delta;
+        self.hscroll = next.clamp(0, max.max(0)) as usize;
     }
 
     /// Scroll so the selected block is within the viewport.
@@ -916,6 +941,12 @@ impl Component for DiffView {
             key!(PageUp) | ctrl!('u') | ctrl!('b') => self.scroll_by(-page),
             key!('g') | key!(Home) => self.scroll = 0,
             key!('G') | key!(End) => self.scroll = self.max_scroll(),
+            // Horizontal scroll (arrows so `h`/`l` stay conflict-accept keys).
+            // `0`/`$` jump to the start / end of the longest line.
+            key!(Right) => self.hscroll_by(4),
+            key!(Left) => self.hscroll_by(-4),
+            key!('0') => self.hscroll = 0,
+            key!('$') => self.hscroll = self.max_line_width(),
             key!('n') => self.next_change(),
             key!('p') => self.prev_change(),
             // Resolve the selected block. `,`/`[`/`h` take ours (HEAD/left),
@@ -1140,6 +1171,20 @@ impl Component for DiffView {
             .skip(self.scroll)
             .take(body_h as usize)
         {
+            // For a paired modification, compute the char-level diff between the
+            // old (left) and new (right) line so only the differing spans get
+            // emphasised, instead of styling the whole line uniformly.
+            let inline = match (row.kind, row.left, row.right) {
+                (RowKind::Changed, Some(li), Some(ri)) => {
+                    let old = self.base_lines.get(li).map(String::as_str).unwrap_or("");
+                    let new = self.doc_lines.get(ri).map(String::as_str).unwrap_or("");
+                    Some(inline_spans(old, new))
+                }
+                _ => None,
+            };
+            let left_emph = inline.as_ref().map(|(l, _)| l.as_slice());
+            let right_emph = inline.as_ref().map(|(_, r)| r.as_slice());
+
             if let Some(base_inner) = base_inner {
                 // The Base pane shows the common ancestor as neutral text
                 // (RowKind::Unchanged) regardless of the conflict colouring.
@@ -1150,6 +1195,8 @@ impl Component for DiffView {
                     Side::Left,
                     gutter as usize,
                     base_inner,
+                    self.hscroll,
+                    None,
                     &style,
                 ));
             }
@@ -1160,6 +1207,8 @@ impl Component for DiffView {
                 Side::Left,
                 gutter as usize,
                 left_inner,
+                self.hscroll,
+                left_emph,
                 &style,
             ));
             right_lines.push(pane_line(
@@ -1169,6 +1218,8 @@ impl Component for DiffView {
                 Side::Right,
                 gutter as usize,
                 right_inner,
+                self.hscroll,
+                right_emph,
                 &style,
             ));
             // Center Result line, recomputed live from the resolutions.
@@ -1183,6 +1234,7 @@ impl Component for DiffView {
                 &self.doc_lines,
                 gutter as usize,
                 center_inner,
+                self.hscroll,
                 &style,
                 selected_style,
             ));
@@ -1235,8 +1287,13 @@ struct PaneStyle {
 }
 
 /// Build one ratatui `Line` for a pane row: a right-aligned line-number gutter
-/// followed by the line content, padded to `inner` so the row background fills
-/// the pane width.
+/// followed by the line content, horizontally scrolled by `hscroll` columns and
+/// padded to `inner` so the row background fills the pane width. When
+/// `emphasis` is `Some` (a paired modification), it carries the per-side
+/// char-level diff runs from [`inline_spans`] so only the differing spans are
+/// rendered in the stronger (reversed + bold) style; otherwise the whole line
+/// is styled uniformly. The gutter is never scrolled.
+#[allow(clippy::too_many_arguments)]
 fn pane_line<'a>(
     idx: Option<usize>,
     src: &[String],
@@ -1244,10 +1301,13 @@ fn pane_line<'a>(
     side: Side,
     gutter: usize,
     inner: usize,
+    hscroll: usize,
+    emphasis: Option<&[(String, bool)]>,
     style: &PaneStyle,
 ) -> ratatui::text::Line<'a> {
     use crate::ui::rat::to_rat_style;
     use ratatui::text::{Line, Span};
+    use zemacs_view::graphics::Modifier;
 
     let zstyle = match (kind, side) {
         (RowKind::Unchanged, _) => style.text,
@@ -1259,6 +1319,7 @@ fn pane_line<'a>(
     match idx {
         Some(i) => {
             let num = format!("{:>width$} ", i + 1, width = gutter.saturating_sub(1));
+<<<<<<< Updated upstream
             let mut content: String = src
                 .get(i)
                 .map(|s| s.replace('\t', "    "))
@@ -1269,6 +1330,20 @@ fn pane_line<'a>(
                 Span::styled(num, to_rat_style(style.linenr)),
                 Span::styled(content, to_rat_style(zstyle)),
             ])
+=======
+            // Char-level runs: the diff spans for a paired modification, else the
+            // whole line as a single non-emphasised run.
+            let runs: Vec<(String, bool)> = match emphasis {
+                Some(e) => e.to_vec(),
+                None => vec![(src.get(i).cloned().unwrap_or_default(), false)],
+            };
+            let emph = zstyle
+                .add_modifier(Modifier::REVERSED)
+                .add_modifier(Modifier::BOLD);
+            let mut spans = vec![Span::styled(num, to_rat_style(style.linenr))];
+            spans.extend(content_spans(&runs, hscroll, inner, zstyle, emph));
+            Line::from(spans)
+>>>>>>> Stashed changes
         }
         None => {
             // Blank filler on the side that has no counterpart line.
@@ -1293,6 +1368,7 @@ fn result_line<'a>(
     doc_lines: &[String],
     gutter: usize,
     inner: usize,
+    hscroll: usize,
     style: &PaneStyle,
     selected_style: Style,
 ) -> ratatui::text::Line<'a> {
@@ -1326,13 +1402,23 @@ fn result_line<'a>(
     match idx {
         Some(i) => {
             let num = format!("{:>width$} ", i + 1, width = gutter.saturating_sub(1));
+<<<<<<< Updated upstream
             let mut content: String = src
                 .get(i)
                 .map(|s| s.replace('\t', "    "))
                 .unwrap_or_default();
             truncate_pad(&mut content, inner);
+=======
+            let runs = vec![(src.get(i).cloned().unwrap_or_default(), false)];
+>>>>>>> Stashed changes
             prefix.push(Span::styled(num, to_rat_style(style.linenr)));
-            prefix.push(Span::styled(content, to_rat_style(content_style)));
+            prefix.extend(content_spans(
+                &runs,
+                hscroll,
+                inner,
+                content_style,
+                content_style,
+            ));
         }
         None => {
             // Resolved side contributes no line here (a blank filler row).
@@ -1358,6 +1444,124 @@ fn truncate_pad(s: &mut String, width: usize) {
 /// Add BOLD to a zemacs style.
 fn to_zstyle_bold(style: Style) -> Style {
     style.add_modifier(zemacs_view::graphics::Modifier::BOLD)
+}
+
+/// Display width of a line in columns, expanding each tab to 4 columns. Used to
+/// clamp horizontal scrolling.
+fn line_width(s: &str) -> usize {
+    s.chars().map(|c| if c == '\t' { 4 } else { 1 }).sum()
+}
+
+/// Push the chars in `chars` as one run if non-empty.
+fn push_run(out: &mut Vec<(String, bool)>, chars: &[char], emph: bool) {
+    if !chars.is_empty() {
+        out.push((chars.iter().collect(), emph));
+    }
+}
+
+/// Char-level (intra-line) diff of two single lines.
+///
+/// Returns one run list per side; each run is `(text, emphasized)` where
+/// `emphasized == true` marks the characters that differ between the two lines
+/// (a deletion on the left / an insertion on the right). Common prefixes,
+/// suffixes and interior matches come back as non-emphasised runs. Identical
+/// inputs yield a single non-emphasised run on each side. Pure and unit-tested;
+/// mirrors the char-diff approach in `zemacs-core::diff` (Myers over `char`
+/// tokens, since the histogram heuristic is poor for repeated characters).
+fn inline_spans(old: &str, new: &str) -> (Vec<(String, bool)>, Vec<(String, bool)>) {
+    let old_chars: Vec<char> = old.chars().collect();
+    let new_chars: Vec<char> = new.chars().collect();
+
+    let mut input: InternedInput<char> = InternedInput::default();
+    input.update_before(old_chars.iter().copied());
+    input.update_after(new_chars.iter().copied());
+    let diff = Diff::compute(Algorithm::Myers, &input);
+
+    let mut left = Vec::new();
+    let mut right = Vec::new();
+    let (mut o, mut n) = (0usize, 0usize);
+    for hunk in diff.hunks() {
+        let (bs, be) = (hunk.before.start as usize, hunk.before.end as usize);
+        let (as_, ae) = (hunk.after.start as usize, hunk.after.end as usize);
+        // Common stretch before this hunk.
+        push_run(&mut left, &old_chars[o..bs], false);
+        push_run(&mut right, &new_chars[n..as_], false);
+        // The differing stretch (emphasised).
+        push_run(&mut left, &old_chars[bs..be], true);
+        push_run(&mut right, &new_chars[as_..ae], true);
+        o = be;
+        n = ae;
+    }
+    // Common tail after the last hunk.
+    push_run(&mut left, &old_chars[o..], false);
+    push_run(&mut right, &new_chars[n..], false);
+    (left, right)
+}
+
+/// Lay out content runs into exactly `width` display cells, applying the
+/// horizontal scroll `hscroll` (in columns) before truncating/padding.
+///
+/// Tabs in each run expand to 4 spaces (inheriting the run's emphasis), then the
+/// first `hscroll` columns are skipped, the remainder is truncated to `width`,
+/// and the line is right-padded with spaces to fill `width`. Operates on `char`s
+/// throughout so multibyte text never panics. Pure and unit-tested.
+fn layout_cells(runs: &[(String, bool)], hscroll: usize, width: usize) -> Vec<(char, bool)> {
+    let mut cells: Vec<(char, bool)> = Vec::new();
+    for (text, emph) in runs {
+        for ch in text.chars() {
+            if ch == '\t' {
+                cells.extend(std::iter::repeat_n((' ', *emph), 4));
+            } else {
+                cells.push((ch, *emph));
+            }
+        }
+    }
+    // Skip the leading scrolled-off columns.
+    let mut visible: Vec<(char, bool)> = if hscroll < cells.len() {
+        cells[hscroll..].to_vec()
+    } else {
+        Vec::new()
+    };
+    // Truncate or pad to exactly `width` cells.
+    if visible.len() > width {
+        visible.truncate(width);
+    } else {
+        visible.extend(std::iter::repeat_n((' ', false), width - visible.len()));
+    }
+    visible
+}
+
+/// Build the styled content spans for one pane row from its char-level runs,
+/// scrolled and clamped via [`layout_cells`]. Adjacent cells with the same
+/// emphasis are coalesced into a single `Span`: emphasised cells get `emph`, the
+/// rest get `base`.
+fn content_spans<'a>(
+    runs: &[(String, bool)],
+    hscroll: usize,
+    width: usize,
+    base: Style,
+    emph: Style,
+) -> Vec<ratatui::text::Span<'a>> {
+    use crate::ui::rat::to_rat_style;
+    use ratatui::text::Span;
+
+    let cells = layout_cells(runs, hscroll, width);
+    let mut spans = Vec::new();
+    let mut cur = String::new();
+    let mut cur_emph = false;
+    for (ch, e) in cells {
+        if !cur.is_empty() && e != cur_emph {
+            let st = if cur_emph { emph } else { base };
+            spans.push(Span::styled(std::mem::take(&mut cur), to_rat_style(st)));
+        }
+        cur_emph = e;
+        cur.push(ch);
+    }
+    if !cur.is_empty() {
+        let st = if cur_emph { emph } else { base };
+        spans.push(Span::styled(cur, to_rat_style(st)));
+    }
+    spans
 }
 
 #[cfg(test)]
@@ -1883,5 +2087,142 @@ mod tests {
         assert!(view.has_base);
         assert!(view.show_base);
         assert!(view.base_pane_lines.contains(&"b".to_string()));
+    }
+
+    // ── intra-line (char-level) highlighting ─────────────────────────────────
+
+    /// Concatenate only the emphasised runs.
+    fn emph_text(runs: &[(String, bool)]) -> String {
+        runs.iter()
+            .filter(|(_, e)| *e)
+            .map(|(s, _)| s.as_str())
+            .collect()
+    }
+    /// Concatenate every run (reconstructs the original line).
+    fn full_text(runs: &[(String, bool)]) -> String {
+        runs.iter().map(|(s, _)| s.as_str()).collect()
+    }
+
+    #[test]
+    fn inline_identical_has_no_emphasis() {
+        let (l, r) = inline_spans("hello world", "hello world");
+        assert_eq!(emph_text(&l), "");
+        assert_eq!(emph_text(&r), "");
+        assert_eq!(full_text(&l), "hello world");
+        assert_eq!(full_text(&r), "hello world");
+        // No run is flagged emphasised.
+        assert!(l.iter().all(|(_, e)| !e));
+        assert!(r.iter().all(|(_, e)| !e));
+    }
+
+    #[test]
+    fn inline_empty_inputs() {
+        let (l, r) = inline_spans("", "");
+        assert!(l.is_empty() && r.is_empty());
+    }
+
+    #[test]
+    fn inline_one_word_change_emphasises_only_that_word() {
+        // Only the middle word differs; the surrounding text is common.
+        let (l, r) = inline_spans("the cat sat", "the dog sat");
+        assert_eq!(emph_text(&l), "cat");
+        assert_eq!(emph_text(&r), "dog");
+        assert_eq!(full_text(&l), "the cat sat");
+        assert_eq!(full_text(&r), "the dog sat");
+    }
+
+    #[test]
+    fn inline_common_prefix_and_suffix() {
+        // "ab" prefix and "ef" suffix are common; only the middle is emphasised.
+        let (l, r) = inline_spans("abcdef", "abXYef");
+        assert_eq!(emph_text(&l), "cd");
+        assert_eq!(emph_text(&r), "XY");
+        // The common prefix/suffix come back un-emphasised.
+        assert_eq!(l.first().unwrap(), &("ab".to_string(), false));
+        assert_eq!(l.last().unwrap(), &("ef".to_string(), false));
+        assert_eq!(r.first().unwrap(), &("ab".to_string(), false));
+        assert_eq!(r.last().unwrap(), &("ef".to_string(), false));
+    }
+
+    #[test]
+    fn inline_pure_insertion_emphasises_added_only() {
+        // Right adds a trailing word; left has nothing emphasised.
+        let (l, r) = inline_spans("foo", "foo bar");
+        assert_eq!(emph_text(&l), "");
+        assert_eq!(emph_text(&r), " bar");
+    }
+
+    // ── horizontal-offset line slicing ───────────────────────────────────────
+
+    fn cells_text(cells: &[(char, bool)]) -> String {
+        cells.iter().map(|(c, _)| *c).collect()
+    }
+    fn run(s: &str) -> Vec<(String, bool)> {
+        vec![(s.to_string(), false)]
+    }
+
+    #[test]
+    fn layout_pads_short_line_to_width() {
+        let cells = layout_cells(&run("abc"), 0, 6);
+        assert_eq!(cells.len(), 6);
+        assert_eq!(cells_text(&cells), "abc   ");
+    }
+
+    #[test]
+    fn layout_truncates_long_line_to_width() {
+        let cells = layout_cells(&run("abcdefgh"), 0, 4);
+        assert_eq!(cells_text(&cells), "abcd");
+    }
+
+    #[test]
+    fn layout_hscroll_skips_leading_columns() {
+        // Skip 2 leading columns, then show 4 (padded).
+        let cells = layout_cells(&run("hello"), 2, 4);
+        assert_eq!(cells_text(&cells), "llo ");
+    }
+
+    #[test]
+    fn layout_hscroll_past_end_is_all_blank() {
+        // Offset beyond the content clamps to an all-blank, full-width line.
+        let cells = layout_cells(&run("hi"), 99, 3);
+        assert_eq!(cells_text(&cells), "   ");
+        assert_eq!(cells.len(), 3);
+    }
+
+    #[test]
+    fn layout_expands_tabs_to_four_columns() {
+        let cells = layout_cells(&run("\tx"), 0, 6);
+        assert_eq!(cells_text(&cells), "    x ");
+    }
+
+    #[test]
+    fn layout_is_multibyte_safe() {
+        // Scrolling over multibyte chars operates on chars, never bytes.
+        let cells = layout_cells(&run("héllo"), 1, 4);
+        assert_eq!(cells.len(), 4);
+        assert_eq!(cells_text(&cells), "éllo");
+        // Past-the-end on multibyte content also must not panic.
+        let cells = layout_cells(&run("naïve"), 10, 2);
+        assert_eq!(cells_text(&cells), "  ");
+    }
+
+    #[test]
+    fn layout_preserves_emphasis_flags_through_scroll() {
+        // Emphasis travels with the chars across hscroll/truncation.
+        let runs = vec![("ab".to_string(), false), ("CD".to_string(), true)];
+        let cells = layout_cells(&runs, 1, 3);
+        // "bCD" — first char un-emphasised, next two emphasised.
+        assert_eq!(cells_text(&cells), "bCD");
+        assert_eq!(cells.iter().map(|(_, e)| *e).collect::<Vec<_>>(), vec![false, true, true]);
+    }
+
+    #[test]
+    fn max_line_width_clamps_hscroll() {
+        // Longest line is "abcdef" (6 cols); hscroll clamps there.
+        let mut view = DiffView::new("f".into(), DocumentId::default(), "abcdef\n", "abcdef\nx\n");
+        view.hscroll_by(100);
+        assert_eq!(view.hscroll, 6);
+        view.hscroll_by(-100);
+        assert_eq!(view.hscroll, 0);
     }
 }

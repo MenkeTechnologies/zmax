@@ -473,19 +473,33 @@ impl Tree {
         }
     }
 
-    /// If `(col, row)` falls on a vertical divider between two side-by-side views,
-    /// return the view immediately to its left (whose right edge can be dragged).
-    pub fn split_divider_at(&self, col: u16, row: u16) -> Option<ViewId> {
-        self.views()
-            .map(|(view, _)| view)
-            .find(|view| {
-                let a = view.area;
-                col == a.right()
-                    && row >= a.y
-                    && row < a.y + a.height
-                    && a.right() < self.area.x + self.area.width
-            })
-            .map(|view| view.id)
+    /// If `(col, row)` falls on a split divider, return the view whose edge forms
+    /// it together with the resize axis: `true` for a **vertical** divider (the
+    /// border between left/right panes, on a view's right edge — drag it with
+    /// [`Self::resize_horizontal`]) or `false` for a **horizontal** divider
+    /// (between top/bottom panes, on a view's bottom edge — drag with
+    /// [`Self::resize_vertical`]).
+    pub fn split_divider_at(&self, col: u16, row: u16) -> Option<(ViewId, bool)> {
+        self.views().map(|(view, _)| view).find_map(|view| {
+            let a = view.area;
+            // Vertical divider on the view's right edge (between L/R panes).
+            if col == a.right()
+                && row >= a.y
+                && row < a.y + a.height
+                && a.right() < self.area.x + self.area.width
+            {
+                return Some((view.id, true));
+            }
+            // Horizontal divider on the view's bottom edge (between T/B panes).
+            if row == a.y + a.height
+                && col >= a.x
+                && col < a.x + a.width
+                && a.y + a.height < self.area.y + self.area.height
+            {
+                return Some((view.id, false));
+            }
+            None
+        })
     }
 
     /// Drag the vertical divider on the right edge of `view` by `delta` columns
