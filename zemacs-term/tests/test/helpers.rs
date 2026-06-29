@@ -298,6 +298,27 @@ pub fn temp_file_with_contents<S: AsRef<str>>(
 /// keys (e.g. `x` = extend line, multi-cursor `s`). Pin the harness to that
 /// Helix keymap so those tests keep validating the engine; vim-specific tests
 /// opt into the vim keymap explicitly via `AppBuilder::with_config`.
+/// A unique path in the OS temp directory that keeps `name`'s extension.
+///
+/// Tests that need language detection open a buffer with a path whose extension
+/// drives the grammar (e.g. `foo.rs` → Rust). Use a temp-dir path rather than a
+/// bare relative name so that if anything ever writes through it (autosave, an
+/// explicit `:w`, a bug) it lands in the temp dir, never in the repository. The
+/// file itself isn't created — only the extension matters, and the buffer's
+/// content comes from the test's input text.
+pub fn temp_path(name: &str) -> PathBuf {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let ext = std::path::Path::new(name)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("");
+    let mut path = std::env::temp_dir();
+    path.push(format!("zemacs-test-{}-{}.{}", std::process::id(), id, ext));
+    path
+}
+
 pub fn test_config() -> Config {
     Config {
         editor: test_editor_config(),
