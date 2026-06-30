@@ -1252,7 +1252,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "f" => goto_first_diag,                // SPC e f
                 "y" => copy_diagnostic,                // SPC e y : copy diagnostic message(s)
                 "h" => command_palette,                // SPC e h : describe checker
-                "v" => command_palette,                // SPC e v : verify checker setup
+                "v" => diagnostics_verify_setup,       // SPC e v : verify diagnostics/LSP setup
                 "." => goto_last_diag,
             },
             "c" => { "Comments"

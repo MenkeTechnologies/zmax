@@ -505,6 +505,7 @@ impl MappableCommand {
         locate_file, "Locate a file via system locate/mdfind and open it (SPC f L)",
         edit_project_config, "Edit the project-local .zemacs/config.toml (SPC p e)",
         man_page_search, "Search man pages via apropos and view the selected page (SPC h m)",
+        diagnostics_verify_setup, "Report the buffer's diagnostics/LSP setup (SPC e v)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7563,6 +7564,65 @@ fn man_page_search(cx: &mut Context) {
     .with_dynamic_query(get_pages, Some(275));
 
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// SPC e v : report the diagnostics setup for the current buffer — its language, attached language
+/// servers and their init state, which servers provide (push/pull) diagnostics, and the current
+/// diagnostic count. The zemacs analogue of Spacemacs' `flycheck-verify-setup`.
+fn diagnostics_verify_setup(cx: &mut Context) {
+    let report = {
+        let doc = doc!(cx.editor);
+        let mut out = format!("Diagnostics setup — {}\n", doc.display_name());
+        out.push_str(&format!(
+            "language: {}\n\n",
+            doc.language_name().unwrap_or("(none / fundamental)")
+        ));
+
+        let servers: Vec<&zemacs_lsp::Client> = doc.language_servers().collect();
+        if servers.is_empty() {
+            out.push_str("No language servers attached to this buffer.\n");
+        } else {
+            out.push_str("Language servers:\n");
+            for ls in &servers {
+                out.push_str(&format!(
+                    "  - {} ({})\n",
+                    ls.name(),
+                    if ls.is_initialized() {
+                        "initialized"
+                    } else {
+                        "starting"
+                    }
+                ));
+            }
+        }
+
+        let names = |feat| {
+            let v: Vec<&str> = doc
+                .language_servers_with_feature(feat)
+                .map(|c| c.name())
+                .collect();
+            if v.is_empty() {
+                "(none)".to_string()
+            } else {
+                v.join(", ")
+            }
+        };
+        out.push_str(&format!(
+            "\nPush-diagnostics providers: {}\n",
+            names(LanguageServerFeature::Diagnostics)
+        ));
+        out.push_str(&format!(
+            "Pull-diagnostics providers: {}\n",
+            names(LanguageServerFeature::PullDiagnostics)
+        ));
+        out.push_str(&format!(
+            "Current diagnostics in buffer: {}\n",
+            doc.diagnostics().len()
+        ));
+        out
+    };
+    show_text_in_scratch(cx.editor, &report);
+    cx.editor.set_status("diagnostics setup");
 }
 
 /// SPC p e : open the project-local config (`<workspace>/.zemacs/config.toml`), creating it (and

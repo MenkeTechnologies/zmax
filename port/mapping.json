@@ -6829,11 +6829,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_e_v",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space e v"
+   "key:normal:space e v",
+   "static:diagnostics_verify_setup"
   ],
-  "note": "verify checker -> command palette"
+  "note": "verify flycheck setup -> diagnostics_verify_setup (lang servers + diag providers + counts)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_c_d",
