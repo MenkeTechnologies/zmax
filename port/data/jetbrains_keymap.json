@@ -1430,5 +1430,61 @@
   "name": "Find Word at Caret",
   "desc": "IntelliJ IDEA default keymap: Cmd F3",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.editing.start-stop-macro-recording",
+  "source": "jetbrains",
+  "category": "editing",
+  "name": "Start/Stop Macro Recording",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.editing.play-back-last-macro",
+  "source": "jetbrains",
+  "category": "editing",
+  "name": "Play Back Last Macro",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.caret-navigation.move-caret-to-page-top",
+  "source": "jetbrains",
+  "category": "caret-navigation",
+  "name": "Move Caret to Page Top",
+  "desc": "IntelliJ IDEA default keymap: Cmd PageUp",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.caret-navigation.move-caret-to-page-bottom",
+  "source": "jetbrains",
+  "category": "caret-navigation",
+  "name": "Move Caret to Page Bottom",
+  "desc": "IntelliJ IDEA default keymap: Cmd PageDown",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.caret-navigation.move-caret-to-page-center",
+  "source": "jetbrains",
+  "category": "caret-navigation",
+  "name": "Move Caret to Page Center",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.coding-assistance.insert-live-template",
+  "source": "jetbrains",
+  "category": "coding-assistance",
+  "name": "Insert Live Template",
+  "desc": "IntelliJ IDEA default keymap: Cmd J",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.run-debug.pause-program",
+  "source": "jetbrains",
+  "category": "run-debug",
+  "name": "Pause Program",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]

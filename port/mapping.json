@@ -2701,7 +2701,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -18817,6 +18817,62 @@
   "status": "ported",
   "evidence": [
    "static:search_selection"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.editing.start-stop-macro-recording",
+  "status": "ported",
+  "evidence": [
+   "static:record_macro"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.editing.play-back-last-macro",
+  "status": "ported",
+  "evidence": [
+   "static:replay_macro"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-page-top",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_top"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-page-bottom",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_bottom"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-page-center",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_center"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.insert-live-template",
+  "status": "ported",
+  "evidence": [
+   "static:snippet_expand"
+  ],
+  "note": "snippet expansion ~ live template"
+ },
+ {
+  "spec_id": "jetbrains.run-debug.pause-program",
+  "status": "ported",
+  "evidence": [
+   "static:dap_pause"
   ],
   "note": "jetbrains"
  }
