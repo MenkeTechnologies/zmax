@@ -19837,5 +19837,333 @@
       "static:scroll_up"
     ],
     "note": "emacs scroll-down-line (view toward start) = zemacs scroll_up (default 1 line)."
+  },
+  {
+    "spec_id": "neovim.option.autoread",
+    "status": "ported",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim 'autoread' ~ zemacs config auto-reload (reload buffer when file changes on disk)"
+  },
+  {
+    "spec_id": "neovim.option.numberwidth",
+    "status": "ported",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim 'numberwidth' ~ zemacs config gutters.line-numbers.min-width"
+  },
+  {
+    "spec_id": "neovim.option.mousehide",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim 'mousehide' ~ zemacs config mouse (boolean enable only)"
+  },
+  {
+    "spec_id": "neovim.option.showmode",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim 'showmode' ~ zemacs statusline ModeConfig / StatusLineElement::Mode"
+  },
+  {
+    "spec_id": "neovim.option.pumborder",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim 'pumborder' ~ zemacs config popup-border (Menu variant; presence not style)"
+  },
+  {
+    "spec_id": "neovim.option.winborder",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "vim 'winborder' ~ zemacs config popup-border (Popup/All; presence not style)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_close",
+    "status": "ported",
+    "evidence": [
+      "static:wclose"
+    ],
+    "note": ":close closes current window = wclose."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_only",
+    "status": "ported",
+    "evidence": [
+      "static:wonly"
+    ],
+    "note": ":only closes all but current window = wonly."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_setfiletype",
+    "status": "ported",
+    "evidence": [
+      "typable:set-language"
+    ],
+    "note": ":setfiletype = set-language (alias lang)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_uniq",
+    "status": "ported",
+    "evidence": [
+      "typable:uniquify-lines"
+    ],
+    "note": ":uniq = uniquify-lines (delete duplicate lines)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_startinsert",
+    "status": "ported",
+    "evidence": [
+      "static:insert_mode"
+    ],
+    "note": ":startinsert enters Insert mode = insert_mode."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_stopinsert",
+    "status": "ported",
+    "evidence": [
+      "static:normal_mode"
+    ],
+    "note": ":stopinsert leaves Insert to Normal = normal_mode."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_suspend",
+    "status": "ported",
+    "evidence": [
+      "static:suspend"
+    ],
+    "note": ":suspend (Ctrl-Z) = suspend."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_stop",
+    "status": "ported",
+    "evidence": [
+      "static:suspend"
+    ],
+    "note": ":stop is alias of :suspend = suspend."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_file",
+    "status": "ported",
+    "evidence": [
+      "static:file_info"
+    ],
+    "note": ":file prints filename + cursor position = file_info (CTRL-G)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_buffers",
+    "status": "partial",
+    "evidence": [
+      "static:buffer_picker"
+    ],
+    "note": ":buffers lists buffers; buffer_picker is the interactive list."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ls",
+    "status": "partial",
+    "evidence": [
+      "static:buffer_picker"
+    ],
+    "note": ":ls buffer list via buffer_picker."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_files",
+    "status": "partial",
+    "evidence": [
+      "static:buffer_picker"
+    ],
+    "note": ":files buffer list via buffer_picker."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_history",
+    "status": "partial",
+    "evidence": [
+      "static:command_history_picker"
+    ],
+    "note": ":history = command_history_picker (picker vs print)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_jumps",
+    "status": "partial",
+    "evidence": [
+      "static:jumplist_picker"
+    ],
+    "note": ":jumps = jumplist_picker (interactive)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_marks",
+    "status": "partial",
+    "evidence": [
+      "static:marks_picker"
+    ],
+    "note": ":marks = marks_picker (picker vs list)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_oldfiles",
+    "status": "partial",
+    "evidence": [
+      "static:frecent_file_picker"
+    ],
+    "note": ":oldfiles = frecent_file_picker (recent files)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_startreplace",
+    "status": "partial",
+    "evidence": [
+      "static:replace_mode"
+    ],
+    "note": ":startreplace = replace_mode (modal vs persistent)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_syntax",
+    "status": "partial",
+    "evidence": [
+      "static:toggle_syntax_highlighting"
+    ],
+    "note": ":syntax on/off = toggle_syntax_highlighting (on/off case)."
+  },
+  {
+    "spec_id": "emacs.command.delete_other_windows",
+    "status": "ported",
+    "evidence": [
+      "static:wonly"
+    ],
+    "note": "delete-other-windows (C-x 1) = wonly."
+  },
+  {
+    "spec_id": "emacs.command.auto_fill_mode",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_auto_fill"
+    ],
+    "note": "auto-fill-mode = toggle_auto_fill."
+  },
+  {
+    "spec_id": "emacs.command.balance_windows",
+    "status": "ported",
+    "evidence": [
+      "static:resize_view_equalize"
+    ],
+    "note": "balance-windows = resize_view_equalize (CTRL-W =)."
+  },
+  {
+    "spec_id": "emacs.command.display_line_numbers_mode",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_line_numbers"
+    ],
+    "note": "display-line-numbers-mode = toggle_line_numbers."
+  },
+  {
+    "spec_id": "emacs.command.eval_defun",
+    "status": "ported",
+    "evidence": [
+      "static:eval_elisp_defun"
+    ],
+    "note": "eval-defun (C-M-x) = eval_elisp_defun."
+  },
+  {
+    "spec_id": "emacs.command.narrow_to_page",
+    "status": "ported",
+    "evidence": [
+      "static:narrow_to_page"
+    ],
+    "note": "narrow-to-page (C-x n p) = narrow_to_page."
+  },
+  {
+    "spec_id": "emacs.command.narrow_to_region",
+    "status": "ported",
+    "evidence": [
+      "static:narrow_to_region"
+    ],
+    "note": "narrow-to-region (C-x n n) = narrow_to_region."
+  },
+  {
+    "spec_id": "emacs.command.read_only_mode",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_readonly"
+    ],
+    "note": "read-only-mode (C-x C-q) = toggle_readonly."
+  },
+  {
+    "spec_id": "emacs.command.whitespace_mode",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_whitespace_render"
+    ],
+    "note": "whitespace-mode = toggle_whitespace_render."
+  },
+  {
+    "spec_id": "emacs.command.widen",
+    "status": "ported",
+    "evidence": [
+      "static:widen"
+    ],
+    "note": "widen (C-x n w) = widen."
+  },
+  {
+    "spec_id": "emacs.command.untabify",
+    "status": "ported",
+    "evidence": [
+      "typable:retab"
+    ],
+    "note": "untabify (tabs->spaces) = retab."
+  },
+  {
+    "spec_id": "emacs.command.overwrite_mode",
+    "status": "partial",
+    "evidence": [
+      "static:replace_mode"
+    ],
+    "note": "overwrite-mode = replace_mode (modal vs persistent)."
+  },
+  {
+    "spec_id": "emacs.command.visual_line_mode",
+    "status": "partial",
+    "evidence": [
+      "static:toggle_soft_wrap"
+    ],
+    "note": "visual-line-mode = toggle_soft_wrap (no motion rebinding)."
+  },
+  {
+    "spec_id": "emacs.command.zap_up_to_char",
+    "status": "partial",
+    "evidence": [
+      "static:delete_till_char_forward"
+    ],
+    "note": "zap-up-to-char = delete_till_char_forward (dt)."
+  },
+  {
+    "spec_id": "emacs.command.kill_region",
+    "status": "partial",
+    "evidence": [
+      "static:delete_selection"
+    ],
+    "note": "kill-region (C-w) = delete_selection into register."
+  },
+  {
+    "spec_id": "emacs.command.insert_char",
+    "status": "partial",
+    "evidence": [
+      "static:unicode_picker"
+    ],
+    "note": "insert-char = unicode_picker (picker vs codepoint entry)."
+  },
+  {
+    "spec_id": "emacs.command.kmacro_end_macro",
+    "status": "partial",
+    "evidence": [
+      "static:record_macro"
+    ],
+    "note": "kmacro-end-macro = record_macro (start/stop toggle)."
   }
 ]
