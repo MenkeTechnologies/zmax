@@ -1673,6 +1673,52 @@ fn magit(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
     Ok(())
 }
 
+/// `:hex` — open a read-only, full-screen `xxd`-style hex viewer of a file's raw
+/// bytes (offset gutter, 16 hex bytes per row grouped 8 + 8, and an ASCII
+/// gutter). With no argument the focused document's file is shown; with an
+/// argument that path is read instead. The bytes are read straight off disk
+/// (not the text buffer) so arbitrary non-UTF-8 content is shown faithfully.
+fn hex(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    // Resolve the target path: the positional argument, else the focused doc.
+    let path = match args.first() {
+        Some(arg) => Some(zemacs_stdx::path::expand_tilde(Path::new(arg)).into_owned()),
+        None => doc!(cx.editor).path().map(|p| p.to_path_buf()),
+    };
+
+    let Some(path) = path else {
+        cx.editor
+            .set_status("no file to view; pass a path: :hex <file>");
+        return Ok(());
+    };
+
+    let bytes = match std::fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            cx.editor
+                .set_status(format!("can't read {}: {err}", path.display()));
+            return Ok(());
+        }
+    };
+
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| path.display().to_string());
+    let view = crate::ui::hex::HexView::new(name, bytes);
+
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(view));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 // --- Org-mode (slice 1: outline folding + TODO cycling) ----------------------
 // Pure logic lives in `super::org`; these typable commands wire it to the focused
 // buffer. Folding reuses the document's `Folds` model exactly like the vim `z*`
@@ -13596,6 +13642,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "hex",
+        aliases: &["hexview", "hexedit"],
+        doc: "Open a read-only xxd-style hex viewer of a file's raw bytes (optional path; defaults to the buffer's file).",
+        fun: hex,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
