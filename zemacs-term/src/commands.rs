@@ -510,6 +510,7 @@ impl MappableCommand {
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
         copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
+        copy_last_keys, "Copy the most recently pressed keys to the clipboard (SPC h d l)",
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
         describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
         package_search, "Search configured language packages and describe one (SPC h p)",
@@ -8003,6 +8004,34 @@ fn package_search(cx: &mut Context) {
         cx.editor.set_status(format!("package: {}", it.name));
     });
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// SPC h d l : copy the most recently pressed keys to the system clipboard (newest last), for
+/// pasting into bug reports / chat. Spacemacs `spacemacs/describe-last-keys`.
+fn copy_last_keys(cx: &mut Context) {
+    // The final key in the ring is the one that triggered this command; drop it.
+    let mut keys: Vec<KeyEvent> = cx.editor.last_keys.iter().copied().collect();
+    keys.pop();
+    if keys.is_empty() {
+        cx.editor.set_status("no recent keys recorded yet");
+        return;
+    }
+    let s = keys
+        .into_iter()
+        .map(|key| {
+            let s = key.to_string();
+            if s.chars().count() == 1 {
+                s
+            } else {
+                format!("<{s}>")
+            }
+        })
+        .collect::<String>();
+    if let Err(e) = cx.editor.registers.write('+', vec![s.clone()]) {
+        cx.editor.set_error(format!("clipboard write failed: {e}"));
+        return;
+    }
+    cx.editor.set_status(format!("Copied last keys to clipboard: {s}"));
 }
 
 /// SPC h d s : copy system information (zemacs version, OS, arch, term) to the system clipboard,

@@ -1527,7 +1527,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "p" => describe_language_package, // SPC h d p : describe language-support package
                     "t" => describe_text_properties, // SPC h d t : describe text properties (syntax node stack)
                     "x" => help,                   // SPC h d x : describe ex-command (Help browser)
-                    "l" => command_palette,        // SPC h d l : copy last keys
+                    "l" => copy_last_keys,         // SPC h d l : copy last pressed keys to clipboard
                     "s" => copy_system_info,       // SPC h d s : copy system info to clipboard
                     // SPC h d c (describe char) -> :character-info via typable table
                 },

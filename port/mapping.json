@@ -6792,11 +6792,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_d_l",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space h d l"
+   "key:normal:space h d l",
+   "static:copy_last_keys"
   ],
-  "note": "copy last keys -> command palette"
+  "note": "describe-last-keys -> copy_last_keys (bounded last-keys ring in Editor; copies to clipboard)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_d_s",

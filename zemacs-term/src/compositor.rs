@@ -150,6 +150,18 @@ impl Compositor {
             }
         }
 
+        // Maintain a bounded ring of recently pressed keys (for `copy_last_keys` / SPC h d l),
+        // skipping keys synthesized during macro replay.
+        if let Event::Key(key) = event {
+            if cx.editor.macro_replaying.is_empty() {
+                const LAST_KEYS_CAP: usize = 30;
+                cx.editor.last_keys.push_back(*key);
+                while cx.editor.last_keys.len() > LAST_KEYS_CAP {
+                    cx.editor.last_keys.pop_front();
+                }
+            }
+        }
+
         let mut callbacks = Vec::new();
         let mut consumed = false;
 

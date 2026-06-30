@@ -1378,6 +1378,8 @@ pub struct Editor {
     pub registers: Registers,
     pub macro_recording: Option<(char, Vec<KeyEvent>)>,
     pub macro_replaying: Vec<char>,
+    /// Bounded ring of the most recently pressed keys (for "copy last keys"). Newest at the back.
+    pub last_keys: std::collections::VecDeque<KeyEvent>,
     pub language_servers: zemacs_lsp::Registry,
     pub diagnostics: Diagnostics,
     pub diff_providers: DiffProviderRegistry,
@@ -1546,6 +1548,7 @@ impl Editor {
             last_substitute: None,
             macro_recording: None,
             macro_replaying: Vec::new(),
+            last_keys: std::collections::VecDeque::new(),
             theme: theme_loader.default(),
             language_servers,
             diagnostics: Diagnostics::new(),
