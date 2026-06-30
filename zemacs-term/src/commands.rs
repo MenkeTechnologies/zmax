@@ -408,6 +408,31 @@ impl MappableCommand {
         global_search, "Global search in workspace folder",
         global_search_symbol, "Global search seeded with the symbol under the cursor",
         clear_search_highlight, "Clear persistent search highlight (SPC s c)",
+        align_at_equals, "Align region at = (SPC x a =)",
+        align_at_comma, "Align region at , (SPC x a ,)",
+        align_at_colon, "Align region at : (SPC x a :)",
+        align_at_semicolon, "Align region at ; (SPC x a ;)",
+        align_at_ampersand, "Align region at & (SPC x a &)",
+        align_at_lparen, "Align region at ( (SPC x a ()",
+        align_at_rparen, "Align region at ) (SPC x a ))",
+        align_at_lbracket, "Align region at [ (SPC x a [)",
+        align_at_rbracket, "Align region at ] (SPC x a ])",
+        align_at_lbrace, "Align region at { (SPC x a {)",
+        align_at_rbrace, "Align region at } (SPC x a })",
+        align_at_dot, "Align region at . (SPC x a .)",
+        align_at_arithmetic, "Align region at arithmetic operators (SPC x a m)",
+        align_left_at_char, "Left-align region at a typed delimiter (SPC x a l)",
+        align_right_at_char, "Right-align region at a typed delimiter (SPC x a L)",
+        goto_window_1, "Go to window 1 (SPC 1)",
+        goto_window_2, "Go to window 2 (SPC 2)",
+        goto_window_3, "Go to window 3 (SPC 3)",
+        goto_window_4, "Go to window 4 (SPC 4)",
+        goto_window_5, "Go to window 5 (SPC 5)",
+        goto_window_6, "Go to window 6 (SPC 6)",
+        goto_window_7, "Go to window 7 (SPC 7)",
+        goto_window_8, "Go to window 8 (SPC 8)",
+        goto_window_9, "Go to window 9 (SPC 9)",
+        delete_window_and_buffer, "Close window and kill its buffer (SPC w . x)",
         extend_line, "Select current line, if already selected, extend to another line based on the anchor",
         extend_line_below, "Select current line, if already selected, extend to next line",
         extend_line_above, "Select current line, if already selected, extend to previous line",
@@ -5799,6 +5824,169 @@ fn make_search_word_bounded(cx: &mut Context) {
             cx.editor.set_status(msg)
         }
         Err(err) => cx.editor.set_error(err.to_string()),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Region alignment (Spacemacs `SPC x a *` / evil-lion). Align every line spanned
+// by the selection so the first match of a delimiter shares a column.
+// ---------------------------------------------------------------------------
+
+/// Align `lines` so the first match of `pat` in each line starts at a shared
+/// column. Lines with no match are left unchanged. `right` right-justifies the
+/// text before the delimiter instead of left-justifying it. Pure (tested).
+fn align_lines(lines: &[String], pat: &regex::Regex, right: bool) -> Vec<String> {
+    let mut parts: Vec<Option<(String, String)>> = Vec::with_capacity(lines.len());
+    let mut width = 0usize;
+    for line in lines {
+        if let Some(mat) = pat.find(line) {
+            let before = &line[..mat.start()];
+            let rest = &line[mat.start()..];
+            let trimmed = before.trim_end();
+            width = width.max(trimmed.chars().count());
+            parts.push(Some((trimmed.to_string(), rest.to_string())));
+        } else {
+            parts.push(None);
+        }
+    }
+    let target = width + 1; // one space before the aligned delimiter
+    lines
+        .iter()
+        .zip(parts)
+        .map(|(orig, p)| match p {
+            Some((before, rest)) => {
+                let len = before.chars().count();
+                let pad = " ".repeat(target.saturating_sub(len));
+                if right {
+                    format!("{}{}{}", pad, before, rest)
+                } else {
+                    format!("{}{}{}", before, pad, rest)
+                }
+            }
+            None => orig.clone(),
+        })
+        .collect()
+}
+
+/// Apply `align_lines` to the lines spanned by the primary selection.
+fn align_region(cx: &mut Context, pat: regex::Regex, right: bool) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let start_line = text.char_to_line(sel.from());
+    let end_char = sel.to().saturating_sub(1).max(sel.from());
+    let end_line = text.char_to_line(end_char);
+    let le = doc.line_ending.as_str();
+
+    let mut lines = Vec::new();
+    let mut last_has_nl = false;
+    for l in start_line..=end_line {
+        let mut s = text.line(l).to_string();
+        last_has_nl = s.ends_with('\n');
+        if last_has_nl {
+            s.pop();
+            if s.ends_with('\r') {
+                s.pop();
+            }
+        }
+        lines.push(s);
+    }
+    let aligned = align_lines(&lines, &pat, right);
+    if aligned == lines {
+        return;
+    }
+    let mut out = aligned.join(le);
+    if last_has_nl {
+        out.push_str(le);
+    }
+    let from = text.line_to_char(start_line);
+    let to = if last_has_nl {
+        text.line_to_char(end_line + 1)
+    } else {
+        text.len_chars()
+    };
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((from, to, Some(out.into()))));
+    doc.apply(&transaction, view.id);
+}
+
+fn align_region_lit(cx: &mut Context, delim: &str, right: bool) {
+    match regex::Regex::new(&regex::escape(delim)) {
+        Ok(re) => align_region(cx, re, right),
+        Err(_) => {}
+    }
+}
+
+fn align_at_equals(cx: &mut Context) { align_region_lit(cx, "=", false) }
+fn align_at_comma(cx: &mut Context) { align_region_lit(cx, ",", false) }
+fn align_at_colon(cx: &mut Context) { align_region_lit(cx, ":", false) }
+fn align_at_semicolon(cx: &mut Context) { align_region_lit(cx, ";", false) }
+fn align_at_ampersand(cx: &mut Context) { align_region_lit(cx, "&", false) }
+fn align_at_lparen(cx: &mut Context) { align_region_lit(cx, "(", false) }
+fn align_at_rparen(cx: &mut Context) { align_region_lit(cx, ")", false) }
+fn align_at_lbracket(cx: &mut Context) { align_region_lit(cx, "[", false) }
+fn align_at_rbracket(cx: &mut Context) { align_region_lit(cx, "]", false) }
+fn align_at_lbrace(cx: &mut Context) { align_region_lit(cx, "{", false) }
+fn align_at_rbrace(cx: &mut Context) { align_region_lit(cx, "}", false) }
+fn align_at_dot(cx: &mut Context) { align_region_lit(cx, ".", false) }
+
+/// Align at arithmetic operators `+ - * /` (Spacemacs `SPC x a m`).
+fn align_at_arithmetic(cx: &mut Context) {
+    if let Ok(re) = regex::Regex::new(r"[-+*/]") {
+        align_region(cx, re, false);
+    }
+}
+
+/// Left-align at a delimiter typed next (evil-lion `gl`, Spacemacs `SPC x a l`).
+fn align_left_at_char(cx: &mut Context) {
+    cx.on_next_key(move |cx, event| {
+        if let KeyEvent { code: KeyCode::Char(ch), .. } = event {
+            align_region_lit(cx, &ch.to_string(), false);
+        }
+    });
+}
+
+/// Right-align at a delimiter typed next (evil-lion `gL`, Spacemacs `SPC x a L`).
+fn align_right_at_char(cx: &mut Context) {
+    cx.on_next_key(move |cx, event| {
+        if let KeyEvent { code: KeyCode::Char(ch), .. } = event {
+            align_region_lit(cx, &ch.to_string(), true);
+        }
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Window-by-number (Spacemacs `SPC 1`..`SPC 9` / window-numbering-mode). Windows
+// are numbered 1..N in the tree's traversal order; jump straight to the Nth.
+// ---------------------------------------------------------------------------
+
+fn goto_window_n(cx: &mut Context, n: usize) {
+    if n == 0 {
+        return;
+    }
+    let ids: Vec<_> = cx.editor.tree.traverse().map(|(id, _)| id).collect();
+    if let Some(&id) = ids.get(n - 1) {
+        cx.editor.focus(id);
+    }
+}
+
+fn goto_window_1(cx: &mut Context) { goto_window_n(cx, 1) }
+fn goto_window_2(cx: &mut Context) { goto_window_n(cx, 2) }
+fn goto_window_3(cx: &mut Context) { goto_window_n(cx, 3) }
+fn goto_window_4(cx: &mut Context) { goto_window_n(cx, 4) }
+fn goto_window_5(cx: &mut Context) { goto_window_n(cx, 5) }
+fn goto_window_6(cx: &mut Context) { goto_window_n(cx, 6) }
+fn goto_window_7(cx: &mut Context) { goto_window_n(cx, 7) }
+fn goto_window_8(cx: &mut Context) { goto_window_n(cx, 8) }
+fn goto_window_9(cx: &mut Context) { goto_window_n(cx, 9) }
+
+/// Close the current window and kill its buffer (Spacemacs `SPC w . x`).
+fn delete_window_and_buffer(cx: &mut Context) {
+    let view_id = view!(cx.editor).id;
+    let doc_id = doc!(cx.editor).id();
+    let _ = cx.editor.close_document(doc_id, false);
+    if cx.editor.tree.views().count() > 1 {
+        cx.editor.close(view_id);
     }
 }
 
@@ -13305,6 +13493,39 @@ fn lsp_or_syntax_workspace_symbol_picker(cx: &mut Context) {
 #[cfg(test)]
 mod insert_generator_tests {
     use super::*;
+
+    fn lines(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn align_at_equals_pads_to_shared_column() {
+        let re = regex::Regex::new("=").unwrap();
+        let out = align_lines(&lines(&["a = 1", "bb = 2", "ccc = 3"]), &re, false);
+        // delimiter column is the same on every line
+        let cols: Vec<usize> = out.iter().map(|l| l.find('=').unwrap()).collect();
+        assert!(cols.windows(2).all(|w| w[0] == w[1]), "aligned: {out:?}");
+        // content preserved
+        assert!(out[0].starts_with("a"));
+        assert!(out[2].starts_with("ccc"));
+    }
+
+    #[test]
+    fn align_skips_lines_without_delimiter() {
+        let re = regex::Regex::new(":").unwrap();
+        let out = align_lines(&lines(&["x: 1", "no delim here", "yy: 2"]), &re, false);
+        assert_eq!(out[1], "no delim here");
+        assert_eq!(out[0].find(':'), out[2].find(':'));
+    }
+
+    #[test]
+    fn align_right_justifies_before_text() {
+        let re = regex::Regex::new("=").unwrap();
+        let out = align_lines(&lines(&["a = 1", "bbb = 2"]), &re, true);
+        // delimiters still aligned; shorter "before" is right-padded with leading spaces
+        assert_eq!(out[0].find('='), out[1].find('='));
+        assert!(out[0].starts_with(' '));
+    }
 
     fn is_hex(s: &str) -> bool {
         s.chars().all(|c| c.is_ascii_hexdigit())

@@ -1026,6 +1026,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "}" => resize_view_taller,     // SPC w . } : enlarge vertically
                     "_" => wonly,                  // SPC w . _ : maximize horizontally
                     "|" => wonly,                  // SPC w . | : maximize vertically
+                    "m" => wonly,                  // SPC w . m : maximize current window
+                    "x" => delete_window_and_buffer, // SPC w . x : delete window + kill buffer
+                    "a" => rotate_view,            // SPC w . a : ace-window (cycle focus)
+                    "1" => goto_window_1, "2" => goto_window_2, "3" => goto_window_3,
+                    "4" => goto_window_4, "5" => goto_window_5, "6" => goto_window_6,
+                    "7" => goto_window_7, "8" => goto_window_8, "9" => goto_window_9,
                 },
             },
             "s" => { "Search"
@@ -1098,6 +1104,16 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "q" => dap_terminate,              // SPC d q : end debug session
             },
             "*" => global_search_symbol,           // SPC * : search with default input (symbol at point)
+            // Window-by-number (window-numbering-mode): SPC 1..9 jump to window N.
+            "1" => goto_window_1,
+            "2" => goto_window_2,
+            "3" => goto_window_3,
+            "4" => goto_window_4,
+            "5" => goto_window_5,
+            "6" => goto_window_6,
+            "7" => goto_window_7,
+            "8" => goto_window_8,
+            "9" => goto_window_9,
             "S" => settings_page,                  // SPC S : Preferences → Settings tab
             "," => preferences,                    // SPC , : open the unified Preferences window
             "z" => toggle_ide,                     // SPC z : toggle IDE workbench (Zen / focus mode)
@@ -1268,24 +1284,24 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 },
                 "tab" => indent,                   // SPC x TAB : indent region
                 "a" => { "Align"
-                    "a" => align_selections,       // SPC x a a : align region
-                    "&" => align_selections,       // SPC x a & : align at &
-                    "c" => align_selections,       // SPC x a c : align indentation
-                    "l" => align_selections,       // SPC x a l : left-align
-                    "r" => align_selections,       // SPC x a r : align at regexp
-                    "m" => align_selections,       // SPC x a m : align at math operators
-                    "L" => align_selections,       // SPC x a L : right-align
-                    "(" => align_selections,       // SPC x a ( : align at (
-                    ")" => align_selections,       // SPC x a ) : align at )
-                    "[" => align_selections,       // SPC x a [ : align at [
-                    "]" => align_selections,       // SPC x a ] : align at ]
-                    "{" => align_selections,       // SPC x a { : align at {
-                    "}" => align_selections,       // SPC x a } : align at }
-                    "," => align_selections,       // SPC x a , : align at ,
-                    "." => align_selections,       // SPC x a . : align at . (numeric)
-                    ":" => align_selections,       // SPC x a : : align at :
-                    ";" => align_selections,       // SPC x a ; : align at ;
-                    "=" => align_selections,       // SPC x a = : align at =
+                    "a" => align_selections,       // SPC x a a : align cursors (Helix)
+                    "&" => align_at_ampersand,     // SPC x a & : align at &
+                    "c" => indent,                 // SPC x a c : align indentation (reindent)
+                    "l" => align_left_at_char,     // SPC x a l : left-align at typed char
+                    "r" => align_selections,       // SPC x a r : align at regexp (approx, partial)
+                    "m" => align_at_arithmetic,    // SPC x a m : align at math operators
+                    "L" => align_right_at_char,    // SPC x a L : right-align at typed char
+                    "(" => align_at_lparen,        // SPC x a ( : align at (
+                    ")" => align_at_rparen,        // SPC x a ) : align at )
+                    "[" => align_at_lbracket,      // SPC x a [ : align at [
+                    "]" => align_at_rbracket,      // SPC x a ] : align at ]
+                    "{" => align_at_lbrace,        // SPC x a { : align at {
+                    "}" => align_at_rbrace,        // SPC x a } : align at }
+                    "," => align_at_comma,         // SPC x a , : align at ,
+                    "." => align_at_dot,           // SPC x a . : align at . (numeric)
+                    ":" => align_at_colon,         // SPC x a : : align at :
+                    ";" => align_at_semicolon,     // SPC x a ; : align at ;
+                    "=" => align_at_equals,        // SPC x a = : align at =
                 },
             },
             "r" => { "Resume / registers"

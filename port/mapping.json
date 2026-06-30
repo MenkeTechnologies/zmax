@@ -5009,7 +5009,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a &"
   ],
@@ -5017,7 +5017,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_c",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a c"
   ],
@@ -5025,7 +5025,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_l",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a l"
   ],
@@ -5041,7 +5041,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_m",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a m"
   ],
@@ -8121,7 +8121,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_x",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a ("
   ],
@@ -8129,7 +8129,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_x_2",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a )"
   ],
@@ -8137,7 +8137,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_x_3",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a ["
   ],
@@ -8145,7 +8145,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_x_4",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a ]"
   ],
@@ -8153,7 +8153,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_x_5",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a {"
   ],
@@ -8161,7 +8161,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_x_6",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a }"
   ],
@@ -8169,7 +8169,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_x_7",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a ,"
   ],
@@ -8177,7 +8177,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_x_8",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a ."
   ],
@@ -8185,7 +8185,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_x_9",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a :"
   ],
@@ -8193,7 +8193,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_semi",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a ;"
   ],
@@ -8201,7 +8201,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_x_10",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a ="
   ],
@@ -8209,7 +8209,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_lU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a L"
   ],
@@ -10390,5 +10390,117 @@
    "key:normal:space *"
   ],
   "note": "search with default input (symbol at point)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_1",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space 1"
+  ],
+  "note": "go to window 1"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_2",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space 2"
+  ],
+  "note": "go to window 2"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_3",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space 3"
+  ],
+  "note": "go to window 3"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_4",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space 4"
+  ],
+  "note": "go to window 4"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_5",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space 5"
+  ],
+  "note": "go to window 5"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_6",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space 6"
+  ],
+  "note": "go to window 6"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_7",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space 7"
+  ],
+  "note": "go to window 7"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_8",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space 8"
+  ],
+  "note": "go to window 8"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_9",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space 9"
+  ],
+  "note": "go to window 9"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w ="
+  ],
+  "note": "balance/equalize windows"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_m",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . m"
+  ],
+  "note": "maximize current window"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_x_7",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . x"
+  ],
+  "note": "delete window and kill buffer"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_0xx9",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . 1"
+  ],
+  "note": "go to window N (transient)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_a",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space w . a"
+  ],
+  "note": "ace-window (cycle focus approx)"
  }
 ]
