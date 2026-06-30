@@ -7072,11 +7072,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_b_n_i",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space b N i"
+   "key:normal:space b N i",
+   "static:clone_indirect_buffer"
   ],
-  "note": "indirect buffer -> :new"
+  "note": "make-indirect-buffer -> clone_indirect_buffer (split = new view of same shared Document)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_b_n_c_i",
