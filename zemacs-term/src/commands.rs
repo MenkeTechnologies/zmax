@@ -504,6 +504,7 @@ impl MappableCommand {
         open_file_literally, "Open a file with no syntax/language (fundamental mode, SPC f l)",
         locate_file, "Locate a file via system locate/mdfind and open it (SPC f L)",
         edit_project_config, "Edit the project-local .zemacs/config.toml (SPC p e)",
+        man_page_search, "Search man pages via apropos and view the selected page (SPC h m)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7474,6 +7475,92 @@ fn locate_file(cx: &mut Context) {
     })
     .with_preview(|_editor, item: &PathBuf| Some((item.as_path().into(), None)))
     .with_dynamic_query(get_files, Some(275));
+
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// SPC h m : search system man pages. A dynamic picker runs `apropos <query>` and, on selection,
+/// renders the chosen page (`man <section> <name>`, de-formatted with `col -bx`) into a scratch
+/// buffer — Spacemacs `helm-man-woman`.
+fn man_page_search(cx: &mut Context) {
+    #[derive(Debug)]
+    struct ManPage {
+        name: String,
+        section: String,
+        line: String,
+    }
+
+    // apropos lines look like: "ls (1) - list directory contents".
+    fn parse(line: &str) -> Option<ManPage> {
+        let open = line.find('(')?;
+        let close = line[open..].find(')')? + open;
+        let name = line[..open].trim().split_whitespace().next()?.to_string();
+        let section = line[open + 1..close].to_string();
+        if name.is_empty() {
+            return None;
+        }
+        Some(ManPage {
+            name,
+            section,
+            line: line.trim().to_string(),
+        })
+    }
+
+    let columns = [PickerColumn::new("man page", |item: &ManPage, _: &()| {
+        item.line.clone().into()
+    })];
+
+    let get_pages = |query: &str,
+                     _editor: &mut Editor,
+                     _config: std::sync::Arc<()>,
+                     injector: &ui::picker::Injector<ManPage, ()>| {
+        let query = query.trim().to_owned();
+        if query.is_empty() {
+            return async { Ok(()) }.boxed();
+        }
+        let injector = injector.clone();
+        async move {
+            let out = std::process::Command::new("apropos")
+                .arg(&query)
+                .output()
+                .ok()
+                .filter(|o| o.status.success())
+                .map(|o| String::from_utf8_lossy(&o.stdout).into_owned());
+            if let Some(out) = out {
+                for line in out.lines().take(500) {
+                    if let Some(page) = parse(line) {
+                        if injector.push(page).is_err() {
+                            break;
+                        }
+                    }
+                }
+            }
+            Ok(())
+        }
+        .boxed()
+    };
+
+    let picker = Picker::new(columns, 0, [], (), |cx, item: &ManPage, _action| {
+        // Section first disambiguates pages that exist in multiple sections.
+        let cmd = format!("man {} {} | col -bx", item.section, item.name);
+        let out = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(&cmd)
+            .env("MANWIDTH", "80")
+            .output();
+        match out {
+            Ok(o) if o.status.success() && !o.stdout.is_empty() => {
+                let content = String::from_utf8_lossy(&o.stdout).into_owned();
+                show_text_in_scratch(cx.editor, &content);
+                cx.editor
+                    .set_status(format!("man {}({})", item.name, item.section));
+            }
+            _ => cx
+                .editor
+                .set_error(format!("no man page for {}", item.name)),
+        }
+    })
+    .with_dynamic_query(get_pages, Some(275));
 
     cx.push_layer(Box::new(overlaid(picker)));
 }

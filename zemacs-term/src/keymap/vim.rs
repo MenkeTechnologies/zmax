@@ -1516,7 +1516,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "r" => help,                       // SPC h r : search documentation files (Help browser)
                 "." => command_palette,            // SPC h . : search dotfile variables
                 "i" => command_palette,            // SPC h i : search info pages
-                "m" => command_palette,            // SPC h m : search man pages
+                "m" => man_page_search,            // SPC h m : search man pages (apropos picker)
                 "d" => { "Describe"
                     "b" => help,                   // SPC h d b : describe bindings (Help browser: keys)
                     "f" => hover,                  // SPC h d f : describe function (LSP hover at point)

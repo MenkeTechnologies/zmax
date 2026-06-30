@@ -6812,11 +6812,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_m",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space h m"
+   "key:normal:space h m",
+   "static:man_page_search"
   ],
-  "note": "search man -> command palette"
+  "note": "search man pages -> man_page_search (apropos dynamic picker, renders man into scratch)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_e_h",
