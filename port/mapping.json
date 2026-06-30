@@ -11503,11 +11503,11 @@
   },
   {
     "spec_id": "jetbrains.navigation.toggle-bookmark",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:harpoon_add"
+      "static:bookmark_toggle"
     ],
-    "note": "harpoon pin ~ bookmark"
+    "note": "Toggle Bookmark (F11) = bookmark_toggle: real line-level bookmark (file:line), distinct from file-level harpoon"
   },
   {
     "spec_id": "jetbrains.navigation.show-structure-window",
@@ -18858,19 +18858,19 @@
   },
   {
     "spec_id": "jetbrains.navigation.go-to-next-bookmark",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:harpoon_next"
+      "static:bookmark_next"
     ],
-    "note": "harpoon pin ~ bookmark"
+    "note": "Next Bookmark = bookmark_next: jump to next line bookmark across files (wraps)"
   },
   {
     "spec_id": "jetbrains.navigation.go-to-previous-bookmark",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:harpoon_prev"
+      "static:bookmark_prev"
     ],
-    "note": "harpoon pin ~ bookmark"
+    "note": "Previous Bookmark = bookmark_prev: jump to previous line bookmark across files (wraps)"
   },
   {
     "spec_id": "jetbrains.navigation.jump-to-source",

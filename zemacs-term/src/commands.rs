@@ -641,6 +641,9 @@ impl MappableCommand {
         harpoon_4, "Jump to harpoon mark 4",
         harpoon_next, "Open the next harpoon mark",
         harpoon_prev, "Open the previous harpoon mark",
+        bookmark_toggle, "Toggle a line bookmark (JetBrains F11)",
+        bookmark_next, "Jump to the next line bookmark (JetBrains)",
+        bookmark_prev, "Jump to the previous line bookmark (JetBrains)",
         harpoon_menu, "Open the harpoon marks menu",
         harpoon_remove, "Unpin the current file from harpoon",
         select_references_to_symbol_under_cursor, "Select symbol references",
@@ -12021,6 +12024,76 @@ fn harpoon_next(cx: &mut Context) {
 /// Open the previous harpoon mark (wraps).
 fn harpoon_prev(cx: &mut Context) {
     harpoon_cycle(cx, false);
+}
+
+/// Line-level bookmarks (JetBrains Bookmarks): an ordered global list of `(file, line)`, distinct
+/// from the file-level harpoon pins. Line numbers are captured at toggle time.
+static BOOKMARKS: std::sync::Mutex<Vec<(std::path::PathBuf, usize)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// The current `(file, 0-based line)` under the cursor, if the buffer has a path.
+fn current_file_line(cx: &Context) -> Option<(std::path::PathBuf, usize)> {
+    let (view, doc) = current_ref!(cx.editor);
+    let path = doc.path()?.to_path_buf();
+    let text = doc.text();
+    let line = text.char_to_line(doc.selection(view.id).primary().cursor(text.slice(..)));
+    Some((path, line))
+}
+
+/// JetBrains "Toggle Bookmark" (F11): add or remove a bookmark on the current line.
+fn bookmark_toggle(cx: &mut Context) {
+    let Some((path, line)) = current_file_line(cx) else {
+        cx.editor.set_error("Cannot bookmark a scratch buffer");
+        return;
+    };
+    let mut marks = BOOKMARKS.lock().unwrap();
+    if let Some(pos) = marks.iter().position(|(p, l)| *p == path && *l == line) {
+        marks.remove(pos);
+        cx.editor.set_status(format!("Bookmark removed ({}:{})", path.display(), line + 1));
+    } else {
+        marks.push((path.clone(), line));
+        marks.sort();
+        cx.editor.set_status(format!("Bookmark set ({}:{})", path.display(), line + 1));
+    }
+}
+
+/// Jump to the next/previous bookmark across all files (wrapping), relative to the cursor.
+fn bookmark_cycle(cx: &mut Context, forward: bool) {
+    let marks = BOOKMARKS.lock().unwrap().clone();
+    if marks.is_empty() {
+        cx.editor.set_status("No bookmarks set (toggle with bookmark_toggle)");
+        return;
+    }
+    let cur = current_file_line(cx);
+    let target = match &cur {
+        Some(c) if forward => marks.iter().find(|m| *m > c).or_else(|| marks.first()),
+        Some(c) => marks.iter().rev().find(|m| *m < c).or_else(|| marks.last()),
+        None => marks.first(),
+    }
+    .cloned();
+    let Some((path, line)) = target else {
+        return;
+    };
+    if let Err(e) = cx.editor.open(&path, Action::Replace) {
+        cx.editor
+            .set_error(format!("unable to open \"{}\": {e}", path.display()));
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    push_jump(view, doc);
+    let line = line.min(doc.text().len_lines().saturating_sub(1));
+    let pos = doc.text().line_to_char(line);
+    doc.set_selection(view.id, Selection::point(pos));
+}
+
+/// JetBrains "Next Bookmark": jump to the next line bookmark (wraps).
+fn bookmark_next(cx: &mut Context) {
+    bookmark_cycle(cx, true);
+}
+
+/// JetBrains "Previous Bookmark": jump to the previous line bookmark (wraps).
+fn bookmark_prev(cx: &mut Context) {
+    bookmark_cycle(cx, false);
 }
 
 /// Fuzzy menu of the project's harpoon marks; Enter opens, and the order is the
