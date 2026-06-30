@@ -573,6 +573,7 @@ impl MappableCommand {
         extract_refactor, "Extract refactoring (method/variable/constant) via LSP (IntelliJ Extract)",
         inline_refactor, "Inline refactoring (variable/method) via LSP (IntelliJ Inline)",
         rewrite_refactor, "Rewrite refactoring (change signature etc.) via LSP",
+        refactor_this, "Show all applicable refactorings (IntelliJ Refactor This)",
         buffer_picker, "Open buffer picker",
         jumplist_picker, "Open jumplist picker",
         register_picker, "Browse registers and paste the chosen one",
