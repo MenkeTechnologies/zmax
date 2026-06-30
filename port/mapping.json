@@ -2701,7 +2701,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -6868,11 +6868,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_e_i",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space f e i"
+   "key:normal:space f e i",
+   "typable:config-open"
   ],
-  "note": "open init -> :config-open"
+  "note": "open init.el -> :config-open (opens the user config.toml, the zemacs init file)"
  },
  {
   "spec_id": "neovim.normal-mode.u",
