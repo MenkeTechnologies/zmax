@@ -676,6 +676,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             // vim window height resize (horizontal split stays on s / C-s)
             "+" => resize_view_taller,        // C-w +: increase window height N lines
             "-" => resize_view_shorter,       // C-w -: decrease window height N lines
+            "[" => resize_view_narrower,      // C-w [ : shrink window horizontally (matches SPC w)
+            "{" => resize_view_shorter,       // C-w { : shrink window vertically (matches SPC w)
             "=" => resize_view_equalize,      // C-w =: make all windows equal size
             "c" => wclose,                    // spacemacs SPC w c : close window
             "m" => wonly,                     // spacemacs SPC w m : maximize (only)
@@ -689,17 +691,36 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "_" => wonly,                     // SPC w _ : maximize window horizontally
             "D" => wclose,                    // SPC w D : delete another window
             "M" => transpose_view,            // SPC w M : swap windows
+            // Kept identical to the `SPC w .` transient submenu (enforced by the
+            // aliased_modes_are_same_in_default_keymap test).
             "." => { "Window transient"
-                "h" => jump_view_left,        // SPC w . h : go to window left
-                "j" => jump_view_down,        // SPC w . j : go to window below
-                "k" => jump_view_up,          // SPC w . k : go to window above
-                "l" => jump_view_right,       // SPC w . l : go to window right
-                "/" => vsplit,                // SPC w . / : vertical split
-                "-" => hsplit,                // SPC w . - : horizontal split
-                "d" => wclose,                // SPC w . d : delete window
-                "D" => wonly,                 // SPC w . D : delete other windows
-                "o" => rotate_view,           // SPC w . o : cycle windows
-                "z" => align_view_center,     // SPC w . z : recenter
+                "h" => jump_view_left,
+                "j" => jump_view_down,
+                "k" => jump_view_up,
+                "l" => jump_view_right,
+                "H" => swap_view_left,
+                "J" => swap_view_down,
+                "K" => swap_view_up,
+                "L" => swap_view_right,
+                "/" => vsplit,
+                "-" => hsplit,
+                "s" => hsplit,
+                "S" => hsplit,
+                "v" => vsplit,
+                "V" => vsplit,
+                "r" => rotate_view,
+                "R" => rotate_view_reverse,
+                "w" => rotate_view,
+                "d" => wclose,
+                "D" => wonly,
+                "o" => rotate_view,
+                "z" => align_view_center,
+                "[" => resize_view_narrower,
+                "]" => resize_view_wider,
+                "{" => resize_view_shorter,
+                "}" => resize_view_taller,
+                "_" => wonly,
+                "|" => wonly,
             },
         },
 
