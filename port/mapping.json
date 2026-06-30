@@ -18238,5 +18238,45 @@
    "key:normal:space D f f"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_echon",
+  "status": "ported",
+  "evidence": [
+   "builtin:viml:ex:echon"
+  ],
+  "note": "Vimscript statement run by embedded vimlrs (:vim)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_for",
+  "status": "ported",
+  "evidence": [
+   "builtin:viml:ex:for"
+  ],
+  "note": "Vimscript statement run by embedded vimlrs (:vim)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_if",
+  "status": "ported",
+  "evidence": [
+   "builtin:viml:ex:if"
+  ],
+  "note": "Vimscript statement run by embedded vimlrs (:vim)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_let",
+  "status": "ported",
+  "evidence": [
+   "builtin:viml:ex:let"
+  ],
+  "note": "Vimscript statement run by embedded vimlrs (:vim)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_try",
+  "status": "ported",
+  "evidence": [
+   "builtin:viml:ex:try"
+  ],
+  "note": "Vimscript statement run by embedded vimlrs (:vim)"
  }
 ]

@@ -315,6 +315,13 @@ def parse_builtins():
                     try: t=open(_os.path.join(dp,fn),encoding="utf-8").read()
                     except OSError: continue
                     for m in _re.finditer(r"\bpub fn f_([a-z0-9_]+)",t): builtins.add("viml:"+m.group(1))
+    # vimlrs ex-statements (`:let`,`:if`,`:for`,`:try`,`:echon` …) it parses/runs,
+    # callable via `:vim`; catalogued as viml:ex:<name>.
+    _ast=_os.path.join(ROOT,"vendor","vimlrs","src","viml_ast.rs")
+    if _os.path.isfile(_ast):
+        _t=open(_ast,encoding="utf-8").read()
+        for _kw in ["let","if","elseif","else","endif","for","endfor","while","endwhile","function","endfunction","return","call","execute","echo","echon","echomsg","echoerr","try","catch","finally","endtry","throw","break","continue","unlet","const"]:
+            if _re.search(r"\b"+_kw.capitalize()+r"\b",_t): builtins.add("viml:ex:"+_kw)
     return builtins
 
 
