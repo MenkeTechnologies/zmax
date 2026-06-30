@@ -10838,5 +10838,61 @@
    "key:normal:space l w 1"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_m_e_e",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space m e e"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_m_e",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space m e $"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_m_e_l",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space m e l"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_m_e_r",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space m e r"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_m_e_b",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space m e b"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_m_e_f",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space m e f"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_m_e_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space m e c"
+  ],
+  "note": ""
  }
 ]
