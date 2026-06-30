@@ -835,6 +835,13 @@ impl MappableCommand {
         loclist_first, "Location list: jump to first entry (:lfirst)",
         loclist_last, "Location list: jump to last entry (:llast)",
         loclist_open, "Location list: open the location list window (:lopen)",
+        goto_next_tabpage, "Go to the next tabpage (gt / :tabnext)",
+        goto_previous_tabpage, "Go to the previous tabpage (gT / :tabprevious)",
+        new_tab, "Open a new tabpage (:tabnew)",
+        close_tab, "Close the current tabpage (:tabclose)",
+        tab_only, "Close all other tabpages (:tabonly)",
+        goto_first_tabpage, "Go to the first tabpage (:tabfirst)",
+        goto_last_tabpage, "Go to the last tabpage (:tablast)",
         move_to_opposite_group, "Move the current editor to the opposite split group (JetBrains)",
         rotate_view, "Goto next window",
         rotate_view_reverse, "Goto previous window",
@@ -12251,6 +12258,31 @@ fn loclist_last(cx: &mut Context) {
 fn loclist_open(cx: &mut Context) {
     let picker = build_qf_picker(cx.editor, QfKind::Location);
     cx.push_layer(picker);
+}
+
+// --- Tabpage commands (vim `gt`/`gT`) -------------------------------------
+
+fn goto_next_tabpage(cx: &mut Context) {
+    cx.editor.goto_next_tabpage();
+}
+fn goto_previous_tabpage(cx: &mut Context) {
+    cx.editor.goto_previous_tabpage();
+}
+fn new_tab(cx: &mut Context) {
+    cx.editor.new_tab();
+}
+fn close_tab(cx: &mut Context) {
+    cx.editor.close_tab();
+}
+fn tab_only(cx: &mut Context) {
+    cx.editor.tab_only();
+}
+fn goto_first_tabpage(cx: &mut Context) {
+    cx.editor.switch_tab(0);
+}
+fn goto_last_tabpage(cx: &mut Context) {
+    let n = cx.editor.tab_count();
+    cx.editor.switch_tab(n.saturating_sub(1));
 }
 
 /// Pin the current file to the project's harpoon list (jump to it later with

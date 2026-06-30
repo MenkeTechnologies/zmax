@@ -21368,5 +21368,85 @@
       "typable:lgetfile"
     ],
     "note": "read error file into location list without jumping"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabnew",
+    "status": "ported",
+    "evidence": [
+      "typable:tabnew"
+    ],
+    "note": "opens a new tabpage (snapshot/replay window layout)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabedit",
+    "status": "ported",
+    "evidence": [
+      "typable:tabnew"
+    ],
+    "note": "alias tabedit -> :tabnew {file}"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabnext",
+    "status": "ported",
+    "evidence": [
+      "typable:tabnext"
+    ],
+    "note": "go to next tab (or tab [count]); gt"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabnext_1",
+    "status": "ported",
+    "evidence": [
+      "typable:tabnext"
+    ],
+    "note": ":tabnext with a count argument"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabprevious",
+    "status": "ported",
+    "evidence": [
+      "typable:tabprevious"
+    ],
+    "note": "go to previous tab; gT"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabclose",
+    "status": "ported",
+    "evidence": [
+      "typable:tabclose"
+    ],
+    "note": "close the current tabpage"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabonly",
+    "status": "ported",
+    "evidence": [
+      "typable:tabonly"
+    ],
+    "note": "close all other tabpages"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabfirst",
+    "status": "ported",
+    "evidence": [
+      "typable:tabfirst"
+    ],
+    "note": "go to first tabpage"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tablast",
+    "status": "ported",
+    "evidence": [
+      "typable:tablast"
+    ],
+    "note": "go to last tabpage"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabrewind",
+    "status": "ported",
+    "evidence": [
+      "typable:tabfirst"
+    ],
+    "note": "alias tabrewind -> first tabpage"
   }
 ]

@@ -1377,6 +1377,17 @@ pub struct QfEntry {
     pub text: String,
 }
 
+/// A saved vim tabpage: a serialized window layout plus each window's saved
+/// selection (in left-to-right leaf order). Tabs share buffers — leaves
+/// reference `DocumentId`s in the shared `documents` map — and only one tab's
+/// window tree is live at a time (the others are parked here and rebuilt on
+/// switch). See `Editor::switch_tab`/`new_tab`.
+#[derive(Debug, Clone)]
+pub struct TabPage {
+    pub shape: crate::tree::TreeShape,
+    pub selections: Vec<Selection>,
+}
+
 /// A snapshot of the latest in-flight LSP `$/progress` work, mirrored onto the
 /// [`Editor`] so UI surfaces can render a determinate gauge when a percentage is
 /// reported (e.g. rust-analyzer indexing) or a spinner-style label otherwise.
@@ -1458,6 +1469,12 @@ pub struct Editor {
     /// `:cnext`/`:cprev`/`:cc`, displayed by `:copen`.
     pub quickfix: Vec<QfEntry>,
     pub quickfix_idx: Option<usize>,
+
+    /// Parked vim tabpages. The entry at `current_tab` is a stale placeholder
+    /// (the live layout is in `tree`); it is refreshed from `tree` whenever the
+    /// active tab changes. Empty until the first `:tabnew`.
+    pub tabs: Vec<TabPage>,
+    pub current_tab: usize,
 
     pub syn_loader: Arc<ArcSwap<syntax::Loader>>,
     pub theme_loader: Arc<theme::Loader>,
@@ -1688,6 +1705,8 @@ impl Editor {
             breakpoints: HashMap::new(),
             quickfix: Vec::new(),
             quickfix_idx: None,
+            tabs: Vec::new(),
+            current_tab: 0,
             syn_loader,
             theme_loader,
             last_theme: None,
@@ -2737,6 +2756,191 @@ impl Editor {
 
     pub fn should_close(&self) -> bool {
         self.tree.is_empty()
+    }
+
+    // --- Tabpages (vim `gt`/`gT`/`:tabnew`/`:tabnext`/…) -------------------
+    //
+    // Only one tab's window tree is live (in `self.tree`) at a time; the rest
+    // are parked as `TabPage` snapshots. Switching snapshots the live tree,
+    // drops its per-window document state, then rebuilds the target tab with
+    // fresh (collision-free) ViewIds and restores its selections. Because all
+    // tabs draw from the one shared `documents` map, buffers are shared.
+
+    /// How many tabpages exist (always at least 1).
+    pub fn tab_count(&self) -> usize {
+        self.tabs.len().max(1)
+    }
+
+    /// The 0-based index of the active tab.
+    pub fn current_tab(&self) -> usize {
+        self.current_tab
+    }
+
+    /// Flash the active tab position in the statusline (tabs have no dedicated
+    /// bar yet, so this is the user's feedback that a switch happened).
+    fn report_tab(&mut self) {
+        let (i, n) = (self.current_tab + 1, self.tab_count());
+        if n > 1 {
+            self.set_status(format!("tab {i}/{n}"));
+        }
+    }
+
+    /// Snapshot the live window tree (layout + each window's selection).
+    fn snapshot_current_tab(&self) -> TabPage {
+        let shape = self.tree.shape();
+        let selections = self
+            .tree
+            .leaf_ids()
+            .into_iter()
+            .map(|vid| {
+                let doc_id = self.tree.get(vid).doc;
+                self.documents
+                    .get(&doc_id)
+                    .map(|d| d.selection(vid).clone())
+                    .unwrap_or_else(|| Selection::point(0))
+            })
+            .collect();
+        TabPage { shape, selections }
+    }
+
+    /// Forget every per-window document entry for the views currently in the
+    /// live tree (called before rebuilding so stale low-index ViewIds can't
+    /// alias the freshly-minted ones).
+    fn drop_live_view_state(&mut self) {
+        for vid in self.tree.leaf_ids() {
+            for doc in self.documents.values_mut() {
+                doc.remove_view(vid);
+            }
+        }
+    }
+
+    /// Rebuild the live tree from a parked tab and restore its selections.
+    fn restore_tab(&mut self, tab: &TabPage) {
+        let gutters = self.config().gutters.clone();
+        let mut make = |doc| View::new(doc, gutters.clone());
+        let new_ids = self.tree.build_from_shape(&tab.shape, &mut make);
+        for (vid, sel) in new_ids.iter().zip(tab.selections.iter()) {
+            let doc_id = self.tree.get(*vid).doc;
+            if let Some(doc) = self.documents.get_mut(&doc_id) {
+                doc.ensure_view_init(*vid);
+                // Clamp the saved selection to the (possibly changed) buffer.
+                let sel = sel.clone().ensure_invariants(doc.text().slice(..));
+                doc.set_selection(*vid, sel);
+            }
+        }
+        let focus = self.tree.focus;
+        self.ensure_cursor_in_view(focus);
+    }
+
+    /// Make `self.tabs` have one slot per tab, seeding slot 0 from the live
+    /// tree on first use.
+    fn ensure_tabs_initialized(&mut self) {
+        if self.tabs.is_empty() {
+            self.tabs.push(self.snapshot_current_tab());
+            self.current_tab = 0;
+        }
+    }
+
+    /// Switch to tab `to` (0-based, clamped). No-op if it's already active.
+    pub fn switch_tab(&mut self, to: usize) {
+        self.ensure_tabs_initialized();
+        let to = to.min(self.tabs.len() - 1);
+        if to == self.current_tab {
+            return;
+        }
+        self.tabs[self.current_tab] = self.snapshot_current_tab();
+        self.drop_live_view_state();
+        let target = self.tabs[to].clone();
+        self.restore_tab(&target);
+        self.current_tab = to;
+        self.report_tab();
+    }
+
+    /// `gt` / `:tabnext`: go to the next tab (wraps).
+    pub fn goto_next_tabpage(&mut self) {
+        self.ensure_tabs_initialized();
+        let next = (self.current_tab + 1) % self.tabs.len();
+        self.switch_tab(next);
+    }
+
+    /// `gT` / `:tabprevious`: go to the previous tab (wraps).
+    pub fn goto_previous_tabpage(&mut self) {
+        self.ensure_tabs_initialized();
+        let prev = (self.current_tab + self.tabs.len() - 1) % self.tabs.len();
+        self.switch_tab(prev);
+    }
+
+    /// `:tabnew`: open a new tab after the current one with a single window on
+    /// a fresh scratch buffer, and focus it.
+    pub fn new_tab(&mut self) {
+        self.ensure_tabs_initialized();
+        self.tabs[self.current_tab] = self.snapshot_current_tab();
+        self.drop_live_view_state();
+        let doc_id = self.new_document(Document::default(
+            self.config.clone(),
+            self.syn_loader.clone(),
+        ));
+        let new = TabPage {
+            shape: crate::tree::TreeShape::Leaf {
+                doc: doc_id,
+                focused: true,
+            },
+            selections: vec![Selection::point(0)],
+        };
+        let idx = self.current_tab + 1;
+        self.tabs.insert(idx, new);
+        let target = self.tabs[idx].clone();
+        self.restore_tab(&target);
+        self.current_tab = idx;
+        self.report_tab();
+    }
+
+    /// `:tabnew {path}` / `:tabedit`: open a tab whose single window shows the
+    /// given (already-opened) document.
+    pub fn new_tab_with_doc(&mut self, doc_id: DocumentId) {
+        self.ensure_tabs_initialized();
+        self.tabs[self.current_tab] = self.snapshot_current_tab();
+        self.drop_live_view_state();
+        let new = TabPage {
+            shape: crate::tree::TreeShape::Leaf {
+                doc: doc_id,
+                focused: true,
+            },
+            selections: vec![Selection::point(0)],
+        };
+        let idx = self.current_tab + 1;
+        self.tabs.insert(idx, new);
+        let target = self.tabs[idx].clone();
+        self.restore_tab(&target);
+        self.current_tab = idx;
+    }
+
+    /// `:tabclose`: close the current tab (refuses to close the last one).
+    pub fn close_tab(&mut self) {
+        self.ensure_tabs_initialized();
+        if self.tabs.len() <= 1 {
+            self.set_error("cannot close last tab");
+            return;
+        }
+        self.drop_live_view_state();
+        self.tabs.remove(self.current_tab);
+        let to = self.current_tab.min(self.tabs.len() - 1);
+        let target = self.tabs[to].clone();
+        self.restore_tab(&target);
+        self.current_tab = to;
+        self.report_tab();
+    }
+
+    /// `:tabonly`: close every tab except the current one.
+    pub fn tab_only(&mut self) {
+        self.ensure_tabs_initialized();
+        if self.tabs.len() <= 1 {
+            return;
+        }
+        let current = self.snapshot_current_tab();
+        self.tabs = vec![current];
+        self.current_tab = 0;
+        self.set_status("only tab");
     }
 
     pub fn ensure_cursor_in_view(&mut self, id: ViewId) {
