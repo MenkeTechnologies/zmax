@@ -39,6 +39,12 @@ impl JumpList {
         Self { jumps, current: 0 }
     }
 
+    /// Empty the jump list (vim `:clearjumps`).
+    pub fn clear(&mut self) {
+        self.jumps.clear();
+        self.current = 0;
+    }
+
     fn push_impl(&mut self, jump: Jump) -> usize {
         let mut num_removed_from_front = 0;
         self.jumps.truncate(self.current);

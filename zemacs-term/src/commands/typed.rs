@@ -385,6 +385,36 @@ fn buffer_previous(
     Ok(())
 }
 
+/// `:nohlsearch` / `:noh` — clear the persistent search highlight (vim `:nohlsearch`). Mirrors the
+/// `clear_search_highlight` command: drop the last-search register and clear the status line.
+fn no_highlight_search(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let reg = cx.editor.registers.last_search_register;
+    cx.editor.registers.remove(reg);
+    cx.editor.clear_status();
+    Ok(())
+}
+
+/// `:clearjumps` — empty the current view's jump list (vim `:clearjumps`).
+fn clear_jumps(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    view_mut!(cx.editor).jumps.clear();
+    cx.editor.set_status("jumps cleared");
+    Ok(())
+}
+
 fn write_impl(
     cx: &mut compositor::Context,
     path: Option<&str>,
@@ -14198,6 +14228,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["bp", "bprev"],
         doc: "Goto previous buffer.",
         fun: buffer_previous,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nohlsearch",
+        aliases: &["noh", "nohl"],
+        doc: "Clear the persistent search highlight (vim :nohlsearch).",
+        fun: no_highlight_search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "clearjumps",
+        aliases: &[],
+        doc: "Clear the current view's jump list (vim :clearjumps).",
+        fun: clear_jumps,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

@@ -19663,5 +19663,37 @@
       "key:normal:space D r l"
     ],
     "note": "spacemacs SPC D r l -> ediff two regions linewise -> ediff_regions"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_nohlsearch",
+    "status": "ported",
+    "evidence": [
+      "typable:nohlsearch"
+    ],
+    "note": ":nohlsearch/:noh -> clear persistent search highlight"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_clearjumps",
+    "status": "ported",
+    "evidence": [
+      "typable:clearjumps"
+    ],
+    "note": ":clearjumps -> JumpList::clear()"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_e",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-e"
+    ],
+    "note": "i_CTRL-E: insert char from line below (copy_char_below)"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_y",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-y"
+    ],
+    "note": "i_CTRL-Y: insert char from line above (copy_char_above)"
   }
 ]
