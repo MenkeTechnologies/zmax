@@ -954,6 +954,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "n" => goto_next_buffer,           // SPC b n
                 "p" => goto_previous_buffer,       // SPC b p
                 "m" => changed_file_picker,        // SPC b m
+                "M" => kill_buffers_by_regex,      // SPC b M : kill buffers matching a regexp
                 "W" => buffer_picker,              // SPC b W : go to buffer (workspace/window)
                 "N" => { "New buffer"
                     "h" => vsplit_new,             // SPC b N h : new buffer in window left (vertical split)
@@ -1281,6 +1282,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "w" => fold_open_all,              // SPC n w : widen (show whole buffer again)
                 "f" => narrow_to_function,         // SPC n f : narrow to the enclosing function
                 "F" => narrow_to_function,         // SPC n F : narrow to function (indirect approx)
+                "p" => narrow_to_page,             // SPC n p : narrow to the current page
+                "P" => narrow_to_page,             // SPC n P : narrow to page (indirect approx)
             },
             "g" => { "Goto (LSP)"
                 "d" => goto_definition,

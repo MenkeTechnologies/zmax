@@ -14798,5 +14798,29 @@
    "key:normal:space f J"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_b_mU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b M"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_n_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space n p"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_n_pU",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space n P"
+  ],
+  "note": ""
  }
 ]

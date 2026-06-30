@@ -485,6 +485,8 @@ impl MappableCommand {
         toggle_centered_cursor, "Keep the cursor vertically centered (SPC t -)",
         toggle_fill_column, "Toggle a fill-column ruler (SPC t f)",
         toggle_long_line_marker, "Toggle an 80th-column ruler (SPC t 8)",
+        kill_buffers_by_regex, "Kill all buffers whose name matches a regex (SPC b M)",
+        narrow_to_page, "Narrow the buffer to the current page (SPC n p)",
         copy_file, "Copy the current file to a prompted destination (SPC f c)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
@@ -6933,6 +6935,71 @@ fn toggle_long_line_marker(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("long-line marker (col 80): {}", if on { "on" } else { "off" }));
+}
+
+/// Kill all buffers whose name matches a prompted regex (Spacemacs `SPC b M`).
+fn kill_buffers_by_regex(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "kill buffers matching:".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let re = match regex::Regex::new(input.trim()) {
+                Ok(r) => r,
+                Err(e) => {
+                    cx.editor.set_error(format!("bad regex: {e}"));
+                    return;
+                }
+            };
+            let current = view!(cx.editor).doc;
+            let ids: Vec<DocumentId> = cx
+                .editor
+                .documents()
+                .filter(|d| d.id() != current && re.is_match(&d.display_name()))
+                .map(|d| d.id())
+                .collect();
+            let n = ids.len();
+            for id in ids {
+                let _ = cx.editor.close_document(id, false);
+            }
+            cx.editor.set_status(format!("killed {n} buffer(s)"));
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Narrow the buffer to the current page (between form-feed `^L` lines), folding
+/// everything outside it (Spacemacs `SPC n p`).
+fn narrow_to_page(cx: &mut Context) {
+    let (start, end, last) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let last = text.len_lines().saturating_sub(1);
+        let cur = text
+            .char_to_line(doc.selection(view.id).primary().head.min(text.len_chars()))
+            .min(last);
+        let is_ff = |l: usize| text.line(l).to_string().contains('\u{0c}');
+        let mut start = cur;
+        while start > 0 && !is_ff(start - 1) {
+            start -= 1;
+        }
+        let mut end = cur;
+        while end < last && !is_ff(end + 1) {
+            end += 1;
+        }
+        (start, end, last)
+    };
+    let (view, doc) = current!(cx.editor);
+    for (s, e) in narrow_outside_ranges(start, end, last) {
+        doc.folds_mut().create(s, e);
+    }
+    doc.folds_mut().clamp(last);
+    fold_goto_line(view, doc, start);
+    cx.editor
+        .set_status(format!("narrowed to page (lines {}-{})", start + 1, end + 1));
 }
 
 /// Copy the current file to a prompted destination (Spacemacs `SPC f c`).
