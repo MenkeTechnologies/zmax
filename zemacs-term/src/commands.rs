@@ -496,6 +496,7 @@ impl MappableCommand {
         toggle_long_line_marker, "Toggle an 80th-column ruler (SPC t 8)",
         toggle_soft_wrap, "Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap)",
         toggle_whitespace_render, "Toggle rendering of whitespace characters (IntelliJ View > Show Whitespaces)",
+        toggle_syntax_highlighting, "Toggle syntax highlighting for the current buffer (SPC t h s)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
         ediff_3_buffers, "3-way diff of three open buffers, read-only (SPC D b 3)",
@@ -7208,6 +7209,27 @@ fn toggle_whitespace_render(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("show whitespace: {}", if on { "on" } else { "off" }));
+}
+
+/// SPC t h s : toggle syntax highlighting for the current buffer (Spacemacs
+/// `spacemacs/toggle-syntax-highlighting`). Clears the language (fundamental) or re-detects it.
+fn toggle_syntax_highlighting(cx: &mut Context) {
+    let loader: &zemacs_core::syntax::Loader = &cx.editor.syn_loader.load();
+    let msg = {
+        let (_view, doc) = current!(cx.editor);
+        if doc.syntax().is_some() {
+            doc.set_language(None, loader);
+            "syntax highlighting: off"
+        } else {
+            doc.detect_language(loader);
+            if doc.syntax().is_some() {
+                "syntax highlighting: on"
+            } else {
+                "syntax highlighting: off (no grammar for this file type)"
+            }
+        }
+    };
+    cx.editor.set_status(msg);
 }
 
 /// Prompt for a file and diff it against the current buffer (Spacemacs `SPC D f f`).

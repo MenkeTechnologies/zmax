@@ -19087,5 +19087,14 @@
    "static:toggle_whitespace_render"
   ],
   "note": "toggle whitespace rendering"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_h_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t h s",
+   "static:toggle_syntax_highlighting"
+  ],
+  "note": "toggle syntax highlighting -> toggle_syntax_highlighting (set_language None / detect)"
  }
 ]

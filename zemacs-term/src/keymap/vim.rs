@@ -140,6 +140,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t h i", "Toggles", ":toggle indent-guides.render"),        // SPC t h i : highlight indentation
     ("space t C-i", "Toggles", ":toggle indent-guides.render"),        // SPC t C-i : global indent guide
     ("space t h c", "Toggles", ":toggle cursorcolumn"),                // SPC t h c : highlight current column
+    ("space t h s", "Toggles", "toggle_syntax_highlighting"),          // SPC t h s : toggle syntax highlighting
     ("space t C-S-l", "Toggles", ":toggle soft-wrap.enable"),          // SPC t C-S-l : visual line navigation
     ("space t K", "Toggles", ":toggle auto-info"),                     // SPC t K : which-key (auto-info) mode
     ("space t k k", "Toggles", ":toggle auto-info"),                   // SPC t k k : which-key persistent state
