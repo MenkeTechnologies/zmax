@@ -10600,14 +10600,6 @@
   "note": ""
  },
  {
-  "spec_id": "spacemacs.keybinding.spc_t_n",
-  "status": "ported",
-  "evidence": [
-   "key:normal:space t n"
-  ],
-  "note": ""
- },
- {
   "spec_id": "spacemacs.keybinding.spc_t_lU",
   "status": "ported",
   "evidence": [
@@ -10716,14 +10708,6 @@
   "status": "ported",
   "evidence": [
    "key:normal:space l D"
-  ],
-  "note": ""
- },
- {
-  "spec_id": "spacemacs.keybinding.spc_l_s",
-  "status": "ported",
-  "evidence": [
-   "key:normal:space l s"
   ],
   "note": ""
  },
@@ -14508,6 +14492,54 @@
   "status": "partial",
   "evidence": [
    "typable:elisp"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_d_b_b",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space D b b"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_m_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t m p"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_m_v",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t m v"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t -"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_f",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t f"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_8",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t 8"
   ],
   "note": ""
  }

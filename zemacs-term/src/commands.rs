@@ -417,6 +417,7 @@ impl MappableCommand {
         goto_next_close_paren, "Go forward to next closing paren (SPC k j)",
         goto_prev_open_paren, "Go backward to previous opening paren (SPC k k)",
         ediff_windows, "Diff the two front windows side by side (SPC D w w)",
+        ediff_buffer, "Diff the current buffer against a picked buffer (SPC D b b)",
         transpose_paragraph, "Swap the current paragraph with the previous one (SPC x t p)",
         transpose_sexp, "Swap the current s-expression with the previous one (SPC x t e)",
         transpose_sentence, "Swap the current sentence with the previous one (SPC x t s)",
@@ -478,6 +479,11 @@ impl MappableCommand {
         layout_goto_7, "Switch to layout 7 (SPC l 7)",
         layout_goto_8, "Switch to layout 8 (SPC l 8)",
         layout_goto_9, "Switch to layout 9 (SPC l 9)",
+        toggle_modeline_position, "Toggle cursor position in the mode line (SPC t m p)",
+        toggle_modeline_vcs, "Toggle version-control info in the mode line (SPC t m v)",
+        toggle_centered_cursor, "Keep the cursor vertically centered (SPC t -)",
+        toggle_fill_column, "Toggle a fill-column ruler (SPC t f)",
+        toggle_long_line_marker, "Toggle an 80th-column ruler (SPC t 8)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
         git_init, "Initialize a new git repository (SPC g i)",
@@ -6431,6 +6437,50 @@ fn narrow_to_function(cx: &mut Context) {
     ));
 }
 
+/// Pick another buffer and diff it against the current one (Spacemacs `SPC D b b`).
+fn ediff_buffer(cx: &mut Context) {
+    let current = view!(cx.editor).doc;
+
+    struct BufMeta {
+        id: DocumentId,
+        name: String,
+    }
+    let items: Vec<BufMeta> = cx
+        .editor
+        .documents()
+        .filter(|d| d.id() != current)
+        .map(|d| BufMeta {
+            id: d.id(),
+            name: d.display_name().into_owned(),
+        })
+        .collect();
+    if items.is_empty() {
+        cx.editor.set_status("no other buffer to diff against");
+        return;
+    }
+
+    let columns = [PickerColumn::new("buffer", |m: &BufMeta, _: &()| m.name.clone().into())];
+    let picker = Picker::new(columns, 0, items, (), move |cx, meta, _action| {
+        let other = meta.id;
+        let g = |cx: &compositor::Context, id: DocumentId| {
+            cx.editor
+                .documents()
+                .find(|d| d.id() == id)
+                .map(|d| (d.display_name().into_owned(), d.text().to_string()))
+        };
+        if let (Some((na, ta)), Some((nb, tb))) = (g(cx, current), g(cx, other)) {
+            let view = crate::ui::merge::DiffView::new(format!("{na} ⇔ {nb}"), other, &ta, &tb);
+            let call = crate::job::Callback::EditorCompositor(Box::new(
+                move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
+                    compositor.push(Box::new(view));
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 /// Compare the two front windows' buffers side by side (Spacemacs `SPC D w w/l`).
 fn ediff_windows(cx: &mut Context) {
     let docs: Vec<DocumentId> = cx.editor.tree.traverse().map(|(_, v)| v.doc).collect();
@@ -6780,6 +6830,96 @@ fn layout_load(cx: &mut Context) {
         },
         Err(e) => cx.editor.set_error(format!("no layouts file: {e}")),
     }
+}
+
+// ---------------------------------------------------------------------------
+// Runtime config toggles (Spacemacs `SPC t *` minor-mode toggles). Each clones
+// the live Config, mutates it, and pushes a ConfigEvent::Update so the change
+// takes effect immediately — honest because every toggle has a visible effect.
+// ---------------------------------------------------------------------------
+
+fn edit_live_config(cx: &mut Context, f: impl FnOnce(&mut zemacs_view::editor::Config)) {
+    let mut config = (*cx.editor.config()).clone();
+    f(&mut config);
+    let _ = cx
+        .editor
+        .config_events
+        .0
+        .send(zemacs_view::editor::ConfigEvent::Update(Box::new(config)));
+}
+
+fn toggle_statusline_element(cx: &mut Context, el: zemacs_view::editor::StatusLineElement) {
+    let mut shown = false;
+    edit_live_config(cx, |c| {
+        let seg = &mut c.statusline.right;
+        if let Some(p) = seg.iter().position(|e| *e == el) {
+            seg.remove(p);
+        } else {
+            seg.push(el);
+            shown = true;
+        }
+    });
+    cx.editor.set_status(format!(
+        "mode-line {:?}: {}",
+        el,
+        if shown { "shown" } else { "hidden" }
+    ));
+}
+
+/// SPC t m p: toggle the cursor position in the mode line.
+fn toggle_modeline_position(cx: &mut Context) {
+    toggle_statusline_element(cx, zemacs_view::editor::StatusLineElement::Position)
+}
+
+/// SPC t m v: toggle the version-control info in the mode line.
+fn toggle_modeline_vcs(cx: &mut Context) {
+    toggle_statusline_element(cx, zemacs_view::editor::StatusLineElement::VersionControl)
+}
+
+/// SPC t - / t C--: keep the cursor vertically centered (large scrolloff).
+fn toggle_centered_cursor(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        if c.scrolloff >= 9999 {
+            c.scrolloff = 5;
+        } else {
+            c.scrolloff = 9999;
+            on = true;
+        }
+    });
+    cx.editor
+        .set_status(format!("centered-cursor: {}", if on { "on" } else { "off" }));
+}
+
+/// SPC t f: toggle a fill-column ruler at `text-width` (default 80).
+fn toggle_fill_column(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        if c.rulers.is_empty() {
+            let w = if c.text_width == 0 { 80 } else { c.text_width as u16 };
+            c.rulers = vec![w];
+            on = true;
+        } else {
+            c.rulers.clear();
+        }
+    });
+    cx.editor
+        .set_status(format!("fill-column ruler: {}", if on { "on" } else { "off" }));
+}
+
+/// SPC t 8 / t C-8: toggle a ruler highlighting the 80th column.
+fn toggle_long_line_marker(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        if c.rulers.contains(&80) {
+            c.rulers.retain(|&r| r != 80);
+        } else {
+            c.rulers.push(80);
+            on = true;
+        }
+    });
+    cx.editor
+        .set_status(format!("long-line marker (col 80): {}", if on { "on" } else { "off" }));
 }
 
 /// Open the current buffer's bytes in the hex editor (Spacemacs `SPC f h`, hexl).

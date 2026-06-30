@@ -523,7 +523,7 @@ mod tests {
                 "space" => { ""
                     "s" => { ""
                         "v" => vsplit,
-                        "c" => hsplit,
+                        "z" => hsplit,
                     },
                 },
             })
@@ -539,12 +539,12 @@ mod tests {
             "Leaf should be present in merged subnode"
         );
         // Merged nodes are appended at the end. The vim default already has a
-        // `SPC s` (search) submap, so the freshly merged `v`/`c` land last.
+        // `SPC s` (search) submap, so the freshly merged `v`/`z` land last.
         let node = keymap.search(&[key!(' '), key!('s')]).unwrap();
         let keys = node.node().unwrap().keys().copied().collect::<Vec<_>>();
         assert_eq!(
             &keys[keys.len() - 2..],
-            &[key!('v'), key!('c')],
+            &[key!('v'), key!('z')],
             "newly merged keys should be ordered at the end"
         );
     }

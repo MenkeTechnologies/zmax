@@ -109,11 +109,16 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space b e",   "Buffers", ":reload"),                              // SPC b e : revert/erase to disk
     ("space p k",   "Project", ":buffer-close-all"),                    // SPC p k : kill all project buffers
     ("space t l",   "Toggles", ":toggle soft-wrap.enable"),            // SPC t l : truncate/wrap lines
-    ("space t n",   "Toggles", ":toggle line-number absolute none"),   // SPC t n : toggle line numbers on/off
     ("space t L",   "Toggles", ":toggle soft-wrap.enable"),            // SPC t L : toggle visual (wrapped) lines
     ("space t W",   "Toggles", ":toggle trim-trailing-whitespace"),    // SPC t W : auto whitespace cleanup on save
+    ("space t m p", "Toggles", "toggle_modeline_position"),            // SPC t m p : toggle point position in mode line
+    ("space t m v", "Toggles", "toggle_modeline_vcs"),                 // SPC t m v : toggle VC info in mode line
+    ("space t -",   "Toggles", "toggle_centered_cursor"),             // SPC t - : centered-cursor mode
+    ("space t f",   "Toggles", "toggle_fill_column"),                 // SPC t f : show fill-column ruler
+    ("space t 8",   "Toggles", "toggle_long_line_marker"),            // SPC t 8 : highlight 80th column
     ("space t C-W", "Toggles", ":toggle trim-trailing-whitespace"),    // SPC t C-W : global whitespace cleanup
     ("space D f v", "Diff",    "git_diff"),                            // SPC D f v : ediff file versions (vs HEAD)
+    ("space D b b", "Diff",    "ediff_buffer"),                        // SPC D b b : ediff two buffers (current vs picked)
     ("space D w w", "Diff",    "ediff_windows"),                       // SPC D w w : compare the two windows (wordwise)
     ("space D w l", "Diff",    "ediff_windows"),                       // SPC D w l : compare the two windows (linewise)
     ("space t V",   "Toggles", ":toggle line-number absolute relative"), // SPC t V : visual line numbers
@@ -707,8 +712,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "|" => wonly,                     // spacemacs SPC w | : maximize window (only)
             "1" => wonly,                     // SPC w 1 : single-window layout
             "2" => vsplit,                    // SPC w 2 : two-window layout (split)
-            "3" => vsplit,                    // SPC w 3 : three-window layout (split)
-            "4" => vsplit,                    // SPC w 4 : four-window layout (split)
+            "3" => make_3_windows,            // SPC w 3 : three-window layout
+            "4" => make_4_windows,            // SPC w 4 : 2x2 window grid
             "_" => wonly,                     // SPC w _ : maximize window horizontally
             "D" => wclose,                    // SPC w D : delete another window
             "M" => transpose_view,            // SPC w M : swap windows
@@ -742,6 +747,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "}" => resize_view_taller,
                 "_" => wonly,
                 "|" => wonly,
+                "m" => wonly,                  // SPC w . m : maximize current window
+                "x" => delete_window_and_buffer, // SPC w . x : delete window + kill buffer
+                "a" => rotate_view,            // SPC w . a : ace-window (cycle focus)
+                "1" => goto_window_1, "2" => goto_window_2, "3" => goto_window_3,
+                "4" => goto_window_4, "5" => goto_window_5, "6" => goto_window_6,
+                "7" => goto_window_7, "8" => goto_window_8, "9" => goto_window_9,
             },
         },
 
@@ -860,41 +871,6 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                         "r" => file_explorer,      // SPC a t r r : ranger full layout
                         "d" => file_explorer,      // SPC a t r d : deer single column
                     },
-                },
-            },
-            "l" => { "Layouts"
-                "l" => layout_create,              // SPC l l : create/select a layout
-                "n" => layout_next,                // SPC l n : next layout
-                "C-l" => layout_next,              // SPC l C-l : next layout (transient)
-                "p" => layout_prev,                // SPC l p : previous layout
-                "N" => layout_prev,                // SPC l N : previous layout
-                "C-h" => layout_prev,              // SPC l C-h : previous layout (transient)
-                "tab" => layout_last,              // SPC l TAB : last used layout
-                "h" => layout_default,             // SPC l h : default layout
-                "d" => layout_delete,              // SPC l d : delete layout (keep buffers)
-                "x" => layout_delete,              // SPC l x : kill layout
-                "X" => layout_delete,              // SPC l X : kill other layouts (approx: delete)
-                "D" => layout_delete,              // SPC l D : delete other layouts (approx)
-                "s" => layout_save,                // SPC l s : save layouts to file
-                "L" => layout_load,                // SPC l L : load layouts from file
-                "b" => buffer_picker,              // SPC l b : select a buffer in the layout
-                "t" => buffer_picker,              // SPC l t : display a buffer
-                "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
-                "4" => layout_goto_4, "5" => layout_goto_5, "6" => layout_goto_6,
-                "7" => layout_goto_7, "8" => layout_goto_8, "9" => layout_goto_9,
-                // Workspaces (eyebrowse) tier — approximated by the same layout ring.
-                "w" => { "Workspaces"
-                    "w" => layout_create,          // SPC l w w : tagged workspace
-                    "n" => layout_next,            // SPC l w n : next workspace
-                    "l" => layout_next,            // SPC l w l : next workspace
-                    "p" => layout_prev,            // SPC l w p : previous workspace
-                    "N" => layout_prev,            // SPC l w N : previous workspace
-                    "h" => layout_prev,            // SPC l w h : previous workspace
-                    "d" => layout_delete,          // SPC l w d : close workspace
-                    "tab" => layout_last,          // SPC l w TAB : last workspace
-                    "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
-                    "4" => layout_goto_4, "5" => layout_goto_5, "6" => layout_goto_6,
-                    "7" => layout_goto_7, "8" => layout_goto_8, "9" => layout_goto_9,
                 },
             },
             "K" => { "Macros"
@@ -1322,12 +1298,47 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "r" => resolve_conflicts,      // SPC g c r : open 3-way merge resolver
                 },
             },
-            "l" => { "LSP"
-                "r" => rename_symbol,              // SPC l r
-                "a" => code_action,                // SPC l a
-                "k" => hover,                      // SPC l k
-                "s" => signature_help,             // SPC l s
-                "f" => format_selections,          // SPC l f
+            "l" => { "Layouts / LSP"
+                // LSP actions (zemacs); the rest are Spacemacs layout/workspace keys.
+                "r" => rename_symbol,              // SPC l r : rename symbol
+                "a" => code_action,                // SPC l a : code action
+                "k" => hover,                      // SPC l k : hover
+                "s" => signature_help,             // SPC l s : signature help
+                "f" => format_selections,          // SPC l f : format
+                // --- layouts (named window configurations) ---
+                "l" => layout_create,              // SPC l l : create/select a layout
+                "n" => layout_next,                // SPC l n : next layout
+                "C-l" => layout_next,              // SPC l C-l : next layout (transient)
+                "p" => layout_prev,                // SPC l p : previous layout
+                "N" => layout_prev,                // SPC l N : previous layout
+                "C-h" => layout_prev,              // SPC l C-h : previous layout (transient)
+                "tab" => layout_last,              // SPC l TAB : last used layout
+                "h" => layout_default,             // SPC l h : default layout
+                "d" => layout_delete,              // SPC l d : delete layout (keep buffers)
+                "x" => layout_delete,              // SPC l x : kill layout
+                "X" => layout_delete,              // SPC l X : kill other layouts (approx)
+                "D" => layout_delete,              // SPC l D : delete other layouts (approx)
+                "S" => layout_save,                // SPC l S : save layouts to file (s is signature-help)
+                "L" => layout_load,                // SPC l L : load layouts from file
+                "b" => buffer_picker,              // SPC l b : select a buffer in the layout
+                "t" => buffer_picker,              // SPC l t : display a buffer
+                "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
+                "4" => layout_goto_4, "5" => layout_goto_5, "6" => layout_goto_6,
+                "7" => layout_goto_7, "8" => layout_goto_8, "9" => layout_goto_9,
+                // Workspaces (eyebrowse) tier — approximated by the same layout ring.
+                "w" => { "Workspaces"
+                    "w" => layout_create,          // SPC l w w : tagged workspace
+                    "n" => layout_next,            // SPC l w n : next workspace
+                    "l" => layout_next,            // SPC l w l : next workspace
+                    "p" => layout_prev,            // SPC l w p : previous workspace
+                    "N" => layout_prev,            // SPC l w N : previous workspace
+                    "h" => layout_prev,            // SPC l w h : previous workspace
+                    "d" => layout_delete,          // SPC l w d : close workspace
+                    "tab" => layout_last,          // SPC l w TAB : last workspace
+                    "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
+                    "4" => layout_goto_4, "5" => layout_goto_5, "6" => layout_goto_6,
+                    "7" => layout_goto_7, "8" => layout_goto_8, "9" => layout_goto_9,
+                },
             },
             "v" => expand_selection,               // SPC v : expand region
             "x" => { "Text"
