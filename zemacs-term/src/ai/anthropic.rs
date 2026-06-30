@@ -100,6 +100,18 @@ impl Anthropic {
         Ok(reply)
     }
 
+    /// Parse one SSE `data:` payload line, returning the text delta if it is a `content_block_delta`
+    /// of type `text_delta`. (Other events — message_start, ping, etc. — return None.)
+    pub(crate) fn sse_delta(data: &str) -> Option<String> {
+        let v: serde_json::Value = serde_json::from_str(data).ok()?;
+        if v["type"].as_str() == Some("content_block_delta")
+            && v["delta"]["type"].as_str() == Some("text_delta")
+        {
+            return v["delta"]["text"].as_str().map(|s| s.to_string());
+        }
+        None
+    }
+
     /// Extract the concatenated text from a Messages API response body.
     pub(crate) fn parse(resp: &str) -> Result<String, String> {
         let v: serde_json::Value =
@@ -139,6 +151,44 @@ impl Provider for Anthropic {
             "anthropic",
         )?;
         Self::parse(&resp)
+    }
+
+    fn stream_chat(
+        &self,
+        system: Option<&str>,
+        messages: &[Message],
+        on_delta: &mut dyn FnMut(&str),
+    ) -> Result<String, String> {
+        use std::io::BufRead;
+        let mut body = Self::body(&self.model, system, messages);
+        body["stream"] = serde_json::Value::Bool(true);
+        let resp = match ureq::post(API_URL)
+            .set("x-api-key", &self.key)
+            .set("anthropic-version", "2023-06-01")
+            .set("content-type", "application/json")
+            .send_json(body)
+        {
+            Ok(r) => r,
+            Err(ureq::Error::Status(code, r)) => {
+                return Err(format!(
+                    "anthropic HTTP {code}: {}",
+                    r.into_string().unwrap_or_default().trim()
+                ))
+            }
+            Err(e) => return Err(format!("anthropic: {e}")),
+        };
+        let mut full = String::new();
+        let reader = std::io::BufReader::new(resp.into_reader());
+        for line in reader.lines() {
+            let line = line.map_err(|e| format!("anthropic: stream read: {e}"))?;
+            if let Some(data) = line.strip_prefix("data: ") {
+                if let Some(delta) = Self::sse_delta(data) {
+                    on_delta(&delta);
+                    full.push_str(&delta);
+                }
+            }
+        }
+        Ok(full)
     }
 
     fn supports_tools(&self) -> bool {
@@ -212,5 +262,14 @@ mod tests {
     fn parse_surfaces_error() {
         let r = r#"{"type":"error","error":{"type":"x","message":"bad key"}}"#;
         assert!(Anthropic::parse(r).unwrap_err().contains("bad key"));
+    }
+
+    #[test]
+    fn sse_delta_extracts_text_delta_only() {
+        let d = r#"{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hi"}}"#;
+        assert_eq!(Anthropic::sse_delta(d).as_deref(), Some("hi"));
+        // non-text events yield nothing
+        assert_eq!(Anthropic::sse_delta(r#"{"type":"message_start"}"#), None);
+        assert_eq!(Anthropic::sse_delta(r#"{"type":"ping"}"#), None);
     }
 }
