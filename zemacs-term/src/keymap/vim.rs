@@ -1265,6 +1265,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "y" => copy_diagnostic,                // SPC e y : copy diagnostic message(s)
                 "h" => describe_diagnostics_checker,   // SPC e h : describe checker (language servers)
                 "v" => diagnostics_verify_setup,       // SPC e v : verify diagnostics/LSP setup
+                "c" => clear_diagnostics,              // SPC e c : clear all diagnostics
                 "." => goto_last_diag,
             },
             "c" => { "Comments"

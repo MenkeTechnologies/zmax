@@ -522,6 +522,7 @@ impl MappableCommand {
         man_page_search, "Search man pages via apropos and view the selected page (SPC h m)",
         info_search, "Search GNU info manuals (apropos) and view the selected node (SPC h i)",
         diagnostics_verify_setup, "Report the buffer's diagnostics/LSP setup (SPC e v)",
+        clear_diagnostics, "Clear all diagnostics for the current buffer (SPC e c)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
         copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
@@ -8223,6 +8224,19 @@ fn info_search(cx: &mut Context) {
 /// SPC e v : report the diagnostics setup for the current buffer — its language, attached language
 /// servers and their init state, which servers provide (push/pull) diagnostics, and the current
 /// diagnostic count. The zemacs analogue of Spacemacs' `flycheck-verify-setup`.
+/// SPC e c : clear all diagnostics for the current buffer (Spacemacs `flycheck-clear`). They
+/// repopulate on the next language-server update, matching flycheck's transient clear.
+fn clear_diagnostics(cx: &mut Context) {
+    let ids: Vec<_> = doc!(cx.editor).language_servers().map(|ls| ls.id()).collect();
+    {
+        let doc = doc_mut!(cx.editor);
+        for id in ids {
+            doc.clear_diagnostics_for_language_server(id);
+        }
+    }
+    cx.editor.set_status("cleared diagnostics");
+}
+
 fn diagnostics_verify_setup(cx: &mut Context) {
     let report = {
         let doc = doc!(cx.editor);
