@@ -497,6 +497,7 @@ impl MappableCommand {
         toggle_soft_wrap, "Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap)",
         toggle_whitespace_render, "Toggle rendering of whitespace characters (IntelliJ View > Show Whitespaces)",
         toggle_syntax_highlighting, "Toggle syntax highlighting for the current buffer (SPC t h s)",
+        toggle_diagnostics, "Toggle diagnostics display / flycheck (SPC t s)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
         ediff_3_buffers, "3-way diff of three open buffers, read-only (SPC D b 3)",
@@ -7230,6 +7231,38 @@ fn toggle_syntax_highlighting(cx: &mut Context) {
         }
     };
     cx.editor.set_status(msg);
+}
+
+/// SPC t s : toggle diagnostics display (the zemacs analogue of Spacemacs' `toggle-flycheck`).
+/// Turns the end-of-line diagnostic messages and the diagnostics gutter on/off.
+fn toggle_diagnostics(cx: &mut Context) {
+    use zemacs_view::annotations::diagnostics::DiagnosticFilter;
+    use zemacs_view::editor::{GutterType, Severity};
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        let enabled = !matches!(c.end_of_line_diagnostics, DiagnosticFilter::Disable);
+        on = !enabled;
+        if on {
+            c.end_of_line_diagnostics = DiagnosticFilter::Enable(Severity::Hint);
+            if !c
+                .gutters
+                .layout
+                .iter()
+                .any(|g| matches!(g, GutterType::Diagnostics))
+            {
+                c.gutters.layout.insert(0, GutterType::Diagnostics);
+            }
+        } else {
+            c.end_of_line_diagnostics = DiagnosticFilter::Disable;
+            c.gutters
+                .layout
+                .retain(|g| !matches!(g, GutterType::Diagnostics));
+        }
+    });
+    cx.editor.set_status(format!(
+        "diagnostics (syntax checking): {}",
+        if on { "on" } else { "off" }
+    ));
 }
 
 /// Prompt for a file and diff it against the current buffer (Spacemacs `SPC D f f`).

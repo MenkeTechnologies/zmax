@@ -19096,5 +19096,14 @@
    "static:toggle_syntax_highlighting"
   ],
   "note": "toggle syntax highlighting -> toggle_syntax_highlighting (set_language None / detect)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t s",
+   "static:toggle_diagnostics"
+  ],
+  "note": "toggle flycheck/syntax checking -> toggle_diagnostics (end-of-line diag filter + diagnostics gutter)"
  }
 ]
