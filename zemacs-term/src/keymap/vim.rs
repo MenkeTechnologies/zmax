@@ -1368,6 +1368,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "r" => goto_reference,
                 "i" => goto_implementation,
                 "y" => goto_type_definition,
+                "h" => call_hierarchy_incoming_calls, // SPC g h : call hierarchy — who calls this (JetBrains Ctrl-Alt-H)
+                "H" => call_hierarchy_outgoing_calls, // SPC g H : call hierarchy — what this calls
                 "b" => git_blame_line,             // SPC g b : git blame current line (spacemacs magit-blame)
                 "s" => git_status,                 // SPC g s : magit status porcelain (Spacemacs magit-status)
                 "m" => resolve_conflicts,          // SPC g m : open 3-way merge-conflict resolver
