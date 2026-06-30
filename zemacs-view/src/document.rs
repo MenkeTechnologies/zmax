@@ -160,6 +160,11 @@ pub struct Document {
     /// vim named marks (a-z etc.) -> char position. Remapped through edits in
     /// `apply_impl`, so a mark follows its text as the buffer changes.
     pub(crate) marks: HashMap<char, usize>,
+    /// Emacs-style narrowing: when `Some((start, end))`, the accessible buffer is restricted to
+    /// that char range — `point_min()`/`point_max()` report these bounds, so goto-buffer-start/end,
+    /// select-all, and last-line confine to the region. Remapped through edits in `apply_impl`.
+    /// Cleared by widen. See `narrow_to` / `widen` / `is_narrowed`.
+    pub(crate) narrow: Option<(usize, usize)>,
     /// The last visual (select-mode) selection, for vim `gv` (reselect).
     pub(crate) last_visual: Option<Selection>,
     /// Manual code folds (vim `zf`/`za`/...). Stored per document; a closed fold
@@ -792,6 +797,7 @@ impl Document {
             document_highlights: HashMap::new(),
             code_action_hints: HashSet::new(),
             marks: HashMap::new(),
+            narrow: None,
             last_visual: None,
             folds: zemacs_core::fold::Folds::default(),
             color_swatches: None,
@@ -1568,6 +1574,14 @@ impl Document {
             *pos = transaction.changes().map_pos(*pos, Assoc::After);
         }
 
+        // Keep the narrowing bounds pinned to their text so edits inside the region grow/shrink it.
+        if let Some((start, end)) = self.narrow {
+            self.narrow = Some((
+                transaction.changes().map_pos(start, Assoc::After),
+                transaction.changes().map_pos(end, Assoc::After),
+            ));
+        }
+
         // vim auto-marks: `.` = position of the last change, `[`/`]` = start/end of the
         // changed text (computed in the new-text coordinate space).
         {
@@ -2083,6 +2097,40 @@ impl Document {
     /// Current document version, incremented at each change.
     pub fn version(&self) -> i32 {
         self.version
+    }
+
+    /// Restrict the accessible buffer to the char range `[start, end]` (Emacs narrow-to-region).
+    /// Bounds are clamped to the document and ordered. After this, [`Document::point_min`] /
+    /// [`Document::point_max`] report the region instead of the whole buffer.
+    pub fn narrow_to(&mut self, start: usize, end: usize) {
+        let len = self.text.len_chars();
+        let lo = start.min(end).min(len);
+        let hi = start.max(end).min(len);
+        self.narrow = Some((lo, hi));
+    }
+
+    /// Remove any active narrowing (Emacs widen).
+    pub fn widen(&mut self) {
+        self.narrow = None;
+    }
+
+    /// Whether the buffer is currently narrowed.
+    pub fn is_narrowed(&self) -> bool {
+        self.narrow.is_some()
+    }
+
+    /// The first accessible char position — the narrow start when narrowed, else `0`.
+    pub fn point_min(&self) -> usize {
+        self.narrow
+            .map(|(s, _)| s.min(self.text.len_chars()))
+            .unwrap_or(0)
+    }
+
+    /// One past the last accessible char position — the narrow end when narrowed, else
+    /// `len_chars()`.
+    pub fn point_max(&self) -> usize {
+        let len = self.text.len_chars();
+        self.narrow.map(|(_, e)| e.min(len)).unwrap_or(len)
     }
 
     /// Manual code folds for this document.
@@ -2736,6 +2784,43 @@ mod test {
                 range_length: None,
             }]
         );
+    }
+
+    #[test]
+    fn narrowing_bounds_and_edit_mapping() {
+        // line 0: "aaa\n" (chars 0..4), line 1: "bbb\n" (4..8), line 2: "ccc" (8..11)
+        let text = Rope::from("aaa\nbbb\nccc");
+        let mut doc = Document::from(
+            text,
+            None,
+            Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let view = ViewId::default();
+        doc.set_selection(view, Selection::single(0, 0));
+
+        // Not narrowed: full buffer bounds.
+        assert!(!doc.is_narrowed());
+        assert_eq!(doc.point_min(), 0);
+        assert_eq!(doc.point_max(), 11);
+
+        // Narrow to the middle line (chars 4..8).
+        doc.narrow_to(4, 8);
+        assert!(doc.is_narrowed());
+        assert_eq!(doc.point_min(), 4);
+        assert_eq!(doc.point_max(), 8);
+
+        // Inserting two chars inside the region grows point_max with the text.
+        let t = Transaction::change(doc.text(), vec![(5, 5, Some("XX".into()))].into_iter());
+        doc.apply(&t, view);
+        assert_eq!(doc.point_min(), 4);
+        assert_eq!(doc.point_max(), 10);
+
+        // Widen restores full bounds.
+        doc.widen();
+        assert!(!doc.is_narrowed());
+        assert_eq!(doc.point_min(), 0);
+        assert_eq!(doc.point_max(), doc.text().len_chars());
     }
 
     #[test]

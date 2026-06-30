@@ -10130,11 +10130,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_n_r",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space n r"
+   "key:normal:space n r",
+   "static:narrow_to_region"
   ],
-  "note": "spacemacs spc_n_r -> narrow buffer to selection (visual, via folds)"
+  "note": "narrow-to-region -> narrow_to_region (true narrowing: Document.narrow bounds confine point-min/max, select-all, gg/G, last-line; region tracks edits; SPC n w widens)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_n_w",

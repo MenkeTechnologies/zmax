@@ -1308,7 +1308,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "-" => decrement,                  // SPC n - : decrease number under point
                 "_" => decrement,                  // SPC n _ : decrease number under point
                 "r" => narrow_to_region,           // SPC n r : narrow buffer to selection (fold outside)
-                "w" => fold_open_all,              // SPC n w : widen (show whole buffer again)
+                "w" => widen,                      // SPC n w : widen (remove narrowing, show whole buffer)
                 "f" => narrow_to_function,         // SPC n f : narrow to the enclosing function
                 "F" => narrow_to_function,         // SPC n F : narrow to function (indirect approx)
                 "p" => narrow_to_page,             // SPC n p : narrow to the current page

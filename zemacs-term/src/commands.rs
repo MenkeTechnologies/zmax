@@ -494,6 +494,7 @@ impl MappableCommand {
         toggle_centered_cursor, "Keep the cursor vertically centered (SPC t -)",
         toggle_fill_column, "Toggle a fill-column ruler (SPC t f)",
         toggle_long_line_marker, "Toggle an 80th-column ruler (SPC t 8)",
+        toggle_soft_wrap, "Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
         ediff_3_buffers, "3-way diff of three open buffers, read-only (SPC D b 3)",
@@ -906,7 +907,8 @@ impl MappableCommand {
         fold_close_all, "Close all folds (zM)",
         fold_delete, "Delete fold under cursor (zd)",
         fold_delete_all, "Delete all folds (zE)",
-        narrow_to_region, "Narrow the view to the selected region (SPC n r)",
+        narrow_to_region, "Narrow the buffer to the selected region (SPC n r)",
+        widen, "Widen: remove narrowing and reveal the whole buffer (SPC n w)",
         kmacro_ring_next, "Cycle to the next macro in the ring (SPC K r n)",
         kmacro_ring_prev, "Cycle to the previous macro in the ring (SPC K r p)",
         kmacro_ring_delete, "Delete the head macro in the ring (SPC K r d)",
@@ -2323,11 +2325,12 @@ fn goto_file_start_impl(cx: &mut Context, movement: Movement) {
         goto_line_impl(cx, movement);
     } else {
         let (view, doc) = current!(cx.editor);
+        let start = doc.point_min();
         let text = doc.text().slice(..);
         let selection = doc
             .selection(view.id)
             .clone()
-            .transform(|range| range.put_cursor(text, 0, movement == Movement::Extend));
+            .transform(|range| range.put_cursor(text, start, movement == Movement::Extend));
         push_jump(view, doc);
         doc.set_selection(view.id, selection);
     }
@@ -2344,7 +2347,8 @@ fn extend_to_file_end(cx: &mut Context) {
 fn goto_file_end_impl(cx: &mut Context, movement: Movement) {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
-    let pos = doc.text().len_chars();
+    // Confine to the narrowed region end when narrowed (Emacs point-max).
+    let pos = doc.point_max();
     let selection = doc
         .selection(view.id)
         .clone()
@@ -5612,8 +5616,10 @@ fn move_text_line_up(cx: &mut Context) {
 fn select_all(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
 
-    let end = doc.text().len_chars();
-    doc.set_selection(view.id, Selection::single(0, end))
+    // Confine to the narrowed region when the buffer is narrowed (Emacs narrow-to-region).
+    let start = doc.point_min();
+    let end = doc.point_max();
+    doc.set_selection(view.id, Selection::single(start, end))
 }
 
 /// Char-offset ranges of every non-overlapping occurrence of `needle` in
@@ -6560,10 +6566,13 @@ fn narrow_to_function(cx: &mut Context) {
         (start, end, last)
     };
     let (view, doc) = current!(cx.editor);
+    let lo = doc.text().line_to_char(start);
+    let hi = doc.text().line_to_char((end + 1).min(doc.text().len_lines()));
     for (s, e) in narrow_outside_ranges(start, end, last) {
         doc.folds_mut().create(s, e);
     }
     doc.folds_mut().clamp(last);
+    doc.narrow_to(lo, hi);
     fold_goto_line(view, doc, start);
     cx.editor.set_status(format!(
         "narrowed to function (lines {}-{})",
@@ -7167,6 +7176,18 @@ fn toggle_long_line_marker(cx: &mut Context) {
         .set_status(format!("long-line marker (col 80): {}", if on { "on" } else { "off" }));
 }
 
+/// Toggle soft-wrapping of long lines (IntelliJ "View > Active Editor > Soft-Wrap").
+fn toggle_soft_wrap(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        let enabled = c.soft_wrap.enable.unwrap_or(false);
+        on = !enabled;
+        c.soft_wrap.enable = Some(on);
+    });
+    cx.editor
+        .set_status(format!("soft-wrap: {}", if on { "on" } else { "off" }));
+}
+
 /// Prompt for a file and diff it against the current buffer (Spacemacs `SPC D f f`).
 fn ediff_file(cx: &mut Context) {
     let (cur_name, cur_text, cur_id) = {
@@ -7365,10 +7386,13 @@ fn narrow_to_page(cx: &mut Context) {
         (start, end, last)
     };
     let (view, doc) = current!(cx.editor);
+    let lo = doc.text().line_to_char(start);
+    let hi = doc.text().line_to_char((end + 1).min(doc.text().len_lines()));
     for (s, e) in narrow_outside_ranges(start, end, last) {
         doc.folds_mut().create(s, e);
     }
     doc.folds_mut().clamp(last);
+    doc.narrow_to(lo, hi);
     fold_goto_line(view, doc, start);
     cx.editor
         .set_status(format!("narrowed to page (lines {}-{})", start + 1, end + 1));
@@ -10861,12 +10885,19 @@ fn extend_to_last_line(cx: &mut Context) {
 
 fn goto_last_line_impl(cx: &mut Context, movement: Movement) {
     let (view, doc) = current!(cx.editor);
+    // When narrowed, `G` goes to the last line of the region (Emacs point-max line).
+    let point_max = doc.point_max();
     let text = doc.text().slice(..);
-    let line_idx = if text.line(text.len_lines() - 1).len_chars() == 0 {
-        // If the last line is blank, don't jump to it.
-        text.len_lines().saturating_sub(2)
+    let last_line = if doc.is_narrowed() {
+        text.char_to_line(point_max)
     } else {
         text.len_lines() - 1
+    };
+    let line_idx = if text.line(last_line).len_chars() == 0 && last_line > 0 {
+        // If the last line is blank, don't jump to it.
+        last_line.saturating_sub(1)
+    } else {
+        last_line
     };
     let pos = text.line_to_char(line_idx);
     let selection = doc
@@ -15097,6 +15128,17 @@ fn fold_open_all(cx: &mut Context) {
     doc.folds_mut().open_all();
 }
 
+/// SPC n w : widen — remove any narrowing and reveal the whole buffer (Emacs `widen`).
+fn widen(cx: &mut Context) {
+    let (_view, doc) = current!(cx.editor);
+    let was_narrowed = doc.is_narrowed();
+    doc.widen();
+    doc.folds_mut().open_all();
+    if was_narrowed {
+        cx.editor.set_status("widened");
+    }
+}
+
 fn fold_close_all(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     doc.folds_mut().close_all();
@@ -15160,10 +15202,17 @@ fn narrow_to_region(cx: &mut Context) {
     let start = text.char_to_line(range.from());
     let end = text.char_to_line(range.to().saturating_sub(1).max(range.from()));
     let last = doc.text().len_lines().saturating_sub(1);
+    // Line-aligned char bounds of the region, computed before the fold mutations below
+    // (which need `&mut doc` and would otherwise conflict with the `text` borrow).
+    let lo = text.line_to_char(start);
+    let hi = text.line_to_char((end + 1).min(text.len_lines()));
     for (s, e) in narrow_outside_ranges(start, end, last) {
         doc.folds_mut().create(s, e);
     }
     doc.folds_mut().clamp(last);
+    // True narrowing: restrict the accessible buffer to the region, so goto-start/end,
+    // last-line, and select-all confine to it — not just the visual fold.
+    doc.narrow_to(lo, hi);
     fold_goto_line(view, doc, start);
     cx.editor
         .set_status(format!("narrowed to lines {}-{}", start + 1, end + 1));
