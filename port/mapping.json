@@ -6680,11 +6680,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_n",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space F n"
+   "key:normal:space F n",
+   "static:layout_create"
   ],
-  "note": "new frame -> new window"
+  "note": "make-frame -> layout_create (TUI analogue: a new layout = independent window-config workspace)"
  },
  {
   "spec_id": "neovim.normal-mode.g_comma",
