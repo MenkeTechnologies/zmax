@@ -524,6 +524,11 @@ impl MappableCommand {
         diagnostics_verify_setup, "Report the buffer's diagnostics/LSP setup (SPC e v)",
         clear_diagnostics, "Clear all diagnostics for the current buffer (SPC e c)",
         ai_chat, "Ask the AI provider about the selection/buffer (SPC a i)",
+        ai_chat_panel, "Open the streaming AI chat drawer (SPC a p)",
+        ai_model_picker, "Pick the AI model at runtime (SPC a m)",
+        toggle_ai_privacy, "Toggle AI privacy mode (SPC a P)",
+        ai_apply_block, "Apply the last AI code block to the selection (SPC a y)",
+        ai_add_file_context, "Add a file as @context for the next AI chat (SPC a @)",
         ai_inline_edit, "AI inline edit/generate on the selection (Cmd+K style, SPC a e)",
         ai_explain, "Explain the selected code with AI (SPC a x)",
         ai_generate_tests, "Generate tests for the selection with AI (SPC a u)",
@@ -8890,7 +8895,12 @@ fn ai_chat(cx: &mut Context) {
                 return;
             }
             let q = input.trim().to_string();
-            let ctx = context.clone();
+            // Privacy mode: withhold the code context, send only the question.
+            let ctx = if crate::ai::privacy() {
+                None
+            } else {
+                context.clone()
+            };
             let lang = lang.clone();
             cx.editor.set_status("AI: thinking…");
             cx.jobs.callback(async move {
@@ -8917,6 +8927,211 @@ fn ai_chat(cx: &mut Context) {
         },
     );
     cx.push_layer(Box::new(prompt));
+}
+
+// --- AI chat drawer: a split buffer streamed into live (Cursor-style chat panel) ---
+static AI_PANEL_DOC: std::sync::Mutex<Option<DocumentId>> = std::sync::Mutex::new(None);
+static AI_SESSION: std::sync::Mutex<Vec<crate::ai::Message>> = std::sync::Mutex::new(Vec::new());
+
+/// Append `text` at the end of the AI drawer document and move its view's cursor to follow, so the
+/// drawer scrolls as tokens stream in. No-op if the drawer isn't visible. Callable from a job.
+fn append_to_ai_doc(editor: &mut Editor, doc_id: DocumentId, text: &str) {
+    let view_id = editor
+        .tree
+        .traverse()
+        .find(|(_, v)| v.doc == doc_id)
+        .map(|(id, _)| id);
+    let Some(view_id) = view_id else {
+        return;
+    };
+    let added = text.chars().count();
+    let Some(doc) = editor.document_mut(doc_id) else {
+        return;
+    };
+    doc.ensure_view_init(view_id);
+    let end = doc.text().len_chars();
+    let tx = Transaction::change(doc.text(), std::iter::once((end, end, Some(text.into()))))
+        .with_selection(Selection::point(end + added));
+    doc.apply(&tx, view_id);
+}
+
+/// SPC a p : open/focus the AI chat drawer (a buffer in a vertical split) and stream a reply into
+/// it live — Cursor-style chat panel with on-the-fly generation. Keeps conversation history.
+fn ai_chat_panel(cx: &mut Context) {
+    let doc_id = {
+        let mut slot = AI_PANEL_DOC.lock().unwrap();
+        let existing = slot.filter(|id| cx.editor.documents().any(|d| d.id() == *id));
+        match existing {
+            Some(id) => {
+                if !cx.editor.tree.traverse().any(|(_, v)| v.doc == id) {
+                    cx.editor.switch(id, Action::VerticalSplit);
+                }
+                id
+            }
+            None => {
+                let id = cx.editor.new_file(Action::VerticalSplit);
+                *slot = Some(id);
+                append_to_ai_doc(cx.editor, id, "# AI chat\n");
+                id
+            }
+        }
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ai chat:".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let q = input.trim().to_string();
+            let ctx = take_pending_context();
+            append_to_ai_doc(cx.editor, doc_id, &format!("\n\n### You\n{q}\n\n### AI\n"));
+            let mut msgs = AI_SESSION.lock().unwrap().clone();
+            msgs.push(crate::ai::Message::user(format!("{q}{ctx}")));
+            cx.editor.set_status("AI: streaming…");
+            cx.jobs.callback(async move {
+                let q_for_session = q.clone();
+                let full = tokio::task::spawn_blocking(move || {
+                    let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
+                    let system = crate::ai::system_with_rules("You are a coding assistant in the zemacs chat drawer. Use fenced code blocks for code.");
+                    let mut on_delta = |d: &str| {
+                        let d = d.to_string();
+                        crate::job::dispatch_blocking(move |editor, _| {
+                            append_to_ai_doc(editor, doc_id, &d)
+                        });
+                    };
+                    provider
+                        .stream_chat(Some(&system), &msgs, &mut on_delta)
+                        .map_err(|e| anyhow::anyhow!(e))
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!("ai task: {e}"))??;
+                {
+                    let mut s = AI_SESSION.lock().unwrap();
+                    s.push(crate::ai::Message::user(q_for_session));
+                    s.push(crate::ai::Message::assistant(full));
+                }
+                Ok(crate::job::Callback::Editor(Box::new(|editor: &mut Editor| {
+                    editor.set_status("AI: done");
+                })))
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// SPC a m : pick the AI model at runtime (Cursor model picker). Sets an override consulted before
+/// `ZEMACS_AI_MODEL`.
+fn ai_model_picker(cx: &mut Context) {
+    let provider = crate::ai::provider_name();
+    let models: Vec<String> = crate::ai::known_models(&provider)
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    if models.is_empty() {
+        cx.editor.set_status(format!("no known models for provider '{provider}'"));
+        return;
+    }
+    let columns = [PickerColumn::new("model", |m: &String, _: &()| m.clone().into())];
+    let picker = Picker::new(columns, 0, models, (), |cx, model: &String, _action| {
+        crate::ai::set_model_override(Some(model.clone()));
+        cx.editor.set_status(format!("AI model: {model}"));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// SPC a P : toggle AI privacy mode (when on, AI commands send only the prompt, not buffer/selection
+/// code).
+fn toggle_ai_privacy(cx: &mut Context) {
+    let on = crate::ai::toggle_privacy();
+    cx.editor
+        .set_status(format!("AI privacy mode: {}", if on { "on" } else { "off" }));
+}
+
+/// Extract the last fenced ```code``` block from a markdown string, if any.
+fn last_code_block(s: &str) -> Option<String> {
+    let mut blocks: Vec<String> = Vec::new();
+    let mut cur: Option<String> = None;
+    for line in s.lines() {
+        if line.trim_start().starts_with("```") {
+            match cur.take() {
+                Some(b) => blocks.push(b),
+                None => cur = Some(String::new()),
+            }
+        } else if let Some(b) = cur.as_mut() {
+            b.push_str(line);
+            b.push('\n');
+        }
+    }
+    blocks.into_iter().last().map(|b| b.trim_end().to_string())
+}
+
+/// SPC a y : apply the last code block from the AI conversation, replacing the selection (or
+/// inserting at the cursor). Cursor's "apply code block".
+fn ai_apply_block(cx: &mut Context) {
+    let block = {
+        let session = AI_SESSION.lock().unwrap();
+        session
+            .iter()
+            .rev()
+            .find(|m| matches!(m.role, crate::ai::Role::Assistant))
+            .and_then(|m| last_code_block(&m.content))
+    };
+    let Some(block) = block else {
+        cx.editor.set_status("no AI code block to apply (chat first)");
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let r = doc.selection(view.id).primary();
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((r.from(), r.to(), Some(block.into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status("applied AI code block (u to undo)");
+}
+
+/// Pending `@file` context to attach to the next AI chat request.
+static AI_PENDING_CONTEXT: std::sync::Mutex<Vec<(String, String)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// SPC a f : add a file as `@file` context for the next AI chat (Cursor `@file`).
+fn ai_add_file_context(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "@file context:".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let path = input.trim().to_string();
+            match std::fs::read_to_string(&path) {
+                Ok(content) => {
+                    AI_PENDING_CONTEXT.lock().unwrap().push((path.clone(), content));
+                    cx.editor
+                        .set_status(format!("added @{path} to AI context (SPC a p to chat)"));
+                }
+                Err(e) => cx.editor.set_error(format!("read {path}: {e}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Take and clear any pending `@file` context, formatted for inclusion in a prompt.
+fn take_pending_context() -> String {
+    let mut ctx = AI_PENDING_CONTEXT.lock().unwrap();
+    if ctx.is_empty() {
+        return String::new();
+    }
+    let mut out = String::from("\n\nAttached files:\n");
+    for (path, content) in ctx.drain(..) {
+        out.push_str(&format!("\n@{path}:\n```\n{content}\n```\n"));
+    }
+    out
 }
 
 /// Strip a leading ```lang fence and trailing ``` from an AI code reply, so an inline edit applies
@@ -9171,6 +9386,35 @@ fn ai_fix(cx: &mut Context) {
 /// the workspace (and runs commands if `ZEMACS_AI_AGENT_ALLOW_EXEC=1`) in a tool-use loop, off the
 /// UI thread. A transcript + list of changed files is shown in a scratch buffer; open buffers whose
 /// files changed are picked up by the file watcher. The headline "CLI IDE with AI agents".
+/// Reload the given files from disk into any open buffers (the agent's "IDE auto-refresh"). Only
+/// touches buffers for these paths, so unsaved edits elsewhere are untouched.
+fn reload_docs_for_paths(editor: &mut Editor, paths: &[std::path::PathBuf]) {
+    let default_view = view!(editor).id;
+    for path in paths {
+        let Some(doc_id) = editor.document_id_by_path(path) else {
+            continue;
+        };
+        let vid = editor
+            .tree
+            .traverse()
+            .find(|(_, v)| v.doc == doc_id)
+            .map(|(id, _)| id)
+            .unwrap_or(default_view);
+        let doc = doc_mut!(editor, &doc_id);
+        doc.ensure_view_init(vid);
+        let view = view_mut!(editor, vid);
+        view.sync_changes(doc);
+        let trust = editor
+            .workspace_trust
+            .query(
+                doc.workspace_root(),
+                zemacs_loader::workspace_trust::TrustQuery::Git,
+            )
+            .is_trusted();
+        let _ = doc.reload(view, &editor.diff_providers, trust);
+    }
+}
+
 fn ai_agent(cx: &mut Context) {
     let root = zemacs_loader::find_workspace().0;
     let prompt = crate::ui::prompt::Prompt::new(
@@ -9191,14 +9435,18 @@ fn ai_agent(cx: &mut Context) {
                     .map_err(|e| anyhow::anyhow!(e))?;
                 let mut report = format!("# AI agent ({} steps)\n\n", result.steps);
                 report.push_str(&result.transcript);
-                let changed = result.changed_files.len();
+                let changed_paths: Vec<std::path::PathBuf> =
+                    result.changed_files.into_iter().collect();
+                let changed = changed_paths.len();
                 if changed > 0 {
                     report.push_str("\n## Changed files\n");
-                    for f in &result.changed_files {
+                    for f in &changed_paths {
                         report.push_str(&format!("- {}\n", f.display()));
                     }
                 }
                 Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+                    // IDE auto-refresh: reload open buffers the agent edited.
+                    reload_docs_for_paths(editor, &changed_paths);
                     show_text_in_scratch(editor, &report);
                     editor.set_status(format!("AI agent done: {changed} file(s) changed"));
                 })))
