@@ -1718,5 +1718,21 @@
   "name": "Inlay Hints",
   "desc": "IntelliJ IDEA default keymap: View > Inlay Hints",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.caret-navigation.scroll-line-up",
+  "source": "jetbrains",
+  "category": "caret-navigation",
+  "name": "Scroll Line Up",
+  "desc": "IntelliJ IDEA default keymap: Cmd Up",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.caret-navigation.scroll-line-down",
+  "source": "jetbrains",
+  "category": "caret-navigation",
+  "name": "Scroll Line Down",
+  "desc": "IntelliJ IDEA default keymap: Cmd Down",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]

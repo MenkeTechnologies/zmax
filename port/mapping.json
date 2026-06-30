@@ -19123,5 +19123,21 @@
    "static:toggle_inlay_hints"
   ],
   "note": "toggle LSP inlay hints"
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.scroll-line-up",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_up"
+  ],
+  "note": "scroll view without moving caret"
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.scroll-line-down",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_down"
+  ],
+  "note": "scroll view without moving caret"
  }
 ]
