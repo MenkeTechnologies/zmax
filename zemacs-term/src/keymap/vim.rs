@@ -891,6 +891,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
             "a" => { "Applications"
                 "a" => ai_agent,                   // SPC a a : autonomous AI agent (reads/writes files, tool-use)
+                "R" => ai_agent_review,            // SPC a R : toggle agent review (dry-run) mode
+                "tab" => ai_complete,              // SPC a TAB : AI code completion at the cursor
                 "z" => ai_revert_agent,            // SPC a z : revert to the agent's pre-run checkpoint
                 "i" => ai_chat,                    // SPC a i : ask the AI provider (Cursor-style assistant)
                 "p" => ai_chat_panel,              // SPC a p : streaming AI chat drawer (on-the-fly generation)

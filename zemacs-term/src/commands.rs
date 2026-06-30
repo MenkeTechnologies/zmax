@@ -539,6 +539,8 @@ impl MappableCommand {
         ai_generate_tests, "Generate tests for the selection with AI (SPC a u)",
         ai_commit_message, "Generate a git commit message with AI (SPC a c)",
         ai_agent, "Run the autonomous AI agent on a task (SPC a a)",
+        ai_agent_review, "Toggle agent review (dry-run) mode — propose changes without applying (SPC a R)",
+        ai_complete, "AI code completion at the cursor (SPC a TAB)",
         ai_revert_agent, "Revert the workspace to the last agent checkpoint (SPC a z)",
         ai_fix, "AI-fix the diagnostic(s) on the current line (SPC a F)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
@@ -9357,6 +9359,69 @@ fn ai_inline_edit(cx: &mut Context) {
         },
     );
     cx.push_layer(Box::new(prompt));
+}
+
+/// SPC a TAB : on-demand AI code completion at the cursor — Cursor's tab autocomplete, manually
+/// triggered rather than rendered as real-time ghost text. Sends the code surrounding the cursor
+/// (with a <CURSOR> marker for fill-in-the-middle) and inserts the model's continuation in place.
+fn ai_complete(cx: &mut Context) {
+    let (pos, before, after, lang) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let pos = doc.selection(view.id).primary().cursor(text.slice(..));
+        let start = pos.saturating_sub(6000);
+        let end = (pos + 2000).min(text.len_chars());
+        (
+            pos,
+            text.slice(start..pos).to_string(),
+            text.slice(pos..end).to_string(),
+            doc.language_name().unwrap_or("").to_string(),
+        )
+    };
+    if before.trim().is_empty() {
+        cx.editor.set_status("AI complete: nothing before cursor");
+        return;
+    }
+    cx.editor.set_status("AI: completing…");
+    cx.jobs.callback(async move {
+        let out = tokio::task::spawn_blocking(move || {
+            let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
+            let sys = crate::ai::system_with_rules("You are a code-completion engine inside the zemacs editor. Continue the code at the <CURSOR> marker. Output ONLY the text to insert at the cursor — no explanation, no markdown code fences, and do not repeat the surrounding code.");
+            let user = format!("Language: {lang}\n\n{before}<CURSOR>{after}");
+            provider
+                .chat(Some(&sys), &[crate::ai::Message::user(user)])
+                .map_err(|e| anyhow::anyhow!(e))
+        })
+        .await
+        .map_err(|e| anyhow::anyhow!("ai task: {e}"))??;
+        let ins = strip_code_fences(&out);
+        Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+            if ins.trim().is_empty() {
+                editor.set_status("AI complete: empty completion");
+                return;
+            }
+            let (view, doc) = current!(editor);
+            let at = pos.min(doc.text().len_chars());
+            let n = ins.chars().count();
+            let tx = Transaction::change(doc.text(), std::iter::once((at, at, Some(ins.into()))))
+                .with_selection(Selection::single(at, at + n));
+            doc.apply(&tx, view.id);
+            doc.append_changes_to_history(view);
+            editor.set_status("AI completion inserted (u to undo)");
+        })))
+    });
+}
+
+/// SPC a R : toggle agent review (dry-run) mode. When on, `ai_agent` (SPC a a) still reasons and
+/// reports the files it would write and commands it would run, but applies nothing — so you can
+/// review the proposed changes, then toggle off and re-run to apply (Cursor's review&apply).
+fn ai_agent_review(cx: &mut Context) {
+    let on = crate::ai::agent::toggle_dry_run();
+    cx.editor.set_status(if on {
+        "AI agent review mode ON — SPC a a proposes changes without applying them"
+    } else {
+        "AI agent review mode OFF — SPC a a applies changes"
+    });
 }
 
 /// A proposed inline edit awaiting accept/reject: (doc, from, to, replacement).
