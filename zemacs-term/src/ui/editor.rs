@@ -1595,6 +1595,8 @@ impl EditorView {
         let mut execute_command = |command: &commands::MappableCommand| {
             command.execute(cxt);
             zemacs_event::dispatch(PostCommand { command, cx: cxt });
+            // Follow-mode (SPC w f): keep sibling windows scrolled in lockstep.
+            cxt.editor.sync_follow_windows();
 
             let current_mode = cxt.editor.mode();
             if current_mode != last_mode {

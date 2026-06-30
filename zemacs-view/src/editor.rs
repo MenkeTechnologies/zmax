@@ -1385,6 +1385,10 @@ pub struct Editor {
     /// breaks the line at the last whitespace (Emacs auto-fill). A persistent
     /// toggle; only applies with a single cursor.
     pub auto_fill: bool,
+    /// Spacemacs follow-mode (`SPC w f`): when set, windows showing the same
+    /// document scroll as one continuous view — sibling windows are re-anchored
+    /// to pick up where the focused window ends. A persistent toggle.
+    pub follow: bool,
     pub tree: Tree,
     pub next_document_id: DocumentId,
     pub documents: BTreeMap<DocumentId, Document>,
@@ -1541,6 +1545,45 @@ pub(crate) fn dedication_redirect(
     }
 }
 
+/// Follow-mode layout. The vertically-ordered windows showing one document act
+/// as a single tall window: window `i` is anchored at `group_top + sum(heights[..i])`
+/// so they tile one continuous view. `group_top` is the group's current scroll
+/// (the top window's line); it is nudged just enough to keep the focused window's
+/// `point_line` visible within that window's slice. Returns each window's new top
+/// line, clamped to `[0, last_line]`.
+pub(crate) fn follow_anchor_lines(
+    heights: &[usize],
+    focus_idx: usize,
+    point_line: usize,
+    group_top: usize,
+    last_line: usize,
+) -> Vec<usize> {
+    let n = heights.len();
+    if n == 0 {
+        return Vec::new();
+    }
+    let fi = focus_idx.min(n - 1);
+    let cum_before: usize = heights[..fi].iter().sum();
+    let fwin_h = heights[fi].max(1);
+
+    // Adjust the group scroll so point stays inside the focused window's slice.
+    let fwin_top = group_top + cum_before;
+    let mut gt = group_top;
+    if point_line < fwin_top {
+        gt = point_line.saturating_sub(cum_before);
+    } else if point_line >= fwin_top + fwin_h {
+        gt = (point_line + 1).saturating_sub(cum_before + fwin_h);
+    }
+
+    let mut out = Vec::with_capacity(n);
+    let mut acc = gt;
+    for &h in heights {
+        out.push(acc.min(last_line));
+        acc = acc.saturating_add(h);
+    }
+    out
+}
+
 impl Action {
     /// Whether to align the view to the cursor after executing this action
     pub fn align_view(&self, view: &View, new_doc: DocumentId) -> bool {
@@ -1580,6 +1623,7 @@ impl Editor {
             block: None,
             subword: false,
             auto_fill: false,
+            follow: false,
             tree: Tree::new(area),
             next_document_id: DocumentId::default(),
             documents: BTreeMap::new(),
@@ -2539,6 +2583,63 @@ impl Editor {
         };
     }
 
+    /// Follow-mode (`SPC w f`): re-anchor sibling windows showing the focused
+    /// document so the group scrolls as one continuous view. No-op unless
+    /// `follow` is set or there are <2 windows on the doc.
+    pub fn sync_follow_windows(&mut self) {
+        if !self.follow {
+            return;
+        }
+        let focus = self.tree.focus;
+        let doc_id = match self.tree.try_get(focus) {
+            Some(v) => v.doc,
+            None => return,
+        };
+        let mut group: Vec<(u16, ViewId, usize)> = self
+            .tree
+            .views()
+            .filter(|(v, _)| v.doc == doc_id)
+            .map(|(v, _)| (v.area.y, v.id, v.inner_height()))
+            .collect();
+        if group.len() < 2 {
+            return;
+        }
+        group.sort_by_key(|&(y, _, _)| y);
+        let focus_idx = group
+            .iter()
+            .position(|&(_, id, _)| id == focus)
+            .unwrap_or(0);
+        let heights: Vec<usize> = group.iter().map(|&(_, _, h)| h).collect();
+
+        // Compute each window's new anchor (char pos) under an immutable borrow,
+        // then apply under a mutable borrow.
+        let offsets: Vec<(ViewId, usize)> = {
+            let doc = match self.documents.get(&doc_id) {
+                Some(d) => d,
+                None => return,
+            };
+            let text = doc.text().slice(..);
+            let last_line = text.len_lines().saturating_sub(1);
+            // Group scroll = the top window's current anchor line.
+            let group_top = text.char_to_line(doc.view_offset(group[0].1).anchor.min(text.len_chars()));
+            // Focused window's point line (keeps it visible within its slice).
+            let point = doc.selection(focus).primary().cursor(text);
+            let point_line = text.char_to_line(point);
+            let lines = follow_anchor_lines(&heights, focus_idx, point_line, group_top, last_line);
+            group
+                .iter()
+                .zip(lines.iter())
+                .map(|(&(_, vid, _), &line)| (vid, text.line_to_char(line.min(last_line))))
+                .collect()
+        };
+        let doc = self.documents.get_mut(&doc_id).unwrap();
+        for (vid, anchor) in offsets {
+            let mut off = doc.view_offset(vid);
+            off.anchor = anchor;
+            doc.set_view_offset(vid, off);
+        }
+    }
+
     pub fn focus(&mut self, view_id: ViewId) {
         if self.tree.focus == view_id {
             return;
@@ -2969,7 +3070,20 @@ impl CursorCache {
 
 #[cfg(test)]
 mod dedication_tests {
-    use super::{dedication_redirect, Action};
+    use super::{dedication_redirect, follow_anchor_lines, Action};
+
+    #[test]
+    fn follow_anchor_chain() {
+        // Windows tile one continuous view from the group top.
+        assert_eq!(follow_anchor_lines(&[10, 10, 10], 0, 0, 0, 100), vec![0, 10, 20]);
+        // Point past the focused (bottom) window's slice scrolls the group down
+        // so point stays visible: focused window [16,26) contains line 25.
+        assert_eq!(follow_anchor_lines(&[10, 10], 1, 25, 0, 100), vec![6, 16]);
+        // Point above the focused window's slice scrolls the group up.
+        assert_eq!(follow_anchor_lines(&[10, 10], 1, 12, 20, 100), vec![2, 12]);
+        // Window tops are clamped to last_line.
+        assert_eq!(follow_anchor_lines(&[10, 10], 0, 0, 0, 5), vec![0, 5]);
+    }
 
     #[test]
     fn dedicated_window_redirects_replace_to_split() {

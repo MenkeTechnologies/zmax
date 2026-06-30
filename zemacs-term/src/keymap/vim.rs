@@ -702,7 +702,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             ">" => resize_view_wider,         // C-w >: increase window width N columns
             "<" => resize_view_narrower,      // C-w <: decrease window width N columns
             "x" | "C-x" => transpose_view,    // C-w x: exchange current window with next
-            "f" | "C-f" => goto_file_hsplit,  // C-w f / C-w C-f: split + edit file under cursor
+            "C-f" => goto_file_hsplit,        // C-w C-f: split + edit file under cursor
+            "f" => toggle_follow_mode,        // C-w f / SPC w f: toggle follow mode (spacemacs)
             "F" => goto_file_hsplit,          // C-w F: split + edit file (with line number)
             "]" | "C-]" => goto_definition,   // C-w ] / C-w C-]: jump to tag/definition (no split)
             "^" | "C-^" => goto_last_accessed_file, // C-w ^ / C-w C-^: edit alternate file
@@ -1057,7 +1058,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 ">" => resize_view_wider,         // C-w >: increase window width N columns
                 "<" => resize_view_narrower,      // C-w <: decrease window width N columns
                 "x" | "C-x" => transpose_view,
-                "f" | "C-f" => goto_file_hsplit,
+                "C-f" => goto_file_hsplit,
+                "f" => toggle_follow_mode,        // SPC w f : toggle follow mode (spacemacs)
                 "F" => goto_file_hsplit,
                 "]" | "C-]" => goto_definition,
                 "^" | "C-^" => goto_last_accessed_file,
