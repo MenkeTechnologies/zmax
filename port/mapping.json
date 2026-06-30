@@ -2701,7 +2701,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -11233,11 +11233,11 @@
  },
  {
   "spec_id": "jetbrains.multiple-carets.select-all-occurrences",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:select_references_to_symbol_under_cursor"
+   "static:select_all_instances"
   ],
-  "note": "LSP refs ~ all occurrences"
+  "note": "select all instances of symbol under cursor"
  },
  {
   "spec_id": "jetbrains.code-folding.expand",
@@ -19022,5 +19022,13 @@
    "static:run_config_manager"
   ],
   "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.window.goto-previous-splitter",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view_reverse"
+  ],
+  "note": "cycle splits (reverse)"
  }
 ]

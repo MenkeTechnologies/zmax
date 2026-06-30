@@ -1630,5 +1630,13 @@
   "name": "Edit Configurations",
   "desc": "IntelliJ IDEA default keymap",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.goto-previous-splitter",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Goto Previous Splitter",
+  "desc": "IntelliJ IDEA default keymap: Cmd Alt Left",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]
