@@ -433,15 +433,15 @@ mod tests {
     #[test]
     fn subtree_end_stops_at_same_or_higher_level() {
         let lines = [
-            "* a",      // 0
-            "body",     // 1
-            "** b",     // 2
-            "body",     // 3
-            "*** c",    // 4
-            "body",     // 5
-            "** d",     // 6
-            "* e",      // 7
-            "body",     // 8
+            "* a",   // 0
+            "body",  // 1
+            "** b",  // 2
+            "body",  // 3
+            "*** c", // 4
+            "body",  // 5
+            "** d",  // 6
+            "* e",   // 7
+            "body",  // 8
         ];
         // subtree of "* a" runs until just before the next level-1 heading "* e".
         assert_eq!(subtree_end(&lines, 0), 6);
@@ -486,11 +486,11 @@ mod tests {
     #[test]
     fn org_date_with_and_without_weekday() {
         assert_eq!(org_date("<2026-07-01>"), Some("2026-07-01".to_string()));
+        assert_eq!(org_date("<2026-07-01 Wed>"), Some("2026-07-01".to_string()));
         assert_eq!(
-            org_date("<2026-07-01 Wed>"),
-            Some("2026-07-01".to_string())
+            org_date("[2026-12-31 Thu 09:00]"),
+            Some("2026-12-31".to_string())
         );
-        assert_eq!(org_date("[2026-12-31 Thu 09:00]"), Some("2026-12-31".to_string()));
         // no date pattern → None.
         assert_eq!(org_date("not a date"), None);
         assert_eq!(org_date("<2026/07/01>"), None);
@@ -623,7 +623,10 @@ mod tests {
         let bytes = t.as_bytes();
         assert_eq!(bytes[4], b'-');
         assert_eq!(bytes[7], b'-');
-        assert!(t.chars().enumerate().all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit()));
+        assert!(t
+            .chars()
+            .enumerate()
+            .all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit()));
     }
 
     #[test]
@@ -648,7 +651,10 @@ mod tests {
         let wd = Path::new("/work/dir");
         // Default.
         assert_eq!(inbox_path(None, wd), PathBuf::from("/work/dir/inbox.org"));
-        assert_eq!(inbox_path(Some("   "), wd), PathBuf::from("/work/dir/inbox.org"));
+        assert_eq!(
+            inbox_path(Some("   "), wd),
+            PathBuf::from("/work/dir/inbox.org")
+        );
         // Relative arg joins the working dir.
         assert_eq!(
             inbox_path(Some("notes/todo.org"), wd),

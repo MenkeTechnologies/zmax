@@ -190,9 +190,7 @@ impl HexView {
                         path.display()
                     ));
                 }
-                Err(err) => cx
-                    .editor
-                    .set_status(format!("hex save failed: {err}")),
+                Err(err) => cx.editor.set_status(format!("hex save failed: {err}")),
             },
             None => cx
                 .editor
@@ -265,9 +263,7 @@ impl Component for HexView {
                 }
                 _ => {
                     // A bare or shifted printable char edits the focused column.
-                    if key.modifiers == KeyModifiers::NONE
-                        || key.modifiers == KeyModifiers::SHIFT
-                    {
+                    if key.modifiers == KeyModifiers::NONE || key.modifiers == KeyModifiers::SHIFT {
                         if let Some(ch) = key.char() {
                             self.type_char(ch);
                         }
@@ -282,9 +278,8 @@ impl Component for HexView {
             key!('q') | key!(Esc) | ctrl!('c') => {
                 if self.dirty && !was_armed {
                     self.quit_armed = true;
-                    cx.editor.set_status(
-                        "unsaved hex edits — Ctrl-s to save, or q again to discard",
-                    );
+                    cx.editor
+                        .set_status("unsaved hex edits — Ctrl-s to save, or q again to discard");
                     return EventResult::Consumed(None);
                 }
                 return EventResult::Consumed(Some(Box::new(
@@ -415,7 +410,11 @@ impl Component for HexView {
                 match chunk.get(i) {
                     Some(b) => {
                         let is_cursor = start + i == self.cursor;
-                        let style = if is_cursor { hex_cursor_style } else { hex_style };
+                        let style = if is_cursor {
+                            hex_cursor_style
+                        } else {
+                            hex_style
+                        };
                         spans.push(Span::styled(format!("{:02x}", b), to_rat_style(style)));
                         spans.push(Span::styled(" ", to_rat_style(text_style)));
                     }
@@ -433,7 +432,11 @@ impl Component for HexView {
                             '.'
                         };
                         let is_cursor = start + i == self.cursor;
-                        let style = if is_cursor { ascii_cursor_style } else { text_style };
+                        let style = if is_cursor {
+                            ascii_cursor_style
+                        } else {
+                            text_style
+                        };
                         spans.push(Span::styled(ch.to_string(), to_rat_style(style)));
                     }
                     None => spans.push(Span::styled(" ", to_rat_style(text_style))),

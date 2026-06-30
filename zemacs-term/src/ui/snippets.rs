@@ -208,7 +208,13 @@ impl SnippetPanel {
         EventResult::Consumed(Some(Self::close_cb()))
     }
 
-    fn handle_mouse(&mut self, col: u16, row: u16, kind: MouseEventKind, cx: &mut Context) -> EventResult {
+    fn handle_mouse(
+        &mut self,
+        col: u16,
+        row: u16,
+        kind: MouseEventKind,
+        cx: &mut Context,
+    ) -> EventResult {
         if !matches!(kind, MouseEventKind::Down(MouseButton::Left)) {
             return EventResult::Consumed(None);
         }
@@ -597,11 +603,7 @@ impl Component for SnippetPanel {
                 } else {
                     body_val
                 };
-                let body_style = if body_active {
-                    text.patch(sel)
-                } else {
-                    text
-                };
+                let body_style = if body_active { text.patch(sel) } else { text };
                 render(
                     Paragraph::new(Span::styled(shown, body_style)).wrap(Wrap { trim: false }),
                     Rect::new(form_inner.x, body_top, form_inner.width, body_h),

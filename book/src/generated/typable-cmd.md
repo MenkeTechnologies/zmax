@@ -2,6 +2,22 @@
 | --- | --- |
 | `:terminal`, `:term` | Open an integrated terminal (PTY shell) running $SHELL. |
 | `:ide`, `:workbench` | Enter IDE mode (file-tree sidebar + panels, like `--ide` / F2). |
+| `:diff`, `:gdiff` | Open a read-only side-by-side diff of the buffer vs. its git HEAD version. |
+| `:merge`, `:resolve` | Resolve the buffer's git merge conflicts in a 3-pane (ours/result/theirs) view. |
+| `:magit`, `:git`, `:gst` | Open the Magit-style git status (stage/unstage/discard/commit changes by section). |
+| `:hex`, `:hexview`, `:hexedit` | Open a read-only xxd-style hex viewer of a file's raw bytes (optional path; defaults to the buffer's file). |
+| `:snippets`, `:snip` | Open the user snippet library editor (create/edit/delete reusable snippets). |
+| `:org-cycle`, `:org-fold` | Toggle a fold over the current org heading's subtree (TAB-style outline cycling). |
+| `:org-todo` | Cycle the current org heading's TODO keyword: none -> TODO -> DONE -> none. |
+| `:org-promote` | Promote the current org heading one level (remove a leading star). |
+| `:org-demote` | Demote the current org heading one level (add a leading star). |
+| `:org-next-heading` | Move the cursor to the next org heading line. |
+| `:org-prev-heading` | Move the cursor to the previous org heading line. |
+| `:org-fold-all` | Fold every org heading subtree in the buffer. |
+| `:org-unfold-all` | Unfold every fold in the buffer. |
+| `:org-agenda`, `:agenda` | Open the org agenda: TODO/DONE items across open .org buffers and *.org files under the working directory, grouped by scheduled/deadline date. |
+| `:org-priority` | Cycle the current org heading's priority cookie: none -> [#A] -> [#B] -> [#C] -> none. |
+| `:org-capture`, `:capture` | Prompt for a line of text and append it as a '* TODO <text>' entry to an inbox org file (default <working-dir>/inbox.org, or an explicit path argument). |
 | `:exit`, `:x`, `:xit` | Write changes to disk if the buffer is modified and then quit. Accepts an optional path (:exit some/path.txt). |
 | `:exit!`, `:x!`, `:xit!` | Force write changes to disk, creating necessary subdirectories, if the buffer is modified and then quit. Accepts an optional path (:exit! some/path.txt). |
 | `:quit`, `:q` | Close the current view. |
@@ -10,6 +26,7 @@
 | `:blame` | Show git blame for the current line in the status bar. |
 | `:reopen`, `:reopen-closed` | Reopen the most recently closed file. |
 | `:zen` | Toggle the IDE workbench (Zen / focus mode). |
+| `:emmet`, `:zencode` | Expand the emmet/zen HTML abbreviation before the cursor. |
 | `:quit!`, `:q!` | Force close the current view, ignoring unsaved changes. |
 | `:open`, `:o`, `:edit`, `:e` | Open a file from disk into the current view. |
 | `:buffer-close`, `:bc`, `:bclose` | Close the current buffer. |

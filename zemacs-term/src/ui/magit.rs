@@ -763,7 +763,11 @@ impl MagitStatus {
     fn rebase_continue(&mut self, cx: &mut Context) {
         let (ok, msg) = self.run_git_noninteractive(&["rebase", "--continue"]);
         let msg = if msg.is_empty() {
-            if ok { "continued".to_string() } else { "stopped".to_string() }
+            if ok {
+                "continued".to_string()
+            } else {
+                "stopped".to_string()
+            }
         } else {
             msg
         };
@@ -780,7 +784,11 @@ impl MagitStatus {
     fn rebase_abort(&mut self, cx: &mut Context) {
         let (ok, msg) = self.run_git_noninteractive(&["rebase", "--abort"]);
         let msg = if msg.is_empty() {
-            if ok { "aborted".to_string() } else { "abort failed".to_string() }
+            if ok {
+                "aborted".to_string()
+            } else {
+                "abort failed".to_string()
+            }
         } else {
             msg
         };
@@ -957,7 +965,8 @@ impl MagitStatus {
                 if self.entries[entry].section == Section::Unstaged {
                     self.apply_hunk(cx, entry, hunk, false);
                 } else {
-                    cx.editor.set_status("hunk is already staged (press u to unstage)");
+                    cx.editor
+                        .set_status("hunk is already staged (press u to unstage)");
                 }
             }
             None => {}
@@ -974,7 +983,8 @@ impl MagitStatus {
                 if self.entries[entry].section == Section::Staged {
                     self.apply_hunk(cx, entry, hunk, true);
                 } else {
-                    cx.editor.set_status("hunk is not staged (press s to stage)");
+                    cx.editor
+                        .set_status("hunk is not staged (press s to stage)");
                 }
             }
             None => {}
@@ -992,11 +1002,11 @@ impl MagitStatus {
         let key = (e.section, e.path.clone());
         // Clone the patch pieces so we drop the borrow on `self.diffs` before
         // shelling out / refreshing.
-        let patch = match self.diffs.get(&key).and_then(|fd| {
-            fd.hunks
-                .get(hunk)
-                .map(|h| hunk_patch(&fd.header, h))
-        }) {
+        let patch = match self
+            .diffs
+            .get(&key)
+            .and_then(|fd| fd.hunks.get(hunk).map(|h| hunk_patch(&fd.header, h)))
+        {
             Some(p) => p,
             None => {
                 cx.editor.set_error("no hunk to apply (try g to refresh)");
@@ -1239,7 +1249,13 @@ impl Component for MagitStatus {
                     surface.set_stringn(area.x, y, text, area.width as usize, header_style);
                 }
                 Row::Note(text) => {
-                    surface.set_stringn(area.x, y, &format!("    {text}"), area.width as usize, info_style);
+                    surface.set_stringn(
+                        area.x,
+                        y,
+                        &format!("    {text}"),
+                        area.width as usize,
+                        info_style,
+                    );
                 }
                 Row::File(i) => {
                     let entry = &self.entries[*i];
@@ -1265,7 +1281,11 @@ impl Component for MagitStatus {
                     if selected_block {
                         surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
                     }
-                    let style = if selected_block { sel_style } else { info_style };
+                    let style = if selected_block {
+                        sel_style
+                    } else {
+                        info_style
+                    };
                     surface.set_stringn(
                         area.x,
                         y,
@@ -1436,9 +1456,11 @@ impl MagitCommit {
             cx.editor.set_status("aborted: empty commit message");
             return None;
         }
-        let tmp = std::env::temp_dir().join(format!("zemacs-COMMIT_EDITMSG-{}", std::process::id()));
+        let tmp =
+            std::env::temp_dir().join(format!("zemacs-COMMIT_EDITMSG-{}", std::process::id()));
         if let Err(e) = std::fs::write(&tmp, &msg) {
-            cx.editor.set_error(format!("commit: temp write failed: {e}"));
+            cx.editor
+                .set_error(format!("commit: temp write failed: {e}"));
             return None;
         }
         let mut cmd = Command::new("git");
@@ -1602,11 +1624,8 @@ pub struct MagitLog {
 
 impl MagitLog {
     fn new(repo_dir: PathBuf) -> Self {
-        let out = git_output(
-            &repo_dir,
-            &["log", "--oneline", "--decorate", "-n", "200"],
-        )
-        .unwrap_or_default();
+        let out = git_output(&repo_dir, &["log", "--oneline", "--decorate", "-n", "200"])
+            .unwrap_or_default();
         MagitLog {
             repo_dir,
             entries: parse_log(&out),
@@ -1639,14 +1658,15 @@ impl MagitLog {
     fn rebase_callback(&self) -> Option<Callback> {
         let base = self.entries.get(self.selected)?.sha.clone();
         let repo_dir = self.repo_dir.clone();
-        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            match MagitRebase::new(repo_dir.clone(), &base) {
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| match MagitRebase::new(
+                repo_dir.clone(),
+                &base,
+            ) {
                 Some(editor) => compositor.push(Box::new(editor)),
-                None => cx
-                    .editor
-                    .set_status("no commits after this one to rebase"),
-            }
-        }))
+                None => cx.editor.set_status("no commits after this one to rebase"),
+            },
+        ))
     }
 }
 
@@ -1744,7 +1764,13 @@ impl Component for MagitLog {
             } else {
                 sha_style
             };
-            surface.set_stringn(area.x, y, &format!("  {}", entry.sha), area.width as usize, style);
+            surface.set_stringn(
+                area.x,
+                y,
+                &format!("  {}", entry.sha),
+                area.width as usize,
+                style,
+            );
             let body_x = area.x + 2 + entry.sha.chars().count() as u16 + 1;
             if body_x < area.x + area.width {
                 let style = if offset == self.selected {
@@ -1856,7 +1882,8 @@ impl MagitRebase {
         let todo = render_todo(&self.rows);
         let tmp = std::env::temp_dir().join(format!("zemacs-rebase-todo-{}", std::process::id()));
         if let Err(e) = std::fs::write(&tmp, &todo) {
-            cx.editor.set_error(format!("rebase: temp write failed: {e}"));
+            cx.editor
+                .set_error(format!("rebase: temp write failed: {e}"));
             return None;
         }
         let tmp_str = tmp.to_string_lossy().into_owned();
@@ -1877,7 +1904,8 @@ impl MagitRebase {
         });
         match out {
             Ok(o) if o.status.success() => {
-                cx.editor.set_status(format!("rebased onto {}", self.base_sha));
+                cx.editor
+                    .set_status(format!("rebased onto {}", self.base_sha));
                 schedule_status_refresh(cx);
                 Some(close)
             }
@@ -1979,8 +2007,7 @@ impl Component for MagitRebase {
 
         let title = " Rebase todo";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint =
-            "j/k move  K/J reorder  p pick  s squash  f fixup  d drop  Enter run  q abort";
+        let hint = "j/k move  K/J reorder  p pick  s squash  f fixup  d drop  Enter run  q abort";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -1991,7 +2018,13 @@ impl Component for MagitRebase {
             );
         }
         let base_line = format!(" onto {} ({} commits)", self.base_sha, self.rows.len());
-        surface.set_stringn(area.x, area.y + 1, &base_line, area.width as usize, info_style);
+        surface.set_stringn(
+            area.x,
+            area.y + 1,
+            &base_line,
+            area.width as usize,
+            info_style,
+        );
 
         let body_y = area.y + 3;
         let body_h = area.height.saturating_sub(3);
@@ -2375,7 +2408,13 @@ impl Component for MagitBranch {
         }
 
         if self.entries.is_empty() {
-            surface.set_stringn(area.x, body_y, "no branches", area.width as usize, info_style);
+            surface.set_stringn(
+                area.x,
+                body_y,
+                "no branches",
+                area.width as usize,
+                info_style,
+            );
             return;
         }
 
@@ -2587,7 +2626,13 @@ impl Component for MagitStash {
         }
 
         if self.entries.is_empty() {
-            surface.set_stringn(area.x, body_y, "no stashes", area.width as usize, info_style);
+            surface.set_stringn(
+                area.x,
+                body_y,
+                "no stashes",
+                area.width as usize,
+                info_style,
+            );
             return;
         }
 
@@ -2607,7 +2652,13 @@ impl Component for MagitStash {
             } else {
                 ref_style
             };
-            surface.set_stringn(area.x, y, &format!("  {}", e.reff), area.width as usize, style);
+            surface.set_stringn(
+                area.x,
+                y,
+                &format!("  {}", e.reff),
+                area.width as usize,
+                style,
+            );
             let body_x = area.x + 2 + e.reff.chars().count() as u16 + 1;
             if body_x < area.x + area.width {
                 let style = if offset == self.selected {
@@ -2926,7 +2977,10 @@ index 1111111..2222222 100644
         assert_eq!(hunks.len(), 2);
         assert_eq!(hunks[0].header, "@@ -1,3 +1,3 @@");
         // body: context, -, +, context.
-        assert_eq!(hunks[0].body, vec![" fn a() {}", "-old line", "+new line", " fn b() {}"]);
+        assert_eq!(
+            hunks[0].body,
+            vec![" fn a() {}", "-old line", "+new line", " fn b() {}"]
+        );
         assert_eq!(hunks[1].header, "@@ -10,2 +10,3 @@");
         assert_eq!(hunks[1].body, vec![" tail", "+added", " end"]);
     }

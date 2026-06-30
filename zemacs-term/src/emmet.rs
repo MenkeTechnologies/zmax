@@ -796,17 +796,118 @@ fn default_attrs(tag: &str) -> &'static [(&'static str, &'static str)] {
 
 fn is_known_tag(tag: &str) -> bool {
     const TAGS: &[&str] = &[
-        "a", "abbr", "address", "area", "article", "aside", "audio", "b", "base", "bdi", "bdo",
-        "blockquote", "body", "br", "button", "canvas", "caption", "cite", "code", "col",
-        "colgroup", "data", "datalist", "dd", "del", "details", "dfn", "dialog", "div", "dl", "dt",
-        "em", "embed", "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4",
-        "h5", "h6", "head", "header", "hgroup", "hr", "html", "i", "iframe", "img", "input", "ins",
-        "kbd", "label", "legend", "li", "link", "main", "map", "mark", "menu", "meta", "meter",
-        "nav", "noscript", "object", "ol", "optgroup", "option", "output", "p", "param", "picture",
-        "pre", "progress", "q", "rp", "rt", "ruby", "s", "samp", "script", "section", "select",
-        "slot", "small", "source", "span", "strong", "style", "sub", "summary", "sup", "table",
-        "tbody", "td", "template", "textarea", "tfoot", "th", "thead", "time", "title", "tr",
-        "track", "u", "ul", "var", "video", "wbr",
+        "a",
+        "abbr",
+        "address",
+        "area",
+        "article",
+        "aside",
+        "audio",
+        "b",
+        "base",
+        "bdi",
+        "bdo",
+        "blockquote",
+        "body",
+        "br",
+        "button",
+        "canvas",
+        "caption",
+        "cite",
+        "code",
+        "col",
+        "colgroup",
+        "data",
+        "datalist",
+        "dd",
+        "del",
+        "details",
+        "dfn",
+        "dialog",
+        "div",
+        "dl",
+        "dt",
+        "em",
+        "embed",
+        "fieldset",
+        "figcaption",
+        "figure",
+        "footer",
+        "form",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "head",
+        "header",
+        "hgroup",
+        "hr",
+        "html",
+        "i",
+        "iframe",
+        "img",
+        "input",
+        "ins",
+        "kbd",
+        "label",
+        "legend",
+        "li",
+        "link",
+        "main",
+        "map",
+        "mark",
+        "menu",
+        "meta",
+        "meter",
+        "nav",
+        "noscript",
+        "object",
+        "ol",
+        "optgroup",
+        "option",
+        "output",
+        "p",
+        "param",
+        "picture",
+        "pre",
+        "progress",
+        "q",
+        "rp",
+        "rt",
+        "ruby",
+        "s",
+        "samp",
+        "script",
+        "section",
+        "select",
+        "slot",
+        "small",
+        "source",
+        "span",
+        "strong",
+        "style",
+        "sub",
+        "summary",
+        "sup",
+        "table",
+        "tbody",
+        "td",
+        "template",
+        "textarea",
+        "tfoot",
+        "th",
+        "thead",
+        "time",
+        "title",
+        "tr",
+        "track",
+        "u",
+        "ul",
+        "var",
+        "video",
+        "wbr",
     ];
     TAGS.contains(&tag)
 }
@@ -824,7 +925,9 @@ fn alias_markup(abbr: &str) -> Option<String> {
         "link:favicon" => {
             r#"<link rel="shortcut icon" type="image/x-icon" href="${1:favicon.ico}">$0"#
         }
-        "link:rss" => r#"<link rel="alternate" type="application/rss+xml" title="RSS" href="${1:rss.xml}">$0"#,
+        "link:rss" => {
+            r#"<link rel="alternate" type="application/rss+xml" title="RSS" href="${1:rss.xml}">$0"#
+        }
         "script:src" => r#"<script src="${1}">$0</script>"#,
         "meta:utf" => r#"<meta charset="${1:UTF-8}">$0"#,
         "meta:vp" => {
@@ -939,10 +1042,7 @@ fn css_declaration(core: &str) -> Option<(String, Option<String>)> {
         }
         return Some((property.to_string(), Some(kw.to_string())));
     }
-    Some((
-        property.to_string(),
-        Some(format_css_value(property, rest)),
-    ))
+    Some((property.to_string(), Some(format_css_value(property, rest))))
 }
 
 /// Format a (possibly multi-valued) numeric/colour CSS value.
@@ -1323,10 +1423,7 @@ mod tests {
 
     #[test]
     fn text_and_attrs() {
-        assert_eq!(
-            ex("a[href=#]{click}"),
-            "<a href=\"#\">click</a>"
-        );
+        assert_eq!(ex("a[href=#]{click}"), "<a href=\"#\">click</a>");
     }
 
     #[test]

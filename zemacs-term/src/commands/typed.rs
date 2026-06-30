@@ -1866,7 +1866,11 @@ pub(crate) fn org_cycle_keyword(editor: &mut Editor) {
 }
 
 /// `:org-promote` — promote the current heading one level (remove a leading `*`).
-fn org_promote(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn org_promote(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -1959,8 +1963,9 @@ fn org_prev_heading(
 pub(crate) fn org_goto_prev_heading(editor: &mut Editor) {
     let line = org_cursor_line(editor);
     let (view, doc) = current!(editor);
-    let target =
-        (0..line).rev().find(|&l| super::org::heading_level(&org_line_text(doc, l)).is_some());
+    let target = (0..line)
+        .rev()
+        .find(|&l| super::org::heading_level(&org_line_text(doc, l)).is_some());
     match target {
         Some(l) => {
             let pos = doc.text().line_to_char(l);

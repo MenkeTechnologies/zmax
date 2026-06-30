@@ -20,6 +20,57 @@ Updated languages and queries:
 Packaging:
 -->
 
+# zemacs (unreleased)
+
+Changes in the zemacs fork, on top of the upstream Helix history below.
+
+Features:
+
+* Snippet library: a `:snippets` editor TUI for reusable snippets (trigger,
+  scope, description, LSP-syntax body), persisted to `snippets.toml`. Typing a
+  trigger word and pressing `Tab` expands the body with live tab stops; user
+  triggers take priority over emmet and are scoped per language.
+* Hex editor: a byte-faithful, xxd-style viewer/editor (`:hex`). Binary files
+  now open in it automatically instead of being rejected, and it round-trips
+  raw bytes exactly on save.
+* Merge-conflict resolution: a JetBrains-style 3-pane (ours/result/theirs)
+  resolver with a diff3 base pane, inline character highlighting, and
+  horizontal scroll (`:merge`), plus a read-only side-by-side diff against git
+  `HEAD` (`:diff`). The IDE Git tab lists conflicted files.
+* Magit-style git TUI: interactive rebase, per-hunk staging, and branch and
+  stash menus.
+* Org-mode: outline folding, `TODO` state cycling, capture, and a date-aware
+  agenda (overdue/today/upcoming).
+* Wildfire: `<ret>` selects/expands to the closest text object and grows to the
+  next enclosing one; `<backspace>` shrinks back.
+* REPL panel (`:repl`, `SPC a r`) fronting all five embedded languages.
+* Run-configuration manager and a unified Preferences window
+  (Settings/Keymap/Theme/Run-Configs).
+
+Commands:
+
+* `:snippets`/`:snip`, `snippet_expand`, `goto_next_tabstop`/`goto_prev_tabstop`
+* `:hex`/`:hexview`/`:hexedit`
+* `:diff`/`:gdiff`, `:merge`/`:resolve`, `:conflict-ours`/`:conflict-theirs`/
+  `:conflict-both`, `:conflict-next`/`:conflict-prev`
+* `goto_next_conflict`/`goto_prev_conflict` (`]n`/`[n`), `resolve_conflicts`
+  (`SPC g m`, `SPC g c r`), `conflict_take_all_ours`/`conflict_take_all_theirs`
+  (`SPC g c O`/`SPC g c T`)
+* `wildfire`/`wildfire_shrink` (`<ret>`/`<backspace>`)
+
+Usability improvements:
+
+* IDE layout (drawer widths, hidden/closed panels, folds, minimap) and the
+  active colorscheme persist to appdata and are restored on `:ide`.
+* Auto-reload (vim `autoread`): externally changed files are reloaded, keeping
+  local edits on conflict; on by default and configurable.
+
+Fixes:
+
+* `cit` changes inside the surrounding (X)HTML tag rather than the tree-sitter
+  class.
+* Guard against an autosave path that could truncate a file after an undo.
+
 # 25.07.1 (2025-07-18)
 
 This is a patch release which lowers the GLIBC requirements of the release artifacts published to GitHub ([#13983](https://github.com/helix-editor/helix/pull/13983))

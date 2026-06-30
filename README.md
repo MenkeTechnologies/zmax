@@ -81,6 +81,28 @@ live buffer: **elisp** (`:elisp`), **vimscript** (`:vim`), **awk** (`:awk`), plu
 a REPL fronting all of them; `~/.zemacs/init.el` and `init.vim` are sourced at
 startup. See [`book/src/scripting.md`](book/src/scripting.md).
 
+## Built-in TUIs
+
+zemacs ships a set of interactive terminal panels for tasks that usually mean
+leaving the editor:
+
+- **Snippet library** (`:snippets`) — a CRUD editor over reusable snippets
+  stored in `snippets.toml`. Type a snippet's trigger word and press `Tab` to
+  expand its body with live tab stops (`${1:…}`/`$0`); triggers are scoped per
+  language.
+- **Hex editor** (`:hex`) — a byte-faithful xxd-style viewer/editor; binary
+  files open here automatically instead of being rejected, and `Ctrl-s` writes
+  the raw bytes back.
+- **Merge & diff** — `:diff` shows the buffer against its git `HEAD`, and
+  `:merge` opens a JetBrains-style 3-pane (ours/result/theirs) conflict
+  resolver with a diff3 base pane; `]n`/`[n` jump between conflict markers.
+- **Magit-style git** — interactive rebase, per-hunk staging, and branch/stash
+  menus.
+- **Org-mode** — outline folding, `TODO` state cycling, capture, and a
+  date-aware agenda.
+- **Wildfire** — press `<ret>` in normal mode to select the closest text
+  object and again to grow to the next enclosing one; `<backspace>` shrinks.
+
 ## Build
 
 ```sh

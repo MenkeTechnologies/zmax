@@ -1,0 +1,467 @@
+
+===== SPC x  (53 gaps) =====
+  [abse] SPC x .                enter the drag stuff transient state
+  [abse] SPC x A                open all visible links
+  [abse] SPC x O                use avy to select multiple links in the frame and open 
+  [abse] SPC x Y                use avy to copy multiple links in the frame
+  [part] SPC x a &              align region at &
+  [part] SPC x a (              align region at (
+  [part] SPC x a )              align region at )
+  [part] SPC x a ,              align region at ,
+  [part] SPC x a .              align region at . (for numeric tables)
+  [part] SPC x a :              align region at :
+  [part] SPC x a ;              align region at ;
+  [part] SPC x a =              align region at =
+  [part] SPC x a L              right-align with evil-lion
+  [part] SPC x a [              align region at [
+  [part] SPC x a ]              align region at ]
+  [part] SPC x a c              align current indentation region using default rules
+  [part] SPC x a l              left-align with evil-lion
+  [part] SPC x a m              align region at arithmetic operators (+-*/)
+  [part] SPC x a r              align region using user-specified regexp
+  [part] SPC x a {              align region at {
+  [part] SPC x a }              align region at }
+  [abse] SPC x a ¦              align region at ¦
+  [abse] SPC x e                Edit strings in place
+  [abse] SPC x g T              reverse source and target languages
+  [abse] SPC x g l              set languages used by translate commands
+  [abse] SPC x g t              translate current word using Google Translate
+  [part] SPC x j c              set the justification to center
+  [part] SPC x j f              set the justification to full
+  [part] SPC x j l              set the justification to left
+  [part] SPC x j n              set the justification to none
+  [part] SPC x j r              set the justification to right
+  [part] SPC x o                use avy to select a link in the frame and open it
+  [abse] SPC x r '              generate strings given by a regexp given this list is f
+  [abse] SPC x r /              Explain the regexp around point with rx
+  [abse] SPC x r c              Convert regexp around point to the other form and displ
+  [abse] SPC x r e '            generate strings from Emacs Lisp regexp
+  [abse] SPC x r e /            Explain Emacs Lisp regexp
+  [abse] SPC x r e p            Convert Emacs Lisp regexp to PCRE
+  [abse] SPC x r e t            Replace Emacs Lisp regexp by rx form or vice versa
+  [abse] SPC x r e x            Convert Emacs Lisp regexp to rx form
+  [abse] SPC x r p '            generate strings from PCRE regexp
+  [abse] SPC x r p /            Explain PCRE regexp
+  [abse] SPC x r p e            Convert PCRE regexp to Emacs Lisp
+  [abse] SPC x r p x            Convert PCRE to rx form
+  [abse] SPC x r t              Replace regexp around point by the rx form or vice vers
+  [abse] SPC x r x              Convert regexp around point in rx form and display the 
+  [abse] SPC x t e              swap (transpose) the current sexp with the previous one
+  [abse] SPC x t p              swap (transpose) the current paragraph with the previou
+  [abse] SPC x t s              swap (transpose) the current sentence with the previous
+  [part] SPC x w c              count the number of occurrences per word in the select 
+  [abse] SPC x w d              show dictionary entry of word from wordnik.com
+  [part] SPC x x                smart quickrun or quickrun-region
+  [abse] SPC x y                use avy to copy a link in the frame
+
+===== SPC t  (40 gaps) =====
+  [abse] SPC t -                centered-cursor mode
+  [abse] SPC t 8                highlight any character past the 80th column
+  [abse] SPC t C--              global centered cursor
+  [abse] SPC t C-8              global toggle highlight of characters for long lines
+  [part] SPC t C-S-l            visual line navigation globally
+  [abse] SPC t C-W              global automatic whitespace cleanup
+  [part] SPC t C-p              global smartparens
+  [abse] SPC t E e              emacs editing style (holy mode)
+  [abse] SPC t E h              hybrid editing style (hybrid mode)
+  [abse] SPC t F                toggle auto-fill mode
+  [abse] SPC t G                ggtags mode
+  [abse] SPC t I                toggle aggressive indent mode
+  [abse] SPC t L                toggle visual lines
+  [abse] SPC t S                toggle spell checking (flyspell)
+  [abse] SPC t W                toggle automatic whitespace cleanup
+  [abse] SPC t c                toggle camel case (subword) motion
+  [abse] SPC t f                display the fill column (by default the fill column is 
+  [abse] SPC t g                toggle golden-ratio mode
+  [abse] SPC t h a              toggle automatic highlight of symbol under point after 
+  [abse] SPC t h s              toggle syntax highlighting
+  [abse] SPC t k k              toggle which-key persistent state
+  [abse] SPC t k m              show persistent major-mode keymap. Toggle off with SPC 
+  [abse] SPC t k t              show persistent top-level keymap. Toggle off with SPC t
+  [abse] SPC t m M              toggle major mode
+  [abse] SPC t m T              toggle mode line itself
+  [abse] SPC t m V              toggle new version lighter
+  [abse] SPC t m b              toggle the battery status
+  [abse] SPC t m c              toggle the org task clock (available in org layer)
+  [abse] SPC t m m              toggle the minor mode lighters
+  [abse] SPC t m n              toggle the cat! (if colors layer is declared in your do
+  [abse] SPC t m p              toggle the point character position
+  [abse] SPC t m r              toggle responsivness of the mode-line
+  [abse] SPC t m s              toggle system monitor (displayed in the minibuffer)
+  [abse] SPC t m t              toggle the time
+  [abse] SPC t m v              toggle the version control info
+  [abse] SPC t n                toggle line numbers
+  [abse] SPC t n v              toggle smooth scrolling
+  [abse] SPC t s                syntax checking (flycheck)
+  [abse] SPC t y                yasnippet mode
+  [abse] SPC t z                toggle 0/1 based column indexing
+
+===== SPC l  (34 gaps) =====
+  [abse] SPC l                  initiate transient state
+  [abse] SPC l 0..9             switch to nth layout
+  [abse] SPC l A                add all the buffers from another layout in the current 
+  [abse] SPC l C-0..C-9         switch to nth layout and keep the transient state activ
+  [abse] SPC l C-h              previous layout in list
+  [abse] SPC l C-l              next layout in list
+  [abse] SPC l D                delete the other layouts and keep their buffers
+  [abse] SPC l L                load layouts from file
+  [abse] SPC l N                previous layout in list
+  [abse] SPC l R                rename current layout
+  [abse] SPC l TAB              switch to the latest layout
+  [abse] SPC l X                kill other layouts with their buffers
+  [abse] SPC l b                select a buffer in the current layout
+  [abse] SPC l d                delete the current layout and keep its buffers
+  [abse] SPC l h                go to default layout
+  [abse] SPC l l                select/create a layout
+  [abse] SPC l n                next layout in list
+  [abse] SPC l o                open a custom layout
+  [abse] SPC l p                previous layout in list
+  [abse] SPC l s                save layouts to file
+  [abse] SPC l t                display a buffer without adding it to the current layou
+  [abse] SPC l w                initiate transient state
+  [abse] SPC l w 0..9           switch to nth workspace
+  [abse] SPC l w C-0..C-9       switch to nth workspace and keep the transient state ac
+  [abse] SPC l w N              switch to previous workspace
+  [abse] SPC l w R              rename current workspace
+  [abse] SPC l w TAB            switch to last active workspace
+  [abse] SPC l w d              close current workspace
+  [abse] SPC l w h              switch to previous workspace
+  [abse] SPC l w l              switch to next workspace
+  [abse] SPC l w n              switch to next workspace
+  [abse] SPC l w p              switch to previous workspace
+  [abse] SPC l w w              switch to tagged workspace
+  [abse] SPC l x                kill current layout with its buffers
+
+===== SPC w  (26 gaps) =====
+  [abse] SPC w .                initiate window transient state
+  [abse] SPC w . 0..9           go to window number n
+  [abse] SPC w . U              redo window layout
+  [abse] SPC w . a              call ace window mode
+  [abse] SPC w . g              toggle golden-ratio on and off
+  [abse] SPC w . m              toggle maximization of current window
+  [abse] SPC w . u              undo window layout (used to effectively undo a closed w
+  [abse] SPC w . x              delete window and kill buffer
+  [part] SPC w 1                make 1 window layout
+  [part] SPC w 2                make 2 windows layout (split vertically)
+  [part] SPC w 3                make 3 windows layout (split vertically)
+  [part] SPC w 4                make 4 windows layout (split in 2x2 grid)
+  [abse] SPC w =                balance split windows
+  [part] SPC w M                swap windows using ace-window
+  [part] SPC w TAB              switch to alternate window in the current frame (switch
+  [part] SPC w \vert            maximize window vertically
+  [part] SPC w _                maximize window horizontally
+  [abse] SPC w b                force the focus back to the minibuffer
+  [abse] SPC w c .              center buffer and enable centering transient state
+  [abse] SPC w c C              toggle visual distraction free mode
+  [abse] SPC w c c              toggle visual centering of the current buffer
+  [abse] SPC w f                toggle follow mode
+  [abse] SPC w p m              open messages buffer in a popup window
+  [abse] SPC w p p              close the current sticky popup window
+  [abse] SPC w t                toggle window dedication (dedicated window cannot be re
+  [abse] SPC w u                undo window layout (used to effectively undo a closed w
+
+===== SPC f  (26 gaps) =====
+  [part] SPC f A                open a file and replace the current buffer with the new
+  [abse] SPC f E                open a file with elevated privileges (sudo edit)
+  [abse] SPC f J                open a junk file, in mode determined by the file extens
+  [part] SPC f L                Locate a file (using locate)
+  [abse] SPC f c                copy current file to a different location
+  [part] SPC f e C-e            reinitialize the /.spacemacs.env file by importing syst
+  [abse] SPC f e D              open ediff buffer of ~/.spacemacs and dotspacemacs-temp
+  [abse] SPC f e E              reload the environment variables by executing dotspacem
+  [abse] SPC f e I              open the early-init.el
+  [abse] SPC f e U              update packages
+  [abse] SPC f e c              recompile all elpa packages
+  [part] SPC f e e              open the /.spacemacs.env file where environment variabl
+  [part] SPC f e i              open the all mighty init.el
+  [abse] SPC f e l              locate an Emacs library
+  [abse] SPC f e v              display and copy the spacemacs version
+  [abse] SPC f h                open binary file with hexl (a hex editor)
+  [part] SPC f l                open file literally in fundamental mode
+  [part] SPC f o                open a file using the default external program
+  [abse] SPC f v d              add a directory variable
+  [abse] SPC f v f              add a local variable to the current file
+  [abse] SPC f v p              add a local variable to the first line of the current f
+  [part] SPC f y C              show and copy current file path relative to the project
+  [part] SPC f y D              show and copy current directory path relative to the pr
+  [part] SPC f y L              show and copy current file path relative to the project
+  [part] SPC f y N              show and copy current file name without extension in th
+  [part] SPC f y Y              show and copy current file path relative to the project
+
+===== SPC D  (26 gaps) =====
+  [abse] SPC D B                ask for a file and run ediff with its backup file
+  [abse] SPC D b 3              ask for 3 opened buffers and start an ediff session wit
+  [abse] SPC D b b              ask for 2 opened buffers and start an ediff session wit
+  [abse] SPC D b p              ask for a buffer or file that contains a patch to apply
+  [abse] SPC D d 3              ask for 3 directories and run ediff on them comparing f
+  [abse] SPC D d d              ask for 2 directories and run ediff on them comparing f
+  [abse] SPC D d r              run ediff on a directory comparing its files with their
+  [abse] SPC D f .              start an ediff session between your .spacemacs and its 
+  [abse] SPC D f 3              ask for 3 files and start an ediff session with them
+  [abse] SPC D f f              ask for 2 files and start an ediff session with them
+  [abse] SPC D f p              ask for a buffer or file that contains a patch to apply
+  [abse] SPC D f v              start ediff between versions of a file
+  [abse] SPC D h                open ediff documentation within Emacs
+  [abse] SPC D m b 3            start an ediff merge session between 2 buffers and thei
+  [abse] SPC D m b b            start an ediff merge session between 2 buffers
+  [abse] SPC D m d 3            start an ediff merge session between files with the sam
+  [abse] SPC D m d d            start an ediff merge session between files with the sam
+  [abse] SPC D m f 3            start an ediff merge session between 2 files and their 
+  [abse] SPC D m f f            start an ediff merge session between 2 files
+  [abse] SPC D m r 3            start an ediff merge session between two revisions of a
+  [abse] SPC D m r r            start an ediff merge session between two revisions of a
+  [abse] SPC D r l              start an ediff session between two regions to perform a
+  [abse] SPC D r w              start an ediff session between two regions to perform a
+  [abse] SPC D s                display ediff registries
+  [abse] SPC D w l              compare linewise the portions of visible text of 2 wind
+  [abse] SPC D w w              compare wordwise the portions of visible text of 2 wind
+
+===== SPC m  (25 gaps) =====
+  [abse] SPC m ,                commit changes with the entered message (git commit buf
+  [abse] SPC m C                checkout pull request (not for issues) (forge)
+  [abse] SPC m D                delete comment under cursor (forge)
+  [abse] SPC m M                create mark to use with topics (forge)
+  [abse] SPC m a                discard message and abort the commit (git commit buffer
+  [abse] SPC m b                browse topic (open in web browser) (forge)
+  [abse] SPC m c                commit changes with the entered message (git commit buf
+  [abse] SPC m d                toggle draft pull request (forge)
+  [abse] SPC m e                edit topic body (forge)
+  [abse] SPC m e $              go to end of line and evaluate last sexp
+  [abse] SPC m e b              evaluate buffer
+  [abse] SPC m e c              evaluate current form (a def or a set)
+  [abse] SPC m e e              evaluate last sexp
+  [abse] SPC m e f              evaluate current defun
+  [abse] SPC m e l              go to end of line and evaluate last sexp
+  [abse] SPC m e r              evaluate region
+  [abse] SPC m k                discard message and abort the commit (git commit buffer
+  [abse] SPC m m                edit topic marks (mark is an unshared label) (forge)
+  [abse] SPC m n                edit personal note (adds to top of topic) (forge)
+  [abse] SPC m r                edit list of people to review an existing topic (forge)
+  [abse] SPC m s                change topic state (open, closed, draft, etc.) (forge)
+  [abse] SPC m t                edit topic title (forge)
+  [abse] SPC m t b              execute buffer tests
+  [abse] SPC m t q              ask for test function to execute
+  [abse] SPC m u                copy URL of topic (add to kill ring) (forge)
+
+===== SPC h  (24 gaps) =====
+  [part] SPC h .                search dotfile variables
+  [abse] SPC h P k              stop the profiler
+  [abse] SPC h P r              display the profiler report
+  [abse] SPC h P s              start the profiler
+  [abse] SPC h P w              write the report to file
+  [part] SPC h SPC              discover Spacemacs documentation, layers and packages
+  [part] SPC h d a              describe current expression under point
+  [part] SPC h d b              describe bindings
+  [part] SPC h d f              describe a function
+  [part] SPC h d k              describe a key
+  [part] SPC h d l              copy last pressed keys that you can paste in gitter cha
+  [part] SPC h d m              describe current modes
+  [part] SPC h d p              describe a package (Emacs built-in function)
+  [part] SPC h d s              copy system information that you can paste in gitter ch
+  [part] SPC h d t              describe text properties
+  [part] SPC h d v              describe a variable
+  [part] SPC h d x              describe an evil ex-command
+  [part] SPC h f                discover the FAQ
+  [part] SPC h i                search in info pages with the symbol at point
+  [part] SPC h l                search layers
+  [part] SPC h m                search available man pages
+  [part] SPC h n                browse emacs news
+  [part] SPC h p                search packages
+  [part] SPC h r                search documentation files
+
+===== SPC s  (24 gaps) =====
+  [part] SPC s B                search all open buffers with the first found tool with 
+  [part] SPC s D                search current directory with the first found tool with
+  [part] SPC s F                search files in an arbitrary directory with the first f
+  [part] SPC s H                go to the last searched occurrence of the last highligh
+  [part] SPC s a A              search current file with ag with default input
+  [part] SPC s a B              search all open buffers with ag with default text
+  [part] SPC s a D              search current directory with ag with default text
+  [part] SPC s a F              search files in an arbitrary directory with ag with def
+  [part] SPC s a P              search in a project with ag with default text
+  [abse] SPC s c                clear persistent search highlighting
+  [part] SPC s d                search current directory with the first found tool
+  [part] SPC s g B              search all open buffers with grep with default text
+  [part] SPC s g F              search files in an arbitrary directory with grep with d
+  [part] SPC s g G              search current file with grep with default input
+  [part] SPC s k B              search all open buffers with ack with default text
+  [part] SPC s k D              search current directory with ack with default text
+  [part] SPC s k F              search files in an arbitrary directory with ack with de
+  [part] SPC s k P              search in a project with ack with default text
+  [part] SPC s r B              search all open buffers with rg with default text
+  [part] SPC s r D              search current directory with rg with default text
+  [part] SPC s r F              search files in an arbitrary directory with rg with def
+  [part] SPC s r P              search in a project with rg with default text
+  [part] SPC s r R              search current file with rg with default input
+  [abse] SPC s w g              Get Google suggestions in emacs. Opens Google results i
+
+===== SPC b  (17 gaps) =====
+  [abse] SPC b .                initiate transient state
+  [abse] SPC b . 1..9           move current buffer to nth window
+  [abse] SPC b . C-1..C-9       switch focus to nth window
+  [abse] SPC b . C-d            bury current buffer
+  [abse] SPC b . M-1..M-9       swap current buffer with nth window
+  [abse] SPC b . q              quit transient state
+  [abse] SPC b C-D              kill buffers using a regular expression
+  [abse] SPC b M                kill all buffers matching the regexp
+  [part] SPC b N C-i            create an indirect buffer from an existing opened buffe
+  [abse] SPC b N I              create an indirect buffer that is clone of currently op
+  [part] SPC b N h              create new empty buffer in a new window on the left
+  [part] SPC b N i              create an indirect buffer that is clone of currently op
+  [part] SPC b N j              create new empty buffer in a new window at the bottom
+  [part] SPC b N k              create new empty buffer in a new window above
+  [part] SPC b N l              create new empty buffer in a new window below
+  [part] SPC b P                copy clipboard and replace buffer (useful when pasting 
+  [part] SPC b W                go to workspace and window by buffer
+
+===== SPC K  (12 gaps) =====
+  [abse] SPC K c f              set the display format for the macro counter
+  [abse] SPC K e b              assign a key binding to the last macro
+  [abse] SPC K e e              edit last macro in a buffer
+  [abse] SPC K e l              edit a macro from lossage information (last 300 execute
+  [abse] SPC K e n              give a name to the last macro
+  [abse] SPC K e r              write the last macro to a register (use SPC r r to call
+  [abse] SPC K e s              step by step edit of the last macro
+  [abse] SPC K r L              view head macro in ring
+  [abse] SPC K r d              delete head macro in ring
+  [abse] SPC K r n              cycle to next macro in ring
+  [abse] SPC K r p              cycle to previous macro in ring
+  [abse] SPC K r s              swap the first two macros in ring
+
+===== SPC u  (11 gaps) =====
+  [abse] SPC u                  universal argument
+  [abse] SPC u SPC b D          kill a visible buffer and its window using ace-window
+  [part] SPC u SPC b d          kill the current buffer and window (does not delete the
+  [part] SPC u SPC b m          kill all buffers and windows except the current one
+  [abse] SPC u SPC h I          Open Spacemacs GitHub issue page with pre-filled inform
+  [part] SPC u SPC w 1          make 1 window layout with force delete
+  [part] SPC u SPC w 2          make 2 windows layout (split vertically) with force del
+  [part] SPC u SPC w 3          make 3 windows layout (split vertically) with force del
+  [part] SPC u SPC w 4          make 4 windows layout (split in 2x2 grid) with force de
+  [abse] SPC u SPC w D          delete another window and its current buffer using ace-
+  [part] SPC u SPC w d          delete a window and its current buffer (does not delete
+
+===== SPC T  (10 gaps) =====
+  [abse] SPC T B                toggle frame background transparency
+  [abse] SPC T F                toggle frame fullscreen
+  [abse] SPC T M                toggle frame maximize
+  [abse] SPC T T                toggle frame transparency (transient state)
+  [abse] SPC T f                toggle fringe display
+  [abse] SPC T m                toggle menu bar
+  [part] SPC T n                cycle to next theme
+  [part] SPC T p                change to previous theme
+  [abse] SPC T t                toggle tool bar
+  [abse] SPC T ~                display tilde in fringe on empty lines
+
+===== SPC j  (9 gaps) =====
+  [part] SPC j (                jump to first unbalanced parentheses
+  [part] SPC j +                format the marked region or entire buffer also cleanup 
+  [part] SPC j D                jump to a listing of the current directory (other windo
+  [abse] SPC j S                split a quoted string or s-expression, insert a new lin
+  [part] SPC j U                select a URL in the current buffer and follow it
+  [part] SPC j f                jump to the definition of an Emacs Lisp function
+  [part] SPC j l                initiate avy jump line
+  [abse] SPC j s                split a quoted string or s-expression in place
+  [part] SPC j v                jump to the definition/declaration of an Emacs Lisp var
+
+===== SPC c  (9 gaps) =====
+  [part] SPC c L                invert comment lines
+  [part] SPC c T                invert comment to line
+  [part] SPC c Y                invert comment and yank
+  [part] SPC c d                close compilation window
+  [part] SPC c h                hide/show comments
+  [abse] SPC c k                kill compilation
+  [part] SPC c p                comment paragraphs
+  [part] SPC c t                comment to line
+  [part] SPC c y                comment and yank
+
+===== SPC g  (9 gaps) =====
+  [abse] SPC g H c              clear commit highlights
+  [abse] SPC g H h              highlight regions by age of commits
+  [abse] SPC g H t              highlight regions by last updated time
+  [abse] SPC g b                open a magit blame
+  [abse] SPC g f d              diff for current file
+  [abse] SPC g f f              view a file at a specific branch or commit
+  [abse] SPC g f m              magit dispatch popup for file operations
+  [abse] SPC g i                initialize a new git repository
+  [abse] SPC g u                select a remote repository
+
+===== SPC p  (8 gaps) =====
+  [part] SPC p a                toggle between implementation and test
+  [part] SPC p d                find directory
+  [part] SPC p e                edit dir-locals.el
+  [part] SPC p g                find tags
+  [part] SPC p k                kill all project buffers
+  [part] SPC p o                run multi-occur
+  [part] SPC p t                open Treemacs and add current projectile root to its li
+  [abse] SPC p v                open project root in vc-dir or magit
+
+===== SPC n  (6 gaps) =====
+  [abse] SPC n F                narrow to the current function in an indirect buffer
+  [abse] SPC n P                narrow to the visible page in an indirect buffer
+  [abse] SPC n R                narrow to the selected text in an indirect buffer
+  [abse] SPC n f                narrow the buffer to the current function
+  [abse] SPC n p                narrow the buffer to the visible page
+  [part] SPC n r                narrow the buffer to the selected text
+
+===== SPC k  (4 gaps) =====
+  [abse] SPC k a                absorb: (a (bs <point> ..)) -> ((bs a <point> ..))
+  [abse] SPC k c                convolute: (as (bs <point> ..)) -> (bs (as <point> ..))
+  [part] SPC k j                go forward to next closing parenthesis
+  [part] SPC k k                go backward to previous opening parenthesis
+
+===== SPC e  (3 gaps) =====
+  [abse] SPC e c                clear all errors
+  [part] SPC e h                describe a flycheck checker
+  [part] SPC e v                verify flycheck setup (useful to debug 3rd party tools 
+
+===== SPC q  (3 gaps) =====
+  [abse] SPC q T                Restart Emacs and debug with --adv-timers
+  [abse] SPC q r                Restart both Emacs and the server, prompting to save an
+  [abse] SPC q t                Restart Emacs and debug with --with-timed-requires
+
+===== SPC z  (2 gaps) =====
+  [abse] SPC z f 0              reset the frame content size and initiate the frame sca
+  [abse] SPC z x 0              reset the font size (no scaling) and initiate the font 
+
+===== SPC a  (1 gaps) =====
+  [abse] SPC a k                launch paradox
+
+===== SPC 1  (1 gaps) =====
+  [abse] SPC 1                  go to window number 1
+
+===== SPC 2  (1 gaps) =====
+  [abse] SPC 2                  go to window number 2
+
+===== SPC 3  (1 gaps) =====
+  [abse] SPC 3                  go to window number 3
+
+===== SPC 4  (1 gaps) =====
+  [abse] SPC 4                  go to window number 4
+
+===== SPC 5  (1 gaps) =====
+  [abse] SPC 5                  go to window number 5
+
+===== SPC 6  (1 gaps) =====
+  [abse] SPC 6                  go to window number 6
+
+===== SPC 7  (1 gaps) =====
+  [abse] SPC 7                  go to window number 7
+
+===== SPC 8  (1 gaps) =====
+  [abse] SPC 8                  go to window number 8
+
+===== SPC 9  (1 gaps) =====
+  [abse] SPC 9                  go to window number 9
+
+===== SPC F  (1 gaps) =====
+  [part] SPC F n                create a new frame
+
+===== SPC o  (1 gaps) =====
+  [abse] SPC o c                example user binding: run org mode capture (SPC o is re
+
+===== SPC r  (1 gaps) =====
+  [abse] SPC r s                resume search buffer (completion or converted search bu
+
+===== SPC *  (1 gaps) =====
+  [abse] SPC *                  search with the first found tool with default input

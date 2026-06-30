@@ -383,10 +383,33 @@ These mappings are in the style of [vim-unimpaired](https://github.com/tpope/vim
 | `[g`     | Go to previous change                        | `goto_prev_change`      |
 | `]G`     | Go to last change                            | `goto_last_change`      |
 | `[G`     | Go to first change                           | `goto_first_change`     |
+| `]n`     | Go to next merge-conflict marker             | `goto_next_conflict`    |
+| `[n`     | Go to previous merge-conflict marker         | `goto_prev_conflict`    |
 | `[x`     | Go to next (X)HTML element                   | `goto_next_xml_element` |
 | `]x`     | Go to previous (X)HTML element               | `goto_prev_xml_element` |
 | `]Space` | Add newline below                            | `add_newline_below`     |
 | `[Space` | Add newline above                            | `add_newline_above`     |
+
+#### Wildfire
+
+In normal mode, expand or shrink the selection by syntax-aware text objects.
+
+| Key           | Description                                       | Command           |
+| -----         | -----------                                       | -------           |
+| `<ret>`       | Select / grow to the closest enclosing text object | `wildfire`        |
+| `<backspace>` | Shrink to the previously selected text object      | `wildfire_shrink` |
+
+#### Git conflicts and merge
+
+These live under the space-`g` git menu (see [Space mode](#space-mode)) and the
+unimpaired `]n`/`[n` motions above.
+
+| Key                  | Description                                                | Command                    |
+| -----                | -----------                                                | -------                    |
+| `SPC g m`, `SPC g c r` | Open the 3-pane merge-conflict resolver (`:merge`)       | `resolve_conflicts`        |
+| `SPC g c O`          | Resolve all conflicts by keeping our side                  | `conflict_take_all_ours`   |
+| `SPC g c T`          | Resolve all conflicts by keeping their side                | `conflict_take_all_theirs` |
+| `SPC g =`            | Side-by-side diff of the buffer vs. git `HEAD` (`:diff`)    | `git_diff`                 |
 
 ## Insert mode
 
@@ -413,10 +436,15 @@ escaping from insert mode to normal mode.
 | `Ctrl-h`, `Backspace`, `Shift-Backspace`    | Delete previous char        | `delete_char_backward`   |
 | `Ctrl-d`, `Delete`                          | Delete next char            | `delete_char_forward`    |
 | `Ctrl-j`, `Enter`                           | Insert new line             | `insert_newline`         |
-| `Tab`                                       | [Smart tab] (configurable)  | `smart_tab`              |
+| `Tab`                                       | Advance a snippet tab stop, else expand a snippet trigger or emmet abbreviation, else [smart tab] | `emmet_expand` |
 | `Shift-Tab`                                 | Insert tab                  | `insert_tab`             |
 
-[Smart tab]: ./editor.md#editorsmart-tab-section
+[smart tab]: ./editor.md#editorsmart-tab-section
+
+> 💡 `Tab` is overloaded in insert mode: if a snippet is active it jumps to the
+> next tab stop; otherwise it tries to expand the word before the cursor as a
+> [snippet](./usage.md#snippets) trigger or an emmet abbreviation; failing
+> both, it behaves as a [smart tab].
 
 These keys are not recommended, but are included for new users less familiar
 with modal editors.

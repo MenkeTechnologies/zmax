@@ -132,21 +132,23 @@ impl OrgAgenda {
         let item = self.items.get(self.selected)?;
         let path = item.file.clone();
         let line = item.line;
-        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.pop();
-            if let Err(err) = cx.editor.open(&path, Action::Replace) {
-                cx.editor
-                    .set_error(format!("failed to open {}: {err}", path.display()));
-                return;
-            }
-            let scrolloff = cx.editor.config().scrolloff;
-            let (view, doc) = current!(cx.editor);
-            let last = doc.text().len_lines().saturating_sub(1);
-            let target = line.min(last);
-            let pos = doc.text().line_to_char(target);
-            doc.set_selection(view.id, zemacs_core::Selection::point(pos));
-            view.ensure_cursor_in_view(doc, scrolloff);
-        }))
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                if let Err(err) = cx.editor.open(&path, Action::Replace) {
+                    cx.editor
+                        .set_error(format!("failed to open {}: {err}", path.display()));
+                    return;
+                }
+                let scrolloff = cx.editor.config().scrolloff;
+                let (view, doc) = current!(cx.editor);
+                let last = doc.text().len_lines().saturating_sub(1);
+                let target = line.min(last);
+                let pos = doc.text().line_to_char(target);
+                doc.set_selection(view.id, zemacs_core::Selection::point(pos));
+                view.ensure_cursor_in_view(doc, scrolloff);
+            },
+        ))
     }
 
     /// Cycle the selected item's TODO keyword. Straightforward case only: the
@@ -348,11 +350,7 @@ impl Component for OrgAgenda {
                     put(surface, &mut x, &item.title, pick(text_style));
 
                     // Right-aligned, dim file:line.
-                    let loc = format!(
-                        "{}:{}",
-                        display_path(&item.file, &self.root),
-                        item.line + 1
-                    );
+                    let loc = format!("{}:{}", display_path(&item.file, &self.root), item.line + 1);
                     let loc_w = loc.chars().count() as u16;
                     // Only draw it if it fits clear of the left content.
                     if loc_w + 1 < area.width && right.saturating_sub(loc_w + 1) > x {
@@ -470,9 +468,7 @@ fn walk_org_files(root: &Path) -> Vec<PathBuf> {
                     continue;
                 }
                 stack.push((path, depth + 1));
-            } else if ft.is_file()
-                && path.extension().and_then(|e| e.to_str()) == Some("org")
-            {
+            } else if ft.is_file() && path.extension().and_then(|e| e.to_str()) == Some("org") {
                 out.push(path);
                 if out.len() >= MAX_FILES {
                     break;
