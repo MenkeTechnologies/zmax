@@ -11802,6 +11802,12 @@ pub(crate) fn build_buffer_picker(
 }
 
 fn jumplist_picker(cx: &mut Context) {
+    let picker = build_jumplist_picker(cx.editor);
+    cx.push_layer(picker);
+}
+
+/// Build the jumplist picker from editor state (shared by the static command and `:jumps`).
+pub(crate) fn build_jumplist_picker(editor: &mut Editor) -> Box<dyn Component> {
     struct JumpMeta<'a> {
         id: DocumentId,
         path: Option<Cow<'a, Path>>,
@@ -11811,15 +11817,15 @@ fn jumplist_picker(cx: &mut Context) {
         is_current: bool,
     }
 
-    for (view, _) in cx.editor.tree.views_mut() {
+    for (view, _) in editor.tree.views_mut() {
         for doc_id in view.jumps.iter().map(|e| e.0).collect::<Vec<_>>().iter() {
-            let doc = doc_mut!(cx.editor, doc_id);
+            let doc = doc_mut!(editor, doc_id);
             view.sync_changes(doc);
         }
     }
 
     let new_meta = |view: &View, doc_id: DocumentId, selection: Selection| {
-        let doc = doc!(cx.editor, &doc_id);
+        let doc = doc!(editor, &doc_id);
         let text = doc.text().slice(..);
         let contents = selection
             .fragments(text)
@@ -11864,13 +11870,13 @@ fn jumplist_picker(cx: &mut Context) {
     let picker = Picker::new(
         columns,
         1, // path
-        cx.editor.tree.views().flat_map(|(view, _)| {
+        editor.tree.views().flat_map(|(view, _)| {
             view.jumps
                 .iter()
                 .rev()
                 .map(|(doc_id, selection)| new_meta(view, *doc_id, selection.clone()))
         }),
-        PathStyleConfig::new(&cx.editor.theme),
+        PathStyleConfig::new(&editor.theme),
         |cx, meta, action| {
             cx.editor.switch(meta.id, action);
             let config = cx.editor.config();
@@ -11886,7 +11892,7 @@ fn jumplist_picker(cx: &mut Context) {
         let line = meta.selection.primary().cursor_line(doc.text().slice(..));
         Some((meta.id.into(), Some((line, line))))
     });
-    cx.push_layer(Box::new(overlaid(picker)));
+    Box::new(overlaid(picker))
 }
 
 /// Pin the current file to the project's harpoon list (jump to it later with
@@ -12093,10 +12099,18 @@ fn reopen_last_closed(cx: &mut Context) {
 /// Fuzzy-pick a previously opened file, ranked by `z`-style frecency
 /// (frequency × recency). Persisted across sessions in `<config>/recent_files`.
 fn frecent_file_picker(cx: &mut Context) {
+    match build_frecent_file_picker() {
+        Some(picker) => cx.push_layer(picker),
+        None => cx.editor.set_status("No recent files yet"),
+    }
+}
+
+/// Build the recent-files picker (shared by the static command and `:oldfiles`). Returns `None`
+/// when there are no recent files yet.
+pub(crate) fn build_frecent_file_picker() -> Option<Box<dyn Component>> {
     let files = crate::recent_files::load_frecent();
     if files.is_empty() {
-        cx.editor.set_status("No recent files yet");
-        return;
+        return None;
     }
     let cwd = zemacs_stdx::env::current_working_dir();
     let columns = [PickerColumn::new("file", |p: &PathBuf, cwd: &PathBuf| {
@@ -12113,7 +12127,7 @@ fn frecent_file_picker(cx: &mut Context) {
         }
     })
     .with_preview(|_editor, path| Some((path.as_path().into(), None)));
-    cx.push_layer(Box::new(overlaid(picker)));
+    Some(Box::new(overlaid(picker)))
 }
 
 fn changed_file_picker(cx: &mut Context) {

@@ -434,6 +434,45 @@ fn buffers_list(
     Ok(())
 }
 
+/// `:jumps` — list the jump list in a picker (vim `:jumps`).
+fn jumps_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(crate::commands::build_jumplist_picker(editor));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// `:oldfiles` / `:browse oldfiles` — pick from recently edited files (vim `:oldfiles`).
+fn oldfiles_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            match crate::commands::build_frecent_file_picker() {
+                Some(picker) => compositor.push(picker),
+                None => editor.set_status("No recent files yet"),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 fn write_impl(
     cx: &mut compositor::Context,
     path: Option<&str>,
@@ -14280,6 +14319,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["ls", "files"],
         doc: "List open buffers in the buffer picker (vim :buffers/:ls/:files).",
         fun: buffers_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "jumps",
+        aliases: &[],
+        doc: "List the jump list in a picker (vim :jumps).",
+        fun: jumps_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "oldfiles",
+        aliases: &[],
+        doc: "Pick from recently edited files (vim :oldfiles).",
+        fun: oldfiles_list,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
