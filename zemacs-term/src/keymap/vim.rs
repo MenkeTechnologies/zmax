@@ -1455,6 +1455,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "r" => paredit_raise,              // SPC k r : raise sexp
                 "t" => paredit_transpose,          // SPC k t : transpose sexps
                 "a" => paredit_absorb,             // SPC k a : absorb previous sexp into form
+                "c" => paredit_convolute,          // SPC k c : convolute sexp
                 "e" => paredit_splice_kill_forward,  // SPC k e : splice, killing forward
                 "E" => paredit_splice_kill_backward, // SPC k E : splice, killing backward
                 "(" => paredit_insert_sexp_before, // SPC k ( : insert sexp before current

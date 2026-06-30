@@ -883,6 +883,7 @@ impl MappableCommand {
         paredit_transpose, "Paredit: transpose the s-expressions around point (SPC k t)",
         paredit_split, "Paredit: split the enclosing list at point (SPC j s)",
         paredit_absorb, "Paredit: absorb the previous sexp into the current form (SPC k a)",
+        paredit_convolute, "Paredit: convolute — swap enclosing/inner prefixes (SPC k c)",
         buffer_swap_window_1, "Swap current buffer with window 1 (SPC b . M-1)",
         buffer_swap_window_2, "Swap current buffer with window 2 (SPC b . M-2)",
         buffer_swap_window_3, "Swap current buffer with window 3 (SPC b . M-3)",
@@ -14209,6 +14210,28 @@ fn pe_raise(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
     Some((out, o))
 }
 
+/// paredit-convolute-sexp: swap the enclosing form's prefix with the inner
+/// form's prefix-up-to-point. `(as (bs <pt> ..)) → (bs (as <pt> ..))`. Pure.
+fn pe_convolute(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (io, ic) = pe_enclosing(ch, pos)?; // inner form
+    if io == 0 {
+        return None;
+    }
+    let (oo, oc) = pe_enclosing(ch, io - 1)?; // form enclosing the inner one
+    if oo >= io || oc <= ic || pos <= io || pos > ic {
+        return None;
+    }
+    let outer_prefix: Vec<char> = ch[oo + 1..io].to_vec(); // `as `
+    let inner_prefix: Vec<char> = ch[io + 1..pos].to_vec(); // `bs `
+    let mut out = Vec::new();
+    out.extend_from_slice(&ch[..=oo]); // up to & incl outer-open
+    out.extend(inner_prefix.iter().copied()); // bs
+    out.push(ch[io]); // inner-open
+    out.extend(outer_prefix.iter().copied()); // as
+    out.extend_from_slice(&ch[pos..]); // point .. inner-close, outer tail, outer-close
+    Some((out, oo + 1))
+}
+
 /// Transpose: swap the s-expression before point with the one after it.
 /// `(a b)` with point between → `(b a)`.
 fn pe_transpose(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
@@ -14323,6 +14346,9 @@ fn paredit_split(cx: &mut Context) {
 }
 fn paredit_absorb(cx: &mut Context) {
     apply_paredit(cx, pe_absorb);
+}
+fn paredit_convolute(cx: &mut Context) {
+    apply_paredit(cx, pe_convolute);
 }
 fn paredit_splice_kill_forward(cx: &mut Context) {
     apply_paredit(cx, pe_splice_kill_forward);
@@ -15672,6 +15698,13 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn paredit_convolute_swaps_prefixes() {
+        let ch: Vec<char> = "(as (bs c))".chars().collect();
+        let (out, _) = pe_convolute(&ch, 8).expect("convolute"); // point at `c`
+        assert_eq!(out.iter().collect::<String>(), "(bs (as c))");
     }
 
     #[test]

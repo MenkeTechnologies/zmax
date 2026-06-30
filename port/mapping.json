@@ -18342,5 +18342,13 @@
    "key:insert:C-@"
   ],
   "note": "insert previously-inserted text (i_CTRL-A/i_CTRL-@)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k c"
+  ],
+  "note": ""
  }
 ]
