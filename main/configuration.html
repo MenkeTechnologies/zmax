@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-e8c0df8c.js";
+            window.path_to_searchindex_js = "searchindex-9d3c84f9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-c0d3b1d1.js"></script>
@@ -215,6 +215,26 @@ You can reload the config file by issuing the <code>:config-reload</code> comman
 signal to the Zemacs process, such as by using the command <code>pkill -USR1 hx</code>.</p>
 <p>Finally, you can have a <code>config.toml</code> and a <code>languages.toml</code> local to a project by putting it under a <code>.zemacs</code> directory in your repository.
 Its settings will be merged with the configuration directory and the built-in configuration.</p>
+<h2 id="keymap-presets"><a class="header" href="#keymap-presets">Keymap presets</a></h2>
+<p>Zemacs ships <strong>four</strong> keybinding presets. Select one with the top-level <code>keymap</code>
+key (or switch at runtime with <code>:keymap &lt;name&gt;</code>, or in Preferences ▸ Keymap):</p>
+<pre><code class="language-toml">keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "emacs"
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Preset</th><th>Starts in</th><th>Leader / prefixes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>spacemacs</code> <em>(default)</em></td><td>Normal</td><td>vim/evil keys + the <code>SPC</code> leader <strong>and</strong> the Emacs <code>C-x</code> prefix; both open a which-key popup.</td></tr>
+<tr><td><code>vim</code></td><td>Normal</td><td>pure vim — no <code>SPC</code> leader and no which-key popup; <code>C-x</code> is <code>decrement</code>.</td></tr>
+<tr><td><code>helix</code></td><td>Normal</td><td>the original Helix selection-first keymap with its <code>SPC</code> leader.</td></tr>
+<tr><td><code>emacs</code></td><td>Insert</td><td>modeless Emacs bindings (<code>C-x</code>, <code>C-c</code>, <code>M-x</code>, …).</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>decrement</code> per line is on <code>g C-x</code> in every preset. Any <code>[keys.*]</code> overrides you
+add are merged on top of the selected preset.</p>
 
                     </main>
 
