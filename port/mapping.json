@@ -6249,11 +6249,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_c_t",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space c t"
+   "key:normal:space c t",
+   "static:comment_to_line"
   ],
-  "note": "comment to line -> toggle_comments"
+  "note": "comment-to-line -> comment_to_line (prompt for target line, line-comment the range)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_c_y",
