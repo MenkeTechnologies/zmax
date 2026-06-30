@@ -19322,5 +19322,22 @@
    "static:clear_diagnostics"
   ],
   "note": "clear all errors -> clear_diagnostics (clears doc diagnostics per language server; flycheck-clear semantics)"
+ },
+ {
+  "spec_id": "cursor.chat.ask",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a i",
+   "static:ai_chat"
+  ],
+  "note": "Cursor chat -> ai_chat (prompt -> provider -> scratch)"
+ },
+ {
+  "spec_id": "cursor.chat.context_selection",
+  "status": "ported",
+  "evidence": [
+   "static:ai_chat"
+  ],
+  "note": "selection sent as code context by ai_chat"
  }
 ]

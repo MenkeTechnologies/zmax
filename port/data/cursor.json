@@ -1,0 +1,266 @@
+[
+ {
+  "id": "cursor.chat.ask",
+  "source": "cursor",
+  "category": "chat",
+  "name": "Chat: ask about code",
+  "desc": "Cursor Cmd+L: ask the AI about your code in a chat panel",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.chat.context_selection",
+  "source": "cursor",
+  "category": "chat",
+  "name": "Chat: selection context",
+  "desc": "Include the current selection as code context",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.chat.context_file",
+  "source": "cursor",
+  "category": "chat",
+  "name": "Chat: @file context",
+  "desc": "Reference a file (@file) as chat context",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.chat.context_symbol",
+  "source": "cursor",
+  "category": "chat",
+  "name": "Chat: @symbol context",
+  "desc": "Reference a symbol/definition (@symbol) as context",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.chat.codebase",
+  "source": "cursor",
+  "category": "chat",
+  "name": "Chat: @codebase",
+  "desc": "Codebase-aware answers via indexing/retrieval",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.chat.web",
+  "source": "cursor",
+  "category": "chat",
+  "name": "Chat: @web",
+  "desc": "Answer using a web search",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.chat.apply",
+  "source": "cursor",
+  "category": "chat",
+  "name": "Chat: apply code block",
+  "desc": "Apply a code block from the answer into the buffer",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.chat.history",
+  "source": "cursor",
+  "category": "chat",
+  "name": "Chat: conversation threads",
+  "desc": "Persistent multi-turn conversation history",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.chat.model_picker",
+  "source": "cursor",
+  "category": "chat",
+  "name": "Chat: model picker",
+  "desc": "Choose the model/provider for a request",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.edit.inline",
+  "source": "cursor",
+  "category": "edit",
+  "name": "Inline edit",
+  "desc": "Cursor Cmd+K: edit the selection from a natural-language prompt",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.edit.generate",
+  "source": "cursor",
+  "category": "edit",
+  "name": "Inline generate",
+  "desc": "Generate code from a prompt with no selection",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.edit.diff_preview",
+  "source": "cursor",
+  "category": "edit",
+  "name": "Inline edit diff preview",
+  "desc": "Preview the AI edit as a diff before applying",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.edit.accept_reject",
+  "source": "cursor",
+  "category": "edit",
+  "name": "Inline edit accept/reject",
+  "desc": "Accept or reject the proposed edit",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.edit.followup",
+  "source": "cursor",
+  "category": "edit",
+  "name": "Inline edit follow-up",
+  "desc": "Iterate on the edit with another instruction",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.edit.terminal",
+  "source": "cursor",
+  "category": "edit",
+  "name": "Terminal Cmd+K",
+  "desc": "Generate a shell command from a prompt in the terminal",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.agent.multi_file",
+  "source": "cursor",
+  "category": "agent",
+  "name": "Agent: multi-file edits",
+  "desc": "Composer/Agent: autonomous edits across multiple files",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.agent.tools_read",
+  "source": "cursor",
+  "category": "agent",
+  "name": "Agent: read files",
+  "desc": "Agent tool to read files/codebase",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.agent.tools_write",
+  "source": "cursor",
+  "category": "agent",
+  "name": "Agent: write files",
+  "desc": "Agent tool to create/edit files",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.agent.tools_terminal",
+  "source": "cursor",
+  "category": "agent",
+  "name": "Agent: run commands",
+  "desc": "Agent tool to run terminal commands",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.agent.apply_review",
+  "source": "cursor",
+  "category": "agent",
+  "name": "Agent: review & apply",
+  "desc": "Review and accept/reject each proposed change",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.agent.plan",
+  "source": "cursor",
+  "category": "agent",
+  "name": "Agent: plan / todos",
+  "desc": "Produce and track a plan/todo list",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.agent.checkpoints",
+  "source": "cursor",
+  "category": "agent",
+  "name": "Agent: checkpoints",
+  "desc": "Checkpoint and restore the workspace between steps",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.agent.auto_run",
+  "source": "cursor",
+  "category": "agent",
+  "name": "Agent: auto-run mode",
+  "desc": "Run tools without per-step confirmation (YOLO)",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.autocomplete.tab",
+  "source": "cursor",
+  "category": "autocomplete",
+  "name": "Tab autocomplete",
+  "desc": "Multi-line AI autocompletion as you type",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.autocomplete.next_edit",
+  "source": "cursor",
+  "category": "autocomplete",
+  "name": "Predict next edit",
+  "desc": "Predict and jump to the next edit location",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.autocomplete.partial_accept",
+  "source": "cursor",
+  "category": "autocomplete",
+  "name": "Partial accept",
+  "desc": "Accept a completion word-by-word",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.misc.commit_message",
+  "source": "cursor",
+  "category": "misc",
+  "name": "AI commit message",
+  "desc": "Generate a git commit message from the diff",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.misc.rules",
+  "source": "cursor",
+  "category": "misc",
+  "name": "Project rules (.cursorrules)",
+  "desc": "Per-project AI rules/system prompt",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.misc.docs",
+  "source": "cursor",
+  "category": "misc",
+  "name": "Custom @docs",
+  "desc": "Index and reference custom documentation",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.misc.explain",
+  "source": "cursor",
+  "category": "misc",
+  "name": "Explain code",
+  "desc": "Explain the selected code",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.misc.fix",
+  "source": "cursor",
+  "category": "misc",
+  "name": "Fix error / lint",
+  "desc": "AI quick-fix for a diagnostic",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.misc.generate_tests",
+  "source": "cursor",
+  "category": "misc",
+  "name": "Generate tests",
+  "desc": "Generate tests for the selection/file",
+  "doc_ref": "https://docs.cursor.com/"
+ },
+ {
+  "id": "cursor.misc.privacy",
+  "source": "cursor",
+  "category": "misc",
+  "name": "Privacy mode",
+  "desc": "Run without sending code to training/storage",
+  "doc_ref": "https://docs.cursor.com/"
+ }
+]
