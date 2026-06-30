@@ -1673,6 +1673,233 @@ fn magit(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
     Ok(())
 }
 
+// --- Org-mode (slice 1: outline folding + TODO cycling) ----------------------
+// Pure logic lives in `super::org`; these typable commands wire it to the focused
+// buffer. Folding reuses the document's `Folds` model exactly like the vim `z*`
+// fold commands: a closed fold over `heading_line..=subtree_end` hides the body
+// while keeping the heading visible.
+
+/// Document line the primary cursor sits on, in the focused view.
+fn org_cursor_line(cx: &mut compositor::Context) -> usize {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    text.char_to_line(cursor)
+}
+
+/// Content of document `line` with any trailing line ending stripped.
+fn org_line_text(doc: &Document, line: usize) -> String {
+    doc.text()
+        .line(line)
+        .chars()
+        .collect::<String>()
+        .trim_end_matches(['\n', '\r'])
+        .to_string()
+}
+
+/// Every document line as an owned string (line endings stripped) — the form the
+/// pure `org::subtree_end` helper consumes.
+fn org_all_lines(doc: &Document) -> Vec<String> {
+    (0..doc.text().len_lines())
+        .map(|l| org_line_text(doc, l))
+        .collect()
+}
+
+/// Replace document `line`'s content (excluding its line ending) with `new`.
+fn org_replace_line(doc: &mut Document, view: &mut View, line: usize, new: String) {
+    let line_start = doc.text().line_to_char(line);
+    let line_end = line_start + org_line_text(doc, line).chars().count();
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((line_start, line_end, Some(Tendril::from(new)))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// `:org-cycle` / `:org-fold` — toggle a fold over the current heading's subtree.
+/// If a closed fold already starts on the heading it is opened; otherwise a
+/// closed fold over `heading..=subtree_end` is created (reusing `Folds`).
+fn org_cycle(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = org_cursor_line(cx);
+    let (_view, doc) = current!(cx.editor);
+    let line_str = org_line_text(doc, line);
+    if super::org::heading_level(&line_str).is_none() {
+        cx.editor.set_status("org-cycle: not on a heading");
+        return Ok(());
+    }
+    let lines = org_all_lines(doc);
+    let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+    let end = super::org::subtree_end(&refs, line);
+    if end <= line {
+        cx.editor
+            .set_status("org-cycle: heading has no subtree to fold");
+        return Ok(());
+    }
+    if doc.folds().closed_fold_starting_at(line).is_some() {
+        doc.folds_mut().open(line);
+        cx.editor.set_status("org-cycle: expanded subtree");
+    } else {
+        let last = doc.text().len_lines().saturating_sub(1);
+        doc.folds_mut().create(line, end);
+        doc.folds_mut().clamp(last);
+        cx.editor
+            .set_status(format!("org-cycle: folded lines {}-{}", line + 1, end + 1));
+    }
+    Ok(())
+}
+
+/// `:org-todo` — cycle the current heading's TODO keyword (none → TODO → DONE → none).
+fn org_todo(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = org_cursor_line(cx);
+    let (view, doc) = current!(cx.editor);
+    let line_str = org_line_text(doc, line);
+    if super::org::heading_level(&line_str).is_none() {
+        cx.editor.set_status("org-todo: not on a heading");
+        return Ok(());
+    }
+    let new = super::org::cycle_todo(&line_str);
+    org_replace_line(doc, view, line, new);
+    Ok(())
+}
+
+/// `:org-promote` — promote the current heading one level (remove a leading `*`).
+fn org_promote(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = org_cursor_line(cx);
+    let (view, doc) = current!(cx.editor);
+    let line_str = org_line_text(doc, line);
+    if super::org::heading_level(&line_str).is_none() {
+        cx.editor.set_status("org-promote: not on a heading");
+        return Ok(());
+    }
+    let new = super::org::promote(&line_str);
+    org_replace_line(doc, view, line, new);
+    Ok(())
+}
+
+/// `:org-demote` — demote the current heading one level (add a leading `*`).
+fn org_demote(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = org_cursor_line(cx);
+    let (view, doc) = current!(cx.editor);
+    let line_str = org_line_text(doc, line);
+    if super::org::heading_level(&line_str).is_none() {
+        cx.editor.set_status("org-demote: not on a heading");
+        return Ok(());
+    }
+    let new = super::org::demote(&line_str);
+    org_replace_line(doc, view, line, new);
+    Ok(())
+}
+
+/// `:org-next-heading` — move the cursor to the next heading line, if any.
+fn org_next_heading(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = org_cursor_line(cx);
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    let target =
+        (line + 1..total).find(|&l| super::org::heading_level(&org_line_text(doc, l)).is_some());
+    match target {
+        Some(l) => {
+            let pos = doc.text().line_to_char(l);
+            doc.set_selection(view.id, Selection::point(pos));
+        }
+        None => cx.editor.set_status("org: no next heading"),
+    }
+    Ok(())
+}
+
+/// `:org-prev-heading` — move the cursor to the previous heading line, if any.
+fn org_prev_heading(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = org_cursor_line(cx);
+    let (view, doc) = current!(cx.editor);
+    let target =
+        (0..line).rev().find(|&l| super::org::heading_level(&org_line_text(doc, l)).is_some());
+    match target {
+        Some(l) => {
+            let pos = doc.text().line_to_char(l);
+            doc.set_selection(view.id, Selection::point(pos));
+        }
+        None => cx.editor.set_status("org: no previous heading"),
+    }
+    Ok(())
+}
+
+/// `:org-fold-all` — fold every heading subtree in the buffer.
+fn org_fold_all(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cursor = org_cursor_line(cx);
+    let (view, doc) = current!(cx.editor);
+    let lines = org_all_lines(doc);
+    let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+    let mut count = 0usize;
+    for (line, l) in refs.iter().enumerate() {
+        if super::org::heading_level(l).is_some() {
+            let end = super::org::subtree_end(&refs, line);
+            if end > line && doc.folds_mut().create(line, end) {
+                count += 1;
+            }
+        }
+    }
+    let last = doc.text().len_lines().saturating_sub(1);
+    doc.folds_mut().clamp(last);
+    // Pull the cursor out of any region we just hid.
+    let anchor = doc.folds().visible_anchor(cursor);
+    if anchor != cursor {
+        let pos = doc.text().line_to_char(anchor);
+        doc.set_selection(view.id, Selection::point(pos));
+    }
+    cx.editor
+        .set_status(format!("org: folded {count} heading(s)"));
+    Ok(())
+}
+
+/// `:org-unfold-all` — open every fold in the buffer.
+fn org_unfold_all(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (_view, doc) = current!(cx.editor);
+    doc.folds_mut().open_all();
+    cx.editor.set_status("org: unfolded all");
+    Ok(())
+}
+
 /// `:terminal` / `:term` — open an integrated terminal (PTY shell). The panel is
 /// created inside the compositor callback so the PTY handle lives on the main
 /// thread (it isn't `Send`).
@@ -13366,6 +13593,94 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["git", "gst"],
         doc: "Open the Magit-style git status (stage/unstage/discard/commit changes by section).",
         fun: magit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-cycle",
+        aliases: &["org-fold"],
+        doc: "Toggle a fold over the current org heading's subtree (TAB-style outline cycling).",
+        fun: org_cycle,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-todo",
+        aliases: &[],
+        doc: "Cycle the current org heading's TODO keyword: none -> TODO -> DONE -> none.",
+        fun: org_todo,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-promote",
+        aliases: &[],
+        doc: "Promote the current org heading one level (remove a leading star).",
+        fun: org_promote,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-demote",
+        aliases: &[],
+        doc: "Demote the current org heading one level (add a leading star).",
+        fun: org_demote,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-next-heading",
+        aliases: &[],
+        doc: "Move the cursor to the next org heading line.",
+        fun: org_next_heading,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-prev-heading",
+        aliases: &[],
+        doc: "Move the cursor to the previous org heading line.",
+        fun: org_prev_heading,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-fold-all",
+        aliases: &[],
+        doc: "Fold every org heading subtree in the buffer.",
+        fun: org_fold_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-unfold-all",
+        aliases: &[],
+        doc: "Unfold every fold in the buffer.",
+        fun: org_unfold_all,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
