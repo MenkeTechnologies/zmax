@@ -496,6 +496,7 @@ impl MappableCommand {
         toggle_long_line_marker, "Toggle an 80th-column ruler (SPC t 8)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
+        ediff_3_buffers, "3-way diff of three open buffers, read-only (SPC D b 3)",
         kill_buffers_by_regex, "Kill all buffers whose name matches a regex (SPC b M)",
         narrow_to_page, "Narrow the buffer to the current page (SPC n p)",
         copy_file, "Copy the current file to a prompted destination (SPC f c)",
@@ -7126,6 +7127,58 @@ fn ediff_file(cx: &mut Context) {
 /// the common ancestor) and show a read-only diff3 comparison (Spacemacs
 /// `SPC D f 3`). Comparison-only — never writes back, so it's safe on arbitrary
 /// external files.
+/// 3-way ediff over three open buffers (names, space-separated; C = ancestor),
+/// shown read-only (Spacemacs `SPC D b 3`).
+fn ediff_3_buffers(cx: &mut Context) {
+    let cur_id = doc!(cx.editor).id();
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ediff 3 buffers (A B C):".into(),
+        None,
+        ui::completers::buffer,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let names: Vec<&str> = input.split_whitespace().collect();
+            if names.len() != 3 {
+                cx.editor
+                    .set_error("need exactly three space-separated buffer names");
+                return;
+            }
+            let mut texts = Vec::with_capacity(3);
+            for nm in &names {
+                let found = cx
+                    .editor
+                    .documents()
+                    .find(|d| d.display_name().as_ref() == *nm)
+                    .map(|d| d.text().to_string());
+                match found {
+                    Some(t) => texts.push(t),
+                    None => {
+                        cx.editor.set_error(format!("no open buffer named {nm}"));
+                        return;
+                    }
+                }
+            }
+            let segs = crate::ui::merge::diff3(&texts[2], &texts[0], &texts[1]);
+            let view = crate::ui::merge::DiffView::from_conflicts(
+                format!("ediff3: {}", names.join(" ")),
+                cur_id,
+                None,
+                segs,
+            )
+            .read_only();
+            let call = crate::job::Callback::EditorCompositor(Box::new(
+                move |_e: &mut Editor, comp: &mut crate::compositor::Compositor| {
+                    comp.push(Box::new(view));
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
 fn ediff_3_files(cx: &mut Context) {
     let cur_id = doc!(cx.editor).id();
     let prompt = crate::ui::prompt::Prompt::new(

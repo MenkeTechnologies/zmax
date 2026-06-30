@@ -18534,5 +18534,13 @@
    "key:normal:space u space b D"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_d_b_3",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space D b 3"
+  ],
+  "note": ""
  }
 ]
