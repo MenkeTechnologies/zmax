@@ -324,14 +324,14 @@ mod tests {
         };
         let is_static = |t: Option<KeyTrie>, name: &str| matches!(t, Some(KeyTrie::MappableCommand(MappableCommand::Static { name: n, .. })) if n == name);
 
-        // G jumps to the last line (vim), and C-v starts a (multi-cursor) block.
+        // G jumps to the last line (vim), and C-v starts visual-block mode.
         assert!(
             is_static(resolve("G"), "goto_last_line"),
             "G should be goto_last_line"
         );
         assert!(
-            is_static(resolve("C-v"), "select_mode"),
-            "C-v should start visual block"
+            is_static(resolve("C-v"), "visual_block_mode"),
+            "C-v should start visual-block mode"
         );
         // V is the vim linewise-visual sequence, not a single Helix command.
         assert!(

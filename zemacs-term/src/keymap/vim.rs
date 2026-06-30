@@ -424,13 +424,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // --- visual mode ----------------------------------------------------
         "v" => select_mode,
         "V" => [extend_to_line_bounds, select_mode],
-        // C-v: visual block. zemacs runs on the Zemacs engine, which has no
-        // rectangular-selection mode, so block editing is emulated with
-        // multi-cursor: enter Visual, set the column width with l/e/$, then
-        // grow the block downward with C-v (or C) — each press copies the
-        // current selection onto the next line. I/A block-insert, c/d/x act
-        // per cursor (see the Visual-mode bindings).
-        "C-v" => select_mode,
+        // C-v: true vim visual-block. Enters Select with a rectangular-block
+        // anchor; motions grow the rectangle (one range per row), I/A
+        // block-insert/append at the left/right edge, o/O switch corners, $
+        // gives ragged-right. See `visual_block_mode` / `block_reproject`.
+        "C-v" => visual_block_mode,
 
         // --- g submap -------------------------------------------------------
         "g" => { "Goto"
@@ -534,7 +532,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "#" => [search_selection, search_prev], // g#: search word backward (no \<\> bounds)
             "*" => [search_selection, search_next], // g*: search word forward (no \<\> bounds)
             "H" => [extend_to_line_bounds, select_mode], // gH: start linewise Select mode
-            "C-h" => select_mode,              // g CTRL-H: start blockwise Select mode (emulated)
+            "C-h" => visual_block_mode,        // g CTRL-H: start blockwise (visual-block) Select mode
             "]" => goto_definition,            // g]: :tselect tag under cursor
             "C-]" => goto_definition,          // g CTRL-]: :tjump tag under cursor
             "tab" => goto_last_accessed_file,  // g<Tab>: go to last accessed tabpage
@@ -1589,32 +1587,34 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
     // Visual / select mode: motions extend, operators act directly.
     let mut select = keymap!({ "Visual mode"
-        "h" | "left"  => extend_char_left,
-        "j" | "down"  => extend_visual_line_down,
-        "k" | "up"    => extend_visual_line_up,
-        "l" | "right" => extend_char_right,
+        // Each motion appends `block_reproject`: in visual-block mode it rebuilds
+        // the rectangle from the anchor to the new cursor; otherwise it is a no-op.
+        "h" | "left"  => [extend_char_left, block_reproject],
+        "j" | "down"  => [extend_visual_line_down, block_reproject],
+        "k" | "up"    => [extend_visual_line_up, block_reproject],
+        "l" | "right" => [extend_char_right, block_reproject],
 
-        "w" => extend_next_word_start,
-        "b" => extend_prev_word_start,
-        "e" => extend_next_word_end,
-        "W" => extend_next_long_word_start,
-        "B" => extend_prev_long_word_start,
-        "E" => extend_next_long_word_end,
+        "w" => [extend_next_word_start, block_reproject],
+        "b" => [extend_prev_word_start, block_reproject],
+        "e" => [extend_next_word_end, block_reproject],
+        "W" => [extend_next_long_word_start, block_reproject],
+        "B" => [extend_prev_long_word_start, block_reproject],
+        "E" => [extend_next_long_word_end, block_reproject],
 
-        "0" | "home" => extend_to_line_start,
-        "^"          => extend_to_first_nonwhitespace,
-        "$" | "end"  => extend_to_line_end,
-        "G"          => extend_to_last_line,
+        "0" | "home" => [extend_to_line_start, block_reproject],
+        "^"          => [extend_to_first_nonwhitespace, block_reproject],
+        "$" | "end"  => block_dollar,         // visual-block: ragged right per row
+        "G"          => [extend_to_last_line, block_reproject],
         "%"          => match_brackets_or_goto_percent,
         "{"          => goto_prev_paragraph,
         "}"          => goto_next_paragraph,
         "("          => move_sentence_backward,
         ")"          => move_sentence_forward,
 
-        "f" => extend_next_char,
-        "F" => extend_prev_char,
-        "t" => extend_till_char,
-        "T" => extend_till_prev_char,
+        "f" => [extend_next_char, block_reproject],
+        "F" => [extend_prev_char, block_reproject],
+        "t" => [extend_till_char, block_reproject],
+        "T" => [extend_till_prev_char, block_reproject],
         ";" => repeat_last_motion,
         "," => repeat_find_char_reverse,
 
@@ -1632,15 +1632,19 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "U"       => [switch_to_uppercase, normal_mode],
         ">"       => [indent, normal_mode],
         "<"       => [unindent, normal_mode],
-        "o"       => flip_selections,
-        "O"       => flip_selections,          // move to the other corner/end of the selection
+        // o/O: in charwise/linewise visual these flip the cursor end; in
+        // visual-block, o jumps to the opposite corner and O to the other
+        // column edge on the same row (vim's block o/O). The commands fall back
+        // to flip_selections when not in block mode.
+        "o"       => block_swap_corners,
+        "O"       => block_swap_columns,
 
-        // --- visual block (multi-cursor emulation) -------------------------
-        // C-v grows the block: copy the current selection onto the next line,
-        // building a vertical stack of cursors. I and A then block-insert at
-        // the left edge and block-append at the right edge of every line in
-        // the block (vim's CTRL-V I.../A...).
-        "C-v"     => copy_selection_on_next_line,
+        // --- visual block (CTRL-V) -----------------------------------------
+        // C-v toggles a true rectangular block: the selection projects to one
+        // range per row spanning the same columns. Motions grow the rectangle
+        // (via block_reproject); I/A block-insert/append at the left/right edge
+        // of every row, c/d/x/y act on the whole block.
+        "C-v"     => visual_block_mode,
         "I"       => [collapse_selection, insert_mode],
         "A"       => append_mode,
         "V"       => extend_to_line_bounds,
@@ -1662,11 +1666,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
         // gq / gw: reformat the highlighted lines (LSP formatter)
         "g" => { "Goto"
-            "g" => extend_to_file_start,             // vgg: extend selection to first line
+            "g" => [extend_to_file_start, block_reproject],   // vgg: extend selection to first line
             "C-g" => document_stats,                 // v g CTRL-G: count the selection
-            "e" => extend_to_last_line,              // ge: extend to last line
-            "h" => extend_to_first_nonwhitespace,    // extend to first non-blank
-            "l" | "$" => extend_to_line_end,         // extend to line end
+            "e" => [extend_to_last_line, block_reproject],    // ge: extend to last line
+            "h" => [extend_to_first_nonwhitespace, block_reproject], // extend to first non-blank
+            "l" | "$" => [extend_to_line_end, block_reproject],      // extend to line end
             "q" => [format_selections, normal_mode],
             "w" => [format_selections, normal_mode],
             "v" => reselect_visual,                  // gv: reselect previous highlighted area
@@ -2078,12 +2082,15 @@ mod tests {
         assert_eq!(cmd_name(resolve(n, "= =").unwrap()), Some("indent"));
         assert!(matches!(resolve(n, "= j").unwrap(), KeyTrie::Sequence(_)));
 
-        // visual block + extras
+        // visual block + extras: C-v now enters true rectangular block mode,
+        // and o/O switch block corners (falling back to flip outside block).
         let s = &km[&Mode::Select];
         assert_eq!(
             cmd_name(resolve(s, "C-v").unwrap()),
-            Some("copy_selection_on_next_line")
+            Some("visual_block_mode")
         );
+        assert_eq!(cmd_name(resolve(s, "o").unwrap()), Some("block_swap_corners"));
+        assert_eq!(cmd_name(resolve(s, "O").unwrap()), Some("block_swap_columns"));
         assert_eq!(cmd_name(resolve(s, "K").unwrap()), Some("hover"));
         assert_eq!(cmd_name(resolve(s, "g C-a").unwrap()), Some("increment"));
 

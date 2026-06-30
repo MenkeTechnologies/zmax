@@ -332,6 +332,11 @@ impl MappableCommand {
         copy_selection_on_next_line, "Copy selection on next line",
         copy_selection_on_prev_line, "Copy selection on previous line",
         column_selection, "Turn the selection into a rectangular column block (IntelliJ column selection)",
+        visual_block_mode, "Enter/leave vim visual-block selection (CTRL-V)",
+        block_reproject, "Rebuild the visual-block rectangle from its anchor (internal motion helper)",
+        block_dollar, "Visual-block: extend each row to its own line end (CTRL-V $)",
+        block_swap_corners, "Visual-block: move cursor to the opposite corner (o)",
+        block_swap_columns, "Visual-block: move cursor to the other column edge (O)",
         move_next_word_start, "Move to start of next word",
         move_prev_word_start, "Move to start of previous word",
         move_next_word_end, "Move to end of next word",
@@ -5516,6 +5521,175 @@ fn column_selection(cx: &mut Context) {
     }
     let primary_index = ranges.len() - 1;
     doc.set_selection(view.id, Selection::new(ranges, primary_index));
+}
+
+// --- vim visual-block mode (CTRL-V) ------------------------------------------
+// Block mode reuses Mode::Select plus the `editor.block` flag (an anchor corner
+// in visual coords). The live selection is always the projected rectangle; the
+// active corner is the primary cursor. Motions move the cursor with the normal
+// `extend_*` commands and then call `block_reproject` (appended in the select
+// keymap), which rebuilds the rectangle from the fixed anchor to the new cursor.
+// Operators (I/A/c/d/x/y) act on the rectangle directly and never reproject.
+
+/// Rebuild the rectangular block selection from the stored anchor corner to the
+/// current primary cursor. No-op unless visual-block mode is active.
+fn block_reproject(cx: &mut Context) {
+    use zemacs_core::{line_ending::line_end_char_index, pos_at_visual_coords, visual_coords_at_pos};
+
+    let Some(block) = cx.editor.block else {
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let tab_width = doc.tab_width();
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let cur = visual_coords_at_pos(text, cursor, tab_width);
+
+    let (ar, ac) = block.anchor;
+    let (r0, r1) = (ar.min(cur.row), ar.max(cur.row));
+    let (cmin, cmax) = (ac.min(cur.col), ac.max(cur.col));
+    // The cursor sits on column `cur.col`; the anchor edge is the opposite column.
+    let cc = cur.col;
+    let other = if cc <= cmin { cmax } else { cmin };
+
+    let total_lines = text.len_lines();
+    let mut ranges = SmallVec::<[Range; 1]>::new();
+    let mut primary_index = 0usize;
+    for row in r0..=r1 {
+        if row >= total_lines {
+            break;
+        }
+        // Skip rows whose content does not reach the block's left column.
+        let left = pos_at_visual_coords(text, Position::new(row, cmin), tab_width);
+        if visual_coords_at_pos(text, left, tab_width).col != cmin {
+            continue;
+        }
+        let (anchor_char, head_char) = if block.to_eol {
+            // ragged right (CTRL-V $): each row runs to its own line end.
+            (left, line_end_char_index(&text, row))
+        } else {
+            let head = pos_at_visual_coords(text, Position::new(row, cc), tab_width);
+            let anchor = pos_at_visual_coords(text, Position::new(row, other), tab_width);
+            (anchor, head)
+        };
+        if row == cur.row {
+            primary_index = ranges.len();
+        }
+        ranges.push(Range::point(anchor_char).put_cursor(text, head_char, true));
+    }
+    if ranges.is_empty() {
+        return;
+    }
+    if primary_index >= ranges.len() {
+        primary_index = ranges.len() - 1;
+    }
+    doc.set_selection(view.id, Selection::new(ranges, primary_index));
+}
+
+/// Enter (or, when already active, leave) vim visual-block mode (CTRL-V). The
+/// anchor corner is the current selection's anchor; the active corner tracks the
+/// cursor, so growing the selection projects a rectangle.
+fn visual_block_mode(cx: &mut Context) {
+    use zemacs_core::visual_coords_at_pos;
+
+    if cx.editor.block.is_some() {
+        // Toggling block mode off leaves a single cursor at the active corner.
+        let (view, doc) = current!(cx.editor);
+        let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+        doc.set_selection(view.id, Selection::point(pos));
+        cx.editor.block = None;
+        cx.editor.mode = Mode::Normal;
+        return;
+    }
+
+    let anchor = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let tab_width = doc.tab_width();
+        let a = doc.selection(view.id).primary().anchor.min(text.len_chars());
+        visual_coords_at_pos(text, a, tab_width)
+    };
+    cx.editor.mode = Mode::Select;
+    cx.editor.block = Some(zemacs_view::editor::BlockSelect {
+        anchor: (anchor.row, anchor.col),
+        to_eol: false,
+    });
+    block_reproject(cx);
+}
+
+/// vim visual-block `$`: extend each row to its own line end (ragged right).
+/// Falls back to plain end-of-line extension outside block mode.
+fn block_dollar(cx: &mut Context) {
+    extend_to_line_end(cx);
+    if let Some(block) = cx.editor.block.as_mut() {
+        block.to_eol = true;
+    }
+    block_reproject(cx);
+}
+
+/// New `(anchor, cursor)` corners after vim block `o`: jump the cursor to the
+/// opposite corner — the anchor and cursor simply trade places.
+fn block_o_corners(
+    anchor: (usize, usize),
+    cursor: (usize, usize),
+) -> ((usize, usize), (usize, usize)) {
+    (cursor, anchor)
+}
+
+/// New `(anchor, cursor)` corners after vim block `O`: swap only the columns,
+/// keeping each corner on its own row (move to the other column edge).
+fn block_o_columns(
+    anchor: (usize, usize),
+    cursor: (usize, usize),
+) -> ((usize, usize), (usize, usize)) {
+    ((anchor.0, cursor.1), (cursor.0, anchor.1))
+}
+
+/// Apply a corner transform (`block_o_corners` / `block_o_columns`): recompute
+/// the anchor + move the cursor, then re-project. Falls back to `flip` when not
+/// in block mode.
+fn block_swap_with(
+    cx: &mut Context,
+    keep_eol: bool,
+    f: fn((usize, usize), (usize, usize)) -> ((usize, usize), (usize, usize)),
+) {
+    use zemacs_core::{pos_at_visual_coords, visual_coords_at_pos};
+
+    let Some(block) = cx.editor.block else {
+        return flip_selections(cx);
+    };
+    let new_cursor = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let tab_width = doc.tab_width();
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let cur = visual_coords_at_pos(text, cursor, tab_width);
+        let (new_anchor, new_cursor_coords) = f(block.anchor, (cur.row, cur.col));
+        cx.editor.block = Some(zemacs_view::editor::BlockSelect {
+            anchor: new_anchor,
+            to_eol: keep_eol && block.to_eol,
+        });
+        pos_at_visual_coords(
+            text,
+            Position::new(new_cursor_coords.0, new_cursor_coords.1),
+            tab_width,
+        )
+    };
+    let (view, doc) = current!(cx.editor);
+    doc.set_selection(view.id, Selection::point(new_cursor));
+    block_reproject(cx);
+}
+
+/// vim visual-block `o`: jump the cursor to the opposite corner (swap both the
+/// row and the column edge). Outside block mode this is the normal `flip`.
+fn block_swap_corners(cx: &mut Context) {
+    block_swap_with(cx, true, block_o_corners);
+}
+
+/// vim visual-block `O`: jump the cursor to the other column edge on the same
+/// row (swap only the columns). Outside block mode this is the normal `flip`.
+fn block_swap_columns(cx: &mut Context) {
+    block_swap_with(cx, false, block_o_columns);
 }
 
 /// Given the full text of the line-block being duplicated, return the string to
@@ -17579,6 +17753,25 @@ mod insert_generator_tests {
         // degenerate column (caret block) and single row
         assert_eq!(rectangle_bounds((3, 5), (7, 5)), (3, 7, 5, 5));
         assert_eq!(rectangle_bounds((2, 9), (2, 1)), (2, 2, 1, 9));
+    }
+
+    #[test]
+    fn block_corner_swaps_match_vim_o_and_upper_o() {
+        // anchor at (row1,col2), cursor at the opposite corner (row4,col6).
+        let anchor = (1, 2);
+        let cursor = (4, 6);
+
+        // `o`: cursor jumps to the opposite corner — anchor/cursor trade places.
+        assert_eq!(block_o_corners(anchor, cursor), ((4, 6), (1, 2)));
+        // applying it twice returns to the start (involution).
+        let (a2, c2) = block_o_corners(anchor, cursor);
+        assert_eq!(block_o_corners(a2, c2), (anchor, cursor));
+
+        // `O`: swap only the columns, each corner staying on its own row.
+        assert_eq!(block_o_columns(anchor, cursor), ((1, 6), (4, 2)));
+        // twice is also an involution.
+        let (a3, c3) = block_o_columns(anchor, cursor);
+        assert_eq!(block_o_columns(a3, c3), (anchor, cursor));
     }
 
     fn lines(v: &[&str]) -> Vec<String> {

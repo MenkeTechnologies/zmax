@@ -1354,6 +1354,20 @@ pub struct LspProgress {
     pub percentage: Option<u32>,
 }
 
+/// vim visual-block (`CTRL-V`) state. Block mode reuses `Mode::Select`; this
+/// flag (when `Some`) marks that the current Select is a rectangular block.
+/// `anchor` is the fixed corner in visual (row, col); the active corner is
+/// always the primary cursor, so motions extend the block by moving the cursor
+/// and re-projecting the rectangle (see `block_reproject`). Cleared on return to
+/// Normal, mirroring `overwrite`.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct BlockSelect {
+    /// The fixed corner, in visual (row, col) coordinates.
+    pub anchor: (usize, usize),
+    /// vim `CTRL-V $`: extend each row to its own line end (ragged right).
+    pub to_eol: bool,
+}
+
 pub struct Editor {
     /// Current editing mode.
     pub mode: Mode,
@@ -1361,6 +1375,8 @@ pub struct Editor {
     /// of being inserted. Only meaningful while `mode == Insert`; cleared on
     /// return to Normal.
     pub overwrite: bool,
+    /// vim visual-block selection state, when the current Select is a block.
+    pub block: Option<BlockSelect>,
     pub tree: Tree,
     pub next_document_id: DocumentId,
     pub documents: BTreeMap<DocumentId, Document>,
@@ -1537,6 +1553,7 @@ impl Editor {
         Self {
             mode: Mode::Normal,
             overwrite: false,
+            block: None,
             tree: Tree::new(area),
             next_document_id: DocumentId::default(),
             documents: BTreeMap::new(),
@@ -2748,6 +2765,8 @@ impl Editor {
 
         // Replace mode is an insert-mode sub-state; always clear it on the way out.
         self.overwrite = false;
+        // Visual-block is a Select sub-state; leaving to Normal always ends it.
+        self.block = None;
 
         if self.mode == Mode::Normal {
             return;

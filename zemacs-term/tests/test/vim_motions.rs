@@ -127,3 +127,35 @@ async fn bracket_next_unmatched_brace() -> anyhow::Result<()> {
     test_with_config(vim(), ("{a#[b|]#{c}d}", "]}", "{ab{c}d#[}|]#")).await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ctrl_v_builds_rectangular_block() -> anyhow::Result<()> {
+    // From the top-left, CTRL-V then grow down two rows and right one column:
+    // a 2-wide rectangle over all three lines, primary on the active (last) row.
+    test_with_config(
+        vim(),
+        (
+            "#[f|]#oo\nbar\nbaz",
+            "<C-v>jjl",
+            "#(fo|)#o\n#(ba|)#r\n#[ba|]#z",
+        ),
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ctrl_v_o_jumps_to_opposite_corner() -> anyhow::Result<()> {
+    // Build the same block, then `o` moves the cursor to the opposite (top-left)
+    // corner: the rectangle is unchanged but the primary/cursor is now top-left.
+    test_with_config(
+        vim(),
+        (
+            "#[f|]#oo\nbar\nbaz",
+            "<C-v>jjlo",
+            "#[|fo]#o\n#(|ba)#r\n#(|ba)#z",
+        ),
+    )
+    .await?;
+    Ok(())
+}
