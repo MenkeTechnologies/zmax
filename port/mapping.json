@@ -545,7 +545,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.slash_lt_cr_gt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:/"
   ],
@@ -553,7 +553,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.question_lt_cr_gt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:?"
   ],
@@ -689,7 +689,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.gf_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g f"
   ],
@@ -721,7 +721,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_lbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:[ ["
   ],
@@ -729,7 +729,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.rbracket_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:] ]"
   ],
@@ -737,7 +737,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ab",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -745,7 +745,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.al",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -753,7 +753,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ib",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -761,7 +761,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.il",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -921,7 +921,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.a_quote",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -929,7 +929,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.a_apos",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -937,7 +937,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.a_lparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -945,7 +945,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.a_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -953,7 +953,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.a_lt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -961,7 +961,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.a_gt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -969,7 +969,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.ab",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -977,7 +977,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.aw",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -985,7 +985,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.a_lbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -993,7 +993,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.a_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -1001,7 +1001,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.a_backtick",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -1009,7 +1009,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.ab_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -1017,7 +1017,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.al",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -1025,7 +1025,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.ap",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -1041,7 +1041,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.at",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -1049,7 +1049,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.aw_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -1057,7 +1057,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.a_lbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -1065,7 +1065,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.a_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:a"
   ],
@@ -1073,7 +1073,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.i_quote",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1081,7 +1081,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.i_apos",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1089,7 +1089,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.i_lparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1097,7 +1097,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.i_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1105,7 +1105,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.i_lt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1113,7 +1113,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.i_gt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1121,7 +1121,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.ib",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1129,7 +1129,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.iw",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1137,7 +1137,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.i_lbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1145,7 +1145,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.i_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1153,7 +1153,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.i_backtick",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1161,7 +1161,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.ib_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1169,7 +1169,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.il",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1177,7 +1177,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.ip",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1193,7 +1193,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.it",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1201,7 +1201,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.iw_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1209,7 +1209,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.i_lbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -1217,7 +1217,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.i_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:i"
   ],
@@ -3217,7 +3217,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_m",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:[ m"
   ],
@@ -3233,7 +3233,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.rbracket_m",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:] m"
   ],
@@ -3473,7 +3473,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.gx",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g x"
   ],
@@ -3529,7 +3529,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_c",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w d"
   ],
@@ -4561,7 +4561,7 @@
  },
  {
   "spec_id": "neovim.visual-mode.gj",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:g J"
   ],
@@ -4961,7 +4961,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.g8",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g 8"
   ],
@@ -5345,7 +5345,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zo",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z O"
   ],
@@ -5353,7 +5353,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zc",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z C"
   ],
@@ -5361,7 +5361,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zv",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z v"
   ],
@@ -5729,7 +5729,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w ]"
   ],
@@ -5737,7 +5737,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_ctrl_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w C-]"
   ],
@@ -5745,7 +5745,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_caret",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w ^"
   ],
@@ -5753,7 +5753,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_ctrl_caret",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w C-^"
   ],
@@ -5929,7 +5929,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_g_f",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w g f"
   ],
@@ -5937,7 +5937,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_g_f_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w g F"
   ],
@@ -5945,7 +5945,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_g_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w g ]"
   ],
@@ -5953,7 +5953,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_g_ctrl_rbracket_split_window_and_do_bar_colon_tjump_bar_to_tag_under",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w g C-]"
   ],
@@ -5969,7 +5969,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_g_lt_tab_gt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w g tab"
   ],
@@ -5977,7 +5977,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_i",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w i"
   ],
@@ -5985,7 +5985,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_p_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w p"
   ],
@@ -5993,7 +5993,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_ctrl_p",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w C-p"
   ],
@@ -6001,7 +6001,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_t_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w t"
   ],
@@ -6009,7 +6009,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_ctrl_t",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w C-t"
   ],
@@ -6017,7 +6017,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_b",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w b"
   ],
@@ -6025,7 +6025,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_ctrl_b",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w C-b"
   ],
@@ -6033,7 +6033,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_w",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w W"
   ],
@@ -6065,7 +6065,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_lt_tab_gt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-tab"
   ],
@@ -6073,7 +6073,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.g_apos_lbrace_mark_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g '"
   ],
@@ -6081,7 +6081,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.g_backtick_lbrace_mark_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g `"
   ],
@@ -6369,7 +6369,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.g_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g ]"
   ],
@@ -6377,7 +6377,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.g_ctrl_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g C-]"
   ],
@@ -6385,7 +6385,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.g_lt_tab_gt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g tab"
   ],
@@ -6409,7 +6409,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zd",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z D"
   ],
@@ -6417,7 +6417,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zi",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z i"
   ],
@@ -6425,7 +6425,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zm_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z m"
   ],
@@ -6433,7 +6433,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zr_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z r"
   ],
@@ -6441,7 +6441,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zn_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z n"
   ],
@@ -6537,7 +6537,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:[ ]"
   ],
@@ -6545,7 +6545,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.rbracket_lbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:] ["
   ],
@@ -6553,7 +6553,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_z",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:[ z"
   ],
@@ -6561,7 +6561,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.rbracket_z",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:] z"
   ],
@@ -6569,7 +6569,7 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_g_j",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-g j"
   ],
@@ -6577,7 +6577,7 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_g_ctrl_j",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-g C-j"
   ],
@@ -6585,7 +6585,7 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_g_lt_down_gt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-g down"
   ],
@@ -6593,7 +6593,7 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_g_k",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-g k"
   ],
@@ -6601,7 +6601,7 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_g_ctrl_k",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-g C-k"
   ],
@@ -6609,7 +6609,7 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_g_lt_up_gt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-g up"
   ],
@@ -6681,7 +6681,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.g_comma",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g ,"
   ],
@@ -7009,7 +7009,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.tilde_lbrace_motion_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:~"
   ],
@@ -7153,7 +7153,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zn",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z N"
   ],
@@ -7161,7 +7161,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zx",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z X"
   ],
@@ -8833,7 +8833,7 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_g_u_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-g U"
   ],
@@ -8913,7 +8913,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w _"
   ],
@@ -8921,7 +8921,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_bar",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w |"
   ],
@@ -9001,7 +9001,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_ctrl_d",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:[ C-d"
   ],
@@ -9009,7 +9009,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.rbracket_ctrl_d",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:] C-d"
   ],
@@ -9097,7 +9097,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_lbrace_char_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:[ ["
   ],
@@ -9105,7 +9105,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.rbracket_lbrace_char_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:] ]"
   ],
@@ -9113,7 +9113,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.g_lbrace_char_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g g"
   ],
@@ -9121,7 +9121,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.z_lbrace_char_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z z"
   ],
@@ -9153,7 +9153,7 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_v_lbrace_char_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-v"
   ],
@@ -9185,7 +9185,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.apos_lparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:'"
   ],
@@ -9193,7 +9193,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.apos_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:'"
   ],
@@ -9225,7 +9225,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.backtick_lparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:`"
   ],
@@ -9233,7 +9233,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.backtick_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:`"
   ],
@@ -9257,7 +9257,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ze_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z e"
   ],
@@ -9265,7 +9265,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zs",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z s"
   ],
@@ -9273,7 +9273,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zx_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z x"
   ],
@@ -9281,7 +9281,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_lbrace_char_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w w"
   ],
@@ -9313,7 +9313,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zg",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z G"
   ],
@@ -9321,7 +9321,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zw",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z W"
   ],
@@ -9345,7 +9345,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zug_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z u G"
   ],
@@ -9353,7 +9353,7 @@
  },
  {
   "spec_id": "neovim.normal-mode.zuw_1",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:z u W"
   ],
