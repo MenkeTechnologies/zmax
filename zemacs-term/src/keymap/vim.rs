@@ -1207,6 +1207,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "c" => focus_ci_panel,             // SPC W c : focus CI status (GitHub Actions; Enter opens)
                 "f" => toggle_drawer_mid,          // SPC W f : fold / unfold the middle drawer column
                 "m" => toggle_bottom_zoom,         // SPC W m : maximize / restore the bottom panel
+                "q" => hide_active_tool_window,    // SPC W q : hide active tool window (JetBrains Shift-Esc)
+                "tab" => jump_to_last_tool_window, // SPC W TAB : jump to last tool window (JetBrains F12)
+                "z" => toggle_ide,                 // SPC W z : hide all tool windows (Zen)
             },
             "p" => { "Project"
                 "f" => file_picker,                // SPC p f

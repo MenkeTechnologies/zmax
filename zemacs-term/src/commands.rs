@@ -843,6 +843,8 @@ impl MappableCommand {
         toggle_auto_reveal, "Toggle always-select-opened-file (autoscroll from source)",
         focus_file_tree, "Focus the project file tree panel",
         focus_structure, "Focus the structure/symbol outline panel",
+        hide_active_tool_window, "Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)",
+        jump_to_last_tool_window, "Toggle focus between the editor and the last tool window (JetBrains F12)",
         focus_problems, "Focus the problems/diagnostics panel",
         focus_run_console, "Focus the Run console (scroll output with j/k/PgUp/PgDn)",
         focus_git_panel, "Focus the Git changes panel (j/k select, Enter opens)",
@@ -13066,6 +13068,25 @@ fn toggle_ide(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, _cx| {
         if let Some(view) = compositor.find::<crate::ui::EditorView>() {
             view.toggle_ide();
+        }
+    }));
+}
+
+/// JetBrains "Hide Active Tool Window" (Shift-Esc): return focus to the editor.
+fn hide_active_tool_window(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.hide_active_tool_window();
+        }
+    }));
+}
+
+/// JetBrains "Jump to Last Tool Window" (F12): toggle focus between the editor
+/// and the most-recently-focused workbench tool window.
+fn jump_to_last_tool_window(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.jump_to_last_tool_window();
         }
     }));
 }

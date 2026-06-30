@@ -11913,27 +11913,27 @@
  },
  {
   "spec_id": "jetbrains.tool-windows.hide-active-tool-window",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:toggle_ide"
+   "static:hide_active_tool_window"
   ],
-  "note": ""
+  "note": "jetbrains tool-window management"
  },
  {
   "spec_id": "jetbrains.tool-windows.hide-all-tool-windows",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:toggle_ide"
   ],
-  "note": ""
+  "note": "jetbrains tool-window management"
  },
  {
   "spec_id": "jetbrains.tool-windows.jump-to-last-tool-window",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:toggle_ide"
+   "static:jump_to_last_tool_window"
   ],
-  "note": ""
+  "note": "jetbrains tool-window management"
  },
  {
   "spec_id": "jetbrains.tool-windows.show-project-window",

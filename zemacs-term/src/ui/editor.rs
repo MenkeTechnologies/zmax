@@ -69,6 +69,9 @@ pub struct EditorView {
     /// session, applied whenever the workbench is (re)created so `:ide` and friends
     /// restore the user's arrangement instead of starting from defaults.
     ide_layout: crate::appdata::IdeLayout,
+    /// Name of the most-recently-focused workbench tool window, for JetBrains
+    /// "Jump to Last Tool Window" (toggle focus between editor and this panel).
+    last_ide_panel: String,
     /// Tab strip hit regions `(x_start, x_end, doc)` and its row, for click-to-switch.
     bufferline_tabs: BufferlineTabs,
     /// `(x_start, x_end)` of the trailing `+` new-buffer button.
@@ -116,6 +119,7 @@ impl EditorView {
             replaying: false,
             ide: None,
             ide_layout: crate::appdata::IdeLayout::default(),
+            last_ide_panel: String::from("project"),
             bufferline_tabs: Vec::new(),
             bufferline_new: (0, 0),
             bufferline_y: 0,
@@ -162,7 +166,29 @@ impl EditorView {
 
     /// Focus a workbench panel by name (creates the workbench if needed).
     pub fn focus_ide_panel(&mut self, name: &str) {
+        self.last_ide_panel = name.to_string();
         self.ide_or_create().focus_panel(name);
+    }
+
+    /// JetBrains "Hide Active Tool Window" (Shift-Esc): return focus to the
+    /// editor, defocusing whatever tool window was active.
+    pub fn hide_active_tool_window(&mut self) {
+        if let Some(ide) = self.ide.as_mut() {
+            ide.focus_editor();
+        }
+    }
+
+    /// JetBrains "Jump to Last Tool Window" (F12): toggle focus between the
+    /// editor and the most-recently-focused tool window.
+    pub fn jump_to_last_tool_window(&mut self) {
+        let last = self.last_ide_panel.clone();
+        match self.ide.as_mut() {
+            // A tool window currently has focus -> go back to the editor.
+            Some(ide) if ide.visible() => ide.focus_editor(),
+            // Editor has focus -> jump to the last-used tool window.
+            Some(ide) => ide.focus_panel(&last),
+            None => self.ide_or_create().focus_panel(&last),
+        }
     }
 
     /// Toggle "always select opened file" (auto-reveal the current buffer in tree).
