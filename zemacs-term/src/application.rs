@@ -275,54 +275,57 @@ impl Application {
                 editor.new_file(Action::VerticalSplit);
             }
         } else if stdin().is_terminal() || cfg!(feature = "integration") {
-            // Restore the previous session's open tabs + cursor, if any; else a scratch + startify.
+            // No file arguments. What we open is governed by the `editor.startup`
+            // option (default: the Startify start screen).
             //
-            // Never restore a persisted session under the integration-test feature: tests
-            // launch with no files and expect a clean, path-less scratch buffer. Reopening
-            // the developer's real `appdata.toml` session (it points at whatever files they
-            // last had open) would otherwise leak those buffers/paths into the test editor
-            // and break assertions about the document text, path, and buffer count. On a
-            // clean machine `appdata` is empty and this is a no-op anyway.
-            let restored = !cfg!(feature = "integration")
-                && appdata
-                    .as_ref()
-                    .map(|d| !d.open_files.is_empty())
-                    .unwrap_or(false);
-            if restored {
-                let data = appdata.as_ref().unwrap();
-                for file in &data.open_files {
-                    // Only reopen regular files; a persisted path that is now a directory,
-                    // deleted, or a special file must not be loaded as a buffer.
-                    let path = std::path::Path::new(file);
-                    if path.is_file() {
-                        let _ = editor.open(path, Action::Load);
-                    }
-                }
-                if let Some(focused) = &data.focused_file {
-                    let focused_path = std::path::Path::new(focused);
-                    if focused_path.is_file() {
-                        if let Ok(doc_id) = editor.open(focused_path, Action::Replace) {
-                            let view_id = editor.tree.focus;
-                            if let Some(pos) = data.cursor {
-                                let doc = doc_mut!(editor, &doc_id);
-                                let pos = pos.min(doc.text().len_chars());
-                                doc.set_selection(view_id, Selection::point(pos));
-                            }
-                        }
-                    }
-                }
-                // If every persisted path failed to open (deleted, now a directory,
-                // an irregular/binary file, …) the tree can be left without a focused
-                // View, which would panic the first render. Guarantee a scratch buffer.
-                if editor.tree.try_get(editor.tree.focus).is_none() {
-                    editor.new_file(Action::VerticalSplit);
-                }
-            } else {
+            // Integration tests always get a clean, path-less scratch buffer with no
+            // overlay: they launch with no files and assert on document text, path,
+            // and buffer count. Honoring `startup` there would reopen the developer's
+            // real `appdata.toml` session or recent files and break those assertions.
+            #[cfg(feature = "integration")]
+            {
                 editor.new_file(Action::VerticalSplit);
-                // Startify-style start screen over the empty scratch buffer. Skipped under
-                // the integration-test feature so headless runs keep the bare buffer.
-                #[cfg(not(feature = "integration"))]
-                compositor.push(Box::new(ui::Startify::new()));
+            }
+            #[cfg(not(feature = "integration"))]
+            {
+                use zemacs_view::editor::StartupScreen;
+                // Snapshot the config so we don't hold the ArcSwap guard across `editor` calls.
+                let (startup, startup_file) = {
+                    let cfg = config.load();
+                    (cfg.editor.startup.clone(), cfg.editor.startup_file.clone())
+                };
+
+                let opened = match startup {
+                    StartupScreen::Startify => false,
+                    StartupScreen::Recent => {
+                        // Open the most-recently-used file over a fresh scratch.
+                        editor.new_file(Action::VerticalSplit);
+                        crate::recent_files::load()
+                            .first()
+                            .map(|path| editor.open(path, Action::Replace).is_ok())
+                            .unwrap_or(false)
+                    }
+                    StartupScreen::File => {
+                        editor.new_file(Action::VerticalSplit);
+                        let path = std::path::Path::new(&startup_file);
+                        !startup_file.is_empty()
+                            && path.is_file()
+                            && editor.open(path, Action::Replace).is_ok()
+                    }
+                    // Restore manages its own buffers (background-loads each tab, then
+                    // replaces into the focused view) so it doesn't leave a stray scratch.
+                    StartupScreen::Session => restore_session(appdata.as_ref(), &mut editor),
+                };
+
+                // The tree must end up with a focused view or the first render panics.
+                // When nothing was opened (Startify mode, or a fallback failed), ensure
+                // a scratch buffer exists and render Startify over it.
+                if !opened {
+                    if editor.tree.try_get(editor.tree.focus).is_none() {
+                        editor.new_file(Action::VerticalSplit);
+                    }
+                    compositor.push(Box::new(ui::Startify::new()));
+                }
             }
         } else {
             editor
@@ -1583,6 +1586,45 @@ impl Application {
 
         errs
     }
+}
+
+/// Restore a previous session into `editor`: background-load every persisted tab,
+/// then replace the focused view with the last-focused file and restore its cursor.
+/// Persisted paths that no longer point at a regular file are skipped.
+///
+/// Returns whether a focused view ended up present (i.e. the session was non-empty
+/// and at least the focused file reopened). `false` means the caller should fall
+/// back to a scratch buffer + start screen.
+#[cfg(not(feature = "integration"))]
+fn restore_session(appdata: Option<&crate::appdata::AppData>, editor: &mut Editor) -> bool {
+    use zemacs_view::editor::Action;
+
+    let Some(data) = appdata else { return false };
+    if data.open_files.is_empty() {
+        return false;
+    }
+    for file in &data.open_files {
+        let path = std::path::Path::new(file);
+        if path.is_file() {
+            let _ = editor.open(path, Action::Load);
+        }
+    }
+    if let Some(focused) = &data.focused_file {
+        let focused_path = std::path::Path::new(focused);
+        if focused_path.is_file() {
+            if let Ok(doc_id) = editor.open(focused_path, Action::Replace) {
+                let view_id = editor.tree.focus;
+                if let Some(pos) = data.cursor {
+                    let doc = doc_mut!(editor, &doc_id);
+                    let pos = pos.min(doc.text().len_chars());
+                    doc.set_selection(view_id, Selection::point(pos));
+                }
+            }
+        }
+    }
+    // A focused view only exists if `focused_file` actually reopened; background
+    // `Action::Load` calls create no view on their own.
+    editor.tree.try_get(editor.tree.focus).is_some()
 }
 
 impl ui::menu::Item for lsp::MessageActionItem {

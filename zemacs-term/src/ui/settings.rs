@@ -41,6 +41,7 @@ const ENUMS: &[(&[&str], &[&str])] = &[
     (&["cursor-shape", "insert"], CURSOR),
     (&["cursor-shape", "select"], CURSOR),
     (&["default-line-ending"], &["native", "lf", "crlf"]),
+    (&["startup"], &["startify", "recent", "session", "file"]),
 ];
 
 fn enum_for(path: &[String]) -> Option<&'static [&'static str]> {

@@ -70,6 +70,8 @@
 | `editor-config` | Whether to read settings from [EditorConfig](https://editorconfig.org) files | `true` |
 | `rainbow-brackets` | Whether to render rainbow colors for matching brackets. Requires tree-sitter `rainbows.scm` queries for the language. | `false` |
 | `kitty-keyboard-protocol` | Whether to enable Kitty Keyboard Protocol. Can be `enabled`, `disabled` or `auto` | `"auto"` |
+| `startup` | What to open when launched with no file arguments. `startify` shows the start screen, `recent` opens the most-recently-used file, `session` restores the previous session's tabs and cursor, `file` opens `startup-file`. Each falls back to `startify` when its target is unavailable. | `"startify"` |
+| `startup-file` | File to open on launch when `startup` is `"file"`. Ignored otherwise. | `""` |
 
 [^3]: In most cases, you also need to enable the `auto-format` setting under `languages.toml`. You can find the reasoning [here](https://github.com/helix-editor/helix/discussions/9043#discussioncomment-7811497).
 

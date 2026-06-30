@@ -454,6 +454,12 @@ pub struct Config {
     pub buffer_picker: BufferPickerConfig,
     /// Workspace-trust configuration.
     pub workspace_trust: WorkspaceTrustConfig,
+    /// What to open on a no-args launch: `startify` (default), `recent` (the
+    /// most-recently-used file), `session` (restore the previous session's
+    /// tabs), or `file` (open `startup-file`).
+    pub startup: StartupScreen,
+    /// File opened on launch when `startup = "file"`. Ignored otherwise.
+    pub startup_file: String,
 }
 
 /// User-facing configuration for `[editor.workspace-trust]`.
@@ -901,6 +907,24 @@ impl Default for CursorShapeConfig {
     }
 }
 
+/// What to open when zemacs is launched with no file arguments.
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum StartupScreen {
+    /// Scratch buffer with the vim-startify start screen (default).
+    #[default]
+    Startify,
+    /// Open the single most-recently-used file. Falls back to Startify if the
+    /// MRU list is empty.
+    Recent,
+    /// Restore the previous session: reopen the tabs/cursor saved on last exit.
+    /// Falls back to Startify when there is no saved session.
+    Session,
+    /// Open the specific file named by `startup-file`. Falls back to Startify if
+    /// that path is unset or no longer a file.
+    File,
+}
+
 /// bufferline render modes
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -1309,6 +1333,8 @@ impl Default for Config {
             kitty_keyboard_protocol: Default::default(),
             buffer_picker: BufferPickerConfig::default(),
             workspace_trust: WorkspaceTrustConfig::default(),
+            startup: StartupScreen::default(),
+            startup_file: String::new(),
         }
     }
 }
