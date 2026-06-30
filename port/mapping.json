@@ -18492,9 +18492,9 @@
   "spec_id": "jetbrains.multiple-carets.toggle-column-selection-mode",
   "status": "ported",
   "evidence": [
-   "static:column_selection"
+   "static:visual_block_mode"
   ],
-  "note": "column_selection turns the selection into a rectangular block (Helix/Kakoune selection->block model rather than a persistent mouse-mode)"
+  "note": "vim visual-block (CTRL-V) is a true persistent rectangular mode, matching IntelliJ column-selection-mode"
  },
  {
   "spec_id": "jetbrains.coding-assistance.complete-current-statement",
@@ -19278,5 +19278,13 @@
    "static:winner_redo"
   ],
   "note": "SPC w . U -> winner_redo (winner-mode window-layout undo/redo)"
+ },
+ {
+  "spec_id": "jetbrains.code-folding.collapse-doc-comments",
+  "status": "ported",
+  "evidence": [
+   "static:fold_comments"
+  ],
+  "note": "fold comment blocks"
  }
 ]
