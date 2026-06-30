@@ -906,6 +906,8 @@ impl MappableCommand {
         fold_toggle, "Toggle fold under cursor (za)",
         fold_open, "Open fold under cursor (zo)",
         fold_close, "Close fold under cursor (zc)",
+        fold_open_recursive, "Open fold under cursor and all nested folds (IntelliJ Expand Recursively)",
+        fold_close_recursive, "Close fold under cursor and all nested folds (IntelliJ Collapse Recursively)",
         fold_open_all, "Open all folds (zR)",
         fold_close_all, "Close all folds (zM)",
         fold_delete, "Delete fold under cursor (zd)",
@@ -15122,6 +15124,27 @@ fn fold_open(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let line = fold_cursor_line(view, doc);
     doc.folds_mut().open(line);
+}
+
+/// Open the fold at the cursor and every fold nested within it (IntelliJ "Expand Recursively").
+fn fold_open_recursive(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let line = fold_cursor_line(view, doc);
+    doc.folds_mut().open_recursive(line);
+}
+
+/// Close the fold at the cursor and every fold nested within it (IntelliJ "Collapse Recursively").
+fn fold_close_recursive(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let line = fold_cursor_line(view, doc);
+    // vim marker folding: create the enclosing `{{{ }}}` fold first if present.
+    if let Some((start, end)) = marker_fold_region(doc, line) {
+        let last = doc.text().len_lines().saturating_sub(1);
+        doc.folds_mut().create(start, end);
+        doc.folds_mut().clamp(last);
+    }
+    doc.folds_mut().close_recursive(line);
+    fold_snap_cursor(view, doc);
 }
 
 fn line_has_marker(doc: &Document, line: usize, pat: &str) -> bool {

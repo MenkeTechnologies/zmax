@@ -19099,5 +19099,21 @@
    "static:toggle_indent_guides"
   ],
   "note": "toggle indentation guides"
+ },
+ {
+  "spec_id": "jetbrains.code-folding.expand-recursively",
+  "status": "ported",
+  "evidence": [
+   "static:fold_open_recursive"
+  ],
+  "note": "fold under cursor + all nested"
+ },
+ {
+  "spec_id": "jetbrains.code-folding.collapse-recursively",
+  "status": "ported",
+  "evidence": [
+   "static:fold_close_recursive"
+  ],
+  "note": "fold under cursor + all nested"
  }
 ]

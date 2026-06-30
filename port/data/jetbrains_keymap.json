@@ -1694,5 +1694,21 @@
   "name": "Show Indent Guides",
   "desc": "IntelliJ IDEA default keymap: View > Active Editor > Show Indent Guides",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.code-folding.expand-recursively",
+  "source": "jetbrains",
+  "category": "code-folding",
+  "name": "Expand Recursively",
+  "desc": "IntelliJ IDEA default keymap: Cmd Plus",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.code-folding.collapse-recursively",
+  "source": "jetbrains",
+  "category": "code-folding",
+  "name": "Collapse Recursively",
+  "desc": "IntelliJ IDEA default keymap: Cmd Minus",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]

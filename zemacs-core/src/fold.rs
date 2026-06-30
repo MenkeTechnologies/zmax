@@ -177,6 +177,35 @@ impl Folds {
         }
     }
 
+    /// Open the innermost fold at `line` together with every fold nested inside
+    /// it (IntelliJ "Expand Recursively"). Returns whether anything changed.
+    pub fn open_recursive(&mut self, line: usize) -> bool {
+        self.set_recursive(line, false)
+    }
+
+    /// Close the innermost fold at `line` together with every fold nested inside
+    /// it (IntelliJ "Collapse Recursively"). Returns whether anything changed.
+    pub fn close_recursive(&mut self, line: usize) -> bool {
+        self.set_recursive(line, true)
+    }
+
+    /// Set the closed state of the innermost fold at `line` and all folds whose
+    /// range is fully contained within it. Returns whether any fold changed.
+    fn set_recursive(&mut self, line: usize, closed: bool) -> bool {
+        let Some(i) = self.innermost_idx(line) else {
+            return false;
+        };
+        let (start, end) = (self.folds[i].start, self.folds[i].end);
+        let mut changed = false;
+        for f in &mut self.folds {
+            if f.start >= start && f.end <= end {
+                changed |= f.closed != closed;
+                f.closed = closed;
+            }
+        }
+        changed
+    }
+
     /// Open every fold (vim `zR`).
     pub fn open_all(&mut self) {
         for f in &mut self.folds {
@@ -300,6 +329,23 @@ mod tests {
                 closed: true
             })
         );
+    }
+
+    #[test]
+    fn recursive_open_close_affects_nested_folds() {
+        let mut f = Folds::default();
+        f.create(1, 10); // outer, closed by default
+        f.create(3, 5); // nested, closed by default
+        // From a line inside only the outer fold, open it and every descendant.
+        assert!(f.open_recursive(8));
+        assert_eq!(closed(&f), Vec::<(usize, usize)>::new(), "outer + nested opened");
+        assert!(!f.open_recursive(8), "second call is a no-op");
+        // From a line inside the nested fold, only the innermost region closes.
+        assert!(f.close_recursive(4));
+        assert_eq!(closed(&f), vec![(3, 5)], "only innermost region closed");
+        // From the outer header line, both the outer fold and its descendants close.
+        assert!(f.close_recursive(1));
+        assert_eq!(closed(&f), vec![(1, 10), (3, 5)]);
     }
 
     #[test]
