@@ -596,16 +596,50 @@ impl ui::menu::Item for CodeActionItem {
 }
 
 pub fn code_action(cx: &mut Context) {
-    code_action_filtered(cx, None, "No code actions available");
+    code_action_filtered(cx, None, None, "No code actions available");
 }
 
 /// Request only `refactor.extract` actions (Extract Method/Variable/Constant/
-/// Field/Parameter) — IntelliJ's Extract family.
+/// Field/Parameter) — IntelliJ's Extract family, as a menu.
 pub fn extract_refactor(cx: &mut Context) {
     code_action_filtered(
         cx,
         Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
+        None,
         "No extract refactoring available here",
+    );
+}
+
+/// Pin Extract Method/Function: the single `refactor.extract` action whose title
+/// names a function/method is applied directly (IntelliJ Extract Method).
+pub fn extract_function(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
+        Some(&["function", "method"]),
+        "No extract-function refactoring available here",
+    );
+}
+
+/// Pin Extract/Introduce Variable: the single `refactor.extract` action whose
+/// title names a variable/local (IntelliJ Introduce Variable).
+pub fn extract_variable(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
+        Some(&["variable", "local"]),
+        "No extract-variable refactoring available here",
+    );
+}
+
+/// Pin Extract Constant: the single `refactor.extract` action whose title names
+/// a constant (IntelliJ Extract Constant).
+pub fn extract_constant(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
+        Some(&["constant"]),
+        "No extract-constant refactoring available here",
     );
 }
 
@@ -615,6 +649,7 @@ pub fn inline_refactor(cx: &mut Context) {
     code_action_filtered(
         cx,
         Some(vec![CodeActionKind::REFACTOR_INLINE]),
+        None,
         "No inline refactoring available here",
     );
 }
@@ -625,6 +660,7 @@ pub fn rewrite_refactor(cx: &mut Context) {
     code_action_filtered(
         cx,
         Some(vec![CodeActionKind::REFACTOR_REWRITE]),
+        None,
         "No rewrite refactoring available here",
     );
 }
@@ -637,16 +673,21 @@ pub fn refactor_this(cx: &mut Context) {
     code_action_filtered(
         cx,
         Some(vec![CodeActionKind::REFACTOR]),
+        None,
         "No refactorings available here",
     );
 }
 
 /// Shared code-action driver. `only` filters the request to the given kinds (and
 /// is re-applied client-side, since some servers ignore the `only` hint and
-/// return everything). `empty_msg` is shown when no matching action is found.
+/// return everything). `title_filter`, when set, keeps only actions whose title
+/// contains one of the (lowercase) substrings — and a *single* surviving action
+/// is applied directly without a menu (used to pin a specific refactoring like
+/// Extract Method). `empty_msg` is shown when no matching action is found.
 fn code_action_filtered(
     cx: &mut Context,
     only: Option<Vec<CodeActionKind>>,
+    title_filter: Option<&'static [&'static str]>,
     empty_msg: &'static str,
 ) {
     let (view, doc) = current!(cx.editor);
@@ -700,6 +741,8 @@ fn code_action_filtered(
         return;
     }
 
+    let auto_apply_single = title_filter.is_some();
+
     cx.jobs.callback(async move {
         let mut actions = Vec::new();
 
@@ -714,9 +757,24 @@ fn code_action_filtered(
         // `lsp_code_action_priority` for how LSP actions are ranked.
         actions.sort_by_key(|action| std::cmp::Reverse(action.priority));
 
+        // Pin to a specific refactoring by title (e.g. Extract Method).
+        if let Some(pats) = title_filter {
+            actions.retain(|a| {
+                let title = a.title().to_ascii_lowercase();
+                pats.iter().any(|p| title.contains(p))
+            });
+        }
+
         let call = move |editor: &mut Editor, compositor: &mut Compositor| {
             if actions.is_empty() {
                 editor.set_error(empty_msg);
+                return;
+            }
+            // A pinned refactoring with a single match applies straight away,
+            // matching IntelliJ's dedicated Extract/Inline actions; ambiguous
+            // matches still fall through to a menu.
+            if auto_apply_single && actions.len() == 1 {
+                actions.into_iter().next().unwrap().execute(editor);
                 return;
             }
             let mut picker = ui::Menu::new(actions, (), move |editor, action, event| {

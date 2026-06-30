@@ -11808,19 +11808,19 @@
  },
  {
   "spec_id": "jetbrains.refactoring.extract-method",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:extract_refactor"
+   "static:extract_function"
   ],
-  "note": "dedicated refactor.extract code actions (kind-filtered menu)"
+  "note": "pinned refactor.extract action by title; applies the single match directly (menu fallback if ambiguous)"
  },
  {
   "spec_id": "jetbrains.refactoring.introduce-variable",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:extract_refactor"
+   "static:extract_variable"
   ],
-  "note": "dedicated refactor.extract code actions (kind-filtered menu)"
+  "note": "pinned refactor.extract action by title; applies the single match directly (menu fallback if ambiguous)"
  },
  {
   "spec_id": "jetbrains.vcs.vcs-operations-popup",
@@ -18986,11 +18986,11 @@
  },
  {
   "spec_id": "jetbrains.refactoring.extract-constant",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:extract_refactor"
+   "static:extract_constant"
   ],
-  "note": "dedicated refactor.extract code actions (kind-filtered menu)"
+  "note": "pinned refactor.extract action by title; applies the single match directly (menu fallback if ambiguous)"
  },
  {
   "spec_id": "jetbrains.refactoring.pull-members-up",
