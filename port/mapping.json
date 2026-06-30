@@ -19450,5 +19450,14 @@
    "key:normal:space w t"
   ],
   "note": "spacemacs SPC w t -> toggle_window_dedication (dedicated window splits on opening other buffers)"
+ },
+ {
+  "spec_id": "cursor.chat.history",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a p",
+   "static:ai_chat_panel"
+  ],
+  "note": "streaming chat drawer with conversation history -> ai_chat_panel"
  }
 ]

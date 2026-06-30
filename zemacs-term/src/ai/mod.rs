@@ -114,6 +114,20 @@ pub trait Provider: Send + Sync {
     fn model(&self) -> &str;
     fn chat(&self, system: Option<&str>, messages: &[Message]) -> Result<String, String>;
 
+    /// Stream a chat response, invoking `on_delta` with each text chunk as it arrives (for live
+    /// "generation on the fly" in the chat drawer). Returns the full text. Blocking — call from
+    /// `spawn_blocking`. Default: fall back to a single non-streamed [`Provider::chat`] call.
+    fn stream_chat(
+        &self,
+        system: Option<&str>,
+        messages: &[Message],
+        on_delta: &mut dyn FnMut(&str),
+    ) -> Result<String, String> {
+        let full = self.chat(system, messages)?;
+        on_delta(&full);
+        Ok(full)
+    }
+
     /// Whether this backend implements agent tool-use ([`Provider::agent_turn`]).
     fn supports_tools(&self) -> bool {
         false

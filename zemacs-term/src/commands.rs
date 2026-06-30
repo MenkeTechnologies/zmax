@@ -524,6 +524,7 @@ impl MappableCommand {
         diagnostics_verify_setup, "Report the buffer's diagnostics/LSP setup (SPC e v)",
         clear_diagnostics, "Clear all diagnostics for the current buffer (SPC e c)",
         ai_chat, "Ask the AI provider about the selection/buffer (SPC a i)",
+        ai_chat_panel, "Open the streaming AI chat drawer (SPC a p)",
         ai_inline_edit, "AI inline edit/generate on the selection (Cmd+K style, SPC a e)",
         ai_explain, "Explain the selected code with AI (SPC a x)",
         ai_generate_tests, "Generate tests for the selection with AI (SPC a u)",
@@ -8904,6 +8905,97 @@ fn ai_chat(cx: &mut Context) {
                 Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
                     show_text_in_scratch(editor, &text);
                     editor.set_status("AI response (scratch buffer)");
+                })))
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+// --- AI chat drawer: a split buffer streamed into live (Cursor-style chat panel) ---
+static AI_PANEL_DOC: std::sync::Mutex<Option<DocumentId>> = std::sync::Mutex::new(None);
+static AI_SESSION: std::sync::Mutex<Vec<crate::ai::Message>> = std::sync::Mutex::new(Vec::new());
+
+/// Append `text` at the end of the AI drawer document and move its view's cursor to follow, so the
+/// drawer scrolls as tokens stream in. No-op if the drawer isn't visible. Callable from a job.
+fn append_to_ai_doc(editor: &mut Editor, doc_id: DocumentId, text: &str) {
+    let view_id = editor
+        .tree
+        .traverse()
+        .find(|(_, v)| v.doc == doc_id)
+        .map(|(id, _)| id);
+    let Some(view_id) = view_id else {
+        return;
+    };
+    let added = text.chars().count();
+    let Some(doc) = editor.document_mut(doc_id) else {
+        return;
+    };
+    doc.ensure_view_init(view_id);
+    let end = doc.text().len_chars();
+    let tx = Transaction::change(doc.text(), std::iter::once((end, end, Some(text.into()))))
+        .with_selection(Selection::point(end + added));
+    doc.apply(&tx, view_id);
+}
+
+/// SPC a p : open/focus the AI chat drawer (a buffer in a vertical split) and stream a reply into
+/// it live — Cursor-style chat panel with on-the-fly generation. Keeps conversation history.
+fn ai_chat_panel(cx: &mut Context) {
+    let doc_id = {
+        let mut slot = AI_PANEL_DOC.lock().unwrap();
+        let existing = slot.filter(|id| cx.editor.documents().any(|d| d.id() == *id));
+        match existing {
+            Some(id) => {
+                if !cx.editor.tree.traverse().any(|(_, v)| v.doc == id) {
+                    cx.editor.switch(id, Action::VerticalSplit);
+                }
+                id
+            }
+            None => {
+                let id = cx.editor.new_file(Action::VerticalSplit);
+                *slot = Some(id);
+                append_to_ai_doc(cx.editor, id, "# AI chat\n");
+                id
+            }
+        }
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ai chat:".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let q = input.trim().to_string();
+            append_to_ai_doc(cx.editor, doc_id, &format!("\n\n### You\n{q}\n\n### AI\n"));
+            let mut msgs = AI_SESSION.lock().unwrap().clone();
+            msgs.push(crate::ai::Message::user(q.clone()));
+            cx.editor.set_status("AI: streaming…");
+            cx.jobs.callback(async move {
+                let q_for_session = q.clone();
+                let full = tokio::task::spawn_blocking(move || {
+                    let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
+                    let system = crate::ai::system_with_rules("You are a coding assistant in the zemacs chat drawer. Use fenced code blocks for code.");
+                    let mut on_delta = |d: &str| {
+                        let d = d.to_string();
+                        crate::job::dispatch_blocking(move |editor, _| {
+                            append_to_ai_doc(editor, doc_id, &d)
+                        });
+                    };
+                    provider
+                        .stream_chat(Some(&system), &msgs, &mut on_delta)
+                        .map_err(|e| anyhow::anyhow!(e))
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!("ai task: {e}"))??;
+                {
+                    let mut s = AI_SESSION.lock().unwrap();
+                    s.push(crate::ai::Message::user(q_for_session));
+                    s.push(crate::ai::Message::assistant(full));
+                }
+                Ok(crate::job::Callback::Editor(Box::new(|editor: &mut Editor| {
+                    editor.set_status("AI: done");
                 })))
             });
         },
