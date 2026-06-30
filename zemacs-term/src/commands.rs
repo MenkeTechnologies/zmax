@@ -433,6 +433,23 @@ impl MappableCommand {
         goto_window_8, "Go to window 8 (SPC 8)",
         goto_window_9, "Go to window 9 (SPC 9)",
         delete_window_and_buffer, "Close window and kill its buffer (SPC w . x)",
+        layout_create, "Create a new window-layout from the current windows (SPC l l)",
+        layout_next, "Switch to the next layout (SPC l n)",
+        layout_prev, "Switch to the previous layout (SPC l p)",
+        layout_last, "Switch to the last-used layout (SPC l TAB)",
+        layout_default, "Switch to the default (first) layout (SPC l h)",
+        layout_delete, "Delete the current layout, keeping its buffers (SPC l d)",
+        layout_save, "Save layouts to disk (SPC l s)",
+        layout_load, "Load layouts from disk (SPC l L)",
+        layout_goto_1, "Switch to layout 1 (SPC l 1)",
+        layout_goto_2, "Switch to layout 2 (SPC l 2)",
+        layout_goto_3, "Switch to layout 3 (SPC l 3)",
+        layout_goto_4, "Switch to layout 4 (SPC l 4)",
+        layout_goto_5, "Switch to layout 5 (SPC l 5)",
+        layout_goto_6, "Switch to layout 6 (SPC l 6)",
+        layout_goto_7, "Switch to layout 7 (SPC l 7)",
+        layout_goto_8, "Switch to layout 8 (SPC l 8)",
+        layout_goto_9, "Switch to layout 9 (SPC l 9)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
         git_init, "Initialize a new git repository (SPC g i)",
@@ -5996,6 +6013,235 @@ fn delete_window_and_buffer(cx: &mut Context) {
     let _ = cx.editor.close_document(doc_id, false);
     if cx.editor.tree.views().count() > 1 {
         cx.editor.close(view_id);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Layouts / workspaces (Spacemacs `SPC l`). A layout is a named window
+// configuration: the set of files open across the splits plus which one is
+// focused. Switching saves the current layout's state and restores the target's
+// (closes extra splits, reopens the saved files side-by-side, refocuses).
+// ---------------------------------------------------------------------------
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+struct WorkLayout {
+    name: String,
+    files: Vec<std::path::PathBuf>,
+    focused: usize,
+}
+
+struct LayoutStore {
+    layouts: Vec<WorkLayout>,
+    current: usize,
+    last: usize,
+}
+
+static LAYOUTS: std::sync::Mutex<LayoutStore> = std::sync::Mutex::new(LayoutStore {
+    layouts: Vec::new(),
+    current: 0,
+    last: 0,
+});
+
+fn layouts_file() -> std::path::PathBuf {
+    zemacs_loader::config_dir().join("layouts.json")
+}
+
+/// Snapshot the current window configuration: file paths in tree order + the
+/// index of the focused file (scratch buffers without a path are skipped).
+fn layout_capture(cx: &mut Context) -> (Vec<std::path::PathBuf>, usize) {
+    let focus = cx.editor.tree.focus;
+    let pairs: Vec<(ViewId, DocumentId)> =
+        cx.editor.tree.traverse().map(|(id, v)| (id, v.doc)).collect();
+    let mut files = Vec::new();
+    let mut focused = 0;
+    for (id, doc_id) in pairs {
+        let path = cx
+            .editor
+            .documents()
+            .find(|d| d.id() == doc_id)
+            .and_then(|d| d.path().map(|p| p.to_path_buf()));
+        if let Some(p) = path {
+            if id == focus {
+                focused = files.len();
+            }
+            files.push(p);
+        }
+    }
+    (files, focused)
+}
+
+/// Restore a window configuration: reduce to one window, reopen each file (first
+/// replacing the current view, the rest as vertical splits), then refocus.
+fn layout_restore(cx: &mut Context, files: &[std::path::PathBuf], focused: usize) {
+    if files.is_empty() {
+        return;
+    }
+    let others: Vec<ViewId> = cx
+        .editor
+        .tree
+        .views()
+        .filter(|(_, f)| !f)
+        .map(|(v, _)| v.id)
+        .collect();
+    for id in others {
+        cx.editor.close(id);
+    }
+    for (i, p) in files.iter().enumerate() {
+        let action = if i == 0 {
+            Action::Replace
+        } else {
+            Action::VerticalSplit
+        };
+        let _ = cx.editor.open(p, action);
+    }
+    let ids: Vec<_> = cx.editor.tree.traverse().map(|(id, _)| id).collect();
+    if let Some(&id) = ids.get(focused) {
+        cx.editor.focus(id);
+    }
+}
+
+/// SPC l l: capture the current windows as a new named layout.
+fn layout_create(cx: &mut Context) {
+    let (files, focused) = layout_capture(cx);
+    let name = {
+        let mut s = LAYOUTS.lock().unwrap();
+        let n = s.layouts.len() + 1;
+        let name = format!("@{n}");
+        s.layouts.push(WorkLayout {
+            name: name.clone(),
+            files,
+            focused,
+        });
+        s.last = s.current;
+        s.current = s.layouts.len() - 1;
+        name
+    };
+    cx.editor.set_status(format!("created layout {name}"));
+}
+
+/// Save the current windows into the active layout, then restore layout `target`.
+fn layout_switch(cx: &mut Context, target: usize) {
+    let (files, focused) = layout_capture(cx);
+    let restore = {
+        let mut s = LAYOUTS.lock().unwrap();
+        if s.layouts.is_empty() {
+            None
+        } else {
+            let cur = s.current.min(s.layouts.len() - 1);
+            s.layouts[cur].files = files;
+            s.layouts[cur].focused = focused;
+            s.last = cur;
+            let t = target % s.layouts.len();
+            s.current = t;
+            Some(s.layouts[t].clone())
+        }
+    };
+    match restore {
+        Some(l) => {
+            layout_restore(cx, &l.files, l.focused);
+            cx.editor.set_status(format!("layout {}", l.name));
+        }
+        None => cx.editor.set_status("no layouts — SPC l l to create one"),
+    }
+}
+
+fn layout_next(cx: &mut Context) {
+    let t = {
+        let s = LAYOUTS.lock().unwrap();
+        if s.layouts.is_empty() {
+            0
+        } else {
+            (s.current + 1) % s.layouts.len()
+        }
+    };
+    layout_switch(cx, t);
+}
+
+fn layout_prev(cx: &mut Context) {
+    let t = {
+        let s = LAYOUTS.lock().unwrap();
+        if s.layouts.is_empty() {
+            0
+        } else {
+            (s.current + s.layouts.len() - 1) % s.layouts.len()
+        }
+    };
+    layout_switch(cx, t);
+}
+
+fn layout_last(cx: &mut Context) {
+    let t = LAYOUTS.lock().unwrap().last;
+    layout_switch(cx, t);
+}
+
+fn layout_default(cx: &mut Context) {
+    layout_switch(cx, 0);
+}
+
+fn layout_goto_n(cx: &mut Context, n: usize) {
+    if n >= 1 {
+        layout_switch(cx, n - 1);
+    }
+}
+fn layout_goto_1(cx: &mut Context) { layout_goto_n(cx, 1) }
+fn layout_goto_2(cx: &mut Context) { layout_goto_n(cx, 2) }
+fn layout_goto_3(cx: &mut Context) { layout_goto_n(cx, 3) }
+fn layout_goto_4(cx: &mut Context) { layout_goto_n(cx, 4) }
+fn layout_goto_5(cx: &mut Context) { layout_goto_n(cx, 5) }
+fn layout_goto_6(cx: &mut Context) { layout_goto_n(cx, 6) }
+fn layout_goto_7(cx: &mut Context) { layout_goto_n(cx, 7) }
+fn layout_goto_8(cx: &mut Context) { layout_goto_n(cx, 8) }
+fn layout_goto_9(cx: &mut Context) { layout_goto_n(cx, 9) }
+
+/// SPC l d / l x: delete the current layout (keeps the open buffers).
+fn layout_delete(cx: &mut Context) {
+    let msg = {
+        let mut s = LAYOUTS.lock().unwrap();
+        if s.layouts.is_empty() {
+            "no layouts to delete".to_string()
+        } else {
+            let c = s.current.min(s.layouts.len() - 1);
+            let name = s.layouts.remove(c).name;
+            if !s.layouts.is_empty() && s.current >= s.layouts.len() {
+                s.current = s.layouts.len() - 1;
+            }
+            format!("deleted layout {name}")
+        }
+    };
+    cx.editor.set_status(msg);
+}
+
+/// SPC l s: persist all layouts to `<config>/layouts.json`.
+fn layout_save(cx: &mut Context) {
+    let json = {
+        let s = LAYOUTS.lock().unwrap();
+        serde_json::to_string_pretty(&s.layouts)
+    };
+    match json {
+        Ok(j) => match std::fs::write(layouts_file(), j) {
+            Ok(_) => cx.editor.set_status("saved layouts"),
+            Err(e) => cx.editor.set_error(format!("save layouts: {e}")),
+        },
+        Err(e) => cx.editor.set_error(format!("serialize layouts: {e}")),
+    }
+}
+
+/// SPC l L: load layouts from `<config>/layouts.json`.
+fn layout_load(cx: &mut Context) {
+    match std::fs::read_to_string(layouts_file()) {
+        Ok(j) => match serde_json::from_str::<Vec<WorkLayout>>(&j) {
+            Ok(v) => {
+                let n = v.len();
+                let mut s = LAYOUTS.lock().unwrap();
+                s.layouts = v;
+                s.current = 0;
+                s.last = 0;
+                drop(s);
+                cx.editor.set_status(format!("loaded {n} layouts"));
+            }
+            Err(e) => cx.editor.set_error(format!("parse layouts: {e}")),
+        },
+        Err(e) => cx.editor.set_error(format!("no layouts file: {e}")),
     }
 }
 
