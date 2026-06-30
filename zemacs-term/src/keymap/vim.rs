@@ -1565,7 +1565,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
         "ret"   => insert_newline,
         "C-j"   => insert_newline,
-        "tab"   => insert_tab,
+        "tab"   => emmet_expand,            // expand emmet/zen abbrev, else Tab
 
         "C-r"   => insert_register,
         "C-e"   => copy_char_below,         // vim i_CTRL-E: insert the character below the cursor

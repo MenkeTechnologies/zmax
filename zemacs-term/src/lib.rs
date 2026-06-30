@@ -17,6 +17,7 @@ pub mod compositor;
 pub mod config;
 pub mod events;
 pub mod file_watcher;
+pub mod emmet;
 pub mod harpoon;
 pub mod health;
 pub mod job;
@@ -24,6 +25,7 @@ pub mod keymap;
 pub mod logging;
 pub mod recent_files;
 pub mod run_config;
+pub mod snippet_store;
 pub mod spell;
 pub mod ui;
 

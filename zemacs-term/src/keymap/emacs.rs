@@ -109,7 +109,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-_" | "C-/" => undo,              // undo
         "A-/" => redo,
         "ret" | "C-j" => insert_newline,
-        "tab" => smart_tab,
+        "tab" => emmet_expand,
 
         // search / files / buffers
         "C-s" => search,                    // isearch-forward (approx)

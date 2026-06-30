@@ -869,6 +869,7 @@ impl MappableCommand {
         extend_to_word, "Extend to a two-character label",
         goto_next_tabstop, "Goto next snippet placeholder",
         goto_prev_tabstop, "Goto next snippet placeholder",
+        emmet_expand, "Expand emmet/zen HTML abbreviation (or Tab)",
         rotate_selections_first, "Make the first selection your primary one",
         rotate_selections_last, "Make the last selection your primary one",
     );
@@ -12658,6 +12659,90 @@ fn increment_impl(cx: &mut Context, increment_direction: IncrementDirection) {
         doc.apply(&transaction, view.id);
         exit_select_mode(cx);
     }
+}
+
+/// Insert-mode Tab handler with emmet/zen-coding expansion.
+///
+/// Precedence:
+///   1. If a snippet is active, advance to its next tabstop (this is how Tab
+///      walks through the placeholders emmet itself emits).
+///   2. In an HTML-like document, try to expand the abbreviation before the
+///      cursor (e.g. `ul>li*3`, `h4*100`).
+///   3. Otherwise fall back to a normal Tab.
+fn emmet_expand(cx: &mut Context) {
+    {
+        let (_, doc) = current_ref!(cx.editor);
+        if doc.active_snippet.is_some() {
+            goto_next_tabstop(cx);
+            return;
+        }
+    }
+    if try_emmet_expand(cx) {
+        return;
+    }
+    // No abbreviation to expand — behave like a normal smart Tab.
+    smart_tab(cx);
+}
+
+/// Attempt emmet expansion at the primary cursor. Returns `true` if an
+/// abbreviation was expanded (and the document mutated), `false` otherwise.
+fn try_emmet_expand(cx: &mut Context) -> bool {
+    let (view, doc) = current!(cx.editor);
+    let view_id = view.id;
+
+    if !crate::emmet::is_html_like(doc.language_id()) {
+        return false;
+    }
+
+    // Gather everything we need from immutable borrows first.
+    let (from, cursor, snippet_str, selection) = {
+        let text = doc.text();
+        let slice = text.slice(..);
+        let selection = doc.selection(view_id);
+        // Single cursor only for now.
+        if selection.ranges().len() != 1 {
+            return false;
+        }
+        let cursor = selection.primary().cursor(slice);
+        let line = text.char_to_line(cursor);
+        let line_start = text.line_to_char(line);
+        let before: String = slice.slice(line_start..cursor).chars().collect();
+
+        let Some((start_in_line, abbr)) = crate::emmet::extract_abbreviation(&before) else {
+            return false;
+        };
+        let base_indent: String = before
+            .chars()
+            .take_while(|c| *c == ' ' || *c == '\t')
+            .collect();
+        let indent_unit = doc.indent_style.as_str();
+        let Some(snippet_str) = crate::emmet::expand(&abbr, indent_unit, &base_indent) else {
+            return false;
+        };
+        (
+            line_start + start_in_line,
+            cursor,
+            snippet_str,
+            selection.clone(),
+        )
+    };
+
+    let Ok(snippet) = zemacs_core::snippets::Snippet::parse(&snippet_str) else {
+        return false;
+    };
+    let edit_offset = Some((from as i128 - cursor as i128, 0i128));
+    let (transaction, rendered) = zemacs_lsp::util::generate_transaction_from_snippet(
+        doc.text(),
+        &selection,
+        edit_offset,
+        false,
+        snippet,
+        &mut doc.snippet_ctx(),
+    );
+    doc.apply(&transaction, view_id);
+    doc.append_changes_to_history(view);
+    doc.active_snippet = zemacs_core::snippets::ActiveSnippet::new(rendered);
+    true
 }
 
 fn goto_next_tabstop(cx: &mut Context) {
