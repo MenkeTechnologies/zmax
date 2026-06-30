@@ -645,6 +645,11 @@ impl MappableCommand {
         yank_pop, "Replace the just-yanked text with the next kill-ring entry (emacs M-y)",
         set_mark_command, "Set mark and activate region, pushing to the mark ring (emacs C-SPC)",
         pop_to_mark, "Jump to the top of the mark ring, rotating it (emacs C-x C-SPC)",
+        point_to_register, "Save point to a register (emacs C-x r SPC)",
+        jump_to_register, "Jump to the position in a register (emacs C-x r j)",
+        number_to_register, "Store the prefix count in a register (emacs C-x r n)",
+        increment_register, "Add the prefix count to a number register (emacs C-x r +)",
+        emacs_insert_register, "Insert a number register's value as text (emacs C-x r i)",
         paste_clipboard_after, "Paste clipboard after selections",
         paste_clipboard_before, "Paste clipboard before selections",
         paste_primary_clipboard_after, "Paste primary clipboard after selections",
@@ -7520,6 +7525,87 @@ fn pop_to_mark(cx: &mut Context) {
         }
         None => cx.editor.set_error("Mark ring is empty"),
     }
+}
+
+/// Emacs `point-to-register` (C-x r SPC): save point in the register read next.
+fn point_to_register(cx: &mut Context) {
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        if let Some(ch) = event.char() {
+            let (view, doc) = current!(cx.editor);
+            let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+            crate::emacs_register::set_pos(ch, pos);
+            cx.editor.set_status(format!("Point saved to register {ch}"));
+        }
+    });
+    cx.editor.autoinfo = Some(Info::new("Point to register", &[("char", "register name")]));
+}
+
+/// Emacs `jump-to-register` (C-x r j): jump to the position in the register read next.
+fn jump_to_register(cx: &mut Context) {
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        if let Some(ch) = event.char() {
+            match crate::emacs_register::get_pos(ch) {
+                Some(pos) => {
+                    let (view, doc) = current!(cx.editor);
+                    let pos = pos.min(doc.text().len_chars());
+                    push_jump(view, doc);
+                    doc.set_selection(view.id, Selection::point(pos));
+                }
+                None => cx
+                    .editor
+                    .set_error(format!("Register {ch} does not hold a position")),
+            }
+        }
+    });
+    cx.editor.autoinfo = Some(Info::new("Jump to register", &[("char", "register name")]));
+}
+
+/// Emacs `number-to-register` (C-x r n): store the prefix count in a register.
+fn number_to_register(cx: &mut Context) {
+    let n = cx.count() as i64;
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        if let Some(ch) = event.char() {
+            crate::emacs_register::set_num(ch, n);
+            cx.editor.set_status(format!("Stored {n} in register {ch}"));
+        }
+    });
+    cx.editor.autoinfo = Some(Info::new("Number to register", &[("char", "register name")]));
+}
+
+/// Emacs `increment-register` (C-x r +): add the prefix count to a number register.
+fn increment_register(cx: &mut Context) {
+    let by = cx.count() as i64;
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        if let Some(ch) = event.char() {
+            let next = crate::emacs_register::incr(ch, by);
+            cx.editor.set_status(format!("Register {ch} = {next}"));
+        }
+    });
+    cx.editor.autoinfo = Some(Info::new("Increment register", &[("char", "register name")]));
+}
+
+/// Emacs `insert-register` (C-x r i): insert a number register's value as text.
+fn emacs_insert_register(cx: &mut Context) {
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        if let Some(ch) = event.char() {
+            match crate::emacs_register::get_num(ch) {
+                Some(n) => {
+                    let mode = cx.editor.mode;
+                    let (view, doc) = current!(cx.editor);
+                    paste_impl(&[n.to_string()], doc, view, Paste::Before, 1, mode);
+                }
+                None => cx
+                    .editor
+                    .set_error(format!("Register {ch} does not hold a number")),
+            }
+        }
+    });
+    cx.editor.autoinfo = Some(Info::new("Insert register", &[("char", "register name")]));
 }
 
 fn ensure_selections_forward(cx: &mut Context) {

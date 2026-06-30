@@ -127,6 +127,13 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "3" => vsplit,                  // split-window-right
             "C-space" => pop_to_mark,       // C-x C-SPC: pop-to-mark
             "C-x" => flip_selections,       // C-x C-x: exchange-point-and-mark
+            "r" => { "Registers"
+                "space" => point_to_register,   // C-x r SPC: point-to-register
+                "j" => jump_to_register,         // C-x r j: jump-to-register
+                "n" => number_to_register,       // C-x r n: number-to-register
+                "+" => increment_register,       // C-x r +: increment-register
+                "i" => emacs_insert_register,    // C-x r i: insert-register
+            },
         },
     });
 
