@@ -762,6 +762,7 @@ impl EditorView {
             overlays,
             theme,
             decorations,
+            Some(view.id),
         );
 
         // Sticky scroll: pin enclosing scope headers at the top of the viewport.
@@ -1549,7 +1550,7 @@ impl EditorView {
         let selection = doc.selection(view.id);
         let view_offset = doc.view_offset(view.id);
         let primary = selection.primary();
-        let text_format = doc.text_format(viewport.width, None);
+        let text_format = doc.text_format(viewport.width, None, Some(view.id));
         for range in selection.iter() {
             let is_primary = primary == *range;
             let cursor = range.cursor(text);

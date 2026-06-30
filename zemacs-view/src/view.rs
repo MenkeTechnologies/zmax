@@ -255,7 +255,7 @@ impl View {
         let doc_text = doc.text().slice(..);
         let viewport = self.inner_area(doc);
         let vertical_viewport_end = view_offset.vertical_offset + viewport.height as usize;
-        let text_fmt = doc.text_format(viewport.width, None);
+        let text_fmt = doc.text_format(viewport.width, None, Some(self.id));
         let annotations = self.text_annotations(doc, None);
 
         let (scrolloff_top, scrolloff_bottom) = if CENTERING {
@@ -388,7 +388,7 @@ impl View {
     pub fn last_visual_line(&self, doc: &Document) -> usize {
         let doc_text = doc.text().slice(..);
         let viewport = self.inner_area(doc);
-        let text_fmt = doc.text_format(viewport.width, None);
+        let text_fmt = doc.text_format(viewport.width, None, Some(self.id));
         let annotations = self.text_annotations(doc, None);
         let view_offset = doc.view_offset(self.id);
 
@@ -429,7 +429,7 @@ impl View {
         let view_offset = doc.view_offset(self.id);
 
         let viewport = self.inner_area(doc);
-        let text_fmt = doc.text_format(viewport.width, None);
+        let text_fmt = doc.text_format(viewport.width, None, Some(self.id));
         let annotations = self.text_annotations(doc, None);
 
         let mut pos = visual_offset_from_anchor(
@@ -604,7 +604,7 @@ impl View {
             doc,
             row,
             column,
-            doc.text_format(self.inner_width(doc), None),
+            doc.text_format(self.inner_width(doc), None, Some(self.id)),
             &self.text_annotations(doc, None),
             ignore_virtual_text,
         )
@@ -621,7 +621,7 @@ impl View {
             doc,
             row,
             column,
-            doc.text_format(self.inner_width(doc), None),
+            doc.text_format(self.inner_width(doc), None, Some(self.id)),
             &self.text_annotations(doc, None),
             ignore_virtual_text,
         )

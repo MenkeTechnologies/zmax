@@ -69,7 +69,7 @@ pub fn align_view(doc: &mut Document, view: &View, align: Align) {
         Align::Bottom => last_line_height,
     };
 
-    let text_fmt = doc.text_format(viewport.width, None);
+    let text_fmt = doc.text_format(viewport.width, None, Some(view.id));
     (view_offset.anchor, view_offset.vertical_offset) = char_idx_at_visual_offset(
         doc_text,
         cursor,
