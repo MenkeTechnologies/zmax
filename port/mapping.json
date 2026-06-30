@@ -19356,5 +19356,32 @@
    "static:ai_inline_edit"
   ],
   "note": "empty-selection generate via ai_inline_edit"
+ },
+ {
+  "spec_id": "cursor.misc.explain",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a x",
+   "static:ai_explain"
+  ],
+  "note": "explain selection -> ai_explain"
+ },
+ {
+  "spec_id": "cursor.misc.generate_tests",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a u",
+   "static:ai_generate_tests"
+  ],
+  "note": "generate tests -> ai_generate_tests"
+ },
+ {
+  "spec_id": "cursor.misc.commit_message",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a c",
+   "static:ai_commit_message"
+  ],
+  "note": "AI commit message -> ai_commit_message (git diff -> AI -> scratch + clipboard)"
  }
 ]
