@@ -860,12 +860,397 @@ const HTML5_DOC: &str = r#"<!DOCTYPE html>
 </body>
 </html>"#;
 
+// ===========================================================================
+// CSS emmet (fuzzy property abbreviations + value/unit inference)
+// ===========================================================================
+
+/// Languages for which Tab should attempt CSS emmet expansion.
+pub fn is_css_like(lang: Option<&str>) -> bool {
+    matches!(
+        lang.unwrap_or("").to_ascii_lowercase().as_str(),
+        "css" | "scss" | "sass" | "less" | "stylus" | "styl" | "postcss" | "sss"
+    )
+}
+
+/// Scan back over the characters that can make up a CSS abbreviation
+/// (`m10`, `p10-20`, `c#fff`, `pos:a`, `fz1.5e`, `m0!`).
+pub fn extract_css_abbreviation(before: &str) -> Option<(usize, String)> {
+    let chars: Vec<char> = before.chars().collect();
+    let mut i = chars.len();
+    while i > 0 {
+        let c = chars[i - 1];
+        if c.is_alphanumeric() || "#.-:%!".contains(c) {
+            i -= 1;
+        } else {
+            break;
+        }
+    }
+    let abbr: String = chars[i..].iter().collect();
+    if abbr.trim().is_empty() {
+        return None;
+    }
+    Some((i, abbr))
+}
+
+/// Expand a CSS abbreviation into a single-line snippet declaration, e.g.
+/// `m10` -> `margin: 10px;$0`, `m` -> `margin: $0;`, `df` -> `display: flex;$0`.
+pub fn expand_css(abbr: &str) -> Option<String> {
+    let abbr = abbr.trim();
+    if abbr.is_empty() {
+        return None;
+    }
+    let important = abbr.ends_with('!');
+    let core = abbr.trim_end_matches('!');
+    let (prop, value) = css_declaration(core)?;
+    let imp = if important { " !important" } else { "" };
+    Some(match value {
+        Some(v) if !v.is_empty() => format!("{prop}: {v}{imp};$0"),
+        _ => format!("{prop}: $0{imp};"),
+    })
+}
+
+/// Resolve a CSS abbreviation to `(property, value)`. `value == None` means an
+/// empty value slot (the caller drops a tabstop there).
+fn css_declaration(core: &str) -> Option<(String, Option<String>)> {
+    // 1. Whole-abbreviation keyword snippets (`df`, `pos:a`, `d:f`, `fw:b`, ...).
+    if let Some((prop, val)) = css_keyword(core) {
+        return Some((prop.to_string(), Some(val.to_string())));
+    }
+
+    // 2. Split leading property letters from the value remainder.
+    let split = core
+        .char_indices()
+        .find(|(_, c)| !c.is_ascii_alphabetic())
+        .map(|(i, _)| i)
+        .unwrap_or(core.len());
+    let (prop_abbr, rest) = core.split_at(split);
+    if prop_abbr.is_empty() {
+        return None;
+    }
+    let property = css_property(prop_abbr)?;
+
+    if rest.is_empty() {
+        return Some((property.to_string(), None));
+    }
+    if let Some(kw) = rest.strip_prefix(':') {
+        // Explicit keyword value not covered by a combo snippet — pass through.
+        if kw.is_empty() {
+            return Some((property.to_string(), None));
+        }
+        return Some((property.to_string(), Some(kw.to_string())));
+    }
+    Some((
+        property.to_string(),
+        Some(format_css_value(property, rest)),
+    ))
+}
+
+/// Format a (possibly multi-valued) numeric/colour CSS value.
+fn format_css_value(property: &str, rest: &str) -> String {
+    if let Some(hex) = rest.strip_prefix('#') {
+        return expand_color(hex);
+    }
+    // Split into values on `-`, honouring leading `-` as a negative sign.
+    let parts: Vec<&str> = rest.split('-').collect();
+    let mut values: Vec<String> = Vec::new();
+    let mut k = 0;
+    while k < parts.len() {
+        if parts[k].is_empty() {
+            // a `-` separator that signals the following token is negative
+            k += 1;
+            if k < parts.len() {
+                values.push(format_number(property, &format!("-{}", parts[k])));
+            }
+        } else {
+            values.push(format_number(property, parts[k]));
+        }
+        k += 1;
+    }
+    values.join(" ")
+}
+
+/// Format a single numeric token with unit inference.
+fn format_number(property: &str, tok: &str) -> String {
+    // keyword-ish value (e.g. `a` -> auto)
+    let first_significant = tok.trim_start_matches('-');
+    if !first_significant
+        .chars()
+        .next()
+        .map(|c| c.is_ascii_digit() || c == '.')
+        .unwrap_or(false)
+    {
+        return match tok {
+            "a" => "auto".to_string(),
+            other => other.to_string(),
+        };
+    }
+
+    // separate the numeric prefix from a trailing unit
+    let neg = tok.starts_with('-');
+    let body = tok.trim_start_matches('-');
+    let split = body
+        .char_indices()
+        .find(|(_, c)| !(c.is_ascii_digit() || *c == '.'))
+        .map(|(i, _)| i)
+        .unwrap_or(body.len());
+    let (num_raw, unit_raw) = body.split_at(split);
+
+    let mut num = num_raw.to_string();
+    if num.starts_with('.') {
+        num.insert(0, '0');
+    }
+    if num.is_empty() {
+        return tok.to_string();
+    }
+    let mut value = if neg { format!("-{num}") } else { num.clone() };
+
+    // bare zero never gets a unit
+    let is_zero = num.chars().all(|c| c == '0' || c == '.');
+    if is_zero && unit_raw.is_empty() {
+        return "0".to_string();
+    }
+
+    if is_unitless_property(property) {
+        return value;
+    }
+
+    let unit = if unit_raw.is_empty() {
+        if num.contains('.') {
+            "em".to_string()
+        } else {
+            "px".to_string()
+        }
+    } else {
+        unit_alias(unit_raw)
+    };
+    value.push_str(&unit);
+    value
+}
+
+fn unit_alias(u: &str) -> String {
+    match u {
+        "p" => "%".to_string(),
+        "e" => "em".to_string(),
+        "r" => "rem".to_string(),
+        "x" => "ex".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// Expand an emmet colour shorthand: `#1`->#111111, `#e0`->#e0e0e0, `#abc`->#abc.
+fn expand_color(hex: &str) -> String {
+    let h = hex.trim();
+    let expanded = match h.len() {
+        0 => "#000".to_string(),
+        1 => format!("#{}", h.repeat(6)),
+        2 => format!("#{}", h.repeat(3)),
+        _ => format!("#{h}"),
+    };
+    expanded
+}
+
+fn is_unitless_property(p: &str) -> bool {
+    matches!(
+        p,
+        "font-weight"
+            | "line-height"
+            | "opacity"
+            | "z-index"
+            | "zoom"
+            | "flex"
+            | "flex-grow"
+            | "flex-shrink"
+            | "order"
+            | "orphans"
+            | "widows"
+            | "column-count"
+    )
+}
+
+/// Property abbreviation -> property name (value-taking).
+fn css_property(a: &str) -> Option<&'static str> {
+    Some(match a {
+        "p" => "padding",
+        "pt" => "padding-top",
+        "pr" => "padding-right",
+        "pb" => "padding-bottom",
+        "pl" => "padding-left",
+        "m" => "margin",
+        "mt" => "margin-top",
+        "mr" => "margin-right",
+        "mb" => "margin-bottom",
+        "ml" => "margin-left",
+        "w" => "width",
+        "h" => "height",
+        "maw" => "max-width",
+        "mah" => "max-height",
+        "miw" => "min-width",
+        "mih" => "min-height",
+        "o" => "outline",
+        "bd" => "border",
+        "bdt" => "border-top",
+        "bdr" => "border-right",
+        "bdb" => "border-bottom",
+        "bdl" => "border-left",
+        "bdw" => "border-width",
+        "bdc" => "border-color",
+        "bds" => "border-style",
+        "bdrs" => "border-radius",
+        "bg" => "background",
+        "bgc" => "background-color",
+        "bgi" => "background-image",
+        "bgp" => "background-position",
+        "bgr" => "background-repeat",
+        "bgsz" => "background-size",
+        "c" => "color",
+        "op" | "opac" => "opacity",
+        "fz" => "font-size",
+        "fw" => "font-weight",
+        "ff" => "font-family",
+        "fs" => "font-style",
+        "lh" => "line-height",
+        "ls" => "letter-spacing",
+        "ws" => "word-spacing",
+        "ta" => "text-align",
+        "td" => "text-decoration",
+        "tt" => "text-transform",
+        "ti" => "text-indent",
+        "tsh" => "text-shadow",
+        "d" => "display",
+        "v" => "visibility",
+        "ov" => "overflow",
+        "ovx" => "overflow-x",
+        "ovy" => "overflow-y",
+        "pos" => "position",
+        "t" => "top",
+        "r" => "right",
+        "b" => "bottom",
+        "l" => "left",
+        "z" => "z-index",
+        "fl" => "float",
+        "cl" => "clear",
+        "cur" => "cursor",
+        "bxsh" => "box-shadow",
+        "bxz" => "box-sizing",
+        "fx" => "flex",
+        "fxg" => "flex-grow",
+        "fxsh" => "flex-shrink",
+        "fxb" => "flex-basis",
+        "fxd" => "flex-direction",
+        "fxw" => "flex-wrap",
+        "jc" => "justify-content",
+        "ai" => "align-items",
+        "as" => "align-self",
+        "ac" => "align-content",
+        "ord" => "order",
+        "gtc" => "grid-template-columns",
+        "gtr" => "grid-template-rows",
+        "gg" => "grid-gap",
+        "gap" => "gap",
+        "trf" => "transform",
+        "trs" => "transition",
+        "anim" => "animation",
+        "cnt" => "content",
+        "whs" => "white-space",
+        "va" => "vertical-align",
+        "zm" => "zoom",
+        _ => return None,
+    })
+}
+
+/// Whole-abbreviation keyword snippets -> `(property, value)`.
+fn css_keyword(a: &str) -> Option<(&'static str, &'static str)> {
+    Some(match a {
+        // display
+        "d:n" | "dn" => ("display", "none"),
+        "d:b" | "db" => ("display", "block"),
+        "d:i" | "di" => ("display", "inline"),
+        "d:ib" | "dib" => ("display", "inline-block"),
+        "d:f" | "df" => ("display", "flex"),
+        "d:if" | "dif" => ("display", "inline-flex"),
+        "d:g" | "dg" => ("display", "grid"),
+        "d:ig" | "dig" => ("display", "inline-grid"),
+        "d:t" => ("display", "table"),
+        // position
+        "pos:a" => ("position", "absolute"),
+        "pos:r" => ("position", "relative"),
+        "pos:f" => ("position", "fixed"),
+        "pos:s" => ("position", "static"),
+        "pos:st" => ("position", "sticky"),
+        // float / clear
+        "fl:l" => ("float", "left"),
+        "fl:r" => ("float", "right"),
+        "fl:n" => ("float", "none"),
+        "cl:l" => ("clear", "left"),
+        "cl:r" => ("clear", "right"),
+        "cl:b" => ("clear", "both"),
+        "cl:n" => ("clear", "none"),
+        // text-align
+        "ta:l" => ("text-align", "left"),
+        "ta:c" => ("text-align", "center"),
+        "ta:r" => ("text-align", "right"),
+        "ta:j" => ("text-align", "justify"),
+        // font
+        "fw:b" => ("font-weight", "bold"),
+        "fw:n" => ("font-weight", "normal"),
+        "fs:i" => ("font-style", "italic"),
+        "fs:n" => ("font-style", "normal"),
+        // text-decoration / transform
+        "td:n" => ("text-decoration", "none"),
+        "td:u" => ("text-decoration", "underline"),
+        "td:l" => ("text-decoration", "line-through"),
+        "tt:u" => ("text-transform", "uppercase"),
+        "tt:l" => ("text-transform", "lowercase"),
+        "tt:c" => ("text-transform", "capitalize"),
+        "tt:n" => ("text-transform", "none"),
+        // overflow
+        "ov:h" => ("overflow", "hidden"),
+        "ov:s" => ("overflow", "scroll"),
+        "ov:a" => ("overflow", "auto"),
+        "ov:v" => ("overflow", "visible"),
+        // visibility
+        "v:h" => ("visibility", "hidden"),
+        "v:v" => ("visibility", "visible"),
+        // cursor
+        "cur:p" => ("cursor", "pointer"),
+        "cur:d" => ("cursor", "default"),
+        // box-sizing
+        "bxz:bb" => ("box-sizing", "border-box"),
+        "bxz:cb" => ("box-sizing", "content-box"),
+        // white-space
+        "whs:n" => ("white-space", "nowrap"),
+        "whs:p" => ("white-space", "pre"),
+        // border shorthand
+        "bd:n" | "bd0" => ("border", "none"),
+        // flex-direction
+        "fxd:c" => ("flex-direction", "column"),
+        "fxd:r" => ("flex-direction", "row"),
+        // justify-content
+        "jc:c" => ("justify-content", "center"),
+        "jc:sb" => ("justify-content", "space-between"),
+        "jc:sa" => ("justify-content", "space-around"),
+        "jc:fs" => ("justify-content", "flex-start"),
+        "jc:fe" => ("justify-content", "flex-end"),
+        // align-items
+        "ai:c" => ("align-items", "center"),
+        "ai:fs" => ("align-items", "flex-start"),
+        "ai:fe" => ("align-items", "flex-end"),
+        "ai:s" => ("align-items", "stretch"),
+        "ai:b" => ("align-items", "baseline"),
+        _ => return None,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn ex(s: &str) -> String {
         expand(s, "\t", "").unwrap()
+    }
+
+    fn css(s: &str) -> String {
+        expand_css(s).unwrap()
     }
 
     #[test]
@@ -976,5 +1361,86 @@ mod tests {
     fn extract_with_text_spaces() {
         let (_s, abbr) = extract_abbreviation("p{hello world}").unwrap();
         assert_eq!(abbr, "p{hello world}");
+    }
+
+    // ---- CSS ----
+
+    #[test]
+    fn css_margin_px() {
+        assert_eq!(css("m10"), "margin: 10px;$0");
+    }
+
+    #[test]
+    fn css_empty_value_cursor() {
+        assert_eq!(css("m"), "margin: $0;");
+    }
+
+    #[test]
+    fn css_multi_value() {
+        assert_eq!(css("p10-20"), "padding: 10px 20px;$0");
+    }
+
+    #[test]
+    fn css_negative() {
+        assert_eq!(css("m-10"), "margin: -10px;$0");
+        assert_eq!(css("m10--20"), "margin: 10px -20px;$0");
+    }
+
+    #[test]
+    fn css_unit_alias_percent_em() {
+        assert_eq!(css("w50p"), "width: 50%;$0");
+        assert_eq!(css("fz1.5e"), "font-size: 1.5em;$0");
+    }
+
+    #[test]
+    fn css_zero_no_unit() {
+        assert_eq!(css("m0"), "margin: 0;$0");
+    }
+
+    #[test]
+    fn css_float_default_em() {
+        assert_eq!(css("p1.5"), "padding: 1.5em;$0");
+    }
+
+    #[test]
+    fn css_unitless() {
+        assert_eq!(css("fw400"), "font-weight: 400;$0");
+        assert_eq!(css("lh1.5"), "line-height: 1.5;$0");
+        assert_eq!(css("z10"), "z-index: 10;$0");
+        assert_eq!(css("op.5"), "opacity: 0.5;$0");
+    }
+
+    #[test]
+    fn css_color() {
+        assert_eq!(css("c#fff"), "color: #fff;$0");
+        assert_eq!(css("c#f"), "color: #ffffff;$0");
+        assert_eq!(css("bgc#e0"), "background-color: #e0e0e0;$0");
+    }
+
+    #[test]
+    fn css_keyword_snippets() {
+        assert_eq!(css("df"), "display: flex;$0");
+        assert_eq!(css("pos:a"), "position: absolute;$0");
+        assert_eq!(css("d:n"), "display: none;$0");
+        assert_eq!(css("ta:c"), "text-align: center;$0");
+        assert_eq!(css("fw:b"), "font-weight: bold;$0");
+    }
+
+    #[test]
+    fn css_important() {
+        assert_eq!(css("m10!"), "margin: 10px !important;$0");
+        assert_eq!(css("df!"), "display: flex !important;$0");
+    }
+
+    #[test]
+    fn css_unknown_is_none() {
+        assert!(expand_css("zzqq123").is_none());
+    }
+
+    #[test]
+    fn css_extract() {
+        let (start, abbr) = extract_css_abbreviation("\tc#fff").unwrap();
+        assert_eq!(start, 1);
+        assert_eq!(abbr, "c#fff");
     }
 }

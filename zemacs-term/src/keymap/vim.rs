@@ -837,6 +837,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "r" => repl,                       // SPC a r : embedded-language REPL (elisp/viml/stryke/awk/zsh)
                 "d" => file_explorer,              // SPC a d : dired (file manager)
                 "f" => file_explorer,              // SPC a f : file tree
+                "o" => { "Org"
+                    "a" => org_agenda,             // SPC a o a : org agenda (Spacemacs org-agenda)
+                    "c" => org_capture,            // SPC a o c : org capture (Spacemacs org-capture)
+                },
                 "t" => { "Ranger"
                     "r" => { "deer/dirvish"
                         "r" => file_explorer,      // SPC a t r r : ranger full layout
@@ -1204,11 +1208,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "i" => goto_implementation,
                 "y" => goto_type_definition,
                 "b" => git_blame_line,             // SPC g b : git blame current line (spacemacs magit-blame)
-                "s" => focus_git_panel,            // SPC g s : git status (focus Git changes panel)
-                "m" => focus_git_panel,            // SPC g m : magit dispatch (focus Git panel)
+                "s" => git_status,                 // SPC g s : magit status porcelain (Spacemacs magit-status)
+                "m" => resolve_conflicts,          // SPC g m : open 3-way merge-conflict resolver
+                "G" => focus_git_panel,            // SPC g G : focus zemacs Git changes panel
                 "t" => git_file_log_picker,        // SPC g t : git time machine (browse file history)
                 "M" => git_blame_line,             // SPC g M : last commit message of current line
-                "=" => git_diff,                   // SPC g = : side-by-side diff vs HEAD (d/D/m taken)
+                "=" => git_diff,                   // SPC g = : side-by-side diff vs HEAD (SPC g d is goto_definition)
                 "l" => { "Links"
                     "l" => open_remote_url,        // SPC g l l : browse to file at current line
                     "c" => open_remote_url,        // SPC g l c : browse to file at a commit
@@ -1377,6 +1382,20 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "h" => { "Help"
                     "h" => hover,                  // SPC m h h : describe thing at point
                 },
+                // Org-mode editing (zemacs has no per-language keymaps, so the org
+                // commands live in the global Major-mode menu; they no-op politely
+                // off org buffers). Promote uses `H` because lowercase `h` is the
+                // Help submenu above.
+                "t" => org_todo,                   // SPC m t : cycle TODO keyword
+                "p" => org_priority,               // SPC m p : cycle priority cookie
+                "tab" => org_cycle,                // SPC m TAB : toggle subtree fold
+                "z" => org_cycle,                  // SPC m z : toggle subtree fold (TAB alias)
+                "H" => org_promote,                // SPC m H : promote heading (h is Help submenu)
+                "l" => org_demote,                 // SPC m l : demote heading
+                "j" => org_next_heading,           // SPC m j : next heading
+                "k" => org_prev_heading,           // SPC m k : previous heading
+                "a" => org_fold_all,               // SPC m a : fold all headings
+                "A" => org_unfold_all,             // SPC m A : unfold all
             },
             // SPC u : universal-argument prefix. Only the window-layout variants
             // that map to a real command are bound; buffer variants are added via

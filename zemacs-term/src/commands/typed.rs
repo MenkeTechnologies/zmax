@@ -1660,8 +1660,16 @@ fn magit(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    open_magit(cx.editor, cx.jobs);
+    Ok(())
+}
+
+/// Shared implementation behind `:magit` / `:git` / `:gst` and the `git_status`
+/// static command: open the Magit-style git status porcelain over the repo
+/// derived from the focused file's directory (falling back to the cwd).
+pub(crate) fn open_magit(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
     // Derive a starting directory from the focused file, else the cwd.
-    let start = doc!(cx.editor)
+    let start = doc!(editor)
         .path()
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| {
@@ -1674,11 +1682,10 @@ fn magit(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
                     compositor.push(Box::new(view));
                 },
             ));
-            cx.jobs.callback(async move { Ok(call) });
+            jobs.callback(async move { Ok(call) });
         }
-        None => cx.editor.set_status("not inside a git repository"),
+        None => editor.set_status("not inside a git repository"),
     }
-    Ok(())
 }
 
 /// `:hex` — open a read-only, full-screen `xxd`-style hex viewer of a file's raw
@@ -1759,8 +1766,8 @@ fn snippets(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
 // while keeping the heading visible.
 
 /// Document line the primary cursor sits on, in the focused view.
-fn org_cursor_line(cx: &mut compositor::Context) -> usize {
-    let (view, doc) = current!(cx.editor);
+fn org_cursor_line(editor: &mut Editor) -> usize {
+    let (view, doc) = current!(editor);
     let text = doc.text().slice(..);
     let cursor = doc.selection(view.id).primary().cursor(text);
     text.char_to_line(cursor)
@@ -1803,32 +1810,36 @@ fn org_cycle(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let line = org_cursor_line(cx);
-    let (_view, doc) = current!(cx.editor);
+    org_toggle_fold(cx.editor);
+    Ok(())
+}
+
+/// Shared implementation behind `:org-cycle` / `:org-fold` and the `org_cycle`
+/// static command: toggle a fold over the current heading's subtree.
+pub(crate) fn org_toggle_fold(editor: &mut Editor) {
+    let line = org_cursor_line(editor);
+    let (_view, doc) = current!(editor);
     let line_str = org_line_text(doc, line);
     if super::org::heading_level(&line_str).is_none() {
-        cx.editor.set_status("org-cycle: not on a heading");
-        return Ok(());
+        editor.set_status("org-cycle: not on a heading");
+        return;
     }
     let lines = org_all_lines(doc);
     let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
     let end = super::org::subtree_end(&refs, line);
     if end <= line {
-        cx.editor
-            .set_status("org-cycle: heading has no subtree to fold");
-        return Ok(());
+        editor.set_status("org-cycle: heading has no subtree to fold");
+        return;
     }
     if doc.folds().closed_fold_starting_at(line).is_some() {
         doc.folds_mut().open(line);
-        cx.editor.set_status("org-cycle: expanded subtree");
+        editor.set_status("org-cycle: expanded subtree");
     } else {
         let last = doc.text().len_lines().saturating_sub(1);
         doc.folds_mut().create(line, end);
         doc.folds_mut().clamp(last);
-        cx.editor
-            .set_status(format!("org-cycle: folded lines {}-{}", line + 1, end + 1));
+        editor.set_status(format!("org-cycle: folded lines {}-{}", line + 1, end + 1));
     }
-    Ok(())
 }
 
 /// `:org-todo` — cycle the current heading's TODO keyword (none → TODO → DONE → none).
@@ -1836,16 +1847,22 @@ fn org_todo(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let line = org_cursor_line(cx);
-    let (view, doc) = current!(cx.editor);
+    org_cycle_keyword(cx.editor);
+    Ok(())
+}
+
+/// Shared implementation behind `:org-todo` and the `org_todo` static command:
+/// cycle the current heading's TODO keyword (none → TODO → DONE → none).
+pub(crate) fn org_cycle_keyword(editor: &mut Editor) {
+    let line = org_cursor_line(editor);
+    let (view, doc) = current!(editor);
     let line_str = org_line_text(doc, line);
     if super::org::heading_level(&line_str).is_none() {
-        cx.editor.set_status("org-todo: not on a heading");
-        return Ok(());
+        editor.set_status("org-todo: not on a heading");
+        return;
     }
     let new = super::org::cycle_todo(&line_str);
     org_replace_line(doc, view, line, new);
-    Ok(())
 }
 
 /// `:org-promote` — promote the current heading one level (remove a leading `*`).
@@ -1853,16 +1870,22 @@ fn org_promote(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let line = org_cursor_line(cx);
-    let (view, doc) = current!(cx.editor);
+    org_promote_heading(cx.editor);
+    Ok(())
+}
+
+/// Shared implementation behind `:org-promote` and the `org_promote` static
+/// command: promote the current heading one level (remove a leading `*`).
+pub(crate) fn org_promote_heading(editor: &mut Editor) {
+    let line = org_cursor_line(editor);
+    let (view, doc) = current!(editor);
     let line_str = org_line_text(doc, line);
     if super::org::heading_level(&line_str).is_none() {
-        cx.editor.set_status("org-promote: not on a heading");
-        return Ok(());
+        editor.set_status("org-promote: not on a heading");
+        return;
     }
     let new = super::org::promote(&line_str);
     org_replace_line(doc, view, line, new);
-    Ok(())
 }
 
 /// `:org-demote` — demote the current heading one level (add a leading `*`).
@@ -1870,16 +1893,22 @@ fn org_demote(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let line = org_cursor_line(cx);
-    let (view, doc) = current!(cx.editor);
+    org_demote_heading(cx.editor);
+    Ok(())
+}
+
+/// Shared implementation behind `:org-demote` and the `org_demote` static
+/// command: demote the current heading one level (add a leading `*`).
+pub(crate) fn org_demote_heading(editor: &mut Editor) {
+    let line = org_cursor_line(editor);
+    let (view, doc) = current!(editor);
     let line_str = org_line_text(doc, line);
     if super::org::heading_level(&line_str).is_none() {
-        cx.editor.set_status("org-demote: not on a heading");
-        return Ok(());
+        editor.set_status("org-demote: not on a heading");
+        return;
     }
     let new = super::org::demote(&line_str);
     org_replace_line(doc, view, line, new);
-    Ok(())
 }
 
 /// `:org-next-heading` — move the cursor to the next heading line, if any.
@@ -1891,8 +1920,15 @@ fn org_next_heading(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let line = org_cursor_line(cx);
-    let (view, doc) = current!(cx.editor);
+    org_goto_next_heading(cx.editor);
+    Ok(())
+}
+
+/// Shared implementation behind `:org-next-heading` and the `org_next_heading`
+/// static command: move the cursor to the next heading line, if any.
+pub(crate) fn org_goto_next_heading(editor: &mut Editor) {
+    let line = org_cursor_line(editor);
+    let (view, doc) = current!(editor);
     let total = doc.text().len_lines();
     let target =
         (line + 1..total).find(|&l| super::org::heading_level(&org_line_text(doc, l)).is_some());
@@ -1901,9 +1937,8 @@ fn org_next_heading(
             let pos = doc.text().line_to_char(l);
             doc.set_selection(view.id, Selection::point(pos));
         }
-        None => cx.editor.set_status("org: no next heading"),
+        None => editor.set_status("org: no next heading"),
     }
-    Ok(())
 }
 
 /// `:org-prev-heading` — move the cursor to the previous heading line, if any.
@@ -1915,8 +1950,15 @@ fn org_prev_heading(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let line = org_cursor_line(cx);
-    let (view, doc) = current!(cx.editor);
+    org_goto_prev_heading(cx.editor);
+    Ok(())
+}
+
+/// Shared implementation behind `:org-prev-heading` and the `org_prev_heading`
+/// static command: move the cursor to the previous heading line, if any.
+pub(crate) fn org_goto_prev_heading(editor: &mut Editor) {
+    let line = org_cursor_line(editor);
+    let (view, doc) = current!(editor);
     let target =
         (0..line).rev().find(|&l| super::org::heading_level(&org_line_text(doc, l)).is_some());
     match target {
@@ -1924,9 +1966,8 @@ fn org_prev_heading(
             let pos = doc.text().line_to_char(l);
             doc.set_selection(view.id, Selection::point(pos));
         }
-        None => cx.editor.set_status("org: no previous heading"),
+        None => editor.set_status("org: no previous heading"),
     }
-    Ok(())
 }
 
 /// `:org-fold-all` — fold every heading subtree in the buffer.
@@ -1938,8 +1979,15 @@ fn org_fold_all(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let cursor = org_cursor_line(cx);
-    let (view, doc) = current!(cx.editor);
+    org_fold_all_headings(cx.editor);
+    Ok(())
+}
+
+/// Shared implementation behind `:org-fold-all` and the `org_fold_all` static
+/// command: fold every heading subtree in the buffer.
+pub(crate) fn org_fold_all_headings(editor: &mut Editor) {
+    let cursor = org_cursor_line(editor);
+    let (view, doc) = current!(editor);
     let lines = org_all_lines(doc);
     let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
     let mut count = 0usize;
@@ -1959,9 +2007,7 @@ fn org_fold_all(
         let pos = doc.text().line_to_char(anchor);
         doc.set_selection(view.id, Selection::point(pos));
     }
-    cx.editor
-        .set_status(format!("org: folded {count} heading(s)"));
-    Ok(())
+    editor.set_status(format!("org: folded {count} heading(s)"));
 }
 
 /// `:org-unfold-all` — open every fold in the buffer.
@@ -1973,10 +2019,16 @@ fn org_unfold_all(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let (_view, doc) = current!(cx.editor);
-    doc.folds_mut().open_all();
-    cx.editor.set_status("org: unfolded all");
+    org_unfold_all_folds(cx.editor);
     Ok(())
+}
+
+/// Shared implementation behind `:org-unfold-all` and the `org_unfold_all`
+/// static command: open every fold in the buffer.
+pub(crate) fn org_unfold_all_folds(editor: &mut Editor) {
+    let (_view, doc) = current!(editor);
+    doc.folds_mut().open_all();
+    editor.set_status("org: unfolded all");
 }
 
 /// `:org-agenda` / `:agenda` — open the org agenda overlay: TODO/DONE headings
@@ -1987,21 +2039,27 @@ fn org_agenda(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    open_org_agenda(cx.editor, cx.jobs);
+    Ok(())
+}
+
+/// Shared implementation behind `:org-agenda` / `:agenda` and the `org_agenda`
+/// static command: open the org agenda overlay over the working tree.
+pub(crate) fn open_org_agenda(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
     // Scan the focused file's directory if it has one, else the cwd.
-    let root = doc!(cx.editor)
+    let root = doc!(editor)
         .path()
         .and_then(|p| p.parent().map(|p| p.to_path_buf()))
         .unwrap_or_else(|| {
             std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
         });
-    let agenda = crate::ui::org_agenda::OrgAgenda::new(cx.editor, root);
+    let agenda = crate::ui::org_agenda::OrgAgenda::new(editor, root);
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
         move |_editor: &mut Editor, compositor: &mut Compositor| {
             compositor.push(Box::new(agenda));
         },
     ));
-    cx.jobs.callback(async move { Ok(call) });
-    Ok(())
+    jobs.callback(async move { Ok(call) });
 }
 
 /// `:org-priority` — cycle the current heading's priority cookie: none → `[#A]` →
@@ -2014,16 +2072,23 @@ fn org_priority(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let line = org_cursor_line(cx);
-    let (view, doc) = current!(cx.editor);
+    org_cycle_priority(cx.editor);
+    Ok(())
+}
+
+/// Shared implementation behind `:org-priority` and the `org_priority` static
+/// command: cycle the current heading's priority cookie (none → `[#A]` → `[#B]`
+/// → `[#C]` → none).
+pub(crate) fn org_cycle_priority(editor: &mut Editor) {
+    let line = org_cursor_line(editor);
+    let (view, doc) = current!(editor);
     let line_str = org_line_text(doc, line);
     if super::org::heading_level(&line_str).is_none() {
-        cx.editor.set_status("org-priority: not on a heading");
-        return Ok(());
+        editor.set_status("org-priority: not on a heading");
+        return;
     }
     let new = super::org::priority_cycle(&line_str);
     org_replace_line(doc, view, line, new);
-    Ok(())
 }
 
 /// `:org-capture` / `:capture` — prompt for a line of text and append it as a
@@ -2035,14 +2100,26 @@ fn org_capture(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    open_org_capture(cx.editor, cx.jobs, args.first());
+    Ok(())
+}
+
+/// Shared implementation behind `:org-capture` / `:capture` and the `org_capture`
+/// static command: prompt for a line of text and append it as a `* TODO <text>`
+/// entry to an inbox org file. `arg` is the optional explicit inbox path.
+pub(crate) fn open_org_capture(
+    editor: &mut Editor,
+    jobs: &mut crate::job::Jobs,
+    arg: Option<&str>,
+) {
     // Resolve the inbox path from the optional argument + working directory.
-    let working_dir = doc!(cx.editor)
+    let working_dir = doc!(editor)
         .path()
         .and_then(|p| p.parent().map(|p| p.to_path_buf()))
         .unwrap_or_else(|| {
             std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
         });
-    let inbox = super::org::inbox_path(args.first(), &working_dir);
+    let inbox = super::org::inbox_path(arg, &working_dir);
 
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
         move |_editor: &mut Editor, compositor: &mut Compositor| {
@@ -2072,8 +2149,7 @@ fn org_capture(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
             compositor.push(Box::new(prompt));
         },
     ));
-    cx.jobs.callback(async move { Ok(call) });
-    Ok(())
+    jobs.callback(async move { Ok(call) });
 }
 
 /// `:terminal` / `:term` — open an integrated terminal (PTY shell). The panel is

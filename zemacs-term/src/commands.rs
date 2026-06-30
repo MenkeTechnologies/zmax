@@ -509,6 +509,18 @@ impl MappableCommand {
         conflict_take_all_theirs, "Resolve ALL conflicts: keep their side",
         git_diff, "Open side-by-side diff vs HEAD",
         resolve_conflicts, "Resolve merge conflicts (3-way)",
+        git_status, "Magit status",
+        org_cycle, "Org: toggle subtree fold",
+        org_todo, "Org: cycle TODO keyword",
+        org_priority, "Org: cycle priority cookie",
+        org_promote, "Org: promote heading",
+        org_demote, "Org: demote heading",
+        org_next_heading, "Org: next heading",
+        org_prev_heading, "Org: previous heading",
+        org_fold_all, "Org: fold all headings",
+        org_unfold_all, "Org: unfold all",
+        org_agenda, "Org: open agenda",
+        org_capture, "Org: capture note",
         goto_first_change, "Goto first change",
         goto_last_change, "Goto last change",
         goto_line_start, "Goto line start",
@@ -10795,6 +10807,67 @@ fn resolve_conflicts(cx: &mut Context) {
     typed::open_merge(cx.editor, cx.jobs);
 }
 
+/// Open the Magit-style git status porcelain for the focused buffer's repo.
+/// Static-command mirror of the `:magit` / `:git` typable command.
+fn git_status(cx: &mut Context) {
+    typed::open_magit(cx.editor, cx.jobs);
+}
+
+/// Toggle a fold over the current org heading's subtree (`:org-cycle`).
+fn org_cycle(cx: &mut Context) {
+    typed::org_toggle_fold(cx.editor);
+}
+
+/// Cycle the current org heading's TODO keyword (`:org-todo`).
+fn org_todo(cx: &mut Context) {
+    typed::org_cycle_keyword(cx.editor);
+}
+
+/// Cycle the current org heading's priority cookie (`:org-priority`).
+fn org_priority(cx: &mut Context) {
+    typed::org_cycle_priority(cx.editor);
+}
+
+/// Promote the current org heading one level (`:org-promote`).
+fn org_promote(cx: &mut Context) {
+    typed::org_promote_heading(cx.editor);
+}
+
+/// Demote the current org heading one level (`:org-demote`).
+fn org_demote(cx: &mut Context) {
+    typed::org_demote_heading(cx.editor);
+}
+
+/// Move the cursor to the next org heading (`:org-next-heading`).
+fn org_next_heading(cx: &mut Context) {
+    typed::org_goto_next_heading(cx.editor);
+}
+
+/// Move the cursor to the previous org heading (`:org-prev-heading`).
+fn org_prev_heading(cx: &mut Context) {
+    typed::org_goto_prev_heading(cx.editor);
+}
+
+/// Fold every org heading subtree in the buffer (`:org-fold-all`).
+fn org_fold_all(cx: &mut Context) {
+    typed::org_fold_all_headings(cx.editor);
+}
+
+/// Open every fold in the buffer (`:org-unfold-all`).
+fn org_unfold_all(cx: &mut Context) {
+    typed::org_unfold_all_folds(cx.editor);
+}
+
+/// Open the org agenda overlay over the working tree (`:org-agenda`).
+fn org_agenda(cx: &mut Context) {
+    typed::open_org_agenda(cx.editor, cx.jobs);
+}
+
+/// Prompt for a note and capture it into the inbox org file (`:org-capture`).
+fn org_capture(cx: &mut Context) {
+    typed::open_org_capture(cx.editor, cx.jobs, None);
+}
+
 /// Run the active named run configuration (or auto-detect when none is set).
 fn run_active_config(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| {
@@ -12690,7 +12763,10 @@ fn try_emmet_expand(cx: &mut Context) -> bool {
     let (view, doc) = current!(cx.editor);
     let view_id = view.id;
 
-    if !crate::emmet::is_html_like(doc.language_id()) {
+    let lang = doc.language_id();
+    let is_css = crate::emmet::is_css_like(lang);
+    let is_html = crate::emmet::is_html_like(lang);
+    if !is_css && !is_html {
         return false;
     }
 
@@ -12708,16 +12784,27 @@ fn try_emmet_expand(cx: &mut Context) -> bool {
         let line_start = text.line_to_char(line);
         let before: String = slice.slice(line_start..cursor).chars().collect();
 
-        let Some((start_in_line, abbr)) = crate::emmet::extract_abbreviation(&before) else {
-            return false;
-        };
-        let base_indent: String = before
-            .chars()
-            .take_while(|c| *c == ' ' || *c == '\t')
-            .collect();
-        let indent_unit = doc.indent_style.as_str();
-        let Some(snippet_str) = crate::emmet::expand(&abbr, indent_unit, &base_indent) else {
-            return false;
+        let (start_in_line, snippet_str) = if is_css {
+            let Some((start, abbr)) = crate::emmet::extract_css_abbreviation(&before) else {
+                return false;
+            };
+            let Some(snippet_str) = crate::emmet::expand_css(&abbr) else {
+                return false;
+            };
+            (start, snippet_str)
+        } else {
+            let Some((start, abbr)) = crate::emmet::extract_abbreviation(&before) else {
+                return false;
+            };
+            let base_indent: String = before
+                .chars()
+                .take_while(|c| *c == ' ' || *c == '\t')
+                .collect();
+            let indent_unit = doc.indent_style.as_str();
+            let Some(snippet_str) = crate::emmet::expand(&abbr, indent_unit, &base_indent) else {
+                return false;
+            };
+            (start, snippet_str)
         };
         (
             line_start + start_in_line,
