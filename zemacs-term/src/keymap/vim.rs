@@ -118,6 +118,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t l",   "Toggles", ":toggle soft-wrap.enable"),            // SPC t l : truncate/wrap lines
     ("space t L",   "Toggles", ":toggle soft-wrap.enable"),            // SPC t L : toggle visual (wrapped) lines
     ("space t W",   "Toggles", ":toggle trim-trailing-whitespace"),    // SPC t W : auto whitespace cleanup on save
+    ("space t g",   "Toggles", "golden_ratio_resize"),                  // SPC t g : golden-ratio window resize
     ("space t m p", "Toggles", "toggle_modeline_position"),            // SPC t m p : toggle point position in mode line
     ("space t m v", "Toggles", "toggle_modeline_vcs"),                 // SPC t m v : toggle VC info in mode line
     ("space t -",   "Toggles", "toggle_centered_cursor"),             // SPC t - : centered-cursor mode
@@ -759,6 +760,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "m" => wonly,                  // SPC w . m : maximize current window
                 "x" => delete_window_and_buffer, // SPC w . x : delete window + kill buffer
                 "a" => rotate_view,            // SPC w . a : ace-window (cycle focus)
+                    "g" => golden_ratio_resize,    // SPC w . g : golden-ratio resize
                 "1" => goto_window_1, "2" => goto_window_2, "3" => goto_window_3,
                 "4" => goto_window_4, "5" => goto_window_5, "6" => goto_window_6,
                 "7" => goto_window_7, "8" => goto_window_8, "9" => goto_window_9,
@@ -1092,6 +1094,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "m" => wonly,                  // SPC w . m : maximize current window
                     "x" => delete_window_and_buffer, // SPC w . x : delete window + kill buffer
                     "a" => rotate_view,            // SPC w . a : ace-window (cycle focus)
+                    "g" => golden_ratio_resize,    // SPC w . g : golden-ratio resize
                     "1" => goto_window_1, "2" => goto_window_2, "3" => goto_window_3,
                     "4" => goto_window_4, "5" => goto_window_5, "6" => goto_window_6,
                     "7" => goto_window_7, "8" => goto_window_8, "9" => goto_window_9,

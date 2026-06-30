@@ -18422,5 +18422,21 @@
    "static:code_action"
   ],
   "note": "jetbrains"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_g_2",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t g"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_g",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . g"
+  ],
+  "note": ""
  }
 ]
