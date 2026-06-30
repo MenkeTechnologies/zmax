@@ -514,6 +514,7 @@ impl MappableCommand {
         describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
         package_search, "Search configured language packages and describe one (SPC h p)",
         config_variable_search, "Search editor config variables, copy path on select (SPC h .)",
+        clone_indirect_buffer, "Clone the current buffer into a shared-document split (SPC b N i)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -13523,6 +13524,15 @@ fn vsplit(cx: &mut Context) {
 
 fn vsplit_new(cx: &mut Context) {
     cx.editor.new_file(Action::VerticalSplit);
+}
+
+/// SPC b N i : clone the current buffer into a new split. zemacs views share their underlying
+/// Document — text and edits propagate between them — so a second view of the same buffer is
+/// functionally an Emacs indirect buffer of the same base. Spacemacs `make-indirect-buffer`.
+fn clone_indirect_buffer(cx: &mut Context) {
+    split(cx.editor, Action::VerticalSplit);
+    cx.editor
+        .set_status("indirect clone: new view sharing this buffer");
 }
 
 fn wclose(cx: &mut Context) {
