@@ -18842,11 +18842,11 @@
   },
   {
     "spec_id": "jetbrains.window.move-to-opposite-group",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:transpose_view"
+      "static:move_to_opposite_group"
     ],
-    "note": "transpose split orientation"
+    "note": "Move to Opposite Tab Group = move_to_opposite_group: swaps the current editor into the adjacent split group (first available direction)"
   },
   {
     "spec_id": "jetbrains.window.reopen-closed-tab",
