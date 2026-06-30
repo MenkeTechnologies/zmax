@@ -164,8 +164,16 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
             };
             cx.jobs.callback(callback);
         } else {
-            // Otherwise, just open the file
-            let _ = cx.editor.open(&path, action)?;
+            // Otherwise, just open the file — a binary file opens in the hex
+            // editor instead of being rejected.
+            match cx.editor.open(&path, action) {
+                Ok(_) => {}
+                Err(zemacs_view::DocumentOpenError::BinaryFile) => {
+                    push_hex_view(cx, path.into_owned());
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
             let (view, doc) = current!(cx.editor);
             let pos = Selection::point(pos_at_coords(doc.text().slice(..), pos, true));
             doc.set_selection(view.id, pos);
@@ -1695,12 +1703,20 @@ fn hex(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::
         return Ok(());
     };
 
+    push_hex_view(cx, path);
+    Ok(())
+}
+
+/// Read `path`'s raw bytes and open them in the hex editor overlay. Shared by the
+/// `:hex` command and by binary-file open routing (a binary file opens here
+/// instead of being rejected). Sets a status message on read failure.
+pub(crate) fn push_hex_view(cx: &mut compositor::Context, path: std::path::PathBuf) {
     let bytes = match std::fs::read(&path) {
         Ok(bytes) => bytes,
         Err(err) => {
             cx.editor
                 .set_status(format!("can't read {}: {err}", path.display()));
-            return Ok(());
+            return;
         }
     };
 
@@ -1716,7 +1732,6 @@ fn hex(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::
         },
     ));
     cx.jobs.callback(async move { Ok(call) });
-    Ok(())
 }
 
 // --- Org-mode (slice 1: outline folding + TODO cycling) ----------------------

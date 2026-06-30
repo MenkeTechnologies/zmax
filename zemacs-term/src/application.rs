@@ -216,6 +216,23 @@ impl Application {
                                 nr_of_files -= 1;
                                 continue;
                             }
+                            // A binary file opens in the hex editor instead of
+                            // being rejected.
+                            Err(DocumentOpenError::BinaryFile) => {
+                                if let Ok(bytes) = std::fs::read(&file) {
+                                    let name = file
+                                        .file_name()
+                                        .map(|n| n.to_string_lossy().into_owned())
+                                        .unwrap_or_else(|| file.display().to_string());
+                                    compositor.push(Box::new(ui::hex::HexView::new(
+                                        name,
+                                        Some(file.clone()),
+                                        bytes,
+                                    )));
+                                }
+                                nr_of_files -= 1;
+                                continue;
+                            }
                             Err(err) => return Err(anyhow::anyhow!(err)),
                             // We can't open more than 1 buffer for 1 file, in this case we already have opened this file previously
                             Ok(doc_id) if old_id == Some(doc_id) => {
