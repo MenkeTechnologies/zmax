@@ -6947,11 +6947,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_e_c_e",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space f e C-e"
+   "key:normal:space f e C-e",
+   "static:reimport_shell_env"
   ],
-  "note": "reinit env -> :config-reload"
+  "note": "reinit .spacemacs.env -> reimport_shell_env (run login shell env, set_var into editor process)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_c_d",

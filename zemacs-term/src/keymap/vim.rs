@@ -155,7 +155,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space f e i", "Files",   ":config-open"),                       // SPC f e i : open init/config
     ("space f e e", "Files",   "show_environment"),                   // SPC f e e : show editor environment variables
     ("space f e R", "Files",   ":config-reload"),                     // SPC f e R : resync the dotfile
-    ("space f e C-e", "Files",  ":config-reload"),                    // SPC f e C-e : reinit env
+    ("space f e C-e", "Files",  "reimport_shell_env"),                // SPC f e C-e : re-import shell environment
     ("space f C d", "Files",   ":line-ending crlf"),                  // SPC f C d : unix -> dos line endings
     ("space f C u", "Files",   ":line-ending lf"),                    // SPC f C u : dos -> unix line endings
     ("space e y",   "Errors",  ":yank-diagnostic"),                   // SPC e y : copy error at point
