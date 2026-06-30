@@ -10068,7 +10068,7 @@ fn ai_revert_agent(cx: &mut Context) {
 
 /// Reload the given files from disk into any open buffers (the agent's "IDE auto-refresh"). Only
 /// touches buffers for these paths, so unsaved edits elsewhere are untouched.
-fn reload_docs_for_paths(editor: &mut Editor, paths: &[std::path::PathBuf]) {
+pub(crate) fn reload_docs_for_paths(editor: &mut Editor, paths: &[std::path::PathBuf]) {
     let default_view = view!(editor).id;
     for path in paths {
         let Some(doc_id) = editor.document_id_by_path(path) else {

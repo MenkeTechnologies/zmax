@@ -534,6 +534,69 @@ fn del_marks(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+/// `:project-replace {pattern} {replacement}` / `:replace-in-files` — JetBrains "Replace in Files"
+/// (Cmd Shift R): regex-replace across every workspace file that matches `pattern` (ripgrep finds the
+/// files; `$1`-style capture refs work in the replacement), writing changed files and reloading any
+/// open buffers. Destructive across the working tree — recoverable via git.
+fn project_replace(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args[0].to_string();
+    let replacement = args[1].to_string();
+    let re = regex::Regex::new(&pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let root = zemacs_loader::find_workspace().0;
+    cx.editor.set_status("project-replace: searching…");
+    cx.jobs.callback(async move {
+        let res = tokio::task::spawn_blocking(
+            move || -> (usize, usize, Vec<std::path::PathBuf>) {
+                let out = std::process::Command::new("rg")
+                    .arg("-l")
+                    .arg("--null")
+                    .arg("-e")
+                    .arg(&pattern)
+                    .current_dir(&root)
+                    .output();
+                let files: Vec<std::path::PathBuf> = match out {
+                    Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout)
+                        .split('\0')
+                        .filter(|s| !s.is_empty())
+                        .map(|s| root.join(s))
+                        .collect(),
+                    _ => Vec::new(),
+                };
+                let mut changed = Vec::new();
+                let mut total = 0usize;
+                for path in files {
+                    let Ok(content) = std::fs::read_to_string(&path) else {
+                        continue;
+                    };
+                    let count = re.find_iter(&content).count();
+                    if count == 0 {
+                        continue;
+                    }
+                    let new = re.replace_all(&content, replacement.as_str());
+                    if new != content && std::fs::write(&path, new.as_bytes()).is_ok() {
+                        total += count;
+                        changed.push(path);
+                    }
+                }
+                (changed.len(), total, changed)
+            },
+        )
+        .await
+        .map_err(|e| anyhow!("project-replace task: {e}"))?;
+        let (nfiles, total, paths) = res;
+        Ok(job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+            crate::commands::reload_docs_for_paths(editor, &paths);
+            editor.set_status(format!(
+                "project-replace: {total} replacement(s) in {nfiles} file(s)"
+            ));
+        })))
+    });
+    Ok(())
+}
+
 /// `:delmarks!` — delete all lowercase/uppercase letter marks (vim `:delmarks!`).
 fn del_marks_all(
     cx: &mut compositor::Context,
@@ -14386,6 +14449,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "project-replace",
+        aliases: &["replace-in-files"],
+        doc: "Regex-replace across all matching workspace files (JetBrains Replace in Files).",
+        fun: project_replace,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
             ..Signature::DEFAULT
         },
     },

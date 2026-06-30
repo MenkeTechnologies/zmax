@@ -11583,11 +11583,11 @@
   },
   {
     "spec_id": "jetbrains.search.replace-in-files",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:substitute"
+      "typable:project-replace"
     ],
-    "note": "global substitute ~ project replace"
+    "note": "Replace in Files (Cmd Shift R) = :project-replace/:replace-in-files: real regex replace across all matching workspace files (ripgrep) with capture refs, writes files + reloads open buffers"
   },
   {
     "spec_id": "jetbrains.search.go-to-file",
