@@ -19197,5 +19197,50 @@
    "static:regex_emacs_to_rx_replace"
   ],
   "note": "replace Emacs regexp by rx form -> regex_emacs_to_rx_replace"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_n_rU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space n R",
+   "static:narrow_region_indirect"
+  ],
+  "note": "narrow to selected text in indirect buffer -> narrow_region_indirect (clone split + per-view narrow to selection)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_b_nU_iU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b N I",
+   "static:clone_indirect_buffer"
+  ],
+  "note": "indirect buffer clone of current -> clone_indirect_buffer"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_b_cU_dU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b C-D",
+   "static:kill_buffers_by_regex"
+  ],
+  "note": "kill buffers by regex -> kill_buffers_by_regex"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_f_e_eU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space f e E",
+   "static:reimport_shell_env"
+  ],
+  "note": "reload env via user-env -> reimport_shell_env"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_f_e_v",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space f e v",
+   "static:copy_version"
+  ],
+  "note": "display and copy version -> copy_version"
  }
 ]

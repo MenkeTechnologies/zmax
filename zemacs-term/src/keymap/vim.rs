@@ -42,6 +42,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space b R", "Buffers", ":reload"),           // SPC b R : revert
     ("space b N n", "Buffers", ":new"),            // SPC b N n : new buffer, current window
     ("space b N i", "Buffers", "clone_indirect_buffer"), // SPC b N i : indirect clone (shared-doc split)
+    ("space b N I", "Buffers", "clone_indirect_buffer"), // SPC b N I : indirect clone of current buffer
+    ("space b C-D", "Buffers", "kill_buffers_by_regex"), // SPC b C-D : kill buffers matching a regex
     ("space b N C-i", "Buffers", "clone_indirect_from_buffer"), // SPC b N C-i : indirect from existing buffer (shared-doc split)
     ("space q q", "Quit",    ":quit-all"),         // SPC q q : quit
     ("space q Q", "Quit",    ":quit-all!"),        // SPC q Q : force quit
@@ -157,6 +159,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space p e",   "Project", "edit_project_config"),                // SPC p e : edit project-local .zemacs/config.toml (dir-locals)
     ("space f e i", "Files",   ":config-open"),                       // SPC f e i : open init/config
     ("space f e e", "Files",   "show_environment"),                   // SPC f e e : show editor environment variables
+    ("space f e E", "Files",   "reimport_shell_env"),                 // SPC f e E : reload env from the shell
+    ("space f e v", "Files",   "copy_version"),                       // SPC f e v : display and copy the version
     ("space f e R", "Files",   ":config-reload"),                     // SPC f e R : resync the dotfile
     ("space f e C-e", "Files",  "reimport_shell_env"),                // SPC f e C-e : re-import shell environment
     ("space f C d", "Files",   ":line-ending crlf"),                  // SPC f C d : unix -> dos line endings
@@ -1312,6 +1316,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "w" => widen,                      // SPC n w : widen (remove narrowing, show whole buffer)
                 "f" => narrow_to_function,         // SPC n f : narrow to the enclosing function
                 "F" => narrow_to_function_indirect, // SPC n F : narrow to function in an indirect (split) view
+                "R" => narrow_region_indirect,     // SPC n R : narrow to selection in an indirect (split) view
                 "p" => narrow_to_page,             // SPC n p : narrow to the current page
                 "P" => narrow_to_page_indirect,    // SPC n P : narrow to page in an indirect (split) view
             },
