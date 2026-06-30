@@ -69,6 +69,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x r x", "Text",    "regex_pcre_to_rx_replace"),              // SPC x r x : regex around point -> rx form
     ("space x r /", "Text",    "regex_pcre_to_rx_explain"),              // SPC x r / : explain regex as rx
     ("space x r e x", "Text",  "regex_emacs_to_rx_replace"),            // SPC x r e x : Emacs regex -> rx form
+    ("space x r e t", "Text",  "regex_emacs_to_rx_replace"),            // SPC x r e t : replace Emacs regex by rx form
     ("space x r e /", "Text",  "regex_emacs_to_rx_explain"),            // SPC x r e / : explain Emacs regex as rx
     ("space x r e p", "Text",  "regex_convert_form"),                    // SPC x r e p : Emacs regex -> PCRE
     ("space x r p e", "Text",  "regex_convert_form"),                    // SPC x r p e : PCRE -> Emacs regex
@@ -140,6 +141,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t h i", "Toggles", ":toggle indent-guides.render"),        // SPC t h i : highlight indentation
     ("space t C-i", "Toggles", ":toggle indent-guides.render"),        // SPC t C-i : global indent guide
     ("space t h c", "Toggles", ":toggle cursorcolumn"),                // SPC t h c : highlight current column
+    ("space t h s", "Toggles", "toggle_syntax_highlighting"),          // SPC t h s : toggle syntax highlighting
+    ("space t s",   "Toggles", "toggle_diagnostics"),                  // SPC t s : toggle diagnostics (flycheck)
     ("space t C-S-l", "Toggles", ":toggle soft-wrap.enable"),          // SPC t C-S-l : visual line navigation
     ("space t K", "Toggles", ":toggle auto-info"),                     // SPC t K : which-key (auto-info) mode
     ("space t k k", "Toggles", ":toggle auto-info"),                   // SPC t k k : which-key persistent state
@@ -1310,9 +1313,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "r" => narrow_to_region,           // SPC n r : narrow buffer to selection (fold outside)
                 "w" => widen,                      // SPC n w : widen (remove narrowing, show whole buffer)
                 "f" => narrow_to_function,         // SPC n f : narrow to the enclosing function
-                "F" => narrow_to_function,         // SPC n F : narrow to function (indirect approx)
+                "F" => narrow_to_function_indirect, // SPC n F : narrow to function in an indirect (split) view
                 "p" => narrow_to_page,             // SPC n p : narrow to the current page
-                "P" => narrow_to_page,             // SPC n P : narrow to page (indirect approx)
+                "P" => narrow_to_page_indirect,    // SPC n P : narrow to page in an indirect (split) view
             },
             "g" => { "Goto (LSP)"
                 "d" => goto_definition,
@@ -1365,6 +1368,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "D" => layout_delete,              // SPC l D : delete other layouts (approx)
                 "S" => layout_save,                // SPC l S : save layouts to file (s is signature-help)
                 "L" => layout_load,                // SPC l L : load layouts from file
+                "o" => layout_load,                // SPC l o : open a custom layout (load from file)
+                "R" => layout_rename,              // SPC l R : rename current layout
                 "b" => buffer_picker,              // SPC l b : select a buffer in the layout
                 "t" => buffer_picker,              // SPC l t : display a buffer
                 "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
@@ -1379,6 +1384,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "N" => layout_prev,            // SPC l w N : previous workspace
                     "h" => layout_prev,            // SPC l w h : previous workspace
                     "d" => layout_delete,          // SPC l w d : close workspace
+                    "R" => layout_rename,          // SPC l w R : rename current workspace
                     "tab" => layout_last,          // SPC l w TAB : last workspace
                     "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
                     "4" => layout_goto_4, "5" => layout_goto_5, "6" => layout_goto_6,
@@ -1509,8 +1515,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "?" => help,                       // SPC h ? : list bindings
                 "c" => help,                       // SPC h c : describe command
                 "space" => help,                   // SPC h SPC : discover docs (Help browser)
-                "f" => command_palette,            // SPC h f : discover the FAQ
-                "l" => command_palette,            // SPC h l : search layers
+                "f" => browse_faq,                 // SPC h f : discover the FAQ (browse FAQ.md)
+                "l" => layer_search,               // SPC h l : search capability areas (zemacs "layers")
                 "p" => package_search,             // SPC h p : search language packages
                 "n" => browse_news,                // SPC h n : browse zemacs release notes (NEWS)
                 "r" => help,                       // SPC h r : search documentation files (Help browser)

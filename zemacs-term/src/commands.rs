@@ -480,6 +480,7 @@ impl MappableCommand {
         layout_default, "Switch to the default (first) layout (SPC l h)",
         layout_delete, "Delete the current layout, keeping its buffers (SPC l d)",
         layout_save, "Save layouts to disk (SPC l s)",
+        layout_rename, "Rename the current layout (SPC l R)",
         layout_load, "Load layouts from disk (SPC l L)",
         layout_goto_1, "Switch to layout 1 (SPC l 1)",
         layout_goto_2, "Switch to layout 2 (SPC l 2)",
@@ -500,6 +501,8 @@ impl MappableCommand {
         toggle_line_numbers, "Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers)",
         toggle_indent_guides, "Toggle indentation guides (IntelliJ View > Show Indent Guides)",
         toggle_inlay_hints, "Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints)",
+        toggle_syntax_highlighting, "Toggle syntax highlighting for the current buffer (SPC t h s)",
+        toggle_diagnostics, "Toggle diagnostics display / flycheck (SPC t s)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
         ediff_3_buffers, "3-way diff of three open buffers, read-only (SPC D b 3)",
@@ -519,6 +522,8 @@ impl MappableCommand {
         copy_last_keys, "Copy the most recently pressed keys to the clipboard (SPC h d l)",
         ace_window, "Jump to a window by its number, prompted (ace-window, SPC w . a)",
         browse_news, "Browse zemacs release notes / NEWS (SPC h n)",
+        browse_faq, "Browse the zemacs FAQ (SPC h f)",
+        layer_search, "Search zemacs capability areas / layers (SPC h l)",
         show_environment, "Show the editor's environment variables (SPC f e e)",
         reimport_shell_env, "Re-import the shell environment into the editor (SPC f e C-e)",
         goto_buffer_window, "Focus the window already showing a chosen buffer (SPC b w)",
@@ -916,6 +921,8 @@ impl MappableCommand {
         fold_delete_all, "Delete all folds (zE)",
         narrow_to_region, "Narrow the buffer to the selected region (SPC n r)",
         widen, "Widen: remove narrowing and reveal the whole buffer (SPC n w)",
+        narrow_to_function_indirect, "Narrow to the function in an indirect (split) view (SPC n F)",
+        narrow_to_page_indirect, "Narrow to the page in an indirect (split) view (SPC n P)",
         kmacro_ring_next, "Cycle to the next macro in the ring (SPC K r n)",
         kmacro_ring_prev, "Cycle to the previous macro in the ring (SPC K r p)",
         kmacro_ring_delete, "Delete the head macro in the ring (SPC K r d)",
@@ -1179,7 +1186,7 @@ fn move_impl(cx: &mut Context, move_fn: MoveFn, dir: Direction, behaviour: Movem
     let count = cx.count();
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
-    let text_fmt = doc.text_format(view.inner_area(doc).width, None);
+    let text_fmt = doc.text_format(view.inner_area(doc).width, None, Some(view.id));
     let mut annotations = view.text_annotations(doc, None);
 
     let selection = doc.selection(view.id).clone().transform(|range| {
@@ -2332,7 +2339,7 @@ fn goto_file_start_impl(cx: &mut Context, movement: Movement) {
         goto_line_impl(cx, movement);
     } else {
         let (view, doc) = current!(cx.editor);
-        let start = doc.point_min();
+        let start = doc.view_point_min(view.id);
         let text = doc.text().slice(..);
         let selection = doc
             .selection(view.id)
@@ -2354,8 +2361,8 @@ fn extend_to_file_end(cx: &mut Context) {
 fn goto_file_end_impl(cx: &mut Context, movement: Movement) {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
-    // Confine to the narrowed region end when narrowed (Emacs point-max).
-    let pos = doc.point_max();
+    // Confine to the narrowed region end when narrowed (Emacs point-max), per-view aware.
+    let pos = doc.view_point_max(view.id);
     let selection = doc
         .selection(view.id)
         .clone()
@@ -5229,7 +5236,7 @@ pub fn scroll(cx: &mut Context, offset: usize, direction: Direction, sync_cursor
 
     let doc_text = doc.text().slice(..);
     let viewport = view.inner_area(doc);
-    let text_fmt = doc.text_format(viewport.width, None);
+    let text_fmt = doc.text_format(viewport.width, None, Some(view.id));
     (view_offset.anchor, view_offset.vertical_offset) = char_idx_at_visual_offset(
         doc_text,
         view_offset.anchor,
@@ -5672,9 +5679,9 @@ fn move_text_line_up(cx: &mut Context) {
 fn select_all(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
 
-    // Confine to the narrowed region when the buffer is narrowed (Emacs narrow-to-region).
-    let start = doc.point_min();
-    let end = doc.point_max();
+    // Confine to the narrowed region when narrowed — per-view narrow wins over the doc-wide one.
+    let start = doc.view_point_min(view.id);
+    let end = doc.view_point_max(view.id);
     doc.set_selection(view.id, Selection::single(start, end))
 }
 
@@ -7016,6 +7023,36 @@ fn layout_create(cx: &mut Context) {
     cx.editor.set_status(format!("created layout {name}"));
 }
 
+/// SPC l R : rename the current layout (Spacemacs `spacemacs/layouts-rename`).
+fn layout_rename(cx: &mut Context) {
+    let cur_name = {
+        let s = LAYOUTS.lock().unwrap();
+        if s.layouts.is_empty() {
+            cx.editor.set_status("no layouts — SPC l l to create one");
+            return;
+        }
+        s.layouts[s.current.min(s.layouts.len() - 1)].name.clone()
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        format!("rename layout ({cur_name}) to:").into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let new = input.trim().to_string();
+            let mut s = LAYOUTS.lock().unwrap();
+            if !s.layouts.is_empty() {
+                let cur = s.current.min(s.layouts.len() - 1);
+                s.layouts[cur].name = new.clone();
+                cx.editor.set_status(format!("renamed layout to {new}"));
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
 /// Save the current windows into the active layout, then restore layout `target`.
 fn layout_switch(cx: &mut Context, target: usize) {
     let (files, focused) = layout_capture(cx);
@@ -7303,6 +7340,59 @@ fn toggle_inlay_hints(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("inlay hints: {}", if on { "on" } else { "off" }));
+}
+
+/// SPC t h s : toggle syntax highlighting for the current buffer (Spacemacs
+/// `spacemacs/toggle-syntax-highlighting`). Clears the language (fundamental) or re-detects it.
+fn toggle_syntax_highlighting(cx: &mut Context) {
+    let loader: &zemacs_core::syntax::Loader = &cx.editor.syn_loader.load();
+    let msg = {
+        let (_view, doc) = current!(cx.editor);
+        if doc.syntax().is_some() {
+            doc.set_language(None, loader);
+            "syntax highlighting: off"
+        } else {
+            doc.detect_language(loader);
+            if doc.syntax().is_some() {
+                "syntax highlighting: on"
+            } else {
+                "syntax highlighting: off (no grammar for this file type)"
+            }
+        }
+    };
+    cx.editor.set_status(msg);
+}
+
+/// SPC t s : toggle diagnostics display (the zemacs analogue of Spacemacs' `toggle-flycheck`).
+/// Turns the end-of-line diagnostic messages and the diagnostics gutter on/off.
+fn toggle_diagnostics(cx: &mut Context) {
+    use zemacs_view::annotations::diagnostics::DiagnosticFilter;
+    use zemacs_view::editor::{GutterType, Severity};
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        let enabled = !matches!(c.end_of_line_diagnostics, DiagnosticFilter::Disable);
+        on = !enabled;
+        if on {
+            c.end_of_line_diagnostics = DiagnosticFilter::Enable(Severity::Hint);
+            if !c
+                .gutters
+                .layout
+                .iter()
+                .any(|g| matches!(g, GutterType::Diagnostics))
+            {
+                c.gutters.layout.insert(0, GutterType::Diagnostics);
+            }
+        } else {
+            c.end_of_line_diagnostics = DiagnosticFilter::Disable;
+            c.gutters
+                .layout
+                .retain(|g| !matches!(g, GutterType::Diagnostics));
+        }
+    });
+    cx.editor.set_status(format!(
+        "diagnostics (syntax checking): {}",
+        if on { "on" } else { "off" }
+    ));
 }
 
 /// Prompt for a file and diff it against the current buffer (Spacemacs `SPC D f f`).
@@ -8259,6 +8349,71 @@ fn browse_news(cx: &mut Context) {
     const CHANGELOG: &str = include_str!("../../CHANGELOG.md");
     show_text_in_scratch(cx.editor, CHANGELOG);
     cx.editor.set_status("zemacs release notes (CHANGELOG)");
+}
+
+/// SPC h f : browse the zemacs FAQ, embedded at build time and shown in a scratch buffer.
+/// Spacemacs `helm-spacemacs-help-faq` / "discover the FAQ".
+fn browse_faq(cx: &mut Context) {
+    const FAQ: &str = include_str!("../../FAQ.md");
+    show_text_in_scratch(cx.editor, FAQ);
+    cx.editor.set_status("zemacs FAQ");
+}
+
+/// The zemacs "layers": capability areas baked into the binary. Spacemacs ships functionality as
+/// installable layers; zemacs bakes them all in, so this is the searchable catalogue of what's
+/// available. (name, one-line summary, detail shown on select).
+const LAYERS: &[(&str, &str, &str)] = &[
+    ("vim-keys", "Vim normal/visual/insert keymap with operator-pending edits",
+     "The default keymap is vim: dd/dw/cw/yy and {motion} operators emulated on the Helix engine.\nNormal, visual, and insert modes behave as in vim."),
+    ("emacs-keys", "Emacs readline chords on command lines and insert mode",
+     "C-a/C-e/C-k/C-y/M-f/M-b etc. in insert mode and prompts. Layered on top of the vim keymap."),
+    ("spacemacs-leader", "SPC leader tree (this menu, SPC h, SPC g, SPC p, ...)",
+     "A Spacemacs-style SPC leader in normal/visual mode plus a C-w window leader. Coverage tracked in docs/keybinding_report.md."),
+    ("lsp", "Language Server Protocol: diagnostics, hover, goto, rename, code actions",
+     "Configured per language in languages.toml. Debug a buffer's setup with SPC e v (verify) and SPC e h (describe checker)."),
+    ("syntax", "Tree-sitter syntax highlighting, textobjects, and structural motions",
+     "tree-sitter grammars drive highlighting, indentation, textobjects, and Wildfire expand-selection (<ret>)."),
+    ("completion", "Autocompletion from LSP, buffer words, paths, and snippets", ""),
+    ("git", "Magit-style git UI: stage hunks, branches, stashes, rebase, blame",
+     "SPC g tree: status (SPC g s), blame (SPC g b), file history (SPC g t), per-file dispatch (SPC g f m), view file at a rev (SPC g f f)."),
+    ("diff-merge", "Buffer-vs-HEAD diff (:diff) and 3-pane conflict resolver (:merge)",
+     "diff3 base pane; ]n/[n jump between conflict markers; ediff over files/buffers (SPC D ...)."),
+    ("scripting", "Five embedded interpreters: elisp, vimscript, awk, zsh, stryke",
+     "Pure-Rust, compiled in. :elisp/:vim/:awk/:zsh/:stryke evaluate against the live buffer. init.el and init.vim are sourced at startup."),
+    ("repl", "Interactive REPL fronting all embedded languages (SPC a r / :repl)", ""),
+    ("org", "Org-mode: outline folding, TODO cycling, capture, date-aware agenda", ""),
+    ("snippets", "Snippet library (:snippets) with per-language triggers and tab stops", ""),
+    ("hex", "Byte-faithful hex editor (:hex); binary files open here automatically", ""),
+    ("terminal", "Integrated PTY terminal in a pane (:terminal) with a C-\\ window leader", ""),
+    ("transform", "200+ selection-transform : commands (json/csv/encoders/case/lines/generators)", ""),
+    ("ide", "IDE workbench (:ide / F2): file tree, structure outline, problems, run panel, minimap", ""),
+    ("pickers", "Fuzzy pickers for files, buffers, symbols, global search, locate (SPC f L)", ""),
+    ("themes", "Theme picker with live preview (SPC T c); default colorscheme zgui-cyberpunk", ""),
+    ("narrowing", "Buffer narrowing and folds (SPC n r/f/p, indirect SPC n F/P, widen SPC n w)",
+     "True Emacs narrow-to-region: gg/G/select-all and visibility confine to the region; indirect (split) narrows leave the original view full."),
+    ("run-debug", "JetBrains-style run/debug configs and a DAP debugger (SPC d ...)", ""),
+    ("help", "Searchable Help browser (SPC h h), describe-* via LSP, man/info/FAQ/news search", ""),
+    ("navigation", "Harpoon marks, vim marks, jumplist, and window/layout management", ""),
+];
+
+/// SPC h l : "search layers" — a picker over zemacs' capability areas (its baked-in analogue of
+/// Spacemacs layers). Selecting one shows its detail. Spacemacs `helm-spacemacs-help-layers`.
+fn layer_search(cx: &mut Context) {
+    let columns = [
+        PickerColumn::new("layer", |it: &&(&str, &str, &str), _: &()| it.0.into()),
+        PickerColumn::new("capability", |it: &&(&str, &str, &str), _: &()| it.1.into()),
+    ];
+    let items: Vec<&(&str, &str, &str)> = LAYERS.iter().collect();
+    let picker = Picker::new(columns, 0, items, (), |cx, it: &&(&str, &str, &str), _action| {
+        let detail = if it.2.is_empty() {
+            format!("{}\n\n{}\n", it.0, it.1)
+        } else {
+            format!("{}\n\n{}\n\n{}\n", it.0, it.1, it.2)
+        };
+        show_text_in_scratch(cx.editor, &detail);
+        cx.editor.set_status(format!("layer: {}", it.0));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// SPC h d l : copy the most recently pressed keys to the system clipboard (newest last), for
@@ -11002,11 +11157,12 @@ fn extend_to_last_line(cx: &mut Context) {
 
 fn goto_last_line_impl(cx: &mut Context, movement: Movement) {
     let (view, doc) = current!(cx.editor);
-    // When narrowed, `G` goes to the last line of the region (Emacs point-max line).
-    let point_max = doc.point_max();
+    // When narrowed, `G` goes to the last line of the region (Emacs point-max line), per-view aware.
+    let narrowed = doc.is_narrowed() || doc.view_narrow(view.id).is_some();
+    let point_max = doc.view_point_max(view.id);
     let text = doc.text().slice(..);
-    let last_line = if doc.is_narrowed() {
-        text.char_to_line(point_max)
+    let last_line = if narrowed {
+        text.char_to_line(point_max.min(text.len_chars()))
     } else {
         text.len_lines() - 1
     };
@@ -13980,7 +14136,7 @@ fn align_view_bottom(cx: &mut Context) {
 fn align_view_middle(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let inner_width = view.inner_width(doc);
-    let text_fmt = doc.text_format(inner_width, None);
+    let text_fmt = doc.text_format(inner_width, None, Some(view.id));
     // there is no horizontal position when softwrap is enabled
     if text_fmt.soft_wrap {
         return;
@@ -15266,15 +15422,81 @@ fn fold_open_all(cx: &mut Context) {
     doc.folds_mut().open_all();
 }
 
-/// SPC n w : widen — remove any narrowing and reveal the whole buffer (Emacs `widen`).
+/// SPC n w : widen — remove any narrowing (document-wide and this view's) and reveal the whole
+/// buffer (Emacs `widen`).
 fn widen(cx: &mut Context) {
-    let (_view, doc) = current!(cx.editor);
-    let was_narrowed = doc.is_narrowed();
+    let (view, doc) = current!(cx.editor);
+    let was_narrowed = doc.is_narrowed() || doc.view_narrow(view.id).is_some();
+    let view_id = view.id;
     doc.widen();
+    doc.clear_view_narrow(view_id);
     doc.folds_mut().open_all();
     if was_narrowed {
         cx.editor.set_status("widened");
     }
+}
+
+/// SPC n F : narrow to the enclosing function in an *indirect* view — clone the buffer into a
+/// split and narrow only that new view, leaving the original full (Emacs indirect-buffer narrow).
+fn narrow_to_function_indirect(cx: &mut Context) {
+    let (lo, hi) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let last = text.len_lines().saturating_sub(1);
+        let cur = text
+            .char_to_line(doc.selection(view.id).primary().head.min(text.len_chars()))
+            .min(last);
+        let is_blank = |l: usize| text.line(l).to_string().trim().is_empty();
+        let mut start = cur;
+        while start > 0 && !is_blank(start - 1) {
+            start -= 1;
+        }
+        let mut end = cur;
+        while end < last && !is_blank(end + 1) {
+            end += 1;
+        }
+        (
+            text.line_to_char(start),
+            text.line_to_char((end + 1).min(text.len_lines())),
+        )
+    };
+    split(cx.editor, Action::VerticalSplit);
+    let (view, doc) = current!(cx.editor);
+    doc.set_view_narrow(view.id, lo, hi);
+    doc.set_selection(view.id, Selection::point(lo));
+    cx.editor
+        .set_status("narrowed to function in an indirect view (SPC n w widens)");
+}
+
+/// SPC n P : narrow to the current page (form-feed delimited) in an *indirect* view.
+fn narrow_to_page_indirect(cx: &mut Context) {
+    let (lo, hi) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let last = text.len_lines().saturating_sub(1);
+        let cur = text
+            .char_to_line(doc.selection(view.id).primary().head.min(text.len_chars()))
+            .min(last);
+        let is_ff = |l: usize| text.line(l).to_string().contains('\u{0c}');
+        let mut start = cur;
+        while start > 0 && !is_ff(start - 1) {
+            start -= 1;
+        }
+        let mut end = cur;
+        while end < last && !is_ff(end + 1) {
+            end += 1;
+        }
+        (
+            text.line_to_char(start),
+            text.line_to_char((end + 1).min(text.len_lines())),
+        )
+    };
+    split(cx.editor, Action::VerticalSplit);
+    let (view, doc) = current!(cx.editor);
+    doc.set_view_narrow(view.id, lo, hi);
+    doc.set_selection(view.id, Selection::point(lo));
+    cx.editor
+        .set_status("narrowed to page in an indirect view (SPC n w widens)");
 }
 
 fn fold_close_all(cx: &mut Context) {

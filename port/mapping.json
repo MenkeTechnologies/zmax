@@ -6162,11 +6162,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_l",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space h l"
+   "key:normal:space h l",
+   "static:layer_search"
   ],
-  "note": "search layers -> command palette"
+  "note": "search layers -> layer_search (picker over zemacs capability areas, the baked-in analogue of Spacemacs layers)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_p",
@@ -6179,11 +6180,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_f",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space h f"
+   "key:normal:space h f",
+   "static:browse_faq"
   ],
-  "note": "FAQ -> command palette"
+  "note": "discover the FAQ -> browse_faq (embedded FAQ.md shown in scratch)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_n",
@@ -12030,11 +12032,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_n_fU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space n F"
+   "key:normal:space n F",
+   "static:narrow_to_function_indirect"
   ],
-  "note": ""
+  "note": "narrow-to-function in indirect buffer -> narrow_to_function_indirect (clone split + per-view narrow; original view stays full)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_g_b",
@@ -14846,11 +14849,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_n_pU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space n P"
+   "key:normal:space n P",
+   "static:narrow_to_page_indirect"
   ],
-  "note": ""
+  "note": "narrow-to-page in indirect buffer -> narrow_to_page_indirect (clone split + per-view narrow)"
  },
  {
   "spec_id": "neovim.function.abs",
@@ -19139,5 +19143,59 @@
    "static:scroll_down"
   ],
   "note": "scroll view without moving caret"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_h_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t h s",
+   "static:toggle_syntax_highlighting"
+  ],
+  "note": "toggle syntax highlighting -> toggle_syntax_highlighting (set_language None / detect)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t s",
+   "static:toggle_diagnostics"
+  ],
+  "note": "toggle flycheck/syntax checking -> toggle_diagnostics (end-of-line diag filter + diagnostics gutter)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_o",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l o",
+   "static:layout_load"
+  ],
+  "note": "SPC l o -> layout_load"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_rU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l R",
+   "static:layout_rename"
+  ],
+  "note": "SPC l R -> layout_rename"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_rU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l w R",
+   "static:layout_rename"
+  ],
+  "note": "SPC l w R -> layout_rename"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r_e_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r e t",
+   "static:regex_emacs_to_rx_replace"
+  ],
+  "note": "replace Emacs regexp by rx form -> regex_emacs_to_rx_replace"
  }
 ]
