@@ -423,6 +423,15 @@ impl MappableCommand {
         align_at_arithmetic, "Align region at arithmetic operators (SPC x a m)",
         align_left_at_char, "Left-align region at a typed delimiter (SPC x a l)",
         align_right_at_char, "Right-align region at a typed delimiter (SPC x a L)",
+        buffer_to_window_1, "Move current buffer to window 1 (SPC b . 1)",
+        buffer_to_window_2, "Move current buffer to window 2 (SPC b . 2)",
+        buffer_to_window_3, "Move current buffer to window 3 (SPC b . 3)",
+        buffer_to_window_4, "Move current buffer to window 4 (SPC b . 4)",
+        buffer_to_window_5, "Move current buffer to window 5 (SPC b . 5)",
+        buffer_to_window_6, "Move current buffer to window 6 (SPC b . 6)",
+        buffer_to_window_7, "Move current buffer to window 7 (SPC b . 7)",
+        buffer_to_window_8, "Move current buffer to window 8 (SPC b . 8)",
+        buffer_to_window_9, "Move current buffer to window 9 (SPC b . 9)",
         goto_window_1, "Go to window 1 (SPC 1)",
         goto_window_2, "Go to window 2 (SPC 2)",
         goto_window_3, "Go to window 3 (SPC 3)",
@@ -5999,6 +6008,28 @@ fn goto_window_n(cx: &mut Context, n: usize) {
         cx.editor.focus(id);
     }
 }
+
+/// Move the current buffer into window N and focus there (Spacemacs `SPC b . 1..9`).
+fn buffer_to_window_n(cx: &mut Context, n: usize) {
+    if n == 0 {
+        return;
+    }
+    let doc_id = doc!(cx.editor).id();
+    let ids: Vec<_> = cx.editor.tree.traverse().map(|(id, _)| id).collect();
+    if let Some(&id) = ids.get(n - 1) {
+        cx.editor.focus(id);
+        cx.editor.switch(doc_id, Action::Replace);
+    }
+}
+fn buffer_to_window_1(cx: &mut Context) { buffer_to_window_n(cx, 1) }
+fn buffer_to_window_2(cx: &mut Context) { buffer_to_window_n(cx, 2) }
+fn buffer_to_window_3(cx: &mut Context) { buffer_to_window_n(cx, 3) }
+fn buffer_to_window_4(cx: &mut Context) { buffer_to_window_n(cx, 4) }
+fn buffer_to_window_5(cx: &mut Context) { buffer_to_window_n(cx, 5) }
+fn buffer_to_window_6(cx: &mut Context) { buffer_to_window_n(cx, 6) }
+fn buffer_to_window_7(cx: &mut Context) { buffer_to_window_n(cx, 7) }
+fn buffer_to_window_8(cx: &mut Context) { buffer_to_window_n(cx, 8) }
+fn buffer_to_window_9(cx: &mut Context) { buffer_to_window_n(cx, 9) }
 
 fn goto_window_1(cx: &mut Context) { goto_window_n(cx, 1) }
 fn goto_window_2(cx: &mut Context) { goto_window_n(cx, 2) }

@@ -108,6 +108,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t l",   "Toggles", ":toggle soft-wrap.enable"),            // SPC t l : truncate/wrap lines
     ("space t n",   "Toggles", ":toggle line-number absolute none"),   // SPC t n : toggle line numbers on/off
     ("space t L",   "Toggles", ":toggle soft-wrap.enable"),            // SPC t L : toggle visual (wrapped) lines
+    ("space t W",   "Toggles", ":toggle trim-trailing-whitespace"),    // SPC t W : auto whitespace cleanup on save
+    ("space t C-W", "Toggles", ":toggle trim-trailing-whitespace"),    // SPC t C-W : global whitespace cleanup
     ("space D f v", "Diff",    "git_diff"),                            // SPC D f v : ediff file versions (vs HEAD)
     ("space t V",   "Toggles", ":toggle line-number absolute relative"), // SPC t V : visual line numbers
     ("space t h i", "Toggles", ":toggle indent-guides.render"),        // SPC t h i : highlight indentation
@@ -980,6 +982,14 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "b" => buffer_picker,          // SPC b . b : list buffers
                     "z" => align_view_center,      // SPC b . z : recenter buffer in window
                     "o" => rotate_view,            // SPC b . o : focus other window
+                    // move current buffer to window N
+                    "1" => buffer_to_window_1, "2" => buffer_to_window_2, "3" => buffer_to_window_3,
+                    "4" => buffer_to_window_4, "5" => buffer_to_window_5, "6" => buffer_to_window_6,
+                    "7" => buffer_to_window_7, "8" => buffer_to_window_8, "9" => buffer_to_window_9,
+                    // switch focus to window N
+                    "C-1" => goto_window_1, "C-2" => goto_window_2, "C-3" => goto_window_3,
+                    "C-4" => goto_window_4, "C-5" => goto_window_5, "C-6" => goto_window_6,
+                    "C-7" => goto_window_7, "C-8" => goto_window_8, "C-9" => goto_window_9,
                     // SPC b . d / x -> :buffer-close via typable table
                 },
                 "P" => [select_all, replace_with_yanked], // SPC b P : paste-replace buffer
