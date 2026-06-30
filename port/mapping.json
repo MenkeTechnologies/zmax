@@ -20238,5 +20238,863 @@
       "typable:delm"
     ],
     "note": ":delm alias of :delmarks"
+  },
+  {
+    "spec_id": "emacs.command.backward_sentence_lparenprogramming_modes_rparen",
+    "status": "ported",
+    "evidence": [
+      "static:move_sentence_backward"
+    ],
+    "note": "move_sentence_backward calls movement::move_prev_sentence, moving point to the previous sentence boundary like backward-sentence"
+  },
+  {
+    "spec_id": "emacs.command.cd",
+    "status": "ported",
+    "evidence": [
+      "typable:cd"
+    ],
+    "note": ":cd (alias of change-current-directory) changes the editor working directory, matching Emacs cd"
+  },
+  {
+    "spec_id": "emacs.command.clipboard_kill_region",
+    "status": "ported",
+    "evidence": [
+      "static:cut_to_clipboard"
+    ],
+    "note": "cut_to_clipboard yanks the selection to the '+' system-clipboard register then deletes it, i.e. cut region to clipboard"
+  },
+  {
+    "spec_id": "emacs.command.clipboard_kill_ring_save",
+    "status": "ported",
+    "evidence": [
+      "static:yank_to_clipboard"
+    ],
+    "note": "yank_to_clipboard copies the selection into the '+' system-clipboard register without deleting, like clipboard-kill-ring-save"
+  },
+  {
+    "spec_id": "emacs.command.clipboard_yank",
+    "status": "ported",
+    "evidence": [
+      "static:paste_clipboard_after"
+    ],
+    "note": "paste_clipboard_after pastes from the '+' system-clipboard register, i.e. yank from clipboard"
+  },
+  {
+    "spec_id": "emacs.command.clone_indirect_buffer",
+    "status": "partial",
+    "evidence": [
+      "static:clone_indirect_buffer"
+    ],
+    "note": "clone_indirect_buffer opens a new view sharing the same document (indirect clone); status text says 'indirect clone: new view sharing this buffer'"
+  },
+  {
+    "spec_id": "emacs.command.clone_indirect_buffer_other_window",
+    "status": "partial",
+    "evidence": [
+      "static:clone_indirect_buffer"
+    ],
+    "note": "clone_indirect_buffer splits the window (Action::VerticalSplit) and shows a view sharing the buffer, i.e. an indirect clone in another window"
+  },
+  {
+    "spec_id": "emacs.command.column_number_mode",
+    "status": "partial",
+    "evidence": [
+      "static:toggle_modeline_position"
+    ],
+    "note": "toggle_modeline_position toggles the line:column Position element in the status line, approximating column-number display toggle"
+  },
+  {
+    "spec_id": "emacs.command.compilation_next_error",
+    "status": "ported",
+    "evidence": [
+      "static:run_next_error"
+    ],
+    "note": "run_next_error jumps to the next file:line error reference in the run/build output (goto_run_error forward)"
+  },
+  {
+    "spec_id": "emacs.command.compilation_previous_error",
+    "status": "ported",
+    "evidence": [
+      "static:run_prev_error"
+    ],
+    "note": "run_prev_error jumps to the previous file:line error reference in the run/build output"
+  },
+  {
+    "spec_id": "emacs.command.completion_at_point_comma_in_programming_language_modes",
+    "status": "ported",
+    "evidence": [
+      "static:completion"
+    ],
+    "note": "completion triggers LSP completion at the cursor, i.e. symbol completion at point in programming modes"
+  },
+  {
+    "spec_id": "emacs.command.copy_file",
+    "status": "ported",
+    "evidence": [
+      "static:copy_file"
+    ],
+    "note": "copy_file prompts for a destination and std::fs::copy's the current file there, matching Emacs copy-file"
+  },
+  {
+    "spec_id": "emacs.command.customize",
+    "status": "partial",
+    "evidence": [
+      "static:settings_page"
+    ],
+    "note": "settings_page opens the Preferences UI on the Settings/config editor tab, a config-customization interface analogous to customize"
+  },
+  {
+    "spec_id": "emacs.command.delete_backward_char",
+    "status": "ported",
+    "evidence": [
+      "static:delete_char_backward"
+    ],
+    "note": "delete_char_backward deletes the character before the cursor, matching delete-backward-char"
+  },
+  {
+    "spec_id": "emacs.command.delete_file",
+    "status": "partial",
+    "evidence": [
+      "typable:delete-file"
+    ],
+    "note": ":delete-file removes the current buffer's backing file from disk and closes the buffer; Emacs prompts for any file but the delete-a-file capability is present"
+  },
+  {
+    "spec_id": "emacs.command.describe_bindings",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h d b"
+    ],
+    "note": "SPC h d b opens the Help/Preferences browser whose Help tab is searchable over commands and keybindings, listing current bindings"
+  },
+  {
+    "spec_id": "emacs.command.describe_function",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h d f"
+    ],
+    "note": "SPC h d f invokes LSP hover at point, showing the documentation/signature of the function under the cursor"
+  },
+  {
+    "spec_id": "emacs.command.describe_mode",
+    "status": "ported",
+    "evidence": [
+      "static:describe_current_modes"
+    ],
+    "note": "describe_current_modes reports the buffer's current (major/minor) modes, matching describe-mode"
+  },
+  {
+    "spec_id": "emacs.command.describe_text_properties",
+    "status": "partial",
+    "evidence": [
+      "static:describe_text_properties"
+    ],
+    "note": "describe_text_properties reports the character and the syntax-node stack at point, approximating Emacs's text-properties-at-point report"
+  },
+  {
+    "spec_id": "emacs.command.describe_variable",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h d v"
+    ],
+    "note": "SPC h d v invokes LSP hover at point, showing documentation/type of the variable under the cursor"
+  },
+  {
+    "spec_id": "emacs.command.display_fill_column_indicator_mode",
+    "status": "partial",
+    "evidence": [
+      "static:toggle_fill_column"
+    ],
+    "note": "toggle_fill_column toggles a ruler at text-width (default 80), displaying the fill-column indicator"
+  },
+  {
+    "spec_id": "emacs.command.find_alternate_file",
+    "status": "ported",
+    "evidence": [
+      "static:find_file_replace_buffer"
+    ],
+    "note": "Opens a prompted file with Action::Replace and closes the old buffer - exactly find-alternate-file (C-x C-v)."
+  },
+  {
+    "spec_id": "emacs.command.find_file_literally",
+    "status": "ported",
+    "evidence": [
+      "static:open_file_literally"
+    ],
+    "note": "Opens file then sets language to None (no syntax/LSP), i.e. raw fundamental-mode visit = find-file-literally."
+  },
+  {
+    "spec_id": "emacs.command.locate",
+    "status": "ported",
+    "evidence": [
+      "static:locate_file"
+    ],
+    "note": "Runs system locate (mdfind fallback) and opens the chosen path = the locate command."
+  },
+  {
+    "spec_id": "emacs.command.man",
+    "status": "ported",
+    "evidence": [
+      "static:man_page_search"
+    ],
+    "note": "apropos-driven picker that runs `man` and renders the page into a buffer = M-x man."
+  },
+  {
+    "spec_id": "emacs.command.goto_address_at_point",
+    "status": "ported",
+    "evidence": [
+      "static:open_url_under_cursor"
+    ],
+    "note": "Finds the URL under the cursor and opens it in the browser = goto-address-at-point."
+  },
+  {
+    "spec_id": "emacs.command.follow_mode",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_follow_mode"
+    ],
+    "note": "Doc: windows on the same doc scroll together - this is exactly follow-mode."
+  },
+  {
+    "spec_id": "emacs.command.font_lock_mode",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_syntax_highlighting"
+    ],
+    "note": "Toggles syntax highlighting for the buffer (clears/redetects language) = font-lock-mode."
+  },
+  {
+    "spec_id": "emacs.command.imenu",
+    "status": "ported",
+    "evidence": [
+      "static:symbol_picker"
+    ],
+    "note": "Document symbol picker to jump to definitions in the current buffer = imenu."
+  },
+  {
+    "spec_id": "emacs.command.list_command_history",
+    "status": "ported",
+    "evidence": [
+      "static:command_history_picker"
+    ],
+    "note": "Picker over past command lines = list-command-history."
+  },
+  {
+    "spec_id": "emacs.command.make_indirect_buffer",
+    "status": "ported",
+    "evidence": [
+      "static:clone_indirect_buffer"
+    ],
+    "note": "Clones the buffer into a shared-document view = an indirect buffer."
+  },
+  {
+    "spec_id": "emacs.command.narrow_to_defun",
+    "status": "ported",
+    "evidence": [
+      "static:narrow_to_function"
+    ],
+    "note": "Narrows the buffer to the enclosing function = narrow-to-defun."
+  },
+  {
+    "spec_id": "emacs.command.move_to_column",
+    "status": "ported",
+    "evidence": [
+      "static:goto_column"
+    ],
+    "note": "Moves point to a given column = move-to-column."
+  },
+  {
+    "spec_id": "emacs.command.forward_sentence_lparenprogramming_modes_rparen",
+    "status": "ported",
+    "evidence": [
+      "static:move_sentence_forward"
+    ],
+    "note": "Moves to next sentence = forward-sentence."
+  },
+  {
+    "spec_id": "emacs.command.goto_line_comma_with_an_argument",
+    "status": "ported",
+    "evidence": [
+      "static:goto_line"
+    ],
+    "note": "Goes to a specific line number = goto-line with argument."
+  },
+  {
+    "spec_id": "emacs.command.left_char",
+    "status": "ported",
+    "evidence": [
+      "static:move_char_left"
+    ],
+    "note": "Moves one character left = left-char/backward-char."
+  },
+  {
+    "spec_id": "emacs.command.isearch_forward_regexp",
+    "status": "ported",
+    "evidence": [
+      "static:search"
+    ],
+    "note": "Helix forward search uses regex patterns = isearch-forward-regexp."
+  },
+  {
+    "spec_id": "emacs.command.isearch_backward_regexp",
+    "status": "ported",
+    "evidence": [
+      "static:rsearch"
+    ],
+    "note": "Reverse regex search = isearch-backward-regexp."
+  },
+  {
+    "spec_id": "emacs.command.isearch_repeat_forward",
+    "status": "ported",
+    "evidence": [
+      "static:search_next"
+    ],
+    "note": "Selects next search match = repeat isearch forward."
+  },
+  {
+    "spec_id": "emacs.command.isearch_repeat_backward",
+    "status": "ported",
+    "evidence": [
+      "static:search_prev"
+    ],
+    "note": "Selects previous search match = repeat isearch backward."
+  },
+  {
+    "spec_id": "emacs.command.flyspell_correct_word",
+    "status": "ported",
+    "evidence": [
+      "static:spell_suggest"
+    ],
+    "note": "Offers spelling suggestions for the word at cursor and replaces it on choice = flyspell-correct-word."
+  },
+  {
+    "spec_id": "emacs.command.flyspell_correct_word_before_point",
+    "status": "ported",
+    "evidence": [
+      "static:spell_suggest"
+    ],
+    "note": "Corrects the misspelled word at/just-before point via a suggestion menu = flyspell-correct-word-before-point."
+  },
+  {
+    "spec_id": "emacs.command.hs_hide_all",
+    "status": "ported",
+    "evidence": [
+      "static:fold_close_all"
+    ],
+    "note": "Closes all folds = hideshow hs-hide-all."
+  },
+  {
+    "spec_id": "emacs.command.hs_show_all",
+    "status": "ported",
+    "evidence": [
+      "static:fold_open_all"
+    ],
+    "note": "Opens all folds = hideshow hs-show-all."
+  },
+  {
+    "spec_id": "emacs.command.hs_hide_block",
+    "status": "ported",
+    "evidence": [
+      "static:fold_close"
+    ],
+    "note": "Closes the fold/block under cursor = hs-hide-block."
+  },
+  {
+    "spec_id": "emacs.command.hs_show_block",
+    "status": "ported",
+    "evidence": [
+      "static:fold_open"
+    ],
+    "note": "Opens the fold/block under cursor = hs-show-block."
+  },
+  {
+    "spec_id": "emacs.command.hs_toggle_hiding",
+    "status": "ported",
+    "evidence": [
+      "static:fold_toggle"
+    ],
+    "note": "Toggles the fold under cursor = hs-toggle-hiding."
+  },
+  {
+    "spec_id": "emacs.command.kmacro_add_counter",
+    "status": "ported",
+    "evidence": [
+      "static:kmacro_add_counter"
+    ],
+    "note": "Adds count to the keyboard-macro counter = kmacro-add-counter."
+  },
+  {
+    "spec_id": "emacs.command.kmacro_to_register",
+    "status": "ported",
+    "evidence": [
+      "static:kmacro_to_register"
+    ],
+    "note": "Writes the last macro to a register = kmacro-to-register."
+  },
+  {
+    "spec_id": "emacs.command.kmacro_cycle_ring_next",
+    "status": "ported",
+    "evidence": [
+      "static:kmacro_ring_next"
+    ],
+    "note": "Cycles to next macro in the ring = kmacro-cycle-ring-next."
+  },
+  {
+    "spec_id": "emacs.command.kmacro_cycle_ring_previous",
+    "status": "ported",
+    "evidence": [
+      "static:kmacro_ring_prev"
+    ],
+    "note": "Cycles to previous macro in the ring = kmacro-cycle-ring-previous."
+  },
+  {
+    "spec_id": "emacs.command.kill_whole_line",
+    "status": "ported",
+    "evidence": [
+      "typable:delete-lines"
+    ],
+    "note": "Deletes the current line(s) into a register (vim :d) = kill-whole-line."
+  },
+  {
+    "spec_id": "emacs.command.kill_current_buffer",
+    "status": "ported",
+    "evidence": [
+      "typable:buffer-close"
+    ],
+    "note": "Closes/kills the current buffer = kill-current-buffer."
+  },
+  {
+    "spec_id": "emacs.command.kill_buffer_and_window",
+    "status": "ported",
+    "evidence": [
+      "static:delete_window_and_buffer"
+    ],
+    "note": "Closes the window and kills its buffer = kill-buffer-and-window."
+  },
+  {
+    "spec_id": "emacs.command.kill_matching_buffers",
+    "status": "ported",
+    "evidence": [
+      "static:kill_buffers_by_regex"
+    ],
+    "note": "Kills all buffers whose name matches a regex = kill-matching-buffers."
+  },
+  {
+    "spec_id": "emacs.command.kill_matching_buffers_no_ask",
+    "status": "ported",
+    "evidence": [
+      "static:kill_buffers_by_regex"
+    ],
+    "note": "Kills regex-matching buffers without per-buffer confirmation = kill-matching-buffers-no-ask."
+  },
+  {
+    "spec_id": "emacs.command.gud_cont",
+    "status": "ported",
+    "evidence": [
+      "static:dap_continue"
+    ],
+    "note": "Continues program execution = gud-cont (continue)."
+  },
+  {
+    "spec_id": "emacs.command.gud_next",
+    "status": "ported",
+    "evidence": [
+      "static:dap_next"
+    ],
+    "note": "Step over to next line = gud-next."
+  },
+  {
+    "spec_id": "emacs.command.gud_step",
+    "status": "ported",
+    "evidence": [
+      "static:dap_step_in"
+    ],
+    "note": "Step into = gud-step."
+  },
+  {
+    "spec_id": "emacs.command.gud_finish",
+    "status": "ported",
+    "evidence": [
+      "static:dap_step_out"
+    ],
+    "note": "Step out / run until function returns = gud-finish."
+  },
+  {
+    "spec_id": "emacs.command.gud_until",
+    "status": "ported",
+    "evidence": [
+      "static:dap_run_to_cursor"
+    ],
+    "note": "Runs the debugger up to the cursor line = gud-until."
+  },
+  {
+    "spec_id": "emacs.command.morse_region",
+    "status": "ported",
+    "evidence": [
+      "typable:morse-encode"
+    ],
+    "note": "Encodes the selection to Morse code = morse-region."
+  },
+  {
+    "spec_id": "emacs.command.nato_region",
+    "status": "ported",
+    "evidence": [
+      "typable:nato"
+    ],
+    "note": "Spells the selection in NATO phonetic alphabet = nato-region."
+  },
+  {
+    "spec_id": "emacs.command.help_with_tutorial",
+    "status": "ported",
+    "evidence": [
+      "typable:tutor"
+    ],
+    "note": "Opens the tutorial = help-with-tutorial."
+  },
+  {
+    "spec_id": "emacs.command.load_theme",
+    "status": "ported",
+    "evidence": [
+      "typable:theme"
+    ],
+    "note": "Changes the editor color theme = load-theme."
+  },
+  {
+    "spec_id": "emacs.command.find_grep",
+    "status": "partial",
+    "evidence": [
+      "typable:grep"
+    ],
+    "note": "Project ripgrep search with jumpable results - the modern equivalent of find-grep."
+  },
+  {
+    "spec_id": "emacs.command.grep_find",
+    "status": "partial",
+    "evidence": [
+      "typable:grep"
+    ],
+    "note": "ripgrep project search with navigable results = grep-find (find|grep) capability."
+  },
+  {
+    "spec_id": "emacs.command.ibuffer",
+    "status": "partial",
+    "evidence": [
+      "static:buffer_picker"
+    ],
+    "note": "Interactive buffer list/selector; covers ibuffer's list-and-switch role (not its bulk-mark ops)."
+  },
+  {
+    "spec_id": "emacs.command.next_error",
+    "status": "partial",
+    "evidence": [
+      "static:run_next_error"
+    ],
+    "note": "Jumps to next file:line in the run/compile output = next-error for compilation output."
+  },
+  {
+    "spec_id": "emacs.command.left_word",
+    "status": "partial",
+    "evidence": [
+      "static:move_prev_word_start"
+    ],
+    "note": "Moves left by one word = left-word (Helix word semantics differ slightly)."
+  },
+  {
+    "spec_id": "emacs.command.global_font_lock_mode",
+    "status": "partial",
+    "evidence": [
+      "static:toggle_syntax_highlighting"
+    ],
+    "note": "Toggles syntax highlighting; zemacs toggle is per-buffer rather than truly global."
+  },
+  {
+    "spec_id": "emacs.command.global_visual_line_mode",
+    "status": "partial",
+    "evidence": [
+      "static:toggle_soft_wrap"
+    ],
+    "note": "Toggles soft-wrap of long lines, the core of visual-line-mode."
+  },
+  {
+    "spec_id": "emacs.command.global_display_line_numbers_mode",
+    "status": "partial",
+    "evidence": [
+      "static:toggle_line_numbers"
+    ],
+    "note": "Toggles the line-number gutter; equivalent display toggle (editor-wide setting)."
+  },
+  {
+    "spec_id": "emacs.command.isearch_forward_symbol_at_point",
+    "status": "partial",
+    "evidence": [
+      "static:search_selection_detect_word_boundaries"
+    ],
+    "note": "Searches for the symbol/word at point with \\b boundaries = isearch-forward-symbol-at-point."
+  },
+  {
+    "spec_id": "emacs.command.kill_matching_lines",
+    "status": "partial",
+    "evidence": [
+      "typable:remove-lines"
+    ],
+    "note": "Drops selected lines matching a regex = flush-lines/kill-matching-lines (operates on selection)."
+  },
+  {
+    "spec_id": "emacs.command.gud_remove",
+    "status": "partial",
+    "evidence": [
+      "static:dap_toggle_breakpoint"
+    ],
+    "note": "Toggles (removes) the breakpoint at the current line = gud-remove."
+  },
+  {
+    "spec_id": "emacs.command.gdb",
+    "status": "partial",
+    "evidence": [
+      "static:dap_launch"
+    ],
+    "note": "Launches an interactive debug session (DAP) - the debugger-start role of M-x gdb."
+  },
+  {
+    "spec_id": "emacs.command.emerge_files",
+    "status": "partial",
+    "evidence": [
+      "static:ediff_merge_file"
+    ],
+    "note": "Interactive merge of a picked file into an editable buffer = emerge-files (via ediff)."
+  },
+  {
+    "spec_id": "emacs.command.info_lookup_symbol",
+    "status": "partial",
+    "evidence": [
+      "static:info_search"
+    ],
+    "note": "Searches GNU info manuals seeded with the symbol under cursor and renders the node = info-lookup-symbol."
+  },
+  {
+    "spec_id": "emacs.command.fill_region_as_paragraph",
+    "status": "partial",
+    "evidence": [
+      "typable:reflow"
+    ],
+    "note": "Hard-wraps the selected lines to a width = fill-region-as-paragraph."
+  },
+  {
+    "spec_id": "emacs.command.re_search_forward",
+    "status": "ported",
+    "evidence": [
+      "static:search"
+    ],
+    "note": "Helix/zemacs `search` is a regex search (forward); re-search-forward is regex forward search."
+  },
+  {
+    "spec_id": "emacs.command.re_search_backward",
+    "status": "ported",
+    "evidence": [
+      "static:rsearch"
+    ],
+    "note": "`rsearch` runs the same regex searcher in Direction::Backward; matches re-search-backward."
+  },
+  {
+    "spec_id": "emacs.command.search_backward",
+    "status": "ported",
+    "evidence": [
+      "static:rsearch"
+    ],
+    "note": "`rsearch` searches backward (regex is a superset of literal string search)."
+  },
+  {
+    "spec_id": "emacs.command.word_search_forward",
+    "status": "partial",
+    "evidence": [
+      "static:make_search_word_bounded"
+    ],
+    "note": "make_search_word_bounded wraps the search regex in \\b...\\b, giving whole-word forward search."
+  },
+  {
+    "spec_id": "emacs.command.word_search_backward",
+    "status": "partial",
+    "evidence": [
+      "static:make_search_word_bounded"
+    ],
+    "note": "Word-bounded search regex applies to backward search (rsearch) too; approximates word-search-backward."
+  },
+  {
+    "spec_id": "emacs.command.xref_find_definitions",
+    "status": "ported",
+    "evidence": [
+      "static:goto_definition"
+    ],
+    "note": "LSP goto_definition jumps to the definition of the symbol at point."
+  },
+  {
+    "spec_id": "emacs.command.xref_find_references",
+    "status": "ported",
+    "evidence": [
+      "static:goto_reference"
+    ],
+    "note": "LSP goto_reference lists/visits references to the symbol; matches xref-find-references."
+  },
+  {
+    "spec_id": "emacs.command.xref_go_back",
+    "status": "ported",
+    "evidence": [
+      "static:jump_backward"
+    ],
+    "note": "jump_backward pops the jumplist to return to the pre-jump location, like xref-go-back."
+  },
+  {
+    "spec_id": "emacs.command.xref_go_forward",
+    "status": "ported",
+    "evidence": [
+      "static:jump_forward"
+    ],
+    "note": "jump_forward re-advances the jumplist, like xref-go-forward."
+  },
+  {
+    "spec_id": "emacs.command.xref_find_apropos",
+    "status": "partial",
+    "evidence": [
+      "static:workspace_symbol_picker"
+    ],
+    "note": "workspace_symbol_picker fuzzy-finds matching symbols across the project, like xref-find-apropos."
+  },
+  {
+    "spec_id": "emacs.command.term",
+    "status": "ported",
+    "evidence": [
+      "static:terminal",
+      "typable:term"
+    ],
+    "note": "`terminal` opens an integrated PTY terminal panel running a shell; matches term."
+  },
+  {
+    "spec_id": "emacs.command.shell",
+    "status": "partial",
+    "evidence": [
+      "static:terminal"
+    ],
+    "note": "Integrated PTY terminal gives an interactive shell; comint line-mode niceties differ from Emacs shell."
+  },
+  {
+    "spec_id": "emacs.command.recentf_open",
+    "status": "ported",
+    "evidence": [
+      "static:frecent_file_picker"
+    ],
+    "note": "frecent_file_picker opens recent files ranked by frecency, like recentf-open."
+  },
+  {
+    "spec_id": "emacs.command.repeat_complex_command",
+    "status": "partial",
+    "evidence": [
+      "static:command_history_picker"
+    ],
+    "note": "command_history_picker lets you pick and re-run a past command line; approximates repeat-complex-command."
+  },
+  {
+    "spec_id": "emacs.command.quoted_insert",
+    "status": "partial",
+    "evidence": [
+      "static:insert_char_interactive"
+    ],
+    "note": "insert_char_interactive waits for and inserts the next typed character literally, like quoted-insert."
+  },
+  {
+    "spec_id": "emacs.command.right_char",
+    "status": "ported",
+    "evidence": [
+      "static:move_char_right"
+    ],
+    "note": "move_char_right moves point one character to the right."
+  },
+  {
+    "spec_id": "emacs.command.right_word",
+    "status": "ported",
+    "evidence": [
+      "static:move_next_word_start"
+    ],
+    "note": "move_next_word_start moves point rightward by a word, like right-word/forward-word."
+  },
+  {
+    "spec_id": "emacs.command.scroll_left",
+    "status": "ported",
+    "evidence": [
+      "static:scroll_column_left"
+    ],
+    "note": "scroll_column_left scrolls the view horizontally left, like scroll-left."
+  },
+  {
+    "spec_id": "emacs.command.scroll_right",
+    "status": "ported",
+    "evidence": [
+      "static:scroll_column_right"
+    ],
+    "note": "scroll_column_right scrolls the view horizontally right, like scroll-right."
+  },
+  {
+    "spec_id": "emacs.command.subword_mode",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_subword"
+    ],
+    "note": "toggle_subword toggles sub-word (CamelCase-aware) w/b/e motions, like subword-mode."
+  },
+  {
+    "spec_id": "emacs.command.vc_diff",
+    "status": "ported",
+    "evidence": [
+      "typable:diff"
+    ],
+    "note": ":diff opens a side-by-side diff of the buffer vs its git HEAD version."
+  },
+  {
+    "spec_id": "emacs.command.vc_annotate",
+    "status": "partial",
+    "evidence": [
+      "typable:blame"
+    ],
+    "note": ":blame shows git blame (author/revision) for the current line; per-line only, not a full annotate buffer."
+  },
+  {
+    "spec_id": "emacs.command.vc_register",
+    "status": "partial",
+    "evidence": [
+      "typable:git-add"
+    ],
+    "note": ":git-add (git-stage) runs git add on the current file, registering/staging it for version control."
+  },
+  {
+    "spec_id": "emacs.command.pwd",
+    "status": "ported",
+    "evidence": [
+      "typable:pwd"
+    ],
+    "note": ":pwd (show-directory) prints the current working directory."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_vimgrep",
+    "status": "partial",
+    "evidence": [
+      "typable:grep"
+    ],
+    "note": "zemacs :grep/:rg searches the project for a pattern and shows jumpable results; matches vimgrep core behavior (search pattern in files, jump to matches). Partial: uses ripgrep regex and a Run console rather than a vim quickfix list."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lvimgrep",
+    "status": "partial",
+    "evidence": [
+      "typable:grep"
+    ],
+    "note": "Same zemacs :grep covers lvimgrep behavior (search pattern in files, jumpable results). Partial: zemacs has a single global result console, no per-window location-list distinction."
+  },
+  {
+    "spec_id": "neovim.insert-mode.lbrace_char1_rbrace_lt_bs_gt_lbrace_char2_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-k",
+      "static:insert_digraph"
+    ],
+    "note": "zemacs implements insert-mode digraph entry (two mnemonic chars -> digraph char) via insert_digraph bound to C-k (vim i_CTRL-K); same result, trigger is C-k not {c1}<BS>{c2}"
   }
 ]
