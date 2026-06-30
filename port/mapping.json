@@ -18683,11 +18683,12 @@
   },
   {
     "spec_id": "jetbrains.navigate-from-symbol.call-hierarchy",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:goto_reference"
+      "key:normal:space g h",
+      "static:call_hierarchy_incoming_calls"
     ],
-    "note": "references ~ callers"
+    "note": "Call Hierarchy (Ctrl-Alt-H) = call_hierarchy_incoming_calls: real LSP prepareCallHierarchy + incomingCalls, jump picker over call sites (SPC g h; outgoing SPC g H)"
   },
   {
     "spec_id": "jetbrains.coding-assistance.smart-completion",

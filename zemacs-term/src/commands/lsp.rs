@@ -1232,6 +1232,90 @@ pub fn goto_reference(cx: &mut Context) {
     });
 }
 
+/// JetBrains "Call Hierarchy" (Ctrl-Alt-H), incoming: who calls the symbol under the cursor.
+/// Two LSP round-trips — `prepareCallHierarchy` then `callHierarchy/incomingCalls` — presented as a
+/// jump picker over the call sites.
+pub fn call_hierarchy_incoming_calls(cx: &mut Context) {
+    call_hierarchy_impl(cx, true);
+}
+
+/// Call hierarchy, outgoing: the functions the symbol under the cursor calls.
+pub fn call_hierarchy_outgoing_calls(cx: &mut Context) {
+    call_hierarchy_impl(cx, false);
+}
+
+fn call_hierarchy_impl(cx: &mut Context, incoming: bool) {
+    let (view, doc) = current_ref!(cx.editor);
+    let language_server =
+        language_server_with_feature!(cx.editor, doc, LanguageServerFeature::CallHierarchy);
+    let ls_id = language_server.id();
+    let offset_encoding = language_server.offset_encoding();
+    let pos = doc.position(view.id, offset_encoding);
+    let prepare = match language_server.prepare_call_hierarchy(doc.identifier(), pos) {
+        Some(future) => future,
+        None => {
+            cx.editor.set_error("Call hierarchy is not available here");
+            return;
+        }
+    };
+    let client = cx.editor.language_servers.get_by_id(ls_id).cloned();
+
+    cx.jobs.callback(async move {
+        let item = prepare.await?.and_then(|items| items.into_iter().next());
+        let Some(item) = item else {
+            return Ok(Callback::EditorCompositor(Box::new(
+                |editor: &mut Editor, _: &mut Compositor| {
+                    editor.set_error("No symbol under cursor for call hierarchy");
+                },
+            )));
+        };
+        let Some(client) = client else {
+            return Ok(Callback::EditorCompositor(Box::new(
+                |editor: &mut Editor, _: &mut Compositor| {
+                    editor.set_error("language server is no longer available");
+                },
+            )));
+        };
+
+        let mut locations = Vec::new();
+        if incoming {
+            if let Some(future) = client.call_hierarchy_incoming(item) {
+                for call in future.await?.into_iter().flatten() {
+                    let uri = call.from.uri.clone();
+                    for range in call.from_ranges {
+                        if let Some(loc) = lsp_location_to_location(
+                            lsp::Location::new(uri.clone(), range),
+                            offset_encoding,
+                        ) {
+                            locations.push(loc);
+                        }
+                    }
+                }
+            }
+        } else if let Some(future) = client.call_hierarchy_outgoing(item) {
+            for call in future.await?.into_iter().flatten() {
+                if let Some(loc) = lsp_location_to_location(
+                    lsp::Location::new(call.to.uri.clone(), call.to.selection_range),
+                    offset_encoding,
+                ) {
+                    locations.push(loc);
+                }
+            }
+        }
+
+        let noun = if incoming { "callers" } else { "callees" };
+        Ok(Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                if locations.is_empty() {
+                    editor.set_error(format!("No {noun} found"));
+                } else {
+                    goto_impl(editor, compositor, locations);
+                }
+            },
+        )))
+    });
+}
+
 pub fn signature_help(cx: &mut Context) {
     cx.editor
         .handlers
