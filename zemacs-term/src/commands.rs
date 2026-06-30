@@ -656,6 +656,11 @@ impl MappableCommand {
         number_to_register, "Store the prefix count in a register (emacs C-x r n)",
         increment_register, "Add the prefix count to a number register (emacs C-x r +)",
         emacs_insert_register, "Insert a number register's value as text (emacs C-x r i)",
+        kill_rectangle, "Kill (cut) the rectangle, saving it for yank (emacs C-x r k)",
+        delete_rectangle, "Delete the rectangle without saving (emacs C-x r d)",
+        clear_rectangle, "Blank the rectangle with spaces (emacs C-x r c)",
+        copy_rectangle_as_kill, "Copy the rectangle without deleting (emacs C-x r M-w)",
+        yank_rectangle, "Insert the saved rectangle at point (emacs C-x r y)",
         paste_clipboard_after, "Paste clipboard after selections",
         paste_clipboard_before, "Paste clipboard before selections",
         paste_primary_clipboard_after, "Paste primary clipboard after selections",
@@ -7746,6 +7751,99 @@ fn emacs_insert_register(cx: &mut Context) {
         }
     });
     cx.editor.autoinfo = Some(Info::new("Insert register", &[("char", "register name")]));
+}
+
+#[derive(Clone, Copy)]
+enum RectOp {
+    Kill,
+    Delete,
+    Clear,
+    CopyAsKill,
+    Yank,
+}
+
+/// Split the document into lines without their trailing line ending.
+fn doc_lines(text: &zemacs_core::Rope) -> Vec<String> {
+    (0..text.len_lines())
+        .map(|i| {
+            let mut s: String = text.line(i).chars().collect();
+            while s.ends_with('\n') || s.ends_with('\r') {
+                s.pop();
+            }
+            s
+        })
+        .collect()
+}
+
+/// Shared driver for the emacs rectangle commands. Derives the rectangle from
+/// the primary selection's two corners and rewrites the buffer in one undoable
+/// step. Columns are character offsets within the line (LF assumed on rejoin).
+fn rectangle_op(cx: &mut Context, op: RectOp) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().clone();
+    let sel = doc.selection(view.id).primary();
+    let (p0, p1) = (sel.from(), sel.to());
+    let l0 = text.char_to_line(p0);
+    let l1 = text.char_to_line(p1.max(p0).saturating_sub(1).max(p0));
+    let col_of = |pos: usize| pos - text.line_to_char(text.char_to_line(pos));
+    let (c0, c1) = (col_of(p0), col_of(p1));
+    let lines = doc_lines(&text);
+    let le = doc.line_ending.as_str();
+
+    let new_lines = match op {
+        RectOp::CopyAsKill => {
+            crate::emacs_rect::save(crate::emacs_rect::extract(&lines, l0, l1, c0, c1));
+            cx.editor.set_status("Rectangle copied");
+            return;
+        }
+        RectOp::Kill => {
+            crate::emacs_rect::save(crate::emacs_rect::extract(&lines, l0, l1, c0, c1));
+            crate::emacs_rect::delete(&lines, l0, l1, c0, c1)
+        }
+        RectOp::Delete => crate::emacs_rect::delete(&lines, l0, l1, c0, c1),
+        RectOp::Clear => crate::emacs_rect::clear(&lines, l0, l1, c0, c1),
+        RectOp::Yank => {
+            let rect = crate::emacs_rect::saved();
+            if rect.is_empty() {
+                cx.editor.set_error("No rectangle to yank");
+                return;
+            }
+            crate::emacs_rect::yank(&lines, l0, c0, &rect)
+        }
+    };
+
+    let new_text = new_lines.join(le);
+    let old_len = text.len_chars();
+    let transaction = Transaction::change(
+        &text,
+        std::iter::once((0, old_len, Some(Tendril::from(new_text.as_str())))),
+    );
+    let (view, doc) = current!(cx.editor);
+    doc.apply(&transaction, view.id);
+    let caret = p0.min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::point(caret));
+    doc.append_changes_to_history(view);
+}
+
+/// Emacs `kill-rectangle` (C-x r k): delete the rectangle, saving it for yank.
+fn kill_rectangle(cx: &mut Context) {
+    rectangle_op(cx, RectOp::Kill);
+}
+/// Emacs `delete-rectangle` (C-x r d): delete the rectangle without saving.
+fn delete_rectangle(cx: &mut Context) {
+    rectangle_op(cx, RectOp::Delete);
+}
+/// Emacs `clear-rectangle` (C-x r c): blank the rectangle with spaces.
+fn clear_rectangle(cx: &mut Context) {
+    rectangle_op(cx, RectOp::Clear);
+}
+/// Emacs `copy-rectangle-as-kill` (C-x r M-w): save the rectangle without deleting.
+fn copy_rectangle_as_kill(cx: &mut Context) {
+    rectangle_op(cx, RectOp::CopyAsKill);
+}
+/// Emacs `yank-rectangle` (C-x r y): insert the saved rectangle at point.
+fn yank_rectangle(cx: &mut Context) {
+    rectangle_op(cx, RectOp::Yank);
 }
 
 fn ensure_selections_forward(cx: &mut Context) {

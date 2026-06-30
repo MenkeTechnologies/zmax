@@ -133,6 +133,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "n" => number_to_register,       // C-x r n: number-to-register
                 "+" => increment_register,       // C-x r +: increment-register
                 "i" => emacs_insert_register,    // C-x r i: insert-register
+                "k" => kill_rectangle,           // C-x r k: kill-rectangle
+                "d" => delete_rectangle,         // C-x r d: delete-rectangle
+                "c" => clear_rectangle,          // C-x r c: clear-rectangle
+                "y" => yank_rectangle,           // C-x r y: yank-rectangle
+                "A-w" => copy_rectangle_as_kill, // C-x r M-w: copy-rectangle-as-kill
             },
         },
     });
