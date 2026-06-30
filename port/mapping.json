@@ -19994,11 +19994,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_jumps",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:jumplist_picker"
+      "typable:jumps"
     ],
-    "note": ":jumps = jumplist_picker (interactive)."
+    "note": ":jumps opens the jumplist picker (real typable)"
   },
   {
     "spec_id": "neovim.ex-command.colon_marks",
@@ -20010,11 +20010,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_oldfiles",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:frecent_file_picker"
+      "typable:oldfiles"
     ],
-    "note": ":oldfiles = frecent_file_picker (recent files)."
+    "note": ":oldfiles opens the recent-files picker (real typable)"
   },
   {
     "spec_id": "neovim.ex-command.colon_startreplace",
