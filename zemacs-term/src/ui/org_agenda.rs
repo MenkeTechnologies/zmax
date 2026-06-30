@@ -7,11 +7,13 @@
 //! `.git`/`target`/`node_modules`, capped in depth and count). Each source is
 //! parsed by the pure, unit-tested [`crate::commands::org::parse_agenda`].
 //!
-//! Items are grouped and sorted: those carrying a `SCHEDULED:`/`DEADLINE:` date
-//! come first under a "Scheduled/Deadline" heading sorted ascending by their
-//! earliest date; undated TODOs follow under "TODO"; completed (`DONE`) items
-//! are listed last under "Done" (kept rather than omitted, rendered dim). Each
-//! row shows the (colored) keyword, the `[#A]` priority, the title, and a
+//! Items are grouped and sorted using a dep-free "today" date
+//! ([`crate::commands::org::today`]): dated items (`SCHEDULED:`/`DEADLINE:`,
+//! earliest wins) are split into **Overdue** (date < today, red, prefixed `!`),
+//! **Today** (green) and **Upcoming** (normal), each sorted ascending by date;
+//! undated TODOs follow under "TODO"; completed (`DONE`) items are listed last
+//! under "Done" (kept rather than omitted, rendered dim). Each row shows the
+//! effective date, the (colored) keyword, the `[#A]` priority, the title, and a
 //! right-aligned, dimmed `file:line`.
 //!
 //! Keys: `j`/`k`/arrows + `g`/`G`/Home/End navigate; `Enter` jumps to the item
@@ -20,8 +22,8 @@
 //! buffers / on-disk files are skipped with a note); `r` re-scans; `q`/`Esc`
 //! close. Opened with `:org-agenda` (alias `:agenda`).
 //!
-//! Deferred to later slices: recurring timestamps, real date math / a "today"
-//! grouping, `.org` syntax highlighting, capture, babel and export.
+//! Deferred to later slices: recurring timestamps, refile/archive, babel and
+//! export.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -51,6 +53,9 @@ enum Row {
 pub struct OrgAgenda {
     /// Working directory the on-disk `.org` scan walks.
     root: PathBuf,
+    /// Today's date (`YYYY-MM-DD`), captured at refresh, used to bucket dated
+    /// items into Overdue / Today / Upcoming.
+    today: String,
     /// Items in display order (grouped + sorted).
     items: Vec<AgendaItem>,
     /// Index into `items` of the highlighted row.
@@ -66,6 +71,7 @@ impl OrgAgenda {
     pub fn new(editor: &Editor, root: PathBuf) -> Self {
         let mut agenda = OrgAgenda {
             root,
+            today: org::today(),
             items: Vec::new(),
             selected: 0,
             scroll: 0,
@@ -76,12 +82,15 @@ impl OrgAgenda {
     }
 
     /// Re-scan all sources and rebuild the sorted item list, clamping the
-    /// selection to the new count.
+    /// selection to the new count. Re-reads "today" so the buckets stay correct
+    /// across a long-lived overlay.
     fn refresh(&mut self, editor: &Editor) {
+        self.today = org::today();
+        let today = self.today.clone();
         let mut items = collect_items(editor, &self.root);
         items.sort_by(|a, b| {
-            group_order(a)
-                .cmp(&group_order(b))
+            group_order(a, &today)
+                .cmp(&group_order(b, &today))
                 .then_with(|| date_key(a).cmp(&date_key(b)))
                 .then_with(|| a.file.cmp(&b.file))
                 .then_with(|| a.line.cmp(&b.line))
@@ -98,7 +107,7 @@ impl OrgAgenda {
         let mut rows = Vec::new();
         let mut last_group: Option<u8> = None;
         for (i, item) in self.items.iter().enumerate() {
-            let g = group_order(item);
+            let g = group_order(item, &self.today);
             if last_group != Some(g) {
                 rows.push(Row::Header(group_label(g)));
                 last_group = Some(g);
@@ -217,11 +226,22 @@ impl Component for OrgAgenda {
         let info_style = theme.get("ui.linenr");
         let header_style = to_bold(theme.get("ui.text.focus"));
         let text_style = theme.get("ui.text");
-        let todo_style = theme.get("diff.minus");
+        let todo_style = theme.get("ui.text");
         let done_style = theme.get("ui.linenr");
         let prio_style = theme.get("constant.numeric");
         let date_style = theme.get("ui.linenr");
         let sel_style = theme.get("ui.selection");
+        // Date-bucket accents: overdue red (fall back to diff.minus), today
+        // green/accent (diff.plus), upcoming uses the normal text style.
+        let overdue_style = {
+            let s = theme.get("error");
+            if s == zemacs_view::graphics::Style::default() {
+                theme.get("diff.minus")
+            } else {
+                s
+            }
+        };
+        let today_style = theme.get("diff.plus");
 
         surface.clear_with(area, bg);
         if area.width < 8 || area.height < 3 {
@@ -300,13 +320,25 @@ impl Component for OrgAgenda {
                         *x += s.chars().count() as u16;
                     };
 
+                    let group = group_order(item, &self.today);
+                    // Accent for the date + keyword by bucket.
+                    let accent = match group {
+                        0 => overdue_style, // Overdue
+                        1 => today_style,   // Today
+                        4 => done_style,    // Done
+                        _ => todo_style,    // Upcoming / undated TODO
+                    };
+                    // Overdue rows get a distinct leading marker.
+                    if group == 0 {
+                        put(surface, &mut x, "! ", pick(overdue_style));
+                    }
                     if let Some(date) = date_key(item) {
-                        put(surface, &mut x, &format!("{date} "), pick(date_style));
+                        put(surface, &mut x, &format!("{date} "), pick(accent));
                     }
                     let kw_style = if item.keyword == "DONE" {
                         done_style
                     } else {
-                        todo_style
+                        accent
                     };
                     put(surface, &mut x, &item.keyword, pick(kw_style));
                     put(surface, &mut x, " ", pick(text_style));
@@ -342,22 +374,30 @@ impl Component for OrgAgenda {
     }
 }
 
-/// Sort/group bucket for an item: dated-active (0), undated TODO (1), done (2).
-fn group_order(item: &AgendaItem) -> u8 {
+/// Sort/group bucket for an item, relative to `today`: dated-active items split
+/// by date into Overdue (0) / Today (1) / Upcoming (2); undated TODOs (3);
+/// completed `DONE` (4). Done is bucketed last regardless of any date it carries.
+fn group_order(item: &AgendaItem, today: &str) -> u8 {
     if item.keyword == "DONE" {
-        2
-    } else if date_key(item).is_some() {
-        0
-    } else {
-        1
+        return 4;
+    }
+    match date_key(item) {
+        Some(date) => match org::date_bucket(date, today) {
+            org::Bucket::Overdue => 0,
+            org::Bucket::Today => 1,
+            org::Bucket::Upcoming => 2,
+        },
+        None => 3,
     }
 }
 
 /// Human label for a group bucket.
 fn group_label(group: u8) -> &'static str {
     match group {
-        0 => "Scheduled/Deadline",
-        1 => "TODO",
+        0 => "Overdue",
+        1 => "Today",
+        2 => "Upcoming",
+        3 => "TODO",
         _ => "Done",
     }
 }
