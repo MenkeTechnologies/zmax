@@ -2701,7 +2701,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -18553,5 +18553,165 @@
    "key:normal:space D b 3"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "jetbrains.editing.delete-to-word-end",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_forward"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.editing.delete-to-word-start",
+  "status": "ported",
+  "evidence": [
+   "static:delete_word_backward"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.navigation.go-to-class",
+  "status": "ported",
+  "evidence": [
+   "static:workspace_symbol_picker"
+  ],
+  "note": "workspace symbol = class navigation"
+ },
+ {
+  "spec_id": "jetbrains.navigation.recent-locations",
+  "status": "ported",
+  "evidence": [
+   "static:jumplist_picker"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.navigation.navigate-to-test",
+  "status": "partial",
+  "evidence": [
+   "static:goto_next_test"
+  ],
+  "note": "test-navigation ~ navigate to test"
+ },
+ {
+  "spec_id": "jetbrains.navigation.jump-to-navigation-bar",
+  "status": "partial",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": "file tree ~ navigation bar"
+ },
+ {
+  "spec_id": "jetbrains.navigate-from-symbol.quick-definition",
+  "status": "partial",
+  "evidence": [
+   "static:goto_definition"
+  ],
+  "note": "navigates instead of peek popup"
+ },
+ {
+  "spec_id": "jetbrains.navigate-from-symbol.type-hierarchy",
+  "status": "partial",
+  "evidence": [
+   "static:goto_implementation"
+  ],
+  "note": "implementations ~ subtypes"
+ },
+ {
+  "spec_id": "jetbrains.navigate-from-symbol.call-hierarchy",
+  "status": "partial",
+  "evidence": [
+   "static:goto_reference"
+  ],
+  "note": "references ~ callers"
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.smart-completion",
+  "status": "partial",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": "no type filtering"
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.override-methods",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "via LSP code action"
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.implement-methods",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "via LSP code action"
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.optimize-imports",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "via LSP source action"
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.cyclic-expand-word",
+  "status": "partial",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": "hippie-expand ~ completion"
+ },
+ {
+  "spec_id": "jetbrains.run-debug.rerun",
+  "status": "ported",
+  "evidence": [
+   "static:rerun_last_run"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.run-debug.resume-program",
+  "status": "ported",
+  "evidence": [
+   "static:dap_continue"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.run-debug.smart-step-into",
+  "status": "partial",
+  "evidence": [
+   "static:dap_step_in"
+  ],
+  "note": "step-in ~ smart step into"
+ },
+ {
+  "spec_id": "jetbrains.vcs.show-history",
+  "status": "ported",
+  "evidence": [
+   "static:git_file_log_picker"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.vcs.annotate",
+  "status": "ported",
+  "evidence": [
+   "static:git_blame_line"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.vcs.add-to-vcs",
+  "status": "ported",
+  "evidence": [
+   "typable:git-stage"
+  ],
+  "note": "stage ~ add to vcs"
  }
 ]
