@@ -512,6 +512,7 @@ impl MappableCommand {
         copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
         describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
+        package_search, "Search configured language packages and describe one (SPC h p)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7828,6 +7829,71 @@ fn describe_current_modes(cx: &mut Context) {
 /// types, comment tokens, formatter/debugger config, and configured language servers. zemacs has no
 /// package manager, so the language configuration is the closest analogue of Spacemacs'
 /// `describe-package`.
+/// Render a human-readable summary of a language-support configuration (the zemacs "package").
+fn render_language_package(
+    lc: &zemacs_core::syntax::config::LanguageConfiguration,
+) -> String {
+    let mut out = format!("Language package: {}\n\n", lc.language_id);
+    out.push_str(&format!("scope: {}\n", lc.scope));
+    out.push_str(&format!(
+        "grammar: {}\n",
+        lc.grammar.as_deref().unwrap_or(&lc.language_id)
+    ));
+    let fts: Vec<String> = lc.file_types.iter().map(|f| format!("{f:?}")).collect();
+    out.push_str(&format!(
+        "file types: {}\n",
+        if fts.is_empty() {
+            "(none)".to_string()
+        } else {
+            fts.join(", ")
+        }
+    ));
+    if !lc.shebangs.is_empty() {
+        out.push_str(&format!("shebangs: {}\n", lc.shebangs.join(", ")));
+    }
+    out.push_str(&format!(
+        "line comment: {}\n",
+        lc.comment_tokens
+            .as_ref()
+            .map(|t| t.join(" "))
+            .unwrap_or_else(|| "(none)".to_string())
+    ));
+    out.push_str(&format!(
+        "block comment: {}\n",
+        if lc.block_comment_tokens.is_some() {
+            "yes"
+        } else {
+            "no"
+        }
+    ));
+    out.push_str(&format!("auto-format on save: {}\n", lc.auto_format));
+    out.push_str(&format!(
+        "external formatter: {}\n",
+        if lc.formatter.is_some() { "yes" } else { "no" }
+    ));
+    out.push_str(&format!(
+        "debugger: {}\n",
+        if lc.debugger.is_some() {
+            "configured"
+        } else {
+            "none"
+        }
+    ));
+    if let Some(tw) = lc.text_width {
+        out.push_str(&format!("text width: {tw}\n"));
+    }
+    let servers: Vec<&str> = lc.language_servers.iter().map(|s| s.name.as_str()).collect();
+    out.push_str(&format!(
+        "configured language servers: {}\n",
+        if servers.is_empty() {
+            "(none)".to_string()
+        } else {
+            servers.join(", ")
+        }
+    ));
+    out
+}
+
 fn describe_language_package(cx: &mut Context) {
     let report = {
         let doc = doc!(cx.editor);
@@ -7836,72 +7902,56 @@ fn describe_language_package(cx: &mut Context) {
                 "No language-support package for {} (fundamental mode).\n",
                 doc.display_name()
             ),
-            Some(lc) => {
-                let mut out = format!("Language package: {}\n\n", lc.language_id);
-                out.push_str(&format!("scope: {}\n", lc.scope));
-                out.push_str(&format!(
-                    "grammar: {}\n",
-                    lc.grammar.as_deref().unwrap_or(&lc.language_id)
-                ));
-                let fts: Vec<String> = lc.file_types.iter().map(|f| format!("{f:?}")).collect();
-                out.push_str(&format!(
-                    "file types: {}\n",
-                    if fts.is_empty() {
-                        "(none)".to_string()
-                    } else {
-                        fts.join(", ")
-                    }
-                ));
-                if !lc.shebangs.is_empty() {
-                    out.push_str(&format!("shebangs: {}\n", lc.shebangs.join(", ")));
-                }
-                out.push_str(&format!(
-                    "line comment: {}\n",
-                    lc.comment_tokens
-                        .as_ref()
-                        .map(|t| t.join(" "))
-                        .unwrap_or_else(|| "(none)".to_string())
-                ));
-                out.push_str(&format!(
-                    "block comment: {}\n",
-                    if lc.block_comment_tokens.is_some() {
-                        "yes"
-                    } else {
-                        "no"
-                    }
-                ));
-                out.push_str(&format!("auto-format on save: {}\n", lc.auto_format));
-                out.push_str(&format!(
-                    "external formatter: {}\n",
-                    if lc.formatter.is_some() { "yes" } else { "no" }
-                ));
-                out.push_str(&format!(
-                    "debugger: {}\n",
-                    if lc.debugger.is_some() {
-                        "configured"
-                    } else {
-                        "none"
-                    }
-                ));
-                if let Some(tw) = lc.text_width {
-                    out.push_str(&format!("text width: {tw}\n"));
-                }
-                let servers: Vec<&str> =
-                    lc.language_servers.iter().map(|s| s.name.as_str()).collect();
-                out.push_str(&format!(
-                    "configured language servers: {}\n",
-                    if servers.is_empty() {
-                        "(none)".to_string()
-                    } else {
-                        servers.join(", ")
-                    }
-                ));
-                out
-            }
+            Some(lc) => render_language_package(lc),
         }
     };
     show_text_in_scratch(cx.editor, &report);
     cx.editor.set_status("describe language package");
+}
+
+/// SPC h p : "search packages" — a picker over every configured language (zemacs' analogue of a
+/// package list); selecting one renders its package description into a scratch buffer. Spacemacs
+/// `helm-spacemacs-help-packages`.
+fn package_search(cx: &mut Context) {
+    struct PackageItem {
+        name: String,
+        types: String,
+        desc: String,
+    }
+    let items: Vec<PackageItem> = {
+        let loader: &zemacs_core::syntax::Loader = &cx.editor.syn_loader.load();
+        let mut v: Vec<PackageItem> = loader
+            .language_configs()
+            .map(|lc| {
+                let types: Vec<String> =
+                    lc.file_types.iter().map(|f| format!("{f:?}")).collect();
+                PackageItem {
+                    name: lc.language_id.clone(),
+                    types: types.join(", "),
+                    desc: render_language_package(lc),
+                }
+            })
+            .collect();
+        v.sort_by(|a, b| a.name.cmp(&b.name));
+        v
+    };
+    if items.is_empty() {
+        cx.editor.set_error("no language packages configured");
+        return;
+    }
+    let columns = [
+        PickerColumn::new("package (language)", |it: &PackageItem, _: &()| {
+            it.name.clone().into()
+        }),
+        PickerColumn::new("file types", |it: &PackageItem, _: &()| {
+            it.types.clone().into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, items, (), |cx, it: &PackageItem, _action| {
+        show_text_in_scratch(cx.editor, &it.desc);
+        cx.editor.set_status(format!("package: {}", it.name));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// SPC h d s : copy system information (zemacs version, OS, arch, term) to the system clipboard,
