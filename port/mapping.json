@@ -19608,5 +19608,14 @@
       "static:ai_agent_review"
     ],
     "note": "agent review (dry-run) mode: write_file/run_command report proposed changes without applying; toggle off and re-run to apply"
+  },
+  {
+    "spec_id": "cursor.misc.docs",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space a D",
+      "static:ai_docs_context"
+    ],
+    "note": "@docs keyword retrieval over a docs directory (ZEMACS_AI_DOCS_DIR or docs/ doc/ documentation/) into AI context; grep-based, not an embeddings index"
   }
 ]

@@ -541,6 +541,7 @@ impl MappableCommand {
         ai_agent, "Run the autonomous AI agent on a task (SPC a a)",
         ai_agent_review, "Toggle agent review (dry-run) mode — propose changes without applying (SPC a R)",
         ai_complete, "AI code completion at the cursor (SPC a TAB)",
+        ai_docs_context, "@docs keyword-search over the docs directory for AI context (SPC a D)",
         ai_revert_agent, "Revert the workspace to the last agent checkpoint (SPC a z)",
         ai_fix, "AI-fix the diagnostic(s) on the current line (SPC a F)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
@@ -9241,6 +9242,69 @@ fn ai_symbol_context(cx: &mut Context) {
         return;
     }
     add_grep_context(cx, "symbol", word);
+}
+
+/// Resolve the documentation directory to search for `@docs`: `ZEMACS_AI_DOCS_DIR` if set, else the
+/// first of `docs/`, `doc/`, `documentation/` that exists under the workspace root.
+fn resolve_docs_dir(root: &std::path::Path) -> Option<std::path::PathBuf> {
+    if let Ok(d) = std::env::var("ZEMACS_AI_DOCS_DIR") {
+        let p = std::path::PathBuf::from(&d);
+        let p = if p.is_absolute() { p } else { root.join(p) };
+        return p.is_dir().then_some(p);
+    }
+    ["docs", "doc", "documentation"]
+        .iter()
+        .map(|d| root.join(d))
+        .find(|p| p.is_dir())
+}
+
+/// SPC a D : add documentation context — prompt for a query, keyword-grep the docs directory
+/// (`ZEMACS_AI_DOCS_DIR` or docs/ doc/ documentation/), attach matches to the next AI chat
+/// (Cursor `@docs`; keyword retrieval over a docs folder, not an embeddings index).
+fn ai_docs_context(cx: &mut Context) {
+    let root = zemacs_loader::find_workspace().0;
+    let docs_dir = match resolve_docs_dir(&root) {
+        Some(d) => d,
+        None => {
+            cx.editor
+                .set_status("@docs: no docs directory (set ZEMACS_AI_DOCS_DIR or add docs/)");
+            return;
+        }
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        "@docs search:".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let query = input.trim().to_string();
+            let dir = docs_dir.clone();
+            cx.editor.set_status("AI: gathering docs…");
+            cx.jobs.callback(async move {
+                let q = query.clone();
+                let res = tokio::task::spawn_blocking(move || grep_context(&dir, &q))
+                    .await
+                    .map_err(|e| anyhow::anyhow!("grep task: {e}"))?;
+                let added = !res.trim().is_empty();
+                if added {
+                    AI_PENDING_CONTEXT
+                        .lock()
+                        .unwrap()
+                        .push((format!("docs: {query}"), res));
+                }
+                Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+                    editor.set_status(if added {
+                        "added @docs context (SPC a p to chat)"
+                    } else {
+                        "no matches in docs"
+                    });
+                })))
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 /// SPC a k : describe a task in natural language and get a shell command (Cursor terminal Cmd+K),

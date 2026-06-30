@@ -907,6 +907,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "@" => ai_add_file_context,        // SPC a @ : add @file context for next chat
                 "b" => ai_codebase_context,        // SPC a b : @codebase keyword-search context
                 "s" => ai_symbol_context,          // SPC a s : @symbol (definition) context
+                "D" => ai_docs_context,            // SPC a D : @docs keyword search over docs/ dir
                 "k" => ai_terminal_command,        // SPC a k : generate a shell command (terminal Cmd+K)
                 "u" => ai_generate_tests,          // SPC a u : AI generate unit tests
                 "c" => ai_commit_message,          // SPC a c : AI git commit message
