@@ -18702,19 +18702,21 @@
   },
   {
     "spec_id": "jetbrains.coding-assistance.override-methods",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:code_action"
+      "key:normal:space l v",
+      "static:override_methods"
     ],
-    "note": "via LSP code action"
+    "note": "Override Methods (Ctrl-O) = override_methods: title-filtered LSP code action (\"override\"), auto-applied (SPC l v)"
   },
   {
     "spec_id": "jetbrains.coding-assistance.implement-methods",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:code_action"
+      "key:normal:space l i",
+      "static:implement_methods"
     ],
-    "note": "via LSP code action"
+    "note": "Implement Methods (Ctrl-I) = implement_methods: title-filtered LSP code action (\"implement\"), auto-applied (SPC l i)"
   },
   {
     "spec_id": "jetbrains.coding-assistance.optimize-imports",

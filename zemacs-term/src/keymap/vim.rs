@@ -1401,6 +1401,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "r" => rename_symbol,              // SPC l r : rename symbol
                 "a" => code_action,                // SPC l a : code action
                 "O" => organize_imports,           // SPC l O : optimize/organize imports (JetBrains Ctrl-Alt-O)
+                "i" => implement_methods,          // SPC l i : implement interface/trait members (JetBrains Ctrl-I)
+                "v" => override_methods,           // SPC l v : override inherited members (JetBrains Ctrl-O)
                 "k" => hover,                      // SPC l k : hover
                 "s" => signature_help,             // SPC l s : signature help
                 "f" => format_selections,          // SPC l f : format

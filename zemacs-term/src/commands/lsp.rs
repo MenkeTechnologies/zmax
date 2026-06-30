@@ -711,6 +711,28 @@ pub fn organize_imports(cx: &mut Context) {
     );
 }
 
+/// IntelliJ "Implement Methods" (Ctrl-I): the server code action that stubs out unimplemented
+/// interface/trait members, pinned by title and applied directly.
+pub fn implement_methods(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        None,
+        Some(&["implement"]),
+        "No implement-members action available here",
+    );
+}
+
+/// IntelliJ "Override Methods" (Ctrl-O): the server code action that generates overrides for
+/// inherited members, pinned by title and applied directly.
+pub fn override_methods(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        None,
+        Some(&["override"]),
+        "No override-members action available here",
+    );
+}
+
 /// Shared code-action driver. `only` filters the request to the given kinds (and
 /// is re-applied client-side, since some servers ignore the `only` hint and
 /// return everything). `title_filter`, when set, keeps only actions whose title

@@ -609,6 +609,8 @@ impl MappableCommand {
         rewrite_refactor, "Rewrite refactoring (change signature etc.) via LSP",
         refactor_this, "Show all applicable refactorings (IntelliJ Refactor This)",
         organize_imports, "Organize/optimize imports via LSP source action (IntelliJ Ctrl-Alt-O)",
+        implement_methods, "Implement missing interface/trait members via LSP (IntelliJ Ctrl-I)",
+        override_methods, "Override inherited members via LSP (IntelliJ Ctrl-O)",
         buffer_picker, "Open buffer picker",
         jumplist_picker, "Open jumplist picker",
         register_picker, "Browse registers and paste the chosen one",
