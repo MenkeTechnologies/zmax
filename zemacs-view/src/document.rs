@@ -1826,6 +1826,16 @@ impl Document {
         self.marks.insert(mark, pos);
     }
 
+    /// Remove a single named mark (vim `:delmarks {m}`); returns whether it was set.
+    pub fn remove_mark(&mut self, mark: char) -> bool {
+        self.marks.remove(&mark).is_some()
+    }
+
+    /// Remove all alphabetic named marks (vim `:delmarks!`), leaving the structural auto-marks.
+    pub fn clear_letter_marks(&mut self) {
+        self.marks.retain(|m, _| !m.is_ascii_alphabetic());
+    }
+
     /// Iterate all set marks as `(mark_char, char_position)` (for the markology gutter).
     pub fn marks_iter(&self) -> impl Iterator<Item = (char, usize)> + '_ {
         let len = self.text.len_chars();

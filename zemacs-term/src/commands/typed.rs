@@ -515,6 +515,39 @@ fn history_list(
     Ok(())
 }
 
+/// `:delmarks {marks}` — delete the listed named marks (vim `:delmarks`/`:delm`).
+fn del_marks(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let spec: String = args.join("");
+    let spec = spec.trim();
+    ensure!(!spec.is_empty(), ":delmarks requires marks (or use :delmarks! for all)");
+    let n = {
+        let doc = doc_mut!(cx.editor);
+        spec.chars()
+            .filter(|c| !c.is_whitespace() && *c != ',')
+            .filter(|&c| doc.remove_mark(c))
+            .count()
+    };
+    cx.editor.set_status(format!("deleted {n} mark(s)"));
+    Ok(())
+}
+
+/// `:delmarks!` — delete all lowercase/uppercase letter marks (vim `:delmarks!`).
+fn del_marks_all(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    doc_mut!(cx.editor).clear_letter_marks();
+    cx.editor.set_status("deleted all letter marks");
+    Ok(())
+}
+
 fn write_impl(
     cx: &mut compositor::Context,
     path: Option<&str>,
@@ -14408,6 +14441,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "delmarks",
+        aliases: &["delm"],
+        doc: "Delete the listed named marks (vim :delmarks abc).",
+        fun: del_marks,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "delmarks!",
+        aliases: &["delm!"],
+        doc: "Delete all letter marks (vim :delmarks!).",
+        fun: del_marks_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
