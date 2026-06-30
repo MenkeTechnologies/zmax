@@ -825,6 +825,7 @@ impl MappableCommand {
         swap_view_up, "Swap with split above",
         swap_view_down, "Swap with split below",
         transpose_view, "Transpose splits",
+        move_to_opposite_group, "Move the current editor to the opposite split group (JetBrains)",
         rotate_view, "Goto next window",
         rotate_view_reverse, "Goto previous window",
         hsplit, "Horizontal bottom split",
@@ -15771,6 +15772,22 @@ fn swap_view_down(cx: &mut Context) {
 
 fn transpose_view(cx: &mut Context) {
     cx.editor.transpose_view()
+}
+
+/// JetBrains "Move to Opposite Tab Group": move the current editor into the adjacent split group,
+/// swapping with whatever split is in the first available direction (right/left/down/up).
+fn move_to_opposite_group(cx: &mut Context) {
+    for dir in [
+        tree::Direction::Right,
+        tree::Direction::Left,
+        tree::Direction::Down,
+        tree::Direction::Up,
+    ] {
+        if cx.editor.tree.swap_split_in_direction(dir).is_some() {
+            return;
+        }
+    }
+    cx.editor.set_status("No opposite split group to move to");
 }
 
 /// Open a new split in the given direction specified by the action.
