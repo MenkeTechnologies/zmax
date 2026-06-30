@@ -6179,11 +6179,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_f",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space h f"
+   "key:normal:space h f",
+   "static:browse_faq"
   ],
-  "note": "FAQ -> command palette"
+  "note": "discover the FAQ -> browse_faq (embedded FAQ.md shown in scratch)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_n",

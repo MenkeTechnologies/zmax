@@ -515,6 +515,7 @@ impl MappableCommand {
         copy_last_keys, "Copy the most recently pressed keys to the clipboard (SPC h d l)",
         ace_window, "Jump to a window by its number, prompted (ace-window, SPC w . a)",
         browse_news, "Browse zemacs release notes / NEWS (SPC h n)",
+        browse_faq, "Browse the zemacs FAQ (SPC h f)",
         show_environment, "Show the editor's environment variables (SPC f e e)",
         reimport_shell_env, "Re-import the shell environment into the editor (SPC f e C-e)",
         goto_buffer_window, "Focus the window already showing a chosen buffer (SPC b w)",
@@ -8162,6 +8163,14 @@ fn browse_news(cx: &mut Context) {
     const CHANGELOG: &str = include_str!("../../CHANGELOG.md");
     show_text_in_scratch(cx.editor, CHANGELOG);
     cx.editor.set_status("zemacs release notes (CHANGELOG)");
+}
+
+/// SPC h f : browse the zemacs FAQ, embedded at build time and shown in a scratch buffer.
+/// Spacemacs `helm-spacemacs-help-faq` / "discover the FAQ".
+fn browse_faq(cx: &mut Context) {
+    const FAQ: &str = include_str!("../../FAQ.md");
+    show_text_in_scratch(cx.editor, FAQ);
+    cx.editor.set_status("zemacs FAQ");
 }
 
 /// SPC h d l : copy the most recently pressed keys to the system clipboard (newest last), for
