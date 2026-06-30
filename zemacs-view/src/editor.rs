@@ -1509,12 +1509,28 @@ pub enum CompleteAction {
     },
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Action {
     Load,
     Replace,
     HorizontalSplit,
     VerticalSplit,
+}
+
+/// Window dedication (Spacemacs `SPC w t`): a dedicated window keeps its buffer.
+/// Replacing it with a *different* document is redirected to a split so the
+/// dedicated buffer stays put. Other actions (and re-opening the same buffer)
+/// pass through unchanged. Pure decision helper for [`Editor::switch`].
+pub(crate) fn dedication_redirect(
+    action: Action,
+    view_dedicated: bool,
+    same_document: bool,
+) -> Action {
+    if action == Action::Replace && view_dedicated && !same_document {
+        Action::HorizontalSplit
+    } else {
+        action
+    }
 }
 
 impl Action {
@@ -2096,6 +2112,13 @@ impl Editor {
                 }
             }
         }
+
+        // Window dedication (Spacemacs `SPC w t`): a dedicated window keeps its
+        // buffer; replacing it with a different document is redirected to a split.
+        let action = match self.tree.try_get(self.tree.focus) {
+            Some(view) => dedication_redirect(action, view.dedicated, view.doc == id),
+            None => action,
+        };
 
         let focust_lost = match action {
             Action::Replace => {
@@ -2931,5 +2954,35 @@ impl CursorCache {
 
     pub fn reset(&self) {
         self.0.set(None)
+    }
+}
+
+#[cfg(test)]
+mod dedication_tests {
+    use super::{dedication_redirect, Action};
+
+    #[test]
+    fn dedicated_window_redirects_replace_to_split() {
+        // Replacing a dedicated window with a *different* doc splits instead.
+        assert_eq!(
+            dedication_redirect(Action::Replace, true, false),
+            Action::HorizontalSplit
+        );
+        // Re-opening the *same* doc in a dedicated window does not split.
+        assert_eq!(
+            dedication_redirect(Action::Replace, true, true),
+            Action::Replace
+        );
+        // A non-dedicated window replaces as usual.
+        assert_eq!(
+            dedication_redirect(Action::Replace, false, false),
+            Action::Replace
+        );
+        // Non-Replace actions are never redirected, even when dedicated.
+        assert_eq!(dedication_redirect(Action::Load, true, false), Action::Load);
+        assert_eq!(
+            dedication_redirect(Action::VerticalSplit, true, false),
+            Action::VerticalSplit
+        );
     }
 }

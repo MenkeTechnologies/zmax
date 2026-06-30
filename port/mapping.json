@@ -19442,5 +19442,13 @@
    "static:ai_fix"
   ],
   "note": "AI fix diagnostic on line -> ai_fix"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w t"
+  ],
+  "note": "spacemacs SPC w t -> toggle_window_dedication (dedicated window splits on opening other buffers)"
  }
 ]

@@ -172,6 +172,10 @@ pub struct View {
     // left to future work. For now we treat all views as focused and give them
     // each their own handler.
     pub diagnostics_handler: DiagnosticsHandler,
+    /// Spacemacs window dedication (`SPC w t`): a dedicated window keeps its
+    /// buffer — opening a *different* buffer is redirected to another split
+    /// rather than replacing this one. See `Editor::switch`.
+    pub dedicated: bool,
 }
 
 impl fmt::Debug for View {
@@ -197,6 +201,7 @@ impl View {
             gutters,
             doc_revisions: HashMap::new(),
             diagnostics_handler: DiagnosticsHandler::new(),
+            dedicated: false,
         }
     }
 

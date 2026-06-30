@@ -960,6 +960,7 @@ impl MappableCommand {
         kmacro_add_counter, "Add [count] to the keyboard-macro counter (SPC K c a)",
         kmacro_insert_counter, "Insert the macro counter value, then increment (SPC K c c)",
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
+        toggle_window_dedication, "Toggle window dedication (spacemacs SPC w t)",
         paredit_slurp_forward, "Paredit: slurp the next s-expression forward (SPC k s)",
         paredit_barf_forward, "Paredit: barf the last s-expression forward (SPC k b)",
         paredit_slurp_backward, "Paredit: slurp the previous s-expression backward (SPC k S)",
@@ -16845,6 +16846,17 @@ fn toggle_readonly(cx: &mut Context) {
         "writable"
     };
     cx.editor.set_status(format!("buffer is now {state}"));
+}
+
+/// Spacemacs `SPC w t`: toggle window dedication. A dedicated window keeps its
+/// buffer — opening a different buffer is redirected to a split (see
+/// `Editor::switch`) instead of replacing this one.
+fn toggle_window_dedication(cx: &mut Context) {
+    let view = view_mut!(cx.editor);
+    view.dedicated = !view.dedicated;
+    let on = view.dedicated;
+    cx.editor
+        .set_status(format!("window dedication: {}", if on { "on" } else { "off" }));
 }
 
 fn scroll_up(cx: &mut Context) {

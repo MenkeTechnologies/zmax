@@ -706,7 +706,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "^" | "C-^" => goto_last_accessed_file, // C-w ^ / C-w C-^: edit alternate file
             "i" | "C-i" => goto_declaration,  // C-w i / C-w C-i: split + jump to declaration (no split)
             "p" | "C-p" => rotate_view,       // C-w p: go to previous (last accessed) window
-            "t" | "C-t" => jump_view_up,      // C-w t: go to top window
+            "C-t" => jump_view_up,            // C-w C-t: go to top window
+            "t" => toggle_window_dedication,  // C-w t / SPC w t: toggle window dedication (spacemacs)
             "b" | "C-b" => jump_view_down,    // C-w b: go to bottom window
             "W" => rotate_view_reverse,       // C-w W: go to previous window (wrap)
             "u" => winner_undo,               // SPC w u : winner-undo (undo window layout)
@@ -1054,7 +1055,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "^" | "C-^" => goto_last_accessed_file,
                 "i" | "C-i" => goto_declaration,
                 "p" | "C-p" => rotate_view,
-                "t" | "C-t" => jump_view_up,
+                "C-t" => jump_view_up,
+                "t" => toggle_window_dedication,  // SPC w t : toggle window dedication (spacemacs)
                 "b" | "C-b" => jump_view_down,
                 "W" => rotate_view_reverse,
                 "u" => winner_undo,               // SPC w u : winner-undo (undo window layout)
