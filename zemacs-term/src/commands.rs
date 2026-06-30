@@ -870,6 +870,7 @@ impl MappableCommand {
         paredit_splice, "Paredit: splice/unwrap the enclosing s-expression (SPC k W)",
         paredit_raise, "Paredit: raise the current s-expression (SPC k r)",
         paredit_transpose, "Paredit: transpose the s-expressions around point (SPC k t)",
+        paredit_split, "Paredit: split the enclosing list at point (SPC j s)",
         paredit_splice_kill_forward, "Paredit: splice, killing forward (SPC k e)",
         paredit_splice_kill_backward, "Paredit: splice, killing backward (SPC k E)",
         paredit_insert_sexp_after, "Paredit: insert a new () sexp after the current one (SPC k ))",
@@ -13721,6 +13722,23 @@ fn pe_transpose(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
     Some((out, ne + 1))
 }
 
+/// paredit-split-sexp: split the enclosing list at point into two siblings.
+/// `(a b| c)` → `(a b) ( c)`.
+fn pe_split(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (o, c) = pe_enclosing(ch, pos)?;
+    if pos <= o || pos > c {
+        return None;
+    }
+    let open = ch[o];
+    let close = ch[c];
+    let mut out = ch[..pos].to_vec();
+    out.push(close);
+    out.push(' ');
+    out.push(open);
+    out.extend_from_slice(&ch[pos..]);
+    Some((out, pos + 3))
+}
+
 /// A pure paredit transform: given the buffer chars and cursor offset, returns
 /// the new chars and cursor offset, or `None` if the edit doesn't apply.
 type PareditFn = fn(&[char], usize) -> Option<(Vec<char>, usize)>;
@@ -13779,6 +13797,9 @@ fn paredit_raise(cx: &mut Context) {
 }
 fn paredit_transpose(cx: &mut Context) {
     apply_paredit(cx, pe_transpose);
+}
+fn paredit_split(cx: &mut Context) {
+    apply_paredit(cx, pe_split);
 }
 fn paredit_splice_kill_forward(cx: &mut Context) {
     apply_paredit(cx, pe_splice_kill_forward);
@@ -15128,6 +15149,14 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn paredit_split_makes_two_lists() {
+        let ch: Vec<char> = "(a b c)".chars().collect();
+        let (out, cur) = pe_split(&ch, 4).expect("split");
+        assert_eq!(out.iter().collect::<String>(), "(a b) ( c)");
+        assert_eq!(cur, 7);
     }
 
     #[test]

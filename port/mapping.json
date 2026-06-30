@@ -14750,5 +14750,37 @@
    "key:normal:space u space w D"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_j_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space j s"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_j_sU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space j S"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_b_x_q",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b . q"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_c_8",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t C-8"
+  ],
+  "note": ""
  }
 ]
