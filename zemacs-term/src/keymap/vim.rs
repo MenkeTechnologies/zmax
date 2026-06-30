@@ -1524,7 +1524,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "v" => hover,                  // SPC h d v : describe variable (LSP hover at point)
                     "m" => describe_current_modes, // SPC h d m : describe current modes
                     "a" => hover,                  // SPC h d a : describe expression under point
-                    "p" => command_palette,        // SPC h d p : describe package
+                    "p" => describe_language_package, // SPC h d p : describe language-support package
                     "t" => describe_text_properties, // SPC h d t : describe text properties (syntax node stack)
                     "x" => help,                   // SPC h d x : describe ex-command (Help browser)
                     "l" => command_palette,        // SPC h d l : copy last keys

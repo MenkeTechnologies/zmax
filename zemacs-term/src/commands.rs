@@ -510,6 +510,7 @@ impl MappableCommand {
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
         copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
+        describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7722,6 +7723,86 @@ fn describe_current_modes(cx: &mut Context) {
     };
     show_text_in_scratch(cx.editor, &report);
     cx.editor.set_status("describe current modes");
+}
+
+/// SPC h d p : describe the language-support "package" for the current buffer — its grammar, file
+/// types, comment tokens, formatter/debugger config, and configured language servers. zemacs has no
+/// package manager, so the language configuration is the closest analogue of Spacemacs'
+/// `describe-package`.
+fn describe_language_package(cx: &mut Context) {
+    let report = {
+        let doc = doc!(cx.editor);
+        match doc.language_config() {
+            None => format!(
+                "No language-support package for {} (fundamental mode).\n",
+                doc.display_name()
+            ),
+            Some(lc) => {
+                let mut out = format!("Language package: {}\n\n", lc.language_id);
+                out.push_str(&format!("scope: {}\n", lc.scope));
+                out.push_str(&format!(
+                    "grammar: {}\n",
+                    lc.grammar.as_deref().unwrap_or(&lc.language_id)
+                ));
+                let fts: Vec<String> = lc.file_types.iter().map(|f| format!("{f:?}")).collect();
+                out.push_str(&format!(
+                    "file types: {}\n",
+                    if fts.is_empty() {
+                        "(none)".to_string()
+                    } else {
+                        fts.join(", ")
+                    }
+                ));
+                if !lc.shebangs.is_empty() {
+                    out.push_str(&format!("shebangs: {}\n", lc.shebangs.join(", ")));
+                }
+                out.push_str(&format!(
+                    "line comment: {}\n",
+                    lc.comment_tokens
+                        .as_ref()
+                        .map(|t| t.join(" "))
+                        .unwrap_or_else(|| "(none)".to_string())
+                ));
+                out.push_str(&format!(
+                    "block comment: {}\n",
+                    if lc.block_comment_tokens.is_some() {
+                        "yes"
+                    } else {
+                        "no"
+                    }
+                ));
+                out.push_str(&format!("auto-format on save: {}\n", lc.auto_format));
+                out.push_str(&format!(
+                    "external formatter: {}\n",
+                    if lc.formatter.is_some() { "yes" } else { "no" }
+                ));
+                out.push_str(&format!(
+                    "debugger: {}\n",
+                    if lc.debugger.is_some() {
+                        "configured"
+                    } else {
+                        "none"
+                    }
+                ));
+                if let Some(tw) = lc.text_width {
+                    out.push_str(&format!("text width: {tw}\n"));
+                }
+                let servers: Vec<&str> =
+                    lc.language_servers.iter().map(|s| s.name.as_str()).collect();
+                out.push_str(&format!(
+                    "configured language servers: {}\n",
+                    if servers.is_empty() {
+                        "(none)".to_string()
+                    } else {
+                        servers.join(", ")
+                    }
+                ));
+                out
+            }
+        }
+    };
+    show_text_in_scratch(cx.editor, &report);
+    cx.editor.set_status("describe language package");
 }
 
 /// SPC h d s : copy system information (zemacs version, OS, arch, term) to the system clipboard,
