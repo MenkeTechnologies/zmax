@@ -1400,6 +1400,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 // LSP actions (zemacs); the rest are Spacemacs layout/workspace keys.
                 "r" => rename_symbol,              // SPC l r : rename symbol
                 "a" => code_action,                // SPC l a : code action
+                "O" => organize_imports,           // SPC l O : optimize/organize imports (JetBrains Ctrl-Alt-O)
                 "k" => hover,                      // SPC l k : hover
                 "s" => signature_help,             // SPC l s : signature help
                 "f" => format_selections,          // SPC l f : format
