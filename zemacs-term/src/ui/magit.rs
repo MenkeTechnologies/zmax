@@ -25,6 +25,7 @@
 //! ([`MagitLog`]) with a per-commit diff viewer ([`MagitShow`]). The ahead/behind
 //! counts vs the upstream are shown in the header when an upstream is configured.
 
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -39,7 +40,7 @@ use crate::{
 };
 
 /// Which section a change belongs to. Ordered as it is rendered.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Section {
     Untracked,
     Unstaged,
@@ -166,6 +167,134 @@ pub fn parse_status(porcelain: &str) -> Vec<StatusEntry> {
     out
 }
 
+/// One hunk of a unified diff: the `@@ -a,b +c,d @@` header line plus the body
+/// lines that follow it (context, `+` additions and `-` removals), up to but not
+/// including the next hunk header.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct Hunk {
+    /// The `@@ … @@` line (possibly with a trailing section-heading hint).
+    pub header: String,
+    /// The hunk body lines (verbatim, including their leading ` `/`+`/`-`).
+    pub body: Vec<String>,
+}
+
+/// A file's parsed diff: the file-level header (`diff --git`, `index`, `---`,
+/// `+++`, mode lines …) and the list of [`Hunk`]s. Used both for rendering the
+/// expanded view and for reconstructing single-hunk patches to feed `git apply`.
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
+pub struct FileDiff {
+    pub header: Vec<String>,
+    pub hunks: Vec<Hunk>,
+}
+
+/// Split a unified diff (one file's worth, as produced by `git diff [--cached]
+/// -- <path>`) into the file header lines and the list of hunks. Pure and
+/// unit-tested.
+///
+/// Everything before the first `@@` line is the file header; each `@@` line
+/// starts a new hunk whose body runs until the next `@@` or end of input. An
+/// empty or hunk-less diff yields the header (possibly empty) and no hunks.
+pub fn parse_diff_hunks(diff: &str) -> (Vec<String>, Vec<Hunk>) {
+    let mut header = Vec::new();
+    let mut hunks: Vec<Hunk> = Vec::new();
+    let mut seen_hunk = false;
+    for line in diff.lines() {
+        if line.starts_with("@@") {
+            seen_hunk = true;
+            hunks.push(Hunk {
+                header: line.to_string(),
+                body: Vec::new(),
+            });
+        } else if seen_hunk {
+            // Safe: `seen_hunk` is only set after pushing at least one hunk.
+            hunks
+                .last_mut()
+                .expect("hunk exists once seen_hunk is set")
+                .body
+                .push(line.to_string());
+        } else {
+            header.push(line.to_string());
+        }
+    }
+    (header, hunks)
+}
+
+/// Reassemble a single-hunk patch from a file `header` and one [`Hunk`], in the
+/// exact shape `git apply` expects: the header lines, the `@@` line, then the
+/// hunk body, each terminated by a newline. Pure and unit-tested.
+pub fn hunk_patch(header: &[String], hunk: &Hunk) -> String {
+    let mut out = String::new();
+    for line in header {
+        out.push_str(line);
+        out.push('\n');
+    }
+    out.push_str(&hunk.header);
+    out.push('\n');
+    for line in &hunk.body {
+        out.push_str(line);
+        out.push('\n');
+    }
+    out
+}
+
+/// A local branch as listed by `git branch`: its name and whether it is the
+/// currently checked-out branch (the `*`-marked line).
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct BranchEntry {
+    pub name: String,
+    pub current: bool,
+}
+
+/// Parse `git branch` (plain, one branch per line) into [`BranchEntry`]s. Pure
+/// and unit-tested. The current branch is the `* `-prefixed line; detached-HEAD
+/// lines (`* (HEAD detached at …)`) are skipped.
+pub fn parse_branches(out: &str) -> Vec<BranchEntry> {
+    let mut entries = Vec::new();
+    for line in out.lines() {
+        let line = line.trim_end();
+        if line.is_empty() {
+            continue;
+        }
+        let current = line.starts_with('*');
+        let name = line.trim_start_matches('*').trim();
+        if name.is_empty() || name.starts_with('(') {
+            continue;
+        }
+        entries.push(BranchEntry {
+            name: name.to_string(),
+            current,
+        });
+    }
+    entries
+}
+
+/// One stash entry as listed by `git stash list`: its ref (`stash@{N}`) and the
+/// descriptive remainder.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct StashEntry {
+    pub reff: String,
+    pub summary: String,
+}
+
+/// Parse `git stash list` output into [`StashEntry`]s. Pure and unit-tested.
+/// Each line is `stash@{N}: <summary>`; the ref is everything up to the first
+/// colon, the summary the trimmed remainder.
+pub fn parse_stash(out: &str) -> Vec<StashEntry> {
+    let mut entries = Vec::new();
+    for line in out.lines() {
+        let line = line.trim_end();
+        if line.is_empty() {
+            continue;
+        }
+        let (reff, summary) = match line.split_once(':') {
+            Some((a, b)) => (a.trim().to_string(), b.trim().to_string()),
+            None => (line.to_string(), String::new()),
+        };
+        entries.push(StashEntry { reff, summary });
+    }
+    entries
+}
+
 /// One commit row in the log view: its abbreviated SHA and the rest of the
 /// `--oneline` text (summary plus any `--decorate` ref names).
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -220,6 +349,41 @@ enum Row {
     Header(String),
     /// A file row; carries the index into [`MagitStatus::entries`].
     File(usize),
+    /// A hunk's `@@ … @@` header row (selectable). Identifies the owning entry
+    /// and the hunk index within that entry's [`FileDiff`].
+    HunkHeader {
+        entry: usize,
+        hunk: usize,
+        text: String,
+    },
+    /// A hunk body line (not directly selectable, but highlighted when its hunk
+    /// is selected). Carries the same `entry`/`hunk` identity for highlighting.
+    HunkLine {
+        entry: usize,
+        hunk: usize,
+        text: String,
+    },
+    /// An indented note shown under an expanded file that has no hunks (e.g. an
+    /// untracked file).
+    Note(String),
+}
+
+/// A selectable item in the status buffer: either a whole file row or a single
+/// hunk within an expanded file.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Target {
+    File(usize),
+    Hunk { entry: usize, hunk: usize },
+}
+
+impl Target {
+    /// The index into [`MagitStatus::entries`] this target belongs to.
+    fn entry_index(self) -> usize {
+        match self {
+            Target::File(i) => i,
+            Target::Hunk { entry, .. } => entry,
+        }
+    }
 }
 
 /// The full-screen interactive magit-status overlay.
@@ -230,7 +394,8 @@ pub struct MagitStatus {
     head: String,
     /// All change rows, grouped/ordered by section.
     entries: Vec<StatusEntry>,
-    /// Index into `entries` of the highlighted row.
+    /// Index into the current [`targets`](MagitStatus::targets) list of the
+    /// highlighted item (a file row or a hunk row).
     selected: usize,
     /// Top visible rendered row.
     scroll: usize,
@@ -241,6 +406,12 @@ pub struct MagitStatus {
     /// `(behind, ahead)` vs the configured upstream, or `None` when there is no
     /// upstream (shown in the header).
     upstream: Option<(usize, usize)>,
+    /// Entries whose diff is expanded inline, keyed by `(section, path)` so the
+    /// expansion survives a [`refresh`](MagitStatus::refresh).
+    expanded: HashSet<(Section, String)>,
+    /// Cached parsed diffs for the currently expanded entries, keyed the same
+    /// way; rebuilt by [`refresh`](MagitStatus::refresh).
+    diffs: HashMap<(Section, String), FileDiff>,
 }
 
 impl MagitStatus {
@@ -258,6 +429,8 @@ impl MagitStatus {
             viewport: 1,
             pending_discard: false,
             upstream: None,
+            expanded: HashSet::new(),
+            diffs: HashMap::new(),
         };
         view.refresh();
         Some(view)
@@ -281,28 +454,73 @@ impl MagitStatus {
                 .then_with(|| a.path.cmp(&b.path))
         });
         self.entries = entries;
-        if self.selected >= self.entries.len() {
-            self.selected = self.entries.len().saturating_sub(1);
+        self.rebuild_diffs();
+        let target_count = self.targets().len();
+        if self.selected >= target_count {
+            self.selected = target_count.saturating_sub(1);
         }
+    }
+
+    /// Recompute the cached [`FileDiff`]s for every currently expanded entry by
+    /// shelling out to `git diff` (worktree) or `git diff --cached` (index).
+    /// Untracked/conflict entries have no plain diff, so they get no cache entry
+    /// (the expanded view shows a note instead).
+    fn rebuild_diffs(&mut self) {
+        let keys: Vec<(Section, String)> = self
+            .entries
+            .iter()
+            .map(|e| (e.section, e.path.clone()))
+            .filter(|k| self.expanded.contains(k))
+            .collect();
+        let mut diffs = HashMap::new();
+        for (section, path) in keys {
+            let args: Vec<&str> = match section {
+                Section::Unstaged => vec!["diff", "--", &path],
+                Section::Staged => vec!["diff", "--cached", "--", &path],
+                // Untracked has no tracked diff; conflicts show a combined diff
+                // that isn't separately stageable, so we skip the cache.
+                Section::Untracked | Section::Conflict => continue,
+            };
+            if let Some(out) = git_output(&self.repo_dir, &args) {
+                let (header, hunks) = parse_diff_hunks(&out);
+                diffs.insert((section, path), FileDiff { header, hunks });
+            }
+        }
+        self.diffs = diffs;
     }
 
     /// Run a mutating `git -C <repo> …` command, returning the trimmed stderr on
     /// failure.
     fn run_git(&self, args: &[&str]) -> Result<(), String> {
-        let mut cmd = Command::new("git");
-        cmd.arg("-C").arg(&self.repo_dir);
-        for a in args {
-            cmd.arg(a);
-        }
-        match cmd.output() {
-            Ok(out) if out.status.success() => Ok(()),
-            Ok(out) => Err(String::from_utf8_lossy(&out.stderr).trim().to_string()),
-            Err(e) => Err(e.to_string()),
-        }
+        git_run(&self.repo_dir, args)
     }
 
+    /// The currently selected target (file row or hunk row), if any.
+    fn selected_target(&self) -> Option<Target> {
+        self.targets().get(self.selected).copied()
+    }
+
+    /// The [`StatusEntry`] the selection belongs to (the file itself for a file
+    /// row, or the owning file for a hunk row).
     fn selected_entry(&self) -> Option<&StatusEntry> {
-        self.entries.get(self.selected)
+        self.selected_target()
+            .and_then(|t| self.entries.get(t.entry_index()))
+    }
+
+    /// The list of selectable targets in render order, derived from the rendered
+    /// rows so it always matches what's on screen.
+    fn targets(&self) -> Vec<Target> {
+        self.rows()
+            .iter()
+            .filter_map(|r| match r {
+                Row::File(i) => Some(Target::File(*i)),
+                Row::HunkHeader { entry, hunk, .. } => Some(Target::Hunk {
+                    entry: *entry,
+                    hunk: *hunk,
+                }),
+                _ => None,
+            })
+            .collect()
     }
 
     /// Stage the selected file (`git add -- <path>`), then refresh.
@@ -449,17 +667,49 @@ impl MagitStatus {
             rows.push(Row::Header(format!("{} ({})", section.title(), idxs.len())));
             for i in idxs {
                 rows.push(Row::File(i));
+                let entry = &self.entries[i];
+                let key = (entry.section, entry.path.clone());
+                if !self.expanded.contains(&key) {
+                    continue;
+                }
+                match self.diffs.get(&key) {
+                    Some(fd) if !fd.hunks.is_empty() => {
+                        for (h, hunk) in fd.hunks.iter().enumerate() {
+                            rows.push(Row::HunkHeader {
+                                entry: i,
+                                hunk: h,
+                                text: hunk.header.clone(),
+                            });
+                            for line in &hunk.body {
+                                rows.push(Row::HunkLine {
+                                    entry: i,
+                                    hunk: h,
+                                    text: line.clone(),
+                                });
+                            }
+                        }
+                    }
+                    _ => {
+                        let note = match entry.section {
+                            Section::Untracked => "(untracked — s stages the whole file)",
+                            Section::Conflict => "(conflict — resolve via Enter)",
+                            _ => "(no changes to show)",
+                        };
+                        rows.push(Row::Note(note.to_string()));
+                    }
+                }
             }
         }
         rows
     }
 
-    /// Move the selection by `delta`, clamped to the entry range.
+    /// Move the selection by `delta`, clamped to the target range.
     fn move_selection(&mut self, delta: isize) {
-        if self.entries.is_empty() {
+        let count = self.targets().len();
+        if count == 0 {
             return;
         }
-        let max = self.entries.len() as isize - 1;
+        let max = count as isize - 1;
         self.selected = (self.selected as isize + delta).clamp(0, max) as usize;
     }
 
@@ -511,6 +761,126 @@ impl MagitStatus {
         Box::new(move |compositor: &mut Compositor, _cx: &mut Context| {
             compositor.push(Box::new(MagitLog::new(repo_dir.clone())));
         })
+    }
+
+    /// Build the branch callback: open the [`MagitBranch`] menu.
+    fn branch_callback(&self) -> Callback {
+        let repo_dir = self.repo_dir.clone();
+        Box::new(move |compositor: &mut Compositor, _cx: &mut Context| {
+            compositor.push(Box::new(MagitBranch::new(repo_dir.clone())));
+        })
+    }
+
+    /// Build the stash callback: open the [`MagitStash`] menu.
+    fn stash_callback(&self) -> Callback {
+        let repo_dir = self.repo_dir.clone();
+        Box::new(move |compositor: &mut Compositor, _cx: &mut Context| {
+            compositor.push(Box::new(MagitStash::new(repo_dir.clone())));
+        })
+    }
+
+    /// `s`: stage the selection. On a file row this stages the whole file
+    /// (slice-1 behaviour); on a hunk row it stages just that hunk via
+    /// `git apply --cached`.
+    fn stage(&mut self, cx: &mut Context) {
+        match self.selected_target() {
+            Some(Target::File(_)) => self.stage_selected(cx),
+            Some(Target::Hunk { entry, hunk }) => {
+                if self.entries[entry].section == Section::Unstaged {
+                    self.apply_hunk(cx, entry, hunk, false);
+                } else {
+                    cx.editor.set_status("hunk is already staged (press u to unstage)");
+                }
+            }
+            None => {}
+        }
+    }
+
+    /// `u`: unstage the selection. On a file row this unstages the whole file;
+    /// on a hunk row it unstages just that hunk via `git apply --cached
+    /// --reverse`.
+    fn unstage(&mut self, cx: &mut Context) {
+        match self.selected_target() {
+            Some(Target::File(_)) => self.unstage_selected(cx),
+            Some(Target::Hunk { entry, hunk }) => {
+                if self.entries[entry].section == Section::Staged {
+                    self.apply_hunk(cx, entry, hunk, true);
+                } else {
+                    cx.editor.set_status("hunk is not staged (press s to stage)");
+                }
+            }
+            None => {}
+        }
+    }
+
+    /// Apply (stage) or reverse-apply (unstage) a single hunk by building a
+    /// minimal one-hunk patch from the cached [`FileDiff`] and feeding it to
+    /// `git apply --cached [--reverse]` via a temp file. Surfaces any
+    /// `git apply` error in the status line and never panics.
+    fn apply_hunk(&mut self, cx: &mut Context, entry: usize, hunk: usize, reverse: bool) {
+        let Some(e) = self.entries.get(entry).cloned() else {
+            return;
+        };
+        let key = (e.section, e.path.clone());
+        // Clone the patch pieces so we drop the borrow on `self.diffs` before
+        // shelling out / refreshing.
+        let patch = match self.diffs.get(&key).and_then(|fd| {
+            fd.hunks
+                .get(hunk)
+                .map(|h| hunk_patch(&fd.header, h))
+        }) {
+            Some(p) => p,
+            None => {
+                cx.editor.set_error("no hunk to apply (try g to refresh)");
+                return;
+            }
+        };
+
+        let tmp = std::env::temp_dir().join(format!(
+            "zemacs-magit-hunk-{}-{}.patch",
+            std::process::id(),
+            hunk
+        ));
+        if let Err(err) = std::fs::write(&tmp, &patch) {
+            cx.editor
+                .set_error(format!("hunk apply: temp write failed: {err}"));
+            return;
+        }
+        let tmp_str = tmp.to_string_lossy().into_owned();
+        let mut args = vec!["apply", "--cached"];
+        if reverse {
+            args.push("--reverse");
+        }
+        args.push(&tmp_str);
+        let result = self.run_git(&args);
+        let _ = std::fs::remove_file(&tmp);
+        match result {
+            Ok(()) => {
+                let verb = if reverse { "unstaged" } else { "staged" };
+                cx.editor.set_status(format!("{verb} hunk in {}", e.path));
+            }
+            Err(err) => cx.editor.set_error(format!("git apply: {err}")),
+        }
+        self.refresh();
+    }
+
+    /// `Tab`: toggle inline expansion of the selection's file. Untracked and
+    /// conflict files have no separable hunks, so the expanded view just shows a
+    /// note.
+    fn toggle_expand(&mut self, cx: &mut Context) {
+        let Some(e) = self.selected_entry().cloned() else {
+            return;
+        };
+        let key = (e.section, e.path.clone());
+        // `remove` returns false when it wasn't expanded → expand it now.
+        if !self.expanded.remove(&key) {
+            if e.section == Section::Untracked {
+                cx.editor
+                    .set_status("untracked file — press s to stage the whole file");
+            }
+            self.expanded.insert(key);
+        }
+        self.refresh();
     }
 }
 
@@ -567,12 +937,15 @@ impl Component for MagitStatus {
             key!('j') | key!(Down) | ctrl!('n') => self.move_selection(1),
             key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
             key!('g') => self.refresh(),
-            key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
+            key!('G') | key!(End) => self.selected = self.targets().len().saturating_sub(1),
             key!(Home) => self.selected = 0,
-            key!('s') => self.stage_selected(cx),
-            key!('u') => self.unstage_selected(cx),
+            key!(Tab) => self.toggle_expand(cx),
+            key!('s') => self.stage(cx),
+            key!('u') => self.unstage(cx),
             key!('S') => self.stage_all(cx),
             key!('U') => self.unstage_all(cx),
+            key!('b') => return EventResult::Consumed(Some(self.branch_callback())),
+            key!('z') => return EventResult::Consumed(Some(self.stash_callback())),
             key!('X') => {
                 if self.entries.is_empty() {
                     // nothing to discard
@@ -625,7 +998,7 @@ impl Component for MagitStatus {
         let title = " Magit status";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
         let hint =
-            "s stage  u unstage  X discard  c commit  a amend  l log  P push  F fetch  p pull  g refresh  q quit";
+            "Tab expand  s stage  u unstage  X discard  c commit  a amend  b branch  z stash  l log  P push  F fetch  p pull  g refresh  q quit";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -640,11 +1013,38 @@ impl Component for MagitStatus {
         let body_h = area.height.saturating_sub(2);
         self.viewport = body_h as usize;
 
+        let text_style = theme.get("ui.text");
+        let sel_target = self.selected_target();
         let rows = self.rows();
-        // Keep the selected file row inside the viewport.
-        if let Some(sel_row) = rows.iter().position(|r| {
-            matches!(r, Row::File(i) if *i == self.selected) && !self.entries.is_empty()
-        }) {
+        // Keep the selected target's row inside the viewport.
+        let is_selected_row = |row: &Row| -> bool {
+            match (row, sel_target) {
+                (Row::File(i), Some(Target::File(j))) => *i == j,
+                (
+                    Row::HunkHeader { entry, hunk, .. },
+                    Some(Target::Hunk {
+                        entry: se,
+                        hunk: sh,
+                    }),
+                ) => *entry == se && *hunk == sh,
+                _ => false,
+            }
+        };
+        // A row belongs to the selected hunk (header or body) — highlighted as a
+        // block when that hunk is the selection.
+        let in_selected_hunk = |row: &Row| -> bool {
+            match (row, sel_target) {
+                (
+                    Row::HunkHeader { entry, hunk, .. } | Row::HunkLine { entry, hunk, .. },
+                    Some(Target::Hunk {
+                        entry: se,
+                        hunk: sh,
+                    }),
+                ) => *entry == se && *hunk == sh,
+                _ => false,
+            }
+        };
+        if let Some(sel_row) = rows.iter().position(is_selected_row) {
             if sel_row < self.scroll {
                 self.scroll = sel_row;
             } else if sel_row >= self.scroll + self.viewport {
@@ -659,6 +1059,7 @@ impl Component for MagitStatus {
             .take(body_h as usize)
         {
             let y = body_y + (offset - self.scroll) as u16;
+            let selected_block = is_selected_row(row) || in_selected_hunk(row);
             match row {
                 Row::Blank => {}
                 Row::Info(text) => {
@@ -667,24 +1068,61 @@ impl Component for MagitStatus {
                 Row::Header(text) => {
                     surface.set_stringn(area.x, y, text, area.width as usize, header_style);
                 }
+                Row::Note(text) => {
+                    surface.set_stringn(area.x, y, &format!("    {text}"), area.width as usize, info_style);
+                }
                 Row::File(i) => {
                     let entry = &self.entries[*i];
-                    let style = match entry.section {
+                    let base = match entry.section {
                         Section::Untracked => plus_style,
                         Section::Unstaged => minus_style,
                         Section::Staged => plus_style,
                         Section::Conflict => conflict_style,
                     };
-                    if *i == self.selected {
+                    if selected_block {
                         surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
                     }
-                    let line = format!("  {} {}", entry.code(), entry.path);
-                    let style = if *i == self.selected {
-                        sel_style
+                    let marker = if self.expanded.contains(&(entry.section, entry.path.clone())) {
+                        '▾'
                     } else {
-                        style
+                        '▸'
                     };
+                    let line = format!("{marker} {} {}", entry.code(), entry.path);
+                    let style = if selected_block { sel_style } else { base };
                     surface.set_stringn(area.x, y, &line, area.width as usize, style);
+                }
+                Row::HunkHeader { text, .. } => {
+                    if selected_block {
+                        surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
+                    }
+                    let style = if selected_block { sel_style } else { info_style };
+                    surface.set_stringn(
+                        area.x,
+                        y,
+                        &format!("    {text}"),
+                        area.width as usize,
+                        style,
+                    );
+                }
+                Row::HunkLine { text, .. } => {
+                    if selected_block {
+                        surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
+                    }
+                    let base = if text.starts_with('+') {
+                        plus_style
+                    } else if text.starts_with('-') {
+                        minus_style
+                    } else {
+                        text_style
+                    };
+                    let style = if selected_block { sel_style } else { base };
+                    surface.set_stringn(
+                        area.x,
+                        y,
+                        &format!("    {text}"),
+                        area.width as usize,
+                        style,
+                    );
                 }
             }
         }
@@ -1265,6 +1703,442 @@ impl Component for MagitShow {
     }
 }
 
+/// A branch menu sub-view, opened from the status buffer with `b`.
+///
+/// Lists local branches (`git branch`), the current one marked. `j`/`k`/arrows
+/// move, `Enter` checks out the selected branch (`git checkout <b>`), `n` starts
+/// creating a new branch — type a name then `Enter` runs `git checkout -b
+/// <name>` — and `q`/`Esc` go back. After a successful checkout/create the menu
+/// pops and the buried [`MagitStatus`] is refreshed.
+pub struct MagitBranch {
+    repo_dir: PathBuf,
+    entries: Vec<BranchEntry>,
+    selected: usize,
+    scroll: usize,
+    viewport: usize,
+    /// `Some(name)` while typing a new branch name; `None` in list mode.
+    creating: Option<String>,
+}
+
+impl MagitBranch {
+    fn new(repo_dir: PathBuf) -> Self {
+        let out = git_output(&repo_dir, &["branch", "--no-color"]).unwrap_or_default();
+        let entries = parse_branches(&out);
+        let selected = entries.iter().position(|b| b.current).unwrap_or(0);
+        MagitBranch {
+            repo_dir,
+            entries,
+            selected,
+            scroll: 0,
+            viewport: 1,
+            creating: None,
+        }
+    }
+
+    fn move_selection(&mut self, delta: isize) {
+        if self.entries.is_empty() {
+            return;
+        }
+        let max = self.entries.len() as isize - 1;
+        self.selected = (self.selected as isize + delta).clamp(0, max) as usize;
+    }
+
+    /// Run `git checkout …`; on success refresh the buried status and return a
+    /// pop callback, otherwise surface the error and stay.
+    fn run_checkout(&self, cx: &mut Context, args: &[&str], label: String) -> Option<Callback> {
+        match git_run(&self.repo_dir, args) {
+            Ok(()) => {
+                cx.editor.set_status(label);
+                schedule_status_refresh(cx);
+                Some(Box::new(|compositor: &mut Compositor, _cx| {
+                    compositor.pop();
+                }))
+            }
+            Err(e) => {
+                cx.editor.set_error(format!("git checkout: {e}"));
+                None
+            }
+        }
+    }
+}
+
+impl Component for MagitBranch {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
+        let key = match event {
+            Event::Key(key) => *key,
+            _ => return EventResult::Ignored(None),
+        };
+
+        // Branch-name input mode.
+        if let Some(name) = self.creating.as_mut() {
+            match key {
+                key!(Esc) => self.creating = None,
+                key!(Enter) => {
+                    let name = name.trim().to_string();
+                    if name.is_empty() {
+                        cx.editor.set_status("branch name is empty");
+                    } else if let Some(cb) =
+                        self.run_checkout(cx, &["checkout", "-b", &name], format!("created {name}"))
+                    {
+                        return EventResult::Consumed(Some(cb));
+                    } else {
+                        self.creating = None;
+                    }
+                }
+                key!(Backspace) => {
+                    name.pop();
+                }
+                KeyEvent {
+                    code: KeyCode::Char(c),
+                    modifiers,
+                } if modifiers == KeyModifiers::NONE || modifiers == KeyModifiers::SHIFT => {
+                    name.push(c);
+                }
+                _ => {}
+            }
+            return EventResult::Consumed(None);
+        }
+
+        let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
+            compositor.pop();
+        });
+        match key {
+            key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
+            key!('j') | key!(Down) | ctrl!('n') => self.move_selection(1),
+            key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
+            key!('g') | key!(Home) => self.selected = 0,
+            key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
+            key!('n') | key!('c') => {
+                self.creating = Some(String::new());
+                cx.editor
+                    .set_status("new branch name (Enter to create, Esc to cancel)");
+            }
+            key!(Enter) => {
+                if let Some(b) = self.entries.get(self.selected) {
+                    if b.current {
+                        cx.editor.set_status(format!("already on {}", b.name));
+                    } else {
+                        let name = b.name.clone();
+                        if let Some(cb) = self.run_checkout(
+                            cx,
+                            &["checkout", &name],
+                            format!("checked out {name}"),
+                        ) {
+                            return EventResult::Consumed(Some(cb));
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+        EventResult::Consumed(None)
+    }
+
+    fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
+        let theme = &ctx.editor.theme;
+        let bg = theme.get("ui.background");
+        let info_style = theme.get("ui.linenr");
+        let header_style = to_bold(theme.get("ui.text.focus"));
+        let text_style = theme.get("ui.text");
+        let cur_style = theme.get("diff.plus");
+        let sel_style = theme.get("ui.selection");
+
+        surface.clear_with(area, bg);
+        if area.width < 8 || area.height < 3 {
+            return;
+        }
+
+        let title = " Branches";
+        surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
+        let hint = "j/k move  Enter checkout  n new  q back";
+        if (title.len() + hint.len() + 3) < area.width as usize {
+            surface.set_stringn(
+                area.x + area.width - hint.len() as u16 - 1,
+                area.y,
+                hint,
+                hint.len(),
+                info_style,
+            );
+        }
+
+        let body_y = area.y + 2;
+        let body_h = area.height.saturating_sub(2);
+        self.viewport = body_h as usize;
+
+        if let Some(name) = &self.creating {
+            surface.set_stringn(
+                area.x,
+                body_y,
+                &format!("new branch: {name}_"),
+                area.width as usize,
+                text_style,
+            );
+            return;
+        }
+
+        if self.selected < self.scroll {
+            self.scroll = self.selected;
+        } else if self.selected >= self.scroll + self.viewport {
+            self.scroll = self.selected - self.viewport + 1;
+        }
+
+        if self.entries.is_empty() {
+            surface.set_stringn(area.x, body_y, "no branches", area.width as usize, info_style);
+            return;
+        }
+
+        for (offset, b) in self
+            .entries
+            .iter()
+            .enumerate()
+            .skip(self.scroll)
+            .take(body_h as usize)
+        {
+            let y = body_y + (offset - self.scroll) as u16;
+            if offset == self.selected {
+                surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
+            }
+            let marker = if b.current { "* " } else { "  " };
+            let style = if offset == self.selected {
+                sel_style
+            } else if b.current {
+                cur_style
+            } else {
+                text_style
+            };
+            surface.set_stringn(
+                area.x,
+                y,
+                &format!("{marker}{}", b.name),
+                area.width as usize,
+                style,
+            );
+        }
+    }
+
+    fn id(&self) -> Option<&'static str> {
+        Some("magit-branch")
+    }
+}
+
+/// A stash menu sub-view, opened from the status buffer with `z`.
+///
+/// Lists stash entries (`git stash list`). `s` pushes a new stash (type an
+/// optional message then `Enter`), `p` pops the latest, `a` applies the selected
+/// entry, `D` drops it; `j`/`k`/arrows move and `q`/`Esc` go back. After every
+/// mutation the list reloads in place and the buried [`MagitStatus`] is
+/// refreshed.
+pub struct MagitStash {
+    repo_dir: PathBuf,
+    entries: Vec<StashEntry>,
+    selected: usize,
+    scroll: usize,
+    viewport: usize,
+    /// `Some(msg)` while typing a stash-push message; `None` in list mode.
+    pushing: Option<String>,
+}
+
+impl MagitStash {
+    fn new(repo_dir: PathBuf) -> Self {
+        let mut view = MagitStash {
+            repo_dir,
+            entries: Vec::new(),
+            selected: 0,
+            scroll: 0,
+            viewport: 1,
+            pushing: None,
+        };
+        view.reload();
+        view
+    }
+
+    fn reload(&mut self) {
+        let out = git_output(&self.repo_dir, &["stash", "list"]).unwrap_or_default();
+        self.entries = parse_stash(&out);
+        if self.selected >= self.entries.len() {
+            self.selected = self.entries.len().saturating_sub(1);
+        }
+    }
+
+    fn move_selection(&mut self, delta: isize) {
+        if self.entries.is_empty() {
+            return;
+        }
+        let max = self.entries.len() as isize - 1;
+        self.selected = (self.selected as isize + delta).clamp(0, max) as usize;
+    }
+
+    /// Run a stash mutation, reload the list, refresh the buried status and
+    /// report the outcome. Stays open.
+    fn run_stash(&mut self, cx: &mut Context, args: &[&str], label: &str) {
+        match git_run(&self.repo_dir, args) {
+            Ok(()) => cx.editor.set_status(format!("stash: {label}")),
+            Err(e) => cx.editor.set_error(format!("git stash: {e}")),
+        }
+        self.reload();
+        schedule_status_refresh(cx);
+    }
+}
+
+impl Component for MagitStash {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
+        let key = match event {
+            Event::Key(key) => *key,
+            _ => return EventResult::Ignored(None),
+        };
+
+        // Stash-message input mode.
+        if let Some(msg) = self.pushing.as_mut() {
+            match key {
+                key!(Esc) => self.pushing = None,
+                key!(Enter) => {
+                    let msg = msg.trim().to_string();
+                    self.pushing = None;
+                    if msg.is_empty() {
+                        self.run_stash(cx, &["stash", "push"], "pushed");
+                    } else {
+                        self.run_stash(cx, &["stash", "push", "-m", &msg], "pushed");
+                    }
+                }
+                key!(Backspace) => {
+                    msg.pop();
+                }
+                KeyEvent {
+                    code: KeyCode::Char(c),
+                    modifiers,
+                } if modifiers == KeyModifiers::NONE || modifiers == KeyModifiers::SHIFT => {
+                    msg.push(c);
+                }
+                _ => {}
+            }
+            return EventResult::Consumed(None);
+        }
+
+        let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
+            compositor.pop();
+        });
+        match key {
+            key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
+            key!('j') | key!(Down) | ctrl!('n') => self.move_selection(1),
+            key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
+            key!('g') | key!(Home) => self.selected = 0,
+            key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
+            key!('s') => {
+                self.pushing = Some(String::new());
+                cx.editor
+                    .set_status("stash message (Enter to push, empty for none, Esc cancel)");
+            }
+            key!('p') => self.run_stash(cx, &["stash", "pop"], "popped"),
+            key!('a') | key!(Enter) => {
+                if let Some(e) = self.entries.get(self.selected) {
+                    let reff = e.reff.clone();
+                    self.run_stash(cx, &["stash", "apply", &reff], "applied");
+                }
+            }
+            key!('D') => {
+                if let Some(e) = self.entries.get(self.selected) {
+                    let reff = e.reff.clone();
+                    self.run_stash(cx, &["stash", "drop", &reff], "dropped");
+                }
+            }
+            _ => {}
+        }
+        EventResult::Consumed(None)
+    }
+
+    fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
+        let theme = &ctx.editor.theme;
+        let bg = theme.get("ui.background");
+        let info_style = theme.get("ui.linenr");
+        let header_style = to_bold(theme.get("ui.text.focus"));
+        let text_style = theme.get("ui.text");
+        let ref_style = theme.get("constant.numeric");
+        let sel_style = theme.get("ui.selection");
+
+        surface.clear_with(area, bg);
+        if area.width < 8 || area.height < 3 {
+            return;
+        }
+
+        let title = " Stashes";
+        surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
+        let hint = "s push  p pop  a apply  D drop  q back";
+        if (title.len() + hint.len() + 3) < area.width as usize {
+            surface.set_stringn(
+                area.x + area.width - hint.len() as u16 - 1,
+                area.y,
+                hint,
+                hint.len(),
+                info_style,
+            );
+        }
+
+        let body_y = area.y + 2;
+        let body_h = area.height.saturating_sub(2);
+        self.viewport = body_h as usize;
+
+        if let Some(msg) = &self.pushing {
+            surface.set_stringn(
+                area.x,
+                body_y,
+                &format!("stash message: {msg}_"),
+                area.width as usize,
+                text_style,
+            );
+            return;
+        }
+
+        if self.selected < self.scroll {
+            self.scroll = self.selected;
+        } else if self.selected >= self.scroll + self.viewport {
+            self.scroll = self.selected - self.viewport + 1;
+        }
+
+        if self.entries.is_empty() {
+            surface.set_stringn(area.x, body_y, "no stashes", area.width as usize, info_style);
+            return;
+        }
+
+        for (offset, e) in self
+            .entries
+            .iter()
+            .enumerate()
+            .skip(self.scroll)
+            .take(body_h as usize)
+        {
+            let y = body_y + (offset - self.scroll) as u16;
+            if offset == self.selected {
+                surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
+            }
+            let style = if offset == self.selected {
+                sel_style
+            } else {
+                ref_style
+            };
+            surface.set_stringn(area.x, y, &format!("  {}", e.reff), area.width as usize, style);
+            let body_x = area.x + 2 + e.reff.chars().count() as u16 + 1;
+            if body_x < area.x + area.width {
+                let style = if offset == self.selected {
+                    sel_style
+                } else {
+                    text_style
+                };
+                surface.set_stringn(
+                    body_x,
+                    y,
+                    &e.summary,
+                    (area.x + area.width - body_x) as usize,
+                    style,
+                );
+            }
+        }
+    }
+
+    fn id(&self) -> Option<&'static str> {
+        Some("magit-stash")
+    }
+}
+
 /// Add BOLD to a style.
 fn to_bold(style: zemacs_view::graphics::Style) -> zemacs_view::graphics::Style {
     style.add_modifier(zemacs_view::graphics::Modifier::BOLD)
@@ -1297,6 +2171,33 @@ fn git_head(repo: &Path) -> String {
     match git_output(repo, &["rev-parse", "--short", "HEAD"]) {
         Some(sha) if !sha.trim().is_empty() => format!("HEAD detached at {}", sha.trim()),
         _ => "(no commits yet)".to_string(),
+    }
+}
+
+/// Run a mutating `git -C <dir> …`, returning `Ok(())` on success or the trimmed
+/// stderr (falling back to stdout, then a generic message) on failure.
+fn git_run(dir: &Path, args: &[&str]) -> Result<(), String> {
+    let mut cmd = Command::new("git");
+    cmd.arg("-C").arg(dir);
+    for a in args {
+        cmd.arg(a);
+    }
+    match cmd.output() {
+        Ok(out) if out.status.success() => Ok(()),
+        Ok(out) => {
+            let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+            if !stderr.is_empty() {
+                Err(stderr)
+            } else {
+                let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                Err(if stdout.is_empty() {
+                    "command failed".to_string()
+                } else {
+                    stdout
+                })
+            }
+        }
+        Err(e) => Err(e.to_string()),
     }
 }
 
@@ -1460,5 +2361,115 @@ MM both.rs
         assert_eq!(parse_ahead_behind(""), None);
         assert_eq!(parse_ahead_behind("nope"), None);
         assert_eq!(parse_ahead_behind("1"), None);
+    }
+
+    const TWO_HUNK_DIFF: &str = "\
+diff --git a/foo.rs b/foo.rs
+index 1111111..2222222 100644
+--- a/foo.rs
++++ b/foo.rs
+@@ -1,3 +1,3 @@
+ fn a() {}
+-old line
++new line
+ fn b() {}
+@@ -10,2 +10,3 @@
+ tail
++added
+ end
+";
+
+    #[test]
+    fn parse_diff_hunks_splits_header_and_hunks() {
+        let (header, hunks) = parse_diff_hunks(TWO_HUNK_DIFF);
+        // Four header lines precede the first @@.
+        assert_eq!(header.len(), 4);
+        assert_eq!(header[0], "diff --git a/foo.rs b/foo.rs");
+        assert_eq!(header[3], "+++ b/foo.rs");
+        assert_eq!(hunks.len(), 2);
+        assert_eq!(hunks[0].header, "@@ -1,3 +1,3 @@");
+        // body: context, -, +, context.
+        assert_eq!(hunks[0].body, vec![" fn a() {}", "-old line", "+new line", " fn b() {}"]);
+        assert_eq!(hunks[1].header, "@@ -10,2 +10,3 @@");
+        assert_eq!(hunks[1].body, vec![" tail", "+added", " end"]);
+    }
+
+    #[test]
+    fn parse_diff_hunks_empty_and_no_hunks() {
+        let (header, hunks) = parse_diff_hunks("");
+        assert!(header.is_empty());
+        assert!(hunks.is_empty());
+
+        // A header with no @@ (e.g. a pure mode/rename change) yields no hunks.
+        let only_header = "diff --git a/x b/x\nold mode 100644\nnew mode 100755\n";
+        let (header, hunks) = parse_diff_hunks(only_header);
+        assert_eq!(header.len(), 3);
+        assert!(hunks.is_empty());
+    }
+
+    #[test]
+    fn hunk_patch_reassembles_appliable_shape() {
+        let (header, hunks) = parse_diff_hunks(TWO_HUNK_DIFF);
+        let patch = hunk_patch(&header, &hunks[0]);
+        // The patch is the header + just the first hunk, newline-terminated.
+        let expected = "\
+diff --git a/foo.rs b/foo.rs
+index 1111111..2222222 100644
+--- a/foo.rs
++++ b/foo.rs
+@@ -1,3 +1,3 @@
+ fn a() {}
+-old line
++new line
+ fn b() {}
+";
+        assert_eq!(patch, expected);
+        assert!(patch.ends_with('\n'));
+        // Round-trips: re-parsing the single-hunk patch gives one hunk.
+        let (h2, hunks2) = parse_diff_hunks(&patch);
+        assert_eq!(h2, header);
+        assert_eq!(hunks2.len(), 1);
+        assert_eq!(hunks2[0], hunks[0]);
+    }
+
+    #[test]
+    fn parse_branches_marks_current_and_splits() {
+        let out = "* main\n  feature/x\n  release\n";
+        let branches = parse_branches(out);
+        assert_eq!(branches.len(), 3);
+        assert_eq!(branches[0].name, "main");
+        assert!(branches[0].current);
+        assert_eq!(branches[1].name, "feature/x");
+        assert!(!branches[1].current);
+        assert_eq!(branches[2].name, "release");
+    }
+
+    #[test]
+    fn parse_branches_skips_detached_and_blanks() {
+        let out = "* (HEAD detached at abc1234)\n  main\n\n";
+        let branches = parse_branches(out);
+        assert_eq!(branches.len(), 1);
+        assert_eq!(branches[0].name, "main");
+        assert!(!branches[0].current);
+    }
+
+    #[test]
+    fn parse_stash_splits_ref_and_summary() {
+        let out = "\
+stash@{0}: WIP on main: 1234567 fix things
+stash@{1}: On feature: experiment
+";
+        let stashes = parse_stash(out);
+        assert_eq!(stashes.len(), 2);
+        assert_eq!(stashes[0].reff, "stash@{0}");
+        assert_eq!(stashes[0].summary, "WIP on main: 1234567 fix things");
+        assert_eq!(stashes[1].reff, "stash@{1}");
+        assert_eq!(stashes[1].summary, "On feature: experiment");
+    }
+
+    #[test]
+    fn parse_stash_empty() {
+        assert!(parse_stash("").is_empty());
+        assert!(parse_stash("\n\n").is_empty());
     }
 }
