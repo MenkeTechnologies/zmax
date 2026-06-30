@@ -1199,7 +1199,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "s" => global_search,              // SPC p s
                 "r" => goto_last_modified_file,    // SPC p r
                 "t" => file_explorer,              // SPC p t : project tree (treemacs)
-                "v" => reveal_in_tree,             // SPC p v : reveal current file in the tree
+                "v" => git_status,                 // SPC p v : open project VC (magit status)
                 "V" => toggle_auto_reveal,         // SPC p V : toggle always-select-opened-file
                 "d" => file_explorer,              // SPC p d : find directory
                 "g" => symbol_picker,              // SPC p g : find tags
@@ -1237,6 +1237,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "C" => run_active_config,          // SPC c C : compile (run active config)
                 "r" => rerun_last_run,             // SPC c r : recompile (re-run last)
                 "m" => run_config_manager,         // SPC c m : pick a build/run target (helm-make)
+                "k" => clear_run_output,           // SPC c k : kill compilation (clear run output)
             },
             "j" => { "Jump"
                 "i" => symbol_picker,              // SPC j i
@@ -1261,6 +1262,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             },
             "F" => { "Frames"
                 "n" => hsplit_new,                 // SPC F n : create a new frame (new window)
+            },
+            "o" => { "Org / user"
+                "c" => org_capture,                // SPC o c : org-mode capture
             },
             "n" => { "Numbers/Narrow"
                 "+" => increment,                  // SPC n + : increase number under point
@@ -1398,6 +1402,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "y" => register_picker,            // SPC r y : kill ring
                 ":" => command_history_picker,     // SPC r : : command-line history (:History:)
                 "/" => search_history_picker,      // SPC r / : search history (:History/)
+                "s" => last_picker,                // SPC r s : resume last search/picker buffer
             },
             "k" => { "Lisp (sexp)"
                 // navigation maps onto the tree-sitter node commands
@@ -1523,6 +1528,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                         "2" => vsplit,             // SPC u SPC w 2 : two-window layout (force)
                         "3" => make_3_windows,     // SPC u SPC w 3 : three-window layout (force)
                         "4" => make_4_windows,     // SPC u SPC w 4 : four-window layout (force)
+                        "D" => delete_window_and_buffer, // SPC u SPC w D : delete window + its buffer
                     },
                 },
             },

@@ -14718,5 +14718,37 @@
    "key:normal:space x r p e"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_c_k",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space c k"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_r_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space r s"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_o_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space o c"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_u_spc_w_dU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space u space w D"
+  ],
+  "note": ""
  }
 ]
