@@ -18675,11 +18675,12 @@
   },
   {
     "spec_id": "jetbrains.navigate-from-symbol.type-hierarchy",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:goto_implementation"
+      "key:normal:space g T",
+      "static:type_hierarchy_supertypes"
     ],
-    "note": "implementations ~ subtypes"
+    "note": "Type Hierarchy (Ctrl-H) = type_hierarchy_supertypes/subtypes: real LSP prepareTypeHierarchy + supertypes/subtypes (SPC g T / g U), jump picker. Added type_hierarchy_provider to lsp-types + client methods + TypeHierarchy feature."
   },
   {
     "spec_id": "jetbrains.navigate-from-symbol.call-hierarchy",
