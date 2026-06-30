@@ -994,7 +994,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                 let start = text.line_to_char(start_line);
                 let middle = text.line_to_char(start_line + height / 2);
                 if height < inner.height as usize {
-                    let text_fmt = doc.text_format(inner.width, None);
+                    let text_fmt = doc.text_format(inner.width, None, None);
                     let annotations = TextAnnotations::default();
                     (offset.anchor, offset.vertical_offset) = char_idx_at_visual_offset(
                         text,
@@ -1075,6 +1075,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                 overlay_highlights,
                 &cx.editor.theme,
                 decorations,
+                None,
             );
         }
     }

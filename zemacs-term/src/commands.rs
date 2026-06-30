@@ -910,6 +910,8 @@ impl MappableCommand {
         fold_delete_all, "Delete all folds (zE)",
         narrow_to_region, "Narrow the buffer to the selected region (SPC n r)",
         widen, "Widen: remove narrowing and reveal the whole buffer (SPC n w)",
+        narrow_to_function_indirect, "Narrow to the function in an indirect (split) view (SPC n F)",
+        narrow_to_page_indirect, "Narrow to the page in an indirect (split) view (SPC n P)",
         kmacro_ring_next, "Cycle to the next macro in the ring (SPC K r n)",
         kmacro_ring_prev, "Cycle to the previous macro in the ring (SPC K r p)",
         kmacro_ring_delete, "Delete the head macro in the ring (SPC K r d)",
@@ -1173,7 +1175,7 @@ fn move_impl(cx: &mut Context, move_fn: MoveFn, dir: Direction, behaviour: Movem
     let count = cx.count();
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
-    let text_fmt = doc.text_format(view.inner_area(doc).width, None);
+    let text_fmt = doc.text_format(view.inner_area(doc).width, None, Some(view.id));
     let mut annotations = view.text_annotations(doc, None);
 
     let selection = doc.selection(view.id).clone().transform(|range| {
@@ -2326,7 +2328,7 @@ fn goto_file_start_impl(cx: &mut Context, movement: Movement) {
         goto_line_impl(cx, movement);
     } else {
         let (view, doc) = current!(cx.editor);
-        let start = doc.point_min();
+        let start = doc.view_point_min(view.id);
         let text = doc.text().slice(..);
         let selection = doc
             .selection(view.id)
@@ -2348,8 +2350,8 @@ fn extend_to_file_end(cx: &mut Context) {
 fn goto_file_end_impl(cx: &mut Context, movement: Movement) {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
-    // Confine to the narrowed region end when narrowed (Emacs point-max).
-    let pos = doc.point_max();
+    // Confine to the narrowed region end when narrowed (Emacs point-max), per-view aware.
+    let pos = doc.view_point_max(view.id);
     let selection = doc
         .selection(view.id)
         .clone()
@@ -5223,7 +5225,7 @@ pub fn scroll(cx: &mut Context, offset: usize, direction: Direction, sync_cursor
 
     let doc_text = doc.text().slice(..);
     let viewport = view.inner_area(doc);
-    let text_fmt = doc.text_format(viewport.width, None);
+    let text_fmt = doc.text_format(viewport.width, None, Some(view.id));
     (view_offset.anchor, view_offset.vertical_offset) = char_idx_at_visual_offset(
         doc_text,
         view_offset.anchor,
@@ -5617,9 +5619,9 @@ fn move_text_line_up(cx: &mut Context) {
 fn select_all(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
 
-    // Confine to the narrowed region when the buffer is narrowed (Emacs narrow-to-region).
-    let start = doc.point_min();
-    let end = doc.point_max();
+    // Confine to the narrowed region when narrowed — per-view narrow wins over the doc-wide one.
+    let start = doc.view_point_min(view.id);
+    let end = doc.view_point_max(view.id);
     doc.set_selection(view.id, Selection::single(start, end))
 }
 
@@ -10903,11 +10905,12 @@ fn extend_to_last_line(cx: &mut Context) {
 
 fn goto_last_line_impl(cx: &mut Context, movement: Movement) {
     let (view, doc) = current!(cx.editor);
-    // When narrowed, `G` goes to the last line of the region (Emacs point-max line).
-    let point_max = doc.point_max();
+    // When narrowed, `G` goes to the last line of the region (Emacs point-max line), per-view aware.
+    let narrowed = doc.is_narrowed() || doc.view_narrow(view.id).is_some();
+    let point_max = doc.view_point_max(view.id);
     let text = doc.text().slice(..);
-    let last_line = if doc.is_narrowed() {
-        text.char_to_line(point_max)
+    let last_line = if narrowed {
+        text.char_to_line(point_max.min(text.len_chars()))
     } else {
         text.len_lines() - 1
     };
@@ -13881,7 +13884,7 @@ fn align_view_bottom(cx: &mut Context) {
 fn align_view_middle(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let inner_width = view.inner_width(doc);
-    let text_fmt = doc.text_format(inner_width, None);
+    let text_fmt = doc.text_format(inner_width, None, Some(view.id));
     // there is no horizontal position when softwrap is enabled
     if text_fmt.soft_wrap {
         return;
@@ -15146,15 +15149,81 @@ fn fold_open_all(cx: &mut Context) {
     doc.folds_mut().open_all();
 }
 
-/// SPC n w : widen — remove any narrowing and reveal the whole buffer (Emacs `widen`).
+/// SPC n w : widen — remove any narrowing (document-wide and this view's) and reveal the whole
+/// buffer (Emacs `widen`).
 fn widen(cx: &mut Context) {
-    let (_view, doc) = current!(cx.editor);
-    let was_narrowed = doc.is_narrowed();
+    let (view, doc) = current!(cx.editor);
+    let was_narrowed = doc.is_narrowed() || doc.view_narrow(view.id).is_some();
+    let view_id = view.id;
     doc.widen();
+    doc.clear_view_narrow(view_id);
     doc.folds_mut().open_all();
     if was_narrowed {
         cx.editor.set_status("widened");
     }
+}
+
+/// SPC n F : narrow to the enclosing function in an *indirect* view — clone the buffer into a
+/// split and narrow only that new view, leaving the original full (Emacs indirect-buffer narrow).
+fn narrow_to_function_indirect(cx: &mut Context) {
+    let (lo, hi) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let last = text.len_lines().saturating_sub(1);
+        let cur = text
+            .char_to_line(doc.selection(view.id).primary().head.min(text.len_chars()))
+            .min(last);
+        let is_blank = |l: usize| text.line(l).to_string().trim().is_empty();
+        let mut start = cur;
+        while start > 0 && !is_blank(start - 1) {
+            start -= 1;
+        }
+        let mut end = cur;
+        while end < last && !is_blank(end + 1) {
+            end += 1;
+        }
+        (
+            text.line_to_char(start),
+            text.line_to_char((end + 1).min(text.len_lines())),
+        )
+    };
+    split(cx.editor, Action::VerticalSplit);
+    let (view, doc) = current!(cx.editor);
+    doc.set_view_narrow(view.id, lo, hi);
+    doc.set_selection(view.id, Selection::point(lo));
+    cx.editor
+        .set_status("narrowed to function in an indirect view (SPC n w widens)");
+}
+
+/// SPC n P : narrow to the current page (form-feed delimited) in an *indirect* view.
+fn narrow_to_page_indirect(cx: &mut Context) {
+    let (lo, hi) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let last = text.len_lines().saturating_sub(1);
+        let cur = text
+            .char_to_line(doc.selection(view.id).primary().head.min(text.len_chars()))
+            .min(last);
+        let is_ff = |l: usize| text.line(l).to_string().contains('\u{0c}');
+        let mut start = cur;
+        while start > 0 && !is_ff(start - 1) {
+            start -= 1;
+        }
+        let mut end = cur;
+        while end < last && !is_ff(end + 1) {
+            end += 1;
+        }
+        (
+            text.line_to_char(start),
+            text.line_to_char((end + 1).min(text.len_lines())),
+        )
+    };
+    split(cx.editor, Action::VerticalSplit);
+    let (view, doc) = current!(cx.editor);
+    doc.set_view_narrow(view.id, lo, hi);
+    doc.set_selection(view.id, Selection::point(lo));
+    cx.editor
+        .set_status("narrowed to page in an indirect view (SPC n w widens)");
 }
 
 fn fold_close_all(cx: &mut Context) {

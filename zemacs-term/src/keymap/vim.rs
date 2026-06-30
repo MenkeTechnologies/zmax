@@ -1310,9 +1310,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "r" => narrow_to_region,           // SPC n r : narrow buffer to selection (fold outside)
                 "w" => widen,                      // SPC n w : widen (remove narrowing, show whole buffer)
                 "f" => narrow_to_function,         // SPC n f : narrow to the enclosing function
-                "F" => narrow_to_function,         // SPC n F : narrow to function (indirect approx)
+                "F" => narrow_to_function_indirect, // SPC n F : narrow to function in an indirect (split) view
                 "p" => narrow_to_page,             // SPC n p : narrow to the current page
-                "P" => narrow_to_page,             // SPC n P : narrow to page (indirect approx)
+                "P" => narrow_to_page_indirect,    // SPC n P : narrow to page in an indirect (split) view
             },
             "g" => { "Goto (LSP)"
                 "d" => goto_definition,

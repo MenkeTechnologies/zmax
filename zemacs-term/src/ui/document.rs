@@ -62,6 +62,7 @@ pub fn render_document(
     overlay_highlights: Vec<syntax::OverlayHighlights>,
     theme: &Theme,
     decorations: DecorationManager,
+    view_id: Option<zemacs_view::ViewId>,
 ) {
     let mut renderer = TextRenderer::new(
         surface,
@@ -74,7 +75,7 @@ pub fn render_document(
         &mut renderer,
         doc.text().slice(..),
         offset.anchor,
-        &doc.text_format(viewport.width, Some(theme)),
+        &doc.text_format(viewport.width, Some(theme), view_id),
         doc_annotations,
         syntax_highlighter,
         overlay_highlights,

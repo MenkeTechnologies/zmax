@@ -12030,11 +12030,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_n_fU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space n F"
+   "key:normal:space n F",
+   "static:narrow_to_function_indirect"
   ],
-  "note": ""
+  "note": "narrow-to-function in indirect buffer -> narrow_to_function_indirect (clone split + per-view narrow; original view stays full)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_g_b",
@@ -14846,11 +14847,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_n_pU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space n P"
+   "key:normal:space n P",
+   "static:narrow_to_page_indirect"
   ],
-  "note": ""
+  "note": "narrow-to-page in indirect buffer -> narrow_to_page_indirect (clone split + per-view narrow)"
  },
  {
   "spec_id": "neovim.function.abs",

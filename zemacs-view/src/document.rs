@@ -1567,6 +1567,13 @@ impl Document {
             view_data.view_position.anchor = transaction
                 .changes()
                 .map_pos(view_data.view_position.anchor, Assoc::Before);
+            // Keep each view's narrowing bounds pinned to their text.
+            if let Some((start, end)) = view_data.narrow {
+                view_data.narrow = Some((
+                    transaction.changes().map_pos(start, Assoc::After),
+                    transaction.changes().map_pos(end, Assoc::After),
+                ));
+            }
         }
 
         // Keep vim marks pinned to their text as the buffer changes.
@@ -2133,6 +2140,47 @@ impl Document {
         self.narrow.map(|(_, e)| e.min(len)).unwrap_or(len)
     }
 
+    /// This view's per-view narrowing range (char positions), if any.
+    pub fn view_narrow(&self, view_id: ViewId) -> Option<(usize, usize)> {
+        let len = self.text.len_chars();
+        self.view_data
+            .get(&view_id)
+            .and_then(|vd| vd.narrow)
+            .map(|(s, e)| (s.min(len), e.min(len)))
+    }
+
+    /// Narrow this view to `[start, end]` (an indirect-buffer narrow that leaves other views of
+    /// the same document untouched). Bounds are clamped and ordered.
+    pub fn set_view_narrow(&mut self, view_id: ViewId, start: usize, end: usize) {
+        let len = self.text.len_chars();
+        let lo = start.min(end).min(len);
+        let hi = start.max(end).min(len);
+        self.view_data_mut(view_id).narrow = Some((lo, hi));
+    }
+
+    /// Remove this view's per-view narrowing (does not affect the document-wide narrow).
+    pub fn clear_view_narrow(&mut self, view_id: ViewId) {
+        if let Some(vd) = self.view_data.get_mut(&view_id) {
+            vd.narrow = None;
+        }
+    }
+
+    /// First accessible char position for `view_id`: the per-view narrow start if set, else the
+    /// document-wide [`Document::point_min`].
+    pub fn view_point_min(&self, view_id: ViewId) -> usize {
+        self.view_narrow(view_id)
+            .map(|(s, _)| s)
+            .unwrap_or_else(|| self.point_min())
+    }
+
+    /// One past the last accessible char position for `view_id`: the per-view narrow end if set,
+    /// else the document-wide [`Document::point_max`].
+    pub fn view_point_max(&self, view_id: ViewId) -> usize {
+        self.view_narrow(view_id)
+            .map(|(_, e)| e)
+            .unwrap_or_else(|| self.point_max())
+    }
+
     /// Manual code folds for this document.
     pub fn folds(&self) -> &zemacs_core::fold::Folds {
         &self.folds
@@ -2560,7 +2608,12 @@ impl Document {
             .unwrap_or_else(|| self.config.load().text_width)
     }
 
-    pub fn text_format(&self, mut viewport_width: u16, theme: Option<&Theme>) -> TextFormat {
+    pub fn text_format(
+        &self,
+        mut viewport_width: u16,
+        theme: Option<&Theme>,
+        view: Option<ViewId>,
+    ) -> TextFormat {
         let config = self.config.load();
         let text_width = self.text_width();
         let mut soft_wrap_at_text_width = self
@@ -2617,7 +2670,24 @@ impl Document {
             wrap_indicator_highlight: theme
                 .and_then(|theme| theme.find_highlight("ui.virtual.wrap")),
             soft_wrap_at_text_width,
-            folded: self.folds.closed_ranges(),
+            folded: {
+                let mut folded = self.folds.closed_ranges();
+                // A per-view narrow hides everything outside the region for THIS view only,
+                // reusing the fold-hiding render path (no per-view fold storage needed).
+                if let Some((s, e)) = view.and_then(|v| self.view_narrow(v)) {
+                    let text = self.text.slice(..);
+                    let last = text.len_lines().saturating_sub(1);
+                    let s_line = text.char_to_line(s.min(text.len_chars()));
+                    let e_line = text.char_to_line(e.saturating_sub(1).max(s).min(text.len_chars()));
+                    if s_line > 0 {
+                        folded.push((0, s_line - 1));
+                    }
+                    if e_line < last {
+                        folded.push((e_line + 1, last));
+                    }
+                }
+                folded
+            },
         }
     }
 
@@ -2708,6 +2778,11 @@ impl Document {
 #[derive(Debug, Default)]
 pub struct ViewData {
     view_position: ViewPosition,
+    /// Per-view Emacs-style narrowing (char range). Independent of the document-wide
+    /// [`Document::narrow`]: lets one view show only a region (an "indirect buffer" narrow)
+    /// while other views of the same document stay full. Drives both this view's accessible
+    /// bounds and its rendered visibility. Remapped through edits in `apply_impl`.
+    narrow: Option<(usize, usize)>,
 }
 
 #[derive(Clone, Debug)]
@@ -2821,6 +2896,43 @@ mod test {
         assert!(!doc.is_narrowed());
         assert_eq!(doc.point_min(), 0);
         assert_eq!(doc.point_max(), doc.text().len_chars());
+    }
+
+    #[test]
+    fn per_view_narrowing_is_independent_and_maps_through_edits() {
+        let text = Rope::from("aaa\nbbb\nccc");
+        let mut doc = Document::from(
+            text,
+            None,
+            Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let view = ViewId::default();
+        doc.set_selection(view, Selection::single(0, 0));
+
+        // No per-view narrow: view bounds fall back to the (full) document bounds.
+        assert_eq!(doc.view_narrow(view), None);
+        assert_eq!(doc.view_point_min(view), 0);
+        assert_eq!(doc.view_point_max(view), 11);
+
+        // Narrow just this view to the middle line; the document-wide narrow stays untouched.
+        doc.set_view_narrow(view, 4, 8);
+        assert_eq!(doc.view_narrow(view), Some((4, 8)));
+        assert_eq!(doc.view_point_min(view), 4);
+        assert_eq!(doc.view_point_max(view), 8);
+        assert!(!doc.is_narrowed()); // document-wide narrow not set
+
+        // Edits inside the region grow the per-view bounds with the text.
+        let t = Transaction::change(doc.text(), vec![(5, 5, Some("XX".into()))].into_iter());
+        doc.apply(&t, view);
+        assert_eq!(doc.view_point_min(view), 4);
+        assert_eq!(doc.view_point_max(view), 10);
+
+        // Clearing the per-view narrow restores full view bounds.
+        doc.clear_view_narrow(view);
+        assert_eq!(doc.view_narrow(view), None);
+        assert_eq!(doc.view_point_min(view), 0);
+        assert_eq!(doc.view_point_max(view), doc.text().len_chars());
     }
 
     #[test]
