@@ -6852,11 +6852,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_p_e",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space p e"
+   "key:normal:space p e",
+   "static:edit_project_config"
   ],
-  "note": "edit dir-locals -> :config-open"
+  "note": "edit dir-locals -> edit_project_config (open/create <workspace>/.zemacs/config.toml)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_e_i",

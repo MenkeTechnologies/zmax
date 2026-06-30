@@ -503,6 +503,7 @@ impl MappableCommand {
         find_file_replace_buffer, "Open a file and replace the current buffer with it (SPC f A)",
         open_file_literally, "Open a file with no syntax/language (fundamental mode, SPC f l)",
         locate_file, "Locate a file via system locate/mdfind and open it (SPC f L)",
+        edit_project_config, "Edit the project-local .zemacs/config.toml (SPC p e)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7475,6 +7476,30 @@ fn locate_file(cx: &mut Context) {
     .with_dynamic_query(get_files, Some(275));
 
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// SPC p e : open the project-local config (`<workspace>/.zemacs/config.toml`), creating it (and
+/// its `.zemacs/` directory) if absent — zemacs' analogue of editing a project's dir-locals.
+fn edit_project_config(cx: &mut Context) {
+    let path = zemacs_loader::workspace_config_file();
+    if !path.exists() {
+        if let Some(parent) = path.parent() {
+            if let Err(e) = std::fs::create_dir_all(parent) {
+                cx.editor
+                    .set_error(format!("create {}: {e}", parent.display()));
+                return;
+            }
+        }
+        if let Err(e) = std::fs::write(&path, b"# zemacs project-local config\n") {
+            cx.editor
+                .set_error(format!("create {}: {e}", path.display()));
+            return;
+        }
+    }
+    if let Err(e) = cx.editor.open(&path, Action::Replace) {
+        cx.editor
+            .set_error(format!("open {}: {e}", path.display()));
+    }
 }
 
 /// `git init` in the current working directory (Spacemacs `SPC g i`).
