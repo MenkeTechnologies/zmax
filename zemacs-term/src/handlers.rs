@@ -15,6 +15,7 @@ pub use zemacs_view::handlers::{word_index, Handlers};
 use self::document_colors::DocumentColorsHandler;
 use self::document_links::DocumentLinksHandler;
 
+mod ai_ghost;
 mod auto_save;
 mod closed_files;
 mod code_action_hint;
@@ -41,6 +42,7 @@ pub fn setup(config: Arc<ArcSwap<Config>>) -> Handlers {
     let word_index = word_index::Handler::spawn();
     let pull_diagnostics = PullDiagnosticsHandler::default().spawn();
     let pull_all_documents_diagnostics = PullAllDocumentsDiagnosticHandler::default().spawn();
+    let ai_ghost = ai_ghost::GhostHandler::new().spawn();
 
     let handlers = Handlers {
         completions: zemacs_view::handlers::completion::CompletionHandler::new(event_tx),
@@ -52,9 +54,11 @@ pub fn setup(config: Arc<ArcSwap<Config>>) -> Handlers {
         pull_diagnostics,
         pull_all_documents_diagnostics,
         code_action_hint,
+        ai_ghost,
     };
 
     zemacs_view::handlers::register_hooks(&handlers);
+    ai_ghost::register_hooks(&handlers);
     completion::register_hooks(&handlers);
     signature_help::register_hooks(&handlers);
     document_highlight::register_hooks(&handlers);

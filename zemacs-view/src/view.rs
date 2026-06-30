@@ -496,6 +496,17 @@ impl View {
                 .add_inline_annotations(other_inlay_hints, other_style)
                 .add_inline_annotations(padding_after_inlay_hints, None);
         };
+
+        if let Some(ghost) = doc.ghost_text.get(&self.id) {
+            // Reuse the inlay-hint dim style if the theme has no dedicated ghost-text key.
+            let style = theme.and_then(|t| {
+                t.find_highlight("ui.virtual.ghost-text")
+                    .or_else(|| t.find_highlight("ui.virtual.inlay-hint"))
+                    .or_else(|| t.find_highlight("ui.virtual"))
+            });
+            text_annotations.add_inline_annotations(&ghost.annotations, style);
+        }
+
         let config = doc.config.load();
 
         if config.lsp.display_color_swatches {

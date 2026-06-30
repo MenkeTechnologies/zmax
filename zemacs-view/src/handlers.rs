@@ -5,6 +5,7 @@ use zemacs_event::send_blocking;
 use crate::handlers::lsp::SignatureHelpInvoked;
 use crate::{DocumentId, Editor, ViewId};
 
+pub mod ai_ghost;
 pub mod completion;
 pub mod dap;
 pub mod diagnostics;
@@ -32,6 +33,7 @@ pub struct Handlers {
     pub pull_diagnostics: Sender<lsp::PullDiagnosticsEvent>,
     pub pull_all_documents_diagnostics: Sender<lsp::PullAllDocumentsDiagnosticsEvent>,
     pub code_action_hint: Sender<lsp::CodeActionHintEvent>,
+    pub ai_ghost: Sender<ai_ghost::GhostEvent>,
 }
 
 impl Handlers {

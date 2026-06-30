@@ -544,6 +544,10 @@ impl MappableCommand {
         ai_agent_review, "Toggle agent review (dry-run) mode — propose changes without applying (SPC a R)",
         ai_complete, "AI code completion at the cursor (SPC a TAB)",
         ai_docs_context, "@docs keyword-search over the docs directory for AI context (SPC a D)",
+        ai_web_context, "@web live web-search results as AI context (SPC a w)",
+        toggle_ai_autocomplete, "Toggle real-time AI ghost-text autocomplete (SPC a g)",
+        ghost_text_accept, "Accept the AI ghost-text suggestion, else Tab (insert mode)",
+        ghost_text_accept_word, "Accept the next word of the AI ghost-text suggestion (partial accept)",
         ai_revert_agent, "Revert the workspace to the last agent checkpoint (SPC a z)",
         ai_fix, "AI-fix the diagnostic(s) on the current line (SPC a F)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
@@ -682,6 +686,10 @@ impl MappableCommand {
         git_diff, "Open side-by-side diff vs HEAD",
         resolve_conflicts, "Resolve merge conflicts (3-way)",
         git_status, "Magit status",
+        git_push, "Push the current branch to its remote (SPC g P)",
+        git_pull, "Fast-forward pull from upstream (SPC g u)",
+        git_fetch, "Fetch all remotes (SPC g F)",
+        cut_to_clipboard, "Cut the selection to the system clipboard (JetBrains Cmd X)",
         org_cycle, "Org: toggle subtree fold",
         org_todo, "Org: cycle TODO keyword",
         org_priority, "Org: cycle priority cookie",
@@ -9398,6 +9406,135 @@ fn ai_docs_context(cx: &mut Context) {
     cx.push_layer(Box::new(prompt));
 }
 
+/// SPC a w : add live web-search results as `@context` for the next AI chat (Cursor `@web`).
+/// Prompts for a query, performs a real web search (DuckDuckGo by default, or any backend set via
+/// `ZEMACS_AI_WEB_SEARCH_URL`), and attaches the top results to `AI_PENDING_CONTEXT`.
+fn ai_web_context(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "@web search:".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let query = input.trim().to_string();
+            cx.editor.set_status("AI: searching the web…");
+            cx.jobs.callback(async move {
+                let q = query.clone();
+                let res = tokio::task::spawn_blocking(move || crate::ai::web::search_context(&q, 6))
+                    .await
+                    .map_err(|e| anyhow::anyhow!("web task: {e}"))?;
+                let (added, status): (bool, String) = match res {
+                    Ok(text) if !text.trim().is_empty() => {
+                        AI_PENDING_CONTEXT
+                            .lock()
+                            .unwrap()
+                            .push((format!("web: {query}"), text));
+                        (true, "added @web context (SPC a p to chat)".to_string())
+                    }
+                    Ok(_) => (false, "no web results".to_string()),
+                    Err(e) => (false, format!("web search failed: {e}")),
+                };
+                let _ = added;
+                Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+                    editor.set_status(status);
+                })))
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// SPC a g : toggle real-time AI ghost-text autocomplete (Cursor predict-next-edit). Off by
+/// default; when on, a dimmed suggestion appears at the cursor after a typing pause.
+fn toggle_ai_autocomplete(cx: &mut Context) {
+    let on = crate::ai::toggle_autocomplete();
+    if !on {
+        // Drop any visible suggestion immediately when turning it off.
+        let view_id = view!(cx.editor).id;
+        doc_mut!(cx.editor).clear_ghost_text(view_id);
+    }
+    cx.editor.set_status(if on {
+        "AI autocomplete ON — ghost text appears as you pause typing (Tab accepts)"
+    } else {
+        "AI autocomplete OFF"
+    });
+}
+
+/// `tab` in insert mode: accept the whole AI ghost-text suggestion if one is showing, otherwise
+/// fall through to the normal Tab behavior (emmet expand / indent).
+fn ghost_text_accept(cx: &mut Context) {
+    let accepted = {
+        let (view, doc) = current!(cx.editor);
+        let view_id = view.id;
+        match doc.take_ghost_text(view_id) {
+            Some(ghost) => {
+                let pos = doc.selection(view_id).primary().cursor(doc.text().slice(..));
+                let n = ghost.text.chars().count();
+                let tx =
+                    Transaction::change(doc.text(), std::iter::once((pos, pos, Some(ghost.text.into()))))
+                        .with_selection(Selection::point(pos + n));
+                doc.apply(&tx, view_id);
+                doc.append_changes_to_history(view);
+                true
+            }
+            None => false,
+        }
+    };
+    if !accepted {
+        emmet_expand(cx);
+    }
+}
+
+/// Partial accept (Cursor): insert just the next word of the AI ghost-text suggestion, keeping the
+/// remainder as a ghost anchored at the new cursor. No-op when no suggestion is showing.
+fn ghost_text_accept_word(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let view_id = view.id;
+    let Some(ghost) = doc.ghost_text(view_id).cloned() else {
+        return;
+    };
+    let (word, rest) = split_first_token(&ghost.text);
+    if word.is_empty() {
+        doc.clear_ghost_text(view_id);
+        return;
+    }
+    let pos = doc.selection(view_id).primary().cursor(doc.text().slice(..));
+    let n = word.chars().count();
+    let tx = Transaction::change(doc.text(), std::iter::once((pos, pos, Some(word.into()))))
+        .with_selection(Selection::point(pos + n));
+    doc.apply(&tx, view_id);
+    doc.append_changes_to_history(view);
+    if rest.is_empty() {
+        doc.clear_ghost_text(view_id);
+    } else {
+        doc.set_ghost_text(view_id, pos + n, rest);
+    }
+}
+
+/// Split off the next "token" to insert for a partial accept: any leading whitespace plus the next
+/// word (or a single punctuation char). Returns (token, remainder).
+fn split_first_token(s: &str) -> (String, String) {
+    let chars: Vec<char> = s.chars().collect();
+    let mut i = 0;
+    while i < chars.len() && chars[i].is_whitespace() {
+        i += 1;
+    }
+    if i < chars.len() {
+        if char_is_word(chars[i]) {
+            while i < chars.len() && char_is_word(chars[i]) {
+                i += 1;
+            }
+        } else {
+            i += 1; // a lone punctuation char
+        }
+    }
+    let token: String = chars[..i].iter().collect();
+    let rest: String = chars[i..].iter().collect();
+    (token, rest)
+}
+
 /// SPC a k : describe a task in natural language and get a shell command (Cursor terminal Cmd+K),
 /// copied to the clipboard and shown in the status line.
 fn ai_terminal_command(cx: &mut Context) {
@@ -9434,7 +9571,7 @@ fn ai_terminal_command(cx: &mut Context) {
 
 /// Strip a leading ```lang fence and trailing ``` from an AI code reply, so an inline edit applies
 /// raw code even when the model wraps it despite instructions.
-fn strip_code_fences(s: &str) -> String {
+pub(crate) fn strip_code_fences(s: &str) -> String {
     let t = s.trim();
     if let Some(rest) = t.strip_prefix("```") {
         if let Some(nl) = rest.find('\n') {
@@ -16223,6 +16360,72 @@ fn resolve_conflicts(cx: &mut Context) {
 /// Static-command mirror of the `:magit` / `:git` typable command.
 fn git_status(cx: &mut Context) {
     typed::open_magit(cx.editor, cx.jobs);
+}
+
+/// Run `git <args>` in the workspace root, returning the trimmed output (or stderr on failure).
+/// `GIT_TERMINAL_PROMPT=0` so a credential prompt fails fast instead of hanging the TUI. Blocking.
+fn git_exec(args: &[&str]) -> Result<String, String> {
+    let root = zemacs_loader::find_workspace().0;
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&root)
+        .args(args)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .output()
+        .map_err(|e| e.to_string())?;
+    let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+    if out.status.success() {
+        Ok(if stdout.is_empty() { stderr } else { stdout })
+    } else {
+        Err(if stderr.is_empty() { stdout } else { stderr })
+    }
+}
+
+/// Run a (network) git command off-thread and report the last output line in the status bar.
+fn git_async(cx: &mut Context, busy: &'static str, args: Vec<String>, label: &'static str) {
+    cx.editor.set_status(format!("git: {busy}"));
+    cx.jobs.callback(async move {
+        let res = tokio::task::spawn_blocking(move || {
+            let refs: Vec<&str> = args.iter().map(String::as_str).collect();
+            git_exec(&refs)
+        })
+        .await
+        .map_err(|e| anyhow::anyhow!("git task: {e}"))?;
+        Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+            match res {
+                Ok(out) => {
+                    let tail = out.lines().last().filter(|l| !l.is_empty()).unwrap_or(label);
+                    editor.set_status(format!("git {label}: {tail}"));
+                }
+                Err(e) => {
+                    let tail = e.lines().last().filter(|l| !l.is_empty()).unwrap_or("failed");
+                    editor.set_status(format!("git {label} failed: {tail}"));
+                }
+            }
+        })))
+    });
+}
+
+/// SPC g P (JetBrains Cmd+Shift+K): push the current branch to its upstream remote.
+fn git_push(cx: &mut Context) {
+    git_async(cx, "pushing…", vec!["push".into()], "pushed");
+}
+
+/// SPC g u (JetBrains Cmd+T, "Update Project"): fast-forward pull from upstream.
+fn git_pull(cx: &mut Context) {
+    git_async(cx, "pulling…", vec!["pull".into(), "--ff-only".into()], "pulled");
+}
+
+/// SPC g F: fetch all remotes.
+fn git_fetch(cx: &mut Context) {
+    git_async(cx, "fetching…", vec!["fetch".into(), "--all".into()], "fetched");
+}
+
+/// JetBrains Cut (Cmd X): copy the selection to the system clipboard, then delete it.
+fn cut_to_clipboard(cx: &mut Context) {
+    yank_to_clipboard(cx);
+    delete_selection(cx);
 }
 
 /// Toggle a fold over the current org heading's subtree (`:org-cycle`).
