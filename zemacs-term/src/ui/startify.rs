@@ -38,7 +38,7 @@ enum EntryAction {
 struct Entry {
     /// Text inside the brackets, e.g. "e", "0", "10", "q".
     bracket: String,
-    /// Single-key shortcut accepted directly (None for indices > 9).
+    /// Single-key shortcut accepted directly (None once the shortcut pool is exhausted).
     shortcut: Option<char>,
     /// Display label (a path for MRU entries, or a `<…>` literal).
     label: String,
@@ -82,20 +82,25 @@ impl Startify {
         let frecent = crate::recent_files::load_frecent();
         let recent = crate::recent_files::load();
         let cwd = std::env::current_dir().ok();
-        let mut idx = 0usize;
+        // Single-key shortcuts come from this pool (shared across both file sections) so that 10+
+        // entries are all reachable — digits first, then letters, skipping e/j/k/q which are bound
+        // to actions (empty/quit) and navigation. Entries past the pool fall back to j/k + Enter.
+        const SHORTCUTS: &[u8] = b"1234567890abcdfghilmnoprstuvwxyz";
+        let mut sc = 0usize;
 
-        // FRECENT — global files ranked by z-frecency (frequency × recency), [0]..[9].
+        // FRECENT — global files ranked by z-frecency (frequency × recency).
         let mut first = true;
-        for path in frecent.iter().take(10) {
+        for path in frecent.iter().take(15) {
+            let shortcut = SHORTCUTS.get(sc).map(|&b| b as char);
+            sc += 1;
             entries.push(Entry {
-                bracket: idx.to_string(),
-                shortcut: (idx <= 9).then(|| char::from(b'0' + idx as u8)),
+                bracket: shortcut.map(|c| c.to_string()).unwrap_or_default(),
+                shortcut,
                 label: tilde(path),
                 is_path: true,
                 section: first.then(|| "FRECENT".to_string()),
                 action: EntryAction::Open(path.clone()),
             });
-            idx += 1;
             first = false;
         }
 
@@ -103,17 +108,18 @@ impl Startify {
         if let Some(cwd) = &cwd {
             let under: Vec<&PathBuf> = recent.iter().filter(|p| p.starts_with(cwd)).collect();
             let mut first = true;
-            for path in under.iter().take(10) {
+            for path in under.iter().take(15) {
                 let rel = path.strip_prefix(cwd).unwrap_or(path);
+                let shortcut = SHORTCUTS.get(sc).map(|&b| b as char);
+                sc += 1;
                 entries.push(Entry {
-                    bracket: idx.to_string(),
-                    shortcut: (idx <= 9).then(|| char::from(b'0' + idx as u8)),
+                    bracket: shortcut.map(|c| c.to_string()).unwrap_or_default(),
+                    shortcut,
                     label: rel.display().to_string(),
                     is_path: true,
                     section: first.then(|| format!("MRU {}", cwd.display())),
                     action: EntryAction::Open((*path).clone()),
                 });
-                idx += 1;
                 first = false;
             }
         }
