@@ -6196,11 +6196,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_b_w",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space b W"
+   "key:normal:space b W",
+   "static:goto_buffer_window"
   ],
-  "note": "go to buffer -> buffer picker"
+  "note": "goto-buffer-window -> goto_buffer_window (focus existing window showing the buffer, else open)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_l",
