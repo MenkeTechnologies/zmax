@@ -106,7 +106,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space g U",   "Git",     ":git-unstage"),                         // SPC g U : unstage current file
     ("space g i",   "Git",     "git_init"),                             // SPC g i : initialize a new git repo
     ("space g f d", "Git",     "git_diff"),                             // SPC g f d : diff current file vs HEAD
-    ("space g f m", "Git",     "git_status"),                           // SPC g f m : magit dispatch (status)
+    ("space g f m", "Git",     "git_file_dispatch"),                    // SPC g f m : magit file-operations dispatch
     ("space g f f", "Git",     "view_file_at_rev"),                     // SPC g f f : view current file at a branch/commit
     ("space f e d", "Files",   ":config-open"),                          // SPC f e d : open dotfile/config
     ("space q f",   "Quit",    ":quit"),                                 // SPC q f : kill frame

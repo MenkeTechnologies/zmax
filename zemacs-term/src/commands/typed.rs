@@ -9248,7 +9248,7 @@ pub(crate) fn git_stash_pop(
 
 /// Run `git <git_args> -- <current file>` in the file's directory and report
 /// `<verb> <path>` (or the git error). Shared by `:git-stage`/`:git-unstage`.
-fn git_on_current_file(
+pub(crate) fn git_on_current_file(
     cx: &mut compositor::Context,
     git_args: &[&str],
     verb: &str,

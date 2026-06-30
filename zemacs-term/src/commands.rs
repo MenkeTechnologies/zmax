@@ -514,6 +514,7 @@ impl MappableCommand {
         ace_window, "Jump to a window by its number, prompted (ace-window, SPC w . a)",
         browse_news, "Browse zemacs release notes / NEWS (SPC h n)",
         goto_buffer_window, "Focus the window already showing a chosen buffer (SPC b w)",
+        git_file_dispatch, "Magit-style file operations dispatch for the current file (SPC g f m)",
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
         describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
         package_search, "Search configured language packages and describe one (SPC h p)",
@@ -6712,6 +6713,39 @@ fn goto_window_n(cx: &mut Context, n: usize) {
     if let Some(&id) = ids.get(n - 1) {
         cx.editor.focus(id);
     }
+}
+
+/// SPC g f m : a magit-style "file dispatch" transient — press a key to run a git operation on the
+/// current file: [s]tage, [u]nstage, [d]iff vs HEAD, [l]og, [b]lame, [g] status. Spacemacs
+/// `magit-file-dispatch`.
+fn git_file_dispatch(cx: &mut Context) {
+    cx.editor.set_status(
+        "git file: [s]tage [u]nstage [d]iff [l]og [b]lame [g]status  (any other key: cancel)",
+    );
+    cx.on_next_key(move |cx, event| match event.code {
+        KeyCode::Char('d') => git_diff(cx),
+        KeyCode::Char('l') => git_file_log_picker(cx),
+        KeyCode::Char('b') => git_blame_line(cx),
+        KeyCode::Char('g') => git_status(cx),
+        KeyCode::Char('s') | KeyCode::Char('u') => {
+            let stage = matches!(event.code, KeyCode::Char('s'));
+            let args: &[&str] = if stage {
+                &["add"]
+            } else {
+                &["reset", "-q", "HEAD"]
+            };
+            let verb = if stage { "staged" } else { "unstaged" };
+            let mut bridge = crate::compositor::Context {
+                editor: cx.editor,
+                jobs: cx.jobs,
+                scroll: None,
+            };
+            if let Err(e) = typed::git_on_current_file(&mut bridge, args, verb) {
+                bridge.editor.set_error(e.to_string());
+            }
+        }
+        _ => cx.editor.set_status("git file: cancelled"),
+    });
 }
 
 /// SPC w . a : ace-window. Show a hint, then jump to the window whose 1-based number is pressed
