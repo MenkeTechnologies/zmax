@@ -525,6 +525,10 @@ impl MappableCommand {
         clear_diagnostics, "Clear all diagnostics for the current buffer (SPC e c)",
         ai_chat, "Ask the AI provider about the selection/buffer (SPC a i)",
         ai_chat_panel, "Open the streaming AI chat drawer (SPC a p)",
+        ai_model_picker, "Pick the AI model at runtime (SPC a m)",
+        toggle_ai_privacy, "Toggle AI privacy mode (SPC a P)",
+        ai_apply_block, "Apply the last AI code block to the selection (SPC a y)",
+        ai_add_file_context, "Add a file as @context for the next AI chat (SPC a @)",
         ai_inline_edit, "AI inline edit/generate on the selection (Cmd+K style, SPC a e)",
         ai_explain, "Explain the selected code with AI (SPC a x)",
         ai_generate_tests, "Generate tests for the selection with AI (SPC a u)",
@@ -8883,7 +8887,12 @@ fn ai_chat(cx: &mut Context) {
                 return;
             }
             let q = input.trim().to_string();
-            let ctx = context.clone();
+            // Privacy mode: withhold the code context, send only the question.
+            let ctx = if crate::ai::privacy() {
+                None
+            } else {
+                context.clone()
+            };
             let lang = lang.clone();
             cx.editor.set_status("AI: thinking…");
             cx.jobs.callback(async move {
@@ -8968,9 +8977,10 @@ fn ai_chat_panel(cx: &mut Context) {
                 return;
             }
             let q = input.trim().to_string();
+            let ctx = take_pending_context();
             append_to_ai_doc(cx.editor, doc_id, &format!("\n\n### You\n{q}\n\n### AI\n"));
             let mut msgs = AI_SESSION.lock().unwrap().clone();
-            msgs.push(crate::ai::Message::user(q.clone()));
+            msgs.push(crate::ai::Message::user(format!("{q}{ctx}")));
             cx.editor.set_status("AI: streaming…");
             cx.jobs.callback(async move {
                 let q_for_session = q.clone();
@@ -9001,6 +9011,119 @@ fn ai_chat_panel(cx: &mut Context) {
         },
     );
     cx.push_layer(Box::new(prompt));
+}
+
+/// SPC a m : pick the AI model at runtime (Cursor model picker). Sets an override consulted before
+/// `ZEMACS_AI_MODEL`.
+fn ai_model_picker(cx: &mut Context) {
+    let provider = crate::ai::provider_name();
+    let models: Vec<String> = crate::ai::known_models(&provider)
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    if models.is_empty() {
+        cx.editor.set_status(format!("no known models for provider '{provider}'"));
+        return;
+    }
+    let columns = [PickerColumn::new("model", |m: &String, _: &()| m.clone().into())];
+    let picker = Picker::new(columns, 0, models, (), |cx, model: &String, _action| {
+        crate::ai::set_model_override(Some(model.clone()));
+        cx.editor.set_status(format!("AI model: {model}"));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// SPC a P : toggle AI privacy mode (when on, AI commands send only the prompt, not buffer/selection
+/// code).
+fn toggle_ai_privacy(cx: &mut Context) {
+    let on = crate::ai::toggle_privacy();
+    cx.editor
+        .set_status(format!("AI privacy mode: {}", if on { "on" } else { "off" }));
+}
+
+/// Extract the last fenced ```code``` block from a markdown string, if any.
+fn last_code_block(s: &str) -> Option<String> {
+    let mut blocks: Vec<String> = Vec::new();
+    let mut cur: Option<String> = None;
+    for line in s.lines() {
+        if line.trim_start().starts_with("```") {
+            match cur.take() {
+                Some(b) => blocks.push(b),
+                None => cur = Some(String::new()),
+            }
+        } else if let Some(b) = cur.as_mut() {
+            b.push_str(line);
+            b.push('\n');
+        }
+    }
+    blocks.into_iter().last().map(|b| b.trim_end().to_string())
+}
+
+/// SPC a y : apply the last code block from the AI conversation, replacing the selection (or
+/// inserting at the cursor). Cursor's "apply code block".
+fn ai_apply_block(cx: &mut Context) {
+    let block = {
+        let session = AI_SESSION.lock().unwrap();
+        session
+            .iter()
+            .rev()
+            .find(|m| matches!(m.role, crate::ai::Role::Assistant))
+            .and_then(|m| last_code_block(&m.content))
+    };
+    let Some(block) = block else {
+        cx.editor.set_status("no AI code block to apply (chat first)");
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let r = doc.selection(view.id).primary();
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((r.from(), r.to(), Some(block.into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status("applied AI code block (u to undo)");
+}
+
+/// Pending `@file` context to attach to the next AI chat request.
+static AI_PENDING_CONTEXT: std::sync::Mutex<Vec<(String, String)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// SPC a f : add a file as `@file` context for the next AI chat (Cursor `@file`).
+fn ai_add_file_context(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "@file context:".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let path = input.trim().to_string();
+            match std::fs::read_to_string(&path) {
+                Ok(content) => {
+                    AI_PENDING_CONTEXT.lock().unwrap().push((path.clone(), content));
+                    cx.editor
+                        .set_status(format!("added @{path} to AI context (SPC a p to chat)"));
+                }
+                Err(e) => cx.editor.set_error(format!("read {path}: {e}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Take and clear any pending `@file` context, formatted for inclusion in a prompt.
+fn take_pending_context() -> String {
+    let mut ctx = AI_PENDING_CONTEXT.lock().unwrap();
+    if ctx.is_empty() {
+        return String::new();
+    }
+    let mut out = String::from("\n\nAttached files:\n");
+    for (path, content) in ctx.drain(..) {
+        out.push_str(&format!("\n@{path}:\n```\n{content}\n```\n"));
+    }
+    out
 }
 
 /// Strip a leading ```lang fence and trailing ``` from an AI code reply, so an inline edit applies

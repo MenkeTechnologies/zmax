@@ -19459,5 +19459,41 @@
    "static:ai_chat_panel"
   ],
   "note": "streaming chat drawer with conversation history -> ai_chat_panel"
+ },
+ {
+  "spec_id": "cursor.chat.model_picker",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a m",
+   "static:ai_model_picker"
+  ],
+  "note": "runtime model picker -> ai_model_picker"
+ },
+ {
+  "spec_id": "cursor.misc.privacy",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a P",
+   "static:toggle_ai_privacy"
+  ],
+  "note": "privacy mode -> toggle_ai_privacy (withholds code context)"
+ },
+ {
+  "spec_id": "cursor.chat.apply",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a y",
+   "static:ai_apply_block"
+  ],
+  "note": "apply last AI code block -> ai_apply_block"
+ },
+ {
+  "spec_id": "cursor.chat.context_file",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a @",
+   "static:ai_add_file_context"
+  ],
+  "note": "@file context -> ai_add_file_context (pending context for next chat)"
  }
 ]

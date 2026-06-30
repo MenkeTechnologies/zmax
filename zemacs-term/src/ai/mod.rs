@@ -148,13 +148,57 @@ pub trait Provider: Send + Sync {
     }
 }
 
-/// Resolve `ZEMACS_AI_PROVIDER` / `ZEMACS_AI_MODEL` from the environment.
+/// Runtime model override set by the model picker (takes precedence over `ZEMACS_AI_MODEL`).
+static MODEL_OVERRIDE: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+/// Privacy mode: when on, AI commands withhold buffer/selection code and send only the prompt.
+static PRIVACY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Set (or clear) the runtime model override.
+pub fn set_model_override(model: Option<String>) {
+    *MODEL_OVERRIDE.lock().unwrap() = model;
+}
+
+/// Whether privacy mode is on.
+pub fn privacy() -> bool {
+    PRIVACY.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Toggle privacy mode; returns the new state.
+pub fn toggle_privacy() -> bool {
+    let new = !privacy();
+    PRIVACY.store(new, std::sync::atomic::Ordering::Relaxed);
+    new
+}
+
+/// Known model ids offered by the model picker for a provider.
+pub fn known_models(provider: &str) -> &'static [&'static str] {
+    match provider {
+        "anthropic" => &[
+            "claude-3-5-sonnet-latest",
+            "claude-3-5-haiku-latest",
+            "claude-3-opus-latest",
+        ],
+        "openai" => &["gpt-4o", "gpt-4o-mini", "o3-mini"],
+        _ => &[],
+    }
+}
+
+/// The configured provider name (env `ZEMACS_AI_PROVIDER`, default anthropic).
+pub fn provider_name() -> String {
+    provider_and_model().0
+}
+
+/// Resolve `ZEMACS_AI_PROVIDER` / `ZEMACS_AI_MODEL` from the environment (model override wins).
 fn provider_and_model() -> (String, Option<String>) {
     let provider = std::env::var("ZEMACS_AI_PROVIDER")
         .ok()
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "anthropic".to_string());
-    let model = std::env::var("ZEMACS_AI_MODEL").ok().filter(|s| !s.is_empty());
+    let model = MODEL_OVERRIDE
+        .lock()
+        .unwrap()
+        .clone()
+        .or_else(|| std::env::var("ZEMACS_AI_MODEL").ok().filter(|s| !s.is_empty()));
     (provider, model)
 }
 
