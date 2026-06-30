@@ -2679,6 +2679,74 @@ qf_nav_cmd!(loclist_getfile_cmd, QfKind::Location, |cx, a| {
     qf_populate(cx, QfKind::Location, &t, false, false)
 });
 
+// --- Tabpages (`:tabnew`, `:tabnext`, `:tabclose`, …) ----------------------
+
+fn tab_new(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ");
+    let path = path.trim();
+    cx.editor.new_tab();
+    if !path.is_empty() {
+        cx.editor
+            .open(std::path::Path::new(path), zemacs_view::editor::Action::Replace)?;
+    }
+    Ok(())
+}
+
+fn tab_next(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match args.first().and_then(|s| s.parse::<usize>().ok()) {
+        Some(n) if n >= 1 => cx.editor.switch_tab(n - 1),
+        _ => cx.editor.goto_next_tabpage(),
+    }
+    Ok(())
+}
+
+fn tab_previous(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.editor.goto_previous_tabpage();
+    Ok(())
+}
+
+fn tab_close(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.editor.close_tab();
+    Ok(())
+}
+
+fn tab_only(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.editor.tab_only();
+    Ok(())
+}
+
+fn tab_first(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.editor.switch_tab(0);
+    Ok(())
+}
+
+fn tab_last(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = cx.editor.tab_count();
+    cx.editor.switch_tab(n.saturating_sub(1));
+    Ok(())
+}
+
 /// `:shell-quote` — wrap the selection in safe shell single-quotes (for pasting a
 /// path or string into a shell command). Reuses [`shell_single_quote`].
 fn shell_quote_cmd(
@@ -15366,6 +15434,63 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: loclist_getfile_cmd,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    // --- Tabpages ---
+    TypableCommand {
+        name: "tabnew",
+        aliases: &["tabe", "tabedit"],
+        doc: "Open a new tabpage (optionally editing a file).",
+        fun: tab_new,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tabnext",
+        aliases: &["tabn"],
+        doc: "Go to the next tabpage (or tab [count]).",
+        fun: tab_next,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tabprevious",
+        aliases: &["tabp", "tabNext", "tabN"],
+        doc: "Go to the previous tabpage.",
+        fun: tab_previous,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tabclose",
+        aliases: &["tabc"],
+        doc: "Close the current tabpage.",
+        fun: tab_close,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tabonly",
+        aliases: &["tabo"],
+        doc: "Close all tabpages except the current one.",
+        fun: tab_only,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tabfirst",
+        aliases: &["tabrewind", "tabr"],
+        doc: "Go to the first tabpage.",
+        fun: tab_first,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tablast",
+        aliases: &[],
+        doc: "Go to the last tabpage.",
+        fun: tab_last,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "shell-quote",

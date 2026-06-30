@@ -528,8 +528,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             // :character-info — vim's ga, not zemacs's goto-last-accessed-file.
             "m" => goto_line_middle,          // gm: go to middle of the screen line (vim, not last-modified)
             "C-g" => document_stats,          // g CTRL-G: line/word/char counts (+ selection)
-            "t" => goto_next_buffer,           // gt: next tabpage -> next buffer
-            "T" => goto_previous_buffer,       // gT: previous tabpage -> previous buffer
+            "t" => goto_next_tabpage,          // gt: next tabpage
+            "T" => goto_previous_tabpage,      // gT: previous tabpage
             "p" => paste_after,                // gp: paste after (vim leaves cursor after)
             "P" => paste_before,               // gP: paste before
             "n" => search_next,                // gn: select the next search match
@@ -722,8 +722,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "}" => hover,                     // C-w }: show tag under cursor in preview (hover)
             // CTRL-W g ...: tab/file/tag variants (vim's window-goto sub-prefix)
             "g" => { "Window goto"
-                "t" => goto_next_buffer,      // C-w g t: next tabpage -> next buffer
-                "T" => goto_previous_buffer,  // C-w g T: prev tabpage -> previous buffer
+                "t" => goto_next_tabpage,     // C-w g t: next tabpage
+                "T" => goto_previous_tabpage, // C-w g T: prev tabpage
                 "f" => goto_file,             // C-w g f: edit file under cursor (new tab approx)
                 "F" => goto_file,             // C-w g F: edit file under cursor (new tab approx)
                 "]" | "C-]" => goto_definition, // C-w g ] / g C-]: tag jump (:tselect/:tjump)
@@ -1089,8 +1089,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "u" => winner_undo,               // SPC w u : winner-undo (undo window layout)
                 "}" => hover,
                 "g" => { "Window goto"
-                    "t" => goto_next_buffer,
-                    "T" => goto_previous_buffer,
+                    "t" => goto_next_tabpage,
+                    "T" => goto_previous_tabpage,
                     "f" => goto_file,
                     "F" => goto_file,
                     "]" | "C-]" => goto_definition,
@@ -2137,14 +2137,14 @@ mod tests {
             cmd_name(resolve(n, "C-]").unwrap()),
             Some("goto_definition")
         );
-        // gt/gT navigate buffers (vim tabpages)
+        // gt/gT navigate vim tabpages
         assert_eq!(
             cmd_name(resolve(n, "g t").unwrap()),
-            Some("goto_next_buffer")
+            Some("goto_next_tabpage")
         );
         assert_eq!(
             cmd_name(resolve(n, "g T").unwrap()),
-            Some("goto_previous_buffer")
+            Some("goto_previous_tabpage")
         );
         // = reindent operator is a sequence for motions, leaf for ==
         assert_eq!(cmd_name(resolve(n, "= =").unwrap()), Some("indent"));

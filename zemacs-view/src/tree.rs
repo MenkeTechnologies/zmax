@@ -1,5 +1,21 @@
-use crate::{graphics::Rect, View, ViewId};
+use crate::{graphics::Rect, DocumentId, View, ViewId};
 use slotmap::SlotMap;
+
+/// A structural snapshot of a window layout, used by tabpages to save a tab's
+/// splits and rebuild them later. Leaves carry only the `DocumentId`; the
+/// editor restores each window's selection separately, matching the
+/// left-to-right leaf order of `shape()`/`build_from_shape()`.
+#[derive(Debug, Clone)]
+pub enum TreeShape {
+    Leaf {
+        doc: DocumentId,
+        focused: bool,
+    },
+    Split {
+        layout: Layout,
+        children: Vec<(f32, TreeShape)>,
+    },
+}
 
 // the dimensions are recomputed on window resize/tree change.
 //
@@ -106,6 +122,142 @@ impl Tree {
             area,
             nodes,
             stack: Vec::new(),
+        }
+    }
+
+    /// Serialize the current layout into a [`TreeShape`] (for tabpages).
+    pub fn shape(&self) -> TreeShape {
+        self.shape_of(self.root)
+    }
+
+    fn shape_of(&self, id: ViewId) -> TreeShape {
+        match &self.nodes[id].content {
+            Content::View(view) => TreeShape::Leaf {
+                doc: view.doc,
+                focused: id == self.focus,
+            },
+            Content::Container(container) => TreeShape::Split {
+                layout: container.layout,
+                children: container
+                    .children
+                    .iter()
+                    .map(|&ch| (self.nodes[ch].weight, self.shape_of(ch)))
+                    .collect(),
+            },
+        }
+    }
+
+    /// Leaf (window) ViewIds in left-to-right order — the same order in which
+    /// `shape()` emits leaves, so the two can be zipped.
+    pub fn leaf_ids(&self) -> Vec<ViewId> {
+        let mut out = Vec::new();
+        self.collect_leaves(self.root, &mut out);
+        out
+    }
+
+    fn collect_leaves(&self, id: ViewId, out: &mut Vec<ViewId>) {
+        match &self.nodes[id].content {
+            Content::View(_) => out.push(id),
+            Content::Container(container) => {
+                for &ch in &container.children {
+                    self.collect_leaves(ch, out);
+                }
+            }
+        }
+    }
+
+    /// Replace the entire layout with one rebuilt from `shape`, minting fresh
+    /// views via `make_view`. Returns the new leaf ViewIds in left-to-right
+    /// order (matching `shape`'s leaves) so the caller can restore per-window
+    /// state. Focus is set to the leaf marked `focused` (else the first leaf).
+    /// The tree's `area` is preserved, so sizes recompute to the current frame.
+    pub fn build_from_shape(
+        &mut self,
+        shape: &TreeShape,
+        make_view: &mut dyn FnMut(DocumentId) -> View,
+    ) -> Vec<ViewId> {
+        let mut nodes = SlotMap::with_key();
+        let root = nodes.insert(Node::container(Layout::Vertical));
+        nodes[root].parent = root;
+        self.nodes = nodes;
+        self.root = root;
+        self.focus = root;
+
+        let mut leaves = Vec::new();
+        let mut focused = None;
+        match shape {
+            TreeShape::Split { layout, children } => {
+                if let Node {
+                    content: Content::Container(container),
+                    ..
+                } = &mut self.nodes[root]
+                {
+                    container.layout = *layout;
+                }
+                for (weight, child) in children {
+                    let id = self.build_node(root, child, make_view, &mut leaves, &mut focused);
+                    self.nodes[id].weight = *weight;
+                }
+            }
+            TreeShape::Leaf { .. } => {
+                self.build_node(root, shape, make_view, &mut leaves, &mut focused);
+            }
+        }
+        self.focus = focused.or_else(|| leaves.first().copied()).unwrap_or(root);
+        self.recalculate();
+        leaves
+    }
+
+    fn build_node(
+        &mut self,
+        parent: ViewId,
+        shape: &TreeShape,
+        make_view: &mut dyn FnMut(DocumentId) -> View,
+        leaves: &mut Vec<ViewId>,
+        focused: &mut Option<ViewId>,
+    ) -> ViewId {
+        match shape {
+            TreeShape::Leaf {
+                doc,
+                focused: is_focus,
+            } => {
+                let view = make_view(*doc);
+                let id = self.nodes.insert(Node::view(view));
+                self.nodes[id].parent = parent;
+                if let Node {
+                    content: Content::View(v),
+                    ..
+                } = &mut self.nodes[id]
+                {
+                    v.id = id;
+                }
+                self.push_child(parent, id);
+                leaves.push(id);
+                if *is_focus {
+                    *focused = Some(id);
+                }
+                id
+            }
+            TreeShape::Split { layout, children } => {
+                let cid = self.nodes.insert(Node::container(*layout));
+                self.nodes[cid].parent = parent;
+                self.push_child(parent, cid);
+                for (weight, child) in children {
+                    let id = self.build_node(cid, child, make_view, leaves, focused);
+                    self.nodes[id].weight = *weight;
+                }
+                cid
+            }
+        }
+    }
+
+    fn push_child(&mut self, parent: ViewId, child: ViewId) {
+        if let Node {
+            content: Content::Container(container),
+            ..
+        } = &mut self.nodes[parent]
+        {
+            container.children.push(child);
         }
     }
 
@@ -886,6 +1038,74 @@ mod test {
     use super::*;
     use crate::editor::GutterConfig;
     use crate::DocumentId;
+
+    // Collect (doc, focused) for each leaf of a shape, left-to-right.
+    fn shape_leaves(shape: &TreeShape) -> Vec<(DocumentId, bool)> {
+        match shape {
+            TreeShape::Leaf { doc, focused } => vec![(*doc, *focused)],
+            TreeShape::Split { children, .. } => {
+                children.iter().flat_map(|(_, c)| shape_leaves(c)).collect()
+            }
+        }
+    }
+
+    #[test]
+    fn tabpage_shape_roundtrips_layout_and_focus() {
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 180,
+            height: 80,
+        };
+        let mut tree = Tree::new(area);
+
+        // Three windows on distinct documents in a vertical split.
+        let mut v0 = View::new(DocumentId::new(10), GutterConfig::default());
+        v0.area = Rect::new(0, 0, 180, 80);
+        tree.insert(v0);
+        tree.split(
+            View::new(DocumentId::new(20), GutterConfig::default()),
+            Layout::Vertical,
+        );
+        tree.split(
+            View::new(DocumentId::new(30), GutterConfig::default()),
+            Layout::Vertical,
+        );
+        // Focus the middle window.
+        let middle = tree.leaf_ids()[1];
+        tree.focus = middle;
+
+        let shape = tree.shape();
+        let before = shape_leaves(&shape);
+        assert_eq!(
+            before,
+            vec![
+                (DocumentId::new(10), false),
+                (DocumentId::new(20), true),
+                (DocumentId::new(30), false),
+            ],
+            "snapshot must preserve left-to-right docs and mark the focused leaf"
+        );
+
+        // Rebuild into a fresh tree; new ViewIds, same structure.
+        let mut rebuilt = Tree::new(area);
+        let new_ids = rebuilt.build_from_shape(&shape, &mut |doc| {
+            View::new(doc, GutterConfig::default())
+        });
+
+        assert_eq!(new_ids.len(), 3, "three leaves rebuilt");
+        let after_docs: Vec<DocumentId> =
+            rebuilt.leaf_ids().iter().map(|&id| rebuilt.get(id).doc).collect();
+        assert_eq!(
+            after_docs,
+            vec![DocumentId::new(10), DocumentId::new(20), DocumentId::new(30)],
+            "rebuilt windows keep document order"
+        );
+        // Focus lands on the leaf that was marked focused (the middle one).
+        assert_eq!(rebuilt.get(rebuilt.focus).doc, DocumentId::new(20));
+        // The returned ids are in the same order as the rebuilt leaves.
+        assert_eq!(new_ids, rebuilt.leaf_ids());
+    }
 
     #[test]
     fn find_split_in_direction() {
