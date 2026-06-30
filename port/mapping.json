@@ -18875,5 +18875,61 @@
    "static:dap_pause"
   ],
   "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.vcs.branches",
+  "status": "ported",
+  "evidence": [
+   "static:git_branch_picker"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.vcs.show-git-log",
+  "status": "ported",
+  "evidence": [
+   "static:git_repo_log_picker"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.vcs.stash-changes",
+  "status": "ported",
+  "evidence": [
+   "typable:git-stash"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.vcs.unstash-changes",
+  "status": "ported",
+  "evidence": [
+   "typable:git-stash-pop"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.diff.resolve-conflicts",
+  "status": "ported",
+  "evidence": [
+   "static:resolve_conflicts"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.navigation.go-to-related-file",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_test_file"
+  ],
+  "note": "test/alternate file ~ related file"
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.unwrap-remove",
+  "status": "partial",
+  "evidence": [
+   "static:unwrap_tag_selection"
+  ],
+  "note": "tag unwrap ~ unwrap/remove"
  }
 ]

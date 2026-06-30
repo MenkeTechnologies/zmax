@@ -1486,5 +1486,61 @@
   "name": "Pause Program",
   "desc": "IntelliJ IDEA default keymap",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.vcs.branches",
+  "source": "jetbrains",
+  "category": "vcs",
+  "name": "Branches",
+  "desc": "IntelliJ IDEA default keymap: Cmd Shift Backtick",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.vcs.show-git-log",
+  "source": "jetbrains",
+  "category": "vcs",
+  "name": "Show Git Log",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.vcs.stash-changes",
+  "source": "jetbrains",
+  "category": "vcs",
+  "name": "Stash Changes",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.vcs.unstash-changes",
+  "source": "jetbrains",
+  "category": "vcs",
+  "name": "Unstash Changes",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.diff.resolve-conflicts",
+  "source": "jetbrains",
+  "category": "diff",
+  "name": "Resolve Conflicts",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.navigation.go-to-related-file",
+  "source": "jetbrains",
+  "category": "navigation",
+  "name": "Related File",
+  "desc": "IntelliJ IDEA default keymap: Ctrl Cmd Up",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.coding-assistance.unwrap-remove",
+  "source": "jetbrains",
+  "category": "coding-assistance",
+  "name": "Unwrap/Remove",
+  "desc": "IntelliJ IDEA default keymap: Cmd Shift Delete",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]
