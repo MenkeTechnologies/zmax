@@ -11,9 +11,13 @@
 //! Slice 2 adds the **agenda** ([`parse_agenda`] / [`AgendaItem`], driven by the
 //! `OrgAgenda` overlay) and heading **priority** cycling ([`priority_cycle`]).
 //!
-//! Deferred to later slices: recurring timestamps, real date math / a "today"
-//! grouping, babel, export, capture, keymap binds, `.org` file-type detection and
-//! syntax highlighting.
+//! Slice 3 adds dep-free **date math** ([`civil_from_days`] / [`ymd_from_unix`] /
+//! [`today`]) used to bucket dated agenda items ([`date_bucket`] →
+//! [`Bucket::Overdue`]/`Today`/`Upcoming`) and **capture** ([`capture_entry`] /
+//! [`inbox_path`] / [`append_capture`], driving `:org-capture`).
+//!
+//! Deferred to later slices: recurring timestamps, refile/archive, babel and
+//! export.
 
 use std::path::{Path, PathBuf};
 
@@ -305,6 +309,111 @@ pub fn priority_cycle(line: &str) -> String {
     }
 }
 
+// --- Slice 3: date math + capture --------------------------------------------
+
+/// Where a dated agenda item falls relative to "today": before today
+/// ([`Bucket::Overdue`]), exactly today ([`Bucket::Today`]) or after
+/// ([`Bucket::Upcoming`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Bucket {
+    Overdue,
+    Today,
+    Upcoming,
+}
+
+/// Convert a count of days since the Unix epoch (1970-01-01 = day 0) into a
+/// proleptic-Gregorian `(year, month, day)` via Howard Hinnant's branch-free
+/// `civil_from_days` algorithm. Pure and total for any `i64` day count, so it is
+/// unit-testable with fixed inputs.
+pub fn civil_from_days(days: i64) -> (i64, u32, u32) {
+    // Shift the epoch to 0000-03-01 so leap days land at the end of the era.
+    let z = days + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = z - era * 146_097; // day-of-era [0, 146096]
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365; // [0, 399]
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100); // day-of-year [0, 365]
+    let mp = (5 * doy + 2) / 153; // month shifted so March = 0 [0, 11]
+    let d = (doy - (153 * mp + 2) / 5 + 1) as u32; // [1, 31]
+    let m = if mp < 10 { mp + 3 } else { mp - 9 }; // [1, 12]
+    let year = if m <= 2 { y + 1 } else { y };
+    (year, m as u32, d)
+}
+
+/// Format the date of a Unix timestamp (whole seconds since the epoch, UTC) as
+/// `YYYY-MM-DD`. Uses [`civil_from_days`], so it is pure and unit-testable
+/// (e.g. `0 -> "1970-01-01"`). Negative timestamps (pre-1970) work via floored
+/// division.
+pub fn ymd_from_unix(secs: i64) -> String {
+    let days = secs.div_euclid(86_400);
+    let (y, m, d) = civil_from_days(days);
+    format!("{y:04}-{m:02}-{d:02}")
+}
+
+/// Today's date as `YYYY-MM-DD`. Reads the wall clock via [`std::time::SystemTime`]
+/// (no `chrono`/`time` dependency) and formats it with [`ymd_from_unix`]. If the
+/// clock is somehow before the epoch it falls back to the epoch date.
+pub fn today() -> String {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    ymd_from_unix(secs)
+}
+
+/// Classify a `YYYY-MM-DD` date against `today` (also `YYYY-MM-DD`). Because that
+/// format sorts chronologically as plain strings, a lexical compare suffices.
+pub fn date_bucket(date: &str, today: &str) -> Bucket {
+    use std::cmp::Ordering;
+    match date.cmp(today) {
+        Ordering::Less => Bucket::Overdue,
+        Ordering::Equal => Bucket::Today,
+        Ordering::Greater => Bucket::Upcoming,
+    }
+}
+
+/// Format a captured note as a top-level org TODO entry: `"* TODO {text}\n"`,
+/// with surrounding whitespace trimmed off `text`. Pure and unit-tested.
+pub fn capture_entry(text: &str) -> String {
+    format!("* TODO {}\n", text.trim())
+}
+
+/// Resolve the inbox file a capture appends to. An explicit (non-blank) `arg`
+/// path wins — absolute as given, relative resolved against `working_dir`;
+/// otherwise the default is `<working_dir>/inbox.org`. Pure and unit-tested.
+pub fn inbox_path(arg: Option<&str>, working_dir: &Path) -> PathBuf {
+    match arg.map(str::trim).filter(|a| !a.is_empty()) {
+        Some(a) => {
+            let p = Path::new(a);
+            if p.is_absolute() {
+                p.to_path_buf()
+            } else {
+                working_dir.join(p)
+            }
+        }
+        None => working_dir.join("inbox.org"),
+    }
+}
+
+/// Append a captured TODO entry to `path`, creating any missing parent
+/// directories and the file itself. Always appends (never clobbers existing
+/// content). Returns the formatted entry on success.
+pub fn append_capture(path: &Path, text: &str) -> std::io::Result<String> {
+    use std::io::Write;
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+    let entry = capture_entry(text);
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
+    file.write_all(entry.as_bytes())?;
+    Ok(entry)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -477,5 +586,78 @@ mod tests {
         assert_eq!(priority_cycle("* [#C] foo"), "* foo");
         // non-heading untouched.
         assert_eq!(priority_cycle("plain text"), "plain text");
+    }
+
+    // --- Slice 3 ----------------------------------------------------------
+
+    #[test]
+    fn civil_from_days_known_points() {
+        // Epoch.
+        assert_eq!(civil_from_days(0), (1970, 1, 1));
+        // First day after the epoch and end of that year.
+        assert_eq!(civil_from_days(1), (1970, 1, 2));
+        assert_eq!(civil_from_days(364), (1970, 12, 31));
+        assert_eq!(civil_from_days(365), (1971, 1, 1));
+        // A leap day: 2000-02-29 is day 11016.
+        assert_eq!(civil_from_days(11_016), (2000, 2, 29));
+        // Pre-epoch day rolls back into 1969.
+        assert_eq!(civil_from_days(-1), (1969, 12, 31));
+    }
+
+    #[test]
+    fn ymd_from_unix_formats_dates() {
+        assert_eq!(ymd_from_unix(0), "1970-01-01");
+        // Mid-day of the epoch still formats as the same date.
+        assert_eq!(ymd_from_unix(86_399), "1970-01-01");
+        assert_eq!(ymd_from_unix(86_400), "1970-01-02");
+        // 2021-01-01 00:00:00 UTC = 1_609_459_200.
+        assert_eq!(ymd_from_unix(1_609_459_200), "2021-01-01");
+        // 2026-06-29 00:00:00 UTC = 1_782_734_400.
+        assert_eq!(ymd_from_unix(1_782_734_400), "2026-06-29");
+    }
+
+    #[test]
+    fn today_is_well_formed() {
+        let t = today();
+        assert_eq!(t.len(), 10);
+        let bytes = t.as_bytes();
+        assert_eq!(bytes[4], b'-');
+        assert_eq!(bytes[7], b'-');
+        assert!(t.chars().enumerate().all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit()));
+    }
+
+    #[test]
+    fn date_bucket_by_string_compare() {
+        assert_eq!(date_bucket("2026-06-28", "2026-06-29"), Bucket::Overdue);
+        assert_eq!(date_bucket("2026-06-29", "2026-06-29"), Bucket::Today);
+        assert_eq!(date_bucket("2026-06-30", "2026-06-29"), Bucket::Upcoming);
+        // Year/month boundaries still sort chronologically as strings.
+        assert_eq!(date_bucket("2025-12-31", "2026-01-01"), Bucket::Overdue);
+        assert_eq!(date_bucket("2026-02-01", "2026-01-31"), Bucket::Upcoming);
+    }
+
+    #[test]
+    fn capture_entry_trims_and_formats() {
+        assert_eq!(capture_entry("buy milk"), "* TODO buy milk\n");
+        assert_eq!(capture_entry("  padded  "), "* TODO padded\n");
+        assert_eq!(capture_entry(""), "* TODO \n");
+    }
+
+    #[test]
+    fn inbox_path_resolution() {
+        let wd = Path::new("/work/dir");
+        // Default.
+        assert_eq!(inbox_path(None, wd), PathBuf::from("/work/dir/inbox.org"));
+        assert_eq!(inbox_path(Some("   "), wd), PathBuf::from("/work/dir/inbox.org"));
+        // Relative arg joins the working dir.
+        assert_eq!(
+            inbox_path(Some("notes/todo.org"), wd),
+            PathBuf::from("/work/dir/notes/todo.org")
+        );
+        // Absolute arg is used verbatim.
+        assert_eq!(
+            inbox_path(Some("/abs/in.org"), wd),
+            PathBuf::from("/abs/in.org")
+        );
     }
 }

@@ -2008,6 +2008,56 @@ fn org_priority(
     Ok(())
 }
 
+/// `:org-capture` / `:capture` — prompt for a line of text and append it as a
+/// `* TODO <text>` entry to an inbox org file. With an argument the inbox is that
+/// path (relative paths resolve against the working dir); otherwise it defaults
+/// to `<working-dir>/inbox.org`. The file (and any parent dirs) is created on
+/// demand and only ever appended to. Pure parts live in [`super::org`].
+fn org_capture(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    // Resolve the inbox path from the optional argument + working directory.
+    let working_dir = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+        });
+    let inbox = super::org::inbox_path(args.first(), &working_dir);
+
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = Prompt::new(
+                "capture: ".into(),
+                None,
+                ui::completers::none,
+                move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    if input.trim().is_empty() {
+                        cx.editor.set_status("org-capture: nothing captured");
+                        return;
+                    }
+                    match super::org::append_capture(&inbox, input) {
+                        Ok(_) => cx
+                            .editor
+                            .set_status(format!("org-capture: appended to {}", inbox.display())),
+                        Err(err) => cx.editor.set_error(format!(
+                            "org-capture: failed to write {}: {err}",
+                            inbox.display()
+                        )),
+                    }
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 /// `:terminal` / `:term` — open an integrated terminal (PTY shell). The panel is
 /// created inside the compositor callback so the PTY handle lives on the main
 /// thread (it isn't `Send`).
@@ -13825,6 +13875,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-capture",
+        aliases: &["capture"],
+        doc: "Prompt for a line of text and append it as a '* TODO <text>' entry to an inbox org file (default <working-dir>/inbox.org, or an explicit path argument).",
+        fun: org_capture,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
