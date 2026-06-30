@@ -991,6 +991,7 @@ impl MappableCommand {
         dap_restart, "Restart debugging session",
         dap_toggle_breakpoint, "Toggle breakpoint",
         dap_continue, "Continue program execution",
+        dap_run_to_cursor, "Run the debugger up to the cursor line (JetBrains Run To Cursor)",
         dap_pause, "Pause program execution",
         dap_step_in, "Step in",
         dap_step_out, "Step out",

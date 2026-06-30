@@ -457,6 +457,52 @@ pub fn dap_continue(cx: &mut Context) {
     }
 }
 
+/// JetBrains "Run To Cursor" (Opt-F9): ensure a breakpoint at the cursor line,
+/// then continue execution so the program runs up to it. Composed from the same
+/// breakpoint-set and continue primitives as `dap_toggle_breakpoint`/
+/// `dap_continue`. (The breakpoint persists, unlike JetBrains' one-shot.)
+pub fn dap_run_to_cursor(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let Some(path) = doc.path().map(ToOwned::to_owned) else {
+        cx.editor
+            .set_error("Can't run to cursor: document has no path");
+        return;
+    };
+    let text = doc.text().slice(..);
+    let line = doc.selection(view.id).primary().cursor_line(text);
+
+    // Ensure a breakpoint at the cursor line so the program stops there.
+    let breakpoints = cx.editor.breakpoints.entry(path.clone()).or_default();
+    if !breakpoints.iter().any(|breakpoint| breakpoint.line == line) {
+        breakpoints.push(Breakpoint {
+            line,
+            ..Default::default()
+        });
+    }
+    let debugger = debugger!(cx.editor);
+    if let Err(e) = breakpoints_changed(debugger, path, breakpoints) {
+        cx.editor
+            .set_error(format!("Failed to set breakpoint: {}", e));
+        return;
+    }
+
+    // Continue execution up to the cursor.
+    let debugger = debugger!(cx.editor);
+    if let Some(thread_id) = debugger.thread_id {
+        let request = debugger.continue_thread(thread_id);
+        dap_callback(
+            cx.jobs,
+            request,
+            |editor, _compositor, _response: dap::requests::ContinueResponse| {
+                debugger!(editor).resume_application();
+            },
+        );
+    } else {
+        cx.editor
+            .set_error("No stopped thread to run from — start or pause the debugger first.");
+    }
+}
+
 pub fn dap_pause(cx: &mut Context) {
     thread_picker(cx, |editor, thread| {
         let debugger = debugger!(editor);

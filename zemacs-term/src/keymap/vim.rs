@@ -1162,6 +1162,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "d" => dap_launch,                 // SPC d d : start debugging
                 "b" => dap_toggle_breakpoint,      // SPC d b : toggle breakpoint
                 "c" => dap_continue,               // SPC d c : continue
+                "C" => dap_run_to_cursor,          // SPC d C : run to cursor (JetBrains Run To Cursor)
                 "i" => dap_step_in,                // SPC d i : step in
                 "o" => dap_step_out,               // SPC d o : step out
                 "n" => dap_next,                   // SPC d n : step over
