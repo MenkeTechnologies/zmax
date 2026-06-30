@@ -9,6 +9,7 @@ mod ide;
 mod info;
 pub mod keymap_editor;
 pub mod lsp;
+pub mod magit;
 mod markdown;
 pub mod menu;
 pub mod merge;

@@ -1643,6 +1643,34 @@ pub(crate) fn open_merge(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
     jobs.callback(async move { Ok(call) });
 }
 
+/// `:magit` / `:git` / `:gst` — open the Magit-style git status porcelain: a
+/// full-screen overlay listing the repo's untracked / unstaged / staged changes
+/// and merge conflicts in sections, with stage/unstage/discard/commit and a
+/// live refresh. The repo is derived from the focused file's directory, falling
+/// back to the current working directory.
+fn magit(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    // Derive a starting directory from the focused file, else the cwd.
+    let start = doc!(cx.editor)
+        .path()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")));
+    match crate::ui::magit::MagitStatus::new(&start) {
+        Some(view) => {
+            let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+                move |_editor: &mut Editor, compositor: &mut Compositor| {
+                    compositor.push(Box::new(view));
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        }
+        None => cx.editor.set_status("not inside a git repository"),
+    }
+    Ok(())
+}
+
 /// `:terminal` / `:term` — open an integrated terminal (PTY shell). The panel is
 /// created inside the compositor callback so the PTY handle lives on the main
 /// thread (it isn't `Send`).
@@ -13325,6 +13353,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["resolve"],
         doc: "Resolve the buffer's git merge conflicts in a 3-pane (ours/result/theirs) view.",
         fun: merge,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "magit",
+        aliases: &["git", "gst"],
+        doc: "Open the Magit-style git status (stage/unstage/discard/commit changes by section).",
+        fun: magit,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
