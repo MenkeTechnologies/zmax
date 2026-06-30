@@ -12,6 +12,23 @@ use super::{Content, Tool, Turn};
 const MAX_STEPS: usize = 16;
 const MAX_TOOL_OUTPUT: usize = 16_000;
 
+/// Review (dry-run) mode: when on, the agent still reasons and reports what it *would* do, but
+/// `write_file`/`run_command` make no changes — they report the proposed action instead. This lets
+/// the user review the agent's plan and proposed edits before applying them (Cursor's review&apply).
+static DRY_RUN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Whether the agent is in review (dry-run) mode.
+pub fn dry_run() -> bool {
+    DRY_RUN.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Toggle review (dry-run) mode; returns the new state.
+pub fn toggle_dry_run() -> bool {
+    let n = !dry_run();
+    DRY_RUN.store(n, std::sync::atomic::Ordering::Relaxed);
+    n
+}
+
 const SYSTEM: &str = "You are an autonomous coding agent embedded in the zemacs editor. \
 You can read, list, and write files in the user's workspace, and (when enabled) run shell commands. \
 Work step by step: inspect what you need, make the edits, and stop when the task is done. \
@@ -169,6 +186,12 @@ fn exec_tool(
             let content = input["content"].as_str().unwrap_or("");
             match safe_path(root, p) {
                 Ok(pb) => {
+                    if dry_run() {
+                        return (
+                            format!("[review] would write {} ({} bytes) — not applied", p, content.len()),
+                            false,
+                        );
+                    }
                     if let Some(parent) = pb.parent() {
                         let _ = std::fs::create_dir_all(parent);
                     }
@@ -191,6 +214,9 @@ fn exec_tool(
                 );
             }
             let cmd = input["command"].as_str().unwrap_or("");
+            if dry_run() {
+                return (format!("[review] would run `{cmd}` — not executed"), false);
+            }
             match std::process::Command::new("sh")
                 .arg("-c")
                 .arg(cmd)
@@ -244,7 +270,17 @@ pub fn run(task: String, root: PathBuf) -> Result<AgentResult, String> {
     }
     let checkpoint = make_checkpoint(&root);
     let tools = tools();
-    let system = super::system_with_rules(SYSTEM);
+    let base_system = if dry_run() {
+        format!(
+            "{SYSTEM}\n\nREVIEW MODE: file writes and commands are NOT applied — they are recorded \
+             for the user to review. Still call write_file with the full proposed contents and \
+             run_command with the exact command, then finish with a summary of every change you \
+             are proposing so the user can decide whether to apply them."
+        )
+    } else {
+        SYSTEM.to_string()
+    };
+    let system = super::system_with_rules(&base_system);
     let mut turns = vec![Turn::user_text(task)];
     let mut transcript = String::new();
     let mut changed = BTreeSet::new();
@@ -313,6 +349,9 @@ pub fn run(task: String, root: PathBuf) -> Result<AgentResult, String> {
 mod tests {
     use super::*;
 
+    /// Serializes tests that touch the process-global DRY_RUN flag so they don't race.
+    static DRY_GUARD: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     #[test]
     fn safe_path_rejects_escape() {
         let root = std::env::temp_dir();
@@ -321,6 +360,7 @@ mod tests {
 
     #[test]
     fn read_write_roundtrip_and_changed_tracking() {
+        let _g = DRY_GUARD.lock().unwrap_or_else(|e| e.into_inner());
         let dir = std::env::temp_dir().join(format!("zai-agent-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let mut changed = BTreeSet::new();
@@ -335,6 +375,28 @@ mod tests {
         let (out, err) = exec_tool(&dir, "read_file", &serde_json::json!({"path":"a.txt"}), &mut changed);
         assert!(!err);
         assert_eq!(out, "hello");
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn dry_run_reports_without_writing() {
+        let _g = DRY_GUARD.lock().unwrap_or_else(|e| e.into_inner());
+        let dir = std::env::temp_dir().join(format!("zai-agent-dry-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(!dry_run());
+        assert!(toggle_dry_run());
+        let mut changed = BTreeSet::new();
+        let (msg, err) = exec_tool(
+            &dir,
+            "write_file",
+            &serde_json::json!({"path":"dry.txt","content":"nope"}),
+            &mut changed,
+        );
+        assert!(!err, "{msg}");
+        assert!(msg.contains("review"), "{msg}");
+        assert!(changed.is_empty(), "dry-run must not record changes");
+        assert!(!dir.join("dry.txt").exists(), "dry-run must not write the file");
+        assert!(!toggle_dry_run()); // reset to off so other tests are unaffected
         std::fs::remove_dir_all(&dir).ok();
     }
 
