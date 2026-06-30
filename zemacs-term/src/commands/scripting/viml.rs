@@ -8,12 +8,15 @@
 //! gain a host hook they will route through the same [`super`] `api_*` surface
 //! the [`CxGuard`](super) already publishes during eval.
 
+#[cfg(unix)]
 use vimlrs::fusevm_bridge::{capture_begin, capture_take};
+#[cfg(unix)]
 use vimlrs::ported::eval::encode::encode_tv2echo;
 
 /// Evaluate VimL source, returning captured `:echo` output plus the rendered
 /// value of a trailing bare expression (if any). Errors carry any echo emitted
 /// before the failure.
+#[cfg(unix)]
 pub(super) fn eval(src: &str) -> Result<String, String> {
     capture_begin();
     let result = vimlrs::eval_source(src);
@@ -28,7 +31,13 @@ pub(super) fn eval(src: &str) -> Result<String, String> {
     }
 }
 
+#[cfg(not(unix))]
+pub(super) fn eval(_src: &str) -> Result<String, String> {
+    Err("embedded vimscript is only supported on unix".into())
+}
+
 /// Join captured echo output with a trailing fragment, skipping empties.
+#[cfg(unix)]
 fn join(echo: &str, tail: &str) -> String {
     let echo = echo.trim_end_matches('\n');
     match (echo.is_empty(), tail.is_empty()) {
