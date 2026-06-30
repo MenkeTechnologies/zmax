@@ -525,6 +525,9 @@ impl MappableCommand {
         clear_diagnostics, "Clear all diagnostics for the current buffer (SPC e c)",
         ai_chat, "Ask the AI provider about the selection/buffer (SPC a i)",
         ai_inline_edit, "AI inline edit/generate on the selection (Cmd+K style, SPC a e)",
+        ai_explain, "Explain the selected code with AI (SPC a x)",
+        ai_generate_tests, "Generate tests for the selection with AI (SPC a u)",
+        ai_commit_message, "Generate a git commit message with AI (SPC a c)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
         copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
@@ -8986,6 +8989,109 @@ fn ai_inline_edit(cx: &mut Context) {
         },
     );
     cx.push_layer(Box::new(prompt));
+}
+
+/// Run a fixed-prompt AI request off the UI thread and show the reply in a scratch buffer.
+/// Shared by the AI explain / generate-tests commands.
+fn ai_run_to_scratch(cx: &mut Context, system: &'static str, user: String, done: &'static str) {
+    cx.editor.set_status("AI: thinking…");
+    cx.jobs.callback(async move {
+        let text = tokio::task::spawn_blocking(move || {
+            let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
+            provider
+                .chat(Some(system), &[crate::ai::Message::user(user)])
+                .map_err(|e| anyhow::anyhow!(e))
+        })
+        .await
+        .map_err(|e| anyhow::anyhow!("ai task: {e}"))??;
+        Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+            show_text_in_scratch(editor, &text);
+            editor.set_status(done);
+        })))
+    });
+}
+
+/// The current selection, or the whole buffer when nothing is selected, plus the language name.
+fn selection_or_buffer(cx: &mut Context) -> (String, String) {
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id).primary();
+    let text = if sel.from() != sel.to() {
+        doc.text().slice(sel.from()..sel.to()).to_string()
+    } else {
+        doc.text().to_string()
+    };
+    (text, doc.language_name().unwrap_or("").to_string())
+}
+
+/// SPC a x : explain the selected code (or whole buffer) in a scratch buffer (Cursor "explain").
+fn ai_explain(cx: &mut Context) {
+    let (code, lang) = selection_or_buffer(cx);
+    let user = format!("Explain this {lang} code clearly and concisely:\n\n{code}");
+    ai_run_to_scratch(
+        cx,
+        "You are a coding assistant. Explain code clearly for an experienced developer.",
+        user,
+        "AI explanation (scratch buffer)",
+    );
+}
+
+/// SPC a u : generate tests for the selected code (or whole buffer) (Cursor "generate tests").
+fn ai_generate_tests(cx: &mut Context) {
+    let (code, lang) = selection_or_buffer(cx);
+    let user = format!("Write thorough unit tests for this {lang} code. Output only the test code.\n\n{code}");
+    ai_run_to_scratch(
+        cx,
+        "You are a coding assistant that writes idiomatic, thorough unit tests.",
+        user,
+        "AI tests (scratch buffer)",
+    );
+}
+
+/// SPC a c : generate a git commit message from the staged (or unstaged) diff, shown in a scratch
+/// buffer (Cursor "AI commit message").
+fn ai_commit_message(cx: &mut Context) {
+    let dir = zemacs_stdx::env::current_working_dir();
+    cx.editor.set_status("AI: writing commit message…");
+    cx.jobs.callback(async move {
+        let text = tokio::task::spawn_blocking(move || {
+            let git = |args: &[&str]| -> String {
+                std::process::Command::new("git")
+                    .arg("-C")
+                    .arg(&dir)
+                    .args(args)
+                    .output()
+                    .ok()
+                    .filter(|o| o.status.success())
+                    .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+                    .unwrap_or_default()
+            };
+            let mut diff = git(&["diff", "--cached"]);
+            if diff.trim().is_empty() {
+                diff = git(&["diff"]);
+            }
+            if diff.trim().is_empty() {
+                return Err(anyhow::anyhow!("no changes to summarize (stage with SPC g S)"));
+            }
+            // Cap very large diffs to keep the request reasonable.
+            if diff.len() > 16000 {
+                diff.truncate(16000);
+            }
+            let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
+            provider
+                .chat(
+                    Some("Write a git commit message for the diff: a concise subject line (<=50 chars, imperative mood), a blank line, then a short body explaining the why. Output only the message."),
+                    &[crate::ai::Message::user(format!("Diff:\n{diff}"))],
+                )
+                .map_err(|e| anyhow::anyhow!(e))
+        })
+        .await
+        .map_err(|e| anyhow::anyhow!("ai task: {e}"))??;
+        Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+            let _ = editor.registers.write('+', vec![text.clone()]);
+            show_text_in_scratch(editor, &text);
+            editor.set_status("AI commit message (copied to clipboard)");
+        })))
+    });
 }
 
 /// SPC g f f : prompt for a branch/commit and show the current file as it was at that revision
