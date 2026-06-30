@@ -530,6 +530,8 @@ impl MappableCommand {
         ai_apply_block, "Apply the last AI code block to the selection (SPC a y)",
         ai_add_file_context, "Add a file as @context for the next AI chat (SPC a @)",
         ai_inline_edit, "AI inline edit/generate on the selection (Cmd+K style, SPC a e)",
+        ai_inline_edit_preview, "AI inline edit with a diff preview (SPC a E)",
+        ai_accept_edit, "Accept the pending AI inline-edit preview (SPC a .)",
         ai_explain, "Explain the selected code with AI (SPC a x)",
         ai_generate_tests, "Generate tests for the selection with AI (SPC a u)",
         ai_commit_message, "Generate a git commit message with AI (SPC a c)",
@@ -9214,6 +9216,105 @@ fn ai_inline_edit(cx: &mut Context) {
         },
     );
     cx.push_layer(Box::new(prompt));
+}
+
+/// A proposed inline edit awaiting accept/reject: (doc, from, to, replacement).
+static AI_PENDING_EDIT: std::sync::Mutex<Option<(DocumentId, usize, usize, String)>> =
+    std::sync::Mutex::new(None);
+
+/// SPC a E : Cursor Cmd+K with a diff preview. Like ai_inline_edit but shows the proposed rewrite
+/// as a read-only side-by-side diff (original ⇔ proposed) and stores it; SPC a . accepts (applies),
+/// Esc/close rejects.
+fn ai_inline_edit_preview(cx: &mut Context) {
+    let (from, to, code, lang, doc_id) = {
+        let (view, doc) = current!(cx.editor);
+        let r = doc.selection(view.id).primary();
+        (
+            r.from(),
+            r.to(),
+            doc.text().slice(r.from()..r.to()).to_string(),
+            doc.language_name().unwrap_or("").to_string(),
+            doc.id(),
+        )
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ai edit (preview):".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let instr = input.trim().to_string();
+            let code = code.clone();
+            let code_for_diff = code.clone();
+            let lang = lang.clone();
+            cx.editor.set_status("AI: editing…");
+            cx.jobs.callback(async move {
+                let out = tokio::task::spawn_blocking(move || {
+                    let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
+                    let sys = crate::ai::system_with_rules("You are a code-editing assistant. Apply the user's instruction and output ONLY the resulting code — no explanation, no markdown fences.");
+                    let user = if code.is_empty() {
+                        format!("Language: {lang}\nInstruction: {instr}")
+                    } else {
+                        format!("Language: {lang}\nInstruction: {instr}\n\nCode to edit:\n{code}")
+                    };
+                    provider
+                        .chat(Some(&sys), &[crate::ai::Message::user(user)])
+                        .map_err(|e| anyhow::anyhow!(e))
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!("ai task: {e}"))??;
+                let new_text = strip_code_fences(&out);
+                *AI_PENDING_EDIT.lock().unwrap() = Some((doc_id, from, to, new_text.clone()));
+                let view = crate::ui::merge::DiffView::new(
+                    "AI edit: original ⇔ proposed (SPC a . to accept)".to_string(),
+                    doc_id,
+                    &code_for_diff,
+                    &new_text,
+                )
+                .read_only();
+                Ok(crate::job::Callback::EditorCompositor(Box::new(
+                    move |editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
+                        compositor.push(Box::new(view));
+                        editor.set_status("AI edit preview — SPC a . to accept, Esc to reject");
+                    },
+                )))
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// SPC a . : accept the pending AI inline-edit preview, applying it (undoable).
+fn ai_accept_edit(cx: &mut Context) {
+    let pending = AI_PENDING_EDIT.lock().unwrap().take();
+    let Some((doc_id, from, to, new_text)) = pending else {
+        cx.editor.set_status("no pending AI edit to accept");
+        return;
+    };
+    let view_id = cx
+        .editor
+        .tree
+        .traverse()
+        .find(|(_, v)| v.doc == doc_id)
+        .map(|(id, _)| id);
+    let Some(view_id) = view_id else {
+        cx.editor.set_status("AI edit: target buffer is no longer open");
+        return;
+    };
+    let doc = doc_mut!(cx.editor, &doc_id);
+    doc.ensure_view_init(view_id);
+    let end = to.min(doc.text().len_chars());
+    let start = from.min(end);
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((start, end, Some(new_text.into()))),
+    );
+    doc.apply(&tx, view_id);
+    let view = view_mut!(cx.editor, view_id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status("AI edit accepted (u to undo)");
 }
 
 /// Run a fixed-prompt AI request off the UI thread and show the reply in a scratch buffer.

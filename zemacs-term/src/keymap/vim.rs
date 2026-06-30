@@ -894,6 +894,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "i" => ai_chat,                    // SPC a i : ask the AI provider (Cursor-style assistant)
                 "p" => ai_chat_panel,              // SPC a p : streaming AI chat drawer (on-the-fly generation)
                 "e" => ai_inline_edit,             // SPC a e : AI inline edit/generate (Cursor Cmd+K)
+                "E" => ai_inline_edit_preview,     // SPC a E : AI inline edit with diff preview
+                "." => ai_accept_edit,             // SPC a . : accept the pending AI edit preview
                 "x" => ai_explain,                 // SPC a x : AI explain selection
                 "F" => ai_fix,                     // SPC a F : AI fix diagnostic on current line
                 "m" => ai_model_picker,            // SPC a m : pick AI model

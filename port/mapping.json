@@ -19520,5 +19520,23 @@
    "static:ai_revert_agent"
   ],
   "note": "agent checkpoint/restore -> git stash create before run + ai_revert_agent (git checkout snapshot)"
+ },
+ {
+  "spec_id": "cursor.edit.diff_preview",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a E",
+   "static:ai_inline_edit_preview"
+  ],
+  "note": "inline edit diff preview -> ai_inline_edit_preview (read-only DiffView original vs proposed)"
+ },
+ {
+  "spec_id": "cursor.edit.accept_reject",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a .",
+   "static:ai_accept_edit"
+  ],
+  "note": "accept/reject pending edit -> ai_accept_edit (Esc/close rejects)"
  }
 ]
