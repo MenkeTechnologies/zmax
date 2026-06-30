@@ -34,6 +34,17 @@ tracks that build-out.
 
 Each item carries a `doc_ref` back to its source line/anchor.
 
+**A note on the emacs denominator.** `emacs_commands.json` + `emacs_keys.json`
+are the *entire* GNU Emacs manual indexes — 3008 items — including games
+(`5x5`), two-column mode, Dired, TeX-mode, Gnus, Calc, and Buffer-Menu keys
+(445 of the 1124 keys are major-mode-specific). No editor "ports" that surface,
+so emacs coverage is reported as a low single-digit percentage by construction:
+it measures *fraction of all of Emacs*, not editing-command coverage. The
+mapped set targets the global editing/movement/search/kill-yank/window/buffer
+commands a code editor actually has; the long mode-specific tail stays absent on
+purpose. Read the emacs row with that scope in mind — it is not comparable to
+the focused Vim/Neovim core-command denominator.
+
 ## Honesty contract
 
 This mirrors the zshrs `gen_port_report.py` precedent. The report is the number

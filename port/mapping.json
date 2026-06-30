@@ -12030,5 +12030,509 @@
    "key:normal:space g b"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "emacs.command.forward_char",
+  "status": "ported",
+  "evidence": [
+   "key:normal:l"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.backward_char",
+  "status": "ported",
+  "evidence": [
+   "key:normal:h"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.next_line",
+  "status": "ported",
+  "evidence": [
+   "key:normal:j"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.previous_line",
+  "status": "ported",
+  "evidence": [
+   "key:normal:k"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.forward_word",
+  "status": "ported",
+  "evidence": [
+   "key:normal:w"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.backward_word",
+  "status": "ported",
+  "evidence": [
+   "key:normal:b"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.beginning_of_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.end_of_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_end"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.kill_line",
+  "status": "ported",
+  "evidence": [
+   "key:insert:C-k"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.kill_word",
+  "status": "ported",
+  "evidence": [
+   "key:insert:A-d"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.backward_kill_word",
+  "status": "ported",
+  "evidence": [
+   "key:insert:A-backspace"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.kill_ring_save",
+  "status": "ported",
+  "evidence": [
+   "key:normal:A-w"
+  ],
+  "note": "M-w copy"
+ },
+ {
+  "spec_id": "emacs.command.yank",
+  "status": "ported",
+  "evidence": [
+   "key:normal:p"
+  ],
+  "note": "paste"
+ },
+ {
+  "spec_id": "emacs.command.yank_pop",
+  "status": "partial",
+  "evidence": [
+   "static:register_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.delete_char",
+  "status": "ported",
+  "evidence": [
+   "key:normal:x"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.open_line",
+  "status": "ported",
+  "evidence": [
+   "key:normal:o"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.transpose_chars",
+  "status": "ported",
+  "evidence": [
+   "typable:transpose-chars"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.transpose_words",
+  "status": "ported",
+  "evidence": [
+   "typable:transpose-words"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.transpose_lines",
+  "status": "partial",
+  "evidence": [
+   "typable:move-line-up"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.upcase_word",
+  "status": "partial",
+  "evidence": [
+   "static:symbol_up_case"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.isearch_forward",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.isearch_backward",
+  "status": "ported",
+  "evidence": [
+   "static:rsearch"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.query_replace",
+  "status": "partial",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.query_replace_regexp",
+  "status": "partial",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.replace_string",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.search_forward",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.undo",
+  "status": "ported",
+  "evidence": [
+   "key:normal:u"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.keyboard_quit",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-g"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.set_mark_command",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-space"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.execute_extended_command",
+  "status": "ported",
+  "evidence": [
+   "static:command_palette"
+  ],
+  "note": "M-x"
+ },
+ {
+  "spec_id": "emacs.command.eval_expression",
+  "status": "ported",
+  "evidence": [
+   "typable:elisp"
+  ],
+  "note": "M-:"
+ },
+ {
+  "spec_id": "emacs.command.comment_line",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_line_comments"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.comment_region",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_comments"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.comment_dwim",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_comments"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.indent_region",
+  "status": "ported",
+  "evidence": [
+   "typable:indent-lines"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.indent_for_tab_command",
+  "status": "ported",
+  "evidence": [
+   "static:smart_tab"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.switch_to_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.kill_buffer",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.list_buffers",
+  "status": "partial",
+  "evidence": [
+   "static:buffer_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.recenter_top_bottom",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-l"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.scroll_up_command",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-f"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.scroll_down_command",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-b"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.forward_paragraph",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.backward_paragraph",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_paragraph"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.goto_char",
+  "status": "ported",
+  "evidence": [
+   "typable:goto-offset"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.what_cursor_position",
+  "status": "ported",
+  "evidence": [
+   "typable:character-info"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.just_one_space",
+  "status": "ported",
+  "evidence": [
+   "typable:just-one-space"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.delete_horizontal_space",
+  "status": "partial",
+  "evidence": [
+   "typable:just-one-space"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.delete_blank_lines",
+  "status": "ported",
+  "evidence": [
+   "typable:delete-blank-lines"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.fill_paragraph",
+  "status": "ported",
+  "evidence": [
+   "typable:reflow"
+  ],
+  "note": "M-q"
+ },
+ {
+  "spec_id": "emacs.command.dabbrev_expand",
+  "status": "ported",
+  "evidence": [
+   "key:insert:A-/"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.repeat",
+  "status": "ported",
+  "evidence": [
+   "key:normal:."
+  ],
+  "note": "dot-repeat"
+ },
+ {
+  "spec_id": "emacs.command.count_words",
+  "status": "ported",
+  "evidence": [
+   "typable:wc"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.delete_trailing_whitespace",
+  "status": "ported",
+  "evidence": [
+   "typable:delete-trailing-whitespace"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.kmacro_start_macro",
+  "status": "ported",
+  "evidence": [
+   "key:normal:q"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.find_file_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:vsplit"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.ispell_word",
+  "status": "partial",
+  "evidence": [
+   "static:goto_next_spell_error"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.flyspell_mode",
+  "status": "partial",
+  "evidence": [
+   "static:goto_next_spell_error"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.string_rectangle",
+  "status": "partial",
+  "evidence": [
+   "static:duplicate_selection_down"
+  ],
+  "note": "block-edit via multicursor"
+ },
+ {
+  "spec_id": "emacs.command.rectangle_mark_mode",
+  "status": "partial",
+  "evidence": [
+   "static:duplicate_selection_down"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.downcase_region",
+  "status": "partial",
+  "evidence": [
+   "static:symbol_under_score"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "emacs.command.upcase_region",
+  "status": "partial",
+  "evidence": [
+   "static:symbol_up_case"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_t_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x t p"
+  ],
+  "note": ""
  }
 ]
