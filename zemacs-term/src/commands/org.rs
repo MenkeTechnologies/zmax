@@ -8,8 +8,14 @@
 //! document's existing `zemacs_core::fold::Folds` model exactly like the vim
 //! `z*` fold commands.
 //!
-//! Deferred to later slices: agenda, babel, export, priorities, keymap binds,
-//! `.org` file-type detection and syntax highlighting.
+//! Slice 2 adds the **agenda** ([`parse_agenda`] / [`AgendaItem`], driven by the
+//! `OrgAgenda` overlay) and heading **priority** cycling ([`priority_cycle`]).
+//!
+//! Deferred to later slices: recurring timestamps, real date math / a "today"
+//! grouping, babel, export, capture, keymap binds, `.org` file-type detection and
+//! syntax highlighting.
+
+use std::path::{Path, PathBuf};
 
 /// Org heading depth: the number of leading `*` characters immediately followed
 /// by a space (`* ` → 1, `** ` → 2, …). A run of stars not followed by a space
@@ -113,6 +119,192 @@ pub fn demote(line: &str) -> String {
     }
 }
 
+// --- Slice 2: agenda parsing + priority cycling -----------------------------
+
+/// The TODO keywords recognised on a heading (slice 2 keeps it to the two
+/// built-ins; both are treated as agenda keywords, `DONE` rendered as completed).
+const KEYWORDS: &[&str] = &["TODO", "DONE"];
+
+/// One agenda entry: a TODO/DONE heading collected from an org file, with its
+/// location, level, keyword, optional `[#A]` priority and any `SCHEDULED:` /
+/// `DEADLINE:` dates pulled from the heading's body (each `YYYY-MM-DD`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AgendaItem {
+    pub file: PathBuf,
+    /// 0-based line of the heading within its file.
+    pub line: usize,
+    pub level: usize,
+    /// `TODO` / `DONE` (the matched keyword).
+    pub keyword: String,
+    /// `A` / `B` / `C` from a `[#A]` cookie, if present.
+    pub priority: Option<char>,
+    /// `YYYY-MM-DD` from a `SCHEDULED:` timestamp in the body.
+    pub scheduled: Option<String>,
+    /// `YYYY-MM-DD` from a `DEADLINE:` timestamp in the body.
+    pub deadline: Option<String>,
+    /// The heading text after the keyword + optional priority cookie.
+    pub title: String,
+}
+
+/// Split a heading's text-after-the-stars into its `(keyword, priority, title)`
+/// parts. The keyword (if present) must be the first whole word; an optional
+/// `[#A]`/`[#B]`/`[#C]` cookie may follow; the rest is the title. Leading
+/// whitespace is ignored. When no keyword matches, `keyword` is `None` (the
+/// caller decides whether the heading is an agenda item).
+fn parse_heading_rest(rest: &str) -> (Option<&'static str>, Option<char>, &str) {
+    let trimmed = rest.trim_start();
+    let mut keyword = None;
+    let mut r = trimmed;
+    for kw in KEYWORDS {
+        if trimmed == *kw {
+            return (Some(kw), None, "");
+        }
+        if let Some(tail) = trimmed.strip_prefix(kw).and_then(|t| t.strip_prefix(' ')) {
+            keyword = Some(*kw);
+            r = tail.trim_start();
+            break;
+        }
+    }
+    let mut priority = None;
+    if let Some((c, tail)) = parse_priority_cookie(r) {
+        priority = Some(c);
+        r = tail.trim_start();
+    }
+    (keyword, priority, r)
+}
+
+/// If `s` begins with a `[#X]` priority cookie (X an ASCII letter), return the
+/// upper-cased priority char and the remainder after the `]`.
+fn parse_priority_cookie(s: &str) -> Option<(char, &str)> {
+    let rest = s.strip_prefix("[#")?;
+    let mut chars = rest.chars();
+    let c = chars.next()?;
+    if !c.is_ascii_alphabetic() {
+        return None;
+    }
+    let body = chars.as_str().strip_prefix(']')?;
+    Some((c.to_ascii_uppercase(), body))
+}
+
+/// Extract the first `YYYY-MM-DD` date out of an org timestamp string (e.g.
+/// `<2026-07-01>` or `<2026-07-01 Wed>`), scanning for the date pattern anywhere
+/// in `s`. Returns `None` when no such pattern is present.
+pub fn org_date(s: &str) -> Option<String> {
+    let bytes = s.as_bytes();
+    let is_digit = |b: u8| b.is_ascii_digit();
+    for start in 0..bytes.len() {
+        let w = bytes.get(start..start + 10)?;
+        if is_digit(w[0])
+            && is_digit(w[1])
+            && is_digit(w[2])
+            && is_digit(w[3])
+            && w[4] == b'-'
+            && is_digit(w[5])
+            && is_digit(w[6])
+            && w[7] == b'-'
+            && is_digit(w[8])
+            && is_digit(w[9])
+        {
+            return Some(s[start..start + 10].to_string());
+        }
+        if bytes.len() < start + 10 {
+            break;
+        }
+    }
+    None
+}
+
+/// Find `SCHEDULED:`/`DEADLINE:`-style date in `line`: locate `marker`, then read
+/// the first org date after it. Returns `None` if the marker isn't present or no
+/// date follows it.
+fn body_date(line: &str, marker: &str) -> Option<String> {
+    let idx = line.find(marker)?;
+    org_date(&line[idx + marker.len()..])
+}
+
+/// Parse an org buffer's text into agenda items. A heading line (one with a
+/// non-zero [`heading_level`]) whose first word after the stars is a TODO keyword
+/// becomes an item; its optional `[#A]` priority cookie and title are split out,
+/// and the heading's body (every following line up to the next heading) is
+/// scanned for `SCHEDULED:` and `DEADLINE:` dates. Pure and unit-tested.
+pub fn parse_agenda(path: &Path, text: &str) -> Vec<AgendaItem> {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut items = Vec::new();
+    for (i, &line) in lines.iter().enumerate() {
+        let Some(level) = heading_level(line) else {
+            continue;
+        };
+        // Text after the stars (and their following space).
+        let rest = &line[level..];
+        let (keyword, priority, title) = parse_heading_rest(rest);
+        let Some(keyword) = keyword else {
+            continue;
+        };
+
+        let mut scheduled = None;
+        let mut deadline = None;
+        for body in lines.iter().skip(i + 1) {
+            if heading_level(body).is_some() {
+                break;
+            }
+            if scheduled.is_none() {
+                scheduled = body_date(body, "SCHEDULED:");
+            }
+            if deadline.is_none() {
+                deadline = body_date(body, "DEADLINE:");
+            }
+        }
+
+        items.push(AgendaItem {
+            file: path.to_path_buf(),
+            line: i,
+            level,
+            keyword: keyword.to_string(),
+            priority,
+            scheduled,
+            deadline,
+            title: title.to_string(),
+        });
+    }
+    items
+}
+
+/// Cycle a heading's priority cookie: none → `[#A]` → `[#B]` → `[#C]` → none.
+/// The cookie sits right after the keyword (or after the stars if there is no
+/// keyword). The stars, keyword and title are preserved; spacing is normalised
+/// to single spaces. Non-heading lines are returned unchanged.
+pub fn priority_cycle(line: &str) -> String {
+    let Some(level) = heading_level(line) else {
+        return line.to_string();
+    };
+    let stars = &line[..level];
+    let rest = &line[level..];
+    let (keyword, priority, title) = parse_heading_rest(rest);
+
+    let next = match priority {
+        None => Some('A'),
+        Some('A') => Some('B'),
+        Some('B') => Some('C'),
+        _ => None,
+    };
+
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(kw) = keyword {
+        parts.push(kw.to_string());
+    }
+    if let Some(p) = next {
+        parts.push(format!("[#{p}]"));
+    }
+    if !title.is_empty() {
+        parts.push(title.to_string());
+    }
+    if parts.is_empty() {
+        stars.to_string()
+    } else {
+        format!("{} {}", stars, parts.join(" "))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,5 +372,110 @@ mod tests {
         // non-heading lines untouched by either.
         assert_eq!(promote("plain"), "plain");
         assert_eq!(demote("plain"), "plain");
+    }
+
+    #[test]
+    fn org_date_with_and_without_weekday() {
+        assert_eq!(org_date("<2026-07-01>"), Some("2026-07-01".to_string()));
+        assert_eq!(
+            org_date("<2026-07-01 Wed>"),
+            Some("2026-07-01".to_string())
+        );
+        assert_eq!(org_date("[2026-12-31 Thu 09:00]"), Some("2026-12-31".to_string()));
+        // no date pattern → None.
+        assert_eq!(org_date("not a date"), None);
+        assert_eq!(org_date("<2026/07/01>"), None);
+        assert_eq!(org_date(""), None);
+        assert_eq!(org_date("12-3"), None);
+    }
+
+    #[test]
+    fn parse_agenda_todo_with_priority_and_scheduled() {
+        let text = "\
+* Project
+** TODO [#A] Write the report
+   SCHEDULED: <2026-07-01 Wed>
+   some notes
+";
+        let items = parse_agenda(Path::new("/tmp/a.org"), text);
+        assert_eq!(items.len(), 1);
+        let it = &items[0];
+        assert_eq!(it.line, 1);
+        assert_eq!(it.level, 2);
+        assert_eq!(it.keyword, "TODO");
+        assert_eq!(it.priority, Some('A'));
+        assert_eq!(it.title, "Write the report");
+        assert_eq!(it.scheduled.as_deref(), Some("2026-07-01"));
+        assert_eq!(it.deadline, None);
+        assert_eq!(it.file, Path::new("/tmp/a.org"));
+    }
+
+    #[test]
+    fn parse_agenda_plain_heading_is_not_an_item() {
+        let items = parse_agenda(Path::new("x.org"), "* Just a heading\nbody\n");
+        assert!(items.is_empty());
+    }
+
+    #[test]
+    fn parse_agenda_done_is_kept_as_keyword() {
+        let items = parse_agenda(Path::new("x.org"), "* DONE shipped it\n");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].keyword, "DONE");
+        assert_eq!(items[0].priority, None);
+        assert_eq!(items[0].title, "shipped it");
+    }
+
+    #[test]
+    fn parse_agenda_deadline_on_body_line() {
+        let text = "* TODO ship\n  DEADLINE: <2026-08-15>\n";
+        let items = parse_agenda(Path::new("x.org"), text);
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].deadline.as_deref(), Some("2026-08-15"));
+        assert_eq!(items[0].scheduled, None);
+    }
+
+    #[test]
+    fn parse_agenda_multiple_items_and_body_scoping() {
+        let text = "\
+* TODO first
+  SCHEDULED: <2026-07-01>
+* notes heading
+  DEADLINE: <2026-09-09>
+** TODO [#B] second
+* DONE third
+";
+        let items = parse_agenda(Path::new("x.org"), text);
+        // "notes heading" is not a keyword heading; its DEADLINE must NOT attach
+        // to "first" (a heading line stops the body scan).
+        assert_eq!(items.len(), 3);
+        assert_eq!(items[0].keyword, "TODO");
+        assert_eq!(items[0].scheduled.as_deref(), Some("2026-07-01"));
+        assert_eq!(items[0].deadline, None);
+        assert_eq!(items[1].keyword, "TODO");
+        assert_eq!(items[1].priority, Some('B'));
+        assert_eq!(items[1].title, "second");
+        assert_eq!(items[2].keyword, "DONE");
+        assert_eq!(items[2].title, "third");
+    }
+
+    #[test]
+    fn priority_cycle_full_cycle_preserves_keyword_and_title() {
+        let none = "** TODO foo bar";
+        let a = priority_cycle(none);
+        assert_eq!(a, "** TODO [#A] foo bar");
+        let b = priority_cycle(&a);
+        assert_eq!(b, "** TODO [#B] foo bar");
+        let c = priority_cycle(&b);
+        assert_eq!(c, "** TODO [#C] foo bar");
+        let back = priority_cycle(&c);
+        assert_eq!(back, "** TODO foo bar");
+    }
+
+    #[test]
+    fn priority_cycle_without_keyword_and_non_heading() {
+        assert_eq!(priority_cycle("* foo"), "* [#A] foo");
+        assert_eq!(priority_cycle("* [#C] foo"), "* foo");
+        // non-heading untouched.
+        assert_eq!(priority_cycle("plain text"), "plain text");
     }
 }

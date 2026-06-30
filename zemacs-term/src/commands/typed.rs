@@ -1946,6 +1946,53 @@ fn org_unfold_all(
     Ok(())
 }
 
+/// `:org-agenda` / `:agenda` — open the org agenda overlay: TODO/DONE headings
+/// gathered from every open `.org` buffer and every `*.org` file under the
+/// working directory, grouped by scheduled/deadline date, undated TODOs and done
+/// items. `Enter` jumps to an item; see [`crate::ui::org_agenda::OrgAgenda`].
+fn org_agenda(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    // Scan the focused file's directory if it has one, else the cwd.
+    let root = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+        });
+    let agenda = crate::ui::org_agenda::OrgAgenda::new(cx.editor, root);
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(agenda));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// `:org-priority` — cycle the current heading's priority cookie: none → `[#A]` →
+/// `[#B]` → `[#C]` → none, applied as a single undoable line replacement.
+fn org_priority(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = org_cursor_line(cx);
+    let (view, doc) = current!(cx.editor);
+    let line_str = org_line_text(doc, line);
+    if super::org::heading_level(&line_str).is_none() {
+        cx.editor.set_status("org-priority: not on a heading");
+        return Ok(());
+    }
+    let new = super::org::priority_cycle(&line_str);
+    org_replace_line(doc, view, line, new);
+    Ok(())
+}
+
 /// `:terminal` / `:term` — open an integrated terminal (PTY shell). The panel is
 /// created inside the compositor callback so the PTY handle lives on the main
 /// thread (it isn't `Send`).
@@ -13738,6 +13785,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Unfold every fold in the buffer.",
         fun: org_unfold_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-agenda",
+        aliases: &["agenda"],
+        doc: "Open the org agenda: TODO/DONE items across open .org buffers and *.org files under the working directory, grouped by scheduled/deadline date.",
+        fun: org_agenda,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-priority",
+        aliases: &[],
+        doc: "Cycle the current org heading's priority cookie: none -> [#A] -> [#B] -> [#C] -> none.",
+        fun: org_priority,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
