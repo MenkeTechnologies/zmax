@@ -1654,5 +1654,13 @@
   "name": "Synchronize",
   "desc": "IntelliJ IDEA default keymap: Cmd Alt Y",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.change-splitter-orientation",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Change Splitter Orientation",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]

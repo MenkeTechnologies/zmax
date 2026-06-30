@@ -2701,7 +2701,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -19047,5 +19047,13 @@
    "typable:reload-all"
   ],
   "note": "refresh all buffers from disk"
+ },
+ {
+  "spec_id": "jetbrains.window.change-splitter-orientation",
+  "status": "ported",
+  "evidence": [
+   "static:transpose_view"
+  ],
+  "note": "transpose split orientation"
  }
 ]
