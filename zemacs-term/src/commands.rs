@@ -1,5 +1,6 @@
 pub(crate) mod dap;
 pub(crate) mod lsp;
+pub(crate) mod org;
 /// Embedded scripting host. The real `scripting/` module (which pulls the
 /// interpreter crates) is compiled only with the `scripting` feature; otherwise
 /// a stub exposing the same entry points reports that scripting was not built in.
