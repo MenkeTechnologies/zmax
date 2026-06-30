@@ -663,6 +663,8 @@ impl MappableCommand {
         yank_rectangle, "Insert the saved rectangle at point (emacs C-x r y)",
         bookmark_set, "Set a named persistent bookmark at point (emacs C-x r m)",
         bookmark_jump, "Jump to a bookmark via a picker (emacs C-x r b / C-x r l)",
+        define_abbrev, "Define a global abbrev: <name> <expansion> (emacs C-x a g)",
+        expand_abbrev, "Expand the abbrev before point (emacs C-x ')",
         paste_clipboard_after, "Paste clipboard after selections",
         paste_clipboard_before, "Paste clipboard before selections",
         paste_primary_clipboard_after, "Paste primary clipboard after selections",
@@ -7909,6 +7911,68 @@ fn bookmark_jump(cx: &mut Context) {
         },
     );
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Emacs `add-global-abbrev` (C-x a g): prompt `<abbrev> <expansion...>` and
+/// define it in the persistent abbrev table.
+fn define_abbrev(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "define abbrev (name expansion): ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            match input.trim().split_once(char::is_whitespace) {
+                Some((name, exp)) => {
+                    crate::emacs_abbrev::define(name, exp.trim_start());
+                    cx.editor.set_status(format!("Abbrev '{name}' defined"));
+                }
+                None => cx.editor.set_error("Usage: <abbrev> <expansion...>"),
+            }
+        },
+    );
+}
+
+/// Emacs `expand-abbrev` (C-x '): expand the word before point if it is a
+/// defined abbrev.
+fn expand_abbrev(cx: &mut Context) {
+    let (start, word) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let mut start = cursor;
+        while start > 0 {
+            let ch = text.char(start - 1);
+            if ch.is_alphanumeric() || ch == '_' {
+                start -= 1;
+            } else {
+                break;
+            }
+        }
+        let word: String = text.slice(start..cursor).chars().collect();
+        (start, word)
+    };
+    if word.is_empty() {
+        cx.editor.set_error("No word before cursor");
+        return;
+    }
+    let Some(expansion) = crate::emacs_abbrev::get(&word) else {
+        cx.editor.set_error(format!("'{word}' is not an abbrev"));
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let cursor = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((start, cursor, Some(Tendril::from(expansion.as_str())))),
+    );
+    doc.apply(&transaction, view.id);
+    let new_pos = start + expansion.chars().count();
+    doc.set_selection(view.id, Selection::point(new_pos));
+    doc.append_changes_to_history(view);
 }
 
 fn ensure_selections_forward(cx: &mut Context) {

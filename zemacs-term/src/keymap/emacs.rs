@@ -142,6 +142,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "b" => bookmark_jump,            // C-x r b: bookmark-jump
                 "l" => bookmark_jump,            // C-x r l: list-bookmarks
             },
+            "'" => expand_abbrev,           // C-x ': expand-abbrev
+            "a" => { "Abbrev"
+                "g" => define_abbrev,       // C-x a g: add-global-abbrev
+            },
         },
     });
 
