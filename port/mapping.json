@@ -19960,27 +19960,27 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_buffers",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:buffer_picker"
+      "typable:buffers"
     ],
-    "note": ":buffers lists buffers; buffer_picker is the interactive list."
+    "note": ":buffers opens the buffer picker (real typable :buffers/:ls/:files)"
   },
   {
     "spec_id": "neovim.ex-command.colon_ls",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:buffer_picker"
+      "typable:buffers"
     ],
-    "note": ":ls buffer list via buffer_picker."
+    "note": ":ls opens the buffer picker (real typable :buffers/:ls/:files)"
   },
   {
     "spec_id": "neovim.ex-command.colon_files",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:buffer_picker"
+      "typable:buffers"
     ],
-    "note": ":files buffer list via buffer_picker."
+    "note": ":files opens the buffer picker (real typable :buffers/:ls/:files)"
   },
   {
     "spec_id": "neovim.ex-command.colon_history",

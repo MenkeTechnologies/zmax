@@ -415,6 +415,25 @@ fn clear_jumps(
     Ok(())
 }
 
+/// `:buffers` / `:ls` / `:files` — list open buffers (vim). zemacs surfaces the list as the
+/// interactive buffer picker rather than a textual dump.
+fn buffers_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(crate::commands::build_buffer_picker(editor, None, false));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 fn write_impl(
     cx: &mut compositor::Context,
     path: Option<&str>,
@@ -14250,6 +14269,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Clear the current view's jump list (vim :clearjumps).",
         fun: clear_jumps,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "buffers",
+        aliases: &["ls", "files"],
+        doc: "List open buffers in the buffer picker (vim :buffers/:ls/:files).",
+        fun: buffers_list,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

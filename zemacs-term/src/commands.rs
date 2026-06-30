@@ -11698,7 +11698,18 @@ fn goto_buffer_window(cx: &mut Context) {
 /// already showing the buffer is focused instead of opening it again. Otherwise the picker's own
 /// open action is used.
 fn buffer_picker_impl(cx: &mut Context, force_action: Option<Action>, goto_window: bool) {
-    let current = view!(cx.editor).doc;
+    let picker = build_buffer_picker(cx.editor, force_action, goto_window);
+    cx.push_layer(picker);
+}
+
+/// Build the buffer-picker component from editor state. Shared by the `buffer_picker` family and the
+/// `:buffers`/`:ls`/`:files` typable commands (which open it via an EditorCompositor job).
+pub(crate) fn build_buffer_picker(
+    editor: &mut Editor,
+    force_action: Option<Action>,
+    goto_window: bool,
+) -> Box<dyn Component> {
+    let current = view!(editor).doc;
 
     struct BufferMeta<'a> {
         id: DocumentId,
@@ -11719,8 +11730,7 @@ fn buffer_picker_impl(cx: &mut Context, force_action: Option<Action>, goto_windo
         focused_at: doc.focused_at,
     };
 
-    let mut items = cx
-        .editor
+    let mut items = editor
         .documents
         .values()
         .map(new_meta)
@@ -11746,8 +11756,7 @@ fn buffer_picker_impl(cx: &mut Context, force_action: Option<Action>, goto_windo
         }),
     ];
 
-    let initial_cursor = if cx
-        .editor
+    let initial_cursor = if editor
         .config()
         .buffer_picker
         .start_position
@@ -11763,7 +11772,7 @@ fn buffer_picker_impl(cx: &mut Context, force_action: Option<Action>, goto_windo
         columns,
         2,
         items,
-        PathStyleConfig::new(&cx.editor.theme),
+        PathStyleConfig::new(&editor.theme),
         move |cx, meta, action| {
             if goto_window {
                 let existing = cx
@@ -11789,7 +11798,7 @@ fn buffer_picker_impl(cx: &mut Context, force_action: Option<Action>, goto_windo
         });
         Some((meta.id.into(), lines))
     });
-    cx.push_layer(Box::new(overlaid(picker)));
+    Box::new(overlaid(picker))
 }
 
 fn jumplist_picker(cx: &mut Context) {
