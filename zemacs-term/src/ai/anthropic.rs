@@ -1,6 +1,8 @@
 //! Anthropic Claude backend (Messages API).
 
-use super::{read_response, Message, Provider, Role};
+use super::{
+    read_response, AssistantReply, Content, Message, Provider, Role, Tool, ToolUse, Turn,
+};
 
 const DEFAULT_MODEL: &str = "claude-3-5-sonnet-latest";
 const API_URL: &str = "https://api.anthropic.com/v1/messages";
@@ -43,6 +45,61 @@ impl Anthropic {
         body
     }
 
+    /// Serialize agent turns into Anthropic's `messages` array (content blocks).
+    pub(crate) fn turns_json(turns: &[Turn]) -> Vec<serde_json::Value> {
+        turns
+            .iter()
+            .map(|t| {
+                let blocks: Vec<serde_json::Value> = t
+                    .content
+                    .iter()
+                    .map(|c| match c {
+                        Content::Text(s) => serde_json::json!({"type":"text","text":s}),
+                        Content::ToolUse(tu) => serde_json::json!({
+                            "type":"tool_use","id":tu.id,"name":tu.name,"input":tu.input
+                        }),
+                        Content::ToolResult {
+                            tool_use_id,
+                            content,
+                            is_error,
+                        } => serde_json::json!({
+                            "type":"tool_result","tool_use_id":tool_use_id,
+                            "content":content,"is_error":is_error
+                        }),
+                    })
+                    .collect();
+                serde_json::json!({ "role": t.role.as_str(), "content": blocks })
+            })
+            .collect()
+    }
+
+    /// Parse an agent response: text blocks + tool_use blocks + stop_reason.
+    pub(crate) fn parse_reply(resp: &str) -> Result<AssistantReply, String> {
+        let v: serde_json::Value =
+            serde_json::from_str(resp).map_err(|e| format!("anthropic: parse: {e}"))?;
+        if let Some(msg) = v["error"]["message"].as_str() {
+            return Err(format!("anthropic: {msg}"));
+        }
+        let mut reply = AssistantReply {
+            stop_reason: v["stop_reason"].as_str().unwrap_or("").to_string(),
+            ..Default::default()
+        };
+        if let Some(blocks) = v["content"].as_array() {
+            for b in blocks {
+                match b["type"].as_str() {
+                    Some("text") => reply.text.push_str(b["text"].as_str().unwrap_or("")),
+                    Some("tool_use") => reply.tool_uses.push(ToolUse {
+                        id: b["id"].as_str().unwrap_or("").to_string(),
+                        name: b["name"].as_str().unwrap_or("").to_string(),
+                        input: b["input"].clone(),
+                    }),
+                    _ => {}
+                }
+            }
+        }
+        Ok(reply)
+    }
+
     /// Extract the concatenated text from a Messages API response body.
     pub(crate) fn parse(resp: &str) -> Result<String, String> {
         let v: serde_json::Value =
@@ -82,6 +139,46 @@ impl Provider for Anthropic {
             "anthropic",
         )?;
         Self::parse(&resp)
+    }
+
+    fn supports_tools(&self) -> bool {
+        true
+    }
+
+    fn agent_turn(
+        &self,
+        system: Option<&str>,
+        turns: &[Turn],
+        tools: &[Tool],
+    ) -> Result<AssistantReply, String> {
+        let tools_json: Vec<serde_json::Value> = tools
+            .iter()
+            .map(|t| {
+                serde_json::json!({
+                    "name": t.name,
+                    "description": t.description,
+                    "input_schema": t.input_schema,
+                })
+            })
+            .collect();
+        let mut body = serde_json::json!({
+            "model": self.model,
+            "max_tokens": MAX_TOKENS,
+            "messages": Self::turns_json(turns),
+            "tools": tools_json,
+        });
+        if let Some(sys) = system {
+            body["system"] = serde_json::Value::String(sys.to_string());
+        }
+        let resp = read_response(
+            ureq::post(API_URL)
+                .set("x-api-key", &self.key)
+                .set("anthropic-version", "2023-06-01")
+                .set("content-type", "application/json")
+                .send_json(body),
+            "anthropic",
+        )?;
+        Self::parse_reply(&resp)
     }
 }
 

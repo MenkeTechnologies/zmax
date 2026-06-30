@@ -528,6 +528,7 @@ impl MappableCommand {
         ai_explain, "Explain the selected code with AI (SPC a x)",
         ai_generate_tests, "Generate tests for the selection with AI (SPC a u)",
         ai_commit_message, "Generate a git commit message with AI (SPC a c)",
+        ai_agent, "Run the autonomous AI agent on a task (SPC a a)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
         copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
@@ -9092,6 +9093,47 @@ fn ai_commit_message(cx: &mut Context) {
             editor.set_status("AI commit message (copied to clipboard)");
         })))
     });
+}
+
+/// SPC a a : run the autonomous AI agent on a prompted task. The agent reads/lists/writes files in
+/// the workspace (and runs commands if `ZEMACS_AI_AGENT_ALLOW_EXEC=1`) in a tool-use loop, off the
+/// UI thread. A transcript + list of changed files is shown in a scratch buffer; open buffers whose
+/// files changed are picked up by the file watcher. The headline "CLI IDE with AI agents".
+fn ai_agent(cx: &mut Context) {
+    let root = zemacs_loader::find_workspace().0;
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ai agent task:".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let task = input.trim().to_string();
+            let root = root.clone();
+            cx.editor.set_status("AI agent: working…");
+            cx.jobs.callback(async move {
+                let result = tokio::task::spawn_blocking(move || crate::ai::agent::run(task, root))
+                    .await
+                    .map_err(|e| anyhow::anyhow!("ai agent task: {e}"))?
+                    .map_err(|e| anyhow::anyhow!(e))?;
+                let mut report = format!("# AI agent ({} steps)\n\n", result.steps);
+                report.push_str(&result.transcript);
+                let changed = result.changed_files.len();
+                if changed > 0 {
+                    report.push_str("\n## Changed files\n");
+                    for f in &result.changed_files {
+                        report.push_str(&format!("- {}\n", f.display()));
+                    }
+                }
+                Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+                    show_text_in_scratch(editor, &report);
+                    editor.set_status(format!("AI agent done: {changed} file(s) changed"));
+                })))
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 /// SPC g f f : prompt for a branch/commit and show the current file as it was at that revision

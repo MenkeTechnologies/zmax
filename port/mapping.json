@@ -19383,5 +19383,46 @@
    "static:ai_commit_message"
   ],
   "note": "AI commit message -> ai_commit_message (git diff -> AI -> scratch + clipboard)"
+ },
+ {
+  "spec_id": "cursor.agent.multi_file",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a a",
+   "static:ai_agent"
+  ],
+  "note": "autonomous multi-file agent -> ai_agent (tool-use loop)"
+ },
+ {
+  "spec_id": "cursor.agent.tools_read",
+  "status": "ported",
+  "evidence": [
+   "static:ai_agent"
+  ],
+  "note": "agent read_file/list_dir tools"
+ },
+ {
+  "spec_id": "cursor.agent.tools_write",
+  "status": "ported",
+  "evidence": [
+   "static:ai_agent"
+  ],
+  "note": "agent write_file tool (workspace-confined)"
+ },
+ {
+  "spec_id": "cursor.agent.tools_terminal",
+  "status": "ported",
+  "evidence": [
+   "static:ai_agent"
+  ],
+  "note": "agent run_command tool (gated by ZEMACS_AI_AGENT_ALLOW_EXEC)"
+ },
+ {
+  "spec_id": "cursor.agent.auto_run",
+  "status": "ported",
+  "evidence": [
+   "static:ai_agent"
+  ],
+  "note": "auto-run commands via ZEMACS_AI_AGENT_ALLOW_EXEC=1"
  }
 ]

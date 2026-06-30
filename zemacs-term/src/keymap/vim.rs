@@ -886,6 +886,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             ";"     => toggle_comments,            // SPC ;   : comment operator
 
             "a" => { "Applications"
+                "a" => ai_agent,                   // SPC a a : autonomous AI agent (reads/writes files, tool-use)
                 "i" => ai_chat,                    // SPC a i : ask the AI provider (Cursor-style assistant)
                 "e" => ai_inline_edit,             // SPC a e : AI inline edit/generate (Cursor Cmd+K)
                 "x" => ai_explain,                 // SPC a x : AI explain selection

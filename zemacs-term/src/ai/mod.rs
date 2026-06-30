@@ -9,6 +9,7 @@
 //! - `ZEMACS_AI_MODEL` — overrides the provider's default model
 //! - `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` — the API key for the chosen provider
 
+pub mod agent;
 pub mod anthropic;
 pub mod openai;
 
@@ -53,12 +54,84 @@ impl Message {
     }
 }
 
+/// A tool the agent can call (name + description + JSON-Schema for its input).
+#[derive(Clone, Debug)]
+pub struct Tool {
+    pub name: String,
+    pub description: String,
+    pub input_schema: serde_json::Value,
+}
+
+/// A model request to invoke a tool.
+#[derive(Clone, Debug)]
+pub struct ToolUse {
+    pub id: String,
+    pub name: String,
+    pub input: serde_json::Value,
+}
+
+/// One content block within an agent turn.
+#[derive(Clone, Debug)]
+pub enum Content {
+    Text(String),
+    ToolUse(ToolUse),
+    ToolResult {
+        tool_use_id: String,
+        content: String,
+        is_error: bool,
+    },
+}
+
+/// One turn in an agent conversation (richer than [`Message`]: carries tool blocks).
+#[derive(Clone, Debug)]
+pub struct Turn {
+    pub role: Role,
+    pub content: Vec<Content>,
+}
+
+impl Turn {
+    pub fn user_text(s: impl Into<String>) -> Self {
+        Self {
+            role: Role::User,
+            content: vec![Content::Text(s.into())],
+        }
+    }
+}
+
+/// The assistant's reply to an agent turn: any text it emitted, the tool calls it wants run, and
+/// the stop reason (`"tool_use"` means it expects tool results and the loop should continue).
+#[derive(Clone, Debug, Default)]
+pub struct AssistantReply {
+    pub text: String,
+    pub tool_uses: Vec<ToolUse>,
+    pub stop_reason: String,
+}
+
 /// A chat backend. `chat` blocks on the network — call it from `tokio::task::spawn_blocking`,
 /// never on the UI thread. `system` is the system prompt; `messages` are the user/assistant turns.
 pub trait Provider: Send + Sync {
     fn name(&self) -> &'static str;
     fn model(&self) -> &str;
     fn chat(&self, system: Option<&str>, messages: &[Message]) -> Result<String, String>;
+
+    /// Whether this backend implements agent tool-use ([`Provider::agent_turn`]).
+    fn supports_tools(&self) -> bool {
+        false
+    }
+
+    /// One agent step: send the running conversation + available tools, get back the assistant's
+    /// text and any tool calls. Default: unsupported (overridden by tool-capable backends).
+    fn agent_turn(
+        &self,
+        _system: Option<&str>,
+        _turns: &[Turn],
+        _tools: &[Tool],
+    ) -> Result<AssistantReply, String> {
+        Err(format!(
+            "{} does not support agent tool-use yet (set ZEMACS_AI_PROVIDER=anthropic)",
+            self.name()
+        ))
+    }
 }
 
 /// Resolve `ZEMACS_AI_PROVIDER` / `ZEMACS_AI_MODEL` from the environment.
