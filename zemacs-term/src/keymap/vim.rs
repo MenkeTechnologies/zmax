@@ -106,6 +106,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space b e",   "Buffers", ":reload"),                              // SPC b e : revert/erase to disk
     ("space p k",   "Project", ":buffer-close-all"),                    // SPC p k : kill all project buffers
     ("space t l",   "Toggles", ":toggle soft-wrap.enable"),            // SPC t l : truncate/wrap lines
+    ("space t n",   "Toggles", ":toggle line-number absolute none"),   // SPC t n : toggle line numbers on/off
+    ("space t L",   "Toggles", ":toggle soft-wrap.enable"),            // SPC t L : toggle visual (wrapped) lines
+    ("space D f v", "Diff",    "git_diff"),                            // SPC D f v : ediff file versions (vs HEAD)
     ("space t V",   "Toggles", ":toggle line-number absolute relative"), // SPC t V : visual line numbers
     ("space t h i", "Toggles", ":toggle indent-guides.render"),        // SPC t h i : highlight indentation
     ("space t C-i", "Toggles", ":toggle indent-guides.render"),        // SPC t C-i : global indent guide
@@ -856,6 +859,18 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "c" => { "Counter"
                     "a" => kmacro_add_counter,     // SPC K c a : increment macro counter
                     "c" => kmacro_insert_counter,  // SPC K c c : insert counter value, then increment
+                },
+                "r" => { "Macro ring"
+                    "n" => kmacro_ring_next,       // SPC K r n : cycle to next macro in ring
+                    "p" => kmacro_ring_prev,       // SPC K r p : cycle to previous macro in ring
+                    "N" => kmacro_ring_prev,       // SPC K r N : cycle to previous macro in ring
+                    "d" => kmacro_ring_delete,     // SPC K r d : delete head macro in ring
+                    "s" => kmacro_ring_swap,       // SPC K r s : swap first two macros in ring
+                    "L" => kmacro_ring_view,       // SPC K r L : view head macro in ring
+                },
+                "e" => { "Edit macro"
+                    "r" => kmacro_to_register,     // SPC K e r : write last macro to a register
+                    "n" => kmacro_to_register,     // SPC K e n : name the last macro (to a register)
                 },
             },
 

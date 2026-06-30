@@ -784,6 +784,12 @@ impl MappableCommand {
         fold_delete, "Delete fold under cursor (zd)",
         fold_delete_all, "Delete all folds (zE)",
         narrow_to_region, "Narrow the view to the selected region (SPC n r)",
+        kmacro_ring_next, "Cycle to the next macro in the ring (SPC K r n)",
+        kmacro_ring_prev, "Cycle to the previous macro in the ring (SPC K r p)",
+        kmacro_ring_delete, "Delete the head macro in the ring (SPC K r d)",
+        kmacro_ring_swap, "Swap the first two macros in the ring (SPC K r s)",
+        kmacro_ring_view, "View the head macro in the ring (SPC K r L)",
+        kmacro_to_register, "Write the last macro to a register (SPC K e r)",
         kmacro_add_counter, "Add [count] to the keyboard-macro counter (SPC K c a)",
         kmacro_insert_counter, "Insert the macro counter value, then increment (SPC K c c)",
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
@@ -11881,6 +11887,120 @@ fn kmacro_counter_reset() {
     KMACRO_COUNTER.store(0, std::sync::atomic::Ordering::Relaxed);
 }
 
+// --- keyboard-macro ring (spacemacs SPC K r / SPC K e) -----------------------
+// A process-global recency list of recorded macro strings (most recent first),
+// mirroring Emacs `kmacro-ring`. `record_macro` pushes each new recording here.
+static MACRO_RING: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+
+fn macro_ring_push(s: String) {
+    if s.is_empty() {
+        return;
+    }
+    if let Ok(mut ring) = MACRO_RING.lock() {
+        ring.retain(|m| m != &s);
+        ring.insert(0, s);
+        ring.truncate(30);
+    }
+}
+
+fn macro_ring_preview(s: &str) -> String {
+    if s.chars().count() > 40 {
+        format!("{}…", s.chars().take(40).collect::<String>())
+    } else {
+        s.to_string()
+    }
+}
+
+/// Copy the ring head into register `@` so `@@` / replay uses it.
+fn kmacro_ring_sync(cx: &mut Context) {
+    let head = MACRO_RING.lock().ok().and_then(|r| r.first().cloned());
+    match head {
+        Some(s) => {
+            let _ = cx.editor.registers.write('@', vec![s.clone()]);
+            cx.editor
+                .set_status(format!("macro ring head → @ : {}", macro_ring_preview(&s)));
+        }
+        None => cx.editor.set_status("macro ring is empty"),
+    }
+}
+
+/// SPC K r n: cycle to the next macro in the ring (head moves to the back).
+fn kmacro_ring_next(cx: &mut Context) {
+    if let Ok(mut r) = MACRO_RING.lock() {
+        if r.len() > 1 {
+            let f = r.remove(0);
+            r.push(f);
+        }
+    }
+    kmacro_ring_sync(cx);
+}
+
+/// SPC K r p / r N: cycle to the previous macro in the ring.
+fn kmacro_ring_prev(cx: &mut Context) {
+    if let Ok(mut r) = MACRO_RING.lock() {
+        if r.len() > 1 {
+            if let Some(b) = r.pop() {
+                r.insert(0, b);
+            }
+        }
+    }
+    kmacro_ring_sync(cx);
+}
+
+/// SPC K r d: delete the head macro from the ring.
+fn kmacro_ring_delete(cx: &mut Context) {
+    let left = if let Ok(mut r) = MACRO_RING.lock() {
+        if !r.is_empty() {
+            r.remove(0);
+        }
+        r.len()
+    } else {
+        0
+    };
+    cx.editor
+        .set_status(format!("deleted head macro ({left} in ring)"));
+}
+
+/// SPC K r s: swap the first two macros in the ring.
+fn kmacro_ring_swap(cx: &mut Context) {
+    if let Ok(mut r) = MACRO_RING.lock() {
+        if r.len() >= 2 {
+            r.swap(0, 1);
+        }
+    }
+    kmacro_ring_sync(cx);
+}
+
+/// SPC K r L: show the head macro in the ring.
+fn kmacro_ring_view(cx: &mut Context) {
+    let head = MACRO_RING.lock().ok().and_then(|r| r.first().cloned());
+    match head {
+        Some(s) => cx.editor.set_status(format!("head macro: {s}")),
+        None => cx.editor.set_status("macro ring is empty"),
+    }
+}
+
+/// SPC K e r / e n: write the head macro to a register typed next.
+fn kmacro_to_register(cx: &mut Context) {
+    let head = MACRO_RING.lock().ok().and_then(|r| r.first().cloned());
+    let Some(s) = head else {
+        cx.editor.set_status("no macro recorded yet");
+        return;
+    };
+    cx.editor.set_status("save macro to register: press a key");
+    cx.on_next_key(move |cx, event| {
+        if let KeyEvent {
+            code: KeyCode::Char(ch),
+            ..
+        } = event
+        {
+            let _ = cx.editor.registers.write(ch, vec![s.clone()]);
+            cx.editor
+                .set_status(format!("macro → register [{ch}]"));
+        }
+    });
+}
+
 /// SPC K c a: add `count` (default 1) to the macro counter.
 fn kmacro_add_counter(cx: &mut Context) {
     let v = kmacro_counter_add(cx.count() as i64);
@@ -13247,6 +13367,7 @@ fn record_macro(cx: &mut Context) {
                 }
             })
             .collect::<String>();
+        macro_ring_push(s.clone());
         match cx.editor.registers.write(reg, vec![s]) {
             Ok(_) => cx
                 .editor
