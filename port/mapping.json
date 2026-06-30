@@ -11953,11 +11953,11 @@
  },
  {
   "spec_id": "jetbrains.tool-windows.show-find-window",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:search_in_files"
+   "static:focus_run_console"
   ],
-  "note": ""
+  "note": "project search results render in the Run console panel"
  },
  {
   "spec_id": "jetbrains.tool-windows.show-structure-window",
