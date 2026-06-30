@@ -94,7 +94,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "pagedown" => page_down,
 
         // mark / region
-        "C-space" => select_mode,           // set-mark-command
+        "C-space" => set_mark_command,      // set-mark-command (pushes mark ring)
         "C-g" => collapse_selection,        // keyboard-quit
 
         // editing
@@ -104,7 +104,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-d" => delete_word_forward,       // M-d: kill-word
         "A-backspace" | "C-w" => delete_word_backward, // C-w/M-DEL approx (no region: kill prev word)
         "A-w" => [yank, collapse_selection],// M-w: kill-ring-save (copy)
-        "C-y" => paste_before,              // C-y: yank (paste)
+        "C-y" => yank_from_kill_ring,       // C-y: yank latest kill-ring entry
+        "A-y" => yank_pop,                  // M-y: yank-pop, cycle to older kill
         "C-u" => kill_to_line_start,
         "C-_" | "C-/" => undo,              // undo
         "A-/" => redo,
@@ -124,6 +125,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "0" => wclose,                  // delete-window
             "2" => hsplit,                  // split-window-below
             "3" => vsplit,                  // split-window-right
+            "C-space" => pop_to_mark,       // C-x C-SPC: pop-to-mark
+            "C-x" => flip_selections,       // C-x C-x: exchange-point-and-mark
         },
     });
 
@@ -167,7 +170,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-k" => kill_to_line_end,
         "C-_" | "C-/" => undo,
         "A-/" => redo,
-        "C-y" => paste_before,
+        "C-y" => yank_from_kill_ring,
+        "A-y" => yank_pop,
         "C-s" => search,
         "C-r" => rsearch,
         "C-x" => { "C-x"

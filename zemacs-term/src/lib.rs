@@ -15,6 +15,8 @@ pub mod closed_files;
 pub mod commands;
 pub mod compositor;
 pub mod config;
+pub mod emacs_kill;
+pub mod emacs_mark;
 pub mod emmet;
 pub mod events;
 pub mod file_watcher;

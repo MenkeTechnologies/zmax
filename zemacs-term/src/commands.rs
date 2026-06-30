@@ -641,6 +641,10 @@ impl MappableCommand {
         replace_selections_with_primary_clipboard, "Replace selections by primary clipboard",
         paste_after, "Paste after selection",
         paste_before, "Paste before selection",
+        yank_from_kill_ring, "Yank the latest kill-ring entry (emacs C-y)",
+        yank_pop, "Replace the just-yanked text with the next kill-ring entry (emacs M-y)",
+        set_mark_command, "Set mark and activate region, pushing to the mark ring (emacs C-SPC)",
+        pop_to_mark, "Jump to the top of the mark ring, rotating it (emacs C-x C-SPC)",
         paste_clipboard_after, "Paste clipboard after selections",
         paste_clipboard_before, "Paste clipboard before selections",
         paste_primary_clipboard_after, "Paste primary clipboard after selections",
@@ -7377,6 +7381,7 @@ fn delete_selection_impl(cx: &mut Context, op: Operation, yank: YankAction) {
         let reg_name = cx
             .register
             .unwrap_or_else(|| cx.editor.config.load().default_yank_register);
+        crate::emacs_kill::record(values.join("\n"));
         if let Err(err) = cx.editor.registers.write(reg_name, values) {
             cx.editor.set_error(err.to_string());
             return;
@@ -7483,6 +7488,38 @@ fn flip_selections(cx: &mut Context) {
         .clone()
         .transform(|range| range.flip());
     doc.set_selection(view.id, selection);
+}
+
+/// Emacs `set-mark-command` (C-SPC): push the current point onto the mark ring
+/// and activate the region (enter Select mode), so later `pop-to-mark` can
+/// return here.
+fn set_mark_command(cx: &mut Context) {
+    let pos = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        doc.selection(view.id).primary().cursor(text)
+    };
+    crate::emacs_mark::push(pos);
+    select_mode(cx);
+}
+
+/// Emacs `pop-to-mark`/`pop-global-mark` (C-x C-SPC): jump point to the top of
+/// the mark ring, rotating it so repeated pops walk back through prior marks.
+fn pop_to_mark(cx: &mut Context) {
+    let pos = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        doc.selection(view.id).primary().cursor(text)
+    };
+    match crate::emacs_mark::pop_to(pos) {
+        Some(target) => {
+            let (view, doc) = current!(cx.editor);
+            push_jump(view, doc);
+            let target = target.min(doc.text().len_chars());
+            doc.set_selection(view.id, Selection::point(target));
+        }
+        None => cx.editor.set_error("Mark ring is empty"),
+    }
 }
 
 fn ensure_selections_forward(cx: &mut Context) {
@@ -9647,6 +9684,7 @@ fn yank_impl(editor: &mut Editor, register: char) {
     doc.set_mark('[', from);
     doc.set_mark(']', to.saturating_sub(1).max(from));
 
+    crate::emacs_kill::record(values.join("\n"));
     match editor.registers.write(register, values) {
         Ok(_) => editor.set_status(format!(
             "yanked {selections} selection{} to register {register}",
@@ -9816,6 +9854,66 @@ fn paste_impl(
 
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
+}
+
+/// Emacs `yank` (C-y): insert the most-recent kill-ring entry at each cursor
+/// and select it, so a following `yank-pop` can swap it for an older kill.
+fn yank_from_kill_ring(cx: &mut Context) {
+    let Some(text) = crate::emacs_kill::top() else {
+        cx.editor.set_error("Kill ring is empty");
+        return;
+    };
+    let count = cx.count();
+    let mode = cx.editor.mode;
+    let (view, doc) = current!(cx.editor);
+    paste_impl(&[text], doc, view, Paste::Before, count, mode);
+    let sel: Vec<(usize, usize)> = doc
+        .selection(view.id)
+        .iter()
+        .map(|r| (r.anchor, r.head))
+        .collect();
+    crate::emacs_kill::begin_yank(sel);
+}
+
+/// Emacs `yank-pop` (M-y): replace the just-yanked text with the next-older
+/// kill-ring entry, cycling. Only fires while the live selection still covers
+/// the previous yank (our stand-in for emacs's last-command-was-yank check).
+fn yank_pop(cx: &mut Context) {
+    let cur: Vec<(usize, usize)> = {
+        let (view, doc) = current!(cx.editor);
+        doc.selection(view.id)
+            .iter()
+            .map(|r| (r.anchor, r.head))
+            .collect()
+    };
+    let Some(entry) = crate::emacs_kill::next_entry(&cur) else {
+        cx.editor
+            .set_error("Previous command was not a yank — nothing to cycle");
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let value = Tendril::from(entry.as_str());
+    let value_len = entry.chars().count();
+    let selection = doc.selection(view.id).clone();
+    let mut offset: isize = 0;
+    let mut ranges = SmallVec::with_capacity(selection.len());
+    let transaction =
+        Transaction::change_by_selection(doc.text(), &selection, |range| {
+            let (from, to) = (range.from(), range.to());
+            let anchor = (from as isize + offset) as usize;
+            ranges.push(Range::new(anchor, anchor + value_len).with_direction(range.direction()));
+            offset += value_len as isize - (to as isize - from as isize);
+            (from, to, Some(value.clone()))
+        });
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::new(ranges, selection.primary_index()));
+    doc.append_changes_to_history(view);
+    let new_sel: Vec<(usize, usize)> = doc
+        .selection(view.id)
+        .iter()
+        .map(|r| (r.anchor, r.head))
+        .collect();
+    crate::emacs_kill::set_yank_sel(new_sel);
 }
 
 pub(crate) fn paste_bracketed_value(cx: &mut Context, contents: String) {
