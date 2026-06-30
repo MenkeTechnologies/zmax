@@ -700,6 +700,7 @@ impl MappableCommand {
         hover, "Show docs for item under cursor",
         toggle_comments, "Comment/uncomment selections",
         toggle_line_comments, "Line comment/uncomment selections",
+        comment_to_line, "Comment/uncomment from the cursor line to a prompted line (SPC c t)",
         toggle_block_comments, "Block comment/uncomment selections",
         rotate_selections_forward, "Rotate selections forward",
         rotate_selections_backward, "Rotate selections backward",
@@ -11985,8 +11986,16 @@ type CommentTransactionFn = fn(
 ) -> Transaction;
 
 fn toggle_comments_impl(cx: &mut Context, comment_transaction: CommentTransactionFn) {
-    let loader: &zemacs_core::syntax::Loader = &cx.editor.syn_loader.load();
-    let (view, doc) = current!(cx.editor);
+    apply_comment_transaction(cx.editor, comment_transaction);
+    exit_select_mode(cx);
+}
+
+/// Resolve the comment tokens for the cursor's enclosing language layer, build the transaction
+/// via `comment_transaction`, and apply it to the current selection. Operates on `&mut Editor`
+/// alone so it can run from a prompt callback (where no full `Context` is available).
+fn apply_comment_transaction(editor: &mut Editor, comment_transaction: CommentTransactionFn) {
+    let loader: &zemacs_core::syntax::Loader = &editor.syn_loader.load();
+    let (view, doc) = current!(editor);
     let cursor = doc
         .selection(view.id)
         .primary()
@@ -12031,7 +12040,6 @@ fn toggle_comments_impl(cx: &mut Context, comment_transaction: CommentTransactio
         comment_transaction(line_token, block_tokens, doc.text(), doc.selection(view.id));
 
     doc.apply(&transaction, view.id);
-    exit_select_mode(cx);
 }
 
 /// commenting behavior:
@@ -12096,6 +12104,63 @@ fn toggle_comments(cx: &mut Context) {
         // not block commented at all and don't have any tokens
         comment::toggle_line_comments(doc, selection, line_token)
     })
+}
+
+/// Line-comment (or uncomment) every line between the cursor's line and `target_line` (0-based,
+/// clamped to the buffer). Mirrors Spacemacs' `evilnc-comment-or-uncomment-to-the-line`.
+fn comment_line_range(editor: &mut Editor, target_line: usize) {
+    {
+        let (view, doc) = current!(editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let cur_line = text.char_to_line(cursor);
+        let last = text.len_lines().saturating_sub(1);
+        let target = target_line.min(last);
+        let (lo, hi) = if cur_line <= target {
+            (cur_line, target)
+        } else {
+            (target, cur_line)
+        };
+        let start = text.line_to_char(lo);
+        let end = (text.line_to_char(hi) + text.line(hi).len_chars()).min(text.len_chars());
+        doc.set_selection(view.id, Selection::single(start, end));
+    }
+    apply_comment_transaction(editor, |line_token, _block_tokens, doc, selection| {
+        comment::toggle_line_comments(doc, selection, line_token)
+    });
+}
+
+/// SPC c t : prompt for a 1-based line number and line-comment the range from the current line
+/// to it (Spacemacs `comment to line`).
+fn comment_to_line(cx: &mut Context) {
+    let cur_line = {
+        let (view, doc) = current!(cx.editor);
+        let slice = doc.text().slice(..);
+        doc.text()
+            .char_to_line(doc.selection(view.id).primary().cursor(slice))
+            + 1
+    };
+    // A count prefix supplies the target line directly, skipping the prompt.
+    if let Some(count) = cx.count {
+        comment_line_range(cx.editor, count.get().saturating_sub(1));
+        return;
+    }
+    let prompt = crate::ui::prompt::Prompt::new(
+        format!("Comment to line (cursor at {cur_line}): ").into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            match input.trim().parse::<usize>() {
+                Ok(n) if n >= 1 => comment_line_range(cx.editor, n - 1),
+                _ => cx.editor.set_error("comment to line: enter a 1-based line number"),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 fn toggle_line_comments(cx: &mut Context) {
