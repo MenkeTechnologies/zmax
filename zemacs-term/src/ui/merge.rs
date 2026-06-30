@@ -581,6 +581,10 @@ pub struct DiffView {
     hscroll: usize,
     /// Number of body rows visible in the last render (for page scrolling).
     viewport: usize,
+    /// When true (external-file / multi-file ediff comparison), `Apply` never
+    /// writes back to any document or disk — the view is comparison-only, so it
+    /// can safely diff arbitrary files without risking the current buffer.
+    read_only: bool,
 }
 
 impl DiffView {
@@ -608,6 +612,7 @@ impl DiffView {
             scroll: 0,
             hscroll: 0,
             viewport: 1,
+            read_only: false,
         }
     }
 
@@ -618,6 +623,13 @@ impl DiffView {
     /// lines, padded so the panes stay aligned — exactly like [`align`]. Blocks
     /// default to [`Resolution::None`] (unresolved). `path` is the document's
     /// absolute path, captured for the `git add` step on Apply.
+    /// Mark this view comparison-only: `Apply` will never write back. Use for
+    /// ediff of arbitrary external files so it can't clobber the current buffer.
+    pub fn read_only(mut self) -> Self {
+        self.read_only = true;
+        self
+    }
+
     pub fn from_conflicts(
         file_name: String,
         doc_id: DocumentId,
@@ -734,6 +746,7 @@ impl DiffView {
             scroll: 0,
             hscroll: 0,
             viewport: 1,
+            read_only: false,
         }
     }
 
@@ -884,6 +897,10 @@ impl Component for DiffView {
             // In conflict mode, once every conflict is resolved, also write the
             // file to disk and `git add` it to mark the conflict resolved.
             key!(Enter) | key!('a') => {
+                // Comparison-only view: never write back, just close.
+                if self.read_only {
+                    return EventResult::Consumed(Some(close));
+                }
                 // Compute everything the callback needs up front — it can't
                 // borrow `self`.
                 let result = self.result_text();

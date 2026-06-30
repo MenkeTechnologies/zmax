@@ -128,6 +128,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t C-W", "Toggles", ":toggle trim-trailing-whitespace"),    // SPC t C-W : global whitespace cleanup
     ("space D f v", "Diff",    "git_diff"),                            // SPC D f v : ediff file versions (vs HEAD)
     ("space D f f", "Diff",    "ediff_file"),                          // SPC D f f : ediff current buffer vs a picked file
+    ("space D f 3", "Diff",    "ediff_3_files"),                       // SPC D f 3 : 3-way diff of three files (read-only)
     ("space D b b", "Diff",    "ediff_buffer"),                        // SPC D b b : ediff two buffers (current vs picked)
     ("space D w w", "Diff",    "ediff_windows"),                       // SPC D w w : compare the two windows (wordwise)
     ("space D w l", "Diff",    "ediff_windows"),                       // SPC D w l : compare the two windows (linewise)

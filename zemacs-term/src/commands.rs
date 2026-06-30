@@ -490,6 +490,7 @@ impl MappableCommand {
         toggle_fill_column, "Toggle a fill-column ruler (SPC t f)",
         toggle_long_line_marker, "Toggle an 80th-column ruler (SPC t 8)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
+        ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
         kill_buffers_by_regex, "Kill all buffers whose name matches a regex (SPC b M)",
         narrow_to_page, "Narrow the buffer to the current page (SPC n p)",
         copy_file, "Copy the current file to a prompted destination (SPC f c)",
@@ -6511,7 +6512,8 @@ fn ediff_buffer(cx: &mut Context) {
                 .map(|d| (d.display_name().into_owned(), d.text().to_string()))
         };
         if let (Some((na, ta)), Some((nb, tb))) = (g(cx, current), g(cx, other)) {
-            let view = crate::ui::merge::DiffView::new(format!("{na} ⇔ {nb}"), other, &ta, &tb);
+            let view =
+                crate::ui::merge::DiffView::new(format!("{na} ⇔ {nb}"), other, &ta, &tb).read_only();
             let call = crate::job::Callback::EditorCompositor(Box::new(
                 move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
                     compositor.push(Box::new(view));
@@ -6539,7 +6541,8 @@ fn ediff_windows(cx: &mut Context) {
     let (Some((na, ta)), Some((nb, tb))) = (get(cx, docs[0]), get(cx, docs[1])) else {
         return;
     };
-    let view = crate::ui::merge::DiffView::new(format!("{na} ⇔ {nb}"), docs[1], &ta, &tb);
+    let view =
+        crate::ui::merge::DiffView::new(format!("{na} ⇔ {nb}"), docs[1], &ta, &tb).read_only();
     cx.push_layer(Box::new(view));
 }
 
@@ -7022,10 +7025,61 @@ fn ediff_file(cx: &mut Context) {
                 cur_id,
                 &other,
                 &cur_text,
-            );
+            )
+            .read_only();
             let call = crate::job::Callback::EditorCompositor(Box::new(
                 move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
                     compositor.push(Box::new(view));
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// 3-way ediff: prompt for three space-separated file paths (A B C, where C is
+/// the common ancestor) and show a read-only diff3 comparison (Spacemacs
+/// `SPC D f 3`). Comparison-only — never writes back, so it's safe on arbitrary
+/// external files.
+fn ediff_3_files(cx: &mut Context) {
+    let cur_id = doc!(cx.editor).id();
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ediff 3 files (A B C):".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let paths: Vec<&str> = input.split_whitespace().collect();
+            if paths.len() != 3 {
+                cx.editor
+                    .set_error("need exactly three space-separated file paths");
+                return;
+            }
+            let mut texts = Vec::with_capacity(3);
+            for p in &paths {
+                match std::fs::read_to_string(p) {
+                    Ok(s) => texts.push(s),
+                    Err(e) => {
+                        cx.editor.set_error(format!("read {p}: {e}"));
+                        return;
+                    }
+                }
+            }
+            // C (ancestor) is the diff3 base; A=ours, B=theirs.
+            let segs = crate::ui::merge::diff3(&texts[2], &texts[0], &texts[1]);
+            let view = crate::ui::merge::DiffView::from_conflicts(
+                format!("ediff3: {} {} {}", paths[0], paths[1], paths[2]),
+                cur_id,
+                None,
+                segs,
+            )
+            .read_only();
+            let call = crate::job::Callback::EditorCompositor(Box::new(
+                move |_e: &mut Editor, comp: &mut crate::compositor::Compositor| {
+                    comp.push(Box::new(view));
                 },
             ));
             cx.jobs.callback(async move { Ok(call) });
