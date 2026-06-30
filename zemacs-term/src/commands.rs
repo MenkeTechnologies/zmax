@@ -505,6 +505,7 @@ impl MappableCommand {
         locate_file, "Locate a file via system locate/mdfind and open it (SPC f L)",
         edit_project_config, "Edit the project-local .zemacs/config.toml (SPC p e)",
         man_page_search, "Search man pages via apropos and view the selected page (SPC h m)",
+        info_search, "Search GNU info manuals (apropos) and view the selected node (SPC h i)",
         diagnostics_verify_setup, "Report the buffer's diagnostics/LSP setup (SPC e v)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
@@ -7567,6 +7568,104 @@ fn man_page_search(cx: &mut Context) {
         }
     })
     .with_dynamic_query(get_pages, Some(275));
+
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// SPC h i : search GNU info manuals via `info --apropos`, seeded with the symbol under the
+/// cursor, and render the chosen node into a scratch buffer. Spacemacs `helm-info-at-point`.
+fn info_search(cx: &mut Context) {
+    // Seed the picker query with the word/symbol under the cursor.
+    let seed = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        let word = if range.from() != range.to() {
+            range
+        } else {
+            textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
+        };
+        let s = text.slice(word.from()..word.to()).to_string().trim().to_string();
+        Some(s).filter(|s| !s.is_empty())
+    };
+
+    #[derive(Debug)]
+    struct InfoEntry {
+        node: String,
+        line: String,
+    }
+
+    // apropos lines look like: "(bash)Bourne Shell Builtins" -- false
+    fn parse(line: &str) -> Option<InfoEntry> {
+        let line = line.trim();
+        let rest = line.strip_prefix('"')?;
+        let end = rest.find('"')?;
+        let node = rest[..end].to_string();
+        if !node.starts_with('(') {
+            return None;
+        }
+        Some(InfoEntry {
+            node,
+            line: line.to_string(),
+        })
+    }
+
+    let columns = [PickerColumn::new("info", |item: &InfoEntry, _: &()| {
+        item.line.clone().into()
+    })];
+
+    let get_nodes = |query: &str,
+                     _editor: &mut Editor,
+                     _config: std::sync::Arc<()>,
+                     injector: &ui::picker::Injector<InfoEntry, ()>| {
+        let query = query.trim().to_owned();
+        if query.is_empty() {
+            return async { Ok(()) }.boxed();
+        }
+        let injector = injector.clone();
+        async move {
+            let out = std::process::Command::new("info")
+                .arg(format!("--apropos={query}"))
+                .output()
+                .ok()
+                .filter(|o| o.status.success())
+                .map(|o| String::from_utf8_lossy(&o.stdout).into_owned());
+            if let Some(out) = out {
+                for line in out.lines().take(500) {
+                    if let Some(entry) = parse(line) {
+                        if injector.push(entry).is_err() {
+                            break;
+                        }
+                    }
+                }
+            }
+            Ok(())
+        }
+        .boxed()
+    };
+
+    let picker = Picker::new(columns, 0, [], (), |cx, item: &InfoEntry, _action| {
+        let out = std::process::Command::new("info")
+            .arg("-o")
+            .arg("-")
+            .arg(&item.node)
+            .output();
+        match out {
+            Ok(o) if o.status.success() && !o.stdout.is_empty() => {
+                let content = String::from_utf8_lossy(&o.stdout).into_owned();
+                show_text_in_scratch(cx.editor, &content);
+                cx.editor.set_status(format!("info {}", item.node));
+            }
+            _ => cx
+                .editor
+                .set_error(format!("could not open info node {}", item.node)),
+        }
+    })
+    .with_dynamic_query(get_nodes, Some(275));
+    let picker = match seed {
+        Some(q) => picker.with_query(q, cx.editor),
+        None => picker,
+    };
 
     cx.push_layer(Box::new(overlaid(picker)));
 }
