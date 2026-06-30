@@ -9529,11 +9529,12 @@
   },
   {
     "spec_id": "fzf.command.rg_reload",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:space s r r"
+      "key:normal:space s r r",
+      "static:global_search"
     ],
-    "note": "global_search; no per-keystroke reload toggle"
+    "note": ":RG -> global_search; dynamic injector re-runs regex on every keystroke (reload-on-keystroke)"
   },
   {
     "spec_id": "fzf.command.lines",
@@ -9595,9 +9596,10 @@
     "spec_id": "fzf.command.history",
     "status": "partial",
     "evidence": [
-      "key:normal:space f r"
+      "key:normal:space f r",
+      "static:frecent_file_picker"
     ],
-    "note": "goto_last_modified_file, not a full MRU picker"
+    "note": ":History -> frecent_file_picker (recent files); frecency not pure MRU"
   },
   {
     "spec_id": "fzf.command.history_cmd",
@@ -20165,5 +20167,53 @@
       "static:record_macro"
     ],
     "note": "kmacro-end-macro = record_macro (start/stop toggle)."
+  },
+  {
+    "spec_id": "emacs.command.enlarge_window_horizontally",
+    "status": "ported",
+    "evidence": [
+      "static:resize_view_wider"
+    ],
+    "note": "emacs enlarge-window-horizontally (C-x }) = zemacs resize_view_wider (CTRL-W >)"
+  },
+  {
+    "spec_id": "emacs.command.shrink_window_horizontally",
+    "status": "ported",
+    "evidence": [
+      "static:resize_view_narrower"
+    ],
+    "note": "emacs shrink-window-horizontally (C-x {) = zemacs resize_view_narrower (CTRL-W <)"
+  },
+  {
+    "spec_id": "emacs.command.capitalize_word",
+    "status": "partial",
+    "evidence": [
+      "static:title_case_selection"
+    ],
+    "note": "emacs capitalize-word = zemacs title_case_selection (capitalize each word in selection)"
+  },
+  {
+    "spec_id": "emacs.command.mark_word",
+    "status": "partial",
+    "evidence": [
+      "static:extend_next_word_end"
+    ],
+    "note": "emacs mark-word (M-@) = zemacs extend_next_word_end"
+  },
+  {
+    "spec_id": "emacs.command.move_to_window_line_top_bottom",
+    "status": "partial",
+    "evidence": [
+      "static:goto_window_center"
+    ],
+    "note": "emacs move-to-window-line-top-bottom (M-r) = zemacs goto_window_center"
+  },
+  {
+    "spec_id": "emacs.command.cycle_spacing",
+    "status": "partial",
+    "evidence": [
+      "typable:just-one-space"
+    ],
+    "note": "emacs cycle-spacing (M-SPC) default = zemacs :just-one-space"
   }
 ]
