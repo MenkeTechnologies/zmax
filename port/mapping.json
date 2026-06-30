@@ -2701,7 +2701,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -8297,7 +8297,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_bU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s B"
   ],
@@ -8545,7 +8545,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_dU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s D"
   ],
@@ -8553,7 +8553,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_fU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s F"
   ],
@@ -8561,7 +8561,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_a_aU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s a A"
   ],
@@ -8569,7 +8569,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_a_bU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s a B"
   ],
@@ -8577,7 +8577,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_a_dU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s a D"
   ],
@@ -8585,7 +8585,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_a_fU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s a F"
   ],
@@ -8593,7 +8593,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_a_pU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s a P"
   ],
@@ -8601,7 +8601,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_g_gU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s g G"
   ],
@@ -8609,7 +8609,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_g_bU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s g B"
   ],
@@ -8617,7 +8617,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_g_fU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s g F"
   ],
@@ -8625,7 +8625,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_k_bU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s k B"
   ],
@@ -8633,7 +8633,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_k_dU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s k D"
   ],
@@ -8641,7 +8641,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_k_fU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s k F"
   ],
@@ -8649,7 +8649,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_k_pU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s k P"
   ],
@@ -8657,7 +8657,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_r_rU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s r R"
   ],
@@ -8665,7 +8665,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_r_bU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s r B"
   ],
@@ -8673,7 +8673,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_r_fU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s r F"
   ],
@@ -8681,7 +8681,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_r_dU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s r D"
   ],
@@ -8689,7 +8689,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_s_r_pU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space s r P"
   ],
@@ -10374,5 +10374,21 @@
    "key:normal:space k ` k"
   ],
   "note": "spacemacs spc_k_bt_k -> hybrid delete sexp"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_s_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space s c"
+  ],
+  "note": "clear persistent search highlight"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_star",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space *"
+  ],
+  "note": "search with default input (symbol at point)"
  }
 ]

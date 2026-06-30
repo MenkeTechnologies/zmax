@@ -469,6 +469,15 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         self
     }
 
+    /// Seed the picker's prompt with an initial query (e.g. the symbol under the
+    /// cursor, for "search with default input"). Reparses immediately so a
+    /// subsequent `with_dynamic_query` fires with the seed already in place.
+    pub fn with_query(mut self, query: String, editor: &Editor) -> Self {
+        self.prompt.set_line(query, editor);
+        self.handle_prompt_change(true);
+        self
+    }
+
     pub fn with_initial_cursor(mut self, cursor: u32) -> Self {
         self.cursor = cursor;
         self

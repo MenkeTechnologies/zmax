@@ -1040,9 +1040,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "`" => jump_backward,              // SPC s ` : back to pre-jump location
                 "P" => global_search,              // SPC s P : search in a project
                 "d" => global_search,              // SPC s d : search current directory
-                "D" => global_search,              // SPC s D : search current directory (alt tool)
-                "B" => global_search,              // SPC s B : search all open buffers
-                "F" => global_search,              // SPC s F : search files in a directory
+                "c" => clear_search_highlight,     // SPC s c : clear persistent search highlight
+                // uppercase variants are the "with default input" forms: seeded
+                // with the symbol under the cursor.
+                "D" => global_search_symbol,       // SPC s D : search current directory (default input)
+                "B" => global_search_symbol,       // SPC s B : search all open buffers (default input)
+                "F" => global_search_symbol,       // SPC s F : search files in a directory (default input)
                 "l" => last_picker,                // SPC s l : resume last search
                 "L" => buffer_line_picker,         // SPC s L : fuzzy lines in current buffer (:BLines)
                 "H" => search_next,                // SPC s H : go to last search occurrence
@@ -1051,25 +1054,25 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "a" => { "ag"
                     "a" => global_search, "b" => global_search, "d" => global_search,
                     "f" => global_search, "p" => global_search,
-                    "A" => global_search, "B" => global_search, "D" => global_search,
-                    "F" => global_search, "P" => global_search,
+                    "A" => global_search_symbol, "B" => global_search_symbol, "D" => global_search_symbol,
+                    "F" => global_search_symbol, "P" => global_search_symbol,
                 },
                 "g" => { "grep"
                     "g" => global_search, "b" => global_search, "f" => global_search,
                     "d" => global_search, "p" => global_search,
-                    "G" => global_search, "B" => global_search, "F" => global_search,
+                    "G" => global_search_symbol, "B" => global_search_symbol, "F" => global_search_symbol,
                 },
                 "k" => { "ack"
                     "b" => global_search, "d" => global_search,
                     "f" => global_search, "p" => global_search,
-                    "B" => global_search, "D" => global_search,
-                    "F" => global_search, "P" => global_search,
+                    "B" => global_search_symbol, "D" => global_search_symbol,
+                    "F" => global_search_symbol, "P" => global_search_symbol,
                 },
                 "r" => { "rg"
                     "r" => global_search, "b" => global_search, "f" => global_search,
                     "d" => global_search, "p" => global_search,
-                    "R" => global_search, "B" => global_search, "F" => global_search,
-                    "D" => global_search, "P" => global_search,
+                    "R" => global_search_symbol, "B" => global_search_symbol, "F" => global_search_symbol,
+                    "D" => global_search_symbol, "P" => global_search_symbol,
                 },
             },
             "R" => { "Run"
@@ -1094,6 +1097,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "v" => dap_variables,              // SPC d v : list variables
                 "q" => dap_terminate,              // SPC d q : end debug session
             },
+            "*" => global_search_symbol,           // SPC * : search with default input (symbol at point)
             "S" => settings_page,                  // SPC S : Preferences → Settings tab
             "," => preferences,                    // SPC , : open the unified Preferences window
             "z" => toggle_ide,                     // SPC z : toggle IDE workbench (Zen / focus mode)

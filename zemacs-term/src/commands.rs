@@ -406,6 +406,8 @@ impl MappableCommand {
         search_selection_detect_word_boundaries, "Use current selection as the search pattern, automatically wrapping with `\\b` on word boundaries",
         make_search_word_bounded, "Modify current search to make it word bounded",
         global_search, "Global search in workspace folder",
+        global_search_symbol, "Global search seeded with the symbol under the cursor",
+        clear_search_highlight, "Clear persistent search highlight (SPC s c)",
         extend_line, "Select current line, if already selected, extend to another line based on the anchor",
         extend_line_below, "Select current line, if already selected, extend to next line",
         extend_line_above, "Select current line, if already selected, extend to previous line",
@@ -5801,6 +5803,46 @@ fn make_search_word_bounded(cx: &mut Context) {
 }
 
 fn global_search(cx: &mut Context) {
+    global_search_seeded(cx, None)
+}
+
+/// Clear persistent search state/highlight (Spacemacs `SPC s c`): drops the
+/// active search register so nothing remains highlighted or navigable.
+fn clear_search_highlight(cx: &mut Context) {
+    let reg = cx.editor.registers.last_search_register;
+    cx.editor.registers.remove(reg);
+    cx.editor.clear_status();
+}
+
+/// The word/selection under the cursor, for "search with default input".
+fn symbol_at_point(cx: &mut Context) -> Option<String> {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    // A non-empty selection wins; otherwise grab the word object at the cursor.
+    let word = if range.from() != range.to() {
+        range
+    } else {
+        textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
+    };
+    let s: String = text.slice(word.from()..word.to()).to_string();
+    let s = s.trim();
+    if s.is_empty() {
+        None
+    } else {
+        Some(regex::escape(s))
+    }
+}
+
+/// Like `global_search` but pre-seeds the query with the symbol under the
+/// cursor (Spacemacs "search … with default input", the uppercase `SPC s`
+/// variants and `SPC *`).
+fn global_search_symbol(cx: &mut Context) {
+    let seed = symbol_at_point(cx);
+    global_search_seeded(cx, seed)
+}
+
+fn global_search_seeded(cx: &mut Context, seed: Option<String>) {
     #[derive(Debug)]
     struct FileResult<'a> {
         path: Cow<'a, Path>,
@@ -6022,8 +6064,12 @@ fn global_search(cx: &mut Context) {
              ..
          }| { Some((path.as_ref().into(), Some((*line_start, *line_end)))) },
     )
-    .with_history_register(Some(reg))
-    .with_dynamic_query(get_files, Some(275));
+    .with_history_register(Some(reg));
+    let picker = match seed {
+        Some(q) if !q.is_empty() => picker.with_query(q, cx.editor),
+        _ => picker,
+    };
+    let picker = picker.with_dynamic_query(get_files, Some(275));
 
     cx.push_layer(Box::new(overlaid(picker)));
 }
