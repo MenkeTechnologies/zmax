@@ -417,6 +417,7 @@ impl MappableCommand {
         goto_next_close_paren, "Go forward to next closing paren (SPC k j)",
         goto_prev_open_paren, "Go backward to previous opening paren (SPC k k)",
         ediff_windows, "Diff the two front windows side by side (SPC D w w)",
+        transpose_paragraph, "Swap the current paragraph with the previous one (SPC x t p)",
         make_3_windows, "Lay out three vertical windows (SPC w 3)",
         make_4_windows, "Lay out a 2x2 window grid (SPC w 4)",
         narrow_to_function, "Narrow the buffer to the enclosing function (SPC n f)",
@@ -6132,6 +6133,79 @@ fn goto_prev_open_paren(cx: &mut Context) {
 }
 
 /// SPC w 3: lay out three vertical windows.
+/// Swap the text in char range `prev` with `cur` (prev must precede cur), keeping
+/// the separator between them. Returns the rebuilt `prev.0..cur.1` slice. Pure.
+fn swap_ranges_text(s: &str, prev: (usize, usize), cur: (usize, usize)) -> String {
+    let ch: Vec<char> = s.chars().collect();
+    let pt: String = ch[prev.0..prev.1].iter().collect();
+    let mid: String = ch[prev.1..cur.0].iter().collect();
+    let ct: String = ch[cur.0..cur.1].iter().collect();
+    format!("{ct}{mid}{pt}")
+}
+
+/// Find the (previous, current) paragraph char-ranges around `cursor` in `lines`
+/// terms, expressed as char offsets into the whole text. Pure (tested).
+fn paragraph_ranges(
+    line_starts: &[usize],
+    blanks: &[bool],
+    cursor_line: usize,
+) -> Option<((usize, usize), (usize, usize))> {
+    let n = blanks.len();
+    if n == 0 || cursor_line >= n || blanks[cursor_line] {
+        return None;
+    }
+    let mut cs = cursor_line;
+    while cs > 0 && !blanks[cs - 1] {
+        cs -= 1;
+    }
+    let mut ce = cursor_line;
+    while ce + 1 < n && !blanks[ce + 1] {
+        ce += 1;
+    }
+    if cs == 0 {
+        return None;
+    }
+    let mut pe = cs - 1;
+    while pe > 0 && blanks[pe] {
+        pe -= 1;
+    }
+    if blanks[pe] {
+        return None;
+    }
+    let mut ps = pe;
+    while ps > 0 && !blanks[ps - 1] {
+        ps -= 1;
+    }
+    let line_char = |l: usize| line_starts.get(l).copied();
+    let pr = (line_char(ps)?, line_char(pe + 1)?);
+    let cr = (line_char(cs)?, line_char(ce + 1)?);
+    Some((pr, cr))
+}
+
+/// SPC x t p: swap the current paragraph with the previous one.
+fn transpose_paragraph(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let n = text.len_lines();
+    let line_starts: Vec<usize> = (0..=n).map(|l| text.line_to_char(l.min(n))).collect();
+    let blanks: Vec<bool> = (0..n).map(|l| text.line(l).to_string().trim().is_empty()).collect();
+    let cur_line = text.char_to_line(
+        doc.selection(view.id)
+            .primary()
+            .head
+            .min(text.len_chars().saturating_sub(1)),
+    );
+    let Some((pr, cr)) = paragraph_ranges(&line_starts, &blanks, cur_line) else {
+        cx.editor.set_status("no previous paragraph to transpose");
+        return;
+    };
+    let whole = text.to_string();
+    let swapped = swap_ranges_text(&whole, pr, cr);
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((pr.0, cr.1, Some(swapped.into()))));
+    doc.apply(&transaction, view.id);
+}
+
 fn make_3_windows(cx: &mut Context) {
     wonly(cx);
     vsplit(cx);
@@ -14281,6 +14355,26 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn transpose_paragraph_swaps_with_previous() {
+        // three lines, blank, three lines — cursor in the second paragraph
+        let s = "alpha\n\nbeta\n";
+        let line_starts: Vec<usize> = {
+            let mut v = vec![0];
+            let mut acc = 0;
+            for line in s.split_inclusive('\n') {
+                acc += line.chars().count();
+                v.push(acc);
+            }
+            v
+        };
+        let blanks = vec![false, true, false];
+        let (pr, cr) = paragraph_ranges(&line_starts, &blanks, 2).expect("ranges");
+        let out = swap_ranges_text(s, pr, cr);
+        assert!(out.starts_with("beta"), "current paragraph moved up: {out:?}");
+        assert!(out.trim_end().ends_with("alpha"), "previous moved down: {out:?}");
     }
 
     #[test]
