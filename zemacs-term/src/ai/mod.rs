@@ -157,6 +157,53 @@ pub fn provider() -> Result<Box<dyn Provider>, String> {
     }
 }
 
+/// Read the project's AI rules — Cursor's `.cursorrules` (single file) or `.cursor/rules/*.md`
+/// (and `.mdc`) — from the workspace root, concatenated. Returns `None` if there are none.
+pub fn project_rules() -> Option<String> {
+    let root = zemacs_loader::find_workspace().0;
+    if let Ok(s) = std::fs::read_to_string(root.join(".cursorrules")) {
+        if !s.trim().is_empty() {
+            return Some(s);
+        }
+    }
+    let dir = root.join(".cursor").join("rules");
+    if dir.is_dir() {
+        let mut files: Vec<std::path::PathBuf> = std::fs::read_dir(&dir)
+            .into_iter()
+            .flatten()
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| {
+                matches!(
+                    p.extension().and_then(|x| x.to_str()),
+                    Some("md") | Some("mdc")
+                )
+            })
+            .collect();
+        files.sort();
+        let mut out = String::new();
+        for f in files {
+            if let Ok(s) = std::fs::read_to_string(&f) {
+                out.push_str(s.trim());
+                out.push_str("\n\n");
+            }
+        }
+        if !out.trim().is_empty() {
+            return Some(out);
+        }
+    }
+    None
+}
+
+/// Append the project's [`project_rules`] to a base system prompt, if any exist. Used by every AI
+/// feature so chat / edit / agent all respect the project's rules.
+pub fn system_with_rules(base: &str) -> String {
+    match project_rules() {
+        Some(rules) => format!("{base}\n\nProject rules (.cursorrules) — follow these:\n{}", rules.trim()),
+        None => base.to_string(),
+    }
+}
+
 /// Read an HTTP response body, turning a non-2xx status into a descriptive error that includes
 /// the response body (which usually carries the provider's error message). Shared by backends.
 pub(crate) fn read_response(

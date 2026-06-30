@@ -529,6 +529,7 @@ impl MappableCommand {
         ai_generate_tests, "Generate tests for the selection with AI (SPC a u)",
         ai_commit_message, "Generate a git commit message with AI (SPC a c)",
         ai_agent, "Run the autonomous AI agent on a task (SPC a a)",
+        ai_fix, "AI-fix the diagnostic(s) on the current line (SPC a F)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
         copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
@@ -8892,11 +8893,9 @@ fn ai_chat(cx: &mut Context) {
                         user = format!("{user}\n\nRelevant code:\n```{l}\n{code}\n```");
                     }
                     let msgs = vec![crate::ai::Message::user(user)];
+                    let system = crate::ai::system_with_rules("You are a coding assistant embedded in the zemacs editor. Answer concisely; use fenced code blocks for code.");
                     provider
-                        .chat(
-                            Some("You are a coding assistant embedded in the zemacs editor. Answer concisely; use fenced code blocks for code."),
-                            &msgs,
-                        )
+                        .chat(Some(&system), &msgs)
                         .map_err(|e| anyhow::anyhow!(e))
                 })
                 .await
@@ -8959,14 +8958,14 @@ fn ai_inline_edit(cx: &mut Context) {
             cx.jobs.callback(async move {
                 let out = tokio::task::spawn_blocking(move || {
                     let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
-                    let sys = "You are a code-editing assistant inside the zemacs editor. Apply the user's instruction and output ONLY the resulting code — no explanation, no markdown code fences.";
+                    let sys = crate::ai::system_with_rules("You are a code-editing assistant inside the zemacs editor. Apply the user's instruction and output ONLY the resulting code — no explanation, no markdown code fences.");
                     let user = if code.is_empty() {
                         format!("Language: {lang}\nInstruction: {instr}")
                     } else {
                         format!("Language: {lang}\nInstruction: {instr}\n\nCode to edit:\n{code}")
                     };
                     provider
-                        .chat(Some(sys), &[crate::ai::Message::user(user)])
+                        .chat(Some(&sys), &[crate::ai::Message::user(user)])
                         .map_err(|e| anyhow::anyhow!(e))
                 })
                 .await
@@ -8999,8 +8998,9 @@ fn ai_run_to_scratch(cx: &mut Context, system: &'static str, user: String, done:
     cx.jobs.callback(async move {
         let text = tokio::task::spawn_blocking(move || {
             let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
+            let system = crate::ai::system_with_rules(system);
             provider
-                .chat(Some(system), &[crate::ai::Message::user(user)])
+                .chat(Some(&system), &[crate::ai::Message::user(user)])
                 .map_err(|e| anyhow::anyhow!(e))
         })
         .await
@@ -9091,6 +9091,69 @@ fn ai_commit_message(cx: &mut Context) {
             let _ = editor.registers.write('+', vec![text.clone()]);
             show_text_in_scratch(editor, &text);
             editor.set_status("AI commit message (copied to clipboard)");
+        })))
+    });
+}
+
+/// SPC a F : ask the AI to fix the diagnostic(s) on the current line, replacing the line with the
+/// corrected code (undoable). Cursor's "AI fix" quick action.
+fn ai_fix(cx: &mut Context) {
+    let (from, to, code, diags, lang) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let line = text.char_to_line(doc.selection(view.id).primary().cursor(slice));
+        let line_slice = text.line(line);
+        let has_nl = line_slice.len_chars() > 0
+            && line_slice.char(line_slice.len_chars() - 1) == '\n';
+        let content_len = line_slice.len_chars() - usize::from(has_nl);
+        let from = text.line_to_char(line);
+        let to = from + content_len;
+        let diags: Vec<String> = doc
+            .diagnostics()
+            .iter()
+            .filter(|d| d.line == line)
+            .map(|d| d.message.clone())
+            .collect();
+        (
+            from,
+            to,
+            text.slice(from..to).to_string(),
+            diags,
+            doc.language_name().unwrap_or("").to_string(),
+        )
+    };
+    if diags.is_empty() {
+        cx.editor.set_status("AI fix: no diagnostic on this line");
+        return;
+    }
+    let diag_text = diags.join("; ");
+    cx.editor.set_status("AI: fixing…");
+    cx.jobs.callback(async move {
+        let new_text = tokio::task::spawn_blocking(move || {
+            let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
+            let sys = crate::ai::system_with_rules("You are a code-fixing assistant. Fix the reported problem(s) in the given line of code. Output ONLY the corrected code for that line — no explanation, no markdown fences.");
+            let user = format!("Language: {lang}\nProblem(s): {diag_text}\n\nCode line:\n{code}");
+            provider
+                .chat(Some(&sys), &[crate::ai::Message::user(user)])
+                .map_err(|e| anyhow::anyhow!(e))
+        })
+        .await
+        .map_err(|e| anyhow::anyhow!("ai task: {e}"))??;
+        let new_text = strip_code_fences(&new_text);
+        Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+            {
+                let (view, doc) = current!(editor);
+                let end = to.min(doc.text().len_chars());
+                let start = from.min(end);
+                let tx = Transaction::change(
+                    doc.text(),
+                    std::iter::once((start, end, Some(new_text.into()))),
+                );
+                doc.apply(&tx, view.id);
+                doc.append_changes_to_history(view);
+            }
+            editor.set_status("AI fix applied (u to undo)");
         })))
     });
 }

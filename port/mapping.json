@@ -19424,5 +19424,22 @@
    "static:ai_agent"
   ],
   "note": "auto-run commands via ZEMACS_AI_AGENT_ALLOW_EXEC=1"
+ },
+ {
+  "spec_id": "cursor.misc.rules",
+  "status": "ported",
+  "evidence": [
+   "static:project_rules"
+  ],
+  "note": ".cursorrules / .cursor/rules -> project_rules; threaded into all AI system prompts"
+ },
+ {
+  "spec_id": "cursor.misc.fix",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a F",
+   "static:ai_fix"
+  ],
+  "note": "AI fix diagnostic on line -> ai_fix"
  }
 ]
