@@ -634,16 +634,21 @@ impl Tree {
     pub fn split_divider_at(&self, col: u16, row: u16) -> Option<(ViewId, bool)> {
         self.views().map(|(view, _)| view).find_map(|view| {
             let a = view.area;
-            // Vertical divider on the view's right edge (between L/R panes).
-            if col == a.right()
+            // Vertical divider between side-by-side panes. Accept the right-edge
+            // column and the one just left of it, so the 1-cell border is easier
+            // to grab (the thin target was the "sometimes can't drag" symptom).
+            if (col + 1 == a.right() || col == a.right())
                 && row >= a.y
                 && row < a.y + a.height
                 && a.right() < self.area.x + self.area.width
             {
                 return Some((view.id, true));
             }
-            // Horizontal divider on the view's bottom edge (between T/B panes).
-            if row == a.y + a.height
+            // Horizontal divider between stacked panes. The *visible* separator
+            // is the top pane's statusline (its last row, `bottom - 1`), so accept
+            // both that row and the bottom edge itself — otherwise the user has to
+            // click one row below the line they can actually see.
+            if (row + 1 == a.y + a.height || row == a.y + a.height)
                 && col >= a.x
                 && col < a.x + a.width
                 && a.y + a.height < self.area.y + self.area.height
@@ -1105,6 +1110,48 @@ mod test {
         assert_eq!(rebuilt.get(rebuilt.focus).doc, DocumentId::new(20));
         // The returned ids are in the same order as the rebuilt leaves.
         assert_eq!(new_ids, rebuilt.leaf_ids());
+    }
+
+    #[test]
+    fn horizontal_divider_hitbox_includes_statusline_row() {
+        // Two stacked panes (a `:split`): top [y 0..40], bottom [y 40..80].
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 180,
+            height: 80,
+        };
+        let mut tree = Tree::new(area);
+        let mut v0 = View::new(DocumentId::new(1), GutterConfig::default());
+        v0.area = area;
+        tree.insert(v0);
+        tree.split(
+            View::new(DocumentId::new(2), GutterConfig::default()),
+            Layout::Horizontal,
+        );
+
+        // Identify the top pane (the one anchored at y == 0).
+        let top = tree
+            .views()
+            .map(|(v, _)| v)
+            .find(|v| v.area.y == 0)
+            .map(|v| v.id)
+            .unwrap();
+        let split_row = tree.get(top).area.y + tree.get(top).area.height; // 40
+
+        // The visible divider is the top pane's statusline (split_row - 1) — it
+        // must be grabbable, and so must the boundary row itself.
+        assert_eq!(
+            tree.split_divider_at(90, split_row - 1),
+            Some((top, false)),
+            "statusline row must be a grabbable horizontal divider"
+        );
+        assert_eq!(tree.split_divider_at(90, split_row), Some((top, false)));
+        // Interior content rows are not dividers.
+        assert_eq!(tree.split_divider_at(90, split_row - 2), None);
+        assert_eq!(tree.split_divider_at(90, 10), None);
+        // The bottom pane's own last row has nothing below it: not a divider.
+        assert_eq!(tree.split_divider_at(90, area.height - 1), None);
     }
 
     #[test]
