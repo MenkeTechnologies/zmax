@@ -1377,6 +1377,10 @@ pub struct Editor {
     pub overwrite: bool,
     /// vim visual-block selection state, when the current Select is a block.
     pub block: Option<BlockSelect>,
+    /// Spacemacs subword-mode (`SPC t c`): when set, the `w`/`b`/`e` word
+    /// motions (and the operators built on them) move by sub-word, splitting
+    /// CamelCase / snake_case identifiers. A persistent toggle.
+    pub subword: bool,
     pub tree: Tree,
     pub next_document_id: DocumentId,
     pub documents: BTreeMap<DocumentId, Document>,
@@ -1570,6 +1574,7 @@ impl Editor {
             mode: Mode::Normal,
             overwrite: false,
             block: None,
+            subword: false,
             tree: Tree::new(area),
             next_document_id: DocumentId::default(),
             documents: BTreeMap::new(),

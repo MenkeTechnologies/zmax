@@ -961,6 +961,13 @@ impl MappableCommand {
         kmacro_insert_counter, "Insert the macro counter value, then increment (SPC K c c)",
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
         toggle_window_dedication, "Toggle window dedication (spacemacs SPC w t)",
+        toggle_subword, "Toggle sub-word w/b/e motions (spacemacs SPC t c)",
+        subword_w, "Next word start, sub-word aware (w)",
+        subword_b, "Previous word start, sub-word aware (b)",
+        subword_e, "Next word end, sub-word aware (e)",
+        subword_extend_w, "Extend to next word start, sub-word aware",
+        subword_extend_b, "Extend to previous word start, sub-word aware",
+        subword_extend_e, "Extend to next word end, sub-word aware",
         paredit_slurp_forward, "Paredit: slurp the next s-expression forward (SPC k s)",
         paredit_barf_forward, "Paredit: barf the last s-expression forward (SPC k b)",
         paredit_slurp_backward, "Paredit: slurp the previous s-expression backward (SPC k S)",
@@ -16857,6 +16864,62 @@ fn toggle_window_dedication(cx: &mut Context) {
     let on = view.dedicated;
     cx.editor
         .set_status(format!("window dedication: {}", if on { "on" } else { "off" }));
+}
+
+/// Spacemacs subword-mode (`SPC t c`): toggle sub-word `w`/`b`/`e` motions.
+fn toggle_subword(cx: &mut Context) {
+    cx.editor.subword = !cx.editor.subword;
+    let on = cx.editor.subword;
+    cx.editor
+        .set_status(format!("subword motion: {}", if on { "on" } else { "off" }));
+}
+
+// Subword-aware word-motion dispatchers: when subword-mode is on, the `w`/`b`/`e`
+// motions (and every operator built on the `extend_*` variants) move by sub-word
+// instead of word. When off they call the original command, so behavior is
+// identical. This keeps the core motion fns untouched.
+fn subword_w(cx: &mut Context) {
+    if cx.editor.subword {
+        // vim-faithful landing (ON the next sub-word start), like vim_move_*.
+        move_word_vim_impl(cx, movement::move_next_sub_word_start, false)
+    } else {
+        vim_move_next_word_start(cx)
+    }
+}
+fn subword_b(cx: &mut Context) {
+    if cx.editor.subword {
+        move_word_vim_impl(cx, movement::move_prev_sub_word_start, false)
+    } else {
+        vim_move_prev_word_start(cx)
+    }
+}
+fn subword_e(cx: &mut Context) {
+    if cx.editor.subword {
+        move_word_vim_impl(cx, movement::move_next_sub_word_end, true)
+    } else {
+        vim_move_next_word_end(cx)
+    }
+}
+fn subword_extend_w(cx: &mut Context) {
+    if cx.editor.subword {
+        extend_next_sub_word_start(cx)
+    } else {
+        extend_next_word_start(cx)
+    }
+}
+fn subword_extend_b(cx: &mut Context) {
+    if cx.editor.subword {
+        extend_prev_sub_word_start(cx)
+    } else {
+        extend_prev_word_start(cx)
+    }
+}
+fn subword_extend_e(cx: &mut Context) {
+    if cx.editor.subword {
+        extend_next_sub_word_end(cx)
+    } else {
+        extend_next_word_end(cx)
+    }
 }
 
 fn scroll_up(cx: &mut Context) {

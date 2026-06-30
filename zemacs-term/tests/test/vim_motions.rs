@@ -184,3 +184,67 @@ async fn ctrl_v_dollar_is_ragged_right() -> anyhow::Result<()> {
     test_with_config(vim(), ("#[a|]#b\nabcd", "<C-v>j$", "#(ab|)#\n#[abcd|]#")).await?;
     Ok(())
 }
+
+/// Spacemacs subword-mode (SPC t c): `w` moves by sub-word, splitting CamelCase.
+#[tokio::test(flavor = "multi_thread")]
+async fn subword_w_splits_camelcase() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "fooBarBaz")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+    app.editor.subword = true; // as if SPC t c had been pressed
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("w"),
+            Some(&|app| {
+                let view = app.editor.tree.get(app.editor.tree.focus);
+                let doc = app.editor.documents().next().unwrap();
+                let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+                assert_eq!(3, pos, "subword `w` should land on 'B' of Bar (col 3)");
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// With subword-mode on, `dw` deletes a single sub-word.
+#[tokio::test(flavor = "multi_thread")]
+async fn subword_dw_deletes_one_subword() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "fooBarBaz")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+    app.editor.subword = true;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("dw"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!("BarBaz", doc.text().to_string(), "subword `dw` deletes only 'foo'");
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}

@@ -19450,5 +19450,13 @@
    "key:normal:space w t"
   ],
   "note": "spacemacs SPC w t -> toggle_window_dedication (dedicated window splits on opening other buffers)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_c_2",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t c"
+  ],
+  "note": "spacemacs SPC t c -> toggle_subword (sub-word w/b/e motions + operators)"
  }
 ]
