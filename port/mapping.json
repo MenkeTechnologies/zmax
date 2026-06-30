@@ -11810,17 +11810,17 @@
   "spec_id": "jetbrains.refactoring.extract-method",
   "status": "partial",
   "evidence": [
-   "static:code_action"
+   "static:extract_refactor"
   ],
-  "note": "via LSP code action"
+  "note": "dedicated refactor.extract code actions (kind-filtered menu)"
  },
  {
   "spec_id": "jetbrains.refactoring.introduce-variable",
   "status": "partial",
   "evidence": [
-   "static:code_action"
+   "static:extract_refactor"
   ],
-  "note": "via LSP code action"
+  "note": "dedicated refactor.extract code actions (kind-filtered menu)"
  },
  {
   "spec_id": "jetbrains.vcs.vcs-operations-popup",
@@ -18418,35 +18418,35 @@
  },
  {
   "spec_id": "jetbrains.refactoring.inline",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:code_action"
+   "static:inline_refactor"
   ],
-  "note": "jetbrains"
+  "note": "dedicated refactor.inline code action"
  },
  {
   "spec_id": "jetbrains.refactoring.change-signature",
   "status": "partial",
   "evidence": [
-   "static:code_action"
+   "static:rewrite_refactor"
   ],
-  "note": "jetbrains"
+  "note": "dedicated refactor.rewrite code actions"
  },
  {
   "spec_id": "jetbrains.refactoring.introduce-field",
   "status": "partial",
   "evidence": [
-   "static:code_action"
+   "static:extract_refactor"
   ],
-  "note": "jetbrains"
+  "note": "dedicated refactor.extract code actions (kind-filtered menu)"
  },
  {
   "spec_id": "jetbrains.refactoring.introduce-parameter",
   "status": "partial",
   "evidence": [
-   "static:code_action"
+   "static:extract_refactor"
   ],
-  "note": "jetbrains"
+  "note": "dedicated refactor.extract code actions (kind-filtered menu)"
  },
  {
   "spec_id": "jetbrains.refactoring.safe-delete",
@@ -18988,9 +18988,9 @@
   "spec_id": "jetbrains.refactoring.extract-constant",
   "status": "partial",
   "evidence": [
-   "static:code_action"
+   "static:extract_refactor"
   ],
-  "note": "via LSP code action"
+  "note": "dedicated refactor.extract code actions (kind-filtered menu)"
  },
  {
   "spec_id": "jetbrains.refactoring.pull-members-up",
