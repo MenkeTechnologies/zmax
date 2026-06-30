@@ -19528,5 +19528,40 @@
    "key:normal:space w f"
   ],
   "note": "spacemacs SPC w f -> toggle_follow_mode (windows on same doc scroll as one continuous view)"
+ },
+ {
+  "spec_id": "cursor.edit.diff_preview",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a E",
+   "static:ai_inline_edit_preview"
+  ],
+  "note": "inline edit diff preview -> ai_inline_edit_preview (read-only DiffView original vs proposed)"
+ },
+ {
+  "spec_id": "cursor.edit.accept_reject",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a .",
+   "static:ai_accept_edit"
+  ],
+  "note": "accept/reject pending edit -> ai_accept_edit (Esc/close rejects)"
+ },
+ {
+  "spec_id": "cursor.agent.plan",
+  "status": "ported",
+  "evidence": [
+   "static:ai_agent"
+  ],
+  "note": "agent plan/todos -> update_plan tool (records ordered plan, shown in transcript)"
+ },
+ {
+  "spec_id": "cursor.edit.followup",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a e",
+   "static:ai_inline_edit"
+  ],
+  "note": "inline-edit follow-up: result is selected so re-running ai_inline_edit refines it"
  }
 ]
