@@ -6201,11 +6201,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_l",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space f l"
+   "key:normal:space f l",
+   "static:open_file_literally"
   ],
-  "note": "open file literally -> file picker"
+  "note": "find-file-literally -> open_file_literally (open then set_language(None): no syntax)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_a",

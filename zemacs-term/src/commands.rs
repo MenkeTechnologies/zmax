@@ -501,6 +501,7 @@ impl MappableCommand {
         narrow_to_page, "Narrow the buffer to the current page (SPC n p)",
         copy_file, "Copy the current file to a prompted destination (SPC f c)",
         find_file_replace_buffer, "Open a file and replace the current buffer with it (SPC f A)",
+        open_file_literally, "Open a file with no syntax/language (fundamental mode, SPC f l)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7389,6 +7390,34 @@ fn open_file_external(cx: &mut Context) {
         },
         None => cx.editor.set_error("buffer has no file path"),
     }
+}
+
+/// SPC f l : open a prompted file with no language/syntax applied — the equivalent of Emacs'
+/// `find-file-literally` / fundamental-mode (raw text, no highlighting or language servers).
+fn open_file_literally(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "find file literally:".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let path = std::path::PathBuf::from(input.trim());
+            match cx.editor.open(&path, Action::Replace) {
+                Ok(id) => {
+                    let loader = cx.editor.syn_loader.load();
+                    if let Some(doc) = cx.editor.document_mut(id) {
+                        doc.set_language(None, &loader);
+                    }
+                    cx.editor
+                        .set_status(format!("opened literally (no syntax): {}", path.display()));
+                }
+                Err(e) => cx.editor.set_error(format!("open {}: {e}", path.display())),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 /// `git init` in the current working directory (Spacemacs `SPC g i`).

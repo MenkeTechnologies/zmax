@@ -916,7 +916,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
             "f" => { "Files"
                 "f" => file_picker,                            // SPC f f
-                "l" => file_picker,                            // SPC f l : open file literally
+                "l" => open_file_literally,                    // SPC f l : open file with no syntax (fundamental mode)
                 "A" => find_file_replace_buffer,               // SPC f A : open file, replace + close current buffer
                 "o" => open_file_external,                     // SPC f o : open with external program
                 "F" => goto_file,                              // SPC f F : open file under point
