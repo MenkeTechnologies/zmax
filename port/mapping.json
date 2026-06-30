@@ -2701,7 +2701,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -18932,5 +18932,61 @@
    "static:unwrap_tag_selection"
   ],
   "note": "tag unwrap ~ unwrap/remove"
+ },
+ {
+  "spec_id": "jetbrains.window.stretch-split-right",
+  "status": "ported",
+  "evidence": [
+   "static:resize_view_wider"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.window.stretch-split-left",
+  "status": "ported",
+  "evidence": [
+   "static:resize_view_narrower"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.window.stretch-split-up",
+  "status": "ported",
+  "evidence": [
+   "static:resize_view_shorter"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.window.stretch-split-down",
+  "status": "ported",
+  "evidence": [
+   "static:resize_view_taller"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.refactoring.extract-constant",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "via LSP code action"
+ },
+ {
+  "spec_id": "jetbrains.refactoring.pull-members-up",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "via LSP code action"
+ },
+ {
+  "spec_id": "jetbrains.refactoring.push-members-down",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "via LSP code action"
  }
 ]

@@ -1542,5 +1542,61 @@
   "name": "Unwrap/Remove",
   "desc": "IntelliJ IDEA default keymap: Cmd Shift Delete",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.stretch-split-right",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Stretch Split to Right",
+  "desc": "IntelliJ IDEA default keymap: Cmd Shift Right",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.stretch-split-left",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Stretch Split to Left",
+  "desc": "IntelliJ IDEA default keymap: Cmd Shift Left",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.stretch-split-up",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Stretch Split to Top",
+  "desc": "IntelliJ IDEA default keymap: Cmd Shift Up",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.stretch-split-down",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Stretch Split to Bottom",
+  "desc": "IntelliJ IDEA default keymap: Cmd Shift Down",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.refactoring.extract-constant",
+  "source": "jetbrains",
+  "category": "refactoring",
+  "name": "Extract Constant",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.refactoring.pull-members-up",
+  "source": "jetbrains",
+  "category": "refactoring",
+  "name": "Pull Members Up",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.refactoring.push-members-down",
+  "source": "jetbrains",
+  "category": "refactoring",
+  "name": "Push Members Down",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]
