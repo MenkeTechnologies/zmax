@@ -18468,11 +18468,11 @@
   },
   {
     "spec_id": "jetbrains.refactoring.change-signature",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:rewrite_refactor"
+      "static:change_signature"
     ],
-    "note": "dedicated refactor.rewrite code actions"
+    "note": "Change Signature (Cmd F6) = change_signature: dedicated title-filtered (\"signature\") refactor code action"
   },
   {
     "spec_id": "jetbrains.refactoring.introduce-field",
@@ -19042,19 +19042,19 @@
   },
   {
     "spec_id": "jetbrains.refactoring.pull-members-up",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:code_action"
+      "static:pull_members_up"
     ],
-    "note": "via LSP code action"
+    "note": "Pull Members Up = pull_members_up: dedicated title-filtered (\"pull\") refactor code action"
   },
   {
     "spec_id": "jetbrains.refactoring.push-members-down",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:code_action"
+      "static:push_members_down"
     ],
-    "note": "via LSP code action"
+    "note": "Push Members Down = push_members_down: dedicated title-filtered (\"push\") refactor code action"
   },
   {
     "spec_id": "jetbrains.tool-windows.quick-switch-scheme",
