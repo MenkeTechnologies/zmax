@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d5ddb0b3.js";
+            window.path_to_searchindex_js = "searchindex-755b3eea.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-c0d3b1d1.js"></script>
@@ -580,6 +580,20 @@ can be accessed via the command <code>hx --tutor</code> or <code>:tutor</code>.<
 <p>Also inspired by Kakoune, multiple selections are a core mode of interaction in Zemacs. For example, the standard way of replacing multiple instances of a word is to first select all instances (so there is one selection per instance) and then use the change action (<code>c</code>) to edit them all at the same time.</p>
 <h2 id="motions"><a class="header" href="#motions">Motions</a></h2>
 <p>Motions are commands that move the cursor or modify selections. They’re used for navigation and text manipulation. Examples include <code>w</code> to move to the next word, or <code>f</code> to find a character. See the <a href="#movement">Movement</a> section of the keymap for more motions.</p>
+<h2 id="wildfire"><a class="header" href="#wildfire">Wildfire</a></h2>
+<p><code>&lt;ret&gt;</code> (Enter) in normal mode selects the closest text object around the cursor; pressing it again grows the selection to the next enclosing object (word → pair → larger pair → …). <code>&lt;backspace&gt;</code> shrinks back to the previous selection. This is the “expand selection by syntax” workflow without picking an explicit text object each time.</p>
+<h2 id="snippets"><a class="header" href="#snippets">Snippets</a></h2>
+<p>A snippet is a template with tab stops written in LSP snippet syntax — <code>${1:default}</code> for the Nth stop with a placeholder, <code>$0</code> for where the cursor finally rests, and a number repeated (e.g. <code>${1}</code>) to mirror an edit at several sites at once.</p>
+<p>Snippets reach you two ways:</p>
+<ul>
+<li><strong>Language-server snippets</strong> appear as completion candidates; accept one and it expands with the tab stops queued.</li>
+<li><strong>Your own library</strong> is edited with <code>:snippets</code>, which opens a panel for creating, editing, and deleting reusable snippets (each with a trigger word, a scope — a language name, or <code>*</code>/empty for every language — a description, and a body). The library is saved to <code>snippets.toml</code> in your config directory.</li>
+</ul>
+<p>To use a library snippet, type its trigger word and press <code>Tab</code>: if the word before the cursor matches a trigger whose scope applies to the current language, the body expands in place (user triggers take priority over emmet). Once a snippet is active, <code>Tab</code> and <code>Shift-Tab</code> walk forward and backward through its tab stops.</p>
+<h2 id="hex-editing"><a class="header" href="#hex-editing">Hex editing</a></h2>
+<p><code>:hex</code> (also <code>:hexview</code>/<code>:hexedit</code>) opens a byte-faithful, xxd-style view of a file’s raw bytes — an offset column, the hex bytes, and the ASCII rendering side by side. It takes an optional path and otherwise uses the current buffer’s file. Binary files opened the normal way are routed here automatically rather than rejected. Press <code>i</code>/<code>R</code> to edit, type into the hex or ASCII column (<code>Tab</code> toggles between them), <code>Ctrl-s</code> to write the raw bytes back, and <code>q</code> to close.</p>
+<h2 id="merge-conflicts"><a class="header" href="#merge-conflicts">Merge conflicts</a></h2>
+<p>When a file has git merge conflicts, <code>:merge</code> (also <code>:resolve</code>) opens a three-pane resolver — <em>ours</em> on the left, the <em>result</em> you are building in the middle, <em>theirs</em> on the right, with a diff3 <em>base</em> pane — modeled on JetBrains’ merge tool, with inline character highlighting and horizontal scrolling. <code>]n</code> and <code>[n</code> jump between conflict markers, and the space-<code>g</code> git menu resolves them: <code>SPC g m</code> (or <code>SPC g c r</code>) opens the resolver, <code>SPC g c O</code>/<code>SPC g c T</code> take all of our/their side, and <code>SPC g =</code> shows a read-only diff of the buffer against git <code>HEAD</code> (<code>:diff</code>). The per-conflict typable commands <code>:conflict-ours</code>/<code>:conflict-theirs</code>/<code>:conflict-both</code> resolve the conflict at the cursor.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="registers-1"><a href="#registers-1" class="header">Registers</a></h1>
 <h2 id="registers"><a class="header" href="#registers">Registers</a></h2>
@@ -1285,10 +1299,41 @@ useful when you’re simply looking over text and not actively editing it.</p>
 <tr><td><code>[g</code></td><td>Go to previous change</td><td><code>goto_prev_change</code></td></tr>
 <tr><td><code>]G</code></td><td>Go to last change</td><td><code>goto_last_change</code></td></tr>
 <tr><td><code>[G</code></td><td>Go to first change</td><td><code>goto_first_change</code></td></tr>
+<tr><td><code>]n</code></td><td>Go to next merge-conflict marker</td><td><code>goto_next_conflict</code></td></tr>
+<tr><td><code>[n</code></td><td>Go to previous merge-conflict marker</td><td><code>goto_prev_conflict</code></td></tr>
 <tr><td><code>[x</code></td><td>Go to next (X)HTML element</td><td><code>goto_next_xml_element</code></td></tr>
 <tr><td><code>]x</code></td><td>Go to previous (X)HTML element</td><td><code>goto_prev_xml_element</code></td></tr>
 <tr><td><code>]Space</code></td><td>Add newline below</td><td><code>add_newline_below</code></td></tr>
 <tr><td><code>[Space</code></td><td>Add newline above</td><td><code>add_newline_above</code></td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="wildfire-1"><a class="header" href="#wildfire-1">Wildfire</a></h4>
+<p>In normal mode, expand or shrink the selection by syntax-aware text objects.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Description</th><th>Command</th></tr>
+</thead>
+<tbody>
+<tr><td><code>&lt;ret&gt;</code></td><td>Select / grow to the closest enclosing text object</td><td><code>wildfire</code></td></tr>
+<tr><td><code>&lt;backspace&gt;</code></td><td>Shrink to the previously selected text object</td><td><code>wildfire_shrink</code></td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="git-conflicts-and-merge"><a class="header" href="#git-conflicts-and-merge">Git conflicts and merge</a></h4>
+<p>These live under the space-<code>g</code> git menu (see <a href="#space-mode">Space mode</a>) and the
+unimpaired <code>]n</code>/<code>[n</code> motions above.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Description</th><th>Command</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SPC g m</code>, <code>SPC g c r</code></td><td>Open the 3-pane merge-conflict resolver (<code>:merge</code>)</td><td><code>resolve_conflicts</code></td></tr>
+<tr><td><code>SPC g c O</code></td><td>Resolve all conflicts by keeping our side</td><td><code>conflict_take_all_ours</code></td></tr>
+<tr><td><code>SPC g c T</code></td><td>Resolve all conflicts by keeping their side</td><td><code>conflict_take_all_theirs</code></td></tr>
+<tr><td><code>SPC g =</code></td><td>Side-by-side diff of the buffer vs. git <code>HEAD</code> (<code>:diff</code>)</td><td><code>git_diff</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -1319,11 +1364,17 @@ to get the smoothest experience.</p>
 <tr><td><code>Ctrl-h</code>, <code>Backspace</code>, <code>Shift-Backspace</code></td><td>Delete previous char</td><td><code>delete_char_backward</code></td></tr>
 <tr><td><code>Ctrl-d</code>, <code>Delete</code></td><td>Delete next char</td><td><code>delete_char_forward</code></td></tr>
 <tr><td><code>Ctrl-j</code>, <code>Enter</code></td><td>Insert new line</td><td><code>insert_newline</code></td></tr>
-<tr><td><code>Tab</code></td><td><a href="#editorsmart-tab-section">Smart tab</a> (configurable)</td><td><code>smart_tab</code></td></tr>
+<tr><td><code>Tab</code></td><td>Advance a snippet tab stop, else expand a snippet trigger or emmet abbreviation, else <a href="#editorsmart-tab-section">smart tab</a></td><td><code>emmet_expand</code></td></tr>
 <tr><td><code>Shift-Tab</code></td><td>Insert tab</td><td><code>insert_tab</code></td></tr>
 </tbody>
 </table>
 </div>
+<blockquote>
+<p>💡 <code>Tab</code> is overloaded in insert mode: if a snippet is active it jumps to the
+next tab stop; otherwise it tries to expand the word before the cursor as a
+<a href="#snippets">snippet</a> trigger or an emmet abbreviation; failing
+both, it behaves as a <a href="#editorsmart-tab-section">smart tab</a>.</p>
+</blockquote>
 <p>These keys are not recommended, but are included for new users less familiar
 with modal editors.</p>
 <div class="table-wrapper">
@@ -1512,6 +1563,22 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tbody>
 <tr><td><code>:terminal</code>, <code>:term</code></td><td>Open an integrated terminal (PTY shell) running $SHELL.</td></tr>
 <tr><td><code>:ide</code>, <code>:workbench</code></td><td>Enter IDE mode (file-tree sidebar + panels, like <code>--ide</code> / F2).</td></tr>
+<tr><td><code>:diff</code>, <code>:gdiff</code></td><td>Open a read-only side-by-side diff of the buffer vs. its git HEAD version.</td></tr>
+<tr><td><code>:merge</code>, <code>:resolve</code></td><td>Resolve the buffer’s git merge conflicts in a 3-pane (ours/result/theirs) view.</td></tr>
+<tr><td><code>:magit</code>, <code>:git</code>, <code>:gst</code></td><td>Open the Magit-style git status (stage/unstage/discard/commit changes by section).</td></tr>
+<tr><td><code>:hex</code>, <code>:hexview</code>, <code>:hexedit</code></td><td>Open a read-only xxd-style hex viewer of a file’s raw bytes (optional path; defaults to the buffer’s file).</td></tr>
+<tr><td><code>:snippets</code>, <code>:snip</code></td><td>Open the user snippet library editor (create/edit/delete reusable snippets).</td></tr>
+<tr><td><code>:org-cycle</code>, <code>:org-fold</code></td><td>Toggle a fold over the current org heading’s subtree (TAB-style outline cycling).</td></tr>
+<tr><td><code>:org-todo</code></td><td>Cycle the current org heading’s TODO keyword: none -&gt; TODO -&gt; DONE -&gt; none.</td></tr>
+<tr><td><code>:org-promote</code></td><td>Promote the current org heading one level (remove a leading star).</td></tr>
+<tr><td><code>:org-demote</code></td><td>Demote the current org heading one level (add a leading star).</td></tr>
+<tr><td><code>:org-next-heading</code></td><td>Move the cursor to the next org heading line.</td></tr>
+<tr><td><code>:org-prev-heading</code></td><td>Move the cursor to the previous org heading line.</td></tr>
+<tr><td><code>:org-fold-all</code></td><td>Fold every org heading subtree in the buffer.</td></tr>
+<tr><td><code>:org-unfold-all</code></td><td>Unfold every fold in the buffer.</td></tr>
+<tr><td><code>:org-agenda</code>, <code>:agenda</code></td><td>Open the org agenda: TODO/DONE items across open .org buffers and *.org files under the working directory, grouped by scheduled/deadline date.</td></tr>
+<tr><td><code>:org-priority</code></td><td>Cycle the current org heading’s priority cookie: none -&gt; [#A] -&gt; [#B] -&gt; [#C] -&gt; none.</td></tr>
+<tr><td><code>:org-capture</code>, <code>:capture</code></td><td>Prompt for a line of text and append it as a ‘* TODO <text>’ entry to an inbox org file (default <working-dir>/inbox.org, or an explicit path argument).</working-dir></text></td></tr>
 <tr><td><code>:exit</code>, <code>:x</code>, <code>:xit</code></td><td>Write changes to disk if the buffer is modified and then quit. Accepts an optional path (:exit some/path.txt).</td></tr>
 <tr><td><code>:exit!</code>, <code>:x!</code>, <code>:xit!</code></td><td>Force write changes to disk, creating necessary subdirectories, if the buffer is modified and then quit. Accepts an optional path (:exit! some/path.txt).</td></tr>
 <tr><td><code>:quit</code>, <code>:q</code></td><td>Close the current view.</td></tr>
@@ -1520,6 +1587,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:blame</code></td><td>Show git blame for the current line in the status bar.</td></tr>
 <tr><td><code>:reopen</code>, <code>:reopen-closed</code></td><td>Reopen the most recently closed file.</td></tr>
 <tr><td><code>:zen</code></td><td>Toggle the IDE workbench (Zen / focus mode).</td></tr>
+<tr><td><code>:emmet</code>, <code>:zencode</code></td><td>Expand the emmet/zen HTML abbreviation before the cursor.</td></tr>
 <tr><td><code>:quit!</code>, <code>:q!</code></td><td>Force close the current view, ignoring unsaved changes.</td></tr>
 <tr><td><code>:open</code>, <code>:o</code>, <code>:edit</code>, <code>:e</code></td><td>Open a file from disk into the current view.</td></tr>
 <tr><td><code>:buffer-close</code>, <code>:bc</code>, <code>:bclose</code></td><td>Close the current buffer.</td></tr>
@@ -1855,7 +1923,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 </thead>
 <tbody>
 <tr><td><code>no_op</code></td><td>Do nothing</td><td></td></tr>
-<tr><td><code>move_char_left</code></td><td>Move left</td><td>normal: <code>h</code>, <code>&lt;C-h&gt;</code>, <code>&lt;left&gt;</code>, <code>&lt;backspace&gt;</code>, insert: <code>&lt;C-b&gt;</code>, <code>&lt;left&gt;</code></td></tr>
+<tr><td><code>move_char_left</code></td><td>Move left</td><td>normal: <code>h</code>, <code>&lt;C-h&gt;</code>, <code>&lt;left&gt;</code>, insert: <code>&lt;C-b&gt;</code>, <code>&lt;left&gt;</code></td></tr>
 <tr><td><code>move_char_right</code></td><td>Move right</td><td>normal: <code>l</code>, <code>&lt;right&gt;</code>, insert: <code>&lt;C-f&gt;</code>, <code>&lt;right&gt;</code></td></tr>
 <tr><td><code>move_line_up</code></td><td>Move up</td><td>normal: <code>gk</code>, <code>g&lt;up&gt;</code></td></tr>
 <tr><td><code>move_line_down</code></td><td>Move down</td><td>normal: <code>gj</code>, <code>g&lt;down&gt;</code></td></tr>
@@ -1889,8 +1957,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>vim_move_prev_long_word_start</code></td><td>Move to start of previous long word (vim caret)</td><td>normal: <code>B</code></td></tr>
 <tr><td><code>vim_move_next_long_word_end</code></td><td>Move to end of next long word (vim caret)</td><td>normal: <code>E</code></td></tr>
 <tr><td><code>vim_move_prev_long_word_end</code></td><td>Move to end of previous long word (vim caret)</td><td>normal: <code>gE</code></td></tr>
-<tr><td><code>move_parent_node_end</code></td><td>Move to end of the parent node</td><td>normal: <code>&lt;space&gt;k$</code></td></tr>
-<tr><td><code>move_parent_node_start</code></td><td>Move to beginning of the parent node</td><td>normal: <code>&lt;space&gt;k0</code></td></tr>
+<tr><td><code>move_parent_node_end</code></td><td>Move to end of the parent node</td><td>normal: <code>&lt;space&gt;k$</code>, select: <code>&lt;space&gt;k$</code></td></tr>
+<tr><td><code>move_parent_node_start</code></td><td>Move to beginning of the parent node</td><td>normal: <code>&lt;space&gt;k0</code>, select: <code>&lt;space&gt;k0</code></td></tr>
 <tr><td><code>extend_next_word_start</code></td><td>Extend to start of next word</td><td>select: <code>w</code></td></tr>
 <tr><td><code>extend_prev_word_start</code></td><td>Extend to start of previous word</td><td>select: <code>b</code></td></tr>
 <tr><td><code>extend_next_word_end</code></td><td>Extend to end of next word</td><td>select: <code>e</code></td></tr>
@@ -1921,8 +1989,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>repeat_find_char_reverse</code></td><td>Repeat last find in opposite direction (,)</td><td>normal: <code>,</code>, select: <code>,</code></td></tr>
 <tr><td><code>replace</code></td><td>Replace with new char</td><td>normal: <code>r</code>, select: <code>r</code></td></tr>
 <tr><td><code>switch_case</code></td><td>Switch (toggle) case</td><td>normal: <code>~</code>, select: <code>~</code></td></tr>
-<tr><td><code>switch_to_uppercase</code></td><td>Switch to uppercase</td><td></td></tr>
-<tr><td><code>switch_to_lowercase</code></td><td>Switch to lowercase</td><td>normal: <code>&lt;space&gt;xu</code></td></tr>
+<tr><td><code>switch_to_uppercase</code></td><td>Switch to uppercase</td><td>normal: <code>&lt;space&gt;xU</code>, select: <code>&lt;space&gt;xU</code></td></tr>
+<tr><td><code>switch_to_lowercase</code></td><td>Switch to lowercase</td><td>normal: <code>&lt;space&gt;xu</code>, select: <code>&lt;space&gt;xu</code></td></tr>
 <tr><td><code>page_up</code></td><td>Move page up</td><td>normal: <code>z^</code>, <code>&lt;A-v&gt;</code>, <code>&lt;C-b&gt;</code>, <code>&lt;S-up&gt;</code>, <code>&lt;pageup&gt;</code>, <code>&lt;S-minus&gt;</code>, insert: <code>&lt;A-v&gt;</code>, <code>&lt;S-up&gt;</code>, <code>&lt;pageup&gt;</code></td></tr>
 <tr><td><code>page_down</code></td><td>Move page down</td><td>normal: <code>z+</code>, <code>&lt;C-f&gt;</code>, <code>&lt;S-+&gt;</code>, <code>&lt;S-ret&gt;</code>, <code>&lt;S-down&gt;</code>, <code>&lt;pagedown&gt;</code>, insert: <code>&lt;S-down&gt;</code>, <code>&lt;pagedown&gt;</code></td></tr>
 <tr><td><code>half_page_up</code></td><td>Move half page up</td><td></td></tr>
@@ -1940,15 +2008,15 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>merge_consecutive_selections</code></td><td>Merge consecutive selections</td><td></td></tr>
 <tr><td><code>search</code></td><td>Search for regex pattern</td><td>normal: <code>/</code>, <code>&lt;C-s&gt;</code></td></tr>
 <tr><td><code>rsearch</code></td><td>Reverse search for regex pattern</td><td>normal: <code>?</code></td></tr>
-<tr><td><code>search_next</code></td><td>Select next search match</td><td>normal: <code>n</code>, <code>gn</code>, <code>&lt;space&gt;sH</code></td></tr>
+<tr><td><code>search_next</code></td><td>Select next search match</td><td>normal: <code>n</code>, <code>gn</code>, <code>&lt;space&gt;sH</code>, select: <code>&lt;space&gt;sH</code></td></tr>
 <tr><td><code>search_prev</code></td><td>Select previous search match</td><td>normal: <code>N</code>, <code>gN</code></td></tr>
 <tr><td><code>extend_search_next</code></td><td>Add next search match to selection</td><td></td></tr>
 <tr><td><code>extend_search_prev</code></td><td>Add previous search match to selection</td><td></td></tr>
 <tr><td><code>search_selection</code></td><td>Use current selection as search pattern</td><td></td></tr>
 <tr><td><code>search_selection_detect_word_boundaries</code></td><td>Use current selection as the search pattern, automatically wrapping with <code>\b</code> on word boundaries</td><td></td></tr>
 <tr><td><code>make_search_word_bounded</code></td><td>Modify current search to make it word bounded</td><td></td></tr>
-<tr><td><code>global_search</code></td><td>Global search in workspace folder</td><td>normal: <code>&lt;space&gt;/</code>, <code>&lt;space&gt;po</code>, <code>&lt;space&gt;ps</code>, <code>&lt;space&gt;sB</code>, <code>&lt;space&gt;sD</code>, <code>&lt;space&gt;sF</code>, <code>&lt;space&gt;sP</code>, <code>&lt;space&gt;sb</code>, <code>&lt;space&gt;sd</code>, <code>&lt;space&gt;sf</code>, <code>&lt;space&gt;sp</code>, <code>&lt;space&gt;ss</code>, <code>&lt;space&gt;saA</code>, <code>&lt;space&gt;saB</code>, <code>&lt;space&gt;saD</code>, <code>&lt;space&gt;saF</code>, <code>&lt;space&gt;saP</code>, <code>&lt;space&gt;saa</code>, <code>&lt;space&gt;sab</code>, <code>&lt;space&gt;sad</code>, <code>&lt;space&gt;saf</code>, <code>&lt;space&gt;sap</code>, <code>&lt;space&gt;sgB</code>, <code>&lt;space&gt;sgF</code>, <code>&lt;space&gt;sgG</code>, <code>&lt;space&gt;sgb</code>, <code>&lt;space&gt;sgd</code>, <code>&lt;space&gt;sgf</code>, <code>&lt;space&gt;sgg</code>, <code>&lt;space&gt;sgp</code>, <code>&lt;space&gt;skB</code>, <code>&lt;space&gt;skD</code>, <code>&lt;space&gt;skF</code>, <code>&lt;space&gt;skP</code>, <code>&lt;space&gt;skb</code>, <code>&lt;space&gt;skd</code>, <code>&lt;space&gt;skf</code>, <code>&lt;space&gt;skp</code>, <code>&lt;space&gt;srB</code>, <code>&lt;space&gt;srD</code>, <code>&lt;space&gt;srF</code>, <code>&lt;space&gt;srP</code>, <code>&lt;space&gt;srR</code>, <code>&lt;space&gt;srb</code>, <code>&lt;space&gt;srd</code>, <code>&lt;space&gt;srf</code>, <code>&lt;space&gt;srp</code>, <code>&lt;space&gt;srr</code></td></tr>
-<tr><td><code>extend_line</code></td><td>Select current line, if already selected, extend to another line based on the anchor</td><td></td></tr>
+<tr><td><code>global_search</code></td><td>Global search in workspace folder</td><td>normal: <code>&lt;space&gt;/</code>, <code>&lt;space&gt;po</code>, <code>&lt;space&gt;ps</code>, <code>&lt;space&gt;sB</code>, <code>&lt;space&gt;sD</code>, <code>&lt;space&gt;sF</code>, <code>&lt;space&gt;sP</code>, <code>&lt;space&gt;sb</code>, <code>&lt;space&gt;sd</code>, <code>&lt;space&gt;sf</code>, <code>&lt;space&gt;sp</code>, <code>&lt;space&gt;ss</code>, <code>&lt;space&gt;saA</code>, <code>&lt;space&gt;saB</code>, <code>&lt;space&gt;saD</code>, <code>&lt;space&gt;saF</code>, <code>&lt;space&gt;saP</code>, <code>&lt;space&gt;saa</code>, <code>&lt;space&gt;sab</code>, <code>&lt;space&gt;sad</code>, <code>&lt;space&gt;saf</code>, <code>&lt;space&gt;sap</code>, <code>&lt;space&gt;sgB</code>, <code>&lt;space&gt;sgF</code>, <code>&lt;space&gt;sgG</code>, <code>&lt;space&gt;sgb</code>, <code>&lt;space&gt;sgd</code>, <code>&lt;space&gt;sgf</code>, <code>&lt;space&gt;sgg</code>, <code>&lt;space&gt;sgp</code>, <code>&lt;space&gt;skB</code>, <code>&lt;space&gt;skD</code>, <code>&lt;space&gt;skF</code>, <code>&lt;space&gt;skP</code>, <code>&lt;space&gt;skb</code>, <code>&lt;space&gt;skd</code>, <code>&lt;space&gt;skf</code>, <code>&lt;space&gt;skp</code>, <code>&lt;space&gt;srB</code>, <code>&lt;space&gt;srD</code>, <code>&lt;space&gt;srF</code>, <code>&lt;space&gt;srP</code>, <code>&lt;space&gt;srR</code>, <code>&lt;space&gt;srb</code>, <code>&lt;space&gt;srd</code>, <code>&lt;space&gt;srf</code>, <code>&lt;space&gt;srp</code>, <code>&lt;space&gt;srr</code>, select: <code>&lt;space&gt;/</code>, <code>&lt;space&gt;po</code>, <code>&lt;space&gt;ps</code>, <code>&lt;space&gt;sB</code>, <code>&lt;space&gt;sD</code>, <code>&lt;space&gt;sF</code>, <code>&lt;space&gt;sP</code>, <code>&lt;space&gt;sb</code>, <code>&lt;space&gt;sd</code>, <code>&lt;space&gt;sf</code>, <code>&lt;space&gt;sp</code>, <code>&lt;space&gt;ss</code>, <code>&lt;space&gt;saA</code>, <code>&lt;space&gt;saB</code>, <code>&lt;space&gt;saD</code>, <code>&lt;space&gt;saF</code>, <code>&lt;space&gt;saP</code>, <code>&lt;space&gt;saa</code>, <code>&lt;space&gt;sab</code>, <code>&lt;space&gt;sad</code>, <code>&lt;space&gt;saf</code>, <code>&lt;space&gt;sap</code>, <code>&lt;space&gt;sgB</code>, <code>&lt;space&gt;sgF</code>, <code>&lt;space&gt;sgG</code>, <code>&lt;space&gt;sgb</code>, <code>&lt;space&gt;sgd</code>, <code>&lt;space&gt;sgf</code>, <code>&lt;space&gt;sgg</code>, <code>&lt;space&gt;sgp</code>, <code>&lt;space&gt;skB</code>, <code>&lt;space&gt;skD</code>, <code>&lt;space&gt;skF</code>, <code>&lt;space&gt;skP</code>, <code>&lt;space&gt;skb</code>, <code>&lt;space&gt;skd</code>, <code>&lt;space&gt;skf</code>, <code>&lt;space&gt;skp</code>, <code>&lt;space&gt;srB</code>, <code>&lt;space&gt;srD</code>, <code>&lt;space&gt;srF</code>, <code>&lt;space&gt;srP</code>, <code>&lt;space&gt;srR</code>, <code>&lt;space&gt;srb</code>, <code>&lt;space&gt;srd</code>, <code>&lt;space&gt;srf</code>, <code>&lt;space&gt;srp</code>, <code>&lt;space&gt;srr</code></td></tr>
+<tr><td><code>extend_line</code></td><td>Select current line, if already selected, extend to another line based on the anchor</td><td>normal: <code>&lt;space&gt;kV</code>, select: <code>&lt;space&gt;kV</code></td></tr>
 <tr><td><code>extend_line_below</code></td><td>Select current line, if already selected, extend to next line</td><td></td></tr>
 <tr><td><code>extend_line_above</code></td><td>Select current line, if already selected, extend to previous line</td><td></td></tr>
 <tr><td><code>select_line_above</code></td><td>Select current line, if already selected, extend or shrink line above based on the anchor</td><td></td></tr>
@@ -1962,101 +2030,115 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>collapse_selection</code></td><td>Collapse selection into single cursor</td><td>normal: <code>&lt;esc&gt;</code></td></tr>
 <tr><td><code>flip_selections</code></td><td>Flip selection cursor and anchor</td><td>select: <code>O</code>, <code>o</code></td></tr>
 <tr><td><code>ensure_selections_forward</code></td><td>Ensure all selections face forward</td><td></td></tr>
-<tr><td><code>insert_mode</code></td><td>Insert before selection</td><td>normal: <code>i</code>, <code>&lt;ins&gt;</code></td></tr>
+<tr><td><code>insert_mode</code></td><td>Insert before selection</td><td>normal: <code>i</code>, <code>&lt;ins&gt;</code>, <code>&lt;space&gt;ki</code>, select: <code>&lt;space&gt;ki</code></td></tr>
 <tr><td><code>append_mode</code></td><td>Append after selection</td><td>normal: <code>a</code>, select: <code>A</code></td></tr>
 <tr><td><code>replace_mode</code></td><td>Enter Replace mode (overtype)</td><td>normal: <code>R</code>, <code>gR</code>, insert: <code>&lt;ins&gt;</code></td></tr>
-<tr><td><code>command_mode</code></td><td>Enter command mode</td><td>normal: <code>:</code>, <code>gQ</code>, <code>&lt;space&gt;:</code>, select: <code>:</code></td></tr>
-<tr><td><code>file_picker</code></td><td>Open file picker</td><td>normal: <code>&lt;space&gt;fA</code>, <code>&lt;space&gt;fL</code>, <code>&lt;space&gt;ff</code>, <code>&lt;space&gt;fl</code>, <code>&lt;space&gt;pf</code>, <code>&lt;space&gt;ph</code>, <code>&lt;space&gt;pp</code></td></tr>
+<tr><td><code>command_mode</code></td><td>Enter command mode</td><td>normal: <code>:</code>, <code>gQ</code>, <code>&lt;space&gt;:</code>, <code>&lt;space&gt;k:</code>, select: <code>:</code>, <code>&lt;space&gt;:</code>, <code>&lt;space&gt;k:</code></td></tr>
+<tr><td><code>file_picker</code></td><td>Open file picker</td><td>normal: <code>&lt;space&gt;fA</code>, <code>&lt;space&gt;fL</code>, <code>&lt;space&gt;ff</code>, <code>&lt;space&gt;fl</code>, <code>&lt;space&gt;pf</code>, <code>&lt;space&gt;ph</code>, <code>&lt;space&gt;pp</code>, select: <code>&lt;space&gt;fA</code>, <code>&lt;space&gt;fL</code>, <code>&lt;space&gt;ff</code>, <code>&lt;space&gt;fl</code>, <code>&lt;space&gt;pf</code>, <code>&lt;space&gt;ph</code>, <code>&lt;space&gt;pp</code></td></tr>
 <tr><td><code>file_picker_in_current_buffer_directory</code></td><td>Open file picker at current buffer’s directory</td><td></td></tr>
 <tr><td><code>file_picker_in_current_directory</code></td><td>Open file picker at current working directory</td><td></td></tr>
-<tr><td><code>file_explorer</code></td><td>Open file explorer in workspace root</td><td>normal: <code>&lt;space&gt;ad</code>, <code>&lt;space&gt;af</code>, <code>&lt;space&gt;ft</code>, <code>&lt;space&gt;pd</code>, <code>&lt;space&gt;pt</code></td></tr>
-<tr><td><code>file_explorer_in_current_buffer_directory</code></td><td>Open file explorer at current buffer’s directory</td><td>normal: <code>&lt;space&gt;fd</code>, <code>&lt;space&gt;fj</code>, <code>&lt;space&gt;jD</code>, <code>&lt;space&gt;jd</code></td></tr>
+<tr><td><code>file_explorer</code></td><td>Open file explorer in workspace root</td><td>normal: <code>&lt;space&gt;ad</code>, <code>&lt;space&gt;af</code>, <code>&lt;space&gt;ft</code>, <code>&lt;space&gt;pd</code>, <code>&lt;space&gt;pt</code>, <code>&lt;space&gt;atrd</code>, <code>&lt;space&gt;atrr</code>, select: <code>&lt;space&gt;ad</code>, <code>&lt;space&gt;af</code>, <code>&lt;space&gt;ft</code>, <code>&lt;space&gt;pd</code>, <code>&lt;space&gt;pt</code>, <code>&lt;space&gt;atrd</code>, <code>&lt;space&gt;atrr</code></td></tr>
+<tr><td><code>file_explorer_in_current_buffer_directory</code></td><td>Open file explorer at current buffer’s directory</td><td>normal: <code>&lt;space&gt;fd</code>, <code>&lt;space&gt;fj</code>, <code>&lt;space&gt;jD</code>, <code>&lt;space&gt;jd</code>, select: <code>&lt;space&gt;fd</code>, <code>&lt;space&gt;fj</code>, <code>&lt;space&gt;jD</code>, <code>&lt;space&gt;jd</code></td></tr>
 <tr><td><code>file_explorer_in_current_directory</code></td><td>Open file explorer at current working directory</td><td></td></tr>
-<tr><td><code>code_action</code></td><td>Perform code action</td><td>normal: <code>&lt;space&gt;la</code></td></tr>
-<tr><td><code>buffer_picker</code></td><td>Open buffer picker</td><td>normal: <code>&lt;space&gt;bW</code>, <code>&lt;space&gt;bb</code>, <code>&lt;space&gt;pb</code>, <code>&lt;space&gt;b.b</code></td></tr>
-<tr><td><code>jumplist_picker</code></td><td>Open jumplist picker</td><td>normal: <code>&lt;space&gt;jj</code></td></tr>
-<tr><td><code>register_picker</code></td><td>Browse registers and paste the chosen one</td><td>normal: <code>&lt;space&gt;re</code>, <code>&lt;space&gt;rr</code>, <code>&lt;space&gt;ry</code></td></tr>
-<tr><td><code>marks_picker</code></td><td>Fuzzy-pick a vim mark and jump to it (:Marks)</td><td>normal: <code>&lt;space&gt;fb</code>, <code>&lt;space&gt;rm</code></td></tr>
-<tr><td><code>buffer_line_picker</code></td><td>Fuzzy-search lines in the current buffer (:BLines)</td><td>normal: <code>&lt;space&gt;sL</code></td></tr>
-<tr><td><code>command_history_picker</code></td><td>Fuzzy-pick and run a past command line (:History:)</td><td>normal: <code>&lt;space&gt;r:</code></td></tr>
-<tr><td><code>search_history_picker</code></td><td>Fuzzy-pick and re-run a past search (:History/)</td><td>normal: <code>&lt;space&gt;r/</code></td></tr>
-<tr><td><code>unicode_picker</code></td><td>Fuzzy-pick a character/digraph and insert it (helm-unicode)</td><td>normal: <code>&lt;space&gt;iu</code></td></tr>
-<tr><td><code>git_file_log_picker</code></td><td>Commit log for the current file (:BCommits)</td><td>normal: <code>&lt;space&gt;gfl</code></td></tr>
-<tr><td><code>git_repo_log_picker</code></td><td>Commit log for the whole repo (:Commits)</td><td>normal: <code>&lt;space&gt;gL</code></td></tr>
-<tr><td><code>theme_picker</code></td><td>Open fuzzy theme picker with live preview</td><td>normal: <code>&lt;space&gt;Tc</code></td></tr>
-<tr><td><code>wrap_sexp</code></td><td>Wrap the selection in parentheses</td><td>normal: <code>&lt;space&gt;kw</code></td></tr>
-<tr><td><code>symbol_picker</code></td><td>Open symbol picker</td><td>normal: <code>&lt;space&gt;ji</code>, <code>&lt;space&gt;pg</code>, <code>&lt;space&gt;sj</code></td></tr>
+<tr><td><code>code_action</code></td><td>Perform code action</td><td>normal: <code>&lt;space&gt;la</code>, select: <code>&lt;space&gt;la</code></td></tr>
+<tr><td><code>buffer_picker</code></td><td>Open buffer picker</td><td>normal: <code>&lt;space&gt;bW</code>, <code>&lt;space&gt;bb</code>, <code>&lt;space&gt;pb</code>, <code>&lt;space&gt;b.b</code>, select: <code>&lt;space&gt;bW</code>, <code>&lt;space&gt;bb</code>, <code>&lt;space&gt;pb</code>, <code>&lt;space&gt;b.b</code></td></tr>
+<tr><td><code>jumplist_picker</code></td><td>Open jumplist picker</td><td>normal: <code>&lt;space&gt;jj</code>, select: <code>&lt;space&gt;jj</code></td></tr>
+<tr><td><code>register_picker</code></td><td>Browse registers and paste the chosen one</td><td>normal: <code>&lt;space&gt;re</code>, <code>&lt;space&gt;rr</code>, <code>&lt;space&gt;ry</code>, select: <code>&lt;space&gt;re</code>, <code>&lt;space&gt;rr</code>, <code>&lt;space&gt;ry</code></td></tr>
+<tr><td><code>marks_picker</code></td><td>Fuzzy-pick a vim mark and jump to it (:Marks)</td><td>normal: <code>&lt;space&gt;fb</code>, <code>&lt;space&gt;rm</code>, select: <code>&lt;space&gt;fb</code>, <code>&lt;space&gt;rm</code></td></tr>
+<tr><td><code>buffer_line_picker</code></td><td>Fuzzy-search lines in the current buffer (:BLines)</td><td>normal: <code>&lt;space&gt;sL</code>, select: <code>&lt;space&gt;sL</code></td></tr>
+<tr><td><code>command_history_picker</code></td><td>Fuzzy-pick and run a past command line (:History:)</td><td>normal: <code>&lt;space&gt;r:</code>, select: <code>&lt;space&gt;r:</code></td></tr>
+<tr><td><code>search_history_picker</code></td><td>Fuzzy-pick and re-run a past search (:History/)</td><td>normal: <code>&lt;space&gt;r/</code>, select: <code>&lt;space&gt;r/</code></td></tr>
+<tr><td><code>unicode_picker</code></td><td>Fuzzy-pick a character/digraph and insert it (helm-unicode)</td><td>normal: <code>&lt;space&gt;iu</code>, select: <code>&lt;space&gt;iu</code></td></tr>
+<tr><td><code>git_file_log_picker</code></td><td>Commit log for the current file (:BCommits)</td><td>normal: <code>&lt;space&gt;gt</code>, <code>&lt;space&gt;gfl</code>, select: <code>&lt;space&gt;gt</code>, <code>&lt;space&gt;gfl</code></td></tr>
+<tr><td><code>git_repo_log_picker</code></td><td>Commit log for the whole repo (:Commits)</td><td>normal: <code>&lt;space&gt;gL</code>, select: <code>&lt;space&gt;gL</code></td></tr>
+<tr><td><code>theme_picker</code></td><td>Open fuzzy theme picker with live preview</td><td>normal: <code>&lt;space&gt;Tc</code>, select: <code>&lt;space&gt;Tc</code></td></tr>
+<tr><td><code>wrap_sexp</code></td><td>Wrap the selection in parentheses</td><td>normal: <code>&lt;space&gt;kw</code>, select: <code>&lt;space&gt;kw</code></td></tr>
+<tr><td><code>symbol_picker</code></td><td>Open symbol picker</td><td>normal: <code>&lt;space&gt;ji</code>, <code>&lt;space&gt;pg</code>, <code>&lt;space&gt;sj</code>, select: <code>&lt;space&gt;ji</code>, <code>&lt;space&gt;pg</code>, <code>&lt;space&gt;sj</code></td></tr>
 <tr><td><code>syntax_symbol_picker</code></td><td>Open symbol picker from syntax information</td><td></td></tr>
 <tr><td><code>lsp_or_syntax_symbol_picker</code></td><td>Open symbol picker from LSP or syntax information</td><td></td></tr>
-<tr><td><code>changed_file_picker</code></td><td>Open changed file picker</td><td>normal: <code>&lt;space&gt;bm</code></td></tr>
-<tr><td><code>frecent_file_picker</code></td><td>Open recent files ranked by frecency (z algorithm)</td><td>normal: <code>&lt;space&gt;fr</code></td></tr>
-<tr><td><code>reopen_last_closed</code></td><td>Reopen the most recently closed file</td><td>normal: <code>&lt;space&gt;fu</code></td></tr>
-<tr><td><code>harpoon_add</code></td><td>Pin the current file to the harpoon list</td><td>normal: <code>&lt;space&gt;Ha</code></td></tr>
-<tr><td><code>harpoon_jump</code></td><td>Jump to the harpoon mark in slot [count]</td><td>normal: <code>&lt;space&gt;Hj</code></td></tr>
-<tr><td><code>harpoon_1</code></td><td>Jump to harpoon mark 1</td><td>normal: <code>&lt;space&gt;H1</code></td></tr>
-<tr><td><code>harpoon_2</code></td><td>Jump to harpoon mark 2</td><td>normal: <code>&lt;space&gt;H2</code></td></tr>
-<tr><td><code>harpoon_3</code></td><td>Jump to harpoon mark 3</td><td>normal: <code>&lt;space&gt;H3</code></td></tr>
-<tr><td><code>harpoon_4</code></td><td>Jump to harpoon mark 4</td><td>normal: <code>&lt;space&gt;H4</code></td></tr>
-<tr><td><code>harpoon_next</code></td><td>Open the next harpoon mark</td><td>normal: <code>&lt;space&gt;Hn</code></td></tr>
-<tr><td><code>harpoon_prev</code></td><td>Open the previous harpoon mark</td><td>normal: <code>&lt;space&gt;Hp</code></td></tr>
-<tr><td><code>harpoon_menu</code></td><td>Open the harpoon marks menu</td><td>normal: <code>&lt;space&gt;Hh</code>, <code>&lt;space&gt;Hl</code></td></tr>
-<tr><td><code>harpoon_remove</code></td><td>Unpin the current file from harpoon</td><td>normal: <code>&lt;space&gt;Hd</code></td></tr>
-<tr><td><code>select_references_to_symbol_under_cursor</code></td><td>Select symbol references</td><td>normal: <code>&lt;space&gt;se</code>, <code>&lt;space&gt;sh</code></td></tr>
-<tr><td><code>workspace_symbol_picker</code></td><td>Open workspace symbol picker</td><td>normal: <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code></td></tr>
+<tr><td><code>changed_file_picker</code></td><td>Open changed file picker</td><td>normal: <code>&lt;space&gt;bm</code>, select: <code>&lt;space&gt;bm</code></td></tr>
+<tr><td><code>frecent_file_picker</code></td><td>Open recent files ranked by frecency (z algorithm)</td><td>normal: <code>&lt;space&gt;fr</code>, select: <code>&lt;space&gt;fr</code></td></tr>
+<tr><td><code>reopen_last_closed</code></td><td>Reopen the most recently closed file</td><td>normal: <code>&lt;space&gt;bu</code>, <code>&lt;space&gt;fu</code>, select: <code>&lt;space&gt;bu</code>, <code>&lt;space&gt;fu</code></td></tr>
+<tr><td><code>harpoon_add</code></td><td>Pin the current file to the harpoon list</td><td>normal: <code>&lt;space&gt;Ha</code>, select: <code>&lt;space&gt;Ha</code></td></tr>
+<tr><td><code>harpoon_jump</code></td><td>Jump to the harpoon mark in slot [count]</td><td>normal: <code>&lt;space&gt;Hj</code>, select: <code>&lt;space&gt;Hj</code></td></tr>
+<tr><td><code>harpoon_1</code></td><td>Jump to harpoon mark 1</td><td>normal: <code>&lt;space&gt;H1</code>, select: <code>&lt;space&gt;H1</code></td></tr>
+<tr><td><code>harpoon_2</code></td><td>Jump to harpoon mark 2</td><td>normal: <code>&lt;space&gt;H2</code>, select: <code>&lt;space&gt;H2</code></td></tr>
+<tr><td><code>harpoon_3</code></td><td>Jump to harpoon mark 3</td><td>normal: <code>&lt;space&gt;H3</code>, select: <code>&lt;space&gt;H3</code></td></tr>
+<tr><td><code>harpoon_4</code></td><td>Jump to harpoon mark 4</td><td>normal: <code>&lt;space&gt;H4</code>, select: <code>&lt;space&gt;H4</code></td></tr>
+<tr><td><code>harpoon_next</code></td><td>Open the next harpoon mark</td><td>normal: <code>&lt;space&gt;Hn</code>, select: <code>&lt;space&gt;Hn</code></td></tr>
+<tr><td><code>harpoon_prev</code></td><td>Open the previous harpoon mark</td><td>normal: <code>&lt;space&gt;Hp</code>, select: <code>&lt;space&gt;Hp</code></td></tr>
+<tr><td><code>harpoon_menu</code></td><td>Open the harpoon marks menu</td><td>normal: <code>&lt;space&gt;Hh</code>, <code>&lt;space&gt;Hl</code>, select: <code>&lt;space&gt;Hh</code>, <code>&lt;space&gt;Hl</code></td></tr>
+<tr><td><code>harpoon_remove</code></td><td>Unpin the current file from harpoon</td><td>normal: <code>&lt;space&gt;Hd</code>, select: <code>&lt;space&gt;Hd</code></td></tr>
+<tr><td><code>select_references_to_symbol_under_cursor</code></td><td>Select symbol references</td><td>normal: <code>&lt;space&gt;se</code>, <code>&lt;space&gt;sh</code>, select: <code>&lt;space&gt;se</code>, <code>&lt;space&gt;sh</code></td></tr>
+<tr><td><code>workspace_symbol_picker</code></td><td>Open workspace symbol picker</td><td>normal: <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code>, select: <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code></td></tr>
 <tr><td><code>syntax_workspace_symbol_picker</code></td><td>Open workspace symbol picker from syntax information</td><td></td></tr>
 <tr><td><code>lsp_or_syntax_workspace_symbol_picker</code></td><td>Open workspace symbol picker from LSP or syntax information</td><td></td></tr>
-<tr><td><code>diagnostics_picker</code></td><td>Open diagnostic picker</td><td>normal: <code>&lt;space&gt;el</code></td></tr>
-<tr><td><code>workspace_diagnostics_picker</code></td><td>Open workspace diagnostic picker</td><td>normal: <code>&lt;space&gt;eL</code></td></tr>
-<tr><td><code>last_picker</code></td><td>Open last picker</td><td>normal: <code>&lt;space&gt;'</code>, <code>&lt;space&gt;rl</code>, <code>&lt;space&gt;sl</code></td></tr>
+<tr><td><code>diagnostics_picker</code></td><td>Open diagnostic picker</td><td>normal: <code>&lt;space&gt;el</code>, select: <code>&lt;space&gt;el</code></td></tr>
+<tr><td><code>workspace_diagnostics_picker</code></td><td>Open workspace diagnostic picker</td><td>normal: <code>&lt;space&gt;eL</code>, select: <code>&lt;space&gt;eL</code></td></tr>
+<tr><td><code>last_picker</code></td><td>Open last picker</td><td>normal: <code>&lt;space&gt;'</code>, <code>&lt;space&gt;rl</code>, <code>&lt;space&gt;sl</code>, select: <code>&lt;space&gt;'</code>, <code>&lt;space&gt;rl</code>, <code>&lt;space&gt;sl</code></td></tr>
 <tr><td><code>insert_at_line_start</code></td><td>Insert at start of line</td><td>normal: <code>I</code>, <code>gI</code></td></tr>
 <tr><td><code>insert_at_line_end</code></td><td>Insert at end of line</td><td>normal: <code>A</code></td></tr>
 <tr><td><code>open_below</code></td><td>Open new line below selection</td><td>normal: <code>o</code></td></tr>
 <tr><td><code>open_above</code></td><td>Open new line above selection</td><td>normal: <code>O</code></td></tr>
 <tr><td><code>normal_mode</code></td><td>Enter normal mode</td><td>normal: <code>&lt;C-c&gt;</code>, <code>&lt;C-\&gt;&lt;C-g&gt;</code>, <code>&lt;C-\&gt;&lt;C-n&gt;</code></td></tr>
-<tr><td><code>select_mode</code></td><td>Enter selection extend mode</td><td>normal: <code>v</code>, <code>gh</code>, <code>&lt;C-v&gt;</code>, <code>g&lt;C-h&gt;</code>, <code>&lt;C-space&gt;</code>, <code>&lt;space&gt;kv</code>, <code>&lt;space&gt;k&lt;C-v&gt;</code></td></tr>
+<tr><td><code>select_mode</code></td><td>Enter selection extend mode</td><td>normal: <code>v</code>, <code>gh</code>, <code>&lt;C-v&gt;</code>, <code>g&lt;C-h&gt;</code>, <code>&lt;C-space&gt;</code>, <code>&lt;space&gt;kv</code>, <code>&lt;space&gt;k&lt;C-v&gt;</code>, select: <code>&lt;space&gt;kv</code>, <code>&lt;space&gt;k&lt;C-v&gt;</code></td></tr>
 <tr><td><code>exit_select_mode</code></td><td>Exit selection mode</td><td></td></tr>
-<tr><td><code>goto_definition</code></td><td>Goto definition</td><td>normal: <code>g]</code>, <code>gd</code>, <code>&lt;C-]&gt;</code>, <code>&lt;C-w&gt;]</code>, <code>]&lt;C-d&gt;</code>, <code>g&lt;C-]&gt;</code>, <code>&lt;C-w&gt;g]</code>, <code>&lt;space&gt;gd</code>, <code>&lt;space&gt;jf</code>, <code>&lt;space&gt;jv</code>, <code>&lt;space&gt;w]</code>, <code>&lt;C-w&gt;&lt;C-]&gt;</code>, <code>&lt;space&gt;mgg</code>, <code>&lt;space&gt;wg]</code>, <code>&lt;C-w&gt;g&lt;C-]&gt;</code>, <code>&lt;space&gt;w&lt;C-]&gt;</code>, <code>&lt;space&gt;wg&lt;C-]&gt;</code>, select: <code>&lt;C-]&gt;</code></td></tr>
-<tr><td><code>goto_declaration</code></td><td>Goto declaration</td><td>normal: <code>gD</code>, <code>&lt;C-w&gt;i</code>, <code>[&lt;C-d&gt;</code>, <code>&lt;space&gt;gD</code>, <code>&lt;space&gt;wi</code>, <code>&lt;C-w&gt;&lt;C-i&gt;</code>, <code>&lt;space&gt;w&lt;C-i&gt;</code></td></tr>
+<tr><td><code>goto_definition</code></td><td>Goto definition</td><td>normal: <code>g]</code>, <code>gd</code>, <code>&lt;C-]&gt;</code>, <code>&lt;C-w&gt;]</code>, <code>]&lt;C-d&gt;</code>, <code>g&lt;C-]&gt;</code>, <code>&lt;C-w&gt;g]</code>, <code>&lt;space&gt;gd</code>, <code>&lt;space&gt;jf</code>, <code>&lt;space&gt;jv</code>, <code>&lt;space&gt;w]</code>, <code>&lt;C-w&gt;&lt;C-]&gt;</code>, <code>&lt;space&gt;mgg</code>, <code>&lt;space&gt;wg]</code>, <code>&lt;C-w&gt;g&lt;C-]&gt;</code>, <code>&lt;space&gt;w&lt;C-]&gt;</code>, <code>&lt;space&gt;wg&lt;C-]&gt;</code>, select: <code>&lt;C-]&gt;</code>, <code>&lt;space&gt;gd</code>, <code>&lt;space&gt;jf</code>, <code>&lt;space&gt;jv</code>, <code>&lt;space&gt;w]</code>, <code>&lt;space&gt;mgg</code>, <code>&lt;space&gt;wg]</code>, <code>&lt;space&gt;w&lt;C-]&gt;</code>, <code>&lt;space&gt;wg&lt;C-]&gt;</code></td></tr>
+<tr><td><code>goto_declaration</code></td><td>Goto declaration</td><td>normal: <code>gD</code>, <code>&lt;C-w&gt;i</code>, <code>[&lt;C-d&gt;</code>, <code>&lt;space&gt;gD</code>, <code>&lt;space&gt;wi</code>, <code>&lt;C-w&gt;&lt;C-i&gt;</code>, <code>&lt;space&gt;w&lt;C-i&gt;</code>, select: <code>&lt;space&gt;gD</code>, <code>&lt;space&gt;wi</code>, <code>&lt;space&gt;w&lt;C-i&gt;</code></td></tr>
 <tr><td><code>add_newline_above</code></td><td>Add newline above</td><td></td></tr>
 <tr><td><code>add_newline_below</code></td><td>Add newline below</td><td></td></tr>
-<tr><td><code>goto_type_definition</code></td><td>Goto type definition</td><td>normal: <code>gy</code>, <code>&lt;space&gt;gy</code></td></tr>
-<tr><td><code>goto_implementation</code></td><td>Goto implementation</td><td>normal: <code>&lt;space&gt;gi</code></td></tr>
+<tr><td><code>goto_type_definition</code></td><td>Goto type definition</td><td>normal: <code>gy</code>, <code>&lt;space&gt;gy</code>, select: <code>&lt;space&gt;gy</code></td></tr>
+<tr><td><code>goto_implementation</code></td><td>Goto implementation</td><td>normal: <code>&lt;space&gt;gi</code>, select: <code>&lt;space&gt;gi</code></td></tr>
 <tr><td><code>goto_file_start</code></td><td>Goto line number <code>&lt;n&gt;</code> else file start</td><td>normal: <code>gg</code>, <code>&lt;A-lt&gt;</code>, <code>&lt;C-home&gt;</code>, insert: <code>&lt;A-lt&gt;</code>, <code>&lt;C-home&gt;</code></td></tr>
 <tr><td><code>goto_file_end</code></td><td>Goto file end</td><td>insert: <code>&lt;A-gt&gt;</code>, <code>&lt;C-end&gt;</code></td></tr>
 <tr><td><code>extend_to_file_start</code></td><td>Extend to line number <code>&lt;n&gt;</code> else file start</td><td>select: <code>gg</code></td></tr>
 <tr><td><code>extend_to_file_end</code></td><td>Extend to file end</td><td></td></tr>
-<tr><td><code>goto_file</code></td><td>Goto files/URLs in selections</td><td>normal: <code>[f</code>, <code>]f</code>, <code>gf</code>, <code>gx</code>, <code>&lt;C-w&gt;gF</code>, <code>&lt;C-w&gt;gf</code>, <code>&lt;space&gt;fF</code>, <code>&lt;space&gt;fo</code>, <code>&lt;space&gt;jU</code>, <code>&lt;space&gt;ju</code>, <code>&lt;space&gt;xo</code>, <code>&lt;space&gt;wgF</code>, <code>&lt;space&gt;wgf</code></td></tr>
-<tr><td><code>goto_file_hsplit</code></td><td>Goto files in selections (hsplit)</td><td>normal: <code>&lt;C-w&gt;F</code>, <code>&lt;C-w&gt;f</code>, <code>&lt;space&gt;wF</code>, <code>&lt;space&gt;wf</code>, <code>&lt;C-w&gt;&lt;C-f&gt;</code>, <code>&lt;space&gt;w&lt;C-f&gt;</code></td></tr>
+<tr><td><code>goto_file</code></td><td>Goto files/URLs in selections</td><td>normal: <code>[f</code>, <code>]f</code>, <code>gf</code>, <code>gx</code>, <code>&lt;C-w&gt;gF</code>, <code>&lt;C-w&gt;gf</code>, <code>&lt;space&gt;fF</code>, <code>&lt;space&gt;fo</code>, <code>&lt;space&gt;jU</code>, <code>&lt;space&gt;ju</code>, <code>&lt;space&gt;xo</code>, <code>&lt;space&gt;wgF</code>, <code>&lt;space&gt;wgf</code>, select: <code>&lt;space&gt;fF</code>, <code>&lt;space&gt;fo</code>, <code>&lt;space&gt;jU</code>, <code>&lt;space&gt;ju</code>, <code>&lt;space&gt;xo</code>, <code>&lt;space&gt;wgF</code>, <code>&lt;space&gt;wgf</code></td></tr>
+<tr><td><code>goto_file_hsplit</code></td><td>Goto files in selections (hsplit)</td><td>normal: <code>&lt;C-w&gt;F</code>, <code>&lt;C-w&gt;f</code>, <code>&lt;space&gt;wF</code>, <code>&lt;space&gt;wf</code>, <code>&lt;C-w&gt;&lt;C-f&gt;</code>, <code>&lt;space&gt;w&lt;C-f&gt;</code>, select: <code>&lt;space&gt;wF</code>, <code>&lt;space&gt;wf</code>, <code>&lt;space&gt;w&lt;C-f&gt;</code></td></tr>
 <tr><td><code>goto_file_vsplit</code></td><td>Goto files in selections (vsplit)</td><td></td></tr>
 <tr><td><code>goto_reference</code></td><td>Goto references</td><td>normal: <code>gr</code></td></tr>
 <tr><td><code>goto_window_top</code></td><td>Goto window top</td><td>normal: <code>H</code></td></tr>
 <tr><td><code>goto_window_center</code></td><td>Goto window center</td><td>normal: <code>M</code></td></tr>
 <tr><td><code>goto_window_bottom</code></td><td>Goto window bottom</td><td>normal: <code>L</code></td></tr>
-<tr><td><code>goto_last_accessed_file</code></td><td>Goto last accessed file</td><td>normal: <code>&lt;C-^&gt;</code>, <code>&lt;C-w&gt;^</code>, <code>g&lt;tab&gt;</code>, <code>&lt;C-tab&gt;</code>, <code>&lt;space&gt;w^</code>, <code>&lt;C-w&gt;&lt;C-^&gt;</code>, <code>&lt;C-w&gt;g&lt;tab&gt;</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code></td></tr>
-<tr><td><code>goto_last_modified_file</code></td><td>Goto last modified file</td><td>normal: <code>&lt;space&gt;pr</code></td></tr>
+<tr><td><code>goto_last_accessed_file</code></td><td>Goto last accessed file</td><td>normal: <code>&lt;C-^&gt;</code>, <code>&lt;C-w&gt;^</code>, <code>g&lt;tab&gt;</code>, <code>&lt;C-tab&gt;</code>, <code>&lt;space&gt;w^</code>, <code>&lt;C-w&gt;&lt;C-^&gt;</code>, <code>&lt;C-w&gt;g&lt;tab&gt;</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code>, select: <code>&lt;space&gt;w^</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code></td></tr>
+<tr><td><code>goto_last_modified_file</code></td><td>Goto last modified file</td><td>normal: <code>&lt;space&gt;pr</code>, select: <code>&lt;space&gt;pr</code></td></tr>
 <tr><td><code>goto_last_modification</code></td><td>Goto last modification</td><td>normal: <code>g,</code>, <code>g.</code>, <code>g;</code></td></tr>
 <tr><td><code>goto_line</code></td><td>Goto line</td><td></td></tr>
 <tr><td><code>goto_last_line</code></td><td>Goto last line</td><td>normal: <code>G</code>, <code>&lt;A-gt&gt;</code>, <code>&lt;C-end&gt;</code></td></tr>
 <tr><td><code>extend_to_last_line</code></td><td>Extend to last line</td><td>select: <code>G</code>, <code>ge</code></td></tr>
-<tr><td><code>goto_first_diag</code></td><td>Goto first diagnostic</td><td>normal: <code>&lt;space&gt;ef</code></td></tr>
+<tr><td><code>goto_first_diag</code></td><td>Goto first diagnostic</td><td>normal: <code>&lt;space&gt;ef</code>, select: <code>&lt;space&gt;ef</code></td></tr>
 <tr><td><code>copy_diagnostic</code></td><td>Copy the diagnostic message(s) on the current line</td><td></td></tr>
-<tr><td><code>goto_last_diag</code></td><td>Goto last diagnostic</td><td>normal: <code>&lt;space&gt;e.</code></td></tr>
-<tr><td><code>goto_next_diag</code></td><td>Goto next diagnostic</td><td>normal: <code>]d</code>, <code>&lt;space&gt;en</code></td></tr>
-<tr><td><code>goto_prev_diag</code></td><td>Goto previous diagnostic</td><td>normal: <code>[d</code>, <code>&lt;space&gt;ep</code></td></tr>
+<tr><td><code>goto_last_diag</code></td><td>Goto last diagnostic</td><td>normal: <code>&lt;space&gt;e.</code>, select: <code>&lt;space&gt;e.</code></td></tr>
+<tr><td><code>goto_next_diag</code></td><td>Goto next diagnostic</td><td>normal: <code>]d</code>, <code>&lt;space&gt;en</code>, select: <code>&lt;space&gt;en</code></td></tr>
+<tr><td><code>goto_prev_diag</code></td><td>Goto previous diagnostic</td><td>normal: <code>[d</code>, <code>&lt;space&gt;ep</code>, select: <code>&lt;space&gt;ep</code></td></tr>
 <tr><td><code>goto_next_change</code></td><td>Goto next change</td><td>normal: <code>]g</code></td></tr>
 <tr><td><code>goto_prev_change</code></td><td>Goto previous change</td><td>normal: <code>[g</code></td></tr>
 <tr><td><code>goto_next_conflict</code></td><td>Goto next merge-conflict marker</td><td>normal: <code>]n</code></td></tr>
 <tr><td><code>goto_prev_conflict</code></td><td>Goto previous merge-conflict marker</td><td>normal: <code>[n</code></td></tr>
-<tr><td><code>conflict_take_all_ours</code></td><td>Resolve ALL conflicts: keep our side</td><td>normal: <code>&lt;space&gt;gcO</code></td></tr>
-<tr><td><code>conflict_take_all_theirs</code></td><td>Resolve ALL conflicts: keep their side</td><td>normal: <code>&lt;space&gt;gcT</code></td></tr>
+<tr><td><code>conflict_take_all_ours</code></td><td>Resolve ALL conflicts: keep our side</td><td>normal: <code>&lt;space&gt;gcO</code>, select: <code>&lt;space&gt;gcO</code></td></tr>
+<tr><td><code>conflict_take_all_theirs</code></td><td>Resolve ALL conflicts: keep their side</td><td>normal: <code>&lt;space&gt;gcT</code>, select: <code>&lt;space&gt;gcT</code></td></tr>
+<tr><td><code>git_diff</code></td><td>Open side-by-side diff vs HEAD</td><td>normal: <code>&lt;space&gt;g=</code>, select: <code>&lt;space&gt;g=</code></td></tr>
+<tr><td><code>resolve_conflicts</code></td><td>Resolve merge conflicts (3-way)</td><td>normal: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code>, select: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code></td></tr>
+<tr><td><code>git_status</code></td><td>Magit status</td><td>normal: <code>&lt;space&gt;gs</code>, select: <code>&lt;space&gt;gs</code></td></tr>
+<tr><td><code>org_cycle</code></td><td>Org: toggle subtree fold</td><td>normal: <code>&lt;space&gt;mz</code>, <code>&lt;space&gt;m&lt;tab&gt;</code>, select: <code>&lt;space&gt;mz</code>, <code>&lt;space&gt;m&lt;tab&gt;</code></td></tr>
+<tr><td><code>org_todo</code></td><td>Org: cycle TODO keyword</td><td>normal: <code>&lt;space&gt;mt</code>, select: <code>&lt;space&gt;mt</code></td></tr>
+<tr><td><code>org_priority</code></td><td>Org: cycle priority cookie</td><td>normal: <code>&lt;space&gt;mp</code>, select: <code>&lt;space&gt;mp</code></td></tr>
+<tr><td><code>org_promote</code></td><td>Org: promote heading</td><td>normal: <code>&lt;space&gt;mH</code>, select: <code>&lt;space&gt;mH</code></td></tr>
+<tr><td><code>org_demote</code></td><td>Org: demote heading</td><td>normal: <code>&lt;space&gt;ml</code>, select: <code>&lt;space&gt;ml</code></td></tr>
+<tr><td><code>org_next_heading</code></td><td>Org: next heading</td><td>normal: <code>&lt;space&gt;mj</code>, select: <code>&lt;space&gt;mj</code></td></tr>
+<tr><td><code>org_prev_heading</code></td><td>Org: previous heading</td><td>normal: <code>&lt;space&gt;mk</code>, select: <code>&lt;space&gt;mk</code></td></tr>
+<tr><td><code>org_fold_all</code></td><td>Org: fold all headings</td><td>normal: <code>&lt;space&gt;ma</code>, select: <code>&lt;space&gt;ma</code></td></tr>
+<tr><td><code>org_unfold_all</code></td><td>Org: unfold all</td><td>normal: <code>&lt;space&gt;mA</code>, select: <code>&lt;space&gt;mA</code></td></tr>
+<tr><td><code>org_agenda</code></td><td>Org: open agenda</td><td>normal: <code>&lt;space&gt;aoa</code>, select: <code>&lt;space&gt;aoa</code></td></tr>
+<tr><td><code>org_capture</code></td><td>Org: capture note</td><td>normal: <code>&lt;space&gt;aoc</code>, select: <code>&lt;space&gt;aoc</code></td></tr>
 <tr><td><code>goto_first_change</code></td><td>Goto first change</td><td></td></tr>
-<tr><td><code>goto_last_change</code></td><td>Goto last change</td><td>normal: <code>&lt;space&gt;jc</code></td></tr>
-<tr><td><code>goto_line_start</code></td><td>Goto line start</td><td>normal: <code>0</code>, <code>g0</code>, <code>&lt;home&gt;</code>, <code>g&lt;home&gt;</code>, <code>&lt;space&gt;j0</code>, insert: <code>&lt;home&gt;</code></td></tr>
-<tr><td><code>goto_line_end</code></td><td>Goto line end</td><td>normal: <code>$</code>, <code>g$</code>, <code>gl</code>, <code>&lt;end&gt;</code>, <code>g&lt;end&gt;</code>, <code>&lt;space&gt;j$</code></td></tr>
+<tr><td><code>goto_last_change</code></td><td>Goto last change</td><td>normal: <code>&lt;space&gt;jc</code>, select: <code>&lt;space&gt;jc</code></td></tr>
+<tr><td><code>goto_line_start</code></td><td>Goto line start</td><td>normal: <code>0</code>, <code>g0</code>, <code>&lt;home&gt;</code>, <code>g&lt;home&gt;</code>, <code>&lt;space&gt;j0</code>, select: <code>&lt;space&gt;j0</code>, insert: <code>&lt;home&gt;</code></td></tr>
+<tr><td><code>goto_line_end</code></td><td>Goto line end</td><td>normal: <code>$</code>, <code>g$</code>, <code>gl</code>, <code>&lt;end&gt;</code>, <code>g&lt;end&gt;</code>, <code>&lt;space&gt;j$</code>, select: <code>&lt;space&gt;j$</code></td></tr>
 <tr><td><code>goto_column</code></td><td>Goto column</td><td>normal: <code>|</code></td></tr>
 <tr><td><code>extend_to_column</code></td><td>Extend to column</td><td></td></tr>
-<tr><td><code>goto_next_buffer</code></td><td>Goto next buffer</td><td>normal: <code>]b</code>, <code>gt</code>, <code>&lt;C-w&gt;gt</code>, <code>&lt;space&gt;bn</code>, <code>&lt;space&gt;b.n</code>, <code>&lt;space&gt;wgt</code></td></tr>
-<tr><td><code>goto_previous_buffer</code></td><td>Goto previous buffer</td><td>normal: <code>[b</code>, <code>gT</code>, <code>&lt;C-w&gt;gT</code>, <code>&lt;space&gt;bp</code>, <code>&lt;space&gt;b.N</code>, <code>&lt;space&gt;b.p</code>, <code>&lt;space&gt;wgT</code></td></tr>
+<tr><td><code>goto_next_buffer</code></td><td>Goto next buffer</td><td>normal: <code>]b</code>, <code>gt</code>, <code>&lt;C-w&gt;gt</code>, <code>&lt;space&gt;bn</code>, <code>&lt;space&gt;b.n</code>, <code>&lt;space&gt;wgt</code>, select: <code>&lt;space&gt;bn</code>, <code>&lt;space&gt;b.n</code>, <code>&lt;space&gt;wgt</code></td></tr>
+<tr><td><code>goto_previous_buffer</code></td><td>Goto previous buffer</td><td>normal: <code>[b</code>, <code>gT</code>, <code>&lt;C-w&gt;gT</code>, <code>&lt;space&gt;bp</code>, <code>&lt;space&gt;b.N</code>, <code>&lt;space&gt;b.p</code>, <code>&lt;space&gt;wgT</code>, select: <code>&lt;space&gt;bp</code>, <code>&lt;space&gt;b.N</code>, <code>&lt;space&gt;b.p</code>, <code>&lt;space&gt;wgT</code></td></tr>
 <tr><td><code>goto_line_end_newline</code></td><td>Goto newline at line end</td><td>insert: <code>&lt;end&gt;</code></td></tr>
 <tr><td><code>goto_first_nonwhitespace</code></td><td>Goto first non-blank in line</td><td>normal: <code>^</code>, <code>_</code>, <code>g^</code>, <code>&lt;A-m&gt;</code></td></tr>
 <tr><td><code>trim_selections</code></td><td>Trim whitespace from selections</td><td></td></tr>
@@ -2064,9 +2146,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>extend_to_first_nonwhitespace</code></td><td>Extend to first non-blank in line</td><td>select: <code>^</code>, <code>gh</code></td></tr>
 <tr><td><code>extend_to_line_end</code></td><td>Extend to line end</td><td>select: <code>$</code>, <code>g$</code>, <code>gl</code>, <code>&lt;end&gt;</code></td></tr>
 <tr><td><code>extend_to_line_end_newline</code></td><td>Extend to line end</td><td></td></tr>
-<tr><td><code>signature_help</code></td><td>Show signature help</td><td>normal: <code>&lt;space&gt;ls</code></td></tr>
+<tr><td><code>signature_help</code></td><td>Show signature help</td><td>normal: <code>&lt;space&gt;ls</code>, select: <code>&lt;space&gt;ls</code></td></tr>
 <tr><td><code>smart_tab</code></td><td>Insert tab if all cursors have all whitespace to their left; otherwise, run a separate command.</td><td></td></tr>
-<tr><td><code>insert_tab</code></td><td>Insert tab char</td><td>insert: <code>&lt;tab&gt;</code></td></tr>
+<tr><td><code>insert_tab</code></td><td>Insert tab char</td><td></td></tr>
 <tr><td><code>insert_newline</code></td><td>Insert newline char</td><td>insert: <code>&lt;C-j&gt;</code>, <code>&lt;ret&gt;</code></td></tr>
 <tr><td><code>insert_char_interactive</code></td><td>Insert an interactively-chosen char</td><td>insert: <code>&lt;C-q&gt;</code>, <code>&lt;C-v&gt;</code></td></tr>
 <tr><td><code>append_char_interactive</code></td><td>Append an interactively-chosen char</td><td></td></tr>
@@ -2076,8 +2158,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>delete_word_forward</code></td><td>Delete next word</td><td>normal: <code>&lt;A-d&gt;</code>, insert: <code>&lt;A-d&gt;</code></td></tr>
 <tr><td><code>kill_to_line_start</code></td><td>Delete till start of line</td><td>insert: <code>&lt;C-u&gt;</code></td></tr>
 <tr><td><code>kill_to_line_end</code></td><td>Delete till end of line</td><td></td></tr>
-<tr><td><code>undo</code></td><td>Undo change</td><td>normal: <code>U</code>, <code>u</code>, <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, insert: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code></td></tr>
-<tr><td><code>redo</code></td><td>Redo change</td><td>normal: <code>&lt;C-r&gt;</code>, <code>&lt;space&gt;k&lt;C-r&gt;</code></td></tr>
+<tr><td><code>undo</code></td><td>Undo change</td><td>normal: <code>U</code>, <code>u</code>, <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;space&gt;ku</code>, select: <code>&lt;space&gt;ku</code>, insert: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code></td></tr>
+<tr><td><code>redo</code></td><td>Redo change</td><td>normal: <code>&lt;C-r&gt;</code>, <code>&lt;space&gt;k&lt;C-r&gt;</code>, select: <code>&lt;space&gt;k&lt;C-r&gt;</code></td></tr>
 <tr><td><code>earlier</code></td><td>Move backward in history</td><td>normal: <code>g&lt;minus&gt;</code></td></tr>
 <tr><td><code>later</code></td><td>Move forward in history</td><td>normal: <code>g+</code></td></tr>
 <tr><td><code>commit_undo_checkpoint</code></td><td>Commit changes to new checkpoint</td><td>insert: <code>&lt;C-g&gt;U</code>, <code>&lt;C-g&gt;u</code></td></tr>
@@ -2092,64 +2174,66 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>replace_with_yanked</code></td><td>Replace with yanked text</td><td>select: <code>P</code>, <code>p</code></td></tr>
 <tr><td><code>replace_selections_with_clipboard</code></td><td>Replace selections by clipboard content</td><td></td></tr>
 <tr><td><code>replace_selections_with_primary_clipboard</code></td><td>Replace selections by primary clipboard</td><td></td></tr>
-<tr><td><code>paste_after</code></td><td>Paste after selection</td><td>normal: <code>p</code>, <code>]p</code>, <code>gp</code>, <code>zp</code></td></tr>
-<tr><td><code>paste_before</code></td><td>Paste before selection</td><td>normal: <code>P</code>, <code>[P</code>, <code>[p</code>, <code>]P</code>, <code>gP</code>, <code>zP</code></td></tr>
+<tr><td><code>paste_after</code></td><td>Paste after selection</td><td>normal: <code>p</code>, <code>]p</code>, <code>gp</code>, <code>zp</code>, <code>&lt;space&gt;kp</code>, select: <code>&lt;space&gt;kp</code></td></tr>
+<tr><td><code>paste_before</code></td><td>Paste before selection</td><td>normal: <code>P</code>, <code>[P</code>, <code>[p</code>, <code>]P</code>, <code>gP</code>, <code>zP</code>, <code>&lt;space&gt;kP</code>, select: <code>&lt;space&gt;kP</code></td></tr>
 <tr><td><code>paste_clipboard_after</code></td><td>Paste clipboard after selections</td><td></td></tr>
 <tr><td><code>paste_clipboard_before</code></td><td>Paste clipboard before selections</td><td></td></tr>
 <tr><td><code>paste_primary_clipboard_after</code></td><td>Paste primary clipboard after selections</td><td></td></tr>
 <tr><td><code>paste_primary_clipboard_before</code></td><td>Paste primary clipboard before selections</td><td></td></tr>
-<tr><td><code>indent</code></td><td>Indent selection</td><td>normal: <code>==</code>, <code>&lt;gt&gt;&lt;gt&gt;</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, insert: <code>&lt;C-t&gt;</code></td></tr>
+<tr><td><code>indent</code></td><td>Indent selection</td><td>normal: <code>==</code>, <code>&lt;gt&gt;&lt;gt&gt;</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, select: <code>&lt;space&gt;x&lt;tab&gt;</code>, insert: <code>&lt;C-t&gt;</code></td></tr>
 <tr><td><code>unindent</code></td><td>Unindent selection</td><td>normal: <code>&lt;lt&gt;&lt;lt&gt;</code>, insert: <code>&lt;C-d&gt;</code></td></tr>
-<tr><td><code>format_selections</code></td><td>Format selection</td><td>normal: <code>&lt;A-q&gt;</code>, <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code>, <code>&lt;space&gt;xjc</code>, <code>&lt;space&gt;xjf</code>, <code>&lt;space&gt;xjl</code>, <code>&lt;space&gt;xjn</code>, <code>&lt;space&gt;xjr</code></td></tr>
-<tr><td><code>join_selections</code></td><td>Join lines inside selection</td><td>normal: <code>J</code>, <code>&lt;A-^&gt;</code></td></tr>
+<tr><td><code>format_selections</code></td><td>Format selection</td><td>normal: <code>&lt;A-q&gt;</code>, <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code>, <code>&lt;space&gt;xjc</code>, <code>&lt;space&gt;xjf</code>, <code>&lt;space&gt;xjl</code>, <code>&lt;space&gt;xjn</code>, <code>&lt;space&gt;xjr</code>, select: <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code>, <code>&lt;space&gt;xjc</code>, <code>&lt;space&gt;xjf</code>, <code>&lt;space&gt;xjl</code>, <code>&lt;space&gt;xjn</code>, <code>&lt;space&gt;xjr</code></td></tr>
+<tr><td><code>join_selections</code></td><td>Join lines inside selection</td><td>normal: <code>J</code>, <code>&lt;A-^&gt;</code>, <code>&lt;space&gt;kJ</code>, select: <code>&lt;space&gt;kJ</code></td></tr>
 <tr><td><code>join_selections_space</code></td><td>Join lines inside selection and select spaces</td><td></td></tr>
 <tr><td><code>keep_selections</code></td><td>Keep selections matching regex</td><td></td></tr>
 <tr><td><code>remove_selections</code></td><td>Remove selections matching regex</td><td></td></tr>
-<tr><td><code>align_selections</code></td><td>Align selections in column</td><td>normal: <code>&lt;space&gt;xa&amp;</code>, <code>&lt;space&gt;xa(</code>, <code>&lt;space&gt;xa)</code>, <code>&lt;space&gt;xa,</code>, <code>&lt;space&gt;xa.</code>, <code>&lt;space&gt;xa:</code>, <code>&lt;space&gt;xa;</code>, <code>&lt;space&gt;xa=</code>, <code>&lt;space&gt;xaL</code>, <code>&lt;space&gt;xa[</code>, <code>&lt;space&gt;xa]</code>, <code>&lt;space&gt;xaa</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;xal</code>, <code>&lt;space&gt;xam</code>, <code>&lt;space&gt;xar</code>, <code>&lt;space&gt;xa{</code>, <code>&lt;space&gt;xa}</code></td></tr>
+<tr><td><code>align_selections</code></td><td>Align selections in column</td><td>normal: <code>&lt;space&gt;xa&amp;</code>, <code>&lt;space&gt;xa(</code>, <code>&lt;space&gt;xa)</code>, <code>&lt;space&gt;xa,</code>, <code>&lt;space&gt;xa.</code>, <code>&lt;space&gt;xa:</code>, <code>&lt;space&gt;xa;</code>, <code>&lt;space&gt;xa=</code>, <code>&lt;space&gt;xaL</code>, <code>&lt;space&gt;xa[</code>, <code>&lt;space&gt;xa]</code>, <code>&lt;space&gt;xaa</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;xal</code>, <code>&lt;space&gt;xam</code>, <code>&lt;space&gt;xar</code>, <code>&lt;space&gt;xa{</code>, <code>&lt;space&gt;xa}</code>, select: <code>&lt;space&gt;xa&amp;</code>, <code>&lt;space&gt;xa(</code>, <code>&lt;space&gt;xa)</code>, <code>&lt;space&gt;xa,</code>, <code>&lt;space&gt;xa.</code>, <code>&lt;space&gt;xa:</code>, <code>&lt;space&gt;xa;</code>, <code>&lt;space&gt;xa=</code>, <code>&lt;space&gt;xaL</code>, <code>&lt;space&gt;xa[</code>, <code>&lt;space&gt;xa]</code>, <code>&lt;space&gt;xaa</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;xal</code>, <code>&lt;space&gt;xam</code>, <code>&lt;space&gt;xar</code>, <code>&lt;space&gt;xa{</code>, <code>&lt;space&gt;xa}</code></td></tr>
 <tr><td><code>keep_primary_selection</code></td><td>Keep primary selection</td><td></td></tr>
 <tr><td><code>remove_primary_selection</code></td><td>Remove primary selection</td><td></td></tr>
 <tr><td><code>completion</code></td><td>Invoke completion popup</td><td>insert: <code>&lt;A-/&gt;</code>, <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-x&gt;s</code>, <code>&lt;C-x&gt;&lt;C-]&gt;</code>, <code>&lt;C-x&gt;&lt;C-d&gt;</code>, <code>&lt;C-x&gt;&lt;C-f&gt;</code>, <code>&lt;C-x&gt;&lt;C-i&gt;</code>, <code>&lt;C-x&gt;&lt;C-k&gt;</code>, <code>&lt;C-x&gt;&lt;C-l&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;C-o&gt;</code>, <code>&lt;C-x&gt;&lt;C-p&gt;</code>, <code>&lt;C-x&gt;&lt;C-r&gt;</code>, <code>&lt;C-x&gt;&lt;C-s&gt;</code>, <code>&lt;C-x&gt;&lt;C-t&gt;</code>, <code>&lt;C-x&gt;&lt;C-u&gt;</code>, <code>&lt;C-x&gt;&lt;C-v&gt;</code></td></tr>
-<tr><td><code>hover</code></td><td>Show docs for item under cursor</td><td>normal: <code>K</code>, <code>&lt;C-w&gt;}</code>, <code>&lt;C-w&gt;g}</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;w}</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;mhh</code>, <code>&lt;space&gt;wg}</code>, select: <code>K</code></td></tr>
-<tr><td><code>toggle_comments</code></td><td>Comment/uncomment selections</td><td>normal: <code>&lt;A-;&gt;</code>, <code>&lt;space&gt;;</code>, <code>&lt;space&gt;cT</code>, <code>&lt;space&gt;cc</code>, <code>&lt;space&gt;ch</code>, <code>&lt;space&gt;cp</code>, <code>&lt;space&gt;ct</code></td></tr>
-<tr><td><code>toggle_line_comments</code></td><td>Line comment/uncomment selections</td><td>normal: <code>&lt;space&gt;cL</code>, <code>&lt;space&gt;cl</code></td></tr>
-<tr><td><code>toggle_block_comments</code></td><td>Block comment/uncomment selections</td><td>normal: <code>&lt;space&gt;cb</code></td></tr>
+<tr><td><code>hover</code></td><td>Show docs for item under cursor</td><td>normal: <code>K</code>, <code>&lt;C-w&gt;}</code>, <code>&lt;C-w&gt;g}</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;w}</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;mhh</code>, <code>&lt;space&gt;wg}</code>, select: <code>K</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;w}</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;mhh</code>, <code>&lt;space&gt;wg}</code></td></tr>
+<tr><td><code>toggle_comments</code></td><td>Comment/uncomment selections</td><td>normal: <code>&lt;A-;&gt;</code>, <code>&lt;space&gt;;</code>, <code>&lt;space&gt;cP</code>, <code>&lt;space&gt;cT</code>, <code>&lt;space&gt;cc</code>, <code>&lt;space&gt;ch</code>, <code>&lt;space&gt;cp</code>, <code>&lt;space&gt;ct</code>, select: <code>&lt;space&gt;;</code>, <code>&lt;space&gt;cP</code>, <code>&lt;space&gt;cT</code>, <code>&lt;space&gt;cc</code>, <code>&lt;space&gt;ch</code>, <code>&lt;space&gt;cp</code>, <code>&lt;space&gt;ct</code></td></tr>
+<tr><td><code>toggle_line_comments</code></td><td>Line comment/uncomment selections</td><td>normal: <code>&lt;space&gt;cL</code>, <code>&lt;space&gt;cl</code>, select: <code>&lt;space&gt;cL</code>, <code>&lt;space&gt;cl</code></td></tr>
+<tr><td><code>toggle_block_comments</code></td><td>Block comment/uncomment selections</td><td>normal: <code>&lt;space&gt;cb</code>, select: <code>&lt;space&gt;cb</code></td></tr>
 <tr><td><code>rotate_selections_forward</code></td><td>Rotate selections forward</td><td></td></tr>
 <tr><td><code>rotate_selections_backward</code></td><td>Rotate selections backward</td><td></td></tr>
 <tr><td><code>rotate_selection_contents_forward</code></td><td>Rotate selection contents forward</td><td></td></tr>
 <tr><td><code>rotate_selection_contents_backward</code></td><td>Rotate selections contents backward</td><td></td></tr>
 <tr><td><code>reverse_selection_contents</code></td><td>Reverse selections contents</td><td></td></tr>
-<tr><td><code>expand_selection</code></td><td>Expand selection to parent syntax node</td><td>normal: <code>&lt;space&gt;v</code>, <code>&lt;space&gt;kU</code>, <code>&lt;space&gt;kk</code></td></tr>
-<tr><td><code>shrink_selection</code></td><td>Shrink selection to previously expanded syntax node</td><td>normal: <code>&lt;space&gt;kj</code></td></tr>
-<tr><td><code>select_next_sibling</code></td><td>Select next sibling in the syntax tree</td><td>normal: <code>&lt;space&gt;kl</code></td></tr>
-<tr><td><code>select_prev_sibling</code></td><td>Select previous sibling the in syntax tree</td><td>normal: <code>&lt;space&gt;kh</code></td></tr>
+<tr><td><code>expand_selection</code></td><td>Expand selection to parent syntax node</td><td>normal: <code>&lt;space&gt;v</code>, <code>&lt;space&gt;kU</code>, <code>&lt;space&gt;kk</code>, select: <code>&lt;space&gt;v</code>, <code>&lt;space&gt;kU</code>, <code>&lt;space&gt;kk</code></td></tr>
+<tr><td><code>shrink_selection</code></td><td>Shrink selection to previously expanded syntax node</td><td>normal: <code>&lt;space&gt;kj</code>, select: <code>&lt;space&gt;kj</code></td></tr>
+<tr><td><code>wildfire</code></td><td>Wildfire: select/expand to the closest text object</td><td>normal: <code>&lt;ret&gt;</code></td></tr>
+<tr><td><code>wildfire_shrink</code></td><td>Wildfire: shrink to the previously selected text object</td><td>normal: <code>&lt;backspace&gt;</code></td></tr>
+<tr><td><code>select_next_sibling</code></td><td>Select next sibling in the syntax tree</td><td>normal: <code>&lt;space&gt;kL</code>, <code>&lt;space&gt;kl</code>, select: <code>&lt;space&gt;kL</code>, <code>&lt;space&gt;kl</code></td></tr>
+<tr><td><code>select_prev_sibling</code></td><td>Select previous sibling the in syntax tree</td><td>normal: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code>, select: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code></td></tr>
 <tr><td><code>select_all_siblings</code></td><td>Select all siblings of the current node</td><td></td></tr>
 <tr><td><code>select_all_children</code></td><td>Select all children of the current node</td><td></td></tr>
 <tr><td><code>jump_forward</code></td><td>Jump forward on jumplist</td><td>normal: <code>&lt;C-i&gt;</code>, <code>&lt;tab&gt;</code></td></tr>
-<tr><td><code>jump_backward</code></td><td>Jump backward on jumplist</td><td>normal: <code>&lt;C-o&gt;</code>, <code>&lt;C-t&gt;</code>, <code>&lt;space&gt;jb</code>, <code>&lt;space&gt;s`</code></td></tr>
+<tr><td><code>jump_backward</code></td><td>Jump backward on jumplist</td><td>normal: <code>&lt;C-o&gt;</code>, <code>&lt;C-t&gt;</code>, <code>&lt;space&gt;jb</code>, <code>&lt;space&gt;s`</code>, select: <code>&lt;space&gt;jb</code>, <code>&lt;space&gt;s`</code></td></tr>
 <tr><td><code>save_selection</code></td><td>Save current selection to jumplist</td><td></td></tr>
-<tr><td><code>jump_view_right</code></td><td>Jump to right split</td><td>normal: <code>&lt;C-w&gt;l</code>, <code>&lt;C-w&gt;.l</code>, <code>&lt;space&gt;wl</code>, <code>&lt;C-w&gt;&lt;C-l&gt;</code>, <code>&lt;space&gt;w.l</code>, <code>&lt;C-w&gt;&lt;right&gt;</code>, <code>&lt;space&gt;w&lt;C-l&gt;</code>, <code>&lt;space&gt;w&lt;right&gt;</code></td></tr>
-<tr><td><code>jump_view_left</code></td><td>Jump to left split</td><td>normal: <code>&lt;C-w&gt;h</code>, <code>&lt;C-w&gt;.h</code>, <code>&lt;space&gt;wh</code>, <code>&lt;C-w&gt;&lt;C-h&gt;</code>, <code>&lt;space&gt;w.h</code>, <code>&lt;C-w&gt;&lt;left&gt;</code>, <code>&lt;space&gt;w&lt;C-h&gt;</code>, <code>&lt;space&gt;w&lt;left&gt;</code></td></tr>
-<tr><td><code>jump_view_up</code></td><td>Jump to split above</td><td>normal: <code>&lt;C-w&gt;k</code>, <code>&lt;C-w&gt;t</code>, <code>&lt;C-w&gt;.k</code>, <code>&lt;C-w&gt;&lt;up&gt;</code>, <code>&lt;space&gt;wk</code>, <code>&lt;space&gt;wt</code>, <code>&lt;C-w&gt;&lt;C-k&gt;</code>, <code>&lt;C-w&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;w.k</code>, <code>&lt;space&gt;w&lt;up&gt;</code>, <code>&lt;space&gt;w&lt;C-k&gt;</code>, <code>&lt;space&gt;w&lt;C-t&gt;</code></td></tr>
-<tr><td><code>jump_view_down</code></td><td>Jump to split below</td><td>normal: <code>&lt;C-w&gt;b</code>, <code>&lt;C-w&gt;j</code>, <code>&lt;C-w&gt;.j</code>, <code>&lt;space&gt;wb</code>, <code>&lt;space&gt;wj</code>, <code>&lt;C-w&gt;&lt;C-b&gt;</code>, <code>&lt;C-w&gt;&lt;C-j&gt;</code>, <code>&lt;space&gt;w.j</code>, <code>&lt;C-w&gt;&lt;down&gt;</code>, <code>&lt;space&gt;w&lt;C-b&gt;</code>, <code>&lt;space&gt;w&lt;C-j&gt;</code>, <code>&lt;space&gt;w&lt;down&gt;</code></td></tr>
-<tr><td><code>swap_view_right</code></td><td>Swap with right split</td><td>normal: <code>&lt;C-w&gt;L</code>, <code>&lt;space&gt;wL</code></td></tr>
-<tr><td><code>swap_view_left</code></td><td>Swap with left split</td><td>normal: <code>&lt;C-w&gt;H</code>, <code>&lt;space&gt;wH</code></td></tr>
-<tr><td><code>swap_view_up</code></td><td>Swap with split above</td><td>normal: <code>&lt;C-w&gt;K</code>, <code>&lt;space&gt;wK</code></td></tr>
-<tr><td><code>swap_view_down</code></td><td>Swap with split below</td><td>normal: <code>&lt;C-w&gt;J</code>, <code>&lt;space&gt;wJ</code></td></tr>
-<tr><td><code>transpose_view</code></td><td>Transpose splits</td><td>normal: <code>&lt;C-w&gt;M</code>, <code>&lt;C-w&gt;x</code>, <code>&lt;space&gt;wM</code>, <code>&lt;space&gt;wx</code>, <code>&lt;C-w&gt;&lt;C-x&gt;</code>, <code>&lt;space&gt;w&lt;C-x&gt;</code></td></tr>
-<tr><td><code>rotate_view</code></td><td>Goto next window</td><td>normal: <code>&lt;C-w&gt;p</code>, <code>&lt;C-w&gt;r</code>, <code>&lt;C-w&gt;w</code>, <code>&lt;C-w&gt;.o</code>, <code>&lt;space&gt;wp</code>, <code>&lt;space&gt;wr</code>, <code>&lt;space&gt;ww</code>, <code>&lt;C-w&gt;&lt;C-p&gt;</code>, <code>&lt;C-w&gt;&lt;C-r&gt;</code>, <code>&lt;C-w&gt;&lt;C-w&gt;</code>, <code>&lt;C-w&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;b.o</code>, <code>&lt;space&gt;w.o</code>, <code>&lt;space&gt;w&lt;C-p&gt;</code>, <code>&lt;space&gt;w&lt;C-r&gt;</code>, <code>&lt;space&gt;w&lt;C-w&gt;</code>, <code>&lt;space&gt;w&lt;tab&gt;</code></td></tr>
-<tr><td><code>rotate_view_reverse</code></td><td>Goto previous window</td><td>normal: <code>&lt;C-w&gt;R</code>, <code>&lt;C-w&gt;W</code>, <code>&lt;space&gt;wR</code>, <code>&lt;space&gt;wW</code></td></tr>
-<tr><td><code>hsplit</code></td><td>Horizontal bottom split</td><td>normal: <code>&lt;C-w&gt;S</code>, <code>&lt;C-w&gt;s</code>, <code>&lt;space&gt;wS</code>, <code>&lt;space&gt;ws</code>, <code>&lt;C-w&gt;&lt;C-s&gt;</code>, <code>&lt;C-w&gt;.&lt;minus&gt;</code>, <code>&lt;space&gt;w&lt;C-s&gt;</code>, <code>&lt;space&gt;w.&lt;minus&gt;</code></td></tr>
-<tr><td><code>hsplit_new</code></td><td>Horizontal bottom split scratch buffer</td><td>normal: <code>&lt;C-w&gt;n</code>, <code>&lt;space&gt;Fn</code>, <code>&lt;space&gt;wn</code>, <code>&lt;C-w&gt;&lt;C-n&gt;</code>, <code>&lt;space&gt;bNh</code>, <code>&lt;space&gt;bNj</code>, <code>&lt;space&gt;bNk</code>, <code>&lt;space&gt;bNl</code>, <code>&lt;space&gt;w&lt;C-n&gt;</code></td></tr>
-<tr><td><code>vsplit</code></td><td>Vertical right split</td><td>normal: <code>&lt;C-w&gt;/</code>, <code>&lt;C-w&gt;2</code>, <code>&lt;C-w&gt;3</code>, <code>&lt;C-w&gt;4</code>, <code>&lt;C-w&gt;V</code>, <code>&lt;C-w&gt;v</code>, <code>&lt;C-w&gt;./</code>, <code>&lt;space&gt;w/</code>, <code>&lt;space&gt;w2</code>, <code>&lt;space&gt;w3</code>, <code>&lt;space&gt;w4</code>, <code>&lt;space&gt;wV</code>, <code>&lt;space&gt;wv</code>, <code>&lt;C-w&gt;&lt;C-v&gt;</code>, <code>&lt;space&gt;w./</code>, <code>&lt;space&gt;w&lt;C-v&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w2</code>, <code>&lt;space&gt;u&lt;space&gt;w3</code>, <code>&lt;space&gt;u&lt;space&gt;w4</code></td></tr>
+<tr><td><code>jump_view_right</code></td><td>Jump to right split</td><td>normal: <code>&lt;C-w&gt;l</code>, <code>&lt;C-w&gt;.l</code>, <code>&lt;space&gt;wl</code>, <code>&lt;C-w&gt;&lt;C-l&gt;</code>, <code>&lt;space&gt;w.l</code>, <code>&lt;C-w&gt;&lt;right&gt;</code>, <code>&lt;space&gt;w&lt;C-l&gt;</code>, <code>&lt;space&gt;w&lt;right&gt;</code>, select: <code>&lt;space&gt;wl</code>, <code>&lt;space&gt;w.l</code>, <code>&lt;space&gt;w&lt;C-l&gt;</code>, <code>&lt;space&gt;w&lt;right&gt;</code></td></tr>
+<tr><td><code>jump_view_left</code></td><td>Jump to left split</td><td>normal: <code>&lt;C-w&gt;h</code>, <code>&lt;C-w&gt;.h</code>, <code>&lt;space&gt;wh</code>, <code>&lt;C-w&gt;&lt;C-h&gt;</code>, <code>&lt;space&gt;w.h</code>, <code>&lt;C-w&gt;&lt;left&gt;</code>, <code>&lt;space&gt;w&lt;C-h&gt;</code>, <code>&lt;space&gt;w&lt;left&gt;</code>, select: <code>&lt;space&gt;wh</code>, <code>&lt;space&gt;w.h</code>, <code>&lt;space&gt;w&lt;C-h&gt;</code>, <code>&lt;space&gt;w&lt;left&gt;</code></td></tr>
+<tr><td><code>jump_view_up</code></td><td>Jump to split above</td><td>normal: <code>&lt;C-w&gt;k</code>, <code>&lt;C-w&gt;t</code>, <code>&lt;C-w&gt;.k</code>, <code>&lt;C-w&gt;&lt;up&gt;</code>, <code>&lt;space&gt;wk</code>, <code>&lt;space&gt;wt</code>, <code>&lt;C-w&gt;&lt;C-k&gt;</code>, <code>&lt;C-w&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;w.k</code>, <code>&lt;space&gt;w&lt;up&gt;</code>, <code>&lt;space&gt;w&lt;C-k&gt;</code>, <code>&lt;space&gt;w&lt;C-t&gt;</code>, select: <code>&lt;space&gt;wk</code>, <code>&lt;space&gt;wt</code>, <code>&lt;space&gt;w.k</code>, <code>&lt;space&gt;w&lt;up&gt;</code>, <code>&lt;space&gt;w&lt;C-k&gt;</code>, <code>&lt;space&gt;w&lt;C-t&gt;</code></td></tr>
+<tr><td><code>jump_view_down</code></td><td>Jump to split below</td><td>normal: <code>&lt;C-w&gt;b</code>, <code>&lt;C-w&gt;j</code>, <code>&lt;C-w&gt;.j</code>, <code>&lt;space&gt;wb</code>, <code>&lt;space&gt;wj</code>, <code>&lt;C-w&gt;&lt;C-b&gt;</code>, <code>&lt;C-w&gt;&lt;C-j&gt;</code>, <code>&lt;space&gt;w.j</code>, <code>&lt;C-w&gt;&lt;down&gt;</code>, <code>&lt;space&gt;w&lt;C-b&gt;</code>, <code>&lt;space&gt;w&lt;C-j&gt;</code>, <code>&lt;space&gt;w&lt;down&gt;</code>, select: <code>&lt;space&gt;wb</code>, <code>&lt;space&gt;wj</code>, <code>&lt;space&gt;w.j</code>, <code>&lt;space&gt;w&lt;C-b&gt;</code>, <code>&lt;space&gt;w&lt;C-j&gt;</code>, <code>&lt;space&gt;w&lt;down&gt;</code></td></tr>
+<tr><td><code>swap_view_right</code></td><td>Swap with right split</td><td>normal: <code>&lt;C-w&gt;L</code>, <code>&lt;C-w&gt;.L</code>, <code>&lt;space&gt;wL</code>, <code>&lt;space&gt;w.L</code>, select: <code>&lt;space&gt;wL</code>, <code>&lt;space&gt;w.L</code></td></tr>
+<tr><td><code>swap_view_left</code></td><td>Swap with left split</td><td>normal: <code>&lt;C-w&gt;H</code>, <code>&lt;C-w&gt;.H</code>, <code>&lt;space&gt;wH</code>, <code>&lt;space&gt;w.H</code>, select: <code>&lt;space&gt;wH</code>, <code>&lt;space&gt;w.H</code></td></tr>
+<tr><td><code>swap_view_up</code></td><td>Swap with split above</td><td>normal: <code>&lt;C-w&gt;K</code>, <code>&lt;C-w&gt;.K</code>, <code>&lt;space&gt;wK</code>, <code>&lt;space&gt;w.K</code>, select: <code>&lt;space&gt;wK</code>, <code>&lt;space&gt;w.K</code></td></tr>
+<tr><td><code>swap_view_down</code></td><td>Swap with split below</td><td>normal: <code>&lt;C-w&gt;J</code>, <code>&lt;C-w&gt;.J</code>, <code>&lt;space&gt;wJ</code>, <code>&lt;space&gt;w.J</code>, select: <code>&lt;space&gt;wJ</code>, <code>&lt;space&gt;w.J</code></td></tr>
+<tr><td><code>transpose_view</code></td><td>Transpose splits</td><td>normal: <code>&lt;C-w&gt;M</code>, <code>&lt;C-w&gt;x</code>, <code>&lt;space&gt;wM</code>, <code>&lt;space&gt;wx</code>, <code>&lt;C-w&gt;&lt;C-x&gt;</code>, <code>&lt;space&gt;w&lt;C-x&gt;</code>, select: <code>&lt;space&gt;wM</code>, <code>&lt;space&gt;wx</code>, <code>&lt;space&gt;w&lt;C-x&gt;</code></td></tr>
+<tr><td><code>rotate_view</code></td><td>Goto next window</td><td>normal: <code>&lt;C-w&gt;p</code>, <code>&lt;C-w&gt;r</code>, <code>&lt;C-w&gt;w</code>, <code>&lt;C-w&gt;.o</code>, <code>&lt;C-w&gt;.r</code>, <code>&lt;C-w&gt;.w</code>, <code>&lt;space&gt;wp</code>, <code>&lt;space&gt;wr</code>, <code>&lt;space&gt;ww</code>, <code>&lt;C-w&gt;&lt;C-p&gt;</code>, <code>&lt;C-w&gt;&lt;C-r&gt;</code>, <code>&lt;C-w&gt;&lt;C-w&gt;</code>, <code>&lt;C-w&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;b.o</code>, <code>&lt;space&gt;w.o</code>, <code>&lt;space&gt;w.r</code>, <code>&lt;space&gt;w.w</code>, <code>&lt;space&gt;w&lt;C-p&gt;</code>, <code>&lt;space&gt;w&lt;C-r&gt;</code>, <code>&lt;space&gt;w&lt;C-w&gt;</code>, <code>&lt;space&gt;w&lt;tab&gt;</code>, select: <code>&lt;space&gt;wp</code>, <code>&lt;space&gt;wr</code>, <code>&lt;space&gt;ww</code>, <code>&lt;space&gt;b.o</code>, <code>&lt;space&gt;w.o</code>, <code>&lt;space&gt;w.r</code>, <code>&lt;space&gt;w.w</code>, <code>&lt;space&gt;w&lt;C-p&gt;</code>, <code>&lt;space&gt;w&lt;C-r&gt;</code>, <code>&lt;space&gt;w&lt;C-w&gt;</code>, <code>&lt;space&gt;w&lt;tab&gt;</code></td></tr>
+<tr><td><code>rotate_view_reverse</code></td><td>Goto previous window</td><td>normal: <code>&lt;C-w&gt;R</code>, <code>&lt;C-w&gt;W</code>, <code>&lt;C-w&gt;.R</code>, <code>&lt;space&gt;wR</code>, <code>&lt;space&gt;wW</code>, <code>&lt;space&gt;w.R</code>, select: <code>&lt;space&gt;wR</code>, <code>&lt;space&gt;wW</code>, <code>&lt;space&gt;w.R</code></td></tr>
+<tr><td><code>hsplit</code></td><td>Horizontal bottom split</td><td>normal: <code>&lt;C-w&gt;S</code>, <code>&lt;C-w&gt;s</code>, <code>&lt;C-w&gt;.S</code>, <code>&lt;C-w&gt;.s</code>, <code>&lt;space&gt;wS</code>, <code>&lt;space&gt;ws</code>, <code>&lt;C-w&gt;&lt;C-s&gt;</code>, <code>&lt;space&gt;w.S</code>, <code>&lt;space&gt;w.s</code>, <code>&lt;C-w&gt;.&lt;minus&gt;</code>, <code>&lt;space&gt;w&lt;C-s&gt;</code>, <code>&lt;space&gt;w.&lt;minus&gt;</code>, select: <code>&lt;space&gt;wS</code>, <code>&lt;space&gt;ws</code>, <code>&lt;space&gt;w.S</code>, <code>&lt;space&gt;w.s</code>, <code>&lt;space&gt;w&lt;C-s&gt;</code>, <code>&lt;space&gt;w.&lt;minus&gt;</code></td></tr>
+<tr><td><code>hsplit_new</code></td><td>Horizontal bottom split scratch buffer</td><td>normal: <code>&lt;C-w&gt;n</code>, <code>&lt;space&gt;Fn</code>, <code>&lt;space&gt;wn</code>, <code>&lt;C-w&gt;&lt;C-n&gt;</code>, <code>&lt;space&gt;bNh</code>, <code>&lt;space&gt;bNj</code>, <code>&lt;space&gt;bNk</code>, <code>&lt;space&gt;bNl</code>, <code>&lt;space&gt;w&lt;C-n&gt;</code>, select: <code>&lt;space&gt;Fn</code>, <code>&lt;space&gt;wn</code>, <code>&lt;space&gt;bNh</code>, <code>&lt;space&gt;bNj</code>, <code>&lt;space&gt;bNk</code>, <code>&lt;space&gt;bNl</code>, <code>&lt;space&gt;w&lt;C-n&gt;</code></td></tr>
+<tr><td><code>vsplit</code></td><td>Vertical right split</td><td>normal: <code>&lt;C-w&gt;/</code>, <code>&lt;C-w&gt;2</code>, <code>&lt;C-w&gt;3</code>, <code>&lt;C-w&gt;4</code>, <code>&lt;C-w&gt;V</code>, <code>&lt;C-w&gt;v</code>, <code>&lt;C-w&gt;./</code>, <code>&lt;C-w&gt;.V</code>, <code>&lt;C-w&gt;.v</code>, <code>&lt;space&gt;w/</code>, <code>&lt;space&gt;w2</code>, <code>&lt;space&gt;w3</code>, <code>&lt;space&gt;w4</code>, <code>&lt;space&gt;wV</code>, <code>&lt;space&gt;wv</code>, <code>&lt;C-w&gt;&lt;C-v&gt;</code>, <code>&lt;space&gt;w./</code>, <code>&lt;space&gt;w.V</code>, <code>&lt;space&gt;w.v</code>, <code>&lt;space&gt;w&lt;C-v&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w2</code>, <code>&lt;space&gt;u&lt;space&gt;w3</code>, <code>&lt;space&gt;u&lt;space&gt;w4</code>, select: <code>&lt;space&gt;w/</code>, <code>&lt;space&gt;w2</code>, <code>&lt;space&gt;w3</code>, <code>&lt;space&gt;w4</code>, <code>&lt;space&gt;wV</code>, <code>&lt;space&gt;wv</code>, <code>&lt;space&gt;w./</code>, <code>&lt;space&gt;w.V</code>, <code>&lt;space&gt;w.v</code>, <code>&lt;space&gt;w&lt;C-v&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w2</code>, <code>&lt;space&gt;u&lt;space&gt;w3</code>, <code>&lt;space&gt;u&lt;space&gt;w4</code></td></tr>
 <tr><td><code>vsplit_new</code></td><td>Vertical right split scratch buffer</td><td></td></tr>
-<tr><td><code>wclose</code></td><td>Close window</td><td>normal: <code>&lt;C-w&gt;D</code>, <code>&lt;C-w&gt;c</code>, <code>&lt;C-w&gt;d</code>, <code>&lt;C-w&gt;q</code>, <code>&lt;C-w&gt;.d</code>, <code>&lt;space&gt;cd</code>, <code>&lt;space&gt;wD</code>, <code>&lt;space&gt;wc</code>, <code>&lt;space&gt;wd</code>, <code>&lt;space&gt;wq</code>, <code>&lt;C-w&gt;&lt;C-d&gt;</code>, <code>&lt;C-w&gt;&lt;C-q&gt;</code>, <code>&lt;space&gt;w.d</code>, <code>&lt;space&gt;w&lt;C-d&gt;</code>, <code>&lt;space&gt;w&lt;C-q&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;wd</code></td></tr>
-<tr><td><code>wonly</code></td><td>Close windows except current</td><td>normal: <code>&lt;C-w&gt;1</code>, <code>&lt;C-w&gt;_</code>, <code>&lt;C-w&gt;m</code>, <code>&lt;C-w&gt;o</code>, <code>&lt;C-w&gt;.D</code>, <code>&lt;C-w&gt;|</code>, <code>&lt;space&gt;w1</code>, <code>&lt;space&gt;w_</code>, <code>&lt;space&gt;wm</code>, <code>&lt;space&gt;wo</code>, <code>&lt;C-w&gt;&lt;C-o&gt;</code>, <code>&lt;space&gt;w.D</code>, <code>&lt;space&gt;w|</code>, <code>&lt;space&gt;w&lt;C-o&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w1</code></td></tr>
+<tr><td><code>wclose</code></td><td>Close window</td><td>normal: <code>&lt;C-w&gt;D</code>, <code>&lt;C-w&gt;c</code>, <code>&lt;C-w&gt;d</code>, <code>&lt;C-w&gt;q</code>, <code>&lt;C-w&gt;.d</code>, <code>&lt;space&gt;cd</code>, <code>&lt;space&gt;wD</code>, <code>&lt;space&gt;wc</code>, <code>&lt;space&gt;wd</code>, <code>&lt;space&gt;wq</code>, <code>&lt;C-w&gt;&lt;C-d&gt;</code>, <code>&lt;C-w&gt;&lt;C-q&gt;</code>, <code>&lt;space&gt;w.d</code>, <code>&lt;space&gt;w&lt;C-d&gt;</code>, <code>&lt;space&gt;w&lt;C-q&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;wd</code>, select: <code>&lt;space&gt;cd</code>, <code>&lt;space&gt;wD</code>, <code>&lt;space&gt;wc</code>, <code>&lt;space&gt;wd</code>, <code>&lt;space&gt;wq</code>, <code>&lt;space&gt;w.d</code>, <code>&lt;space&gt;w&lt;C-d&gt;</code>, <code>&lt;space&gt;w&lt;C-q&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;wd</code></td></tr>
+<tr><td><code>wonly</code></td><td>Close windows except current</td><td>normal: <code>&lt;C-w&gt;1</code>, <code>&lt;C-w&gt;_</code>, <code>&lt;C-w&gt;m</code>, <code>&lt;C-w&gt;o</code>, <code>&lt;C-w&gt;.D</code>, <code>&lt;C-w&gt;._</code>, <code>&lt;C-w&gt;|</code>, <code>&lt;C-w&gt;.|</code>, <code>&lt;space&gt;w1</code>, <code>&lt;space&gt;w_</code>, <code>&lt;space&gt;wm</code>, <code>&lt;space&gt;wo</code>, <code>&lt;C-w&gt;&lt;C-o&gt;</code>, <code>&lt;space&gt;w.D</code>, <code>&lt;space&gt;w._</code>, <code>&lt;space&gt;w|</code>, <code>&lt;space&gt;w.|</code>, <code>&lt;space&gt;w&lt;C-o&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w1</code>, select: <code>&lt;space&gt;w1</code>, <code>&lt;space&gt;w_</code>, <code>&lt;space&gt;wm</code>, <code>&lt;space&gt;wo</code>, <code>&lt;space&gt;w.D</code>, <code>&lt;space&gt;w._</code>, <code>&lt;space&gt;w|</code>, <code>&lt;space&gt;w.|</code>, <code>&lt;space&gt;w&lt;C-o&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w1</code></td></tr>
 <tr><td><code>select_register</code></td><td>Select register</td><td>normal: <code>"</code></td></tr>
 <tr><td><code>insert_register</code></td><td>Insert register</td><td>insert: <code>&lt;C-r&gt;</code></td></tr>
 <tr><td><code>copy_between_registers</code></td><td>Copy between two registers</td><td></td></tr>
 <tr><td><code>align_view_middle</code></td><td>Align view middle</td><td></td></tr>
 <tr><td><code>align_view_top</code></td><td>Align view top</td><td>normal: <code>zt</code></td></tr>
-<tr><td><code>align_view_center</code></td><td>Align view center</td><td>normal: <code>zz</code>, <code>&lt;C-l&gt;</code>, <code>&lt;C-w&gt;.z</code>, <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code></td></tr>
+<tr><td><code>align_view_center</code></td><td>Align view center</td><td>normal: <code>zz</code>, <code>&lt;C-l&gt;</code>, <code>&lt;C-w&gt;.z</code>, <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code>, select: <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code></td></tr>
 <tr><td><code>align_view_bottom</code></td><td>Align view bottom</td><td>normal: <code>zb</code></td></tr>
 <tr><td><code>scroll_up</code></td><td>Scroll view up</td><td>normal: <code>&lt;C-y&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-y&gt;</code></td></tr>
 <tr><td><code>scroll_down</code></td><td>Scroll view down</td><td>normal: <code>&lt;C-e&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-e&gt;</code></td></tr>
@@ -2157,11 +2241,11 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>scroll_column_right</code></td><td>Scroll view right one column (zl)</td><td>normal: <code>zl</code>, <code>z&lt;right&gt;</code></td></tr>
 <tr><td><code>scroll_half_column_left</code></td><td>Scroll view left half a screen (zH)</td><td>normal: <code>zH</code>, <code>ze</code></td></tr>
 <tr><td><code>scroll_half_column_right</code></td><td>Scroll view right half a screen (zL)</td><td>normal: <code>zL</code>, <code>zs</code></td></tr>
-<tr><td><code>resize_view_wider</code></td><td>Make current window wider (CTRL-W &gt;)</td><td>normal: <code>&lt;C-w&gt;&lt;gt&gt;</code>, <code>&lt;space&gt;w&lt;gt&gt;</code></td></tr>
-<tr><td><code>resize_view_narrower</code></td><td>Make current window narrower (CTRL-W &lt;)</td><td>normal: <code>&lt;C-w&gt;&lt;lt&gt;</code>, <code>&lt;space&gt;w&lt;lt&gt;</code></td></tr>
-<tr><td><code>resize_view_taller</code></td><td>Make current window taller (CTRL-W +)</td><td>normal: <code>&lt;C-w&gt;+</code>, <code>&lt;space&gt;w+</code></td></tr>
-<tr><td><code>resize_view_shorter</code></td><td>Make current window shorter (CTRL-W -)</td><td>normal: <code>&lt;C-w&gt;&lt;minus&gt;</code>, <code>&lt;space&gt;w&lt;minus&gt;</code></td></tr>
-<tr><td><code>resize_view_equalize</code></td><td>Make all windows equal size (CTRL-W =)</td><td>normal: <code>&lt;C-w&gt;=</code>, <code>&lt;space&gt;w=</code></td></tr>
+<tr><td><code>resize_view_wider</code></td><td>Make current window wider (CTRL-W &gt;)</td><td>normal: <code>&lt;C-w&gt;.]</code>, <code>&lt;C-w&gt;&lt;gt&gt;</code>, <code>&lt;space&gt;w.]</code>, <code>&lt;space&gt;w&lt;gt&gt;</code>, select: <code>&lt;space&gt;w.]</code>, <code>&lt;space&gt;w&lt;gt&gt;</code></td></tr>
+<tr><td><code>resize_view_narrower</code></td><td>Make current window narrower (CTRL-W &lt;)</td><td>normal: <code>&lt;C-w&gt;[</code>, <code>&lt;C-w&gt;.[</code>, <code>&lt;C-w&gt;&lt;lt&gt;</code>, <code>&lt;space&gt;w[</code>, <code>&lt;space&gt;w.[</code>, <code>&lt;space&gt;w&lt;lt&gt;</code>, select: <code>&lt;space&gt;w[</code>, <code>&lt;space&gt;w.[</code>, <code>&lt;space&gt;w&lt;lt&gt;</code></td></tr>
+<tr><td><code>resize_view_taller</code></td><td>Make current window taller (CTRL-W +)</td><td>normal: <code>&lt;C-w&gt;+</code>, <code>&lt;C-w&gt;.}</code>, <code>&lt;space&gt;w+</code>, <code>&lt;space&gt;w.}</code>, select: <code>&lt;space&gt;w+</code>, <code>&lt;space&gt;w.}</code></td></tr>
+<tr><td><code>resize_view_shorter</code></td><td>Make current window shorter (CTRL-W -)</td><td>normal: <code>&lt;C-w&gt;{</code>, <code>&lt;C-w&gt;.{</code>, <code>&lt;space&gt;w{</code>, <code>&lt;space&gt;w.{</code>, <code>&lt;C-w&gt;&lt;minus&gt;</code>, <code>&lt;space&gt;w&lt;minus&gt;</code>, select: <code>&lt;space&gt;w{</code>, <code>&lt;space&gt;w.{</code>, <code>&lt;space&gt;w&lt;minus&gt;</code></td></tr>
+<tr><td><code>resize_view_equalize</code></td><td>Make all windows equal size (CTRL-W =)</td><td>normal: <code>&lt;C-w&gt;=</code>, <code>&lt;space&gt;w=</code>, select: <code>&lt;space&gt;w=</code></td></tr>
 <tr><td><code>rot13</code></td><td>ROT13-encode the selection (g?)</td><td></td></tr>
 <tr><td><code>url_encode</code></td><td>Percent-encode (URL-encode) the selection</td><td></td></tr>
 <tr><td><code>url_decode</code></td><td>Percent-decode (URL-decode) the selection</td><td></td></tr>
@@ -2221,35 +2305,50 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>json_minify_selection</code></td><td>Minify the selected JSON</td><td></td></tr>
 <tr><td><code>xml_pretty_selection</code></td><td>Pretty-print the selected XML/HTML</td><td></td></tr>
 <tr><td><code>insert_digraph</code></td><td>Insert a digraph by two-character mnemonic (CTRL-K)</td><td>insert: <code>&lt;C-k&gt;</code></td></tr>
+<tr><td><code>insert_uuid_v4</code></td><td>Insert a random UUIDv4 (SPC i U 4)</td><td>normal: <code>&lt;space&gt;iU4</code>, <code>&lt;space&gt;iUU</code>, select: <code>&lt;space&gt;iU4</code>, <code>&lt;space&gt;iUU</code></td></tr>
+<tr><td><code>insert_uuid_v1</code></td><td>Insert a time-based UUIDv1 (SPC i U 1)</td><td>normal: <code>&lt;space&gt;iU1</code>, select: <code>&lt;space&gt;iU1</code></td></tr>
+<tr><td><code>insert_lorem_sentence</code></td><td>Insert a lorem-ipsum sentence (SPC i l s)</td><td>normal: <code>&lt;space&gt;ils</code>, select: <code>&lt;space&gt;ils</code></td></tr>
+<tr><td><code>insert_lorem_paragraph</code></td><td>Insert a lorem-ipsum paragraph (SPC i l p)</td><td>normal: <code>&lt;space&gt;ilp</code>, select: <code>&lt;space&gt;ilp</code></td></tr>
+<tr><td><code>insert_lorem_list</code></td><td>Insert a lorem-ipsum list (SPC i l l)</td><td>normal: <code>&lt;space&gt;ill</code>, select: <code>&lt;space&gt;ill</code></td></tr>
+<tr><td><code>insert_password_simple</code></td><td>Insert a simple alphanumeric password (SPC i p 1)</td><td>normal: <code>&lt;space&gt;ip1</code>, select: <code>&lt;space&gt;ip1</code></td></tr>
+<tr><td><code>insert_password_strong</code></td><td>Insert a stronger password with symbols (SPC i p 2)</td><td>normal: <code>&lt;space&gt;ip2</code>, select: <code>&lt;space&gt;ip2</code></td></tr>
+<tr><td><code>insert_password_paranoid</code></td><td>Insert a long password for paranoids (SPC i p 3)</td><td>normal: <code>&lt;space&gt;ip3</code>, select: <code>&lt;space&gt;ip3</code></td></tr>
+<tr><td><code>insert_password_numerical</code></td><td>Insert a numeric password (SPC i p n)</td><td>normal: <code>&lt;space&gt;ipn</code>, select: <code>&lt;space&gt;ipn</code></td></tr>
+<tr><td><code>insert_password_phonetic</code></td><td>Insert a phonetically easy password (SPC i p p)</td><td>normal: <code>&lt;space&gt;ipp</code>, select: <code>&lt;space&gt;ipp</code></td></tr>
+<tr><td><code>symbol_upper_camel</code></td><td>Change symbol style to UpperCamelCase (SPC x i C)</td><td>normal: <code>&lt;space&gt;xiC</code>, select: <code>&lt;space&gt;xiC</code></td></tr>
+<tr><td><code>symbol_up_case</code></td><td>Change symbol style to UP_CASE (SPC x i U)</td><td>normal: <code>&lt;space&gt;xiU</code>, select: <code>&lt;space&gt;xiU</code></td></tr>
+<tr><td><code>symbol_under_score</code></td><td>Change symbol style to under_score (SPC x i _)</td><td>normal: <code>&lt;space&gt;xi_</code>, select: <code>&lt;space&gt;xi_</code></td></tr>
+<tr><td><code>randomize_lines_in_region</code></td><td>Randomize lines in the selection (SPC x l r)</td><td>normal: <code>&lt;space&gt;xlr</code>, select: <code>&lt;space&gt;xlr</code></td></tr>
+<tr><td><code>randomize_words_in_region</code></td><td>Randomize words in the selection (SPC x w r)</td><td>normal: <code>&lt;space&gt;xwr</code>, select: <code>&lt;space&gt;xwr</code></td></tr>
 <tr><td><code>copy_char_below</code></td><td>Insert the character below the cursor (i_CTRL-E)</td><td>insert: <code>&lt;C-e&gt;</code></td></tr>
 <tr><td><code>copy_char_above</code></td><td>Insert the character above the cursor (i_CTRL-Y)</td><td>insert: <code>&lt;C-y&gt;</code></td></tr>
 <tr><td><code>file_info</code></td><td>Show file name and cursor position (CTRL-G)</td><td>normal: <code>&lt;C-g&gt;</code></td></tr>
 <tr><td><code>document_stats</code></td><td>Show document line/word/char counts (g CTRL-G)</td><td>normal: <code>g&lt;C-g&gt;</code>, select: <code>g&lt;C-g&gt;</code></td></tr>
-<tr><td><code>git_blame_line</code></td><td>Show git blame for the current line (g b)</td><td>normal: <code>&lt;space&gt;gb</code></td></tr>
+<tr><td><code>git_blame_line</code></td><td>Show git blame for the current line (g b)</td><td>normal: <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code>, select: <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code></td></tr>
 <tr><td><code>git_branch_picker</code></td><td>Pick a git branch and check it out</td><td></td></tr>
-<tr><td><code>preferences</code></td><td>Open the unified Preferences window</td><td>normal: <code>&lt;space&gt;,</code></td></tr>
-<tr><td><code>help</code></td><td>Open the inline Help browser</td><td>normal: <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code></td></tr>
-<tr><td><code>dashboard</code></td><td>Open the system-stats Dashboard (Preferences)</td><td></td></tr>
+<tr><td><code>preferences</code></td><td>Open the unified Preferences window</td><td>normal: <code>&lt;space&gt;,</code>, select: <code>&lt;space&gt;,</code></td></tr>
+<tr><td><code>help</code></td><td>Open the inline Help browser</td><td>normal: <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, select: <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code></td></tr>
+<tr><td><code>dashboard</code></td><td>Open the system-stats Dashboard (Preferences)</td><td>normal: <code>&lt;space&gt;bh</code>, select: <code>&lt;space&gt;bh</code></td></tr>
 <tr><td><code>search_in_files</code></td><td>Open the project-wide Find in Files panel</td><td></td></tr>
-<tr><td><code>terminal</code></td><td>Open an integrated terminal (PTY shell)</td><td></td></tr>
-<tr><td><code>run_config_manager</code></td><td>Manage run/debug configurations</td><td>normal: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code></td></tr>
-<tr><td><code>run_active_config</code></td><td>Run the active run configuration</td><td>normal: <code>&lt;F5&gt;</code>, <code>&lt;space&gt;Rr</code></td></tr>
-<tr><td><code>clear_run_output</code></td><td>Clear the Run tool window output</td><td>normal: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code></td></tr>
-<tr><td><code>rerun_last_run</code></td><td>Re-run the last command in the Run console</td><td>normal: <code>&lt;space&gt;RR</code></td></tr>
-<tr><td><code>run_next_error</code></td><td>Jump to the next file:line in the run output</td><td>normal: <code>&lt;space&gt;Rn</code></td></tr>
-<tr><td><code>run_prev_error</code></td><td>Jump to the previous file:line in the run output</td><td>normal: <code>&lt;space&gt;Rp</code></td></tr>
-<tr><td><code>reveal_in_tree</code></td><td>Reveal the current file in the project tree</td><td>normal: <code>&lt;space&gt;pv</code></td></tr>
-<tr><td><code>toggle_auto_reveal</code></td><td>Toggle always-select-opened-file (autoscroll from source)</td><td>normal: <code>&lt;space&gt;pV</code></td></tr>
-<tr><td><code>focus_file_tree</code></td><td>Focus the project file tree panel</td><td>normal: <code>&lt;space&gt;Wp</code>, <code>&lt;space&gt;Wt</code></td></tr>
-<tr><td><code>focus_structure</code></td><td>Focus the structure/symbol outline panel</td><td>normal: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code></td></tr>
-<tr><td><code>focus_problems</code></td><td>Focus the problems/diagnostics panel</td><td>normal: <code>&lt;space&gt;We</code></td></tr>
-<tr><td><code>focus_run_console</code></td><td>Focus the Run console (scroll output with j/k/PgUp/PgDn)</td><td>normal: <code>&lt;space&gt;Wr</code></td></tr>
-<tr><td><code>focus_git_panel</code></td><td>Focus the Git changes panel (j/k select, Enter opens)</td><td>normal: <code>&lt;space&gt;Wg</code></td></tr>
-<tr><td><code>focus_ci_panel</code></td><td>Focus the CI status panel (GitHub Actions runs; Enter opens in browser)</td><td>normal: <code>&lt;space&gt;Wc</code></td></tr>
-<tr><td><code>toggle_bottom_zoom</code></td><td>Maximize / restore the bottom panel</td><td>normal: <code>&lt;space&gt;Wm</code></td></tr>
-<tr><td><code>toggle_drawer_mid</code></td><td>Fold / unfold the middle column of the bottom drawer</td><td>normal: <code>&lt;space&gt;Wf</code></td></tr>
-<tr><td><code>toggle_ide</code></td><td>Toggle the IDE workbench (Zen / focus mode)</td><td>normal: <code>&lt;space&gt;z</code></td></tr>
-<tr><td><code>settings_page</code></td><td>Open the settings page (config.toml editor)</td><td>normal: <code>&lt;space&gt;S</code></td></tr>
+<tr><td><code>terminal</code></td><td>Open an integrated terminal (PTY shell)</td><td>normal: <code>&lt;space&gt;p'</code>, select: <code>&lt;space&gt;p'</code></td></tr>
+<tr><td><code>run_config_manager</code></td><td>Manage run/debug configurations</td><td>normal: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code>, select: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code></td></tr>
+<tr><td><code>run_active_config</code></td><td>Run the active run configuration</td><td>normal: <code>&lt;F5&gt;</code>, <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, select: <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code></td></tr>
+<tr><td><code>clear_run_output</code></td><td>Clear the Run tool window output</td><td>normal: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, select: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code></td></tr>
+<tr><td><code>rerun_last_run</code></td><td>Re-run the last command in the Run console</td><td>normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code></td></tr>
+<tr><td><code>run_next_error</code></td><td>Jump to the next file:line in the run output</td><td>normal: <code>&lt;space&gt;Rn</code>, select: <code>&lt;space&gt;Rn</code></td></tr>
+<tr><td><code>run_prev_error</code></td><td>Jump to the previous file:line in the run output</td><td>normal: <code>&lt;space&gt;Rp</code>, select: <code>&lt;space&gt;Rp</code></td></tr>
+<tr><td><code>reveal_in_tree</code></td><td>Reveal the current file in the project tree</td><td>normal: <code>&lt;space&gt;pv</code>, select: <code>&lt;space&gt;pv</code></td></tr>
+<tr><td><code>toggle_auto_reveal</code></td><td>Toggle always-select-opened-file (autoscroll from source)</td><td>normal: <code>&lt;space&gt;pV</code>, select: <code>&lt;space&gt;pV</code></td></tr>
+<tr><td><code>focus_file_tree</code></td><td>Focus the project file tree panel</td><td>normal: <code>&lt;space&gt;Wp</code>, <code>&lt;space&gt;Wt</code>, select: <code>&lt;space&gt;Wp</code>, <code>&lt;space&gt;Wt</code></td></tr>
+<tr><td><code>focus_structure</code></td><td>Focus the structure/symbol outline panel</td><td>normal: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code>, select: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code></td></tr>
+<tr><td><code>focus_problems</code></td><td>Focus the problems/diagnostics panel</td><td>normal: <code>&lt;space&gt;We</code>, select: <code>&lt;space&gt;We</code></td></tr>
+<tr><td><code>focus_run_console</code></td><td>Focus the Run console (scroll output with j/k/PgUp/PgDn)</td><td>normal: <code>&lt;space&gt;Wr</code>, select: <code>&lt;space&gt;Wr</code></td></tr>
+<tr><td><code>focus_git_panel</code></td><td>Focus the Git changes panel (j/k select, Enter opens)</td><td>normal: <code>&lt;space&gt;Wg</code>, <code>&lt;space&gt;gG</code>, select: <code>&lt;space&gt;Wg</code>, <code>&lt;space&gt;gG</code></td></tr>
+<tr><td><code>focus_ci_panel</code></td><td>Focus the CI status panel (GitHub Actions runs; Enter opens in browser)</td><td>normal: <code>&lt;space&gt;Wc</code>, select: <code>&lt;space&gt;Wc</code></td></tr>
+<tr><td><code>toggle_bottom_zoom</code></td><td>Maximize / restore the bottom panel</td><td>normal: <code>&lt;space&gt;Wm</code>, select: <code>&lt;space&gt;Wm</code></td></tr>
+<tr><td><code>toggle_drawer_mid</code></td><td>Fold / unfold the middle column of the bottom drawer</td><td>normal: <code>&lt;space&gt;Wf</code>, select: <code>&lt;space&gt;Wf</code></td></tr>
+<tr><td><code>toggle_ide</code></td><td>Toggle the IDE workbench (Zen / focus mode)</td><td>normal: <code>&lt;space&gt;z</code>, select: <code>&lt;space&gt;z</code></td></tr>
+<tr><td><code>settings_page</code></td><td>Open the settings page (config.toml editor)</td><td>normal: <code>&lt;space&gt;S</code>, select: <code>&lt;space&gt;S</code></td></tr>
 <tr><td><code>goto_next_spell_error</code></td><td>Move to the next misspelled word (]s)</td><td>normal: <code>]s</code></td></tr>
 <tr><td><code>goto_prev_spell_error</code></td><td>Move to the previous misspelled word ([s)</td><td>normal: <code>[s</code></td></tr>
 <tr><td><code>spell_add_good</code></td><td>Mark word under cursor as correctly spelled (zg)</td><td>normal: <code>zG</code>, <code>zg</code></td></tr>
@@ -2260,16 +2359,31 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>fold_toggle</code></td><td>Toggle fold under cursor (za)</td><td>normal: <code>zA</code>, <code>za</code>, <code>zi</code></td></tr>
 <tr><td><code>fold_open</code></td><td>Open fold under cursor (zo)</td><td>normal: <code>zO</code>, <code>zo</code>, <code>zv</code>, <code>zx</code></td></tr>
 <tr><td><code>fold_close</code></td><td>Close fold under cursor (zc)</td><td>normal: <code>zC</code>, <code>zc</code></td></tr>
-<tr><td><code>fold_open_all</code></td><td>Open all folds (zR)</td><td>normal: <code>zR</code>, <code>zX</code>, <code>zn</code>, <code>zr</code></td></tr>
+<tr><td><code>fold_open_all</code></td><td>Open all folds (zR)</td><td>normal: <code>zR</code>, <code>zX</code>, <code>zn</code>, <code>zr</code>, <code>&lt;space&gt;nw</code>, select: <code>&lt;space&gt;nw</code></td></tr>
 <tr><td><code>fold_close_all</code></td><td>Close all folds (zM)</td><td>normal: <code>zM</code>, <code>zN</code>, <code>zm</code></td></tr>
 <tr><td><code>fold_delete</code></td><td>Delete fold under cursor (zd)</td><td>normal: <code>zD</code>, <code>zd</code></td></tr>
 <tr><td><code>fold_delete_all</code></td><td>Delete all folds (zE)</td><td>normal: <code>zE</code></td></tr>
+<tr><td><code>narrow_to_region</code></td><td>Narrow the view to the selected region (SPC n r)</td><td>normal: <code>&lt;space&gt;nr</code>, select: <code>&lt;space&gt;nr</code></td></tr>
+<tr><td><code>kmacro_add_counter</code></td><td>Add [count] to the keyboard-macro counter (SPC K c a)</td><td>normal: <code>&lt;space&gt;Kca</code>, select: <code>&lt;space&gt;Kca</code></td></tr>
+<tr><td><code>kmacro_insert_counter</code></td><td>Insert the macro counter value, then increment (SPC K c c)</td><td>normal: <code>&lt;space&gt;Kcc</code>, select: <code>&lt;space&gt;Kcc</code></td></tr>
+<tr><td><code>toggle_readonly</code></td><td>Toggle the buffer’s read-only (writable) state (SPC b w)</td><td>normal: <code>&lt;space&gt;bw</code>, select: <code>&lt;space&gt;bw</code></td></tr>
+<tr><td><code>paredit_slurp_forward</code></td><td>Paredit: slurp the next s-expression forward (SPC k s)</td><td>normal: <code>&lt;space&gt;ks</code>, <code>&lt;space&gt;k`s</code>, select: <code>&lt;space&gt;ks</code>, <code>&lt;space&gt;k`s</code></td></tr>
+<tr><td><code>paredit_barf_forward</code></td><td>Paredit: barf the last s-expression forward (SPC k b)</td><td>normal: <code>&lt;space&gt;kb</code>, select: <code>&lt;space&gt;kb</code></td></tr>
+<tr><td><code>paredit_slurp_backward</code></td><td>Paredit: slurp the previous s-expression backward (SPC k S)</td><td>normal: <code>&lt;space&gt;kS</code>, select: <code>&lt;space&gt;kS</code></td></tr>
+<tr><td><code>paredit_barf_backward</code></td><td>Paredit: barf the first s-expression backward (SPC k B)</td><td>normal: <code>&lt;space&gt;kB</code>, select: <code>&lt;space&gt;kB</code></td></tr>
+<tr><td><code>paredit_splice</code></td><td>Paredit: splice/unwrap the enclosing s-expression (SPC k W)</td><td>normal: <code>&lt;space&gt;kW</code>, select: <code>&lt;space&gt;kW</code></td></tr>
+<tr><td><code>paredit_raise</code></td><td>Paredit: raise the current s-expression (SPC k r)</td><td>normal: <code>&lt;space&gt;kr</code>, select: <code>&lt;space&gt;kr</code></td></tr>
+<tr><td><code>paredit_transpose</code></td><td>Paredit: transpose the s-expressions around point (SPC k t)</td><td>normal: <code>&lt;space&gt;kt</code>, <code>&lt;space&gt;k`p</code>, <code>&lt;space&gt;k`t</code>, select: <code>&lt;space&gt;kt</code>, <code>&lt;space&gt;k`p</code>, <code>&lt;space&gt;k`t</code></td></tr>
+<tr><td><code>paredit_splice_kill_forward</code></td><td>Paredit: splice, killing forward (SPC k e)</td><td>normal: <code>&lt;space&gt;ke</code>, select: <code>&lt;space&gt;ke</code></td></tr>
+<tr><td><code>paredit_splice_kill_backward</code></td><td>Paredit: splice, killing backward (SPC k E)</td><td>normal: <code>&lt;space&gt;kE</code>, select: <code>&lt;space&gt;kE</code></td></tr>
+<tr><td><code>paredit_insert_sexp_after</code></td><td>Paredit: insert a new () sexp after the current one (SPC k ))</td><td>normal: <code>&lt;space&gt;k)</code>, select: <code>&lt;space&gt;k)</code></td></tr>
+<tr><td><code>paredit_insert_sexp_before</code></td><td>Paredit: insert a new () sexp before the current one (SPC k ()</td><td>normal: <code>&lt;space&gt;k(</code>, select: <code>&lt;space&gt;k(</code></td></tr>
 <tr><td><code>fold_next</code></td><td>Move to next fold (zj)</td><td>normal: <code>]z</code>, <code>zj</code></td></tr>
 <tr><td><code>fold_prev</code></td><td>Move to previous fold (zk)</td><td>normal: <code>[z</code>, <code>zk</code></td></tr>
 <tr><td><code>goto_line_last_nonblank</code></td><td>Goto last non-blank on line (g_)</td><td>normal: <code>g_</code></td></tr>
 <tr><td><code>goto_line_middle</code></td><td>Goto middle of text line (gM)</td><td>normal: <code>gM</code>, <code>gm</code></td></tr>
 <tr><td><code>goto_byte</code></td><td>Goto byte {count} in buffer (go)</td><td>normal: <code>go</code></td></tr>
-<tr><td><code>goto_prev_unmatched_paren</code></td><td>Goto previous unmatched ( ([()</td><td>normal: <code>[(</code>, <code>&lt;space&gt;j(</code></td></tr>
+<tr><td><code>goto_prev_unmatched_paren</code></td><td>Goto previous unmatched ( ([()</td><td>normal: <code>[(</code>, <code>&lt;space&gt;j(</code>, select: <code>&lt;space&gt;j(</code></td></tr>
 <tr><td><code>goto_prev_unmatched_brace</code></td><td>Goto previous unmatched { ([{)</td><td>normal: <code>[{</code></td></tr>
 <tr><td><code>goto_next_unmatched_paren</code></td><td>Goto next unmatched ) (])</td><td>normal: <code>])</code></td></tr>
 <tr><td><code>goto_next_unmatched_brace</code></td><td>Goto next unmatched } (]})</td><td>normal: <code>]}</code></td></tr>
@@ -2277,20 +2391,20 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>goto_next_mark</code></td><td>Goto next lowercase mark (]`)</td><td>normal: <code>]`</code></td></tr>
 <tr><td><code>goto_prev_mark_line</code></td><td>Goto previous lowercase mark, line start ([’])</td><td>normal: <code>['</code></td></tr>
 <tr><td><code>goto_next_mark_line</code></td><td>Goto next lowercase mark, line start (]’)</td><td>normal: <code>]'</code></td></tr>
-<tr><td><code>yank_file_path</code></td><td>Yank current file path to clipboard</td><td>normal: <code>&lt;space&gt;fyC</code>, <code>&lt;space&gt;fyY</code>, <code>&lt;space&gt;fyy</code></td></tr>
-<tr><td><code>yank_file_name</code></td><td>Yank current file name to clipboard</td><td>normal: <code>&lt;space&gt;fyN</code>, <code>&lt;space&gt;fyn</code></td></tr>
-<tr><td><code>yank_file_path_with_line</code></td><td>Yank current file path:line to clipboard</td><td>normal: <code>&lt;space&gt;fyL</code>, <code>&lt;space&gt;fyl</code></td></tr>
-<tr><td><code>yank_file_path_with_line_col</code></td><td>Yank current file path:line:col to clipboard</td><td>normal: <code>&lt;space&gt;fyc</code></td></tr>
-<tr><td><code>yank_file_dir</code></td><td>Yank current file’s directory to clipboard</td><td>normal: <code>&lt;space&gt;fyD</code>, <code>&lt;space&gt;fyd</code></td></tr>
-<tr><td><code>copy_remote_url</code></td><td>Copy web permalink (host/blob/<sha>/path#Ln) for current line</sha></td><td></td></tr>
-<tr><td><code>open_remote_url</code></td><td>Open current line’s web permalink in the browser</td><td></td></tr>
+<tr><td><code>yank_file_path</code></td><td>Yank current file path to clipboard</td><td>normal: <code>&lt;space&gt;fyC</code>, <code>&lt;space&gt;fyY</code>, <code>&lt;space&gt;fyy</code>, select: <code>&lt;space&gt;fyC</code>, <code>&lt;space&gt;fyY</code>, <code>&lt;space&gt;fyy</code></td></tr>
+<tr><td><code>yank_file_name</code></td><td>Yank current file name to clipboard</td><td>normal: <code>&lt;space&gt;fyN</code>, <code>&lt;space&gt;fyn</code>, select: <code>&lt;space&gt;fyN</code>, <code>&lt;space&gt;fyn</code></td></tr>
+<tr><td><code>yank_file_path_with_line</code></td><td>Yank current file path:line to clipboard</td><td>normal: <code>&lt;space&gt;fyL</code>, <code>&lt;space&gt;fyl</code>, select: <code>&lt;space&gt;fyL</code>, <code>&lt;space&gt;fyl</code></td></tr>
+<tr><td><code>yank_file_path_with_line_col</code></td><td>Yank current file path:line:col to clipboard</td><td>normal: <code>&lt;space&gt;fyc</code>, select: <code>&lt;space&gt;fyc</code></td></tr>
+<tr><td><code>yank_file_dir</code></td><td>Yank current file’s directory to clipboard</td><td>normal: <code>&lt;space&gt;fyD</code>, <code>&lt;space&gt;fyd</code>, select: <code>&lt;space&gt;fyD</code>, <code>&lt;space&gt;fyd</code></td></tr>
+<tr><td><code>copy_remote_url</code></td><td>Copy web permalink (host/blob/<sha>/path#Ln) for current line</sha></td><td>normal: <code>&lt;space&gt;glC</code>, <code>&lt;space&gt;glL</code>, <code>&lt;space&gt;glP</code>, select: <code>&lt;space&gt;glC</code>, <code>&lt;space&gt;glL</code>, <code>&lt;space&gt;glP</code></td></tr>
+<tr><td><code>open_remote_url</code></td><td>Open current line’s web permalink in the browser</td><td>normal: <code>&lt;space&gt;glc</code>, <code>&lt;space&gt;gll</code>, <code>&lt;space&gt;glp</code>, select: <code>&lt;space&gt;glc</code>, <code>&lt;space&gt;gll</code>, <code>&lt;space&gt;glp</code></td></tr>
 <tr><td><code>open_url_under_cursor</code></td><td>Open the URL under the cursor in the browser</td><td></td></tr>
 <tr><td><code>duplicate_selection_down</code></td><td>Duplicate current line(s) downward</td><td></td></tr>
 <tr><td><code>duplicate_selection_up</code></td><td>Duplicate current line(s) upward</td><td></td></tr>
 <tr><td><code>move_text_line_down</code></td><td>Move current line(s) down past the next line</td><td></td></tr>
 <tr><td><code>move_text_line_up</code></td><td>Move current line(s) up past the previous line</td><td></td></tr>
-<tr><td><code>count_selection</code></td><td>Count chars/words/lines in selection</td><td>normal: <code>&lt;space&gt;xc</code>, <code>&lt;space&gt;xwc</code></td></tr>
-<tr><td><code>match_brackets</code></td><td>Goto matching bracket</td><td></td></tr>
+<tr><td><code>count_selection</code></td><td>Count chars/words/lines in selection</td><td>normal: <code>&lt;space&gt;xc</code>, <code>&lt;space&gt;xwc</code>, select: <code>&lt;space&gt;xc</code>, <code>&lt;space&gt;xwc</code></td></tr>
+<tr><td><code>match_brackets</code></td><td>Goto matching bracket</td><td>normal: <code>&lt;space&gt;k%</code>, select: <code>&lt;space&gt;k%</code></td></tr>
 <tr><td><code>match_brackets_or_goto_percent</code></td><td>Goto matching bracket, or {count} percent through the file</td><td>normal: <code>%</code>, select: <code>%</code></td></tr>
 <tr><td><code>surround_add</code></td><td>Surround add</td><td></td></tr>
 <tr><td><code>surround_replace</code></td><td>Surround replace</td><td></td></tr>
@@ -2334,7 +2448,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>goto_prev_parameter</code></td><td>Goto previous parameter</td><td></td></tr>
 <tr><td><code>goto_next_comment</code></td><td>Goto next comment</td><td>normal: <code>]*</code>, <code>]/</code></td></tr>
 <tr><td><code>goto_prev_comment</code></td><td>Goto previous comment</td><td>normal: <code>[*</code>, <code>[/</code></td></tr>
-<tr><td><code>goto_next_test</code></td><td>Goto next test</td><td>normal: <code>&lt;space&gt;pa</code></td></tr>
+<tr><td><code>goto_next_test</code></td><td>Goto next test</td><td>normal: <code>&lt;space&gt;pa</code>, select: <code>&lt;space&gt;pa</code></td></tr>
 <tr><td><code>goto_prev_test</code></td><td>Goto previous test</td><td></td></tr>
 <tr><td><code>goto_next_xml_element</code></td><td>Goto next (X)HTML element</td><td></td></tr>
 <tr><td><code>goto_prev_xml_element</code></td><td>Goto previous (X)HTML element</td><td></td></tr>
@@ -2344,16 +2458,16 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>goto_prev_paragraph</code></td><td>Goto previous paragraph</td><td>normal: <code>{</code>, <code>[[</code>, select: <code>{</code></td></tr>
 <tr><td><code>move_sentence_forward</code></td><td>Move to next sentence</td><td>normal: <code>)</code>, select: <code>)</code></td></tr>
 <tr><td><code>move_sentence_backward</code></td><td>Move to previous sentence</td><td>normal: <code>(</code>, select: <code>(</code></td></tr>
-<tr><td><code>dap_launch</code></td><td>Launch debug target</td><td>normal: <code>&lt;S-F5&gt;</code>, <code>&lt;space&gt;dd</code></td></tr>
-<tr><td><code>dap_restart</code></td><td>Restart debugging session</td><td>normal: <code>&lt;space&gt;dr</code></td></tr>
-<tr><td><code>dap_toggle_breakpoint</code></td><td>Toggle breakpoint</td><td>normal: <code>&lt;F9&gt;</code>, <code>&lt;space&gt;db</code></td></tr>
-<tr><td><code>dap_continue</code></td><td>Continue program execution</td><td>normal: <code>&lt;space&gt;dc</code></td></tr>
-<tr><td><code>dap_pause</code></td><td>Pause program execution</td><td>normal: <code>&lt;space&gt;dp</code></td></tr>
-<tr><td><code>dap_step_in</code></td><td>Step in</td><td>normal: <code>&lt;F11&gt;</code>, <code>&lt;space&gt;di</code></td></tr>
-<tr><td><code>dap_step_out</code></td><td>Step out</td><td>normal: <code>&lt;S-F11&gt;</code>, <code>&lt;space&gt;do</code></td></tr>
-<tr><td><code>dap_next</code></td><td>Step to next</td><td>normal: <code>&lt;F10&gt;</code>, <code>&lt;space&gt;dn</code></td></tr>
-<tr><td><code>dap_variables</code></td><td>List variables</td><td>normal: <code>&lt;space&gt;dv</code></td></tr>
-<tr><td><code>dap_terminate</code></td><td>End debug session</td><td>normal: <code>&lt;space&gt;dq</code></td></tr>
+<tr><td><code>dap_launch</code></td><td>Launch debug target</td><td>normal: <code>&lt;S-F5&gt;</code>, <code>&lt;space&gt;dd</code>, select: <code>&lt;space&gt;dd</code></td></tr>
+<tr><td><code>dap_restart</code></td><td>Restart debugging session</td><td>normal: <code>&lt;space&gt;dr</code>, select: <code>&lt;space&gt;dr</code></td></tr>
+<tr><td><code>dap_toggle_breakpoint</code></td><td>Toggle breakpoint</td><td>normal: <code>&lt;F9&gt;</code>, <code>&lt;space&gt;db</code>, select: <code>&lt;space&gt;db</code></td></tr>
+<tr><td><code>dap_continue</code></td><td>Continue program execution</td><td>normal: <code>&lt;space&gt;dc</code>, select: <code>&lt;space&gt;dc</code></td></tr>
+<tr><td><code>dap_pause</code></td><td>Pause program execution</td><td>normal: <code>&lt;space&gt;dp</code>, select: <code>&lt;space&gt;dp</code></td></tr>
+<tr><td><code>dap_step_in</code></td><td>Step in</td><td>normal: <code>&lt;F11&gt;</code>, <code>&lt;space&gt;di</code>, select: <code>&lt;space&gt;di</code></td></tr>
+<tr><td><code>dap_step_out</code></td><td>Step out</td><td>normal: <code>&lt;S-F11&gt;</code>, <code>&lt;space&gt;do</code>, select: <code>&lt;space&gt;do</code></td></tr>
+<tr><td><code>dap_next</code></td><td>Step to next</td><td>normal: <code>&lt;F10&gt;</code>, <code>&lt;space&gt;dn</code>, select: <code>&lt;space&gt;dn</code></td></tr>
+<tr><td><code>dap_variables</code></td><td>List variables</td><td>normal: <code>&lt;space&gt;dv</code>, select: <code>&lt;space&gt;dv</code></td></tr>
+<tr><td><code>dap_terminate</code></td><td>End debug session</td><td>normal: <code>&lt;space&gt;dq</code>, select: <code>&lt;space&gt;dq</code></td></tr>
 <tr><td><code>dap_edit_condition</code></td><td>Edit breakpoint condition on current line</td><td></td></tr>
 <tr><td><code>dap_edit_log</code></td><td>Edit breakpoint log message on current line</td><td></td></tr>
 <tr><td><code>dap_switch_thread</code></td><td>Switch current thread</td><td></td></tr>
@@ -2366,17 +2480,19 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>shell_append_output</code></td><td>Append shell command output after selections</td><td></td></tr>
 <tr><td><code>shell_keep_pipe</code></td><td>Filter selections with shell predicate</td><td></td></tr>
 <tr><td><code>suspend</code></td><td>Suspend and return to shell</td><td>normal: <code>&lt;C-z&gt;</code></td></tr>
-<tr><td><code>rename_symbol</code></td><td>Rename symbol</td><td>normal: <code>&lt;space&gt;lr</code></td></tr>
-<tr><td><code>increment</code></td><td>Increment item under cursor</td><td>normal: <code>&lt;C-a&gt;</code>, <code>&lt;space&gt;n+</code>, <code>&lt;space&gt;n=</code>, select: <code>&lt;C-a&gt;</code>, <code>g&lt;C-a&gt;</code></td></tr>
-<tr><td><code>decrement</code></td><td>Decrement item under cursor</td><td>normal: <code>&lt;C-x&gt;</code>, <code>&lt;space&gt;n_</code>, <code>&lt;space&gt;n&lt;minus&gt;</code>, select: <code>&lt;C-x&gt;</code>, <code>g&lt;C-x&gt;</code></td></tr>
+<tr><td><code>rename_symbol</code></td><td>Rename symbol</td><td>normal: <code>&lt;space&gt;lr</code>, select: <code>&lt;space&gt;lr</code></td></tr>
+<tr><td><code>increment</code></td><td>Increment item under cursor</td><td>normal: <code>&lt;C-a&gt;</code>, <code>&lt;space&gt;n+</code>, <code>&lt;space&gt;n=</code>, select: <code>&lt;C-a&gt;</code>, <code>g&lt;C-a&gt;</code>, <code>&lt;space&gt;n+</code>, <code>&lt;space&gt;n=</code></td></tr>
+<tr><td><code>decrement</code></td><td>Decrement item under cursor</td><td>normal: <code>&lt;C-x&gt;</code>, <code>&lt;space&gt;n_</code>, <code>&lt;space&gt;n&lt;minus&gt;</code>, select: <code>&lt;C-x&gt;</code>, <code>g&lt;C-x&gt;</code>, <code>&lt;space&gt;n_</code>, <code>&lt;space&gt;n&lt;minus&gt;</code></td></tr>
 <tr><td><code>record_macro</code></td><td>Record macro</td><td></td></tr>
 <tr><td><code>replay_macro</code></td><td>Replay macro</td><td>normal: <code>Q</code></td></tr>
-<tr><td><code>command_palette</code></td><td>Open command palette</td><td>normal: <code>&lt;F1&gt;</code>, <code>&lt;A-x&gt;</code>, <code>&lt;space&gt;?</code>, <code>&lt;space&gt;eh</code>, <code>&lt;space&gt;ev</code>, <code>&lt;space&gt;h.</code>, <code>&lt;space&gt;hf</code>, <code>&lt;space&gt;hi</code>, <code>&lt;space&gt;hl</code>, <code>&lt;space&gt;hm</code>, <code>&lt;space&gt;hn</code>, <code>&lt;space&gt;hp</code>, <code>&lt;space&gt;hr</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdl</code>, <code>&lt;space&gt;hdm</code>, <code>&lt;space&gt;hdp</code>, <code>&lt;space&gt;hds</code>, <code>&lt;space&gt;hdt</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;&lt;space&gt;</code>, <code>&lt;space&gt;h&lt;space&gt;</code></td></tr>
-<tr><td><code>repl</code></td><td>Open the embedded-language REPL (elisp/viml/stryke/awk/zsh)</td><td>normal: <code>&lt;space&gt;ar</code></td></tr>
-<tr><td><code>goto_word</code></td><td>Jump to a two-character label</td><td>normal: <code>&lt;space&gt;jl</code>, <code>&lt;space&gt;jw</code></td></tr>
+<tr><td><code>command_palette</code></td><td>Open command palette</td><td>normal: <code>&lt;F1&gt;</code>, <code>&lt;A-x&gt;</code>, <code>&lt;space&gt;?</code>, <code>&lt;space&gt;eh</code>, <code>&lt;space&gt;ev</code>, <code>&lt;space&gt;h.</code>, <code>&lt;space&gt;hf</code>, <code>&lt;space&gt;hi</code>, <code>&lt;space&gt;hl</code>, <code>&lt;space&gt;hm</code>, <code>&lt;space&gt;hn</code>, <code>&lt;space&gt;hp</code>, <code>&lt;space&gt;hr</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdl</code>, <code>&lt;space&gt;hdm</code>, <code>&lt;space&gt;hdp</code>, <code>&lt;space&gt;hds</code>, <code>&lt;space&gt;hdt</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;&lt;space&gt;</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, select: <code>&lt;space&gt;?</code>, <code>&lt;space&gt;eh</code>, <code>&lt;space&gt;ev</code>, <code>&lt;space&gt;h.</code>, <code>&lt;space&gt;hf</code>, <code>&lt;space&gt;hi</code>, <code>&lt;space&gt;hl</code>, <code>&lt;space&gt;hm</code>, <code>&lt;space&gt;hn</code>, <code>&lt;space&gt;hp</code>, <code>&lt;space&gt;hr</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdl</code>, <code>&lt;space&gt;hdm</code>, <code>&lt;space&gt;hdp</code>, <code>&lt;space&gt;hds</code>, <code>&lt;space&gt;hdt</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;&lt;space&gt;</code>, <code>&lt;space&gt;h&lt;space&gt;</code></td></tr>
+<tr><td><code>repl</code></td><td>Open the embedded-language REPL (elisp/viml/stryke/awk/zsh)</td><td>normal: <code>&lt;space&gt;ar</code>, select: <code>&lt;space&gt;ar</code></td></tr>
+<tr><td><code>goto_word</code></td><td>Jump to a two-character label</td><td>normal: <code>&lt;space&gt;jl</code>, <code>&lt;space&gt;jw</code>, select: <code>&lt;space&gt;jl</code>, <code>&lt;space&gt;jw</code></td></tr>
 <tr><td><code>extend_to_word</code></td><td>Extend to a two-character label</td><td></td></tr>
 <tr><td><code>goto_next_tabstop</code></td><td>Goto next snippet placeholder</td><td></td></tr>
 <tr><td><code>goto_prev_tabstop</code></td><td>Goto next snippet placeholder</td><td></td></tr>
+<tr><td><code>emmet_expand</code></td><td>Expand emmet/zen HTML abbreviation (or Tab)</td><td>insert: <code>&lt;tab&gt;</code></td></tr>
+<tr><td><code>snippet_expand</code></td><td>Expand the user snippet whose trigger precedes the cursor</td><td></td></tr>
 <tr><td><code>rotate_selections_first</code></td><td>Make the first selection your primary one</td><td></td></tr>
 <tr><td><code>rotate_selections_last</code></td><td>Make the last selection your primary one</td><td></td></tr>
 </tbody>
@@ -5560,7 +5676,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>427</strong> (7.1%)</li>
 <li>Absent: <strong>4760</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 557 static commands, 635 typable <code>:</code> commands, 1297 default keybindings</li>
+<li>zemacs source surface: 573 static commands, 656 typable <code>:</code> commands, 1310 default keybindings</li>
 </ul>
 <h2 id="coverage-by-source"><a class="header" href="#coverage-by-source">Coverage by source</a></h2>
 <div class="table-wrapper">
