@@ -338,6 +338,100 @@ pub fn parse_ahead_behind(out: &str) -> Option<(usize, usize)> {
     Some((behind, ahead))
 }
 
+/// The action applied to a single commit in an interactive-rebase todo list.
+///
+/// Maps 1:1 onto git's todo verbs (see [`RebaseAction::verb`]). Reword/edit are
+/// intentionally not modelled here — they require git to stop mid-rebase for
+/// interactive message/commit editing, which this non-interactive driver does
+/// not support (it overrides `GIT_EDITOR`/`GIT_SEQUENCE_EDITOR` to never block).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum RebaseAction {
+    /// Keep the commit as-is.
+    Pick,
+    /// Meld into the previous commit, combining both messages.
+    Squash,
+    /// Meld into the previous commit, discarding this commit's message.
+    Fixup,
+    /// Remove the commit entirely.
+    Drop,
+}
+
+impl RebaseAction {
+    /// The git todo verb for this action (`pick`/`squash`/`fixup`/`drop`).
+    pub fn verb(self) -> &'static str {
+        match self {
+            RebaseAction::Pick => "pick",
+            RebaseAction::Squash => "squash",
+            RebaseAction::Fixup => "fixup",
+            RebaseAction::Drop => "drop",
+        }
+    }
+}
+
+/// One row of an interactive-rebase todo list: the action to apply, the commit's
+/// abbreviated SHA and its subject line.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct RebaseRow {
+    pub action: RebaseAction,
+    pub sha: String,
+    pub subject: String,
+}
+
+/// Parse `git log --reverse --format=%h %s <base>..HEAD` output into todo rows,
+/// each defaulting to [`RebaseAction::Pick`]. Pure and unit-tested.
+///
+/// Each non-empty line is `<sha> <subject…>`; the SHA is the first
+/// whitespace-delimited token and the subject the remainder (which may be empty
+/// for an empty-message commit). Blank lines are skipped. The rows come back in
+/// git's todo order (oldest first), matching the `--reverse` flag.
+pub fn parse_rebase_todo(out: &str) -> Vec<RebaseRow> {
+    let mut rows = Vec::new();
+    for line in out.lines() {
+        let line = line.trim_end();
+        if line.is_empty() {
+            continue;
+        }
+        let (sha, subject) = match line.split_once(char::is_whitespace) {
+            Some((sha, rest)) => (sha.to_string(), rest.trim_start().to_string()),
+            None => (line.to_string(), String::new()),
+        };
+        rows.push(RebaseRow {
+            action: RebaseAction::Pick,
+            sha,
+            subject,
+        });
+    }
+    rows
+}
+
+/// Serialize todo rows to a git rebase-todo file body, one `<verb> <sha>
+/// <subject>` line per row in display order (including `drop` rows). Pure and
+/// unit-tested; the result is fed to `git rebase -i` via `GIT_SEQUENCE_EDITOR`.
+pub fn render_todo(rows: &[RebaseRow]) -> String {
+    let mut out = String::new();
+    for row in rows {
+        out.push_str(row.action.verb());
+        out.push(' ');
+        out.push_str(&row.sha);
+        out.push(' ');
+        out.push_str(&row.subject);
+        out.push('\n');
+    }
+    out
+}
+
+/// In-progress rebase state, surfaced in the [`MagitStatus`] header and gating
+/// the continue/abort keys.
+#[derive(Clone, PartialEq, Eq, Debug)]
+struct RebaseProgress {
+    /// Short description of the commit being rebased onto (from the state dir).
+    onto: String,
+    /// Number of todo steps completed so far.
+    done: usize,
+    /// Total number of todo steps.
+    total: usize,
+}
+
 /// A single rendered line of the buffer, used for layout, scrolling and mapping
 /// the selection cursor to a screen row.
 enum Row {
@@ -412,6 +506,9 @@ pub struct MagitStatus {
     /// Cached parsed diffs for the currently expanded entries, keyed the same
     /// way; rebuilt by [`refresh`](MagitStatus::refresh).
     diffs: HashMap<(Section, String), FileDiff>,
+    /// `Some(..)` while an interactive rebase is in progress (detected from the
+    /// git state dir); enables the continue/abort keys and the header notice.
+    rebase: Option<RebaseProgress>,
 }
 
 impl MagitStatus {
@@ -431,6 +528,7 @@ impl MagitStatus {
             upstream: None,
             expanded: HashSet::new(),
             diffs: HashMap::new(),
+            rebase: None,
         };
         view.refresh();
         Some(view)
@@ -440,6 +538,7 @@ impl MagitStatus {
     /// clamping the selection to the new entry count.
     fn refresh(&mut self) {
         self.head = git_head(&self.repo_dir);
+        self.rebase = detect_rebase(&self.repo_dir);
         self.upstream = git_output(
             &self.repo_dir,
             &["rev-list", "--left-right", "--count", "@{u}...HEAD"],
@@ -630,6 +729,69 @@ impl MagitStatus {
         self.refresh();
     }
 
+    /// Run a `git -C <repo> …` with `GIT_EDITOR=true` (so any commit-message
+    /// prompt auto-accepts and never blocks), returning `(success, message)`
+    /// with stdout+stderr condensed into one status-line-friendly string.
+    fn run_git_noninteractive(&self, args: &[&str]) -> (bool, String) {
+        let mut cmd = Command::new("git");
+        cmd.arg("-C").arg(&self.repo_dir);
+        for a in args {
+            cmd.arg(a);
+        }
+        cmd.env("GIT_EDITOR", "true");
+        match cmd.output() {
+            Ok(out) => {
+                let mut parts = Vec::new();
+                let stdout = String::from_utf8_lossy(&out.stdout);
+                let stderr = String::from_utf8_lossy(&out.stderr);
+                if !stdout.trim().is_empty() {
+                    parts.push(stdout.trim().to_string());
+                }
+                if !stderr.trim().is_empty() {
+                    parts.push(stderr.trim().to_string());
+                }
+                (out.status.success(), condense(&parts.join("\n")))
+            }
+            Err(e) => (false, e.to_string()),
+        }
+    }
+
+    /// `r` (when a rebase is in progress): `git rebase --continue`. Surfaces the
+    /// outcome and refreshes — if it stops at the next conflict the buffer's
+    /// conflict section and in-progress notice reflect that, so the
+    /// resolve→continue loop keeps working.
+    fn rebase_continue(&mut self, cx: &mut Context) {
+        let (ok, msg) = self.run_git_noninteractive(&["rebase", "--continue"]);
+        let msg = if msg.is_empty() {
+            if ok { "continued".to_string() } else { "stopped".to_string() }
+        } else {
+            msg
+        };
+        if ok {
+            cx.editor.set_status(format!("rebase: {msg}"));
+        } else {
+            cx.editor.set_error(format!("rebase: {msg}"));
+        }
+        self.refresh();
+    }
+
+    /// `A` (when a rebase is in progress): `git rebase --abort`, restoring the
+    /// pre-rebase HEAD, then refresh.
+    fn rebase_abort(&mut self, cx: &mut Context) {
+        let (ok, msg) = self.run_git_noninteractive(&["rebase", "--abort"]);
+        let msg = if msg.is_empty() {
+            if ok { "aborted".to_string() } else { "abort failed".to_string() }
+        } else {
+            msg
+        };
+        if ok {
+            cx.editor.set_status(format!("rebase: {msg}"));
+        } else {
+            cx.editor.set_error(format!("rebase: {msg}"));
+        }
+        self.refresh();
+    }
+
     /// Build the linear list of rendered rows from the current entries.
     fn rows(&self) -> Vec<Row> {
         let mut rows = Vec::new();
@@ -642,6 +804,12 @@ impl MagitStatus {
             }
         }
         rows.push(Row::Info(head_line));
+        if let Some(rb) = &self.rebase {
+            rows.push(Row::Header(format!(
+                "Rebasing onto {} ({}/{}) — r continue, A abort",
+                rb.onto, rb.done, rb.total
+            )));
+        }
         if self.entries.is_empty() {
             rows.push(Row::Blank);
             rows.push(Row::Info("nothing to commit, working tree clean".into()));
@@ -968,6 +1136,8 @@ impl Component for MagitStatus {
             key!('P') => self.remote_op(cx, "push", &["push"]),
             key!('F') => self.remote_op(cx, "fetch", &["fetch"]),
             key!('p') => self.remote_op(cx, "pull", &["pull"]),
+            key!('r') if self.rebase.is_some() => self.rebase_continue(cx),
+            key!('A') if self.rebase.is_some() => self.rebase_abort(cx),
             key!(Enter) => {
                 if let Some(cb) = self.visit_callback() {
                     return EventResult::Consumed(Some(cb));
@@ -1462,6 +1632,22 @@ impl MagitLog {
             compositor.push(Box::new(MagitShow::new(repo_dir.clone(), &sha)));
         }))
     }
+
+    /// Open the interactive-rebase todo editor for the commits *after* the
+    /// selected one (i.e. `<selected_sha>..HEAD`). The selected commit is the
+    /// rebase base and stays untouched.
+    fn rebase_callback(&self) -> Option<Callback> {
+        let base = self.entries.get(self.selected)?.sha.clone();
+        let repo_dir = self.repo_dir.clone();
+        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
+            match MagitRebase::new(repo_dir.clone(), &base) {
+                Some(editor) => compositor.push(Box::new(editor)),
+                None => cx
+                    .editor
+                    .set_status("no commits after this one to rebase"),
+            }
+        }))
+    }
 }
 
 impl Component for MagitLog {
@@ -1481,6 +1667,11 @@ impl Component for MagitLog {
             key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
             key!(Enter) | key!('d') => {
                 if let Some(cb) = self.show_callback() {
+                    return EventResult::Consumed(Some(cb));
+                }
+            }
+            key!('r') => {
+                if let Some(cb) = self.rebase_callback() {
                     return EventResult::Consumed(Some(cb));
                 }
             }
@@ -1505,7 +1696,7 @@ impl Component for MagitLog {
 
         let title = " Magit log";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d show diff  q back";
+        let hint = "j/k move  Enter/d show diff  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -1574,6 +1765,307 @@ impl Component for MagitLog {
 
     fn id(&self) -> Option<&'static str> {
         Some("magit-log")
+    }
+}
+
+/// An interactive-rebase todo editor (magit/lazygit style), opened from
+/// [`MagitLog`] with `r` on a commit.
+///
+/// It rebases the commits *after* the selected one — `git rebase -i <base>`
+/// editing `<base>..HEAD` — where `<base>` is the selected commit's SHA. The
+/// todo is that commit's descendants up to HEAD in git's order (oldest first).
+///
+/// Keys: `j`/`k`/arrows move; `g`/`G` top/bottom; `K`/`J` reorder the selected
+/// row up/down; `p`/`s`/`f`/`d` set the row's action (pick/squash/fixup/drop);
+/// `Enter` or `Ctrl-c Ctrl-c` execute; `q`/`Esc` abort without rebasing.
+///
+/// Reword and edit are intentionally not offered this slice: they require git to
+/// stop mid-rebase for interactive message/commit editing, but the executor
+/// overrides `GIT_EDITOR`/`GIT_SEQUENCE_EDITOR` so the rebase never blocks.
+///
+/// Execution serializes the todo to a temp file and runs git non-interactively:
+/// `GIT_SEQUENCE_EDITOR=cp <tmp>` makes git overwrite its generated todo with
+/// ours (git appends the todo path, so it runs `cp <tmp> <todo>`), and
+/// `GIT_EDITOR=true` auto-accepts any squash/fixup combined message. On a
+/// conflict the editor closes and the rebase is left in progress for the user to
+/// resolve from the status buffer (resolve → `r` continue / `A` abort).
+pub struct MagitRebase {
+    repo_dir: PathBuf,
+    /// The rebase base (selected commit SHA); `git rebase -i <base_sha>`.
+    base_sha: String,
+    rows: Vec<RebaseRow>,
+    selected: usize,
+    scroll: usize,
+    viewport: usize,
+    /// Set after one `Ctrl-c`; a second `Ctrl-c` runs the rebase.
+    pending_exec: bool,
+}
+
+impl MagitRebase {
+    /// Build the editor for `<base_sha>..HEAD`. Returns `None` (with no overlay)
+    /// when there are no commits after the base to rebase.
+    fn new(repo_dir: PathBuf, base_sha: &str) -> Option<Self> {
+        let range = format!("{base_sha}..HEAD");
+        let out = git_output(&repo_dir, &["log", "--reverse", "--format=%h %s", &range])?;
+        let rows = parse_rebase_todo(&out);
+        if rows.is_empty() {
+            return None;
+        }
+        Some(MagitRebase {
+            repo_dir,
+            base_sha: base_sha.to_string(),
+            rows,
+            selected: 0,
+            scroll: 0,
+            viewport: 1,
+            pending_exec: false,
+        })
+    }
+
+    fn move_selection(&mut self, delta: isize) {
+        if self.rows.is_empty() {
+            return;
+        }
+        let max = self.rows.len() as isize - 1;
+        self.selected = (self.selected as isize + delta).clamp(0, max) as usize;
+    }
+
+    /// Move the selected row up (`delta = -1`) or down (`delta = 1`), carrying
+    /// the selection with it. No-op at the ends.
+    fn move_row(&mut self, delta: isize) {
+        let target = self.selected as isize + delta;
+        if target < 0 || target >= self.rows.len() as isize {
+            return;
+        }
+        let target = target as usize;
+        self.rows.swap(self.selected, target);
+        self.selected = target;
+    }
+
+    fn set_action(&mut self, action: RebaseAction) {
+        if let Some(row) = self.rows.get_mut(self.selected) {
+            row.action = action;
+        }
+    }
+
+    /// Serialize the todo and run the rebase non-interactively. Returns a pop
+    /// callback both on success and on a conflict/failure (leaving the rebase in
+    /// progress in the latter case); returns `None` only when git can't be
+    /// spawned, so the editor stays open.
+    fn execute(&self, cx: &mut Context) -> Option<Callback> {
+        let todo = render_todo(&self.rows);
+        let tmp = std::env::temp_dir().join(format!("zemacs-rebase-todo-{}", std::process::id()));
+        if let Err(e) = std::fs::write(&tmp, &todo) {
+            cx.editor.set_error(format!("rebase: temp write failed: {e}"));
+            return None;
+        }
+        let tmp_str = tmp.to_string_lossy().into_owned();
+        // git runs `$GIT_SEQUENCE_EDITOR <todopath>`, so `cp <tmp>` expands to
+        // `cp <tmp> <todopath>`, overwriting git's generated todo with ours.
+        let seq_editor = format!("cp {}", shell_quote(&tmp_str));
+        let mut cmd = Command::new("git");
+        cmd.arg("-C").arg(&self.repo_dir);
+        cmd.args(["-c", "rebase.autosquash=false", "rebase", "-i"]);
+        cmd.arg(&self.base_sha);
+        cmd.env("GIT_SEQUENCE_EDITOR", seq_editor);
+        cmd.env("GIT_EDITOR", "true");
+        let out = cmd.output();
+        let _ = std::fs::remove_file(&tmp);
+
+        let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
+            compositor.pop();
+        });
+        match out {
+            Ok(o) if o.status.success() => {
+                cx.editor.set_status(format!("rebased onto {}", self.base_sha));
+                schedule_status_refresh(cx);
+                Some(close)
+            }
+            Ok(o) => {
+                // Nonzero exit, typically a merge conflict. Don't hang: close the
+                // editor, surface git's message and leave the rebase in progress.
+                let stdout = String::from_utf8_lossy(&o.stdout);
+                let stderr = String::from_utf8_lossy(&o.stderr);
+                let mut parts = Vec::new();
+                if !stdout.trim().is_empty() {
+                    parts.push(stdout.trim().to_string());
+                }
+                if !stderr.trim().is_empty() {
+                    parts.push(stderr.trim().to_string());
+                }
+                let msg = condense(&parts.join("\n"));
+                let msg = if msg.is_empty() {
+                    "resolve conflicts, then continue".to_string()
+                } else {
+                    msg
+                };
+                cx.editor.set_error(format!("rebase stopped: {msg}"));
+                schedule_status_refresh(cx);
+                Some(close)
+            }
+            Err(e) => {
+                cx.editor.set_error(format!("git rebase: {e}"));
+                None
+            }
+        }
+    }
+}
+
+impl Component for MagitRebase {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
+        let key = match event {
+            Event::Key(key) => *key,
+            _ => return EventResult::Ignored(None),
+        };
+
+        // `Ctrl-c Ctrl-c` runs the rebase (two presses); any other key resets it.
+        if let ctrl!('c') = key {
+            if self.pending_exec {
+                self.pending_exec = false;
+                if let Some(cb) = self.execute(cx) {
+                    return EventResult::Consumed(Some(cb));
+                }
+            } else {
+                self.pending_exec = true;
+                cx.editor
+                    .set_status("press Ctrl-c again to run the rebase (Esc to cancel)");
+            }
+            return EventResult::Consumed(None);
+        }
+        self.pending_exec = false;
+
+        let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
+            compositor.pop();
+        });
+        match key {
+            key!('q') | key!(Esc) => return EventResult::Consumed(Some(close)),
+            key!('j') | key!(Down) | ctrl!('n') => self.move_selection(1),
+            key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
+            key!('g') | key!(Home) => self.selected = 0,
+            key!('G') | key!(End) => self.selected = self.rows.len().saturating_sub(1),
+            key!('K') => self.move_row(-1),
+            key!('J') => self.move_row(1),
+            key!('p') => self.set_action(RebaseAction::Pick),
+            key!('s') => self.set_action(RebaseAction::Squash),
+            key!('f') => self.set_action(RebaseAction::Fixup),
+            key!('d') => self.set_action(RebaseAction::Drop),
+            key!(Enter) => {
+                if let Some(cb) = self.execute(cx) {
+                    return EventResult::Consumed(Some(cb));
+                }
+            }
+            _ => {}
+        }
+        EventResult::Consumed(None)
+    }
+
+    fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
+        let theme = &ctx.editor.theme;
+        let bg = theme.get("ui.background");
+        let info_style = theme.get("ui.linenr");
+        let header_style = to_bold(theme.get("ui.text.focus"));
+        let text_style = theme.get("ui.text");
+        let sha_style = theme.get("constant.numeric");
+        let accent_style = to_bold(theme.get("ui.text.focus"));
+        let drop_style = theme
+            .get("ui.linenr")
+            .add_modifier(zemacs_view::graphics::Modifier::CROSSED_OUT);
+        let sel_style = theme.get("ui.selection");
+
+        surface.clear_with(area, bg);
+        if area.width < 8 || area.height < 3 {
+            return;
+        }
+
+        let title = " Rebase todo";
+        surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
+        let hint =
+            "j/k move  K/J reorder  p pick  s squash  f fixup  d drop  Enter run  q abort";
+        if (title.len() + hint.len() + 3) < area.width as usize {
+            surface.set_stringn(
+                area.x + area.width - hint.len() as u16 - 1,
+                area.y,
+                hint,
+                hint.len(),
+                info_style,
+            );
+        }
+        let base_line = format!(" onto {} ({} commits)", self.base_sha, self.rows.len());
+        surface.set_stringn(area.x, area.y + 1, &base_line, area.width as usize, info_style);
+
+        let body_y = area.y + 3;
+        let body_h = area.height.saturating_sub(3);
+        self.viewport = body_h as usize;
+
+        if self.selected < self.scroll {
+            self.scroll = self.selected;
+        } else if self.selected >= self.scroll + self.viewport {
+            self.scroll = self.selected - self.viewport + 1;
+        }
+
+        for (offset, row) in self
+            .rows
+            .iter()
+            .enumerate()
+            .skip(self.scroll)
+            .take(body_h as usize)
+        {
+            let y = body_y + (offset - self.scroll) as u16;
+            let selected = offset == self.selected;
+            if selected {
+                surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
+            }
+            // `pick   abc1234 subject` — verb padded so the SHA/subject align.
+            let verb = row.action.verb();
+            let verb_style = if selected {
+                sel_style
+            } else {
+                match row.action {
+                    RebaseAction::Pick => text_style,
+                    RebaseAction::Squash | RebaseAction::Fixup => accent_style,
+                    RebaseAction::Drop => drop_style,
+                }
+            };
+            surface.set_stringn(
+                area.x,
+                y,
+                &format!("  {verb:<7}"),
+                area.width as usize,
+                verb_style,
+            );
+            let sha_x = area.x + 2 + 7;
+            if sha_x < area.x + area.width {
+                let style = if selected { sel_style } else { sha_style };
+                surface.set_stringn(
+                    sha_x,
+                    y,
+                    &row.sha,
+                    (area.x + area.width - sha_x) as usize,
+                    style,
+                );
+            }
+            let subj_x = sha_x + row.sha.chars().count() as u16 + 1;
+            if subj_x < area.x + area.width {
+                let style = if selected {
+                    sel_style
+                } else if row.action == RebaseAction::Drop {
+                    drop_style
+                } else {
+                    text_style
+                };
+                surface.set_stringn(
+                    subj_x,
+                    y,
+                    &row.subject,
+                    (area.x + area.width - subj_x) as usize,
+                    style,
+                );
+            }
+        }
+    }
+
+    fn id(&self) -> Option<&'static str> {
+        Some("magit-rebase")
     }
 }
 
@@ -2144,6 +2636,51 @@ fn to_bold(style: zemacs_view::graphics::Style) -> zemacs_view::graphics::Style 
     style.add_modifier(zemacs_view::graphics::Modifier::BOLD)
 }
 
+/// Single-quote a string for safe use inside a shell command (git runs
+/// `GIT_SEQUENCE_EDITOR` through the shell). Embedded single quotes are escaped
+/// the POSIX way (`'\''`).
+fn shell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
+
+/// Detect an in-progress rebase by probing the git state directory
+/// (`rebase-merge` for interactive/merge rebases, `rebase-apply` for am-style),
+/// returning its progress. `None` when no rebase is running.
+fn detect_rebase(repo: &Path) -> Option<RebaseProgress> {
+    // (state-dir name, current-step file, total-steps file).
+    for (name, num_file, end_file) in [
+        ("rebase-merge", "msgnum", "end"),
+        ("rebase-apply", "next", "last"),
+    ] {
+        let Some(rel) = git_output(repo, &["rev-parse", "--git-path", name]) else {
+            continue;
+        };
+        let p = PathBuf::from(rel.trim());
+        // `--git-path` is relative to the repo (we ran with `-C repo`).
+        let dir = if p.is_absolute() { p } else { repo.join(p) };
+        if !dir.exists() {
+            continue;
+        }
+        let onto = std::fs::read_to_string(dir.join("onto"))
+            .ok()
+            .map(|s| s.trim().chars().take(9).collect::<String>())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "?".to_string());
+        let read_num = |file: &str| -> usize {
+            std::fs::read_to_string(dir.join(file))
+                .ok()
+                .and_then(|s| s.trim().parse().ok())
+                .unwrap_or(0)
+        };
+        return Some(RebaseProgress {
+            onto,
+            done: read_num(num_file),
+            total: read_num(end_file),
+        });
+    }
+    None
+}
+
 /// Resolve the git work-tree root containing `start`.
 fn git_repo_root(start: &Path) -> Option<PathBuf> {
     let dir = if start.is_dir() {
@@ -2471,5 +3008,101 @@ stash@{1}: On feature: experiment
     fn parse_stash_empty() {
         assert!(parse_stash("").is_empty());
         assert!(parse_stash("\n\n").is_empty());
+    }
+
+    #[test]
+    fn rebase_action_verbs() {
+        assert_eq!(RebaseAction::Pick.verb(), "pick");
+        assert_eq!(RebaseAction::Squash.verb(), "squash");
+        assert_eq!(RebaseAction::Fixup.verb(), "fixup");
+        assert_eq!(RebaseAction::Drop.verb(), "drop");
+    }
+
+    #[test]
+    fn parse_rebase_todo_defaults_to_pick_in_order() {
+        // `git log --reverse --format=%h %s <base>..HEAD` — oldest first.
+        let out = "aaa1111 first commit\nbbb2222 second commit\nccc3333 third\n";
+        let rows = parse_rebase_todo(out);
+        assert_eq!(rows.len(), 3);
+        assert!(rows.iter().all(|r| r.action == RebaseAction::Pick));
+        assert_eq!(rows[0].sha, "aaa1111");
+        assert_eq!(rows[0].subject, "first commit");
+        assert_eq!(rows[1].sha, "bbb2222");
+        assert_eq!(rows[1].subject, "second commit");
+        assert_eq!(rows[2].sha, "ccc3333");
+        assert_eq!(rows[2].subject, "third");
+    }
+
+    #[test]
+    fn parse_rebase_todo_handles_empty_subject_and_blanks() {
+        let rows = parse_rebase_todo("\nabc1234\n\n");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].sha, "abc1234");
+        assert_eq!(rows[0].subject, "");
+        assert!(parse_rebase_todo("").is_empty());
+    }
+
+    #[test]
+    fn render_todo_emits_verb_sha_subject_in_order() {
+        let rows = vec![
+            RebaseRow {
+                action: RebaseAction::Pick,
+                sha: "aaa1111".into(),
+                subject: "first".into(),
+            },
+            RebaseRow {
+                action: RebaseAction::Squash,
+                sha: "bbb2222".into(),
+                subject: "second".into(),
+            },
+            RebaseRow {
+                action: RebaseAction::Fixup,
+                sha: "ccc3333".into(),
+                subject: "third".into(),
+            },
+            RebaseRow {
+                action: RebaseAction::Drop,
+                sha: "ddd4444".into(),
+                subject: "fourth".into(),
+            },
+        ];
+        let todo = render_todo(&rows);
+        assert_eq!(
+            todo,
+            "pick aaa1111 first\nsquash bbb2222 second\nfixup ccc3333 third\ndrop ddd4444 fourth\n"
+        );
+    }
+
+    #[test]
+    fn render_todo_keeps_dropped_rows() {
+        // A dropped row still emits a `drop …` line (git removes it on apply).
+        let rows = vec![RebaseRow {
+            action: RebaseAction::Drop,
+            sha: "deadbee".into(),
+            subject: "obsolete change".into(),
+        }];
+        assert_eq!(render_todo(&rows), "drop deadbee obsolete change\n");
+    }
+
+    #[test]
+    fn render_todo_roundtrips_through_parse() {
+        // Parsing a `%h %s` log then rendering prepends the default `pick` verb.
+        let out = "aaa1111 a\nbbb2222 b\n";
+        assert_eq!(
+            render_todo(&parse_rebase_todo(out)),
+            "pick aaa1111 a\npick bbb2222 b\n"
+        );
+    }
+
+    #[test]
+    fn render_todo_empty() {
+        assert_eq!(render_todo(&[]), "");
+    }
+
+    #[test]
+    fn shell_quote_wraps_and_escapes() {
+        assert_eq!(shell_quote("/tmp/todo"), "'/tmp/todo'");
+        assert_eq!(shell_quote("/has space/x"), "'/has space/x'");
+        assert_eq!(shell_quote("a'b"), "'a'\\''b'");
     }
 }
