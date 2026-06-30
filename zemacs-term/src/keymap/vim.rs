@@ -1457,6 +1457,15 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "h" => { "Help"
                     "h" => hover,                  // SPC m h h : describe thing at point
                 },
+                "e" => { "Eval (elisp)"
+                    "e" => eval_elisp_line,        // SPC m e e : eval last sexp (current line)
+                    "$" => eval_elisp_line,        // SPC m e $ : goto eol + eval last sexp
+                    "l" => eval_elisp_line,        // SPC m e l : goto eol + eval last sexp
+                    "r" => eval_elisp_region,      // SPC m e r : eval region
+                    "b" => eval_elisp_buffer,      // SPC m e b : eval buffer
+                    "f" => eval_elisp_defun,       // SPC m e f : eval current defun
+                    "c" => eval_elisp_defun,       // SPC m e c : eval current form
+                },
                 // Org-mode editing (zemacs has no per-language keymaps, so the org
                 // commands live in the global Major-mode menu; they no-op politely
                 // off org buffers). Promote uses `H` because lowercase `h` is the

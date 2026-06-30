@@ -433,6 +433,10 @@ impl MappableCommand {
         goto_window_8, "Go to window 8 (SPC 8)",
         goto_window_9, "Go to window 9 (SPC 9)",
         delete_window_and_buffer, "Close window and kill its buffer (SPC w . x)",
+        eval_elisp_region, "Evaluate the selection as elisp (SPC m e r)",
+        eval_elisp_buffer, "Evaluate the buffer as elisp (SPC m e b)",
+        eval_elisp_line, "Evaluate the current line as elisp (SPC m e e)",
+        eval_elisp_defun, "Evaluate the enclosing form as elisp (SPC m e f)",
         layout_create, "Create a new window-layout from the current windows (SPC l l)",
         layout_next, "Switch to the next layout (SPC l n)",
         layout_prev, "Switch to the previous layout (SPC l p)",
@@ -6288,6 +6292,89 @@ fn git_init(cx: &mut Context) {
             .set_error(String::from_utf8_lossy(&out.stderr).trim().to_string()),
         Err(e) => cx.editor.set_error(format!("git init failed: {e}")),
     }
+}
+
+// ---------------------------------------------------------------------------
+// Elisp evaluation (Spacemacs `SPC m e *` in emacs-lisp-mode). zemacs embeds an
+// elisp interpreter; evaluate the selection / line / defun / buffer against the
+// live editor and echo the result. (No-ops politely off elisp buffers — the
+// reader simply errors.)
+// ---------------------------------------------------------------------------
+
+fn run_elisp(cx: &mut Context, src: &str) {
+    if src.trim().is_empty() {
+        cx.editor.set_status("nothing to evaluate");
+        return;
+    }
+    let result = {
+        let mut ccx = crate::compositor::Context {
+            editor: cx.editor,
+            jobs: cx.jobs,
+            scroll: None,
+        };
+        crate::commands::scripting::eval_elisp(&mut ccx, src)
+    };
+    match result {
+        Ok(out) => cx.editor.set_status(format!("⇒ {out}")),
+        Err(e) => cx.editor.set_error(format!("elisp: {e}")),
+    }
+}
+
+/// SPC m e r: evaluate the current selection as elisp.
+fn eval_elisp_region(cx: &mut Context) {
+    let src = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        doc.selection(view.id).primary().fragment(text).to_string()
+    };
+    run_elisp(cx, &src);
+}
+
+/// SPC m e b: evaluate the whole buffer as elisp.
+fn eval_elisp_buffer(cx: &mut Context) {
+    let src = doc!(cx.editor).text().to_string();
+    run_elisp(cx, &src);
+}
+
+/// SPC m e e / e $ / e l: evaluate the current line (≈ last sexp) as elisp.
+fn eval_elisp_line(cx: &mut Context) {
+    let src = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let head = doc
+            .selection(view.id)
+            .primary()
+            .head
+            .min(text.len_chars().saturating_sub(1));
+        let line = text.char_to_line(head);
+        text.line(line).to_string()
+    };
+    run_elisp(cx, &src);
+}
+
+/// SPC m e f / e c: evaluate the enclosing top-level form (≈ paragraph) as elisp.
+fn eval_elisp_defun(cx: &mut Context) {
+    let src = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let last = text.len_lines().saturating_sub(1);
+        let cur = text
+            .char_to_line(doc.selection(view.id).primary().head.min(text.len_chars()))
+            .min(last);
+        let is_blank = |l: usize| text.line(l).to_string().trim().is_empty();
+        let mut start = cur;
+        while start > 0 && !is_blank(start - 1) {
+            start -= 1;
+        }
+        let mut end = cur;
+        while end < last && !is_blank(end + 1) {
+            end += 1;
+        }
+        let from = text.line_to_char(start);
+        let to = text.line_to_char((end + 1).min(text.len_lines()));
+        text.slice(from..to).to_string()
+    };
+    run_elisp(cx, &src);
 }
 
 fn global_search(cx: &mut Context) {
