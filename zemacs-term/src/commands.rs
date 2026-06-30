@@ -485,6 +485,8 @@ impl MappableCommand {
         toggle_centered_cursor, "Keep the cursor vertically centered (SPC t -)",
         toggle_fill_column, "Toggle a fill-column ruler (SPC t f)",
         toggle_long_line_marker, "Toggle an 80th-column ruler (SPC t 8)",
+        copy_file, "Copy the current file to a prompted destination (SPC f c)",
+        open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
         git_init, "Initialize a new git repository (SPC g i)",
@@ -6931,6 +6933,48 @@ fn toggle_long_line_marker(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("long-line marker (col 80): {}", if on { "on" } else { "off" }));
+}
+
+/// Copy the current file to a prompted destination (Spacemacs `SPC f c`).
+fn copy_file(cx: &mut Context) {
+    let Some(src) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        "copy to:".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let dest = std::path::PathBuf::from(input.trim());
+            match std::fs::copy(&src, &dest) {
+                Ok(_) => cx.editor.set_status(format!("copied to {}", dest.display())),
+                Err(e) => cx.editor.set_error(format!("copy failed: {e}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Open a fresh timestamped junk file under `<config>/junk/` (Spacemacs `SPC f J`).
+fn open_junk_file(cx: &mut Context) {
+    let dir = zemacs_loader::config_dir().join("junk");
+    let _ = std::fs::create_dir_all(&dir);
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let path = dir.join(format!("junk-{ts}.txt"));
+    let _ = std::fs::write(&path, b"");
+    match cx.editor.open(&path, Action::Replace) {
+        Ok(_) => cx
+            .editor
+            .set_status(format!("junk file: {}", path.display())),
+        Err(e) => cx.editor.set_error(format!("open junk file: {e}")),
+    }
 }
 
 /// Open the current buffer's bytes in the hex editor (Spacemacs `SPC f h`, hexl).

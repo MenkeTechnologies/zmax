@@ -907,6 +907,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "o" => open_file_external,                     // SPC f o : open with external program
                 "F" => goto_file,                              // SPC f F : open file under point
                 "h" => open_hex,                               // SPC f h : open binary file in hex editor (hexl)
+                "c" => copy_file,                              // SPC f c : copy file to a different location
+                "J" => open_junk_file,                         // SPC f J : open a junk file
                 "L" => file_picker,                            // SPC f L : locate a file
                 "b" => marks_picker,                           // SPC f b : go to file bookmarks (marks)
                 "r" => frecent_file_picker,                    // SPC f r : recent files (z frecency)

@@ -14782,5 +14782,21 @@
    "key:normal:space t C-8"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_f_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space f c"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_f_jU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space f J"
+  ],
+  "note": ""
  }
 ]
