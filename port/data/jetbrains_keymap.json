@@ -1638,5 +1638,21 @@
   "name": "Goto Previous Splitter",
   "desc": "IntelliJ IDEA default keymap: Cmd Alt Left",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.editing.reload-from-disk",
+  "source": "jetbrains",
+  "category": "editing",
+  "name": "Reload from Disk",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.editing.synchronize",
+  "source": "jetbrains",
+  "category": "editing",
+  "name": "Synchronize",
+  "desc": "IntelliJ IDEA default keymap: Cmd Alt Y",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]
