@@ -2214,9 +2214,9 @@ checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 
 [[package]]
 name = "fusevm"
-version = "0.14.3"
+version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0b9f3d5a37ac5916cac83ac57837142f8a3516e6a43597d43bab8e831ea8717"
+checksum = "86de6aa60cded919cb9ae214e4522e4f6c7becbb67603f360da54c8c7f752468"
 dependencies = [
  "bincode",
  "chrono",
@@ -6973,7 +6973,7 @@ dependencies = [
 
 [[package]]
 name = "strykelang"
-version = "0.17.33"
+version = "0.17.34"
 dependencies = [
  "aes",
  "aes-gcm",
