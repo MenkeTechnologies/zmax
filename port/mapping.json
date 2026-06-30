@@ -18278,5 +18278,37 @@
    "builtin:viml:ex:try"
   ],
   "note": "Vimscript statement run by embedded vimlrs (:vim)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r_x",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r x"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r /"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r_e_x",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r e x"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r_e",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r e /"
+  ],
+  "note": ""
  }
 ]

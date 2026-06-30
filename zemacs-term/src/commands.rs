@@ -409,6 +409,10 @@ impl MappableCommand {
         global_search_symbol, "Global search seeded with the symbol under the cursor",
         clear_search_highlight, "Clear persistent search highlight (SPC s c)",
         regex_convert_form, "Convert the selected regex between PCRE and Emacs forms (SPC x r c)",
+        regex_emacs_to_rx_replace, "Convert the selected Emacs regex to rx form (SPC x r e x)",
+        regex_emacs_to_rx_explain, "Explain the selected Emacs regex as rx (SPC x r e /)",
+        regex_pcre_to_rx_replace, "Convert the selected PCRE regex to rx form (SPC x r x)",
+        regex_pcre_to_rx_explain, "Explain the selected PCRE regex as rx (SPC x r /)",
         justify_left, "Left-justify (fill) the region (SPC x j l)",
         justify_right, "Right-justify the region (SPC x j r)",
         justify_center, "Center-justify the region (SPC x j c)",
@@ -7246,6 +7250,267 @@ fn swap_regex_grouping(s: &str) -> String {
     }
     out
 }
+
+// --- regex -> rx sexp form (Spacemacs `SPC x r x` / `x r /`, pcre2el) ---------
+// A small recursive-descent parser for *Emacs* regex syntax that emits the
+// Emacs `rx` s-expression form. Honest by construction: it returns Err on any
+// construct it does not understand, so it never emits a wrong conversion.
+
+#[derive(Debug, PartialEq)]
+enum Rx {
+    Lit(String),
+    AnyChar,
+    Bol,
+    Eol,
+    Class(bool, String),
+    WordChar,
+    NotWordChar,
+    Space,
+    Group(Box<Rx>),
+    Seq(Vec<Rx>),
+    Or(Vec<Rx>),
+    Star(Box<Rx>),
+    Plus(Box<Rx>),
+    Opt(Box<Rx>),
+    Repeat(usize, Option<usize>, Box<Rx>),
+}
+
+struct RxParser {
+    ch: Vec<char>,
+    i: usize,
+}
+
+impl RxParser {
+    fn at(&self, s: &str) -> bool {
+        self.ch[self.i..].iter().collect::<String>().starts_with(s)
+    }
+    fn parse_alt(&mut self) -> Result<Rx, String> {
+        let mut alts = vec![self.parse_seq()?];
+        while self.at("\\|") {
+            self.i += 2;
+            alts.push(self.parse_seq()?);
+        }
+        Ok(if alts.len() == 1 {
+            alts.pop().unwrap()
+        } else {
+            Rx::Or(alts)
+        })
+    }
+    fn parse_seq(&mut self) -> Result<Rx, String> {
+        let mut items = Vec::new();
+        while self.i < self.ch.len() && !self.at("\\|") && !self.at("\\)") {
+            items.push(self.parse_quant()?);
+        }
+        // merge adjacent single-char literals into runs
+        let mut merged: Vec<Rx> = Vec::new();
+        for it in items {
+            if let (Rx::Lit(a), Some(Rx::Lit(b))) = (&it, merged.last_mut()) {
+                b.push_str(a);
+            } else {
+                merged.push(it);
+            }
+        }
+        Ok(if merged.len() == 1 {
+            merged.pop().unwrap()
+        } else {
+            Rx::Seq(merged)
+        })
+    }
+    fn parse_quant(&mut self) -> Result<Rx, String> {
+        let atom = self.parse_atom()?;
+        if self.i < self.ch.len() {
+            match self.ch[self.i] {
+                '*' => {
+                    self.i += 1;
+                    return Ok(Rx::Star(Box::new(atom)));
+                }
+                '+' => {
+                    self.i += 1;
+                    return Ok(Rx::Plus(Box::new(atom)));
+                }
+                '?' => {
+                    self.i += 1;
+                    return Ok(Rx::Opt(Box::new(atom)));
+                }
+                _ => {}
+            }
+            if self.at("\\{") {
+                self.i += 2;
+                let mut num = String::new();
+                while self.i < self.ch.len() && self.ch[self.i].is_ascii_digit() {
+                    num.push(self.ch[self.i]);
+                    self.i += 1;
+                }
+                let lo: usize = num.parse().map_err(|_| "bad {n}".to_string())?;
+                let hi = if self.i < self.ch.len() && self.ch[self.i] == ',' {
+                    self.i += 1;
+                    let mut h = String::new();
+                    while self.i < self.ch.len() && self.ch[self.i].is_ascii_digit() {
+                        h.push(self.ch[self.i]);
+                        self.i += 1;
+                    }
+                    if h.is_empty() {
+                        None
+                    } else {
+                        Some(h.parse().map_err(|_| "bad {n,m}".to_string())?)
+                    }
+                } else {
+                    Some(lo)
+                };
+                if !self.at("\\}") {
+                    return Err("unterminated \\{".into());
+                }
+                self.i += 2;
+                return Ok(Rx::Repeat(lo, hi, Box::new(atom)));
+            }
+        }
+        Ok(atom)
+    }
+    fn parse_atom(&mut self) -> Result<Rx, String> {
+        if self.at("\\(") {
+            self.i += 2;
+            if self.at("?:") {
+                self.i += 2;
+            }
+            let inner = self.parse_alt()?;
+            if !self.at("\\)") {
+                return Err("unterminated \\(".into());
+            }
+            self.i += 2;
+            return Ok(Rx::Group(Box::new(inner)));
+        }
+        let c = self.ch[self.i];
+        match c {
+            '.' => {
+                self.i += 1;
+                Ok(Rx::AnyChar)
+            }
+            '^' => {
+                self.i += 1;
+                Ok(Rx::Bol)
+            }
+            '$' => {
+                self.i += 1;
+                Ok(Rx::Eol)
+            }
+            '[' => {
+                self.i += 1;
+                let neg = self.i < self.ch.len() && self.ch[self.i] == '^';
+                if neg {
+                    self.i += 1;
+                }
+                let mut body = String::new();
+                while self.i < self.ch.len() && self.ch[self.i] != ']' {
+                    body.push(self.ch[self.i]);
+                    self.i += 1;
+                }
+                if self.i >= self.ch.len() {
+                    return Err("unterminated [".into());
+                }
+                self.i += 1;
+                Ok(Rx::Class(neg, body))
+            }
+            '\\' => {
+                if self.i + 1 >= self.ch.len() {
+                    return Err("trailing backslash".into());
+                }
+                let n = self.ch[self.i + 1];
+                self.i += 2;
+                match n {
+                    'w' => Ok(Rx::WordChar),
+                    'W' => Ok(Rx::NotWordChar),
+                    's' => Ok(Rx::Space),
+                    '.' | '*' | '+' | '?' | '[' | ']' | '^' | '$' | '\\' | '(' | ')' | '|'
+                    | '{' | '}' => Ok(Rx::Lit(n.to_string())),
+                    other => Err(format!("unsupported escape \\{other}")),
+                }
+            }
+            _ => {
+                self.i += 1;
+                Ok(Rx::Lit(c.to_string()))
+            }
+        }
+    }
+}
+
+fn rx_to_string(rx: &Rx) -> String {
+    match rx {
+        Rx::Lit(s) => format!("{s:?}"),
+        Rx::AnyChar => "nonl".into(),
+        Rx::Bol => "bol".into(),
+        Rx::Eol => "eol".into(),
+        Rx::Class(false, b) => format!("(any {b:?})"),
+        Rx::Class(true, b) => format!("(not (any {b:?}))"),
+        Rx::WordChar => "wordchar".into(),
+        Rx::NotWordChar => "(not wordchar)".into(),
+        Rx::Space => "space".into(),
+        Rx::Group(i) => format!("(group {})", rx_to_string(i)),
+        Rx::Seq(items) => format!(
+            "(seq {})",
+            items.iter().map(rx_to_string).collect::<Vec<_>>().join(" ")
+        ),
+        Rx::Or(items) => format!(
+            "(or {})",
+            items.iter().map(rx_to_string).collect::<Vec<_>>().join(" ")
+        ),
+        Rx::Star(i) => format!("(zero-or-more {})", rx_to_string(i)),
+        Rx::Plus(i) => format!("(one-or-more {})", rx_to_string(i)),
+        Rx::Opt(i) => format!("(opt {})", rx_to_string(i)),
+        Rx::Repeat(lo, Some(hi), i) if lo == hi => format!("(= {lo} {})", rx_to_string(i)),
+        Rx::Repeat(lo, Some(hi), i) => format!("(** {lo} {hi} {})", rx_to_string(i)),
+        Rx::Repeat(lo, None, i) => format!("(>= {lo} {})", rx_to_string(i)),
+    }
+}
+
+/// Convert an Emacs-regex string to its `rx` s-expression form, or Err.
+fn emacs_regex_to_rx(s: &str) -> Result<String, String> {
+    if s.is_empty() {
+        return Err("empty regex".into());
+    }
+    let mut p = RxParser {
+        ch: s.chars().collect(),
+        i: 0,
+    };
+    let rx = p.parse_alt()?;
+    if p.i != p.ch.len() {
+        return Err(format!("unexpected `{}`", p.ch[p.i]));
+    }
+    Ok(rx_to_string(&rx))
+}
+
+/// Shared: convert the selection to rx form. `pcre` first swaps grouping to the
+/// Emacs convention. `replace` swaps the text in place; otherwise echoes it.
+fn regex_to_rx(cx: &mut Context, pcre: bool, replace: bool) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    if range.from() == range.to() {
+        cx.editor.set_status("select a regex to convert to rx");
+        return;
+    }
+    let src = range.fragment(text).to_string();
+    let emacs = if pcre { swap_regex_grouping(&src) } else { src };
+    match emacs_regex_to_rx(&emacs) {
+        Ok(rx) => {
+            if replace {
+                let transaction = Transaction::change(
+                    doc.text(),
+                    std::iter::once((range.from(), range.to(), Some(rx.clone().into()))),
+                );
+                doc.apply(&transaction, view.id);
+                cx.editor.set_status(format!("rx: {rx}"));
+            } else {
+                cx.editor.set_status(format!("rx: {rx}"));
+            }
+        }
+        Err(e) => cx.editor.set_error(format!("can't convert to rx: {e}")),
+    }
+}
+
+fn regex_emacs_to_rx_replace(cx: &mut Context) { regex_to_rx(cx, false, true) }
+fn regex_emacs_to_rx_explain(cx: &mut Context) { regex_to_rx(cx, false, false) }
+fn regex_pcre_to_rx_replace(cx: &mut Context) { regex_to_rx(cx, true, true) }
+fn regex_pcre_to_rx_explain(cx: &mut Context) { regex_to_rx(cx, true, false) }
 
 /// Convert the selected regex between PCRE and Emacs forms (Spacemacs
 /// `SPC x r c` / `x r e p` / `x r p e`). Operates on the primary selection.
@@ -15308,6 +15573,21 @@ mod insert_generator_tests {
         let (out, cur) = pe_split(&ch, 4).expect("split");
         assert_eq!(out.iter().collect::<String>(), "(a b) ( c)");
         assert_eq!(cur, 7);
+    }
+
+    #[test]
+    fn emacs_regex_to_rx_basic() {
+        assert_eq!(emacs_regex_to_rx("abc").unwrap(), "\"abc\"");
+        assert_eq!(emacs_regex_to_rx("a*").unwrap(), "(zero-or-more \"a\")");
+        assert_eq!(emacs_regex_to_rx("a+").unwrap(), "(one-or-more \"a\")");
+        assert_eq!(
+            emacs_regex_to_rx("\\(foo\\|bar\\)").unwrap(),
+            "(group (or \"foo\" \"bar\"))"
+        );
+        assert_eq!(emacs_regex_to_rx("[a-z]").unwrap(), "(any \"a-z\")");
+        assert_eq!(emacs_regex_to_rx("a\\{2,3\\}").unwrap(), "(** 2 3 \"a\")");
+        // honest: unsupported escape errors rather than emitting garbage
+        assert!(emacs_regex_to_rx("\\q").is_err());
     }
 
     #[test]
