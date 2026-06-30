@@ -19429,9 +19429,10 @@
   "spec_id": "cursor.misc.rules",
   "status": "ported",
   "evidence": [
-   "static:project_rules"
+   "static:ai_chat",
+   "static:ai_agent"
   ],
-  "note": ".cursorrules / .cursor/rules -> project_rules; threaded into all AI system prompts"
+  "note": ".cursorrules / .cursor/rules applied via system_with_rules in all AI commands (ai_chat, ai_agent, ...)"
  },
  {
   "spec_id": "cursor.misc.fix",
