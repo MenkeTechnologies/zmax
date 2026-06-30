@@ -508,6 +508,7 @@ impl MappableCommand {
         diagnostics_verify_setup, "Report the buffer's diagnostics/LSP setup (SPC e v)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
+        copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7685,6 +7686,27 @@ fn describe_diagnostics_checker(cx: &mut Context) {
     };
     show_text_in_scratch(cx.editor, &report);
     cx.editor.set_status("describe checker");
+}
+
+/// SPC h d s : copy system information (zemacs version, OS, arch, term) to the system clipboard,
+/// for pasting into bug reports — Spacemacs `spacemacs/describe-system-info`.
+fn copy_system_info(cx: &mut Context) {
+    let info = format!(
+        "zemacs {}\nOS: {} ({})\narch: {}\nterm: {}",
+        zemacs_loader::VERSION_AND_GIT_HASH,
+        std::env::consts::OS,
+        std::env::consts::FAMILY,
+        std::env::consts::ARCH,
+        std::env::var("TERM").unwrap_or_else(|_| "(unknown)".to_string()),
+    );
+    if let Err(e) = cx.editor.registers.write('+', vec![info.clone()]) {
+        cx.editor.set_error(format!("clipboard write failed: {e}"));
+        return;
+    }
+    cx.editor.set_status(format!(
+        "Copied system info to clipboard ({} bytes)",
+        info.len()
+    ));
 }
 
 /// SPC h d t : describe the "text properties" at the cursor. In a structural editor that means the
