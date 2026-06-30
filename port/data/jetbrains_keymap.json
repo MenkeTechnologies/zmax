@@ -1734,5 +1734,13 @@
   "name": "Scroll Line Down",
   "desc": "IntelliJ IDEA default keymap: Cmd Down",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.code-folding.collapse-doc-comments",
+  "source": "jetbrains",
+  "category": "code-folding",
+  "name": "Collapse Doc Comments",
+  "desc": "IntelliJ IDEA default keymap: Code > Folding > Collapse Doc Comments",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]
