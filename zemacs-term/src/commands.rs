@@ -479,6 +479,7 @@ impl MappableCommand {
         layout_default, "Switch to the default (first) layout (SPC l h)",
         layout_delete, "Delete the current layout, keeping its buffers (SPC l d)",
         layout_save, "Save layouts to disk (SPC l s)",
+        layout_rename, "Rename the current layout (SPC l R)",
         layout_load, "Load layouts from disk (SPC l L)",
         layout_goto_1, "Switch to layout 1 (SPC l 1)",
         layout_goto_2, "Switch to layout 2 (SPC l 2)",
@@ -6965,6 +6966,36 @@ fn layout_create(cx: &mut Context) {
         name
     };
     cx.editor.set_status(format!("created layout {name}"));
+}
+
+/// SPC l R : rename the current layout (Spacemacs `spacemacs/layouts-rename`).
+fn layout_rename(cx: &mut Context) {
+    let cur_name = {
+        let s = LAYOUTS.lock().unwrap();
+        if s.layouts.is_empty() {
+            cx.editor.set_status("no layouts — SPC l l to create one");
+            return;
+        }
+        s.layouts[s.current.min(s.layouts.len() - 1)].name.clone()
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        format!("rename layout ({cur_name}) to:").into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let new = input.trim().to_string();
+            let mut s = LAYOUTS.lock().unwrap();
+            if !s.layouts.is_empty() {
+                let cur = s.current.min(s.layouts.len() - 1);
+                s.layouts[cur].name = new.clone();
+                cx.editor.set_status(format!("renamed layout to {new}"));
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 /// Save the current windows into the active layout, then restore layout `target`.

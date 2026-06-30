@@ -19105,5 +19105,32 @@
    "static:toggle_diagnostics"
   ],
   "note": "toggle flycheck/syntax checking -> toggle_diagnostics (end-of-line diag filter + diagnostics gutter)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_o",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l o",
+   "static:layout_load"
+  ],
+  "note": "SPC l o -> layout_load"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_rU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l R",
+   "static:layout_rename"
+  ],
+  "note": "SPC l R -> layout_rename"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_rU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l w R",
+   "static:layout_rename"
+  ],
+  "note": "SPC l w R -> layout_rename"
  }
 ]

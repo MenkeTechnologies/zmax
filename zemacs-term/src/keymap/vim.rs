@@ -1367,6 +1367,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "D" => layout_delete,              // SPC l D : delete other layouts (approx)
                 "S" => layout_save,                // SPC l S : save layouts to file (s is signature-help)
                 "L" => layout_load,                // SPC l L : load layouts from file
+                "o" => layout_load,                // SPC l o : open a custom layout (load from file)
+                "R" => layout_rename,              // SPC l R : rename current layout
                 "b" => buffer_picker,              // SPC l b : select a buffer in the layout
                 "t" => buffer_picker,              // SPC l t : display a buffer
                 "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
@@ -1381,6 +1383,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "N" => layout_prev,            // SPC l w N : previous workspace
                     "h" => layout_prev,            // SPC l w h : previous workspace
                     "d" => layout_delete,          // SPC l w d : close workspace
+                    "R" => layout_rename,          // SPC l w R : rename current workspace
                     "tab" => layout_last,          // SPC l w TAB : last workspace
                     "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
                     "4" => layout_goto_4, "5" => layout_goto_5, "6" => layout_goto_6,
