@@ -766,7 +766,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "|" => wonly,
                 "m" => wonly,                  // SPC w . m : maximize current window
                 "x" => delete_window_and_buffer, // SPC w . x : delete window + kill buffer
-                "a" => rotate_view,            // SPC w . a : ace-window (cycle focus)
+                "a" => ace_window,             // SPC w . a : ace-window (jump to window by number)
                     "g" => golden_ratio_resize,    // SPC w . g : golden-ratio resize
                 "1" => goto_window_1, "2" => goto_window_2, "3" => goto_window_3,
                 "4" => goto_window_4, "5" => goto_window_5, "6" => goto_window_6,
@@ -1100,7 +1100,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "|" => wonly,                  // SPC w . | : maximize vertically
                     "m" => wonly,                  // SPC w . m : maximize current window
                     "x" => delete_window_and_buffer, // SPC w . x : delete window + kill buffer
-                    "a" => rotate_view,            // SPC w . a : ace-window (cycle focus)
+                    "a" => ace_window,             // SPC w . a : ace-window (jump to window by number)
                     "g" => golden_ratio_resize,    // SPC w . g : golden-ratio resize
                     "1" => goto_window_1, "2" => goto_window_2, "3" => goto_window_3,
                     "4" => goto_window_4, "5" => goto_window_5, "6" => goto_window_6,

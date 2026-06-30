@@ -10517,11 +10517,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_w_x_a",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space w . a"
+   "key:normal:space w . a",
+   "static:ace_window"
   ],
-  "note": "ace-window (cycle focus approx)"
+  "note": "ace-window -> ace_window (on_next_key reads window number 1-9 and jumps)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_h",

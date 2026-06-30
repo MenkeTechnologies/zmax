@@ -511,6 +511,7 @@ impl MappableCommand {
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
         copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
         copy_last_keys, "Copy the most recently pressed keys to the clipboard (SPC h d l)",
+        ace_window, "Jump to a window by its number, prompted (ace-window, SPC w . a)",
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
         describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
         package_search, "Search configured language packages and describe one (SPC h p)",
@@ -6709,6 +6710,31 @@ fn goto_window_n(cx: &mut Context, n: usize) {
     if let Some(&id) = ids.get(n - 1) {
         cx.editor.focus(id);
     }
+}
+
+/// SPC w . a : ace-window. Show a hint, then jump to the window whose 1-based number is pressed
+/// (windows are numbered in traversal order, matching `SPC w 1..9`). Spacemacs `ace-window`.
+fn ace_window(cx: &mut Context) {
+    let n = cx.editor.tree.traverse().count();
+    if n <= 1 {
+        cx.editor.set_status("ace-window: only one window");
+        return;
+    }
+    cx.editor.set_status(format!(
+        "ace-window: press 1-{} to select a window",
+        n.min(9)
+    ));
+    cx.on_next_key(move |cx, event| {
+        if let KeyCode::Char(c) = event.code {
+            if let Some(d) = c.to_digit(10) {
+                if d >= 1 {
+                    goto_window_n(cx, d as usize);
+                    return;
+                }
+            }
+        }
+        cx.editor.set_status("ace-window: cancelled");
+    });
 }
 
 /// Move the current buffer into window N and focus there (Spacemacs `SPC b . 1..9`).
