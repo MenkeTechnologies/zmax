@@ -248,3 +248,32 @@ async fn subword_dw_deletes_one_subword() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// Spacemacs auto-fill (SPC t F): typing past text_width wraps the line at the
+/// last whitespace.
+#[tokio::test(flavor = "multi_thread")]
+async fn auto_fill_wraps_at_text_width() -> anyhow::Result<()> {
+    let mut cfg = Config {
+        keys: zemacs_term::keymap::vim::default(),
+        ..Default::default()
+    };
+    cfg.editor.text_width = 10; // narrow fill column so a short line triggers the wrap
+    let mut app = helpers::AppBuilder::new().with_config(cfg).build()?;
+    app.editor.auto_fill = true;
+
+    // Type "aaa bbb ccc" (11 chars) in insert mode; the space-separated text
+    // crosses column 10, so auto-fill breaks at the last space <= 10 (index 7).
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("iaaa bbb ccc"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!("aaa bbb\nccc\n", doc.text().to_string(), "auto-fill wraps at the last space before col 10");
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}

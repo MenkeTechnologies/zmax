@@ -19458,5 +19458,13 @@
    "key:normal:space t c"
   ],
   "note": "spacemacs SPC t c -> toggle_subword (sub-word w/b/e motions + operators)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_fU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t F"
+  ],
+  "note": "spacemacs SPC t F -> toggle_auto_fill (Emacs auto-fill: wrap at text_width while typing)"
  }
 ]

@@ -1381,6 +1381,10 @@ pub struct Editor {
     /// motions (and the operators built on them) move by sub-word, splitting
     /// CamelCase / snake_case identifiers. A persistent toggle.
     pub subword: bool,
+    /// Spacemacs auto-fill-mode (`SPC t F`): when set, typing past `text_width`
+    /// breaks the line at the last whitespace (Emacs auto-fill). A persistent
+    /// toggle; only applies with a single cursor.
+    pub auto_fill: bool,
     pub tree: Tree,
     pub next_document_id: DocumentId,
     pub documents: BTreeMap<DocumentId, Document>,
@@ -1575,6 +1579,7 @@ impl Editor {
             overwrite: false,
             block: None,
             subword: false,
+            auto_fill: false,
             tree: Tree::new(area),
             next_document_id: DocumentId::default(),
             documents: BTreeMap::new(),

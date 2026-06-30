@@ -962,6 +962,7 @@ impl MappableCommand {
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
         toggle_window_dedication, "Toggle window dedication (spacemacs SPC w t)",
         toggle_subword, "Toggle sub-word w/b/e motions (spacemacs SPC t c)",
+        toggle_auto_fill, "Toggle auto-fill: wrap at text-width while typing (spacemacs SPC t F)",
         subword_w, "Next word start, sub-word aware (w)",
         subword_b, "Previous word start, sub-word aware (b)",
         subword_e, "Next word end, sub-word aware (e)",
@@ -12262,6 +12263,58 @@ pub mod insert {
     use zemacs_core::auto_pairs;
     use zemacs_view::editor::SmartTabConfig;
 
+    /// Emacs auto-fill break point. Given the line text up to the cursor and the
+    /// fill column, return the char index (within `prefix`) of the whitespace to
+    /// replace with a newline, or `None` to leave the line unbroken. Breaks at
+    /// the last whitespace at/before the fill column; if the first word is itself
+    /// longer than the column, breaks at the first whitespace past it instead.
+    pub(crate) fn auto_fill_break(prefix: &str, fill: usize) -> Option<usize> {
+        if prefix.chars().count() <= fill {
+            return None;
+        }
+        let mut last_ws_before: Option<usize> = None;
+        let mut first_ws_after: Option<usize> = None;
+        for (i, ch) in prefix.chars().enumerate() {
+            if (ch == ' ' || ch == '\t') && i > 0 {
+                if i <= fill {
+                    last_ws_before = Some(i);
+                } else if first_ws_after.is_none() {
+                    first_ws_after = Some(i);
+                }
+            }
+        }
+        last_ws_before.or(first_ws_after)
+    }
+
+    /// Emacs auto-fill (`SPC t F`): if the current line exceeds `text_width`,
+    /// replace a whitespace with a newline so the line wraps. Single cursor only.
+    fn auto_fill_after_insert(cx: &mut Context) {
+        let fill = cx.editor.config().text_width;
+        let (ws_at, view_id, doc_id) = {
+            let (view, doc) = current_ref!(cx.editor);
+            let slice = doc.text().slice(..);
+            let sel = doc.selection(view.id);
+            if sel.len() != 1 {
+                return;
+            }
+            let cursor = sel.primary().cursor(slice);
+            let line = slice.char_to_line(cursor);
+            let line_start = slice.line_to_char(line);
+            let prefix: String = slice.slice(line_start..cursor).chars().collect();
+            match auto_fill_break(&prefix, fill) {
+                Some(b) => (line_start + b, view.id, doc.id()),
+                None => return,
+            }
+        };
+        let doc = doc_mut!(cx.editor, &doc_id);
+        let text = doc.text();
+        let transaction = Transaction::change(
+            text,
+            std::iter::once((ws_at, ws_at + 1, Some(Tendril::from("\n")))),
+        );
+        doc.apply(&transaction, view_id);
+    }
+
     pub fn insert_char(cx: &mut Context, c: char) {
         // vim Replace mode (`R`): overtype the character under the cursor rather
         // than inserting, unless the cursor sits at the end of the line (where
@@ -12296,6 +12349,11 @@ pub mod insert {
 
         let doc = doc_mut!(cx.editor, &doc.id());
         doc.apply(&transaction, view.id);
+
+        // Emacs auto-fill (SPC t F): wrap the line at whitespace past text_width.
+        if cx.editor.auto_fill {
+            auto_fill_after_insert(cx);
+        }
 
         zemacs_event::dispatch(PostInsertChar { c, cx });
     }
@@ -16874,6 +16932,17 @@ fn toggle_subword(cx: &mut Context) {
         .set_status(format!("subword motion: {}", if on { "on" } else { "off" }));
 }
 
+/// Spacemacs auto-fill-mode (`SPC t F`): toggle auto-wrapping at text_width.
+fn toggle_auto_fill(cx: &mut Context) {
+    cx.editor.auto_fill = !cx.editor.auto_fill;
+    let on = cx.editor.auto_fill;
+    cx.editor.set_status(format!(
+        "auto-fill: {} (text-width {})",
+        if on { "on" } else { "off" },
+        cx.editor.config().text_width
+    ));
+}
+
 // Subword-aware word-motion dispatchers: when subword-mode is on, the `w`/`b`/`e`
 // motions (and every operator built on the `extend_*` variants) move by sub-word
 // instead of word. When off they call the original command, so behavior is
@@ -18378,6 +18447,22 @@ mod insert_generator_tests {
         // degenerate column (caret block) and single row
         assert_eq!(rectangle_bounds((3, 5), (7, 5)), (3, 7, 5, 5));
         assert_eq!(rectangle_bounds((2, 9), (2, 1)), (2, 2, 1, 9));
+    }
+
+    #[test]
+    fn auto_fill_break_points() {
+        use super::insert::auto_fill_break;
+        // Under the fill column: no break.
+        assert_eq!(auto_fill_break("short", 10), None);
+        // Break at the last whitespace at/before the fill column.
+        assert_eq!(auto_fill_break("the quick brown", 10), Some(9));
+        assert_eq!(auto_fill_break("ab cdefghijkl", 5), Some(2));
+        // First word longer than the column: break at the first whitespace past it.
+        assert_eq!(auto_fill_break("verylongword tail", 5), Some(12));
+        // No whitespace at all (one long token): cannot break.
+        assert_eq!(auto_fill_break("verylongwordnobreak", 5), None);
+        // Never break at column 0 (leading whitespace).
+        assert_eq!(auto_fill_break(" leadingspacetoolong", 5), None);
     }
 
     #[test]
