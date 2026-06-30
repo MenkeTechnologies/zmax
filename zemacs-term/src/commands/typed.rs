@@ -1708,7 +1708,7 @@ fn hex(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.display().to_string());
-    let view = crate::ui::hex::HexView::new(name, bytes);
+    let view = crate::ui::hex::HexView::new(name, Some(path), bytes);
 
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
         move |_editor: &mut Editor, compositor: &mut Compositor| {

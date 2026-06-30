@@ -1,4 +1,4 @@
-//! Read-only `xxd`-style hex viewer (slice 1 of an editable hex editor).
+//! `xxd`-style hex viewer & **editor** (slice 2: byte-faithful overwrite editing).
 //!
 //! A full-screen overlay [`Component`] that shows a file's **raw bytes** as a
 //! classic hex dump: an offset gutter, 16 hex bytes per row grouped 8 + 8, and
@@ -6,20 +6,38 @@
 //!
 //! The view is backed by a plain [`Vec<u8>`] (read with [`std::fs::read`]) — not
 //! the editor's text [`Rope`](zemacs_core::Rope) — so arbitrary, non-UTF-8 bytes
-//! are shown faithfully. This is the foundation for an editable hex editor
-//! (slice 2), so the byte model, scrolling and the byte cursor are kept clean
-//! and the row formatting lives in a pure, unit-tested helper ([`hex_row`]).
+//! are shown and *written back* faithfully.
 //!
-//! Read-only: you can move a byte cursor and scroll, but not edit yet.
+//! ## Editing (slice 2)
 //!
-//! Keys: `h`/`l`/arrows move the cursor ±1 byte, `j`/`k`/Down/Up move ±16 bytes
-//! (one row), `0`/Home and `$`/End jump to the start / end of the row, `g`/`G`
-//! to the start / end of the file, PageUp/PageDown (`ctrl-u`/`ctrl-d`) scroll a
-//! screenful, `q`/`Esc`/`ctrl-c` close. The mouse wheel scrolls.
+//! The editor opens in read-only **nav** mode (slice-1 keys). `i`/`R` enters
+//! **EDIT** mode; `Esc` leaves it. `Tab` toggles the focused column between Hex
+//! and Ascii in either mode.
+//!
+//! * EDIT + Hex: a hex digit `[0-9a-fA-F]` sets the **high** nibble of the byte
+//!   under the cursor (recording a "pending high nibble"); the next digit sets
+//!   the **low** nibble and advances to the next byte.
+//! * EDIT + Ascii: a printable char (`0x20..=0x7e`) overwrites the byte and
+//!   advances.
+//!
+//! Editing is **overwrite-only** — the file length never changes in this slice.
+//! Any change marks the buffer dirty (`[+]` in the header).
+//!
+//! ## Saving
+//!
+//! `Ctrl-s` writes the current bytes to the file path via [`std::fs::write`]
+//! (byte-faithful). Quitting (`q`/`Esc` in nav mode) with unsaved edits is
+//! guarded: the first `q` warns, a second `q` discards and closes.
+//!
+//! Slice-1 nav keys still work in nav mode; in EDIT mode the arrow keys / Home /
+//! End / PageUp / PageDown still navigate while printable keys edit.
+
+use std::path::PathBuf;
 
 use tui::buffer::Buffer as Surface;
 use zemacs_view::graphics::Rect;
 use zemacs_view::input::MouseEventKind;
+use zemacs_view::keyboard::KeyModifiers;
 
 use crate::{
     compositor::{Component, Compositor, Context, Event, EventResult},
@@ -29,10 +47,29 @@ use crate::{
 /// Number of bytes shown per row.
 const BYTES_PER_ROW: usize = 16;
 
-/// The full-screen read-only hex viewer overlay.
+/// Which column edits / cursor highlighting are focused on.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Column {
+    Hex,
+    Ascii,
+}
+
+impl Column {
+    /// The other column.
+    fn toggled(self) -> Column {
+        match self {
+            Column::Hex => Column::Ascii,
+            Column::Ascii => Column::Hex,
+        }
+    }
+}
+
+/// The full-screen hex viewer / editor overlay.
 pub struct HexView {
     /// Display name of the file (shown in the header).
     file_name: String,
+    /// Absolute path to write on save; `None` when opened from bytes only.
+    path: Option<PathBuf>,
     /// The raw file bytes — the source of truth for everything rendered.
     bytes: Vec<u8>,
     /// Index of the byte under the cursor (`0` when the file is empty).
@@ -42,17 +79,35 @@ pub struct HexView {
     /// Number of body rows visible in the last render (for page scrolling and
     /// keeping the cursor on screen). Updated every frame.
     viewport: usize,
+    /// `true` once `i`/`R` has entered EDIT mode; `false` in read-only nav.
+    edit_mode: bool,
+    /// The focused column (Hex or Ascii) for editing and cursor highlight.
+    focus: Column,
+    /// In Hex EDIT mode, the high nibble already typed for the cursor byte, if a
+    /// second (low-nibble) digit is awaited.
+    pending_high: Option<u8>,
+    /// `true` once any byte has been overwritten since the last save.
+    dirty: bool,
+    /// `true` once a dirty-quit has been warned; a second `q` then discards.
+    quit_armed: bool,
 }
 
 impl HexView {
-    /// Construct a viewer over `bytes`, labelled `file_name` in the header.
-    pub fn new(file_name: String, bytes: Vec<u8>) -> Self {
+    /// Construct a viewer over `bytes`, labelled `file_name`, optionally backed
+    /// by `path` (so it can be saved). Pass `None` to open from bytes only.
+    pub fn new(file_name: String, path: Option<PathBuf>, bytes: Vec<u8>) -> Self {
         HexView {
             file_name,
+            path,
             bytes,
             cursor: 0,
             scroll: 0,
             viewport: 1,
+            edit_mode: false,
+            focus: Column::Hex,
+            pending_high: None,
+            dirty: false,
+            quit_armed: false,
         }
     }
 
@@ -74,8 +129,9 @@ impl HexView {
     }
 
     /// Move the cursor to byte `idx` (clamped to a valid byte) and scroll so it
-    /// stays visible. No-op on an empty file.
+    /// stays visible. No-op on an empty file. Abandons any pending high nibble.
     fn move_to(&mut self, idx: isize) {
+        self.pending_high = None;
         if self.bytes.is_empty() {
             return;
         }
@@ -93,10 +149,60 @@ impl HexView {
             self.scroll = row + 1 - self.viewport;
         }
     }
+
+    /// Apply a typed `ch` to the focused column, overwriting the cursor byte.
+    /// In Hex focus only hex digits act (composing high then low nibble); in
+    /// Ascii focus only printable bytes act. Marks dirty + advances on a change.
+    fn type_char(&mut self, ch: char) {
+        match self.focus {
+            Column::Hex => {
+                if let Some(digit) = hex_digit(ch) {
+                    let (cursor, pending, changed) =
+                        apply_hex_digit(&mut self.bytes, self.cursor, self.pending_high, digit);
+                    self.cursor = cursor;
+                    self.pending_high = pending;
+                    if changed {
+                        self.dirty = true;
+                        self.ensure_cursor_visible();
+                    }
+                }
+            }
+            Column::Ascii => {
+                let (cursor, changed) = apply_ascii_char(&mut self.bytes, self.cursor, ch);
+                self.cursor = cursor;
+                if changed {
+                    self.dirty = true;
+                    self.ensure_cursor_visible();
+                }
+            }
+        }
+    }
+
+    /// Write the current bytes to `path` (byte-faithful), reporting via status.
+    fn save(&mut self, cx: &mut Context) {
+        match &self.path {
+            Some(path) => match std::fs::write(path, &self.bytes) {
+                Ok(()) => {
+                    self.dirty = false;
+                    cx.editor.set_status(format!(
+                        "wrote {} bytes to {}",
+                        self.bytes.len(),
+                        path.display()
+                    ));
+                }
+                Err(err) => cx
+                    .editor
+                    .set_status(format!("hex save failed: {err}")),
+            },
+            None => cx
+                .editor
+                .set_status("can't save hex: no file path (opened from bytes)"),
+        }
+    }
 }
 
 impl Component for HexView {
-    fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         let key = match event {
             Event::Key(key) => *key,
             Event::Mouse(ev) => {
@@ -110,6 +216,11 @@ impl Component for HexView {
             _ => return EventResult::Ignored(None),
         };
 
+        // Quit-arming only survives consecutive `q` presses: clear it now, and
+        // re-arm only in the quit branch below.
+        let was_armed = self.quit_armed;
+        self.quit_armed = false;
+
         let cursor = self.cursor as isize;
         let bpr = BYTES_PER_ROW as isize;
         // A screenful of bytes, used for page scrolling.
@@ -117,14 +228,72 @@ impl Component for HexView {
         // Start of the cursor's current row, for `0`/`$`.
         let row_start = self.cursor - (self.cursor % BYTES_PER_ROW);
 
+        // Keys handled identically in both modes: save and column toggle.
+        match key {
+            ctrl!('s') => {
+                self.save(cx);
+                return EventResult::Consumed(None);
+            }
+            key!(Tab) => {
+                self.focus = self.focus.toggled();
+                self.pending_high = None;
+                return EventResult::Consumed(None);
+            }
+            _ => {}
+        }
+
+        if self.edit_mode {
+            // EDIT mode: arrows still navigate; printable keys edit the focus.
+            match key {
+                key!(Esc) => {
+                    self.edit_mode = false;
+                    self.pending_high = None;
+                }
+                key!(Left) => self.move_to(cursor - 1),
+                key!(Right) => self.move_to(cursor + 1),
+                key!(Up) => self.move_to(cursor - bpr),
+                key!(Down) => self.move_to(cursor + bpr),
+                key!(Home) => self.move_to(row_start as isize),
+                key!(End) => self.move_to((row_start + BYTES_PER_ROW - 1) as isize),
+                key!(PageDown) | ctrl!('d') | ctrl!('f') => {
+                    self.scroll_by(self.viewport.max(1) as isize);
+                    self.move_to(cursor + page);
+                }
+                key!(PageUp) | ctrl!('u') | ctrl!('b') => {
+                    self.scroll_by(-(self.viewport.max(1) as isize));
+                    self.move_to(cursor - page);
+                }
+                _ => {
+                    // A bare or shifted printable char edits the focused column.
+                    if key.modifiers == KeyModifiers::NONE
+                        || key.modifiers == KeyModifiers::SHIFT
+                    {
+                        if let Some(ch) = key.char() {
+                            self.type_char(ch);
+                        }
+                    }
+                }
+            }
+            return EventResult::Consumed(None);
+        }
+
+        // NAV mode (slice-1 keys, read-only).
         match key {
             key!('q') | key!(Esc) | ctrl!('c') => {
+                if self.dirty && !was_armed {
+                    self.quit_armed = true;
+                    cx.editor.set_status(
+                        "unsaved hex edits — Ctrl-s to save, or q again to discard",
+                    );
+                    return EventResult::Consumed(None);
+                }
                 return EventResult::Consumed(Some(Box::new(
                     |compositor: &mut Compositor, _cx| {
                         compositor.pop();
                     },
                 )));
             }
+            key!('i') | key!('R') => self.edit_mode = true,
             key!('h') | key!(Left) => self.move_to(cursor - 1),
             key!('l') | key!(Right) => self.move_to(cursor + 1),
             key!('j') | key!(Down) => self.move_to(cursor + bpr),
@@ -165,14 +334,26 @@ impl Component for HexView {
             return;
         }
 
-        // ── Header (two rows): title + byte count, then a key hint ───────────
+        // Mode / focus indicator for the header.
+        let mode = match (self.edit_mode, self.focus) {
+            (true, Column::Hex) => "-- EDIT (hex) --",
+            (true, Column::Ascii) => "-- EDIT (ascii) --",
+            (false, Column::Hex) => "NAV [hex]",
+            (false, Column::Ascii) => "NAV [ascii]",
+        };
+        let dirty = if self.dirty { " [+]" } else { "" };
+
+        // ── Header (two rows): title + byte count + mode, then a key hint ─────
         let header_h = 2u16;
         let header = format!(
-            " {}  —  {} byte{}  ·  cursor 0x{:08x}",
+            " {}{}  —  {} byte{}  ·  cursor 0x{:08x}  ·  {}{}",
             self.file_name,
+            dirty,
             self.bytes.len(),
             if self.bytes.len() == 1 { "" } else { "s" },
             self.cursor,
+            mode,
+            if self.dirty { "  (modified)" } else { "" },
         );
         surface.set_stringn(
             area.x,
@@ -181,7 +362,11 @@ impl Component for HexView {
             area.width as usize,
             title_style.add_modifier(zemacs_view::graphics::Modifier::BOLD),
         );
-        let hint = " h/l byte  j/k row  0/$ line  g/G file  ^u/^d page  q quit";
+        let hint = if self.edit_mode {
+            " type to edit  Tab col  arrows move  ^s save  Esc nav"
+        } else {
+            " h/l byte  j/k row  Tab col  i edit  ^s save  g/G file  q quit"
+        };
         surface.set_stringn(area.x, area.y + 1, hint, area.width as usize, linenr_style);
 
         let body_y = area.y + header_h;
@@ -190,6 +375,19 @@ impl Component for HexView {
         if body_h == 0 {
             return;
         }
+
+        // The "active" cursor highlight (the focused column) vs. the mirror
+        // highlight on the unfocused column.
+        let hex_cursor_style = if self.focus == Column::Hex {
+            cursor_style
+        } else {
+            linenr_style
+        };
+        let ascii_cursor_style = if self.focus == Column::Ascii {
+            cursor_style
+        } else {
+            linenr_style
+        };
 
         // ── Body: one ratatui Line per visible row, with the cursor byte
         // highlighted in both the hex and ASCII columns ─────────────────────
@@ -217,7 +415,7 @@ impl Component for HexView {
                 match chunk.get(i) {
                     Some(b) => {
                         let is_cursor = start + i == self.cursor;
-                        let style = if is_cursor { cursor_style } else { hex_style };
+                        let style = if is_cursor { hex_cursor_style } else { hex_style };
                         spans.push(Span::styled(format!("{:02x}", b), to_rat_style(style)));
                         spans.push(Span::styled(" ", to_rat_style(text_style)));
                     }
@@ -235,7 +433,7 @@ impl Component for HexView {
                             '.'
                         };
                         let is_cursor = start + i == self.cursor;
-                        let style = if is_cursor { cursor_style } else { text_style };
+                        let style = if is_cursor { ascii_cursor_style } else { text_style };
                         spans.push(Span::styled(ch.to_string(), to_rat_style(style)));
                     }
                     None => spans.push(Span::styled(" ", to_rat_style(text_style))),
@@ -252,6 +450,68 @@ impl Component for HexView {
     fn id(&self) -> Option<&'static str> {
         Some("hex")
     }
+}
+
+/// Value of a hex-digit char `[0-9a-fA-F]` (`0..=15`), or `None`.
+fn hex_digit(c: char) -> Option<u8> {
+    c.to_digit(16).map(|d| d as u8)
+}
+
+/// Replace the **high** nibble of `b` with the low 4 bits of `digit`, keeping
+/// the low nibble.
+pub fn set_high_nibble(b: u8, digit: u8) -> u8 {
+    (b & 0x0f) | ((digit & 0x0f) << 4)
+}
+
+/// Replace the **low** nibble of `b` with the low 4 bits of `digit`, keeping the
+/// high nibble.
+pub fn set_low_nibble(b: u8, digit: u8) -> u8 {
+    (b & 0xf0) | (digit & 0x0f)
+}
+
+/// Apply one hex-digit edit (overwrite only). Returns
+/// `(new_cursor, new_pending_high, changed)`.
+///
+/// * With no pending high nibble, sets the **high** nibble of the byte under
+///   `cursor` and records `digit` as the pending high nibble (cursor unchanged).
+/// * With a pending high nibble, sets the **low** nibble and advances the cursor
+///   (clamped to the last byte).
+///
+/// Editing past the end of `bytes` (including an empty buffer) is a no-op.
+fn apply_hex_digit(
+    bytes: &mut [u8],
+    cursor: usize,
+    pending: Option<u8>,
+    digit: u8,
+) -> (usize, Option<u8>, bool) {
+    if cursor >= bytes.len() {
+        return (cursor, None, false);
+    }
+    match pending {
+        None => {
+            bytes[cursor] = set_high_nibble(bytes[cursor], digit);
+            (cursor, Some(digit), true)
+        }
+        Some(_) => {
+            bytes[cursor] = set_low_nibble(bytes[cursor], digit);
+            let next = (cursor + 1).min(bytes.len() - 1);
+            (next, None, true)
+        }
+    }
+}
+
+/// Apply one ASCII-char edit (overwrite only). Returns `(new_cursor, changed)`.
+///
+/// Only printable bytes (`0x20..=0x7e`) act; the byte under `cursor` is
+/// overwritten and the cursor advances (clamped to the last byte). Editing past
+/// the end of `bytes`, or a non-printable char, is a no-op.
+fn apply_ascii_char(bytes: &mut [u8], cursor: usize, ch: char) -> (usize, bool) {
+    if cursor >= bytes.len() || !(0x20u32..=0x7e).contains(&(ch as u32)) {
+        return (cursor, false);
+    }
+    bytes[cursor] = ch as u8;
+    let next = (cursor + 1).min(bytes.len() - 1);
+    (next, true)
 }
 
 /// Format one hex-dump row. Pure (no editor state) so the layout is unit-tested.
@@ -338,5 +598,120 @@ mod tests {
         assert!(hex.starts_with("1234abcd  "));
         // An empty chunk still produces a full-width, all-padded hex column.
         assert_eq!(hex.len(), 59);
+    }
+
+    // ── slice 2: byte-edit logic ─────────────────────────────────────────────
+
+    #[test]
+    fn hex_digit_parses_all_cases() {
+        assert_eq!(hex_digit('0'), Some(0));
+        assert_eq!(hex_digit('9'), Some(9));
+        assert_eq!(hex_digit('a'), Some(10));
+        assert_eq!(hex_digit('F'), Some(15));
+        assert_eq!(hex_digit('g'), None);
+        assert_eq!(hex_digit(' '), None);
+    }
+
+    #[test]
+    fn nibbles_set_independently() {
+        assert_eq!(set_high_nibble(0x00, 0x3), 0x30);
+        assert_eq!(set_low_nibble(0x30, 0xc), 0x3c);
+        // Setting the high nibble keeps the existing low nibble, and vice-versa.
+        assert_eq!(set_high_nibble(0xab, 0x1), 0x1b);
+        assert_eq!(set_low_nibble(0xab, 0x9), 0xa9);
+        // Only the low 4 bits of the digit are used.
+        assert_eq!(set_high_nibble(0x00, 0xff), 0xf0);
+        assert_eq!(set_low_nibble(0x00, 0xff), 0x0f);
+    }
+
+    #[test]
+    fn high_then_low_nibble_compose_to_byte() {
+        let mut bytes = vec![0x00];
+        // Type '3': sets high nibble, records pending, cursor stays.
+        let (cursor, pending, changed) = apply_hex_digit(&mut bytes, 0, None, 0x3);
+        assert_eq!(bytes, vec![0x30]);
+        assert_eq!(cursor, 0);
+        assert_eq!(pending, Some(0x3));
+        assert!(changed);
+        // Type 'c': sets low nibble, clears pending, advances (clamped).
+        let (cursor, pending, changed) = apply_hex_digit(&mut bytes, cursor, pending, 0xc);
+        assert_eq!(bytes, vec![0x3c]);
+        assert_eq!(cursor, 0); // only one byte → clamps in place
+        assert_eq!(pending, None);
+        assert!(changed);
+    }
+
+    #[test]
+    fn hex_low_nibble_advances_cursor() {
+        let mut bytes = vec![0x00, 0x00];
+        let (cursor, pending, _) = apply_hex_digit(&mut bytes, 0, None, 0xa);
+        let (cursor, pending, changed) = apply_hex_digit(&mut bytes, cursor, pending, 0xb);
+        assert_eq!(bytes, vec![0xab, 0x00]);
+        assert_eq!(cursor, 1); // advanced to the next byte
+        assert_eq!(pending, None);
+        assert!(changed);
+    }
+
+    #[test]
+    fn hex_edit_past_end_is_noop() {
+        // Empty buffer: nothing to edit.
+        let mut empty: Vec<u8> = vec![];
+        let (cursor, pending, changed) = apply_hex_digit(&mut empty, 0, None, 0xf);
+        assert!(empty.is_empty());
+        assert_eq!(cursor, 0);
+        assert_eq!(pending, None);
+        assert!(!changed);
+
+        // Cursor at/after end of a non-empty buffer.
+        let mut bytes = vec![0x11];
+        let (_c, _p, changed) = apply_hex_digit(&mut bytes, 1, None, 0xf);
+        assert_eq!(bytes, vec![0x11]);
+        assert!(!changed);
+    }
+
+    #[test]
+    fn ascii_overwrite_sets_byte_and_advances() {
+        let mut bytes = vec![0x00, 0x00];
+        let (cursor, changed) = apply_ascii_char(&mut bytes, 0, 'A');
+        assert_eq!(bytes, vec![0x41, 0x00]);
+        assert_eq!(cursor, 1);
+        assert!(changed);
+    }
+
+    #[test]
+    fn ascii_non_printable_and_past_end_are_noop() {
+        let mut bytes = vec![0x41];
+        // Non-printable char.
+        let (cursor, changed) = apply_ascii_char(&mut bytes, 0, '\n');
+        assert_eq!(bytes, vec![0x41]);
+        assert_eq!(cursor, 0);
+        assert!(!changed);
+        // Past the end.
+        let (cursor, changed) = apply_ascii_char(&mut bytes, 5, 'Z');
+        assert_eq!(bytes, vec![0x41]);
+        assert_eq!(cursor, 5);
+        assert!(!changed);
+    }
+
+    #[test]
+    fn typing_marks_buffer_dirty() {
+        let mut view = HexView::new("t".into(), None, vec![0x00, 0x00]);
+        assert!(!view.dirty);
+        view.edit_mode = true;
+        view.focus = Column::Hex;
+        view.type_char('4');
+        view.type_char('1'); // composes 0x41 = 'A'
+        assert!(view.dirty);
+        assert_eq!(view.bytes, vec![0x41, 0x00]);
+        assert_eq!(view.cursor, 1);
+
+        // Ascii focus overwrite also marks dirty / advances.
+        let mut view = HexView::new("t".into(), None, vec![0x00, 0x00]);
+        view.edit_mode = true;
+        view.focus = Column::Ascii;
+        view.type_char('Z');
+        assert!(view.dirty);
+        assert_eq!(view.bytes, vec![0x5a, 0x00]);
+        assert_eq!(view.cursor, 1);
     }
 }
