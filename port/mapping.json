@@ -14694,5 +14694,29 @@
    "static:expand_abbrev"
   ],
   "note": "emacs Step B"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r c"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r_e_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r e p"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r_p_e",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r p e"
+  ],
+  "note": ""
  }
 ]

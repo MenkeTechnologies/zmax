@@ -65,6 +65,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x t c", "Text",    ":transpose-chars"),                      // SPC x t c
     ("space x t l", "Text",    ":move-line-up"),                         // SPC x t l : transpose lines
     ("space x t w", "Text",    ":transpose-words"),                      // SPC x t w
+    ("space x r c", "Text",    "regex_convert_form"),                    // SPC x r c : convert regex PCRE <-> Emacs
+    ("space x r e p", "Text",  "regex_convert_form"),                    // SPC x r e p : Emacs regex -> PCRE
+    ("space x r p e", "Text",  "regex_convert_form"),                    // SPC x r p e : PCRE -> Emacs regex
     ("space x t p", "Text",    "transpose_paragraph"),                   // SPC x t p : swap current/previous paragraph
     ("space x t e", "Text",    "transpose_sexp"),                        // SPC x t e : swap current/previous sexp
     ("space x t s", "Text",    "transpose_sentence"),                    // SPC x t s : swap current/previous sentence
