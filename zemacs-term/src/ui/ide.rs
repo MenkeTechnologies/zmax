@@ -683,6 +683,38 @@ impl Ide {
                 self.select_tab(BottomTab::Ci);
                 self.focus = Focus::Problems;
             }
+            // Bottom-panel tool windows that already render as tabs but were not
+            // directly command-focusable (JetBrains-style Bookmarks/Services/etc.).
+            "harpoon" | "bookmarks" => {
+                self.fold_problems = false;
+                self.select_tab(BottomTab::Harpoon);
+                self.focus = Focus::Problems;
+            }
+            "marks" => {
+                self.fold_problems = false;
+                self.select_tab(BottomTab::Marks);
+                self.focus = Focus::Problems;
+            }
+            "registers" => {
+                self.fold_problems = false;
+                self.select_tab(BottomTab::Registers);
+                self.focus = Focus::Problems;
+            }
+            "jumplist" => {
+                self.fold_problems = false;
+                self.select_tab(BottomTab::Jumplist);
+                self.focus = Focus::Problems;
+            }
+            "recent" => {
+                self.fold_problems = false;
+                self.select_tab(BottomTab::Recent);
+                self.focus = Focus::Problems;
+            }
+            "todo" => {
+                self.fold_problems = false;
+                self.select_tab(BottomTab::Todo);
+                self.focus = Focus::Problems;
+            }
             _ => self.focus = Focus::Editor,
         }
     }

@@ -11945,11 +11945,11 @@
  },
  {
   "spec_id": "jetbrains.tool-windows.show-bookmarks-window",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:harpoon_menu"
+   "static:focus_bookmarks"
   ],
-  "note": ""
+  "note": "jetbrains tool window"
  },
  {
   "spec_id": "jetbrains.tool-windows.show-find-window",
@@ -11969,11 +11969,11 @@
  },
  {
   "spec_id": "jetbrains.tool-windows.show-services-window",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:focus_ci_panel"
   ],
-  "note": ""
+  "note": "jetbrains tool window"
  },
  {
   "spec_id": "jetbrains.tool-windows.show-terminal-window",

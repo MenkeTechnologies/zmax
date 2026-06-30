@@ -845,6 +845,12 @@ impl MappableCommand {
         focus_structure, "Focus the structure/symbol outline panel",
         hide_active_tool_window, "Return focus to the editor, hiding the active tool window (JetBrains Shift-Esc)",
         jump_to_last_tool_window, "Toggle focus between the editor and the last tool window (JetBrains F12)",
+        focus_bookmarks, "Focus the Bookmarks tool window (pinned files; JetBrains Bookmarks)",
+        focus_marks_panel, "Focus the Marks tool window",
+        focus_registers_panel, "Focus the Registers tool window",
+        focus_jumplist_panel, "Focus the Jumplist tool window",
+        focus_recent_panel, "Focus the Recent Files tool window",
+        focus_todo_panel, "Focus the TODO tool window",
         focus_problems, "Focus the problems/diagnostics panel",
         focus_run_console, "Focus the Run console (scroll output with j/k/PgUp/PgDn)",
         focus_git_panel, "Focus the Git changes panel (j/k select, Enter opens)",
@@ -13024,6 +13030,31 @@ fn focus_ci_panel(cx: &mut Context) {
     focus_ide_panel(cx, "ci");
     // Explicit open always refetches (the panel's own auto-fetch only fires once).
     crate::ci::spawn_fetch(cx.jobs);
+}
+
+/// Focus the Bookmarks tool window (pinned files; JetBrains Bookmarks, Cmd 2).
+fn focus_bookmarks(cx: &mut Context) {
+    focus_ide_panel(cx, "bookmarks");
+}
+/// Focus the Marks tool window (vim a-z marks).
+fn focus_marks_panel(cx: &mut Context) {
+    focus_ide_panel(cx, "marks");
+}
+/// Focus the Registers tool window.
+fn focus_registers_panel(cx: &mut Context) {
+    focus_ide_panel(cx, "registers");
+}
+/// Focus the Jumplist tool window.
+fn focus_jumplist_panel(cx: &mut Context) {
+    focus_ide_panel(cx, "jumplist");
+}
+/// Focus the Recent Files tool window.
+fn focus_recent_panel(cx: &mut Context) {
+    focus_ide_panel(cx, "recent");
+}
+/// Focus the TODO/marker tool window.
+fn focus_todo_panel(cx: &mut Context) {
+    focus_ide_panel(cx, "todo");
 }
 
 /// Jump to the next `file:line` reference in the run output (vim `:cnext`).

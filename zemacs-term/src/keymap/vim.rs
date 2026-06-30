@@ -1210,6 +1210,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "q" => hide_active_tool_window,    // SPC W q : hide active tool window (JetBrains Shift-Esc)
                 "tab" => jump_to_last_tool_window, // SPC W TAB : jump to last tool window (JetBrains F12)
                 "z" => toggle_ide,                 // SPC W z : hide all tool windows (Zen)
+                "b" => focus_bookmarks,            // SPC W b : Bookmarks tool window (JetBrains Cmd 2)
+                "k" => focus_marks_panel,          // SPC W k : Marks tool window
+                "R" => focus_registers_panel,      // SPC W R : Registers tool window
+                "j" => focus_jumplist_panel,       // SPC W j : Jumplist tool window
+                "u" => focus_recent_panel,         // SPC W u : Recent Files tool window
+                "d" => focus_todo_panel,           // SPC W d : TODO tool window
             },
             "p" => { "Project"
                 "f" => file_picker,                // SPC p f
