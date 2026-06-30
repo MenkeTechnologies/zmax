@@ -418,6 +418,8 @@ impl MappableCommand {
         goto_prev_open_paren, "Go backward to previous opening paren (SPC k k)",
         ediff_windows, "Diff the two front windows side by side (SPC D w w)",
         transpose_paragraph, "Swap the current paragraph with the previous one (SPC x t p)",
+        transpose_sexp, "Swap the current s-expression with the previous one (SPC x t e)",
+        transpose_sentence, "Swap the current sentence with the previous one (SPC x t s)",
         make_3_windows, "Lay out three vertical windows (SPC w 3)",
         make_4_windows, "Lay out a 2x2 window grid (SPC w 4)",
         narrow_to_function, "Narrow the buffer to the enclosing function (SPC n f)",
@@ -6180,6 +6182,171 @@ fn paragraph_ranges(
     let pr = (line_char(ps)?, line_char(pe + 1)?);
     let cr = (line_char(cs)?, line_char(ce + 1)?);
     Some((pr, cr))
+}
+
+/// Read the s-expression ending at exclusive index `end` (skipping trailing
+/// whitespace): a balanced `()[]{}` group, or an atom. Returns its char range.
+fn read_sexp_back(ch: &[char], end: usize) -> Option<(usize, usize)> {
+    let mut i = end.min(ch.len());
+    while i > 0 && ch[i - 1].is_whitespace() {
+        i -= 1;
+    }
+    if i == 0 {
+        return None;
+    }
+    let end = i;
+    if matches!(ch[i - 1], ')' | ']' | '}') {
+        let mut depth = 0i32;
+        let mut j = i;
+        while j > 0 {
+            j -= 1;
+            match ch[j] {
+                ')' | ']' | '}' => depth += 1,
+                '(' | '[' | '{' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some((j, end));
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    } else {
+        let mut j = i;
+        while j > 0
+            && !ch[j - 1].is_whitespace()
+            && !matches!(ch[j - 1], '(' | '[' | '{' | ')' | ']' | '}')
+        {
+            j -= 1;
+        }
+        Some((j, end))
+    }
+}
+
+/// The exclusive end index of the s-expression *containing* `cursor`: the close
+/// of the innermost enclosing bracket group, or the end of the token at point.
+fn sexp_current_end(ch: &[char], cursor: usize) -> usize {
+    let n = ch.len();
+    let cur = cursor.min(n);
+    let close_from = |open: usize| -> usize {
+        let mut dd = 0i32;
+        let mut k = open;
+        while k < n {
+            match ch[k] {
+                '(' | '[' | '{' => dd += 1,
+                ')' | ']' | '}' => {
+                    dd -= 1;
+                    if dd == 0 {
+                        return k + 1;
+                    }
+                }
+                _ => {}
+            }
+            k += 1;
+        }
+        n
+    };
+    // backward scan for an unmatched opening bracket (the enclosing group)
+    let mut depth = 0i32;
+    let mut j = cur;
+    while j > 0 {
+        j -= 1;
+        match ch[j] {
+            ')' | ']' | '}' => depth += 1,
+            '(' | '[' | '{' => {
+                if depth == 0 {
+                    return close_from(j);
+                }
+                depth -= 1;
+            }
+            _ => {}
+        }
+    }
+    // top level: end of the token (group or atom) at/after the cursor
+    let mut i = cur;
+    while i < n && ch[i].is_whitespace() {
+        i += 1;
+    }
+    if i < n && matches!(ch[i], '(' | '[' | '{') {
+        return close_from(i);
+    }
+    while i < n && !ch[i].is_whitespace() && !matches!(ch[i], '(' | '[' | '{' | ')' | ']' | '}') {
+        i += 1;
+    }
+    i
+}
+
+/// (previous, current) s-expression ranges around `cursor`. Pure (tested).
+fn sexp_pair(ch: &[char], cursor: usize) -> Option<((usize, usize), (usize, usize))> {
+    let cur = read_sexp_back(ch, sexp_current_end(ch, cursor))?;
+    let prev = read_sexp_back(ch, cur.0)?;
+    Some((prev, cur))
+}
+
+/// (previous, current) sentence ranges around `cursor`. A sentence ends at
+/// `.`/`!`/`?`. Pure (tested).
+fn sentence_pair(ch: &[char], cursor: usize) -> Option<((usize, usize), (usize, usize))> {
+    let is_end = |i: usize| matches!(ch.get(i), Some('.') | Some('!') | Some('?'));
+    let cursor = cursor.min(ch.len().saturating_sub(1));
+    // current sentence end: next terminator at/after cursor (inclusive)
+    let mut ce = cursor;
+    while ce < ch.len() && !is_end(ce) {
+        ce += 1;
+    }
+    let ce = (ce + 1).min(ch.len()); // include the terminator
+                                     // current start: just after the previous terminator
+    let mut cs = cursor;
+    while cs > 0 && !is_end(cs - 1) {
+        cs -= 1;
+    }
+    if cs == 0 {
+        return None;
+    }
+    // previous sentence end is the terminator just before cs
+    let pe = cs;
+    let mut ps = pe.saturating_sub(1);
+    while ps > 0 && !is_end(ps - 1) {
+        ps -= 1;
+    }
+    // trim leading whitespace of each sentence so the swap reads cleanly
+    let trim = |mut a: usize, b: usize| {
+        while a < b && ch[a].is_whitespace() {
+            a += 1;
+        }
+        (a, b)
+    };
+    Some((trim(ps, pe), trim(cs, ce)))
+}
+
+fn transpose_units(cx: &mut Context, finder: fn(&[char], usize) -> Option<((usize, usize), (usize, usize))>) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let ch: Vec<char> = text.chars().collect();
+    let cursor = doc
+        .selection(view.id)
+        .primary()
+        .head
+        .min(ch.len().saturating_sub(1));
+    let Some((pr, cr)) = finder(&ch, cursor) else {
+        cx.editor.set_status("nothing to transpose");
+        return;
+    };
+    let whole: String = ch.iter().collect();
+    let swapped = swap_ranges_text(&whole, pr, cr);
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((pr.0, cr.1, Some(swapped.into()))));
+    doc.apply(&transaction, view.id);
+}
+
+/// SPC x t e: swap the current s-expression with the previous one.
+fn transpose_sexp(cx: &mut Context) {
+    transpose_units(cx, sexp_pair)
+}
+
+/// SPC x t s: swap the current sentence with the previous one.
+fn transpose_sentence(cx: &mut Context) {
+    transpose_units(cx, sentence_pair)
 }
 
 /// SPC x t p: swap the current paragraph with the previous one.
@@ -14355,6 +14522,25 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn transpose_sexp_swaps_balanced_groups() {
+        let s = "(a) (b)";
+        let ch: Vec<char> = s.chars().collect();
+        // cursor inside the second group
+        let (pr, cr) = sexp_pair(&ch, 5).expect("sexp pair");
+        let out = swap_ranges_text(s, pr, cr);
+        assert_eq!(out, "(b) (a)");
+    }
+
+    #[test]
+    fn transpose_sentence_swaps_with_previous() {
+        let s = "One. Two.";
+        let ch: Vec<char> = s.chars().collect();
+        let (pr, cr) = sentence_pair(&ch, 6).expect("sentence pair");
+        let out = swap_ranges_text(s, pr, cr);
+        assert!(out.starts_with("Two."), "got {out:?}");
     }
 
     #[test]
