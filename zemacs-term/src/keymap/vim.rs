@@ -1510,7 +1510,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "c" => help,                       // SPC h c : describe command
                 "space" => help,                   // SPC h SPC : discover docs (Help browser)
                 "f" => browse_faq,                 // SPC h f : discover the FAQ (browse FAQ.md)
-                "l" => command_palette,            // SPC h l : search layers
+                "l" => layer_search,               // SPC h l : search capability areas (zemacs "layers")
                 "p" => package_search,             // SPC h p : search language packages
                 "n" => browse_news,                // SPC h n : browse zemacs release notes (NEWS)
                 "r" => help,                       // SPC h r : search documentation files (Help browser)

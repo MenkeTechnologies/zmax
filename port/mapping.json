@@ -6162,11 +6162,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_l",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space h l"
+   "key:normal:space h l",
+   "static:layer_search"
   ],
-  "note": "search layers -> command palette"
+  "note": "search layers -> layer_search (picker over zemacs capability areas, the baked-in analogue of Spacemacs layers)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_p",
