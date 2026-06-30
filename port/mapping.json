@@ -19091,5 +19091,13 @@
    "static:toggle_line_numbers"
   ],
   "note": "toggle line-numbers gutter"
+ },
+ {
+  "spec_id": "jetbrains.view.show-indent-guides",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_indent_guides"
+  ],
+  "note": "toggle indentation guides"
  }
 ]
