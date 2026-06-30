@@ -534,6 +534,7 @@ impl MappableCommand {
         ai_generate_tests, "Generate tests for the selection with AI (SPC a u)",
         ai_commit_message, "Generate a git commit message with AI (SPC a c)",
         ai_agent, "Run the autonomous AI agent on a task (SPC a a)",
+        ai_revert_agent, "Revert the workspace to the last agent checkpoint (SPC a z)",
         ai_fix, "AI-fix the diagnostic(s) on the current line (SPC a F)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
@@ -9386,6 +9387,40 @@ fn ai_fix(cx: &mut Context) {
 /// the workspace (and runs commands if `ZEMACS_AI_AGENT_ALLOW_EXEC=1`) in a tool-use loop, off the
 /// UI thread. A transcript + list of changed files is shown in a scratch buffer; open buffers whose
 /// files changed are picked up by the file watcher. The headline "CLI IDE with AI agents".
+/// The `git stash create` SHA of the last AI-agent run's pre-edit snapshot, for revert.
+static AI_CHECKPOINT: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// SPC a z : revert the workspace to the checkpoint taken before the last AI-agent run
+/// (`git checkout <snapshot> -- .`), then reload open buffers. Cursor's agent "restore checkpoint".
+fn ai_revert_agent(cx: &mut Context) {
+    let sha = AI_CHECKPOINT.lock().unwrap().clone();
+    let Some(sha) = sha else {
+        cx.editor.set_status("no AI-agent checkpoint to revert to");
+        return;
+    };
+    let root = zemacs_loader::find_workspace().0;
+    match std::process::Command::new("git")
+        .arg("-C")
+        .arg(&root)
+        .args(["checkout", &sha, "--", "."])
+        .output()
+    {
+        Ok(o) if o.status.success() => {
+            let paths: Vec<std::path::PathBuf> = cx
+                .editor
+                .documents()
+                .filter_map(|d| d.path().map(|p| p.to_path_buf()))
+                .collect();
+            reload_docs_for_paths(cx.editor, &paths);
+            cx.editor.set_status("reverted to AI-agent checkpoint");
+        }
+        Ok(o) => cx
+            .editor
+            .set_error(String::from_utf8_lossy(&o.stderr).trim().to_string()),
+        Err(e) => cx.editor.set_error(format!("git checkout: {e}")),
+    }
+}
+
 /// Reload the given files from disk into any open buffers (the agent's "IDE auto-refresh"). Only
 /// touches buffers for these paths, so unsaved edits elsewhere are untouched.
 fn reload_docs_for_paths(editor: &mut Editor, paths: &[std::path::PathBuf]) {
@@ -9433,6 +9468,7 @@ fn ai_agent(cx: &mut Context) {
                     .await
                     .map_err(|e| anyhow::anyhow!("ai agent task: {e}"))?
                     .map_err(|e| anyhow::anyhow!(e))?;
+                *AI_CHECKPOINT.lock().unwrap() = result.checkpoint.clone();
                 let mut report = format!("# AI agent ({} steps)\n\n", result.steps);
                 report.push_str(&result.transcript);
                 let changed_paths: Vec<std::path::PathBuf> =

@@ -19511,5 +19511,14 @@
    "static:ai_add_file_context"
   ],
   "note": "@file context -> ai_add_file_context (pending context for next chat)"
+ },
+ {
+  "spec_id": "cursor.agent.checkpoints",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a z",
+   "static:ai_revert_agent"
+  ],
+  "note": "agent checkpoint/restore -> git stash create before run + ai_revert_agent (git checkout snapshot)"
  }
 ]
