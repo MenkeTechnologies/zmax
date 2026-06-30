@@ -19563,5 +19563,32 @@
    "static:ai_inline_edit"
   ],
   "note": "inline-edit follow-up: result is selected so re-running ai_inline_edit refines it"
+ },
+ {
+  "spec_id": "cursor.chat.codebase",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a b",
+   "static:ai_codebase_context"
+  ],
+  "note": "@codebase -> ai_codebase_context (keyword grep retrieval, not embeddings)"
+ },
+ {
+  "spec_id": "cursor.chat.context_symbol",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a s",
+   "static:ai_symbol_context"
+  ],
+  "note": "@symbol -> ai_symbol_context (grep symbol definitions into context)"
+ },
+ {
+  "spec_id": "cursor.edit.terminal",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a k",
+   "static:ai_terminal_command"
+  ],
+  "note": "terminal Cmd+K -> ai_terminal_command (NL -> shell command, copied)"
  }
 ]

@@ -529,6 +529,9 @@ impl MappableCommand {
         toggle_ai_privacy, "Toggle AI privacy mode (SPC a P)",
         ai_apply_block, "Apply the last AI code block to the selection (SPC a y)",
         ai_add_file_context, "Add a file as @context for the next AI chat (SPC a @)",
+        ai_codebase_context, "Add codebase-search results as @context (SPC a b)",
+        ai_symbol_context, "Add the symbol-under-cursor's definitions as @context (SPC a s)",
+        ai_terminal_command, "Generate a shell command from natural language (SPC a k)",
         ai_inline_edit, "AI inline edit/generate on the selection (Cmd+K style, SPC a e)",
         ai_inline_edit_preview, "AI inline edit with a diff preview (SPC a E)",
         ai_accept_edit, "Accept the pending AI inline-edit preview (SPC a .)",
@@ -9136,6 +9139,140 @@ fn take_pending_context() -> String {
         out.push_str(&format!("\n@{path}:\n```\n{content}\n```\n"));
     }
     out
+}
+
+/// Keyword-grep the workspace for `query` (ripgrep, falling back to grep), returning the first ~80
+/// matching `file:line:text` rows. A lightweight retrieval substitute for embeddings.
+fn grep_context(root: &std::path::Path, query: &str) -> String {
+    let run = |prog: &str, args: &[&str]| {
+        std::process::Command::new(prog)
+            .args(args)
+            .current_dir(root)
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+    };
+    let out = run(
+        "rg",
+        &["-n", "-S", "--max-count", "5", "--max-columns", "200", query],
+    )
+    .or_else(|| run("grep", &["-rn", "--", query, "."]))
+    .unwrap_or_default();
+    out.lines().take(80).collect::<Vec<_>>().join("\n")
+}
+
+/// Grep the workspace for `query` and stash the results as pending `@context` for the next AI chat.
+fn add_grep_context(cx: &mut Context, label: &'static str, query: String) {
+    if query.trim().is_empty() {
+        cx.editor.set_status("nothing to search");
+        return;
+    }
+    let root = zemacs_loader::find_workspace().0;
+    cx.editor.set_status("AI: gathering context…");
+    cx.jobs.callback(async move {
+        let q = query.clone();
+        let res = tokio::task::spawn_blocking(move || grep_context(&root, &q))
+            .await
+            .map_err(|e| anyhow::anyhow!("grep task: {e}"))?;
+        let added = !res.trim().is_empty();
+        if added {
+            AI_PENDING_CONTEXT
+                .lock()
+                .unwrap()
+                .push((format!("{label}: {query}"), res));
+        }
+        Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+            editor.set_status(if added {
+                "added @context (SPC a p to chat)"
+            } else {
+                "no matches found"
+            });
+        })))
+    });
+}
+
+/// SPC a b : add codebase context — prompt for a query, keyword-grep the workspace, attach matches
+/// to the next AI chat (Cursor `@codebase`; keyword retrieval, not embeddings).
+fn ai_codebase_context(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "@codebase search:".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            add_grep_context(
+                &mut crate::commands::Context {
+                    register: None,
+                    count: None,
+                    editor: cx.editor,
+                    callback: Vec::new(),
+                    on_next_key_callback: None,
+                    jobs: cx.jobs,
+                },
+                "codebase",
+                input.trim().to_string(),
+            );
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// SPC a s : add the symbol under the cursor's definition(s) as `@context` (Cursor `@symbol`),
+/// found by keyword-grep across the workspace.
+fn ai_symbol_context(cx: &mut Context) {
+    let word = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        let w = if range.from() != range.to() {
+            range
+        } else {
+            textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
+        };
+        text.slice(w.from()..w.to()).to_string().trim().to_string()
+    };
+    if word.is_empty() {
+        cx.editor.set_status("no symbol under cursor");
+        return;
+    }
+    add_grep_context(cx, "symbol", word);
+}
+
+/// SPC a k : describe a task in natural language and get a shell command (Cursor terminal Cmd+K),
+/// copied to the clipboard and shown in the status line.
+fn ai_terminal_command(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "shell command for:".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let req = input.trim().to_string();
+            cx.editor.set_status("AI: generating command…");
+            cx.jobs.callback(async move {
+                let cmd = tokio::task::spawn_blocking(move || {
+                    let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
+                    let sys = "You translate a request into ONE shell command for a unix terminal. Output ONLY the command — no explanation, no markdown fences.";
+                    provider
+                        .chat(Some(sys), &[crate::ai::Message::user(req)])
+                        .map_err(|e| anyhow::anyhow!(e))
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!("ai task: {e}"))??;
+                let cmd = strip_code_fences(&cmd).trim().to_string();
+                Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+                    let _ = editor.registers.write('+', vec![cmd.clone()]);
+                    editor.set_status(format!("$ {cmd}  (copied)"));
+                })))
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 /// Strip a leading ```lang fence and trailing ``` from an AI code reply, so an inline edit applies
