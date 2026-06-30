@@ -1416,7 +1416,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "&" => align_at_ampersand,     // SPC x a & : align at &
                     "c" => indent,                 // SPC x a c : align indentation (reindent)
                     "l" => align_left_at_char,     // SPC x a l : left-align at typed char
-                    "r" => align_selections,       // SPC x a r : align at regexp (approx, partial)
+                    "r" => align_at_regex,         // SPC x a r : align region at a typed regexp
                     "m" => align_at_arithmetic,    // SPC x a m : align at math operators
                     "L" => align_right_at_char,    // SPC x a L : right-align at typed char
                     "(" => align_at_lparen,        // SPC x a ( : align at (

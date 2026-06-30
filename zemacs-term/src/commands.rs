@@ -444,6 +444,7 @@ impl MappableCommand {
         align_at_rbrace, "Align region at } (SPC x a })",
         align_at_dot, "Align region at . (SPC x a .)",
         align_at_arithmetic, "Align region at arithmetic operators (SPC x a m)",
+        align_at_regex, "Align region at a user-specified regexp (SPC x a r)",
         align_left_at_char, "Left-align region at a typed delimiter (SPC x a l)",
         align_right_at_char, "Right-align region at a typed delimiter (SPC x a L)",
         buffer_to_window_1, "Move current buffer to window 1 (SPC b . 1)",
@@ -6043,8 +6044,8 @@ fn align_lines(lines: &[String], pat: &regex::Regex, right: bool) -> Vec<String>
 }
 
 /// Apply `align_lines` to the lines spanned by the primary selection.
-fn align_region(cx: &mut Context, pat: regex::Regex, right: bool) {
-    let (view, doc) = current!(cx.editor);
+fn align_region(editor: &mut Editor, pat: regex::Regex, right: bool) {
+    let (view, doc) = current!(editor);
     let text = doc.text();
     let sel = doc.selection(view.id).primary();
     let start_line = text.char_to_line(sel.from());
@@ -6610,9 +6611,28 @@ fn ediff_windows(cx: &mut Context) {
 
 fn align_region_lit(cx: &mut Context, delim: &str, right: bool) {
     match regex::Regex::new(&regex::escape(delim)) {
-        Ok(re) => align_region(cx, re, right),
+        Ok(re) => align_region(cx.editor, re, right),
         Err(_) => {}
     }
+}
+
+/// SPC x a r: align the region at a user-specified regexp.
+fn align_at_regex(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "align at regexp:".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate || input.is_empty() {
+                return;
+            }
+            match regex::Regex::new(input) {
+                Ok(re) => align_region(cx.editor, re, false),
+                Err(e) => cx.editor.set_error(format!("bad regex: {e}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 fn align_at_equals(cx: &mut Context) { align_region_lit(cx, "=", false) }
@@ -6631,7 +6651,7 @@ fn align_at_dot(cx: &mut Context) { align_region_lit(cx, ".", false) }
 /// Align at arithmetic operators `+ - * /` (Spacemacs `SPC x a m`).
 fn align_at_arithmetic(cx: &mut Context) {
     if let Ok(re) = regex::Regex::new(r"[-+*/]") {
-        align_region(cx, re, false);
+        align_region(cx.editor, re, false);
     }
 }
 

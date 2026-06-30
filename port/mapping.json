@@ -5033,7 +5033,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_a_r",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x a r"
   ],
