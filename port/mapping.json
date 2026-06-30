@@ -21096,5 +21096,277 @@
       "static:insert_digraph"
     ],
     "note": "zemacs implements insert-mode digraph entry (two mnemonic chars -> digraph char) via insert_digraph bound to C-k (vim i_CTRL-K); same result, trigger is C-k not {c1}<BS>{c2}"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_copen",
+    "status": "ported",
+    "evidence": [
+      "typable:copen"
+    ],
+    "note": "opens the quickfix list window (picker)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cwindow",
+    "status": "ported",
+    "evidence": [
+      "typable:copen"
+    ],
+    "note": "alias cwindow opens the quickfix window"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cclose",
+    "status": "partial",
+    "evidence": [
+      "typable:cclose"
+    ],
+    "note": "qf window is a transient overlay; acknowledges close"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cnext",
+    "status": "ported",
+    "evidence": [
+      "typable:cnext"
+    ],
+    "note": "jump to next quickfix entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cprevious",
+    "status": "ported",
+    "evidence": [
+      "typable:cprevious"
+    ],
+    "note": "jump to previous quickfix entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cfirst",
+    "status": "ported",
+    "evidence": [
+      "typable:cfirst"
+    ],
+    "note": "jump to first quickfix entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_crewind",
+    "status": "ported",
+    "evidence": [
+      "typable:cfirst"
+    ],
+    "note": "alias crewind -> first entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_clast",
+    "status": "ported",
+    "evidence": [
+      "typable:clast"
+    ],
+    "note": "jump to last quickfix entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cc",
+    "status": "ported",
+    "evidence": [
+      "typable:cc"
+    ],
+    "note": "jump to nth/current quickfix entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cnfile",
+    "status": "ported",
+    "evidence": [
+      "typable:cnfile"
+    ],
+    "note": "first entry in next file"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cpfile",
+    "status": "ported",
+    "evidence": [
+      "typable:cpfile"
+    ],
+    "note": "last entry in previous file"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cbuffer",
+    "status": "ported",
+    "evidence": [
+      "typable:cbuffer"
+    ],
+    "note": "populate quickfix from current buffer's error lines"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cgetbuffer",
+    "status": "ported",
+    "evidence": [
+      "typable:cgetbuffer"
+    ],
+    "note": "populate quickfix from buffer without jumping"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_caddbuffer",
+    "status": "ported",
+    "evidence": [
+      "typable:caddbuffer"
+    ],
+    "note": "append buffer error lines to quickfix"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:cexpr"
+    ],
+    "note": "parses argument text (no vimscript expr eval)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cgetexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:cgetexpr"
+    ],
+    "note": "parses argument text without jumping"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_caddexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:caddexpr"
+    ],
+    "note": "appends parsed argument text"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cfile",
+    "status": "ported",
+    "evidence": [
+      "typable:cfile"
+    ],
+    "note": "read error file into quickfix and jump"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cgetfile",
+    "status": "ported",
+    "evidence": [
+      "typable:cgetfile"
+    ],
+    "note": "read error file into quickfix without jumping"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lopen",
+    "status": "ported",
+    "evidence": [
+      "typable:lopen"
+    ],
+    "note": "opens the location list window"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lwindow",
+    "status": "ported",
+    "evidence": [
+      "typable:lopen"
+    ],
+    "note": "alias lwindow opens the location window"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lclose",
+    "status": "partial",
+    "evidence": [
+      "typable:lclose"
+    ],
+    "note": "location window is a transient overlay"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lnext",
+    "status": "ported",
+    "evidence": [
+      "typable:lnext"
+    ],
+    "note": "next location entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lprevious",
+    "status": "ported",
+    "evidence": [
+      "typable:lprevious"
+    ],
+    "note": "previous location entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lfirst",
+    "status": "ported",
+    "evidence": [
+      "typable:lfirst"
+    ],
+    "note": "first location entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lrewind",
+    "status": "ported",
+    "evidence": [
+      "typable:lfirst"
+    ],
+    "note": "alias lrewind -> first"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_llast",
+    "status": "ported",
+    "evidence": [
+      "typable:llast"
+    ],
+    "note": "last location entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ll",
+    "status": "ported",
+    "evidence": [
+      "typable:ll"
+    ],
+    "note": "jump to nth/current location entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lbuffer",
+    "status": "ported",
+    "evidence": [
+      "typable:lbuffer"
+    ],
+    "note": "populate location list from buffer"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lgetbuffer",
+    "status": "ported",
+    "evidence": [
+      "typable:lgetbuffer"
+    ],
+    "note": "populate location list without jumping"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:lexpr"
+    ],
+    "note": "parses argument text"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lgetexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:lgetexpr"
+    ],
+    "note": "parses argument text without jumping"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lfile",
+    "status": "ported",
+    "evidence": [
+      "typable:lfile"
+    ],
+    "note": "read error file into location list and jump"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lgetfile",
+    "status": "ported",
+    "evidence": [
+      "typable:lgetfile"
+    ],
+    "note": "read error file into location list without jumping"
   }
 ]

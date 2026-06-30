@@ -182,6 +182,11 @@ pub struct View {
     /// buffer — opening a *different* buffer is redirected to another split
     /// rather than replacing this one. See `Editor::switch`.
     pub dedicated: bool,
+    /// The per-window vim location list and the current entry index. Like the
+    /// global quickfix list but scoped to this window; driven by the
+    /// `:lopen`/`:lnext`/`:lprev`/`:ll` family.
+    pub loclist: Vec<crate::editor::QfEntry>,
+    pub loclist_idx: Option<usize>,
 }
 
 impl fmt::Debug for View {
@@ -208,6 +213,8 @@ impl View {
             doc_revisions: HashMap::new(),
             diagnostics_handler: DiagnosticsHandler::new(),
             dedicated: false,
+            loclist: Vec::new(),
+            loclist_idx: None,
         }
     }
 
