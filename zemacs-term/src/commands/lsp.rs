@@ -744,6 +744,36 @@ pub fn generate_code(cx: &mut Context) {
     );
 }
 
+/// IntelliJ "Change Signature" (Cmd F6): the server's change-signature refactor, pinned by title.
+pub fn change_signature(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        None,
+        Some(&["signature"]),
+        "No change-signature refactoring available here",
+    );
+}
+
+/// IntelliJ "Pull Members Up": the server refactor that moves members to a supertype, pinned by title.
+pub fn pull_members_up(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        None,
+        Some(&["pull"]),
+        "No pull-members-up refactoring available here",
+    );
+}
+
+/// IntelliJ "Push Members Down": the server refactor that moves members to subtypes, pinned by title.
+pub fn push_members_down(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        None,
+        Some(&["push"]),
+        "No push-members-down refactoring available here",
+    );
+}
+
 /// Shared code-action driver. `only` filters the request to the given kinds (and
 /// is re-applied client-side, since some servers ignore the `only` hint and
 /// return everything). `title_filter`, when set, keeps only actions whose title
