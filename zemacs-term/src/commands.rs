@@ -412,6 +412,7 @@ impl MappableCommand {
         search_prev, "Select previous search match",
         extend_search_next, "Add next search match to selection",
         extend_search_prev, "Add previous search match to selection",
+        add_selection_to_next_match, "Add the next occurrence of the selection as a new cursor (JetBrains Ctrl-G / VSCode Cmd-D)",
         search_selection, "Use current selection as search pattern",
         search_selection_detect_word_boundaries, "Use current selection as the search pattern, automatically wrapping with `\\b` on word boundaries",
         make_search_word_bounded, "Modify current search to make it word bounded",
@@ -5960,6 +5961,39 @@ fn select_all_instances(cx: &mut Context) {
     doc.set_selection(view.id, selection);
     cx.editor
         .set_status(format!("{} matches selected", ranges.len()));
+}
+
+/// JetBrains "Add Selection for Next Occurrence" (Ctrl-G) / VSCode Cmd-D: find the next occurrence
+/// of the primary selection's text and add it as a new cursor, keeping the existing selections.
+/// Wraps around when there is no occurrence after the primary, and skips already-selected ones.
+fn add_selection_to_next_match(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let selection = doc.selection(view.id);
+    let primary = selection.primary();
+    let needle: String = slice.slice(primary.from()..primary.to()).chunks().collect();
+    if needle.is_empty() {
+        cx.editor
+            .set_error("select text first (Add Selection for Next Occurrence)");
+        return;
+    }
+    let haystack: String = slice.chunks().collect();
+    let ranges = find_all_ranges(&haystack, &needle);
+    let existing: std::collections::HashSet<usize> =
+        selection.ranges().iter().map(|r| r.from()).collect();
+    let anchor = primary.from();
+    let next = ranges
+        .iter()
+        .find(|&&(s, _)| s > anchor && !existing.contains(&s))
+        .or_else(|| ranges.iter().find(|&&(s, _)| !existing.contains(&s)))
+        .copied();
+    match next {
+        Some((s, e)) => {
+            let sel = selection.clone().push(Range::new(s, e));
+            doc.set_selection(view.id, sel);
+        }
+        None => cx.editor.set_status("no more occurrences"),
+    }
 }
 
 fn select_regex(cx: &mut Context) {
