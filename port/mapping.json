@@ -7081,11 +7081,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_b_n_c_i",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space b N C-i"
+   "key:normal:space b N C-i",
+   "static:clone_indirect_from_buffer"
   ],
-  "note": "indirect buffer -> :new"
+  "note": "indirect buffer from existing -> clone_indirect_from_buffer (buffer picker opens chosen buffer in a shared-doc split)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_u_spc_w_d",

@@ -515,6 +515,7 @@ impl MappableCommand {
         package_search, "Search configured language packages and describe one (SPC h p)",
         config_variable_search, "Search editor config variables, copy path on select (SPC h .)",
         clone_indirect_buffer, "Clone the current buffer into a shared-document split (SPC b N i)",
+        clone_indirect_from_buffer, "Open an existing buffer in a shared-document split (SPC b N C-i)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -9721,6 +9722,18 @@ impl PathStyleConfig {
 }
 
 fn buffer_picker(cx: &mut Context) {
+    buffer_picker_impl(cx, None);
+}
+
+/// SPC b N C-i : open an existing buffer in a split — a second view of that buffer's shared
+/// Document, i.e. an indirect buffer of it (Spacemacs `make-indirect-buffer` from a buffer).
+fn clone_indirect_from_buffer(cx: &mut Context) {
+    buffer_picker_impl(cx, Some(Action::VerticalSplit));
+}
+
+/// Shared body for the buffer picker. When `force_action` is set, the chosen buffer always opens
+/// with that action (e.g. always in a split); otherwise the picker's own open action is used.
+fn buffer_picker_impl(cx: &mut Context, force_action: Option<Action>) {
     let current = view!(cx.editor).doc;
 
     struct BufferMeta<'a> {
@@ -9787,8 +9800,8 @@ fn buffer_picker(cx: &mut Context) {
         2,
         items,
         PathStyleConfig::new(&cx.editor.theme),
-        |cx, meta, action| {
-            cx.editor.switch(meta.id, action);
+        move |cx, meta, action| {
+            cx.editor.switch(meta.id, force_action.unwrap_or(action));
         },
     )
     .with_initial_cursor(initial_cursor)
