@@ -580,6 +580,8 @@ impl MappableCommand {
         reverse_selection_contents, "Reverse selections contents",
         expand_selection, "Expand selection to parent syntax node",
         shrink_selection, "Shrink selection to previously expanded syntax node",
+        wildfire, "Wildfire: select/expand to the closest text object",
+        wildfire_shrink, "Wildfire: shrink to the previously selected text object",
         select_next_sibling, "Select next sibling in the syntax tree",
         select_prev_sibling, "Select previous sibling the in syntax tree",
         select_all_siblings, "Select all siblings of the current node",
@@ -9808,6 +9810,106 @@ fn shrink_selection(cx: &mut Context) {
     cx.editor.apply_motion(motion);
 }
 
+/// Returns true if `outer` fully contains `inner` and is strictly larger than
+/// it (i.e. they are not equal). Direction is ignored; only the covered span
+/// (`from()`..`to()`) matters.
+fn wildfire_range_strictly_contains(outer: Range, inner: Range) -> bool {
+    outer.from() <= inner.from()
+        && outer.to() >= inner.to()
+        && (outer.from() < inner.from() || outer.to() > inner.to())
+}
+
+/// Compute the wildfire target for a single range.
+///
+/// * With `count > 1` we jump directly to the Nth closest enclosing pair's
+///   inside (like the count-aware text-object commands).
+/// * With `count == 1` (a plain `<Enter>`) we must grow *strictly*: because
+///   `find_nth_closest_pairs_pos` on a range that is already a pair's inside
+///   can return that very same pair, we retry with an increasing `skip`
+///   (Nth-closest) until the result strictly contains the current range. If no
+///   larger enclosing object exists, the range is returned unchanged.
+fn wildfire_grow_range(
+    syntax: Option<&Syntax>,
+    slice: RopeSlice,
+    range: Range,
+    count: usize,
+) -> Range {
+    use textobject::{textobject_pair_surround_closest, TextObject};
+
+    if count > 1 {
+        return textobject_pair_surround_closest(syntax, slice, range, TextObject::Inside, count);
+    }
+
+    // Grow strictly: try successively larger enclosing pairs.
+    let mut last: Option<Range> = None;
+    let mut skip = 1usize;
+    // Bound the search so a pathological document can never spin forever.
+    while skip <= 64 {
+        let candidate =
+            textobject_pair_surround_closest(syntax, slice, range, TextObject::Inside, skip);
+        if wildfire_range_strictly_contains(candidate, range) {
+            return candidate;
+        }
+        // `textobject_pair_surround_closest` returns the input range unchanged
+        // when no pair is found, so once the candidate stops changing there is
+        // no larger object to grow into.
+        if last == Some(candidate) {
+            break;
+        }
+        last = Some(candidate);
+        skip += 1;
+    }
+    range
+}
+
+/// Wildfire: select / expand to the closest enclosing text object.
+///
+/// Each plain `<Enter>` grows the selection to the inside of the next-larger
+/// enclosing pair (quote/paren/bracket/brace/tag). `N<Enter>` jumps straight to
+/// the Nth closest. The previous selection is pushed onto the per-view
+/// `object_selections` stack so `wildfire_shrink` (`<BS>`) can restore it.
+fn wildfire(cx: &mut Context) {
+    let count = cx.count();
+    let motion = move |editor: &mut Editor| {
+        let (view, doc) = current!(editor);
+        let text = doc.text().slice(..);
+        let current_selection = doc.selection(view.id).clone();
+        let new_selection = current_selection
+            .clone()
+            .transform(|range| wildfire_grow_range(doc.syntax(), text, range, count));
+
+        // Only record / apply when something actually changed, so that a
+        // no-op `<Enter>` (no larger object) doesn't pollute the shrink stack.
+        if new_selection != current_selection {
+            view.object_selections.push(current_selection);
+            doc.set_selection(view.id, new_selection);
+        }
+    };
+    cx.editor.apply_motion(motion);
+}
+
+/// Wildfire: shrink to the previously selected (smaller) text object.
+///
+/// Pops the per-view `object_selections` stack (shared with `expand_selection`
+/// / `shrink_selection`) and restores the previous selection. No-op when the
+/// stack is empty.
+fn wildfire_shrink(cx: &mut Context) {
+    let motion = |editor: &mut Editor| {
+        let (view, doc) = current!(editor);
+        let current_selection = doc.selection(view.id);
+        if let Some(prev_selection) = view.object_selections.pop() {
+            if current_selection.contains(&prev_selection) {
+                doc.set_selection(view.id, prev_selection);
+            } else {
+                // The stack no longer matches the current selection; drop it so
+                // a later expand starts fresh.
+                view.object_selections.clear();
+            }
+        }
+    };
+    cx.editor.apply_motion(motion);
+}
+
 fn select_sibling_impl<F>(cx: &mut Context, sibling_fn: F)
 where
     F: Fn(&zemacs_core::Syntax, RopeSlice, Selection) -> Selection + 'static,
@@ -13951,5 +14053,70 @@ mod path_yank_tests {
             p("https://bitbucket.org/o/r", "feed", "a.py", 3),
             "https://bitbucket.org/o/r/src/feed/a.py#lines-3"
         );
+    }
+}
+
+#[cfg(test)]
+mod wildfire_tests {
+    use super::{wildfire_grow_range, wildfire_range_strictly_contains};
+    use zemacs_core::{Range, Rope};
+
+    #[test]
+    fn strictly_contains() {
+        assert!(wildfire_range_strictly_contains(
+            Range::new(0, 10),
+            Range::new(2, 5)
+        ));
+        // Equal ranges are not strictly larger.
+        assert!(!wildfire_range_strictly_contains(
+            Range::new(2, 5),
+            Range::new(2, 5)
+        ));
+        // Same end, larger start span -> contains.
+        assert!(wildfire_range_strictly_contains(
+            Range::new(1, 5),
+            Range::new(2, 5)
+        ));
+        // Partial overlap is not containment.
+        assert!(!wildfire_range_strictly_contains(
+            Range::new(0, 4),
+            Range::new(2, 5)
+        ));
+    }
+
+    #[test]
+    fn grow_strictly_through_nested_pairs() {
+        // Indices: ( a   [ b ]   c )
+        //          0 1 2 3 4 5 6 7 8
+        let doc = Rope::from("(a [b] c)");
+        let slice = doc.slice(..);
+
+        // Start with the cursor on `b` (a point selection).
+        let start = Range::point(4);
+
+        // First plain <Enter>: grow to the inside of `[]` -> just "b".
+        let g1 = wildfire_grow_range(None, slice, start, 1);
+        assert_eq!(slice.slice(g1.from()..g1.to()), "b");
+        assert!(wildfire_range_strictly_contains(g1, start));
+
+        // Second plain <Enter>: from inside `[]` grow strictly to inside `()`.
+        let g2 = wildfire_grow_range(None, slice, g1, 1);
+        assert_eq!(slice.slice(g2.from()..g2.to()), "a [b] c");
+        assert!(wildfire_range_strictly_contains(g2, g1));
+
+        // Third plain <Enter>: no larger enclosing pair -> unchanged.
+        let g3 = wildfire_grow_range(None, slice, g2, 1);
+        assert_eq!(g3, g2);
+    }
+
+    #[test]
+    fn count_jumps_to_nth_closest() {
+        let doc = Rope::from("(a [b] c)");
+        let slice = doc.slice(..);
+        let start = Range::point(4);
+
+        // N=2 jumps straight to the inside of the 2nd-closest pair `()`.
+        let g = wildfire_grow_range(None, slice, start, 2);
+        assert_eq!(slice.slice(g.from()..g.to()), "a [b] c");
     }
 }

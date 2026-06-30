@@ -185,7 +185,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "j" | "down"  => move_visual_line_down,
         "k" | "up"    => move_visual_line_up,
         "l" | "right" => move_char_right,
-        "backspace"   => move_char_left,
+        // Wildfire (vim plugin port): <BS> shrinks back to the previously
+        // selected text object. Replaces vim's `move_char_left` on backspace.
+        "backspace"   => wildfire_shrink,
 
         // --- word motions ---------------------------------------------------
         // vim caret semantics: land *on* the target char, not Helix's
@@ -243,7 +245,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "#" => [search_selection_detect_word_boundaries, search_prev], // backward word search
 
         // --- line motions to first non-blank ------------------------------
-        "+" | "ret" => [move_visual_line_down, goto_first_nonwhitespace],
+        // Wildfire (vim plugin port): <CR> selects/expands to the closest
+        // enclosing text object (N<CR> jumps to the Nth closest). This takes
+        // over Enter in Normal mode; `+` keeps the original down + first
+        // non-blank motion.
+        "ret"       => wildfire,
+        "+"         => [move_visual_line_down, goto_first_nonwhitespace],
         "-"         => [move_visual_line_up, goto_first_nonwhitespace],
         "_"         => goto_first_nonwhitespace,
 
