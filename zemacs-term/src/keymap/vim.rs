@@ -868,7 +868,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // --- misc -----------------------------------------------------------
         ":" => command_mode,
         "C-z" => suspend,
-        "esc" => collapse_selection,
+        // vim never keeps you in a multi-cursor state: Esc in Normal drops every
+        // extra cursor (from visual-block, select-all, etc.) back to a single one.
+        "esc" => [keep_primary_selection, collapse_selection],
 
         // --- leader (space) — kept for pickers / LSP / commands ------------
         // --- leader (space): spacemacs SPC tree ----------------------------
@@ -1758,7 +1760,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "C-n" => [save_visual_selection, collapse_selection, normal_mode],
             "C-g" => [save_visual_selection, collapse_selection, normal_mode],
         },
-        "esc" => [save_visual_selection, collapse_selection, normal_mode],
+        // Leaving Visual/visual-block collapses to a single cursor (like vim), not
+        // one cursor per line — keep_primary drops the block's extra cursors.
+        "esc" => [save_visual_selection, keep_primary_selection, collapse_selection, normal_mode],
     });
 
     // Insert mode: vim-style editing keys.
