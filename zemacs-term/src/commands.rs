@@ -929,6 +929,8 @@ impl MappableCommand {
         widen, "Widen: remove narrowing and reveal the whole buffer (SPC n w)",
         narrow_to_function_indirect, "Narrow to the function in an indirect (split) view (SPC n F)",
         narrow_region_indirect, "Narrow to the selected region in an indirect (split) view (SPC n R)",
+        winner_undo, "Undo the last window-layout change (winner-undo, SPC w u)",
+        winner_redo, "Redo a window-layout change (winner-redo, SPC w . U)",
         copy_version, "Display and copy the zemacs version to the clipboard (SPC f e v)",
         narrow_to_page_indirect, "Narrow to the page in an indirect (split) view (SPC n P)",
         kmacro_ring_next, "Cycle to the next macro in the ring (SPC K r n)",
@@ -14219,6 +14221,7 @@ fn clone_indirect_buffer(cx: &mut Context) {
 }
 
 fn wclose(cx: &mut Context) {
+    winner_record(cx);
     if cx.editor.tree.views().count() == 1 {
         if let Err(err) = typed::buffers_remaining_impl(cx.editor) {
             cx.editor.set_error(err.to_string());
@@ -14231,6 +14234,7 @@ fn wclose(cx: &mut Context) {
 }
 
 fn wonly(cx: &mut Context) {
+    winner_record(cx);
     let views = cx
         .editor
         .tree
@@ -14241,6 +14245,83 @@ fn wonly(cx: &mut Context) {
         if !focus {
             cx.editor.close(view_id);
         }
+    }
+}
+
+// --- winner-mode: undo/redo of window-layout changes (Spacemacs SPC w u / w . u / w . U) ---
+struct WinnerHistory {
+    stack: Vec<(Vec<std::path::PathBuf>, usize)>,
+    pos: usize,
+}
+static WINNER: std::sync::Mutex<WinnerHistory> = std::sync::Mutex::new(WinnerHistory {
+    stack: Vec::new(),
+    pos: 0,
+});
+
+/// Snapshot the current window layout onto the winner history (truncating any redo tail).
+/// Called before window-mutating commands so their previous layout can be restored.
+fn winner_record(cx: &mut Context) {
+    let cur = layout_capture(cx);
+    let mut w = WINNER.lock().unwrap();
+    // Skip if identical to the current tip (avoid duplicate snapshots).
+    if w.stack.get(w.pos).map(|c| c == &cur).unwrap_or(false) {
+        return;
+    }
+    let pos = w.pos;
+    if !w.stack.is_empty() {
+        w.stack.truncate(pos + 1);
+    }
+    w.stack.push(cur);
+    w.pos = w.stack.len() - 1;
+}
+
+/// SPC w u : undo the last window-layout change (winner-undo).
+fn winner_undo(cx: &mut Context) {
+    let cur = layout_capture(cx);
+    let target = {
+        let mut w = WINNER.lock().unwrap();
+        // Ensure the current layout is the tip so redo can return to it.
+        if w.stack.get(w.pos).map(|c| c != &cur).unwrap_or(true) {
+            let pos = w.pos;
+            if !w.stack.is_empty() {
+                w.stack.truncate(pos + 1);
+            }
+            w.stack.push(cur);
+            w.pos = w.stack.len() - 1;
+        }
+        if w.pos > 0 {
+            w.pos -= 1;
+            Some(w.stack[w.pos].clone())
+        } else {
+            None
+        }
+    };
+    match target {
+        Some((files, focused)) => {
+            layout_restore(cx, &files, focused);
+            cx.editor.set_status("winner-undo: restored previous window layout");
+        }
+        None => cx.editor.set_status("winner-undo: no earlier window layout"),
+    }
+}
+
+/// SPC w U : redo a window-layout change undone by winner-undo (winner-redo).
+fn winner_redo(cx: &mut Context) {
+    let target = {
+        let mut w = WINNER.lock().unwrap();
+        if w.pos + 1 < w.stack.len() {
+            w.pos += 1;
+            Some(w.stack[w.pos].clone())
+        } else {
+            None
+        }
+    };
+    match target {
+        Some((files, focused)) => {
+            layout_restore(cx, &files, focused);
+            cx.editor.set_status("winner-redo: restored next window layout");
+        }
+        None => cx.editor.set_status("winner-redo: no later window layout"),
     }
 }
 
