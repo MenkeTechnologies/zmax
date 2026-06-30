@@ -1512,7 +1512,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "f" => command_palette,            // SPC h f : discover the FAQ
                 "l" => command_palette,            // SPC h l : search layers
                 "p" => package_search,             // SPC h p : search language packages
-                "n" => command_palette,            // SPC h n : browse emacs news
+                "n" => browse_news,                // SPC h n : browse zemacs release notes (NEWS)
                 "r" => help,                       // SPC h r : search documentation files (Help browser)
                 "." => config_variable_search,     // SPC h . : search config variables (dotfile vars)
                 "i" => info_search,                // SPC h i : search info manuals (apropos, seeded at point)

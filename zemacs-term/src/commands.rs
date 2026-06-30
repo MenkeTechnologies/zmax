@@ -512,6 +512,7 @@ impl MappableCommand {
         copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
         copy_last_keys, "Copy the most recently pressed keys to the clipboard (SPC h d l)",
         ace_window, "Jump to a window by its number, prompted (ace-window, SPC w . a)",
+        browse_news, "Browse zemacs release notes / NEWS (SPC h n)",
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
         describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
         package_search, "Search configured language packages and describe one (SPC h p)",
@@ -8030,6 +8031,14 @@ fn package_search(cx: &mut Context) {
         cx.editor.set_status(format!("package: {}", it.name));
     });
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// SPC h n : browse zemacs' release notes (the editor's NEWS), embedded at build time and shown
+/// in a scratch buffer. Spacemacs `view-emacs-news`.
+fn browse_news(cx: &mut Context) {
+    const CHANGELOG: &str = include_str!("../../CHANGELOG.md");
+    show_text_in_scratch(cx.editor, CHANGELOG);
+    cx.editor.set_status("zemacs release notes (CHANGELOG)");
 }
 
 /// SPC h d l : copy the most recently pressed keys to the system clipboard (newest last), for

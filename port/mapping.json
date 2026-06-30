@@ -6187,11 +6187,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_n",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space h n"
+   "key:normal:space h n",
+   "static:browse_news"
   ],
-  "note": "emacs news -> command palette"
+  "note": "view-emacs-news -> browse_news (embedded CHANGELOG.md shown in scratch)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_b_w",
