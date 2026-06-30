@@ -350,17 +350,19 @@ impl MagitStatus {
     fn visit_callback(&self) -> Option<Callback> {
         let entry = self.selected_entry()?.clone();
         let abs = self.repo_dir.join(&entry.path);
-        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.pop();
-            if let Err(err) = cx.editor.open(&abs, Action::Replace) {
-                cx.editor
-                    .set_error(format!("failed to open {}: {err}", abs.display()));
-                return;
-            }
-            if entry.section == Section::Conflict {
-                crate::commands::typed::open_merge(cx.editor, cx.jobs);
-            }
-        }))
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                if let Err(err) = cx.editor.open(&abs, Action::Replace) {
+                    cx.editor
+                        .set_error(format!("failed to open {}: {err}", abs.display()));
+                    return;
+                }
+                if entry.section == Section::Conflict {
+                    crate::commands::typed::open_merge(cx.editor, cx.jobs);
+                }
+            },
+        ))
     }
 
     /// Build the commit prompt callback: if nothing is staged, status-message
@@ -495,7 +497,8 @@ impl Component for MagitStatus {
         // Title + key hint.
         let title = " Magit status";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "s stage  u unstage  X discard  S/U all  c commit  Enter visit  g refresh  q quit";
+        let hint =
+            "s stage  u unstage  X discard  S/U all  c commit  Enter visit  g refresh  q quit";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -512,9 +515,9 @@ impl Component for MagitStatus {
 
         let rows = self.rows();
         // Keep the selected file row inside the viewport.
-        if let Some(sel_row) = rows.iter().position(
-            |r| matches!(r, Row::File(i) if *i == self.selected) && !self.entries.is_empty(),
-        ) {
+        if let Some(sel_row) = rows.iter().position(|r| {
+            matches!(r, Row::File(i) if *i == self.selected) && !self.entries.is_empty()
+        }) {
             if sel_row < self.scroll {
                 self.scroll = sel_row;
             } else if sel_row >= self.scroll + self.viewport {
@@ -549,7 +552,11 @@ impl Component for MagitStatus {
                         surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
                     }
                     let line = format!("  {} {}", entry.code(), entry.path);
-                    let style = if *i == self.selected { sel_style } else { style };
+                    let style = if *i == self.selected {
+                        sel_style
+                    } else {
+                        style
+                    };
                     surface.set_stringn(area.x, y, &line, area.width as usize, style);
                 }
             }

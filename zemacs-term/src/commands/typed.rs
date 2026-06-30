@@ -1656,7 +1656,9 @@ fn magit(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
     let start = doc!(cx.editor)
         .path()
         .map(|p| p.to_path_buf())
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")));
+        .unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+        });
     match crate::ui::magit::MagitStatus::new(&start) {
         Some(view) => {
             let call: job::Callback = job::Callback::EditorCompositor(Box::new(
