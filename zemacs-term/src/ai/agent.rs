@@ -23,6 +23,24 @@ pub struct AgentResult {
     pub transcript: String,
     pub changed_files: BTreeSet<PathBuf>,
     pub steps: usize,
+    /// A `git stash create` SHA snapshot of the workspace taken before editing (if in a git repo
+    /// with changes), so the run can be reverted. None if not applicable.
+    pub checkpoint: Option<String>,
+}
+
+/// Snapshot the working tree without modifying it (`git stash create`), returning the commit SHA.
+fn make_checkpoint(root: &Path) -> Option<String> {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["stash", "create", "ai-agent checkpoint"])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let sha = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    (!sha.is_empty()).then_some(sha)
 }
 
 /// The tools exposed to the agent.
@@ -195,6 +213,7 @@ pub fn run(task: String, root: PathBuf) -> Result<AgentResult, String> {
             provider.name()
         ));
     }
+    let checkpoint = make_checkpoint(&root);
     let tools = tools();
     let system = super::system_with_rules(SYSTEM);
     let mut turns = vec![Turn::user_text(task)];
@@ -254,6 +273,7 @@ pub fn run(task: String, root: PathBuf) -> Result<AgentResult, String> {
         transcript,
         changed_files: changed,
         steps,
+        checkpoint,
     })
 }
 
