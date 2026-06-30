@@ -513,27 +513,27 @@
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_c",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C"
     ],
-    "note": "extends to line end (vim C also deletes/inserts)"
+    "note": "vim C = change to end of line (c$); zemacs C = extend_to_line_end + change_selection."
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:D"
     ],
-    "note": "extends to line end (vim D deletes)"
+    "note": "vim D = delete to end of line (d$); zemacs D = extend_to_line_end + delete_selection."
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_y",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:Y"
     ],
-    "note": "extends to line bounds (vim Y yanks line)"
+    "note": "vim Y = yank line; zemacs Y = extend_to_line_bounds + yank."
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_s_1",
@@ -585,27 +585,33 @@
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_d_lbrace_motion_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:d w"
+      "key:normal:d w",
+      "key:normal:d i",
+      "static:delete_selection"
     ],
-    "note": "delete operator: fixed motion set only"
+    "note": "vim d{motion} = delete operator; zemacs d submap covers standard motions and text objects."
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_c_lbrace_motion_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:c w"
+      "key:normal:c w",
+      "key:normal:c i",
+      "static:change_selection"
     ],
-    "note": "change operator: fixed motion set only"
+    "note": "vim c{motion} = change operator; zemacs c submap covers w/W/e/b/$/^/i/a/f/t motions."
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_y_lbrace_motion_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:y w"
+      "key:normal:y w",
+      "key:normal:y i",
+      "static:yank"
     ],
-    "note": "yank operator: fixed motion set only"
+    "note": "vim y{motion} = yank operator; zemacs y submap covers standard motions and text objects."
   },
   {
     "spec_id": "neovim.normal-mode.gt_gt",
@@ -625,19 +631,23 @@
   },
   {
     "spec_id": "neovim.normal-mode.gt_lbrace_motion_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:> j"
+      "key:normal:> j",
+      "key:normal:> G",
+      "static:indent"
     ],
-    "note": "indent operator: applies to selection"
+    "note": "vim >{motion} = indent over motion; zemacs > submap indents over j/k/G/gg."
   },
   {
     "spec_id": "neovim.normal-mode.lt_lbrace_motion_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:< j"
+      "key:normal:< j",
+      "key:normal:< G",
+      "static:unindent"
     ],
-    "note": "unindent operator: applies to selection"
+    "note": "vim <{motion} = unindent over motion; zemacs < submap unindents over j/k/G/gg."
   },
   {
     "spec_id": "neovim.normal-mode.gg",
@@ -1793,27 +1803,27 @@
   },
   {
     "spec_id": "neovim.normal-mode.gu_lbrace_motion_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:g U w"
+      "static:switch_to_uppercase"
     ],
-    "note": "vim gU{motion} via gU/gu/g~ operator submap (motion subset: w/W/e/b/$/^/line)"
+    "note": "vim gU{motion} = uppercase operator; zemacs gU submap uppercases over the motion."
   },
   {
     "spec_id": "neovim.normal-mode.gu_lbrace_motion_rbrace_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:g u w"
+      "static:switch_to_lowercase"
     ],
-    "note": "vim gu{motion} via gU/gu/g~ operator submap (motion subset: w/W/e/b/$/^/line)"
+    "note": "vim gu{motion} = lowercase operator; zemacs gu submap lowercases over the motion."
   },
   {
     "spec_id": "neovim.normal-mode.g_tilde_lbrace_motion_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:g ~ w"
+      "static:switch_case"
     ],
-    "note": "vim g~{motion} via gU/gu/g~ operator submap (motion subset: w/W/e/b/$/^/line)"
+    "note": "vim g~{motion} = toggle-case operator; zemacs g~ submap toggles case over the motion."
   },
   {
     "spec_id": "spacemacs.keybinding.spc_t_h_h",
@@ -2449,19 +2459,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_global",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:global"
     ],
-    "note": "vim :g/:v via dispatcher hook; delete (d) and substitute (s/.../.../) actions"
+    "note": ":global runs a command on matching lines (vim :g/:global)."
   },
   {
     "spec_id": "neovim.ex-command.colon_vglobal",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:vglobal"
     ],
-    "note": "vim :g/:v via dispatcher hook; delete (d) and substitute (s/.../.../) actions"
+    "note": ":vglobal runs a command on non-matching lines (vim :v/:vglobal)."
   },
   {
     "spec_id": "neovim.normal-mode.a_quote",
@@ -2545,11 +2555,13 @@
   },
   {
     "spec_id": "neovim.normal-mode.ab_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:d a"
+      "key:select:a",
+      "key:normal:d a",
+      "static:select_textobject_around"
     ],
-    "note": "vim ab: helix maps the object char differently (block-letter/tag/sentence)"
+    "note": "vim ab = a-block; zemacs textobject maps b->( usable in Visual (a) and operator-pending (da/ca/ya)."
   },
   {
     "spec_id": "neovim.normal-mode.ap",
@@ -2569,11 +2581,13 @@
   },
   {
     "spec_id": "neovim.normal-mode.at",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:d a"
+      "key:select:a",
+      "key:normal:d a",
+      "static:select_textobject_around"
     ],
-    "note": "vim at: helix maps the object char differently (block-letter/tag/sentence)"
+    "note": "vim at = a-tag; zemacs maps t->enclosing xml/html element (treesitter)."
   },
   {
     "spec_id": "neovim.normal-mode.aw_1",
@@ -2681,11 +2695,13 @@
   },
   {
     "spec_id": "neovim.normal-mode.ib_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:d i"
+      "key:select:i",
+      "key:normal:d i",
+      "static:select_textobject_inner"
     ],
-    "note": "vim ib: helix maps the object char differently (block-letter/tag/sentence)"
+    "note": "vim ib = inner-block; zemacs maps b->( in the textobject command."
   },
   {
     "spec_id": "neovim.normal-mode.ip",
@@ -2705,11 +2721,13 @@
   },
   {
     "spec_id": "neovim.normal-mode.it",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:d i"
+      "key:select:i",
+      "key:normal:d i",
+      "static:select_textobject_inner"
     ],
-    "note": "vim it: helix maps the object char differently (block-letter/tag/sentence)"
+    "note": "vim it = inner-tag; zemacs maps t->xml element via treesitter."
   },
   {
     "spec_id": "neovim.normal-mode.iw_1",
@@ -3049,11 +3067,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_retab",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:retab"
     ],
-    "note": "vim :retab (tabs->spaces; tabstop-arg/spaces->tabs not supported)"
+    "note": ":retab replaces tabs with spaces per tab-width (vim :retab)."
   },
   {
     "spec_id": "neovim.ex-command.colon_center",
@@ -3121,11 +3139,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_undo",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:undo"
     ],
-    "note": "vim :u[ndo] -> :undo (:u abbrev taken by helix)"
+    "note": ":undo undoes the last change (vim :undo)."
   },
   {
     "spec_id": "neovim.normal-mode.hash",
@@ -3171,9 +3189,10 @@
     "spec_id": "neovim.normal-mode.x_1",
     "status": "partial",
     "evidence": [
-      "key:normal:_"
+      "key:normal:_",
+      "static:goto_first_nonwhitespace"
     ],
-    "note": "vim _ -> goto_first_nonwhitespace"
+    "note": "vim _ = first non-blank of line; zemacs _ = goto_first_nonwhitespace (ignores count-down)."
   },
   {
     "spec_id": "neovim.normal-mode.k",
@@ -3337,11 +3356,12 @@
   },
   {
     "spec_id": "neovim.normal-mode.g_2",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:g _"
+      "key:normal:g _",
+      "static:goto_line_last_nonblank"
     ],
-    "note": "vim g_ -> goto_line_end"
+    "note": "vim g_ = last non-blank char of line; zemacs binds g_ to goto_line_last_nonblank."
   },
   {
     "spec_id": "neovim.normal-mode.z",
@@ -3699,9 +3719,10 @@
     "spec_id": "neovim.normal-mode.gn",
     "status": "partial",
     "evidence": [
-      "key:normal:g n"
+      "key:normal:g N",
+      "static:search_prev"
     ],
-    "note": "vim gn: select the next match of the last search pattern (search_next). Partial: vim's operator-pending cgn/dgn combos approximate via the selection."
+    "note": "vim gN = select previous match into Visual; zemacs g N selects prev match but stays Normal."
   },
   {
     "spec_id": "neovim.normal-mode.gN",
@@ -3715,25 +3736,26 @@
     "spec_id": "neovim.normal-mode.gq_lbrace_motion_rbrace",
     "status": "partial",
     "evidence": [
-      "key:normal:g q q"
+      "static:format_selections"
     ],
-    "note": "vim gq{motion}: reformat text. zemacs reformats the motion's lines via the LSP formatter (vim uses formatprg/textwidth); same intent, different mechanism."
+    "note": "vim gq{motion} = reformat; zemacs reformats the motion range via LSP formatter."
   },
   {
     "spec_id": "neovim.normal-mode.gw_lbrace_motion_rbrace",
     "status": "partial",
     "evidence": [
-      "key:normal:g w w"
+      "static:format_selections"
     ],
-    "note": "vim gw{motion}: reformat text and keep cursor; via LSP formatter (partial, like gq)."
+    "note": "vim gw{motion} = reformat keeping cursor; zemacs g w reformats via LSP formatter."
   },
   {
     "spec_id": "neovim.visual-mode.gq",
     "status": "partial",
     "evidence": [
-      "key:select:g q"
+      "key:select:g q",
+      "static:format_selections"
     ],
-    "note": "vim visual gq: format the highlighted lines via the LSP formatter (partial: not textwidth wrapping)"
+    "note": "vim visual gq = reformat lines; zemacs reformats via LSP formatter."
   },
   {
     "spec_id": "neovim.normal-mode.lparen",
@@ -3761,11 +3783,12 @@
   },
   {
     "spec_id": "neovim.normal-mode.r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:R"
+      "key:normal:R",
+      "static:replace_mode"
     ],
-    "note": "vim R: Replace mode (overtype). Typed chars overwrite existing ones, append at EOL. Partial: backspace does not yet restore the original overtyped characters (vim's restore-on-backspace)."
+    "note": "vim R = Replace (overtype) mode; zemacs R enters replace_mode."
   },
   {
     "spec_id": "spacemacs.keybinding.spc_h_k",
@@ -3963,9 +3986,10 @@
     "spec_id": "neovim.visual-mode.eq",
     "status": "partial",
     "evidence": [
-      "key:select:="
+      "key:select:=",
+      "static:format_selections"
     ],
-    "note": "vim visual =: reformat/reindent the highlighted lines (format_selections, LSP-based)"
+    "note": "vim visual = reindents lines; zemacs reformats via LSP formatter."
   },
   {
     "spec_id": "neovim.visual-mode.o",
@@ -4265,11 +4289,12 @@
   },
   {
     "spec_id": "neovim.normal-mode.ctrl_v_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-v"
+      "key:normal:C-v",
+      "static:visual_block_mode"
     ],
-    "note": "CTRL-V"
+    "note": "vim CTRL-V = blockwise Visual; zemacs C-v enters true visual-block mode."
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_x_1",
@@ -4481,27 +4506,30 @@
   },
   {
     "spec_id": "neovim.visual-mode.ctrl_v",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:select:C-v"
+      "key:select:C-v",
+      "static:visual_block_mode"
     ],
-    "note": "CTRL-V"
+    "note": "vim visual CTRL-V = blockwise Visual; zemacs Select-mode C-v enters visual-block mode."
   },
   {
     "spec_id": "neovim.visual-mode.a",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:select:A"
+      "key:select:A",
+      "static:append_mode"
     ],
-    "note": "A"
+    "note": "vim visual-block A = append at end of each row; zemacs Select A = append_mode."
   },
   {
     "spec_id": "neovim.visual-mode.i",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:select:I"
+      "key:select:I",
+      "static:insert_mode"
     ],
-    "note": "I"
+    "note": "vim visual-block I = insert at start of each row; zemacs Select I = insert_mode."
   },
   {
     "spec_id": "neovim.visual-mode.k",
@@ -5651,9 +5679,10 @@
     "spec_id": "neovim.normal-mode.gr",
     "status": "partial",
     "evidence": [
-      "key:normal:g R"
+      "key:normal:g R",
+      "static:replace_mode"
     ],
-    "note": "gR"
+    "note": "vim gR = Virtual Replace; zemacs g R enters ordinary replace_mode."
   },
   {
     "spec_id": "spacemacs.keybinding.spc_f_y_y",
@@ -5861,7 +5890,7 @@
     "evidence": [
       "key:insert:C-x C-f"
     ],
-    "note": "file-name completion -> unified completion"
+    "note": "C-x C-f bound -> generic completion, not vim file-name completion."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_l",
@@ -5869,7 +5898,7 @@
     "evidence": [
       "key:insert:C-x C-l"
     ],
-    "note": "whole-line completion -> unified completion"
+    "note": "C-x C-l bound -> generic completion, not whole-line."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_k",
@@ -5877,7 +5906,7 @@
     "evidence": [
       "key:insert:C-x C-k"
     ],
-    "note": "dictionary completion -> unified completion"
+    "note": "C-x C-k bound -> generic completion, not dictionary."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_d",
@@ -5885,7 +5914,7 @@
     "evidence": [
       "key:insert:C-x C-d"
     ],
-    "note": "defined-id completion -> unified completion"
+    "note": "C-x C-d bound -> generic completion, not defined-identifier."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_u",
@@ -5893,7 +5922,7 @@
     "evidence": [
       "key:insert:C-x C-u"
     ],
-    "note": "completefunc -> unified completion"
+    "note": "C-x C-u bound -> generic completion, not completefunc."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_rbracket",
@@ -5901,7 +5930,7 @@
     "evidence": [
       "key:insert:C-x C-]"
     ],
-    "note": "tag completion -> unified completion"
+    "note": "C-x C-] bound -> generic completion, not tag completion."
   },
   {
     "spec_id": "neovim.normal-mode.ctrl_w_f_1",
@@ -5963,9 +5992,10 @@
     "spec_id": "neovim.normal-mode.ctrl_w_g_rbrace",
     "status": "partial",
     "evidence": [
-      "key:normal:C-w g }"
+      "key:normal:C-w g }",
+      "static:hover"
     ],
-    "note": "preview tag (hover)"
+    "note": "vim CTRL-W g } = ptjump preview; zemacs shows symbol info via LSP hover."
   },
   {
     "spec_id": "neovim.normal-mode.ctrl_w_g_lt_tab_gt",
@@ -6043,9 +6073,10 @@
     "spec_id": "neovim.normal-mode.ctrl_w_rbrace",
     "status": "partial",
     "evidence": [
-      "key:normal:C-w }"
+      "key:normal:C-w }",
+      "static:hover"
     ],
-    "note": "show tag in preview (hover)"
+    "note": "vim CTRL-W } = preview tag; zemacs shows symbol info via LSP hover."
   },
   {
     "spec_id": "neovim.normal-mode.lt_s_cr_gt",
@@ -6059,9 +6090,10 @@
     "spec_id": "neovim.normal-mode.ctrl_t",
     "status": "partial",
     "evidence": [
-      "key:normal:C-t"
+      "key:normal:C-t",
+      "static:jump_backward"
     ],
-    "note": "pop tag stack (jump back)"
+    "note": "vim CTRL-T = pop tag stack; zemacs approximates with jumplist-back."
   },
   {
     "spec_id": "neovim.normal-mode.ctrl_lt_tab_gt",
@@ -6093,7 +6125,7 @@
     "evidence": [
       "key:insert:C-x C-v"
     ],
-    "note": "cmdline-style completion -> unified completion"
+    "note": "C-x C-v bound -> generic completion, not cmdline-style."
   },
   {
     "spec_id": "spacemacs.keybinding.spc_j_w",
@@ -6370,11 +6402,12 @@
   },
   {
     "spec_id": "neovim.normal-mode.g_ctrl_h",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:g C-h"
+      "key:normal:g C-h",
+      "static:visual_block_mode"
     ],
-    "note": "g CTRL-H: blockwise Select (emulated)"
+    "note": "vim gCTRL-H = blockwise Select mode; zemacs g C-h enters visual-block mode."
   },
   {
     "spec_id": "neovim.normal-mode.g_rbracket",
@@ -6630,7 +6663,7 @@
     "evidence": [
       "key:insert:C-x C-t"
     ],
-    "note": "thesaurus -> unified completion"
+    "note": "C-x C-t bound -> generic completion, not thesaurus."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_r",
@@ -6638,7 +6671,7 @@
     "evidence": [
       "key:insert:C-x C-r"
     ],
-    "note": "register completion -> unified completion"
+    "note": "C-x C-r bound -> generic completion, not complete-from-registers."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_s",
@@ -6646,7 +6679,7 @@
     "evidence": [
       "key:insert:C-x C-s"
     ],
-    "note": "spelling -> unified completion"
+    "note": "C-x C-s bound -> generic completion, not spelling."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_e",
@@ -6654,7 +6687,7 @@
     "evidence": [
       "key:insert:C-x C-e"
     ],
-    "note": "scroll up -> scroll_down"
+    "note": "C-x C-e scrolls view down while staying in insert (approximates i_CTRL-X_CTRL-E)."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_y",
@@ -6662,7 +6695,7 @@
     "evidence": [
       "key:insert:C-x C-y"
     ],
-    "note": "scroll down -> scroll_up"
+    "note": "C-x C-y scrolls view up while staying in insert (approximates i_CTRL-X_CTRL-Y)."
   },
   {
     "spec_id": "spacemacs.keybinding.spc_j_f",
@@ -7010,9 +7043,10 @@
     "spec_id": "neovim.normal-mode.gq",
     "status": "partial",
     "evidence": [
-      "key:normal:g Q"
+      "key:normal:g Q",
+      "static:command_mode"
     ],
-    "note": "gQ: Ex mode -> command line"
+    "note": "vim gQ = Ex mode; zemacs g Q opens the command line (single Ex command)."
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_s",
@@ -7166,7 +7200,7 @@
     "evidence": [
       "key:insert:C-x s"
     ],
-    "note": "i_CTRL-X_s spelling -> completion"
+    "note": "C-x s bound -> generic completion, not spelling."
   },
   {
     "spec_id": "neovim.normal-mode.ctrl_w_ctrl_i",
@@ -8828,11 +8862,11 @@
   },
   {
     "spec_id": "neovim.normal-mode.g_question",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:g ? ?"
+      "static:rot13"
     ],
-    "note": "Rot13 encoding operator"
+    "note": "vim g?{motion} = ROT13 operator; zemacs g? submap runs rot13 over the motion."
   },
   {
     "spec_id": "neovim.normal-mode.g_question_question",
@@ -8872,7 +8906,7 @@
     "evidence": [
       "key:insert:ins"
     ],
-    "note": "toggle Insert/Replace mode"
+    "note": "<Insert> -> replace_mode; vim toggles Insert/Replace, zemacs goes one-way into Replace."
   },
   {
     "spec_id": "neovim.normal-mode.ctrl_c",
@@ -8912,7 +8946,7 @@
     "evidence": [
       "key:insert:C-x C-o"
     ],
-    "note": "enter CTRL-X sub mode, see |i_CTRL-X_index|"
+    "note": "CTRL-X completion sub-mode tree exists but all sub-keys route to one LSP+word completion."
   },
   {
     "spec_id": "neovim.normal-mode.ctrl_w_plus",
@@ -8966,17 +9000,19 @@
     "spec_id": "neovim.normal-mode.lbracket_i_1",
     "status": "partial",
     "evidence": [
-      "key:normal:[ i"
+      "key:normal:[ i",
+      "static:search_prev"
     ],
-    "note": "show first line found in current and"
+    "note": "vim [i = first line above with word; zemacs jumps to previous occurrence (buffer search)."
   },
   {
     "spec_id": "neovim.normal-mode.rbracket_i_1",
     "status": "partial",
     "evidence": [
-      "key:normal:] i"
+      "key:normal:] i",
+      "static:search_next"
     ],
-    "note": "show first line found in current and"
+    "note": "vim ]i = first line below with word; zemacs jumps to next occurrence (buffer search)."
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_i",
@@ -9116,11 +9152,12 @@
   },
   {
     "spec_id": "neovim.normal-mode.lbrace_count_rbrace_lt_del_gt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "builtin:count"
+      "key:normal:del",
+      "static:delete_selection"
     ],
-    "note": "remove the last digit from {count}"
+    "note": "vim <Del> in Normal = delete char under cursor (like x); zemacs binds del to delete_selection."
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_lbrace_char_rbrace",
@@ -11144,19 +11181,19 @@
   },
   {
     "spec_id": "jetbrains.caret-navigation.move-caret-to-code-block-start",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:goto_prev_unmatched_brace"
     ],
-    "note": ""
+    "note": "Move Caret to Code Block Start = goto previous unmatched opening brace."
   },
   {
     "spec_id": "jetbrains.caret-navigation.move-caret-to-code-block-end",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:goto_next_unmatched_brace"
     ],
-    "note": ""
+    "note": "Move Caret to Code Block End = goto next unmatched closing brace."
   },
   {
     "spec_id": "jetbrains.caret-navigation.next-method",
@@ -11632,11 +11669,11 @@
   },
   {
     "spec_id": "jetbrains.navigate-from-symbol.highlight-usages-in-file",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:select_references_to_symbol_under_cursor"
     ],
-    "note": ""
+    "note": "Highlight Usages in File = select all in-file references to the symbol under cursor."
   },
   {
     "spec_id": "jetbrains.code-analysis.error-description",
@@ -19695,5 +19732,110 @@
       "key:insert:C-y"
     ],
     "note": "i_CTRL-Y: insert char from line above (copy_char_above)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.z_lbrace_height_rbrace_lt_cr_gt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:z ret",
+      "static:align_view_top"
+    ],
+    "note": "vim z<CR> = current line to top + first non-blank; zemacs z<CR> = align_view_top + goto_first_nonwhitespace."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_registers",
+    "status": "ported",
+    "evidence": [
+      "typable:registers"
+    ],
+    "note": ":registers/:reg shows all register contents (vim :registers)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_display",
+    "status": "ported",
+    "evidence": [
+      "typable:display"
+    ],
+    "note": ":display is a vim synonym of :registers; exposed as alias."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_terminal",
+    "status": "ported",
+    "evidence": [
+      "typable:terminal"
+    ],
+    "note": ":terminal/:term opens an integrated PTY shell (vim :terminal)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_help",
+    "status": "ported",
+    "evidence": [
+      "typable:help"
+    ],
+    "note": ":help/:h opens a searchable Help browser (role of vim :help)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_grep",
+    "status": "partial",
+    "evidence": [
+      "typable:grep"
+    ],
+    "note": ":grep runs ripgrep over the project with jumpable results; uses Run console not quickfix."
+  },
+  {
+    "spec_id": "emacs.command.mark_whole_buffer",
+    "status": "ported",
+    "evidence": [
+      "static:select_all"
+    ],
+    "note": "emacs mark-whole-buffer = zemacs select_all."
+  },
+  {
+    "spec_id": "emacs.command.transpose_sentences",
+    "status": "ported",
+    "evidence": [
+      "static:transpose_sentence"
+    ],
+    "note": "emacs transpose-sentences = zemacs transpose_sentence."
+  },
+  {
+    "spec_id": "emacs.command.toggle_truncate_lines",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_soft_wrap"
+    ],
+    "note": "emacs toggle-truncate-lines = zemacs toggle_soft_wrap."
+  },
+  {
+    "spec_id": "emacs.command.align_regexp",
+    "status": "ported",
+    "evidence": [
+      "static:align_at_regex"
+    ],
+    "note": "emacs align-regexp = zemacs align_at_regex."
+  },
+  {
+    "spec_id": "emacs.command.other_window",
+    "status": "ported",
+    "evidence": [
+      "static:rotate_view"
+    ],
+    "note": "emacs other-window = zemacs rotate_view (Goto next window)."
+  },
+  {
+    "spec_id": "emacs.command.scroll_up_line",
+    "status": "ported",
+    "evidence": [
+      "static:scroll_down"
+    ],
+    "note": "emacs scroll-up-line (view toward end) = zemacs scroll_down (default 1 line)."
+  },
+  {
+    "spec_id": "emacs.command.scroll_down_line",
+    "status": "ported",
+    "evidence": [
+      "static:scroll_up"
+    ],
+    "note": "emacs scroll-down-line (view toward start) = zemacs scroll_up (default 1 line)."
   }
 ]
