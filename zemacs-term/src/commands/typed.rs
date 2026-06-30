@@ -473,6 +473,48 @@ fn oldfiles_list(
     Ok(())
 }
 
+/// `:marks` — list the buffer's marks in a picker (vim `:marks`).
+fn marks_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            match crate::commands::build_marks_picker(editor) {
+                Some(picker) => compositor.push(picker),
+                None => editor.set_status("No marks set"),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// `:history` / `:history :` — pick from the command-line history (vim `:history`).
+fn history_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            match crate::commands::build_command_history_picker(editor) {
+                Some(picker) => compositor.push(picker),
+                None => editor.set_status("No command-line history"),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 fn write_impl(
     cx: &mut compositor::Context,
     path: Option<&str>,
@@ -14344,6 +14386,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "marks",
+        aliases: &[],
+        doc: "List the buffer's marks in a picker (vim :marks).",
+        fun: marks_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "history",
+        aliases: &[],
+        doc: "Pick from the command-line history (vim :history).",
+        fun: history_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

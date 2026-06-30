@@ -14163,6 +14163,14 @@ fn register_picker(cx: &mut Context) {
 /// named mark in the current buffer and jump to it. Marks are stored per-document
 /// (`m{a-z}` sets them, plus the auto-marks `.`/`[`/`]`/`^`/`<`/`>`).
 fn marks_picker(cx: &mut Context) {
+    match build_marks_picker(cx.editor) {
+        Some(picker) => cx.push_layer(picker),
+        None => cx.editor.set_status("No marks set"),
+    }
+}
+
+/// Build the marks picker (shared by the static command and `:marks`). `None` when no marks set.
+pub(crate) fn build_marks_picker(editor: &mut Editor) -> Option<Box<dyn Component>> {
     struct MarkMeta {
         mark: char,
         doc_id: DocumentId,
@@ -14171,7 +14179,7 @@ fn marks_picker(cx: &mut Context) {
         text: String,
     }
 
-    let (_, doc) = current_ref!(cx.editor);
+    let (_, doc) = current_ref!(editor);
     let doc_id = doc.id();
     let text = doc.text().slice(..);
     let len = text.len_chars();
@@ -14195,8 +14203,7 @@ fn marks_picker(cx: &mut Context) {
     items.sort_by_key(|m| (!m.mark.is_ascii_alphabetic(), m.mark));
 
     if items.is_empty() {
-        cx.editor.set_status("No marks set");
-        return;
+        return None;
     }
 
     let columns = [
@@ -14214,7 +14221,7 @@ fn marks_picker(cx: &mut Context) {
         doc.set_selection(view.id, Selection::point(pos));
     })
     .with_preview(|_editor, meta| Some((meta.doc_id.into(), Some((meta.line, meta.line)))));
-    cx.push_layer(Box::new(overlaid(picker)));
+    Some(Box::new(overlaid(picker)))
 }
 
 /// fzf.vim `:BLines`: fuzzy-search every line of the current buffer and jump to
@@ -14265,17 +14272,23 @@ fn buffer_line_picker(cx: &mut Context) {
 /// fzf.vim `:History:` : fuzzy-pick a past command line (`:` register history)
 /// and execute it.
 fn command_history_picker(cx: &mut Context) {
-    let mut items: Vec<String> = cx
-        .editor
+    match build_command_history_picker(cx.editor) {
+        Some(picker) => cx.push_layer(picker),
+        None => cx.editor.set_status("No command-line history"),
+    }
+}
+
+/// Build the command-history picker (shared by the static command and `:history`). `None` if empty.
+pub(crate) fn build_command_history_picker(editor: &mut Editor) -> Option<Box<dyn Component>> {
+    let mut items: Vec<String> = editor
         .registers
-        .read(':', cx.editor)
+        .read(':', editor)
         .map(|values| values.map(|v| v.into_owned()).collect())
         .unwrap_or_default();
     items.reverse(); // most-recent first
 
     if items.is_empty() {
-        cx.editor.set_status("No command-line history");
-        return;
+        return None;
     }
 
     let columns = [ui::PickerColumn::new("command", |cmd: &String, _: &()| {
@@ -14285,7 +14298,7 @@ fn command_history_picker(cx: &mut Context) {
     let picker = Picker::new(columns, 0, items, (), |cx, cmd, _action| {
         crate::commands::typed::run_command_line(cx, cmd);
     });
-    cx.push_layer(Box::new(overlaid(picker)));
+    Some(Box::new(overlaid(picker)))
 }
 
 /// fzf.vim `:History/` : fuzzy-pick a past search pattern (`/` register history)
