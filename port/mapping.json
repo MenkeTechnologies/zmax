@@ -18350,5 +18350,77 @@
    "key:normal:space k c"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "jetbrains.selection.select-all",
+  "status": "ported",
+  "evidence": [
+   "static:select_all"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.multiple-carets.add-caret-to-each-line-in-selection",
+  "status": "ported",
+  "evidence": [
+   "static:split_selection_on_newline"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.multiple-carets.deselect-last-occurrence",
+  "status": "ported",
+  "evidence": [
+   "static:remove_primary_selection"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.editing.cut",
+  "status": "partial",
+  "evidence": [
+   "static:delete_selection"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.refactoring.inline",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.refactoring.change-signature",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.refactoring.introduce-field",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.refactoring.introduce-parameter",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.refactoring.safe-delete",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "jetbrains"
  }
 ]
