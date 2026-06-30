@@ -1403,6 +1403,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "O" => organize_imports,           // SPC l O : optimize/organize imports (JetBrains Ctrl-Alt-O)
                 "i" => implement_methods,          // SPC l i : implement interface/trait members (JetBrains Ctrl-I)
                 "v" => override_methods,           // SPC l v : override inherited members (JetBrains Ctrl-O)
+                "g" => generate_code,              // SPC l g : generate code — getters/constructors/impls (JetBrains Cmd N)
                 "k" => hover,                      // SPC l k : hover
                 "s" => signature_help,             // SPC l s : signature help
                 "f" => format_selections,          // SPC l f : format

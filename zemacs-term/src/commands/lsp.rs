@@ -733,6 +733,17 @@ pub fn override_methods(cx: &mut Context) {
     );
 }
 
+/// IntelliJ "Generate" (Cmd N): the server's "Generate …" code actions (getters/setters,
+/// constructors, `impl` blocks, derives …) as a focused menu (a single match auto-applies).
+pub fn generate_code(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        None,
+        Some(&["generate"]),
+        "No generate action available here",
+    );
+}
+
 /// Shared code-action driver. `only` filters the request to the given kinds (and
 /// is re-applied client-side, since some servers ignore the `only` hint and
 /// return everything). `title_filter`, when set, keeps only actions whose title

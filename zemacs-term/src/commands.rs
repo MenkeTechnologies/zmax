@@ -611,6 +611,7 @@ impl MappableCommand {
         organize_imports, "Organize/optimize imports via LSP source action (IntelliJ Ctrl-Alt-O)",
         implement_methods, "Implement missing interface/trait members via LSP (IntelliJ Ctrl-I)",
         override_methods, "Override inherited members via LSP (IntelliJ Ctrl-O)",
+        generate_code, "Generate code (getters/constructors/impls) via LSP (IntelliJ Cmd N)",
         buffer_picker, "Open buffer picker",
         jumplist_picker, "Open jumplist picker",
         register_picker, "Browse registers and paste the chosen one",

@@ -18548,11 +18548,12 @@
   },
   {
     "spec_id": "jetbrains.coding-assistance.generate",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:code_action"
+      "key:normal:space l g",
+      "static:generate_code"
     ],
-    "note": "LSP code action menu ~ Generate (getters/constructors)"
+    "note": "Generate (Cmd N) = generate_code: title-filtered (\"generate\") LSP code-action menu — getters/constructors/impls/derives (SPC l g)"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_p_v",
