@@ -19286,5 +19286,32 @@
    "static:fold_comments"
   ],
   "note": "fold comment blocks"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_aU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l A",
+   "static:layout_add_buffers"
+  ],
+  "note": "add buffers from another layout -> layout_add_buffers"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_cU_0xxcU_9",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l C-1",
+   "static:layout_goto_1"
+  ],
+  "note": "switch to nth layout (transient) -> layout_goto C-1..C-9"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_cU_0xxcU_9",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l w C-1",
+   "static:layout_goto_1"
+  ],
+  "note": "switch to nth workspace (transient) -> layout_goto C-1..C-9"
  }
 ]

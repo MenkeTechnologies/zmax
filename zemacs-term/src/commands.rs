@@ -929,6 +929,7 @@ impl MappableCommand {
         widen, "Widen: remove narrowing and reveal the whole buffer (SPC n w)",
         narrow_to_function_indirect, "Narrow to the function in an indirect (split) view (SPC n F)",
         narrow_region_indirect, "Narrow to the selected region in an indirect (split) view (SPC n R)",
+        layout_add_buffers, "Add another layout's buffers into the current windows (SPC l A)",
         winner_undo, "Undo the last window-layout change (winner-undo, SPC w u)",
         winner_redo, "Redo a window-layout change (winner-redo, SPC w . U)",
         copy_version, "Display and copy the zemacs version to the clipboard (SPC f e v)",
@@ -7230,6 +7231,54 @@ fn layout_rename(cx: &mut Context) {
                 let cur = s.current.min(s.layouts.len() - 1);
                 s.layouts[cur].name = new.clone();
                 cx.editor.set_status(format!("renamed layout to {new}"));
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// SPC l A : add all the buffers from another layout into the current windows (Spacemacs
+/// `spacemacs/layouts-add-buffers`). Prompts for a layout number and opens its files in splits.
+fn layout_add_buffers(cx: &mut Context) {
+    let names = {
+        let s = LAYOUTS.lock().unwrap();
+        if s.layouts.is_empty() {
+            cx.editor.set_status("no layouts — SPC l l to create one");
+            return;
+        }
+        s.layouts
+            .iter()
+            .enumerate()
+            .map(|(i, l)| format!("{}:{}", i + 1, l.name))
+            .collect::<Vec<_>>()
+            .join("  ")
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        format!("add buffers from layout ({names}): ").into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let Ok(n) = input.trim().parse::<usize>() else {
+                cx.editor.set_error("enter a layout number");
+                return;
+            };
+            let files = {
+                let s = LAYOUTS.lock().unwrap();
+                s.layouts.get(n.saturating_sub(1)).map(|l| l.files.clone())
+            };
+            match files {
+                Some(files) => {
+                    let count = files.len();
+                    for p in files {
+                        let _ = cx.editor.open(&p, Action::VerticalSplit);
+                    }
+                    cx.editor
+                        .set_status(format!("added {count} buffers from layout {n}"));
+                }
+                None => cx.editor.set_error("no such layout"),
             }
         },
     );

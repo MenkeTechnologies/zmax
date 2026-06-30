@@ -1385,6 +1385,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
                 "4" => layout_goto_4, "5" => layout_goto_5, "6" => layout_goto_6,
                 "7" => layout_goto_7, "8" => layout_goto_8, "9" => layout_goto_9,
+                "A" => layout_add_buffers,         // SPC l A : add another layout's buffers
+                "C-1" => layout_goto_1, "C-2" => layout_goto_2, "C-3" => layout_goto_3,
+                "C-4" => layout_goto_4, "C-5" => layout_goto_5, "C-6" => layout_goto_6,
+                "C-7" => layout_goto_7, "C-8" => layout_goto_8, "C-9" => layout_goto_9,
                 // Workspaces (eyebrowse) tier — approximated by the same layout ring.
                 "w" => { "Workspaces"
                     "w" => layout_create,          // SPC l w w : tagged workspace
@@ -1399,6 +1403,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
                     "4" => layout_goto_4, "5" => layout_goto_5, "6" => layout_goto_6,
                     "7" => layout_goto_7, "8" => layout_goto_8, "9" => layout_goto_9,
+                    "C-1" => layout_goto_1, "C-2" => layout_goto_2, "C-3" => layout_goto_3,
+                    "C-4" => layout_goto_4, "C-5" => layout_goto_5, "C-6" => layout_goto_6,
+                    "C-7" => layout_goto_7, "C-8" => layout_goto_8, "C-9" => layout_goto_9,
                 },
             },
             "v" => expand_selection,               // SPC v : expand region
