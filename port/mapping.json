@@ -2701,7 +2701,7 @@
     "evidence": [
       "key:normal:d i"
     ],
-    "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+    "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
   },
   {
     "spec_id": "neovim.normal-mode.it",
@@ -11840,11 +11840,12 @@
   },
   {
     "spec_id": "jetbrains.vcs.update-project",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:git_status"
+      "key:normal:space g u",
+      "static:git_pull"
     ],
-    "note": "magit fetch/pull"
+    "note": "fast-forward pull from upstream (git pull --ff-only)"
   },
   {
     "spec_id": "jetbrains.vcs.rollback",
@@ -11856,11 +11857,12 @@
   },
   {
     "spec_id": "jetbrains.vcs.push",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:git_status"
+      "key:normal:space g P",
+      "static:git_push"
     ],
-    "note": "magit push"
+    "note": "push current branch to remote (git push, GIT_TERMINAL_PROMPT=0)"
   },
   {
     "spec_id": "jetbrains.vcs.next-change",
@@ -18410,11 +18412,11 @@
   },
   {
     "spec_id": "jetbrains.editing.cut",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:delete_selection"
+      "static:cut_to_clipboard"
     ],
-    "note": "jetbrains"
+    "note": "cut selection to system clipboard (yank + delete)"
   },
   {
     "spec_id": "jetbrains.refactoring.inline",
@@ -19574,6 +19576,15 @@
     "note": "@codebase -> ai_codebase_context (keyword grep retrieval, not embeddings)"
   },
   {
+    "spec_id": "cursor.chat.web",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space a w",
+      "static:ai_web_context"
+    ],
+    "note": "@web -> ai_web_context (real web search via ai::web; DuckDuckGo default, ZEMACS_AI_WEB_SEARCH_URL override)"
+  },
+  {
     "spec_id": "cursor.chat.context_symbol",
     "status": "ported",
     "evidence": [
@@ -19599,6 +19610,25 @@
       "static:ai_complete"
     ],
     "note": "on-demand AI code completion at the cursor (fill-in-the-middle around <CURSOR>); manual trigger rather than real-time ghost text"
+  },
+  {
+    "spec_id": "cursor.autocomplete.next_edit",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space a g",
+      "static:toggle_ai_autocomplete",
+      "static:ghost_text_accept"
+    ],
+    "note": "real-time debounced ghost-text inference engine: handlers/ai_ghost.rs renders the AI's fill-in-the-middle continuation as dimmed inline virtual text after a typing pause; Tab accepts. Opt-in (SPC a g / ZEMACS_AI_AUTOCOMPLETE)"
+  },
+  {
+    "spec_id": "cursor.autocomplete.partial_accept",
+    "status": "ported",
+    "evidence": [
+      "key:insert:A-right",
+      "static:ghost_text_accept_word"
+    ],
+    "note": "word-by-word acceptance of the ghost-text suggestion (A-Right); inserts the next token and re-anchors the remainder"
   },
   {
     "spec_id": "cursor.agent.apply_review",

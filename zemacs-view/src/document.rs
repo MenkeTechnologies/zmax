@@ -153,6 +153,9 @@ pub struct Document {
     pub(crate) inlay_hints: HashMap<ViewId, DocumentInlayHints>,
     /// Jump label overlays for each view.
     pub(crate) jump_labels: HashMap<ViewId, Vec<Overlay>>,
+    /// AI ghost-text (inline completion) suggestion for each view, rendered as dimmed virtual text
+    /// at the cursor and accepted with Tab. Cleared on edit/cursor-move.
+    pub(crate) ghost_text: HashMap<ViewId, GhostText>,
     /// LSP document highlights for each view, stored as char ranges.
     pub(crate) document_highlights: HashMap<ViewId, DocumentHighlights>,
     /// LSP code action hints for each view.
@@ -284,6 +287,30 @@ pub struct DocumentLink {
     pub end: usize,
     pub link: lsp::DocumentLink,
     pub language_server_id: LanguageServerId,
+}
+
+/// An AI ghost-text (inline completion) suggestion for one `(Document, View)`: the model's
+/// proposed insertion at `pos`, rendered as a dimmed inline annotation. `text` is the raw string to
+/// insert on accept; `annotations` is the pre-built render layer (a single annotation, so the
+/// borrowed `&[InlineAnnotation]` the renderer needs lives on the document).
+#[derive(Debug, Clone)]
+pub struct GhostText {
+    /// Char offset the suggestion is anchored at (the cursor when it was produced).
+    pub pos: usize,
+    /// The text that will be inserted when the suggestion is accepted.
+    pub text: String,
+    /// Pre-built render layer (kept in sync with `text`).
+    pub annotations: Vec<InlineAnnotation>,
+}
+
+impl GhostText {
+    pub fn new(pos: usize, text: String) -> Self {
+        // The suggestion renders inline on a single visual line; collapse any newlines so the ghost
+        // never disturbs the layout (the full multi-line text is still inserted on accept).
+        let display: String = text.replace('\n', "⏎");
+        let annotations = vec![InlineAnnotation::new(pos, display)];
+        Self { pos, text, annotations }
+    }
 }
 
 /// Inlay hints for a single `(Document, View)` combo.
@@ -794,6 +821,7 @@ impl Document {
             readonly: false,
             is_binary: false,
             jump_labels: HashMap::new(),
+            ghost_text: HashMap::new(),
             document_highlights: HashMap::new(),
             code_action_hints: HashSet::new(),
             marks: HashMap::new(),
@@ -1516,6 +1544,7 @@ impl Document {
         self.view_data.remove(&view_id);
         self.inlay_hints.remove(&view_id);
         self.jump_labels.remove(&view_id);
+        self.ghost_text.remove(&view_id);
         self.document_highlights.remove(&view_id);
         self.document_highlight_controllers.remove(&view_id);
         self.code_action_hints.remove(&view_id);
@@ -2702,6 +2731,26 @@ impl Document {
 
     pub fn remove_jump_labels(&mut self, view_id: ViewId) {
         self.jump_labels.remove(&view_id);
+    }
+
+    /// Set the AI ghost-text suggestion for `view_id` (anchored at `pos`).
+    pub fn set_ghost_text(&mut self, view_id: ViewId, pos: usize, text: String) {
+        self.ghost_text.insert(view_id, GhostText::new(pos, text));
+    }
+
+    /// The current ghost-text suggestion for `view_id`, if any.
+    pub fn ghost_text(&self, view_id: ViewId) -> Option<&GhostText> {
+        self.ghost_text.get(&view_id)
+    }
+
+    /// Clear and return the ghost-text suggestion for `view_id` (used when accepting it).
+    pub fn take_ghost_text(&mut self, view_id: ViewId) -> Option<GhostText> {
+        self.ghost_text.remove(&view_id)
+    }
+
+    /// Clear any ghost-text suggestion for `view_id`; returns whether one was present.
+    pub fn clear_ghost_text(&mut self, view_id: ViewId) -> bool {
+        self.ghost_text.remove(&view_id).is_some()
     }
 
     pub fn set_document_highlights(

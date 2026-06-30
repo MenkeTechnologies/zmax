@@ -12,6 +12,7 @@
 pub mod agent;
 pub mod anthropic;
 pub mod openai;
+pub mod web;
 
 /// A chat role. zemacs keeps `System` separate from the message list (Anthropic wants it
 /// top-level), but the enum models all three for OpenAI-style backends.
@@ -167,6 +168,32 @@ pub fn privacy() -> bool {
 pub fn toggle_privacy() -> bool {
     let new = !privacy();
     PRIVACY.store(new, std::sync::atomic::Ordering::Relaxed);
+    new
+}
+
+/// Real-time ghost-text autocomplete state: 0 = unset (fall back to env), 1 = on, 2 = off.
+/// Off by default — it fires an inference request on every typing pause, so it is opt-in (toggle
+/// with `SPC a g`, or default it on with `ZEMACS_AI_AUTOCOMPLETE=1`).
+static AUTOCOMPLETE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+
+/// Whether real-time ghost-text autocomplete is enabled.
+pub fn autocomplete_enabled() -> bool {
+    match AUTOCOMPLETE.load(std::sync::atomic::Ordering::Relaxed) {
+        1 => true,
+        2 => false,
+        _ => std::env::var("ZEMACS_AI_AUTOCOMPLETE")
+            .map(|v| v == "1" || v == "true")
+            .unwrap_or(false),
+    }
+}
+
+/// Toggle ghost-text autocomplete; returns the new state.
+pub fn toggle_autocomplete() -> bool {
+    let new = !autocomplete_enabled();
+    AUTOCOMPLETE.store(
+        if new { 1 } else { 2 },
+        std::sync::atomic::Ordering::Relaxed,
+    );
     new
 }
 

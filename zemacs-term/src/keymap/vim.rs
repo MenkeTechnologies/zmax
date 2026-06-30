@@ -113,6 +113,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space g f d", "Git",     "git_diff"),                             // SPC g f d : diff current file vs HEAD
     ("space g f m", "Git",     "git_file_dispatch"),                    // SPC g f m : magit file-operations dispatch
     ("space g f f", "Git",     "view_file_at_rev"),                     // SPC g f f : view current file at a branch/commit
+    ("space g P",   "Git",     "git_push"),                             // SPC g P : push current branch (JetBrains Cmd+Shift+K)
+    ("space g u",   "Git",     "git_pull"),                             // SPC g u : fast-forward pull (JetBrains Cmd+T)
+    ("space g F",   "Git",     "git_fetch"),                            // SPC g F : fetch all remotes
     ("space f e d", "Files",   ":config-open"),                          // SPC f e d : open dotfile/config
     ("space q f",   "Quit",    ":quit"),                                 // SPC q f : kill frame
     ("space b s",   "Buffers", ":new"),                                  // SPC b s : scratch buffer
@@ -910,6 +913,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "b" => ai_codebase_context,        // SPC a b : @codebase keyword-search context
                 "s" => ai_symbol_context,          // SPC a s : @symbol (definition) context
                 "D" => ai_docs_context,            // SPC a D : @docs keyword search over docs/ dir
+                "w" => ai_web_context,             // SPC a w : @web live web-search context
+                "g" => toggle_ai_autocomplete,     // SPC a g : toggle real-time ghost-text autocomplete
                 "k" => ai_terminal_command,        // SPC a k : generate a shell command (terminal Cmd+K)
                 "u" => ai_generate_tests,          // SPC a u : AI generate unit tests
                 "c" => ai_commit_message,          // SPC a c : AI git commit message
@@ -1810,7 +1815,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
         "ret"   => insert_newline,
         "C-j"   => insert_newline,
-        "tab"   => emmet_expand,            // expand emmet/zen abbrev, else Tab
+        "tab"   => ghost_text_accept,       // accept AI ghost-text suggestion, else expand emmet/Tab
+        "A-right" => ghost_text_accept_word, // partial-accept: take the next word of the suggestion
 
         "C-r"   => insert_register,
         "C-a"   => insert_last_inserted_text,    // i_CTRL-A: insert previously inserted text
