@@ -18230,5 +18230,13 @@
    "builtin:viml:xor"
   ],
   "note": "implemented by embedded vimlrs (pub fn f_xor)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_d_f_f",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space D f f"
+  ],
+  "note": ""
  }
 ]

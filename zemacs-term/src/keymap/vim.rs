@@ -122,6 +122,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t C-8", "Toggles", "toggle_long_line_marker"),            // SPC t C-8 : global 80-col highlight
     ("space t C-W", "Toggles", ":toggle trim-trailing-whitespace"),    // SPC t C-W : global whitespace cleanup
     ("space D f v", "Diff",    "git_diff"),                            // SPC D f v : ediff file versions (vs HEAD)
+    ("space D f f", "Diff",    "ediff_file"),                          // SPC D f f : ediff current buffer vs a picked file
     ("space D b b", "Diff",    "ediff_buffer"),                        // SPC D b b : ediff two buffers (current vs picked)
     ("space D w w", "Diff",    "ediff_windows"),                       // SPC D w w : compare the two windows (wordwise)
     ("space D w l", "Diff",    "ediff_windows"),                       // SPC D w l : compare the two windows (linewise)
