@@ -408,6 +408,7 @@ impl MappableCommand {
         global_search, "Global search in workspace folder",
         global_search_symbol, "Global search seeded with the symbol under the cursor",
         clear_search_highlight, "Clear persistent search highlight (SPC s c)",
+        regex_convert_form, "Convert the selected regex between PCRE and Emacs forms (SPC x r c)",
         justify_left, "Left-justify (fill) the region (SPC x j l)",
         justify_right, "Right-justify the region (SPC x j r)",
         justify_center, "Center-justify the region (SPC x j c)",
@@ -7057,6 +7058,60 @@ fn eval_elisp_defun(cx: &mut Context) {
         text.slice(from..to).to_string()
     };
     run_elisp(cx, &src);
+}
+
+// ---------------------------------------------------------------------------
+// Regex form conversion (Spacemacs `SPC x r`, pcre2el). The grouping `( )`,
+// alternation `|`, and quantifier `{ }` metacharacters are *inverted* between
+// PCRE (bare = special) and Emacs regex (backslash-escaped = special), so a
+// single backslash-toggle on those five characters converts either direction.
+// ---------------------------------------------------------------------------
+
+/// Toggle backslash-escaping of `( ) | { }` — converts a regex between PCRE and
+/// Emacs (elisp) forms for the grouping/alternation/quantifier subset. Pure.
+fn swap_regex_grouping(s: &str) -> String {
+    let ch: Vec<char> = s.chars().collect();
+    let mut out = String::new();
+    let mut i = 0;
+    while i < ch.len() {
+        let c = ch[i];
+        if c == '\\' && i + 1 < ch.len() {
+            let n = ch[i + 1];
+            if matches!(n, '(' | ')' | '|' | '{' | '}') {
+                out.push(n); // escaped special -> bare
+            } else {
+                out.push('\\');
+                out.push(n); // preserve other escapes (\d, \w, \b, \\, …)
+            }
+            i += 2;
+            continue;
+        }
+        if matches!(c, '(' | ')' | '|' | '{' | '}') {
+            out.push('\\'); // bare special -> escaped
+        }
+        out.push(c);
+        i += 1;
+    }
+    out
+}
+
+/// Convert the selected regex between PCRE and Emacs forms (Spacemacs
+/// `SPC x r c` / `x r e p` / `x r p e`). Operates on the primary selection.
+fn regex_convert_form(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    if range.from() == range.to() {
+        cx.editor.set_status("select a regex to convert (PCRE ⇔ Emacs)");
+        return;
+    }
+    let converted = swap_regex_grouping(&range.fragment(text).to_string());
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((range.from(), range.to(), Some(converted.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    cx.editor.set_status("converted regex grouping (PCRE ⇔ Emacs)");
 }
 
 fn global_search(cx: &mut Context) {
@@ -15073,6 +15128,18 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn regex_grouping_swaps_pcre_and_emacs() {
+        // PCRE -> Emacs: bare grouping/alt becomes escaped
+        assert_eq!(swap_regex_grouping("(foo|bar)+"), "\\(foo\\|bar\\)+");
+        // round-trips back to PCRE
+        assert_eq!(swap_regex_grouping("\\(foo\\|bar\\)+"), "(foo|bar)+");
+        // other escapes (\d, \b) are preserved untouched
+        assert_eq!(swap_regex_grouping("\\d+\\bx"), "\\d+\\bx");
+        // quantifier braces toggle too
+        assert_eq!(swap_regex_grouping("a{2,3}"), "a\\{2,3\\}");
     }
 
     #[test]
