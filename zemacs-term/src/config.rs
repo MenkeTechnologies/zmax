@@ -14,9 +14,9 @@ pub struct Config {
     pub theme: Option<theme::Config>,
     pub keys: HashMap<Mode, KeyTrie>,
     pub editor: zemacs_view::editor::Config,
-    /// Selected keymap preset name ("vim" | "helix" | "emacs"). `keys` is this
-    /// preset with any `[keys]` overrides merged on top. Drives the startup mode
-    /// (emacs starts in Insert) and the `:keymap` command's current value.
+    /// Selected keymap preset name ("spacemacs" | "vim" | "helix" | "emacs").
+    /// `keys` is this preset with any `[keys]` overrides merged on top. Drives the
+    /// startup mode (emacs starts in Insert) and the `:keymap` command's current value.
     pub keymap: String,
 }
 
@@ -26,12 +26,12 @@ pub struct ConfigRaw {
     pub theme: Option<theme::Config>,
     pub keys: Option<HashMap<Mode, KeyTrie>>,
     pub editor: Option<toml::Value>,
-    /// Base keymap preset: "vim" (default), "helix", or "emacs".
+    /// Base keymap preset: "spacemacs" (default), "vim", "helix", or "emacs".
     pub keymap: Option<String>,
 }
 
 /// Default keymap preset when none is configured.
-pub const DEFAULT_KEYMAP: &str = "vim";
+pub const DEFAULT_KEYMAP: &str = "spacemacs";
 
 /// Resolve a keymap preset name to its base bindings, warning + falling back to
 /// the default preset on an unknown name.
@@ -188,7 +188,7 @@ impl Config {
 /// so the written file never drifts from the compiled-in default.
 const DEFAULT_CONFIG_BODY: &str = r#"# Zemacs configuration. See `book/src/configuration.md` for the full reference.
 
-# Base keymap preset: "vim", "helix", or "emacs".
+# Base keymap preset: "spacemacs" (default), "vim", "helix", or "emacs".
 keymap = "{keymap}"
 
 # theme = "default"
@@ -307,9 +307,9 @@ mod tests {
         assert_eq!(default_keys, keymap::default());
     }
 
-    /// The editor must ship the *vim* keymap as its default, not the legacy
-    /// Helix selection-first one. Pin a couple of vim-only bindings so a
-    /// regression in the `keymap::default` re-export is caught here.
+    /// The default (spacemacs) keymap is vim-derived, not the legacy Helix
+    /// selection-first one. Pin a couple of vim bindings so a regression in the
+    /// `keymap::default` re-export (or the vim base) is caught here.
     #[test]
     fn default_keymap_is_vim_not_helix() {
         use crate::keymap::{KeyTrie, MappableCommand};
@@ -337,6 +337,46 @@ mod tests {
         assert!(
             matches!(resolve("V"), Some(KeyTrie::Sequence(_))),
             "V should be linewise visual"
+        );
+    }
+
+    /// Spacemacs (the default) turns `C-x` into the Emacs prefix submenu and
+    /// keeps the `SPC` leader; the pure `vim` preset leaves `C-x = decrement` and
+    /// has no `SPC` leader (so it shows no which-key popup).
+    #[test]
+    fn spacemacs_has_cx_prefix_and_leader_vim_does_not() {
+        use crate::keymap::{self, KeyTrie, MappableCommand};
+        use zemacs_view::input::KeyEvent;
+
+        let cx: KeyEvent = "C-x".parse().unwrap();
+        let space: KeyEvent = "space".parse().unwrap();
+
+        let spacemacs = keymap::preset("spacemacs").unwrap();
+        let sm_normal = &spacemacs[&Mode::Normal];
+        assert!(
+            matches!(sm_normal.search(&[cx]), Some(KeyTrie::Node(_))),
+            "spacemacs C-x should be a prefix submenu (which-key)"
+        );
+        assert!(
+            matches!(sm_normal.search(&[space]), Some(KeyTrie::Node(_))),
+            "spacemacs should keep the SPC leader"
+        );
+        // The Emacs C-x C-f / C-x C-s bindings are present under the prefix.
+        assert!(sm_normal.search(&[cx, "C-f".parse().unwrap()]).is_some());
+        assert!(sm_normal.search(&[cx, "C-s".parse().unwrap()]).is_some());
+
+        let vim = keymap::preset("vim").unwrap();
+        let vim_normal = &vim[&Mode::Normal];
+        assert!(
+            matches!(
+                vim_normal.search(&[cx]),
+                Some(KeyTrie::MappableCommand(MappableCommand::Static { name, .. })) if *name == "decrement"
+            ),
+            "vim C-x should stay decrement"
+        );
+        assert!(
+            !matches!(vim_normal.search(&[space]), Some(KeyTrie::Node(_))),
+            "vim should have no SPC leader (no which-key popup)"
         );
     }
 }

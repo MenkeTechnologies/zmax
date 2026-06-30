@@ -1630,9 +1630,12 @@ impl EditorView {
                 let suppressed = self.keymaps.pending().first().is_some_and(|key| {
                     let key = key.to_string();
                     if config.auto_info_leader_only {
-                        // Only the leader (space) popup is shown; every other prefix
-                        // (c, d, g, z, >, ci, di, ...) is suppressed.
-                        key != "space"
+                        // Only deliberate leader prefixes get a popup: the `space`
+                        // leader and the emacs/spacemacs `C-x` prefix. Every other
+                        // prefix (c, d, g, z, >, ci, di, C-w, ...) is suppressed.
+                        // (In the pure `vim` preset neither is a prefix, so vim
+                        // shows no which-key at all.)
+                        key != "space" && key != "C-x"
                     } else {
                         config
                             .auto_info_exclude

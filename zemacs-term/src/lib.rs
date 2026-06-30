@@ -35,6 +35,7 @@ pub mod run_config;
 pub mod snippet_store;
 pub mod spell;
 pub mod ui;
+pub mod zemacsinfo;
 
 #[cfg(not(windows))]
 use std::env::var_os;

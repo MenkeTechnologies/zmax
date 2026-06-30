@@ -31,9 +31,14 @@ and an honest, source-derived account of how far it's met.
 
 zemacs runs on the Zemacs engine — tree-sitter syntax, LSP, multiple
 selections — but targets **vim/emacs semantics**, not Zemacs's selection-first
-model. The default keymap is vim: the keys you press are the keys vim binds,
-including operator-pending edits (`dd`, `dw`, `cw`, `yy`) emulated on the Zemacs
-engine, with emacs, Spacemacs, and JetBrains functionality layered on top.
+model. There are four keymap presets — **spacemacs** (default), **vim**,
+**helix**, and **emacs** — selectable with `keymap = "..."` in `config.toml` or
+`:keymap <name>` at runtime. The default spacemacs keymap is vim keys (the keys
+you press are the keys vim binds, including operator-pending edits `dd`, `dw`,
+`cw`, `yy` emulated on the Zemacs engine) plus the `SPC` leader and the Emacs
+`C-x` prefix — both open a which-key popup. The pure `vim` preset drops the
+spacemacs layer (no `SPC` leader, no which-key, `C-x` is `decrement`). emacs and
+JetBrains functionality is layered on top throughout.
 
 ## Port report
 

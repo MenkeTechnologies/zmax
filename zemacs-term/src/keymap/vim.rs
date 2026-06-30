@@ -228,8 +228,11 @@ fn add_spacemacs_typables(normal: &mut KeyTrie) {
     }
 }
 
+/// The shared vim/evil base keymap, **including** the spacemacs `SPC` leader.
+/// The `vim` preset ([`default`]) strips the leader from this; the `spacemacs`
+/// preset ([`super::spacemacs::default`]) overlays the Emacs `C-x` prefix on it.
 #[rustfmt::skip]
-pub fn default() -> HashMap<Mode, KeyTrie> {
+pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
     let mut normal = keymap!({ "Normal mode"
         // --- left-hand motions ---------------------------------------------
         "h" | "left"  => move_char_left,
@@ -1904,6 +1907,28 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
     )
 }
 
+/// The **vim** preset: pure vim, with no spacemacs layer. It is [`base`] with
+/// the `SPC` leader removed from Normal and Select modes, so vim shows no
+/// which-key popup and `<Space>` reverts to vim's "move one char right" (extend
+/// in visual). `C-x` stays vim's `decrement`. `decrement` per-line is still on
+/// `g C-x` in either preset.
+pub fn default() -> HashMap<Mode, KeyTrie> {
+    let mut keymap = base();
+    let space = chord("space")[0];
+    if let Some(node) = keymap.get_mut(&Mode::Normal).and_then(KeyTrie::node_mut) {
+        node.shift_remove(&space);
+        node.insert(space, KeyTrie::MappableCommand(MappableCommand::move_char_right));
+    }
+    if let Some(node) = keymap.get_mut(&Mode::Select).and_then(KeyTrie::node_mut) {
+        node.shift_remove(&space);
+        node.insert(
+            space,
+            KeyTrie::MappableCommand(MappableCommand::extend_char_right),
+        );
+    }
+    keymap
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2011,7 +2036,9 @@ mod tests {
 
     #[test]
     fn spacemacs_leader_tree_bound() {
-        let km = default();
+        // The SPC leader lives in the shared base (the spacemacs preset); the
+        // pure `vim` preset strips it.
+        let km = base();
         let n = &km[&Mode::Normal];
         // spacemacs SPC tree resolves to the expected zemacs commands.
         assert_eq!(
@@ -2042,7 +2069,7 @@ mod tests {
         // leader tree as Normal mode — it was previously Normal-only, so a
         // `v`-selection couldn't reach the SPC menu (mouse-drag could, because
         // it stays in Normal mode).
-        let km = default();
+        let km = base();
         let s = &km[&Mode::Select];
         assert_eq!(
             cmd_name(resolve(s, "space f f").unwrap()),
@@ -2063,7 +2090,7 @@ mod tests {
 
     #[test]
     fn spacemacs_typable_bindings_inserted() {
-        let km = default();
+        let km = base();
         let n = &km[&Mode::Normal];
         // SPC f s / SPC q q etc. resolve to typable commands inserted post-macro.
         for (chord_str, _, cmd) in SPACEMACS_TYPABLE.iter().chain(VIM_TYPABLE) {
@@ -2098,7 +2125,7 @@ mod tests {
 
     #[test]
     fn spacemacs_composite_bindings_are_sequences() {
-        let km = default();
+        let km = base();
         let n = &km[&Mode::Normal];
         for chord in ["space j k", "space b Y"] {
             let leaf = resolve(n, chord).unwrap_or_else(|| panic!("{chord} did not resolve"));

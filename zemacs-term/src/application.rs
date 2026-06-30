@@ -1503,6 +1503,7 @@ impl Application {
         self.event_loop(input_stream).await;
 
         self.save_appdata();
+        crate::zemacsinfo::save(&self.editor);
 
         let close_errs = self.close().await;
 
