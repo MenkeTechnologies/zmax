@@ -709,6 +709,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "t" | "C-t" => jump_view_up,      // C-w t: go to top window
             "b" | "C-b" => jump_view_down,    // C-w b: go to bottom window
             "W" => rotate_view_reverse,       // C-w W: go to previous window (wrap)
+            "u" => winner_undo,               // SPC w u : winner-undo (undo window layout)
             "}" => hover,                     // C-w }: show tag under cursor in preview (hover)
             // CTRL-W g ...: tab/file/tag variants (vim's window-goto sub-prefix)
             "g" => { "Window goto"
@@ -773,6 +774,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "m" => wonly,                  // SPC w . m : maximize current window
                 "x" => delete_window_and_buffer, // SPC w . x : delete window + kill buffer
                 "a" => ace_window,             // SPC w . a : ace-window (jump to window by number)
+                "u" => winner_undo,            // SPC w . u : winner-undo (undo window layout)
+                "U" => winner_redo,            // SPC w . U : winner-redo (redo window layout)
                     "g" => golden_ratio_resize,    // SPC w . g : golden-ratio resize
                 "1" => goto_window_1, "2" => goto_window_2, "3" => goto_window_3,
                 "4" => goto_window_4, "5" => goto_window_5, "6" => goto_window_6,
@@ -1047,6 +1050,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "t" | "C-t" => jump_view_up,
                 "b" | "C-b" => jump_view_down,
                 "W" => rotate_view_reverse,
+                "u" => winner_undo,               // SPC w u : winner-undo (undo window layout)
                 "}" => hover,
                 "g" => { "Window goto"
                     "t" => goto_next_buffer,
@@ -1107,6 +1111,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "m" => wonly,                  // SPC w . m : maximize current window
                     "x" => delete_window_and_buffer, // SPC w . x : delete window + kill buffer
                     "a" => ace_window,             // SPC w . a : ace-window (jump to window by number)
+                "u" => winner_undo,            // SPC w . u : winner-undo (undo window layout)
+                "U" => winner_redo,            // SPC w . U : winner-redo (redo window layout)
                     "g" => golden_ratio_resize,    // SPC w . g : golden-ratio resize
                     "1" => goto_window_1, "2" => goto_window_2, "3" => goto_window_3,
                     "4" => goto_window_4, "5" => goto_window_5, "6" => goto_window_6,

@@ -19251,5 +19251,32 @@
    "static:toggle_auto_highlight"
   ],
   "note": "toggle automatic symbol highlight -> toggle_auto_highlight (auto_document_highlight config)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_u",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w u",
+   "static:winner_undo"
+  ],
+  "note": "SPC w u -> winner_undo (winner-mode window-layout undo/redo)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_u",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . u",
+   "static:winner_undo"
+  ],
+  "note": "SPC w . u -> winner_undo (winner-mode window-layout undo/redo)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_x_uU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w . U",
+   "static:winner_redo"
+  ],
+  "note": "SPC w . U -> winner_redo (winner-mode window-layout undo/redo)"
  }
 ]
