@@ -747,6 +747,7 @@ impl MappableCommand {
         resize_view_taller, "Make current window taller (CTRL-W +)",
         resize_view_shorter, "Make current window shorter (CTRL-W -)",
         resize_view_equalize, "Make all windows equal size (CTRL-W =)",
+        golden_ratio_resize, "Resize the focused window to the golden ratio (SPC t g)",
         rot13, "ROT13-encode the selection (g?)",
         url_encode, "Percent-encode (URL-encode) the selection",
         url_decode, "Percent-decode (URL-decode) the selection",
@@ -12642,6 +12643,25 @@ fn resize_view_shorter(cx: &mut Context) {
 
 fn resize_view_equalize(cx: &mut Context) {
     cx.editor.tree.equalize();
+}
+
+/// Resize the focused window to the golden ratio (~62% of the frame), the
+/// primary effect of Spacemacs golden-ratio mode (SPC t g / SPC w . g). Uses
+/// only the public resize APIs — no core layout surgery.
+fn golden_ratio_resize(cx: &mut Context) {
+    const PHI: f32 = 0.618;
+    cx.editor.tree.equalize();
+    let total = cx.editor.tree.area();
+    let focus = cx.editor.tree.focus;
+    let cur = cx.editor.tree.get(focus).area;
+    let dw = (total.width as f32 * PHI) as i16 - cur.width as i16;
+    let dh = (total.height as f32 * PHI) as i16 - cur.height as i16;
+    if dw > 0 {
+        cx.editor.tree.resize_horizontal(focus, dw);
+    }
+    if dh > 0 {
+        cx.editor.tree.resize_vertical(focus, dh);
+    }
 }
 
 // --- digraphs (vim i_CTRL-K {char1}{char2}) ----------------------------------
