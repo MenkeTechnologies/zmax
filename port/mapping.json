@@ -18434,19 +18434,19 @@
  },
  {
   "spec_id": "jetbrains.refactoring.introduce-field",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:extract_refactor"
+   "static:extract_field"
   ],
-  "note": "dedicated refactor.extract code actions (kind-filtered menu)"
+  "note": "pinned refactor.extract action by title; applies the single match directly (server-dependent, menu fallback if ambiguous)"
  },
  {
   "spec_id": "jetbrains.refactoring.introduce-parameter",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:extract_refactor"
+   "static:extract_parameter"
   ],
-  "note": "dedicated refactor.extract code actions (kind-filtered menu)"
+  "note": "pinned refactor.extract action by title; applies the single match directly (server-dependent, menu fallback if ambiguous)"
  },
  {
   "spec_id": "jetbrains.refactoring.safe-delete",

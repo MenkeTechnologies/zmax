@@ -575,6 +575,8 @@ impl MappableCommand {
         extract_function, "Extract Method/Function via LSP (IntelliJ Extract Method)",
         extract_variable, "Introduce Variable via LSP (IntelliJ Introduce Variable)",
         extract_constant, "Extract Constant via LSP (IntelliJ Extract Constant)",
+        extract_field, "Introduce Field via LSP (IntelliJ Introduce Field)",
+        extract_parameter, "Introduce Parameter via LSP (IntelliJ Introduce Parameter)",
         inline_refactor, "Inline refactoring (variable/method) via LSP (IntelliJ Inline)",
         rewrite_refactor, "Rewrite refactoring (change signature etc.) via LSP",
         refactor_this, "Show all applicable refactorings (IntelliJ Refactor This)",

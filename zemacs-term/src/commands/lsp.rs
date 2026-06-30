@@ -643,6 +643,28 @@ pub fn extract_constant(cx: &mut Context) {
     );
 }
 
+/// Pin Introduce Field: the single `refactor.extract` action whose title names a
+/// field (IntelliJ Introduce Field). Available only on servers that offer it.
+pub fn extract_field(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
+        Some(&["field"]),
+        "No introduce-field refactoring available here",
+    );
+}
+
+/// Pin Introduce Parameter: the single `refactor.extract` action whose title
+/// names a parameter (IntelliJ Introduce Parameter). Server-dependent.
+pub fn extract_parameter(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
+        Some(&["parameter"]),
+        "No introduce-parameter refactoring available here",
+    );
+}
+
 /// Request only `refactor.inline` actions (Inline Variable/Method) — IntelliJ's
 /// Inline refactoring.
 pub fn inline_refactor(cx: &mut Context) {
