@@ -2701,7 +2701,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -18714,5 +18714,109 @@
    "typable:git-stage"
   ],
   "note": "stage ~ add to vcs"
+ },
+ {
+  "spec_id": "jetbrains.window.close-tab",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.window.close-all-tabs",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close-all"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.window.close-other-tabs",
+  "status": "ported",
+  "evidence": [
+   "typable:buffer-close-others"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.window.split-right",
+  "status": "ported",
+  "evidence": [
+   "static:vsplit"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.window.split-down",
+  "status": "ported",
+  "evidence": [
+   "static:hsplit"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.window.unsplit-all",
+  "status": "ported",
+  "evidence": [
+   "static:wonly"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.window.goto-next-splitter",
+  "status": "ported",
+  "evidence": [
+   "static:rotate_view"
+  ],
+  "note": "cycle splits"
+ },
+ {
+  "spec_id": "jetbrains.window.move-to-opposite-group",
+  "status": "partial",
+  "evidence": [
+   "static:transpose_view"
+  ],
+  "note": "transpose split orientation"
+ },
+ {
+  "spec_id": "jetbrains.window.reopen-closed-tab",
+  "status": "ported",
+  "evidence": [
+   "static:reopen_last_closed"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.navigation.go-to-next-bookmark",
+  "status": "partial",
+  "evidence": [
+   "static:harpoon_next"
+  ],
+  "note": "harpoon pin ~ bookmark"
+ },
+ {
+  "spec_id": "jetbrains.navigation.go-to-previous-bookmark",
+  "status": "partial",
+  "evidence": [
+   "static:harpoon_prev"
+  ],
+  "note": "harpoon pin ~ bookmark"
+ },
+ {
+  "spec_id": "jetbrains.navigation.jump-to-source",
+  "status": "partial",
+  "evidence": [
+   "static:goto_definition"
+  ],
+  "note": "jump to source ~ go to definition"
+ },
+ {
+  "spec_id": "jetbrains.search.find-word-at-caret",
+  "status": "ported",
+  "evidence": [
+   "static:search_selection"
+  ],
+  "note": "jetbrains"
  }
 ]

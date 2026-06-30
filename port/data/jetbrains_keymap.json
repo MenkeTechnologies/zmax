@@ -1326,5 +1326,109 @@
   "name": "Add to VCS",
   "desc": "IntelliJ IDEA default keymap: Cmd Alt A",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.close-tab",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Close Tab",
+  "desc": "IntelliJ IDEA default keymap: Cmd W",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.close-all-tabs",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Close All Tabs",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.close-other-tabs",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Close Other Tabs",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.split-right",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Split and Move Right",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.split-down",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Split and Move Down",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.unsplit-all",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Unsplit All",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.goto-next-splitter",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Goto Next Splitter",
+  "desc": "IntelliJ IDEA default keymap: Cmd Alt Right",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.move-to-opposite-group",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Move to Opposite Tab Group",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.window.reopen-closed-tab",
+  "source": "jetbrains",
+  "category": "window",
+  "name": "Reopen Closed Tab",
+  "desc": "IntelliJ IDEA default keymap: Cmd Shift T",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.navigation.go-to-next-bookmark",
+  "source": "jetbrains",
+  "category": "navigation",
+  "name": "Next Bookmark",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.navigation.go-to-previous-bookmark",
+  "source": "jetbrains",
+  "category": "navigation",
+  "name": "Previous Bookmark",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.navigation.jump-to-source",
+  "source": "jetbrains",
+  "category": "navigation",
+  "name": "Jump to Source",
+  "desc": "IntelliJ IDEA default keymap: F4",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.search.find-word-at-caret",
+  "source": "jetbrains",
+  "category": "search",
+  "name": "Find Word at Caret",
+  "desc": "IntelliJ IDEA default keymap: Cmd F3",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]
