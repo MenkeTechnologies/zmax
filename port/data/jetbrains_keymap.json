@@ -1166,5 +1166,165 @@
   "name": "Settings",
   "desc": "IntelliJ IDEA default keymap: Cmd Comma",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.editing.delete-to-word-end",
+  "source": "jetbrains",
+  "category": "editing",
+  "name": "Delete to Word End",
+  "desc": "IntelliJ IDEA default keymap: Alt Delete",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.editing.delete-to-word-start",
+  "source": "jetbrains",
+  "category": "editing",
+  "name": "Delete to Word Start",
+  "desc": "IntelliJ IDEA default keymap: Cmd Delete",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.navigation.go-to-class",
+  "source": "jetbrains",
+  "category": "navigation",
+  "name": "Class",
+  "desc": "IntelliJ IDEA default keymap: Cmd O",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.navigation.recent-locations",
+  "source": "jetbrains",
+  "category": "navigation",
+  "name": "Recent Locations",
+  "desc": "IntelliJ IDEA default keymap: Cmd Shift E",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.navigation.navigate-to-test",
+  "source": "jetbrains",
+  "category": "navigation",
+  "name": "Test",
+  "desc": "IntelliJ IDEA default keymap: Cmd Shift T",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.navigation.jump-to-navigation-bar",
+  "source": "jetbrains",
+  "category": "navigation",
+  "name": "Jump to Navigation Bar",
+  "desc": "IntelliJ IDEA default keymap: Cmd Up",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.navigate-from-symbol.quick-definition",
+  "source": "jetbrains",
+  "category": "navigate-from-symbol",
+  "name": "Quick Definition",
+  "desc": "IntelliJ IDEA default keymap: Cmd Y",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.navigate-from-symbol.type-hierarchy",
+  "source": "jetbrains",
+  "category": "navigate-from-symbol",
+  "name": "Type Hierarchy",
+  "desc": "IntelliJ IDEA default keymap: Ctrl H",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.navigate-from-symbol.call-hierarchy",
+  "source": "jetbrains",
+  "category": "navigate-from-symbol",
+  "name": "Call Hierarchy",
+  "desc": "IntelliJ IDEA default keymap: Ctrl Alt H",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.coding-assistance.smart-completion",
+  "source": "jetbrains",
+  "category": "coding-assistance",
+  "name": "Smart Type Completion",
+  "desc": "IntelliJ IDEA default keymap: Ctrl Shift Space",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.coding-assistance.override-methods",
+  "source": "jetbrains",
+  "category": "coding-assistance",
+  "name": "Override Methods",
+  "desc": "IntelliJ IDEA default keymap: Ctrl O",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.coding-assistance.implement-methods",
+  "source": "jetbrains",
+  "category": "coding-assistance",
+  "name": "Implement Methods",
+  "desc": "IntelliJ IDEA default keymap: Ctrl I",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.coding-assistance.optimize-imports",
+  "source": "jetbrains",
+  "category": "coding-assistance",
+  "name": "Optimize Imports",
+  "desc": "IntelliJ IDEA default keymap: Ctrl Alt O",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.coding-assistance.cyclic-expand-word",
+  "source": "jetbrains",
+  "category": "coding-assistance",
+  "name": "Cyclic Expand Word",
+  "desc": "IntelliJ IDEA default keymap: Alt Slash",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.run-debug.rerun",
+  "source": "jetbrains",
+  "category": "run-debug",
+  "name": "Rerun",
+  "desc": "IntelliJ IDEA default keymap: Ctrl F5",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.run-debug.resume-program",
+  "source": "jetbrains",
+  "category": "run-debug",
+  "name": "Resume Program",
+  "desc": "IntelliJ IDEA default keymap: Cmd Alt R",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.run-debug.smart-step-into",
+  "source": "jetbrains",
+  "category": "run-debug",
+  "name": "Smart Step Into",
+  "desc": "IntelliJ IDEA default keymap: Shift F7",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.vcs.show-history",
+  "source": "jetbrains",
+  "category": "vcs",
+  "name": "Show History",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.vcs.annotate",
+  "source": "jetbrains",
+  "category": "vcs",
+  "name": "Annotate with Git Blame",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.vcs.add-to-vcs",
+  "source": "jetbrains",
+  "category": "vcs",
+  "name": "Add to VCS",
+  "desc": "IntelliJ IDEA default keymap: Cmd Alt A",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]
