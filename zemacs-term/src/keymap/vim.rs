@@ -1232,7 +1232,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "d" => file_explorer,              // SPC p d : find directory
                 "g" => symbol_picker,              // SPC p g : find tags
                 "o" => global_search,              // SPC p o : multi-occur
-                "a" => goto_next_test,             // SPC p a : toggle implementation/test
+                "a" => toggle_test_file,           // SPC p a : toggle implementation/test file
                 "'" => terminal,                   // SPC p ' : open a shell in the project root
                 "c" => run_active_config,          // SPC p c : compile project (run active config)
                 "u" => run_active_config,          // SPC p u : run project (run active config)

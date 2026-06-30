@@ -319,6 +319,7 @@ impl MappableCommand {
         move_line_down, "Move down",
         drag_line_down, "Drag the current line down (SPC x . j)",
         drag_line_up, "Drag the current line up (SPC x . k)",
+        toggle_test_file, "Toggle between implementation and test file (SPC p a)",
         move_visual_line_up, "Move up",
         move_visual_line_down, "Move down",
         extend_char_left, "Extend left",
@@ -14668,6 +14669,72 @@ fn goto_prev_test(cx: &mut Context) {
     goto_ts_object_impl(cx, "test", Direction::Backward)
 }
 
+/// Candidate counterpart file names for impl<->test toggling. If `name` looks
+/// like a test file, returns the implementation name; otherwise returns common
+/// test-file names. Pure (tested).
+fn test_counterpart_names(name: &str) -> Vec<String> {
+    let (stem, dotext) = match name.rfind('.') {
+        Some(i) => (&name[..i], &name[i..]),
+        None => (name, ""),
+    };
+    let mut out = Vec::new();
+    if let Some(s) = stem.strip_suffix("_test").or_else(|| stem.strip_suffix("_spec")) {
+        out.push(format!("{s}{dotext}"));
+    }
+    if let Some(s) = stem.strip_prefix("test_").or_else(|| stem.strip_prefix("spec_")) {
+        out.push(format!("{s}{dotext}"));
+    }
+    if let Some(s) = stem.strip_suffix(".test").or_else(|| stem.strip_suffix(".spec")) {
+        out.push(format!("{s}{dotext}"));
+    }
+    if !out.is_empty() {
+        return out;
+    }
+    out.push(format!("{stem}_test{dotext}"));
+    out.push(format!("{stem}_spec{dotext}"));
+    out.push(format!("test_{stem}{dotext}"));
+    if !dotext.is_empty() {
+        let ext = &dotext[1..];
+        out.push(format!("{stem}.test.{ext}"));
+        out.push(format!("{stem}.spec.{ext}"));
+    }
+    out
+}
+
+/// SPC p a: toggle between an implementation file and its test counterpart,
+/// trying common naming conventions in the same directory and a `tests/` sibling.
+fn toggle_test_file(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    let Some(name) = path.file_name().and_then(|n| n.to_str()).map(String::from) else {
+        return;
+    };
+    let dir = path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+    let cands = test_counterpart_names(&name);
+    // search dirs: same dir, a `tests/` subdir, and a sibling `tests/` dir
+    let mut dirs = vec![dir.clone(), dir.join("tests")];
+    if let Some(parent) = dir.parent() {
+        dirs.push(parent.join("tests"));
+        dirs.push(parent.join("src"));
+    }
+    for d in &dirs {
+        for cand in &cands {
+            let p = d.join(cand);
+            if p.exists() && p != path {
+                match cx.editor.open(&p, Action::Replace) {
+                    Ok(_) => cx.editor.set_status(format!("→ {}", p.display())),
+                    Err(e) => cx.editor.set_error(format!("{e}")),
+                }
+                return;
+            }
+        }
+    }
+    cx.editor
+        .set_status("no implementation/test counterpart found");
+}
+
 fn goto_next_xml_element(cx: &mut Context) {
     goto_ts_object_impl(cx, "xml-element", Direction::Forward)
 }
@@ -15906,6 +15973,18 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn test_counterpart_names_both_directions() {
+        // impl -> test candidates
+        let c = test_counterpart_names("foo.rs");
+        assert!(c.contains(&"foo_test.rs".to_string()));
+        assert!(c.contains(&"test_foo.rs".to_string()));
+        // test -> impl
+        assert_eq!(test_counterpart_names("foo_test.rs"), vec!["foo.rs".to_string()]);
+        assert_eq!(test_counterpart_names("test_foo.py"), vec!["foo.py".to_string()]);
+        assert_eq!(test_counterpart_names("foo.test.js"), vec!["foo.js".to_string()]);
     }
 
     #[test]

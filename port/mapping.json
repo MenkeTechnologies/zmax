@@ -6841,7 +6841,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_p_a",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space p a"
   ],
