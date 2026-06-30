@@ -1381,6 +1381,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             },
             "v" => expand_selection,               // SPC v : expand region
             "x" => { "Text"
+                "." => { "Drag"
+                    "j" | "down" => drag_line_down,    // SPC x . j : drag line down
+                    "k" | "up" => drag_line_up,        // SPC x . k : drag line up
+                    "J" => drag_line_down,
+                    "K" => drag_line_up,
+                },
                 "c" => count_selection,            // SPC x c : count chars/words/lines
                 "u" => switch_to_lowercase,        // SPC x u : lowercase
                 "U" => switch_to_uppercase,        // SPC x U : uppercase the selection

@@ -317,6 +317,8 @@ impl MappableCommand {
         move_char_right, "Move right",
         move_line_up, "Move up",
         move_line_down, "Move down",
+        drag_line_down, "Drag the current line down (SPC x . j)",
+        drag_line_up, "Drag the current line up (SPC x . k)",
         move_visual_line_up, "Move up",
         move_visual_line_down, "Move down",
         extend_char_left, "Extend left",
@@ -1173,6 +1175,65 @@ fn move_line_up(cx: &mut Context) {
 fn move_line_down(cx: &mut Context) {
     move_impl(cx, move_vertically, Direction::Forward, Movement::Move)
 }
+
+/// Reorder two adjacent lines: line A (with its trailing newline) and the next
+/// line B (which may lack a trailing newline if it's the final line) → the
+/// region text with B before A, preserving newline structure. Pure (tested).
+fn reorder_two_lines(a: &str, b: &str, le: &str) -> String {
+    if a.ends_with('\n') && !b.ends_with('\n') {
+        format!("{}{}{}", b, le, a.trim_end_matches(['\n', '\r']))
+    } else {
+        format!("{}{}", b, a)
+    }
+}
+
+/// Drag the current line down/up, moving the cursor with it (Spacemacs
+/// drag-stuff). Minimal two-line transaction (no whole-buffer rewrite).
+fn drag_line(cx: &mut Context, down: bool) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let n = text.len_lines();
+    if n == 0 || text.len_chars() == 0 {
+        return;
+    }
+    let ends_nl = text.char(text.len_chars() - 1) == '\n';
+    let real_last = if ends_nl {
+        n.saturating_sub(2)
+    } else {
+        n.saturating_sub(1)
+    };
+    let slice = text.slice(..);
+    let cur = text
+        .char_to_line(doc.selection(view.id).primary().cursor(slice))
+        .min(real_last);
+    let (a, b) = if down {
+        if cur >= real_last {
+            return;
+        }
+        (cur, cur + 1)
+    } else {
+        if cur == 0 {
+            return;
+        }
+        (cur - 1, cur)
+    };
+    let a_start = text.line_to_char(a);
+    let b_start = text.line_to_char(b);
+    let b_end = text.line_to_char((b + 1).min(n));
+    let la = text.slice(a_start..b_start).to_string();
+    let lb = text.slice(b_start..b_end).to_string();
+    let le = doc.line_ending.as_str();
+    let swapped = reorder_two_lines(&la, &lb, le);
+    let transaction =
+        Transaction::change(text, std::iter::once((a_start, b_end, Some(swapped.into()))));
+    doc.apply(&transaction, view.id);
+    let (view, doc) = current!(cx.editor);
+    let target = (if down { b } else { a }).min(doc.text().len_lines().saturating_sub(1));
+    let pos = doc.text().line_to_char(target);
+    doc.set_selection(view.id, Selection::point(pos));
+}
+fn drag_line_down(cx: &mut Context) { drag_line(cx, true) }
+fn drag_line_up(cx: &mut Context) { drag_line(cx, false) }
 
 fn move_visual_line_up(cx: &mut Context) {
     move_impl(
@@ -15825,6 +15886,14 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn reorder_two_lines_handles_newlines() {
+        // middle lines: both have trailing newlines
+        assert_eq!(reorder_two_lines("foo\n", "bar\n", "\n"), "bar\nfoo\n");
+        // B is the final line (no trailing newline): B gains one, A loses it
+        assert_eq!(reorder_two_lines("foo\n", "bar", "\n"), "bar\nfoo");
     }
 
     #[test]

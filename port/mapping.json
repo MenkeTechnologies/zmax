@@ -18462,5 +18462,13 @@
    "key:normal:space p v"
   ],
   "note": "open project in magit -> git_status"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x . j"
+  ],
+  "note": ""
  }
 ]
