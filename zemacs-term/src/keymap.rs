@@ -1,22 +1,25 @@
 pub mod default;
 pub mod emacs;
 pub mod macros;
+pub mod spacemacs;
 pub mod vim;
 
 pub use crate::commands::MappableCommand;
-// zemacs ships the vim keymap as the default keymap that `Config` loads.
-// The Helix selection-first keymap remains available as `default::default`
-// (module path) for reference, but is no longer what the editor binds.
-pub use vim::default;
+// zemacs ships the spacemacs keymap as the default keymap that `Config` loads:
+// vim/evil keys + the `SPC` leader + the Emacs `C-x` prefix. The pure-vim base
+// is `vim::default`, and the Helix selection-first keymap remains available as
+// `default::default` (module path) for reference, but neither is the default.
+pub use spacemacs::default;
 
 /// The keymap preset names selectable via `keymap = "..."` in config.toml and
 /// the `:keymap` command.
-pub const PRESETS: &[&str] = &["vim", "helix", "emacs"];
+pub const PRESETS: &[&str] = &["spacemacs", "vim", "helix", "emacs"];
 
 /// Resolve a named keymap preset to its base keybindings. Returns `None` for an
 /// unknown name so callers can report it.
 pub fn preset(name: &str) -> Option<HashMap<Mode, KeyTrie>> {
     match name {
+        "spacemacs" => Some(spacemacs::default()),
         "vim" => Some(vim::default()),
         "helix" => Some(default::default()),
         "emacs" => Some(emacs::default()),
@@ -25,8 +28,8 @@ pub fn preset(name: &str) -> Option<HashMap<Mode, KeyTrie>> {
 }
 
 /// The mode the editor should start in for a keymap preset. Emacs is modeless
-/// (you are always inserting), so it starts in Insert; the modal keymaps start
-/// in Normal.
+/// (you are always inserting), so it starts in Insert; the modal keymaps
+/// (spacemacs, vim, helix) start in Normal.
 pub fn default_mode(name: &str) -> Mode {
     match name {
         "emacs" => Mode::Insert,
@@ -388,8 +391,8 @@ impl Keymaps {
 
 impl Default for Keymaps {
     fn default() -> Self {
-        // zemacs ships the vim keymap as the default (see keymap/vim.rs).
-        Self::new(Box::new(ArcSwap::new(Arc::new(vim::default()))))
+        // zemacs ships the spacemacs keymap as the default (see keymap/spacemacs.rs).
+        Self::new(Box::new(ArcSwap::new(Arc::new(spacemacs::default()))))
     }
 }
 

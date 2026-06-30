@@ -74,7 +74,9 @@ const TOPICS: &[(&str, &str)] = &[
         "Welcome to zemacs",
         "zemacs is a hackable modal editor with a full IDE shell (project tree, structure, \
       problems, run window, git, minimap) and a vim-faithful keymap.\n\n\
-      • Press SPC (space) for the leader menu.\n\
+      • Four keymap presets: spacemacs (default), vim, helix, emacs.  Switch with\n\
+        :keymap <name> or in Preferences ▸ Keymap.\n\
+      • Press SPC (space) for the leader menu; press C-x for the emacs prefix.\n\
       • SPC , opens Preferences (Settings, Keymap, Color Scheme, Run Configs).\n\
       • SPC h opens this Help.\n\
       • : opens the command line; SPC SPC is the command palette (M-x).",
@@ -133,9 +135,17 @@ const TOPICS: &[(&str, &str)] = &[
     ),
     (
         "The leader (SPC) menu",
-        "SPC is the spacemacs-style leader.  A which-key popup shows the next keys.\n\
-      SPC f  files, SPC b  buffers, SPC s  search, SPC g  git, SPC p  project,\n\
-      SPC w  windows, SPC R  run, SPC ,  preferences, SPC h  help.",
+        "In the spacemacs keymap (default) SPC is the leader.  A which-key popup shows\n\
+      the next keys.  SPC f  files, SPC b  buffers, SPC s  search, SPC g  git,\n\
+      SPC p  project, SPC w  windows, SPC R  run, SPC ,  preferences, SPC h  help.\n\
+      (The pure vim keymap has no SPC leader and shows no which-key popup.)",
+    ),
+    (
+        "The C-x prefix (emacs/spacemacs)",
+        "In the spacemacs (default) and emacs keymaps, C-x is the Emacs command prefix\n\
+      and opens a which-key popup.  C-x C-s save, C-x C-f find-file, C-x b buffer,\n\
+      C-x k kill-buffer, C-x o other-window, C-x 0/1/2/3 windows, C-x r registers/\n\
+      rectangles/bookmarks, C-x C-c quit.  (In the vim keymap C-x is decrement.)",
     ),
     (
         "Preferences (SPC ,)",
