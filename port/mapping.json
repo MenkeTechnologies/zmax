@@ -18456,6 +18456,30 @@
   "note": "jetbrains run to cursor"
  },
  {
+  "spec_id": "jetbrains.multiple-carets.toggle-column-selection-mode",
+  "status": "partial",
+  "evidence": [
+   "static:copy_selection_on_next_line"
+  ],
+  "note": "column carets via copy_selection_on_next_line (C) ~ column selection mode"
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.complete-current-statement",
+  "status": "partial",
+  "evidence": [
+   "static:open_below"
+  ],
+  "note": "open line below to continue ~ complete-statement (no semantic syntax insertion)"
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.generate",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "LSP code action menu ~ Generate (getters/constructors)"
+ },
+ {
   "spec_id": "spacemacs.keybinding.spc_p_v",
   "status": "ported",
   "evidence": [
@@ -18492,6 +18516,22 @@
   "status": "ported",
   "evidence": [
    "key:normal:space x r t"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_k_k",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t k k"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_u_spc_b_dU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space u space b D"
   ],
   "note": ""
  }

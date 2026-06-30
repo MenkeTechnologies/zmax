@@ -141,6 +141,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t h c", "Toggles", ":toggle cursorcolumn"),                // SPC t h c : highlight current column
     ("space t C-S-l", "Toggles", ":toggle soft-wrap.enable"),          // SPC t C-S-l : visual line navigation
     ("space t K", "Toggles", ":toggle auto-info"),                     // SPC t K : which-key (auto-info) mode
+    ("space t k k", "Toggles", ":toggle auto-info"),                   // SPC t k k : which-key persistent state
     ("space t p", "Toggles", ":toggle auto-pairs"),                    // SPC t p : smartparens (auto-pairs)
     ("space t C-p", "Toggles", ":toggle auto-pairs"),                  // SPC t C-p : global smartparens
     // SPC T c (theme_picker) is a static command, bound in the macro keymap below.
@@ -159,6 +160,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space e y",   "Errors",  ":yank-diagnostic"),                   // SPC e y : copy error at point
     ("space x x",   "Text",    ":run-shell-command"),                 // SPC x x : quickrun (run a command)
     ("space u space b d", "Universal", ":buffer-close"),              // SPC u SPC b d : kill buffer + window
+    ("space u space b D", "Universal", "delete_window_and_buffer"),   // SPC u SPC b D : kill visible buffer + window
     ("space u space b m", "Universal", ":buffer-close-others"),       // SPC u SPC b m : kill other buffers
     ("space b . d", "Buffers", ":buffer-close"),                     // SPC b . d : kill current buffer
     ("space b . x", "Buffers", ":buffer-close"),                     // SPC b . x : kill buffer and window
