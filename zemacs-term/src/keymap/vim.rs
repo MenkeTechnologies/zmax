@@ -91,6 +91,10 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space g L",   "Git",     "git_repo_log_picker"),                   // SPC g L : repo commit log (:Commits)
     ("space g S",   "Git",     ":git-stage"),                           // SPC g S : stage current file
     ("space g U",   "Git",     ":git-unstage"),                         // SPC g U : unstage current file
+    ("space g i",   "Git",     "git_init"),                             // SPC g i : initialize a new git repo
+    ("space g f d", "Git",     "git_diff"),                             // SPC g f d : diff current file vs HEAD
+    ("space g f m", "Git",     "git_status"),                           // SPC g f m : magit dispatch (status)
+    ("space g f f", "Git",     "git_file_log_picker"),                  // SPC g f f : view file at a branch/commit (log)
     ("space f e d", "Files",   ":config-open"),                          // SPC f e d : open dotfile/config
     ("space q f",   "Quit",    ":quit"),                                 // SPC q f : kill frame
     ("space b s",   "Buffers", ":new"),                                  // SPC b s : scratch buffer
@@ -863,8 +867,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "f" => file_picker,                            // SPC f f
                 "l" => file_picker,                            // SPC f l : open file literally
                 "A" => file_picker,                            // SPC f A : open file, replace buffer
-                "o" => goto_file,                              // SPC f o : open with external program
+                "o" => open_file_external,                     // SPC f o : open with external program
                 "F" => goto_file,                              // SPC f F : open file under point
+                "h" => open_hex,                               // SPC f h : open binary file in hex editor (hexl)
                 "L" => file_picker,                            // SPC f L : locate a file
                 "b" => marks_picker,                           // SPC f b : go to file bookmarks (marks)
                 "r" => frecent_file_picker,                    // SPC f r : recent files (z frecency)
@@ -912,10 +917,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "m" => changed_file_picker,        // SPC b m
                 "W" => buffer_picker,              // SPC b W : go to buffer (workspace/window)
                 "N" => { "New buffer"
-                    "h" => hsplit_new,             // SPC b N h : new buffer in window left
+                    "h" => vsplit_new,             // SPC b N h : new buffer in window left (vertical split)
                     "j" => hsplit_new,             // SPC b N j : new buffer in window below
                     "k" => hsplit_new,             // SPC b N k : new buffer in window above
-                    "l" => hsplit_new,             // SPC b N l : new buffer in window right
+                    "l" => vsplit_new,             // SPC b N l : new buffer in window right (vertical split)
                     // SPC b N n / i / C-i -> :new via typable table
                 },
                 "." => { "Buffer transient"
