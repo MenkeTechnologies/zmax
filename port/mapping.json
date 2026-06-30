@@ -19067,5 +19067,13 @@
    "static:transpose_view"
   ],
   "note": "transpose split orientation"
+ },
+ {
+  "spec_id": "jetbrains.view.toggle-soft-wrap",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_soft_wrap"
+  ],
+  "note": "toggle soft-wrap of long lines"
  }
 ]

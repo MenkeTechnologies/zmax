@@ -1662,5 +1662,13 @@
   "name": "Change Splitter Orientation",
   "desc": "IntelliJ IDEA default keymap",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.view.toggle-soft-wrap",
+  "source": "jetbrains",
+  "category": "view",
+  "name": "Soft-Wrap",
+  "desc": "IntelliJ IDEA default keymap: View > Active Editor > Soft-Wrap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]
