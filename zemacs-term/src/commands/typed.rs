@@ -2747,6 +2747,146 @@ fn tab_last(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+fn tab_move(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let to = match args.first().and_then(|s| s.parse::<usize>().ok()) {
+        Some(n) => n,
+        None => cx.editor.tab_count().saturating_sub(1),
+    };
+    cx.editor.move_current_tab(to);
+    Ok(())
+}
+
+fn tab_do(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cmd = args.join(" ");
+    if cmd.trim().is_empty() {
+        bail!("usage: :tabdo <command>");
+    }
+    for i in 0..cx.editor.tab_count() {
+        cx.editor.switch_tab(i);
+        run_command_line(cx, &cmd);
+    }
+    Ok(())
+}
+
+fn tabs_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call = job::Callback::EditorCompositor(Box::new(|editor, compositor| {
+        compositor.push(crate::commands::build_tabs_picker(editor));
+    }));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+// --- Quickfix/location extensions: :cdo, :clist, history, add-variants -----
+
+/// `:cdo`/`:cfdo`/`:ldo`/`:lfdo` — run an ex-command on each list entry (or the
+/// first entry of each file).
+fn qf_do(
+    cx: &mut compositor::Context,
+    kind: QfKind,
+    per_file: bool,
+    args: &Args,
+) -> anyhow::Result<()> {
+    let cmd = args.join(" ");
+    if cmd.trim().is_empty() {
+        bail!("usage: :cdo <command>");
+    }
+    let entries = crate::commands::qf_snapshot(cx.editor, kind);
+    if entries.is_empty() {
+        bail!("list is empty");
+    }
+    let mut seen_files = std::collections::HashSet::new();
+    for (i, e) in entries.iter().enumerate() {
+        if per_file && !seen_files.insert(e.path.clone()) {
+            continue;
+        }
+        crate::commands::qf_jump_nth(cx.editor, kind, Some(i + 1));
+        run_command_line(cx, &cmd);
+    }
+    Ok(())
+}
+
+qf_nav_cmd!(quickfix_do_cmd, QfKind::Quickfix, |cx, a| qf_do(
+    cx,
+    QfKind::Quickfix,
+    false,
+    a
+));
+qf_nav_cmd!(quickfix_fdo_cmd, QfKind::Quickfix, |cx, a| qf_do(
+    cx,
+    QfKind::Quickfix,
+    true,
+    a
+));
+qf_nav_cmd!(loclist_do_cmd, QfKind::Location, |cx, a| qf_do(
+    cx,
+    QfKind::Location,
+    false,
+    a
+));
+qf_nav_cmd!(loclist_fdo_cmd, QfKind::Location, |cx, a| qf_do(
+    cx,
+    QfKind::Location,
+    true,
+    a
+));
+qf_nav_cmd!(quickfix_list_cmd, QfKind::Quickfix, |cx, _a| {
+    qf_open_window(cx, QfKind::Quickfix);
+    Ok(())
+});
+qf_nav_cmd!(loclist_list_cmd, QfKind::Location, |cx, _a| {
+    qf_open_window(cx, QfKind::Location);
+    Ok(())
+});
+qf_nav_cmd!(quickfix_older_cmd, QfKind::Quickfix, |cx, _a| {
+    crate::commands::qf_history_go(cx.editor, -1);
+    Ok(())
+});
+qf_nav_cmd!(quickfix_newer_cmd, QfKind::Quickfix, |cx, _a| {
+    crate::commands::qf_history_go(cx.editor, 1);
+    Ok(())
+});
+qf_nav_cmd!(quickfix_history_cmd, QfKind::Quickfix, |cx, _a| {
+    crate::commands::qf_history_info(cx.editor);
+    Ok(())
+});
+qf_nav_cmd!(quickfix_addfile_cmd, QfKind::Quickfix, |cx, a| {
+    let path = a.join(" ");
+    if path.trim().is_empty() {
+        bail!("usage: :caddfile <path>");
+    }
+    let t = std::fs::read_to_string(path.trim())?;
+    qf_populate(cx, QfKind::Quickfix, &t, true, false)
+});
+qf_nav_cmd!(loclist_addbuffer_cmd, QfKind::Location, |cx, _a| {
+    let t = current_buffer_text(cx);
+    qf_populate(cx, QfKind::Location, &t, true, false)
+});
+qf_nav_cmd!(loclist_addexpr_cmd, QfKind::Location, |cx, a| {
+    let t = a.join(" ");
+    qf_populate(cx, QfKind::Location, &t, true, false)
+});
+qf_nav_cmd!(loclist_addfile_cmd, QfKind::Location, |cx, a| {
+    let path = a.join(" ");
+    if path.trim().is_empty() {
+        bail!("usage: :laddfile <path>");
+    }
+    let t = std::fs::read_to_string(path.trim())?;
+    qf_populate(cx, QfKind::Location, &t, true, false)
+});
+qf_nav_cmd!(loclist_pfile_cmd, QfKind::Location, |cx, _a| {
+    crate::commands::qf_step_file(cx.editor, QfKind::Location, false);
+    Ok(())
+});
+
 /// `:shell-quote` — wrap the selection in safe shell single-quotes (for pasting a
 /// path or string into a shell command). Reuses [`shell_single_quote`].
 fn shell_quote_cmd(
@@ -15493,6 +15633,143 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "tabmove",
+        aliases: &["tabm"],
+        doc: "Move the current tabpage to position [N] (default: last).",
+        fun: tab_move,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tabdo",
+        aliases: &[],
+        doc: "Run an ex-command in every tabpage.",
+        fun: tab_do,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tabs",
+        aliases: &[],
+        doc: "List the tabpages and switch to the selected one.",
+        fun: tabs_list,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    // --- Quickfix/location extensions ---
+    TypableCommand {
+        name: "cdo",
+        aliases: &[],
+        doc: "Run an ex-command on each quickfix entry.",
+        fun: quickfix_do_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cfdo",
+        aliases: &[],
+        doc: "Run an ex-command on the first quickfix entry of each file.",
+        fun: quickfix_fdo_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "ldo",
+        aliases: &[],
+        doc: "Run an ex-command on each location list entry.",
+        fun: loclist_do_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lfdo",
+        aliases: &[],
+        doc: "Run an ex-command on the first location entry of each file.",
+        fun: loclist_fdo_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "clist",
+        aliases: &["cl"],
+        doc: "Show the quickfix list.",
+        fun: quickfix_list_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "llist",
+        aliases: &["lli"],
+        doc: "Show the location list.",
+        fun: loclist_list_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "colder",
+        aliases: &["col"],
+        doc: "Go to an older quickfix list.",
+        fun: quickfix_older_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cnewer",
+        aliases: &["cnew"],
+        doc: "Go to a newer quickfix list.",
+        fun: quickfix_newer_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "chistory",
+        aliases: &["chi"],
+        doc: "Show the quickfix list history position.",
+        fun: quickfix_history_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "caddfile",
+        aliases: &[],
+        doc: "Append a file of error lines to the quickfix list.",
+        fun: quickfix_addfile_cmd,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "laddbuffer",
+        aliases: &[],
+        doc: "Append the current buffer's error lines to the location list.",
+        fun: loclist_addbuffer_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "laddexpr",
+        aliases: &[],
+        doc: "Append the argument text's entries to the location list.",
+        fun: loclist_addexpr_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "laddfile",
+        aliases: &[],
+        doc: "Append a file of error lines to the location list.",
+        fun: loclist_addfile_cmd,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lpfile",
+        aliases: &["lpf"],
+        doc: "Jump to the last location entry in the previous file.",
+        fun: loclist_pfile_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "shell-quote",
         aliases: &["sh-quote"],
         doc: "Wrap the selection in safe shell single-quotes.",
@@ -18160,7 +18437,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "keymap",
         aliases: &[],
-        doc: "Switch the active keymap preset: vim, helix, or emacs.",
+        doc: "Switch the active keymap preset: spacemacs, vim, helix, or emacs.",
         fun: set_keymap,
         completer: CommandCompleter::none(),
         signature: Signature {

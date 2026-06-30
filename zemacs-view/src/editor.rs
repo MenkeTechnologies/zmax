@@ -376,10 +376,11 @@ pub struct Config {
     /// set to [] to show every popup, or add "space" to also silence the leader menu.
     /// Note: only consulted when `auto-info-leader-only` is false.
     pub auto_info_exclude: Vec<String>,
-    /// When true, only the leader (space) which-key popup is shown; popups for every other
-    /// prefix (c, d, g, z, >, ci, di, ca, da, ...) are suppressed because they are too
-    /// distracting. Set to false to show which-key for all prefixes (subject to
-    /// `auto-info-exclude`). Defaults to true.
+    /// When true, only the deliberate leader prefixes get a which-key popup — the
+    /// `space` leader and the emacs/spacemacs `C-x` prefix; popups for every other
+    /// prefix (c, d, g, z, >, ci, di, ca, da, C-w, ...) are suppressed because they
+    /// are too distracting. Set to false to show which-key for all prefixes (subject
+    /// to `auto-info-exclude`). Defaults to true.
     pub auto_info_leader_only: bool,
     /// When true, vim-sneak overrides `s`/`S` (jump to a two-character sequence). When false,
     /// `s`/`S` keep vim's substitute-char / substitute-line. Defaults to true.
@@ -1388,6 +1389,34 @@ pub struct TabPage {
     pub selections: Vec<Selection>,
 }
 
+/// The document of a parked tab's focused window (or its first window).
+fn tab_focused_doc(shape: &crate::tree::TreeShape) -> DocumentId {
+    use crate::tree::TreeShape;
+    match shape {
+        TreeShape::Leaf { doc, .. } => *doc,
+        TreeShape::Split { children, .. } => {
+            // Prefer the subtree containing the focused leaf; else the first.
+            for (_, child) in children {
+                if shape_has_focus(child) {
+                    return tab_focused_doc(child);
+                }
+            }
+            children
+                .first()
+                .map(|(_, c)| tab_focused_doc(c))
+                .unwrap_or_default()
+        }
+    }
+}
+
+fn shape_has_focus(shape: &crate::tree::TreeShape) -> bool {
+    use crate::tree::TreeShape;
+    match shape {
+        TreeShape::Leaf { focused, .. } => *focused,
+        TreeShape::Split { children, .. } => children.iter().any(|(_, c)| shape_has_focus(c)),
+    }
+}
+
 /// A snapshot of the latest in-flight LSP `$/progress` work, mirrored onto the
 /// [`Editor`] so UI surfaces can render a determinate gauge when a percentage is
 /// reported (e.g. rust-analyzer indexing) or a spinner-style label otherwise.
@@ -1469,6 +1498,10 @@ pub struct Editor {
     /// `:cnext`/`:cprev`/`:cc`, displayed by `:copen`.
     pub quickfix: Vec<QfEntry>,
     pub quickfix_idx: Option<usize>,
+    /// Past quickfix lists for `:colder`/`:cnewer`/`:chistory` (vim keeps up to
+    /// 10). `quickfix_stack_pos` indexes the currently-active list within it.
+    pub quickfix_stack: Vec<Vec<QfEntry>>,
+    pub quickfix_stack_pos: usize,
 
     /// Parked vim tabpages. The entry at `current_tab` is a stale placeholder
     /// (the live layout is in `tree`); it is refreshed from `tree` whenever the
@@ -1705,6 +1738,8 @@ impl Editor {
             breakpoints: HashMap::new(),
             quickfix: Vec::new(),
             quickfix_idx: None,
+            quickfix_stack: Vec::new(),
+            quickfix_stack_pos: 0,
             tabs: Vec::new(),
             current_tab: 0,
             syn_loader,
@@ -2941,6 +2976,38 @@ impl Editor {
         self.tabs = vec![current];
         self.current_tab = 0;
         self.set_status("only tab");
+    }
+
+    /// `:tabmove [N]`: move the current tab to position `to` (0-based, clamped).
+    /// With no argument vim moves the tab to the end.
+    pub fn move_current_tab(&mut self, to: usize) {
+        self.ensure_tabs_initialized();
+        self.tabs[self.current_tab] = self.snapshot_current_tab();
+        let from = self.current_tab;
+        let to = to.min(self.tabs.len() - 1);
+        if to == from {
+            return;
+        }
+        let tab = self.tabs.remove(from);
+        self.tabs.insert(to, tab);
+        self.current_tab = to;
+        self.report_tab();
+    }
+
+    /// The focused document of each tab, in order (for `:tabs`). The active tab
+    /// reads the live tree; parked tabs read their snapshot.
+    pub fn tab_focused_docs(&self) -> Vec<DocumentId> {
+        self.tabs
+            .iter()
+            .enumerate()
+            .map(|(i, tab)| {
+                if i == self.current_tab {
+                    self.tree.get(self.tree.focus).doc
+                } else {
+                    tab_focused_doc(&tab.shape)
+                }
+            })
+            .collect()
     }
 
     pub fn ensure_cursor_in_view(&mut self, id: ViewId) {

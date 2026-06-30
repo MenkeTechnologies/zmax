@@ -12045,6 +12045,61 @@ fn qf_entries(editor: &Editor, kind: QfKind) -> Vec<QfEntry> {
     }
 }
 
+/// A clone of a list's entries, for callers outside this module (`:cdo`).
+pub(crate) fn qf_snapshot(editor: &Editor, kind: QfKind) -> Vec<QfEntry> {
+    qf_entries(editor, kind)
+}
+
+const QF_HISTORY_MAX: usize = 10;
+
+/// Push a freshly-created quickfix list onto the history stack (vim keeps the
+/// last 10), dropping any lists newer than the current position first.
+fn qf_history_push(editor: &mut Editor, list: Vec<QfEntry>) {
+    let stack = &mut editor.quickfix_stack;
+    if !stack.is_empty() {
+        stack.truncate(editor.quickfix_stack_pos + 1);
+    }
+    stack.push(list);
+    if stack.len() > QF_HISTORY_MAX {
+        let overflow = stack.len() - QF_HISTORY_MAX;
+        stack.drain(0..overflow);
+    }
+    editor.quickfix_stack_pos = stack.len().saturating_sub(1);
+}
+
+/// `:colder`/`:cnewer`: move `delta` steps through the quickfix history and
+/// load that list as the active quickfix list.
+pub(crate) fn qf_history_go(editor: &mut Editor, delta: isize) {
+    let len = editor.quickfix_stack.len();
+    if len == 0 {
+        editor.set_error("quickfix list history is empty");
+        return;
+    }
+    let pos = (editor.quickfix_stack_pos as isize + delta).clamp(0, len as isize - 1) as usize;
+    if pos == editor.quickfix_stack_pos {
+        editor.set_status(if delta < 0 { "at oldest list" } else { "at newest list" });
+        return;
+    }
+    editor.quickfix_stack_pos = pos;
+    editor.quickfix = editor.quickfix_stack[pos].clone();
+    editor.quickfix_idx = (!editor.quickfix.is_empty()).then_some(0);
+    editor.set_status(format!("quickfix list {} of {}", pos + 1, len));
+}
+
+/// `:chistory`: report the position in the quickfix history stack.
+pub(crate) fn qf_history_info(editor: &mut Editor) {
+    let len = editor.quickfix_stack.len();
+    if len == 0 {
+        editor.set_status("no quickfix lists");
+    } else {
+        editor.set_status(format!(
+            "quickfix list {} of {}",
+            editor.quickfix_stack_pos + 1,
+            len
+        ));
+    }
+}
+
 fn qf_len(editor: &Editor, kind: QfKind) -> usize {
     match kind {
         QfKind::Quickfix => editor.quickfix.len(),
@@ -12082,6 +12137,10 @@ pub(crate) fn qf_set_entries(
             } else {
                 editor.quickfix = new_entries;
                 editor.quickfix_idx = None;
+                // A fresh list becomes a new entry in the `:colder`/`:cnewer`
+                // history (append variants keep editing the current list).
+                let snapshot = editor.quickfix.clone();
+                qf_history_push(editor, snapshot);
             }
             if editor.quickfix_idx.is_none() && !editor.quickfix.is_empty() {
                 editor.quickfix_idx = Some(0);
@@ -12261,6 +12320,49 @@ fn loclist_open(cx: &mut Context) {
 }
 
 // --- Tabpage commands (vim `gt`/`gT`) -------------------------------------
+
+/// Build the `:tabs` picker — one row per tabpage labelled by its focused
+/// file, switching to the chosen tab on selection.
+pub(crate) fn build_tabs_picker(editor: &mut Editor) -> Box<dyn Component> {
+    struct TabItem {
+        idx: usize,
+        label: String,
+        current: bool,
+    }
+    let current = editor.current_tab();
+    let items: Vec<TabItem> = editor
+        .tab_focused_docs()
+        .into_iter()
+        .enumerate()
+        .map(|(idx, doc_id)| {
+            let label = editor
+                .documents
+                .get(&doc_id)
+                .and_then(|d| d.path())
+                .map(|p| {
+                    zemacs_stdx::path::get_relative_path(p.to_path_buf())
+                        .to_string_lossy()
+                        .into_owned()
+                })
+                .unwrap_or_else(|| "[scratch]".to_string());
+            TabItem {
+                idx,
+                label,
+                current: idx == current,
+            }
+        })
+        .collect();
+    let columns = [
+        ui::PickerColumn::new("tab", |it: &TabItem, _| {
+            format!("{}{}", it.idx + 1, if it.current { " *" } else { "" }).into()
+        }),
+        ui::PickerColumn::new("file", |it: &TabItem, _| it.label.as_str().into()),
+    ];
+    let picker = Picker::new(columns, 1, items, (), |cx, item, _action| {
+        cx.editor.switch_tab(item.idx);
+    });
+    Box::new(overlaid(picker))
+}
 
 fn goto_next_tabpage(cx: &mut Context) {
     cx.editor.goto_next_tabpage();
@@ -20019,6 +20121,38 @@ mod quickfix_tests {
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0].path, PathBuf::from("src/a.rs"));
         assert_eq!(entries[1].line, 1);
+    }
+
+    #[test]
+    fn history_push_caps_and_drops_newer() {
+        // A small standalone model mirroring qf_history_push's stack logic.
+        fn push(stack: &mut Vec<usize>, pos: &mut usize, v: usize) {
+            if !stack.is_empty() {
+                stack.truncate(*pos + 1);
+            }
+            stack.push(v);
+            if stack.len() > QF_HISTORY_MAX {
+                let overflow = stack.len() - QF_HISTORY_MAX;
+                stack.drain(0..overflow);
+            }
+            *pos = stack.len().saturating_sub(1);
+        }
+        let mut stack = Vec::new();
+        let mut pos = 0;
+        for i in 0..12 {
+            push(&mut stack, &mut pos, i);
+        }
+        // capped at 10, newest is 11, oldest retained is 2
+        assert_eq!(stack.len(), QF_HISTORY_MAX);
+        assert_eq!(stack.first().copied(), Some(2));
+        assert_eq!(stack.last().copied(), Some(11));
+        assert_eq!(pos, 9);
+        // going older then pushing drops the newer tail
+        pos = 5;
+        push(&mut stack, &mut pos, 99);
+        assert_eq!(stack.last().copied(), Some(99));
+        assert_eq!(stack[5], 7); // index 5 held value 7 (2+5)
+        assert_eq!(stack.len(), 7);
     }
 
     #[test]

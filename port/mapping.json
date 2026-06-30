@@ -21448,5 +21448,141 @@
       "typable:tabfirst"
     ],
     "note": "alias tabrewind -> first tabpage"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cdo",
+    "status": "ported",
+    "evidence": [
+      "typable:cdo"
+    ],
+    "note": "run an ex-command on each quickfix entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cfdo",
+    "status": "ported",
+    "evidence": [
+      "typable:cfdo"
+    ],
+    "note": "run an ex-command on the first entry of each file"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ldo",
+    "status": "ported",
+    "evidence": [
+      "typable:ldo"
+    ],
+    "note": "run an ex-command on each location entry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lfdo",
+    "status": "ported",
+    "evidence": [
+      "typable:lfdo"
+    ],
+    "note": "run an ex-command on the first location entry of each file"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_clist",
+    "status": "ported",
+    "evidence": [
+      "typable:clist"
+    ],
+    "note": "show the quickfix list (picker)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_llist",
+    "status": "ported",
+    "evidence": [
+      "typable:llist"
+    ],
+    "note": "show the location list (picker)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_colder",
+    "status": "ported",
+    "evidence": [
+      "typable:colder"
+    ],
+    "note": "go to an older quickfix list"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cnewer",
+    "status": "ported",
+    "evidence": [
+      "typable:cnewer"
+    ],
+    "note": "go to a newer quickfix list"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_chistory",
+    "status": "ported",
+    "evidence": [
+      "typable:chistory"
+    ],
+    "note": "show quickfix list history position"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_caddfile",
+    "status": "ported",
+    "evidence": [
+      "typable:caddfile"
+    ],
+    "note": "append a file of error lines to the quickfix list"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_laddbuffer",
+    "status": "ported",
+    "evidence": [
+      "typable:laddbuffer"
+    ],
+    "note": "append current buffer to the location list"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_laddexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:laddexpr"
+    ],
+    "note": "append argument text to the location list (no vimscript eval)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_laddfile",
+    "status": "ported",
+    "evidence": [
+      "typable:laddfile"
+    ],
+    "note": "append a file of error lines to the location list"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lpfile",
+    "status": "ported",
+    "evidence": [
+      "typable:lpfile"
+    ],
+    "note": "last location entry in the previous file"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabmove",
+    "status": "ported",
+    "evidence": [
+      "typable:tabmove"
+    ],
+    "note": "move the current tabpage"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabdo",
+    "status": "ported",
+    "evidence": [
+      "typable:tabdo"
+    ],
+    "note": "run an ex-command in every tabpage"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabs",
+    "status": "ported",
+    "evidence": [
+      "typable:tabs"
+    ],
+    "note": "list tabpages and switch (picker)"
   }
 ]
