@@ -19520,5 +19520,13 @@
    "static:ai_revert_agent"
   ],
   "note": "agent checkpoint/restore -> git stash create before run + ai_revert_agent (git checkout snapshot)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_w_f",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space w f"
+  ],
+  "note": "spacemacs SPC w f -> toggle_follow_mode (windows on same doc scroll as one continuous view)"
  }
 ]

@@ -969,6 +969,7 @@ impl MappableCommand {
         toggle_window_dedication, "Toggle window dedication (spacemacs SPC w t)",
         toggle_subword, "Toggle sub-word w/b/e motions (spacemacs SPC t c)",
         toggle_auto_fill, "Toggle auto-fill: wrap at text-width while typing (spacemacs SPC t F)",
+        toggle_follow_mode, "Toggle follow mode: windows on the same doc scroll together (spacemacs SPC w f)",
         subword_w, "Next word start, sub-word aware (w)",
         subword_b, "Previous word start, sub-word aware (b)",
         subword_e, "Next word end, sub-word aware (e)",
@@ -17214,6 +17215,18 @@ fn toggle_subword(cx: &mut Context) {
     let on = cx.editor.subword;
     cx.editor
         .set_status(format!("subword motion: {}", if on { "on" } else { "off" }));
+}
+
+/// Spacemacs follow-mode (`SPC w f`): toggle synchronized scrolling of windows
+/// that show the same document (one continuous view).
+fn toggle_follow_mode(cx: &mut Context) {
+    cx.editor.follow = !cx.editor.follow;
+    let on = cx.editor.follow;
+    if on {
+        cx.editor.sync_follow_windows();
+    }
+    cx.editor
+        .set_status(format!("follow mode: {}", if on { "on" } else { "off" }));
 }
 
 /// Spacemacs auto-fill-mode (`SPC t F`): toggle auto-wrapping at text_width.
