@@ -516,6 +516,7 @@ impl MappableCommand {
         ace_window, "Jump to a window by its number, prompted (ace-window, SPC w . a)",
         browse_news, "Browse zemacs release notes / NEWS (SPC h n)",
         browse_faq, "Browse the zemacs FAQ (SPC h f)",
+        layer_search, "Search zemacs capability areas / layers (SPC h l)",
         show_environment, "Show the editor's environment variables (SPC f e e)",
         reimport_shell_env, "Re-import the shell environment into the editor (SPC f e C-e)",
         goto_buffer_window, "Focus the window already showing a chosen buffer (SPC b w)",
@@ -8171,6 +8172,63 @@ fn browse_faq(cx: &mut Context) {
     const FAQ: &str = include_str!("../../FAQ.md");
     show_text_in_scratch(cx.editor, FAQ);
     cx.editor.set_status("zemacs FAQ");
+}
+
+/// The zemacs "layers": capability areas baked into the binary. Spacemacs ships functionality as
+/// installable layers; zemacs bakes them all in, so this is the searchable catalogue of what's
+/// available. (name, one-line summary, detail shown on select).
+const LAYERS: &[(&str, &str, &str)] = &[
+    ("vim-keys", "Vim normal/visual/insert keymap with operator-pending edits",
+     "The default keymap is vim: dd/dw/cw/yy and {motion} operators emulated on the Helix engine.\nNormal, visual, and insert modes behave as in vim."),
+    ("emacs-keys", "Emacs readline chords on command lines and insert mode",
+     "C-a/C-e/C-k/C-y/M-f/M-b etc. in insert mode and prompts. Layered on top of the vim keymap."),
+    ("spacemacs-leader", "SPC leader tree (this menu, SPC h, SPC g, SPC p, ...)",
+     "A Spacemacs-style SPC leader in normal/visual mode plus a C-w window leader. Coverage tracked in docs/keybinding_report.md."),
+    ("lsp", "Language Server Protocol: diagnostics, hover, goto, rename, code actions",
+     "Configured per language in languages.toml. Debug a buffer's setup with SPC e v (verify) and SPC e h (describe checker)."),
+    ("syntax", "Tree-sitter syntax highlighting, textobjects, and structural motions",
+     "tree-sitter grammars drive highlighting, indentation, textobjects, and Wildfire expand-selection (<ret>)."),
+    ("completion", "Autocompletion from LSP, buffer words, paths, and snippets", ""),
+    ("git", "Magit-style git UI: stage hunks, branches, stashes, rebase, blame",
+     "SPC g tree: status (SPC g s), blame (SPC g b), file history (SPC g t), per-file dispatch (SPC g f m), view file at a rev (SPC g f f)."),
+    ("diff-merge", "Buffer-vs-HEAD diff (:diff) and 3-pane conflict resolver (:merge)",
+     "diff3 base pane; ]n/[n jump between conflict markers; ediff over files/buffers (SPC D ...)."),
+    ("scripting", "Five embedded interpreters: elisp, vimscript, awk, zsh, stryke",
+     "Pure-Rust, compiled in. :elisp/:vim/:awk/:zsh/:stryke evaluate against the live buffer. init.el and init.vim are sourced at startup."),
+    ("repl", "Interactive REPL fronting all embedded languages (SPC a r / :repl)", ""),
+    ("org", "Org-mode: outline folding, TODO cycling, capture, date-aware agenda", ""),
+    ("snippets", "Snippet library (:snippets) with per-language triggers and tab stops", ""),
+    ("hex", "Byte-faithful hex editor (:hex); binary files open here automatically", ""),
+    ("terminal", "Integrated PTY terminal in a pane (:terminal) with a C-\\ window leader", ""),
+    ("transform", "200+ selection-transform : commands (json/csv/encoders/case/lines/generators)", ""),
+    ("ide", "IDE workbench (:ide / F2): file tree, structure outline, problems, run panel, minimap", ""),
+    ("pickers", "Fuzzy pickers for files, buffers, symbols, global search, locate (SPC f L)", ""),
+    ("themes", "Theme picker with live preview (SPC T c); default colorscheme zgui-cyberpunk", ""),
+    ("narrowing", "Buffer narrowing and folds (SPC n r/f/p, indirect SPC n F/P, widen SPC n w)",
+     "True Emacs narrow-to-region: gg/G/select-all and visibility confine to the region; indirect (split) narrows leave the original view full."),
+    ("run-debug", "JetBrains-style run/debug configs and a DAP debugger (SPC d ...)", ""),
+    ("help", "Searchable Help browser (SPC h h), describe-* via LSP, man/info/FAQ/news search", ""),
+    ("navigation", "Harpoon marks, vim marks, jumplist, and window/layout management", ""),
+];
+
+/// SPC h l : "search layers" — a picker over zemacs' capability areas (its baked-in analogue of
+/// Spacemacs layers). Selecting one shows its detail. Spacemacs `helm-spacemacs-help-layers`.
+fn layer_search(cx: &mut Context) {
+    let columns = [
+        PickerColumn::new("layer", |it: &&(&str, &str, &str), _: &()| it.0.into()),
+        PickerColumn::new("capability", |it: &&(&str, &str, &str), _: &()| it.1.into()),
+    ];
+    let items: Vec<&(&str, &str, &str)> = LAYERS.iter().collect();
+    let picker = Picker::new(columns, 0, items, (), |cx, it: &&(&str, &str, &str), _action| {
+        let detail = if it.2.is_empty() {
+            format!("{}\n\n{}\n", it.0, it.1)
+        } else {
+            format!("{}\n\n{}\n\n{}\n", it.0, it.1, it.2)
+        };
+        show_text_in_scratch(cx.editor, &detail);
+        cx.editor.set_status(format!("layer: {}", it.0));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// SPC h d l : copy the most recently pressed keys to the system clipboard (newest last), for
