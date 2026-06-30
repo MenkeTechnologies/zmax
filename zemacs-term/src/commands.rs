@@ -702,6 +702,7 @@ impl MappableCommand {
         toggle_comments, "Comment/uncomment selections",
         toggle_line_comments, "Line comment/uncomment selections",
         comment_to_line, "Comment/uncomment from the cursor line to a prompted line (SPC c t)",
+        invert_comment_to_line, "Invert comments per line from the cursor to a prompted line (SPC c T)",
         toggle_block_comments, "Block comment/uncomment selections",
         rotate_selections_forward, "Rotate selections forward",
         rotate_selections_backward, "Rotate selections backward",
@@ -12135,9 +12136,11 @@ fn toggle_comments(cx: &mut Context) {
     })
 }
 
-/// Line-comment (or uncomment) every line between the cursor's line and `target_line` (0-based,
-/// clamped to the buffer). Mirrors Spacemacs' `evilnc-comment-or-uncomment-to-the-line`.
-fn comment_line_range(editor: &mut Editor, target_line: usize) {
+/// Comment the range of lines between the cursor's line and `target_line` (0-based, clamped to the
+/// buffer). When `invert`, each line is toggled independently (Spacemacs
+/// `evilnc-invert-comment-line-by-line`); otherwise the whole range shares one decision
+/// (`evilnc-comment-or-uncomment-to-the-line`).
+fn comment_line_range(editor: &mut Editor, target_line: usize, invert: bool) {
     {
         let (view, doc) = current!(editor);
         let text = doc.text();
@@ -12155,14 +12158,20 @@ fn comment_line_range(editor: &mut Editor, target_line: usize) {
         let end = (text.line_to_char(hi) + text.line(hi).len_chars()).min(text.len_chars());
         doc.set_selection(view.id, Selection::single(start, end));
     }
-    apply_comment_transaction(editor, |line_token, _block_tokens, doc, selection| {
-        comment::toggle_line_comments(doc, selection, line_token)
-    });
+    if invert {
+        apply_comment_transaction(editor, |line_token, _block_tokens, doc, selection| {
+            comment::invert_line_comments(doc, selection, line_token)
+        });
+    } else {
+        apply_comment_transaction(editor, |line_token, _block_tokens, doc, selection| {
+            comment::toggle_line_comments(doc, selection, line_token)
+        });
+    }
 }
 
-/// SPC c t : prompt for a 1-based line number and line-comment the range from the current line
-/// to it (Spacemacs `comment to line`).
-fn comment_to_line(cx: &mut Context) {
+/// Prompt for a 1-based target line (or take a count prefix) and comment the range from the
+/// cursor's line to it; `invert` toggles each line independently.
+fn comment_to_line_prompt(cx: &mut Context, invert: bool) {
     let cur_line = {
         let (view, doc) = current!(cx.editor);
         let slice = doc.text().slice(..);
@@ -12170,13 +12179,17 @@ fn comment_to_line(cx: &mut Context) {
             .char_to_line(doc.selection(view.id).primary().cursor(slice))
             + 1
     };
-    // A count prefix supplies the target line directly, skipping the prompt.
     if let Some(count) = cx.count {
-        comment_line_range(cx.editor, count.get().saturating_sub(1));
+        comment_line_range(cx.editor, count.get().saturating_sub(1), invert);
         return;
     }
+    let label = if invert {
+        format!("Invert comment to line (cursor at {cur_line}): ")
+    } else {
+        format!("Comment to line (cursor at {cur_line}): ")
+    };
     let prompt = crate::ui::prompt::Prompt::new(
-        format!("Comment to line (cursor at {cur_line}): ").into(),
+        label.into(),
         None,
         ui::completers::none,
         move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
@@ -12184,12 +12197,22 @@ fn comment_to_line(cx: &mut Context) {
                 return;
             }
             match input.trim().parse::<usize>() {
-                Ok(n) if n >= 1 => comment_line_range(cx.editor, n - 1),
+                Ok(n) if n >= 1 => comment_line_range(cx.editor, n - 1, invert),
                 _ => cx.editor.set_error("comment to line: enter a 1-based line number"),
             }
         },
     );
     cx.push_layer(Box::new(prompt));
+}
+
+/// SPC c t : line-comment the range from the cursor to a prompted line (uniform).
+fn comment_to_line(cx: &mut Context) {
+    comment_to_line_prompt(cx, false);
+}
+
+/// SPC c T : invert (per-line toggle) comments over the range from the cursor to a prompted line.
+fn invert_comment_to_line(cx: &mut Context) {
+    comment_to_line_prompt(cx, true);
 }
 
 fn toggle_line_comments(cx: &mut Context) {

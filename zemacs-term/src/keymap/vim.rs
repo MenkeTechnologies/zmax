@@ -1265,7 +1265,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "y" => [yank, toggle_comments],    // SPC c y : comment and yank
                 "d" => wclose,                     // SPC c d : close compilation window
                 "L" => toggle_line_comments,       // SPC c L : invert/toggle comment lines
-                "T" => toggle_comments,            // SPC c T : invert comment to line
+                "T" => invert_comment_to_line,     // SPC c T : invert (per-line) comment to a prompted line
                 "Y" => [yank, toggle_comments],    // SPC c Y : invert comment and yank
                 "P" => toggle_comments,            // SPC c P : invert comment paragraphs
                 "C" => run_active_config,          // SPC c C : compile (run active config)

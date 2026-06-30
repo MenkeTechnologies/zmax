@@ -116,6 +116,49 @@ pub fn toggle_line_comments(doc: &Rope, selection: &Selection, token: Option<&st
     Transaction::change(doc, changes.into_iter())
 }
 
+/// Like [`toggle_line_comments`] but inverts each line independently: commented lines are
+/// uncommented and uncommented lines are commented, rather than the whole block sharing one
+/// decision. Mirrors Spacemacs' `evilnc-invert-comment-line-by-line`.
+#[must_use]
+pub fn invert_line_comments(doc: &Rope, selection: &Selection, token: Option<&str>) -> Transaction {
+    let text = doc.slice(..);
+    let token = token.unwrap_or(DEFAULT_COMMENT_TOKEN);
+    let comment = Tendril::from(format!("{} ", token));
+    let token_len = token.chars().count();
+
+    let mut lines: Vec<usize> = Vec::with_capacity(selection.len());
+    let mut min_next_line = 0;
+    for selection in selection {
+        let (start, end) = selection.line_range(text);
+        let start = start.clamp(min_next_line, text.len_lines());
+        let end = (end + 1).min(text.len_lines());
+        lines.extend(start..end);
+        min_next_line = end;
+    }
+
+    let mut changes: Vec<Change> = Vec::with_capacity(lines.len());
+    for line in lines {
+        let line_slice = text.line(line);
+        // blank lines are skipped, matching the block toggle.
+        let Some(pos) = line_slice.first_non_whitespace_char() else {
+            continue;
+        };
+        let len = line_slice.len_chars();
+        let abs = text.line_to_char(line) + pos;
+        let fragment = Cow::from(line_slice.slice(pos..std::cmp::min(pos + token.len(), len)));
+        if fragment == token {
+            // commented -> uncomment (drop a single trailing space if present).
+            let margin = usize::from(matches!(line_slice.get_char(pos + token_len), Some(' ')));
+            changes.push((abs, abs + token.len() + margin, None));
+        } else {
+            // uncommented -> comment.
+            changes.push((abs, abs, Some(comment.clone())));
+        }
+    }
+
+    Transaction::change(doc, changes.into_iter())
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum CommentChange {
     Commented {
@@ -353,6 +396,23 @@ mod test {
 
             // (commented = true, to_change = [line 0, line 2], min = col 0, margin = 1)
             assert_eq!(res, (true, vec![0, 2], 0, 1));
+        }
+    }
+
+    mod invert_line_comment {
+        use super::*;
+
+        #[test]
+        fn toggles_each_line_independently() {
+            // Mixed: line 0 commented, line 2 not (line 1 blank). Inverting flips each.
+            let mut doc = Rope::from("// 1\n\nx\n// 3");
+            let selection = Selection::single(0, doc.len_chars());
+
+            let transaction = invert_line_comments(&doc, &selection, Some("//"));
+            transaction.apply(&mut doc);
+
+            // commented lines become uncommented, uncommented become commented; blank untouched.
+            assert_eq!(doc, "1\n\n// x\n3");
         }
     }
 

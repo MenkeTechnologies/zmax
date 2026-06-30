@@ -8419,11 +8419,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_c_tU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space c T"
+   "key:normal:space c T",
+   "static:invert_comment_to_line"
   ],
-  "note": "SPC c T"
+  "note": "invert comment to line -> invert_comment_to_line (per-line toggle over the range)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_c_yU",
