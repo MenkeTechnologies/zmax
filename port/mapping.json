@@ -18470,5 +18470,29 @@
    "key:normal:space x . j"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r_p_x",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r p x"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r p /"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r t"
+  ],
+  "note": ""
  }
 ]
