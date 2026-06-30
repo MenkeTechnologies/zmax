@@ -506,6 +506,7 @@ impl MappableCommand {
         edit_project_config, "Edit the project-local .zemacs/config.toml (SPC p e)",
         man_page_search, "Search man pages via apropos and view the selected page (SPC h m)",
         diagnostics_verify_setup, "Report the buffer's diagnostics/LSP setup (SPC e v)",
+        describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7623,6 +7624,66 @@ fn diagnostics_verify_setup(cx: &mut Context) {
     };
     show_text_in_scratch(cx.editor, &report);
     cx.editor.set_status("diagnostics setup");
+}
+
+/// SPC e h : describe the "checkers" (language servers) attached to the current buffer — each
+/// server's name, init state, and which features it advertises. The zemacs analogue of Spacemacs'
+/// `flycheck-describe-checker`.
+fn describe_diagnostics_checker(cx: &mut Context) {
+    if doc!(cx.editor).language_servers().next().is_none() {
+        cx.editor
+            .set_error("no checker (language server) attached to this buffer");
+        return;
+    }
+    let report = {
+        let doc = doc!(cx.editor);
+        let mut out = format!(
+            "Checkers for {} ({})\n\n",
+            doc.display_name(),
+            doc.language_name().unwrap_or("(none)")
+        );
+        let feats = [
+            ("diagnostics (push)", LanguageServerFeature::Diagnostics),
+            ("diagnostics (pull)", LanguageServerFeature::PullDiagnostics),
+            ("hover", LanguageServerFeature::Hover),
+            ("completion", LanguageServerFeature::Completion),
+            ("format", LanguageServerFeature::Format),
+            ("code-action", LanguageServerFeature::CodeAction),
+            ("rename", LanguageServerFeature::RenameSymbol),
+            ("goto-definition", LanguageServerFeature::GotoDefinition),
+            ("references", LanguageServerFeature::GotoReference),
+            ("document-symbols", LanguageServerFeature::DocumentSymbols),
+            ("inlay-hints", LanguageServerFeature::InlayHints),
+            ("signature-help", LanguageServerFeature::SignatureHelp),
+        ];
+        for ls in doc.language_servers() {
+            out.push_str(&format!(
+                "● {} — {}\n",
+                ls.name(),
+                if ls.is_initialized() {
+                    "initialized"
+                } else {
+                    "starting"
+                }
+            ));
+            let supported: Vec<&str> = feats
+                .iter()
+                .filter(|(_, f)| ls.supports_feature(*f))
+                .map(|(label, _)| *label)
+                .collect();
+            out.push_str(&format!(
+                "    features: {}\n\n",
+                if supported.is_empty() {
+                    "(none advertised)".to_string()
+                } else {
+                    supported.join(", ")
+                }
+            ));
+        }
+        out
+    };
+    show_text_in_scratch(cx.editor, &report);
+    cx.editor.set_status("describe checker");
 }
 
 /// SPC p e : open the project-local config (`<workspace>/.zemacs/config.toml`), creating it (and

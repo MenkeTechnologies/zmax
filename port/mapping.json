@@ -6821,11 +6821,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_e_h",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space e h"
+   "key:normal:space e h",
+   "static:describe_diagnostics_checker"
   ],
-  "note": "describe checker -> command palette"
+  "note": "describe flycheck checker -> describe_diagnostics_checker (lang servers + advertised features)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_e_v",
