@@ -887,6 +887,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
             "a" => { "Applications"
                 "i" => ai_chat,                    // SPC a i : ask the AI provider (Cursor-style assistant)
+                "e" => ai_inline_edit,             // SPC a e : AI inline edit/generate (Cursor Cmd+K)
                 "r" => repl,                       // SPC a r : embedded-language REPL (elisp/viml/stryke/awk/zsh)
                 "d" => file_explorer,              // SPC a d : dired (file manager)
                 "f" => file_explorer,              // SPC a f : file tree

@@ -19339,5 +19339,22 @@
    "static:ai_chat"
   ],
   "note": "selection sent as code context by ai_chat"
+ },
+ {
+  "spec_id": "cursor.edit.inline",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a e",
+   "static:ai_inline_edit"
+  ],
+  "note": "Cursor Cmd+K inline edit -> ai_inline_edit (rewrite selection)"
+ },
+ {
+  "spec_id": "cursor.edit.generate",
+  "status": "ported",
+  "evidence": [
+   "static:ai_inline_edit"
+  ],
+  "note": "empty-selection generate via ai_inline_edit"
  }
 ]

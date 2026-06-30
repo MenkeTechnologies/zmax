@@ -524,6 +524,7 @@ impl MappableCommand {
         diagnostics_verify_setup, "Report the buffer's diagnostics/LSP setup (SPC e v)",
         clear_diagnostics, "Clear all diagnostics for the current buffer (SPC e c)",
         ai_chat, "Ask the AI provider about the selection/buffer (SPC a i)",
+        ai_inline_edit, "AI inline edit/generate on the selection (Cmd+K style, SPC a e)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
         copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
@@ -8899,6 +8900,87 @@ fn ai_chat(cx: &mut Context) {
                 Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
                     show_text_in_scratch(editor, &text);
                     editor.set_status("AI response (scratch buffer)");
+                })))
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Strip a leading ```lang fence and trailing ``` from an AI code reply, so an inline edit applies
+/// raw code even when the model wraps it despite instructions.
+fn strip_code_fences(s: &str) -> String {
+    let t = s.trim();
+    if let Some(rest) = t.strip_prefix("```") {
+        if let Some(nl) = rest.find('\n') {
+            let body = rest[nl + 1..].trim_end();
+            let body = body.strip_suffix("```").unwrap_or(body);
+            return body.trim_end().to_string();
+        }
+    }
+    t.to_string()
+}
+
+/// SPC a e : Cursor-style inline edit (Cmd+K). Prompts for an instruction, sends the current
+/// selection (empty = generate at the cursor) to the AI, and replaces it with the rewritten code.
+/// Applied as a single transaction, so `u` undoes it.
+fn ai_inline_edit(cx: &mut Context) {
+    let (from, to, code, lang) = {
+        let (view, doc) = current!(cx.editor);
+        let r = doc.selection(view.id).primary();
+        (
+            r.from(),
+            r.to(),
+            doc.text().slice(r.from()..r.to()).to_string(),
+            doc.language_name().unwrap_or("").to_string(),
+        )
+    };
+    let label = if from == to {
+        "ai generate:"
+    } else {
+        "ai edit:"
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        label.into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let instr = input.trim().to_string();
+            let code = code.clone();
+            let lang = lang.clone();
+            cx.editor.set_status("AI: editing…");
+            cx.jobs.callback(async move {
+                let out = tokio::task::spawn_blocking(move || {
+                    let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
+                    let sys = "You are a code-editing assistant inside the zemacs editor. Apply the user's instruction and output ONLY the resulting code — no explanation, no markdown code fences.";
+                    let user = if code.is_empty() {
+                        format!("Language: {lang}\nInstruction: {instr}")
+                    } else {
+                        format!("Language: {lang}\nInstruction: {instr}\n\nCode to edit:\n{code}")
+                    };
+                    provider
+                        .chat(Some(sys), &[crate::ai::Message::user(user)])
+                        .map_err(|e| anyhow::anyhow!(e))
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!("ai task: {e}"))??;
+                let new_text = strip_code_fences(&out);
+                Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+                    {
+                        let (view, doc) = current!(editor);
+                        let end = to.min(doc.text().len_chars());
+                        let start = from.min(end);
+                        let tx = Transaction::change(
+                            doc.text(),
+                            std::iter::once((start, end, Some(new_text.into()))),
+                        );
+                        doc.apply(&tx, view.id);
+                        doc.append_changes_to_history(view);
+                    }
+                    editor.set_status("AI edit applied (u to undo)");
                 })))
             });
         },
