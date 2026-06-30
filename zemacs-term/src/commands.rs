@@ -9203,14 +9203,17 @@ fn ai_inline_edit(cx: &mut Context) {
                         let (view, doc) = current!(editor);
                         let end = to.min(doc.text().len_chars());
                         let start = from.min(end);
+                        let new_len = new_text.chars().count();
+                        // Select the inserted result so re-running SPC a e edits it (follow-up).
                         let tx = Transaction::change(
                             doc.text(),
                             std::iter::once((start, end, Some(new_text.into()))),
-                        );
+                        )
+                        .with_selection(Selection::single(start, start + new_len));
                         doc.apply(&tx, view.id);
                         doc.append_changes_to_history(view);
                     }
-                    editor.set_status("AI edit applied (u to undo)");
+                    editor.set_status("AI edit applied (u to undo; SPC a e again to refine)");
                 })))
             });
         },

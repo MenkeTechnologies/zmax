@@ -19538,5 +19538,22 @@
    "static:ai_accept_edit"
   ],
   "note": "accept/reject pending edit -> ai_accept_edit (Esc/close rejects)"
+ },
+ {
+  "spec_id": "cursor.agent.plan",
+  "status": "ported",
+  "evidence": [
+   "static:ai_agent"
+  ],
+  "note": "agent plan/todos -> update_plan tool (records ordered plan, shown in transcript)"
+ },
+ {
+  "spec_id": "cursor.edit.followup",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space a e",
+   "static:ai_inline_edit"
+  ],
+  "note": "inline-edit follow-up: result is selected so re-running ai_inline_edit refines it"
  }
 ]

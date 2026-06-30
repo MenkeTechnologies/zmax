@@ -82,6 +82,15 @@ fn tools() -> Vec<Tool> {
                 "required":["command"]
             }),
         },
+        Tool {
+            name: "update_plan".into(),
+            description: "Record or update your task plan as an ordered list of steps; call this first and whenever the plan changes. Input: {\"steps\": [string]}.".into(),
+            input_schema: serde_json::json!({
+                "type":"object",
+                "properties":{"steps":{"type":"array","items":{"type":"string"}}},
+                "required":["steps"]
+            }),
+        },
     ]
 }
 
@@ -200,6 +209,26 @@ fn exec_tool(
                 Err(e) => (format!("run '{cmd}': {e}"), true),
             }
         }
+        "update_plan" => {
+            let steps: Vec<String> = input["steps"]
+                .as_array()
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|s| s.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
+                .unwrap_or_default();
+            if steps.is_empty() {
+                return ("update_plan: no steps".into(), true);
+            }
+            let plan = steps
+                .iter()
+                .enumerate()
+                .map(|(i, s)| format!("{}. {s}", i + 1))
+                .collect::<Vec<_>>()
+                .join("\n");
+            (plan, false)
+        }
         other => (format!("unknown tool '{other}'"), true),
     }
 }
@@ -257,6 +286,9 @@ pub fn run(task: String, root: PathBuf) -> Result<AgentResult, String> {
                     .unwrap_or(""),
                 if is_error { "[error]" } else { "[ok]" }
             ));
+            if tu.name == "update_plan" && !is_error {
+                transcript.push_str(&format!("Plan:\n{out}\n"));
+            }
             results.push(Content::ToolResult {
                 tool_use_id: tu.id.clone(),
                 content: out,
