@@ -1,9 +1,10 @@
 # zemacs port tracking
 
 This directory holds the **port report** infrastructure: the instrument that
-measures how much of the Vim/Neovim + Emacs + Spacemacs feature surface zemacs
-implements. zemacs starts from the Helix modal core and is being built out
-toward the union of those three editors; this report tracks that build-out.
+measures how much of the Vim/Neovim + Emacs + Spacemacs + fzf.vim + JetBrains
+(IntelliJ IDEA) feature surface zemacs implements. zemacs starts from the Helix
+modal core and is being built out toward the union of those editors; this report
+tracks that build-out.
 
 ## Layout
 
@@ -28,6 +29,8 @@ toward the union of those three editors; this report tracks that build-out.
 | `emacs_keys.json` | GNU Emacs Manual — Key Index |
 | `spacemacs_bindings.json` | Spacemacs `doc/DOCUMENTATION.org` |
 | `spacemacs_layers.json` | Spacemacs `layers/` git tree |
+| `fzf_vim.json` | junegunn/fzf.vim — Commands reference |
+| `jetbrains_keymap.json` | JetBrains IntelliJ IDEA — macOS Default Keymap reference (`jetbrains.com/help/idea/reference-keymap-mac-default.html`) |
 
 Each item carries a `doc_ref` back to its source line/anchor.
 

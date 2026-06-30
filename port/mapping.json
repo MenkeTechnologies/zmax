@@ -4073,7 +4073,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_k_j",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space k j"
   ],
@@ -4081,7 +4081,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_k_k",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space k k"
   ],
@@ -6233,7 +6233,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_w_c",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x w c"
   ],
@@ -6713,7 +6713,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_j_l",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x j l"
   ],
@@ -6721,7 +6721,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_j_c",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x j c"
   ],
@@ -6729,7 +6729,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_j_f",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x j f"
   ],
@@ -6737,7 +6737,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_j_r",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x j r"
   ],
@@ -6745,7 +6745,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_j_n",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space x j n"
   ],
@@ -10924,6 +10924,1086 @@
   "status": "ported",
   "evidence": [
    "key:normal:space t C-W"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_d_w_w",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space D w w"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_d_w_l",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space D w l"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.editing.copy",
+  "status": "ported",
+  "evidence": [
+   "typable:clipboard-yank"
+  ],
+  "note": "copy selection to system clipboard"
+ },
+ {
+  "spec_id": "jetbrains.editing.paste",
+  "status": "ported",
+  "evidence": [
+   "key:normal:p"
+  ],
+  "note": "paste"
+ },
+ {
+  "spec_id": "jetbrains.editing.paste-from-history",
+  "status": "partial",
+  "evidence": [
+   "static:register_picker"
+  ],
+  "note": "register picker ~ paste-from-history"
+ },
+ {
+  "spec_id": "jetbrains.editing.copy-paths",
+  "status": "ported",
+  "evidence": [
+   "static:yank_file_path"
+  ],
+  "note": "yank file path"
+ },
+ {
+  "spec_id": "jetbrains.editing.copy-reference",
+  "status": "partial",
+  "evidence": [
+   "static:yank_file_path_with_line"
+  ],
+  "note": "path:line ~ reference"
+ },
+ {
+  "spec_id": "jetbrains.editing.save-all",
+  "status": "ported",
+  "evidence": [
+   "typable:write-all"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.editing.undo",
+  "status": "ported",
+  "evidence": [
+   "key:normal:u"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.editing.redo",
+  "status": "ported",
+  "evidence": [
+   "typable:redo"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.editing.indent-selection",
+  "status": "ported",
+  "evidence": [
+   "typable:indent-lines"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.editing.unindent-line-or-selection",
+  "status": "ported",
+  "evidence": [
+   "typable:dedent-lines"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.editing.auto-indent-lines",
+  "status": "partial",
+  "evidence": [
+   "typable:format"
+  ],
+  "note": "reformat ~ auto-indent"
+ },
+ {
+  "spec_id": "jetbrains.editing.start-new-line",
+  "status": "ported",
+  "evidence": [
+   "key:normal:o"
+  ],
+  "note": "open line below"
+ },
+ {
+  "spec_id": "jetbrains.editing.start-new-line-before-current",
+  "status": "ported",
+  "evidence": [
+   "key:normal:O"
+  ],
+  "note": "open line above"
+ },
+ {
+  "spec_id": "jetbrains.editing.delete-line",
+  "status": "ported",
+  "evidence": [
+   "typable:delete-lines"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.editing.join-lines",
+  "status": "ported",
+  "evidence": [
+   "static:join_selections"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.editing.duplicate-line-or-selection",
+  "status": "ported",
+  "evidence": [
+   "typable:duplicate-line"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.editing.toggle-case",
+  "status": "ported",
+  "evidence": [
+   "typable:swapcase"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.editing.scratch-file",
+  "status": "ported",
+  "evidence": [
+   "typable:new"
+  ],
+  "note": "new scratch buffer"
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-previous-word",
+  "status": "ported",
+  "evidence": [
+   "key:normal:b"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-next-word",
+  "status": "ported",
+  "evidence": [
+   "key:normal:w"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-line-start",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-line-end",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_end"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-matching-brace",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets_or_goto_percent"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-code-block-start",
+  "status": "partial",
+  "evidence": [
+   "static:goto_prev_unmatched_brace"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-code-block-end",
+  "status": "partial",
+  "evidence": [
+   "static:goto_next_unmatched_brace"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.next-method",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_function"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.previous-method",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_function"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.page-up",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-b"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.page-down",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-f"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-text-start",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.caret-navigation.move-caret-to-text-end",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_end"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.selection.extend-selection",
+  "status": "ported",
+  "evidence": [
+   "static:wildfire"
+  ],
+  "note": "syntactic expand"
+ },
+ {
+  "spec_id": "jetbrains.selection.shrink-selection",
+  "status": "ported",
+  "evidence": [
+   "static:wildfire_shrink"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.multiple-carets.clone-caret-above",
+  "status": "partial",
+  "evidence": [
+   "static:duplicate_selection_up"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.multiple-carets.clone-caret-below",
+  "status": "partial",
+  "evidence": [
+   "static:duplicate_selection_down"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.multiple-carets.add-selection-for-next-occurrence",
+  "status": "partial",
+  "evidence": [
+   "static:search_selection"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.multiple-carets.select-all-occurrences",
+  "status": "partial",
+  "evidence": [
+   "static:select_references_to_symbol_under_cursor"
+  ],
+  "note": "LSP refs ~ all occurrences"
+ },
+ {
+  "spec_id": "jetbrains.code-folding.expand",
+  "status": "ported",
+  "evidence": [
+   "static:fold_open"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.code-folding.collapse",
+  "status": "ported",
+  "evidence": [
+   "static:fold_close"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.code-folding.expand-all",
+  "status": "ported",
+  "evidence": [
+   "static:fold_open_all"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.code-folding.collapse-all",
+  "status": "ported",
+  "evidence": [
+   "static:fold_close_all"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.code-folding.fold-selection",
+  "status": "ported",
+  "evidence": [
+   "static:fold_create"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.show-intention-actions",
+  "status": "ported",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.basic-completion",
+  "status": "ported",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.reformat-code",
+  "status": "ported",
+  "evidence": [
+   "typable:format"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.parameter-info",
+  "status": "ported",
+  "evidence": [
+   "static:signature_help"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.quick-documentation",
+  "status": "ported",
+  "evidence": [
+   "static:hover"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.move-statement-up",
+  "status": "ported",
+  "evidence": [
+   "static:move_line_up"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.move-statement-down",
+  "status": "ported",
+  "evidence": [
+   "static:move_line_down"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.move-line-up",
+  "status": "ported",
+  "evidence": [
+   "static:move_line_up"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.move-line-down",
+  "status": "ported",
+  "evidence": [
+   "static:move_line_down"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.comment-with-line-comment",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_line_comments"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.comment-with-block-comment",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_block_comments"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.coding-assistance.surround-with",
+  "status": "ported",
+  "evidence": [
+   "static:surround_add"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.go-to-line-column",
+  "status": "ported",
+  "evidence": [
+   "typable:goto"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.switcher",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.select-in",
+  "status": "partial",
+  "evidence": [
+   "static:reveal_in_tree"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.recent-files",
+  "status": "ported",
+  "evidence": [
+   "static:frecent_file_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.last-edit-location",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_modification"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.back",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-o"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.forward",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-i"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.select-next-tab",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.select-previous-tab",
+  "status": "ported",
+  "evidence": [
+   "static:goto_previous_buffer"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.toggle-bookmark",
+  "status": "partial",
+  "evidence": [
+   "static:harpoon_add"
+  ],
+  "note": "harpoon pin ~ bookmark"
+ },
+ {
+  "spec_id": "jetbrains.navigation.show-structure-window",
+  "status": "ported",
+  "evidence": [
+   "static:focus_structure"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.next-occurrence",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigation.previous-occurrence",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.search.search-everywhere",
+  "status": "ported",
+  "evidence": [
+   "static:command_palette"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.search.find",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.search.find-next",
+  "status": "ported",
+  "evidence": [
+   "static:search_next"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.search.find-previous",
+  "status": "ported",
+  "evidence": [
+   "static:search_prev"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.search.replace",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.search.find-in-files",
+  "status": "ported",
+  "evidence": [
+   "static:search_in_files"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.search.replace-in-files",
+  "status": "partial",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "global substitute ~ project replace"
+ },
+ {
+  "spec_id": "jetbrains.search.go-to-file",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.search.file-structure",
+  "status": "ported",
+  "evidence": [
+   "static:symbol_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.search.go-to-symbol",
+  "status": "ported",
+  "evidence": [
+   "static:symbol_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.search.find-action",
+  "status": "ported",
+  "evidence": [
+   "static:command_palette"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigate-from-symbol.find-usages",
+  "status": "ported",
+  "evidence": [
+   "static:goto_reference"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigate-from-symbol.go-to-declaration-or-usages",
+  "status": "ported",
+  "evidence": [
+   "static:goto_definition"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigate-from-symbol.go-to-type-declaration",
+  "status": "ported",
+  "evidence": [
+   "static:goto_type_definition"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigate-from-symbol.show-usages",
+  "status": "ported",
+  "evidence": [
+   "static:select_references_to_symbol_under_cursor"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigate-from-symbol.go-to-super-method",
+  "status": "partial",
+  "evidence": [
+   "static:goto_definition"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigate-from-symbol.go-to-implementation-s",
+  "status": "ported",
+  "evidence": [
+   "static:goto_implementation"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.navigate-from-symbol.highlight-usages-in-file",
+  "status": "partial",
+  "evidence": [
+   "static:select_references_to_symbol_under_cursor"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.code-analysis.error-description",
+  "status": "partial",
+  "evidence": [
+   "static:hover"
+  ],
+  "note": "hover shows diagnostic"
+ },
+ {
+  "spec_id": "jetbrains.code-analysis.next-highlighted-error",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.code-analysis.previous-highlighted-error",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_diag"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.code-analysis.show-problems-window",
+  "status": "ported",
+  "evidence": [
+   "static:focus_problems"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.run-anything",
+  "status": "partial",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.run-context-configuration",
+  "status": "ported",
+  "evidence": [
+   "static:run_active_config"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.run",
+  "status": "ported",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.debug-context-configuration",
+  "status": "ported",
+  "evidence": [
+   "static:dap_launch"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.debug",
+  "status": "ported",
+  "evidence": [
+   "static:dap_launch"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.stop",
+  "status": "ported",
+  "evidence": [
+   "static:dap_terminate"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.step-over",
+  "status": "ported",
+  "evidence": [
+   "static:dap_next"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.step-into",
+  "status": "ported",
+  "evidence": [
+   "static:dap_step_in"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.step-out",
+  "status": "ported",
+  "evidence": [
+   "static:dap_step_out"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.evaluate-expression",
+  "status": "ported",
+  "evidence": [
+   "typable:debug-eval"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.toggle-line-breakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_toggle_breakpoint"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.view-breakpoints",
+  "status": "partial",
+  "evidence": [
+   "static:dap_edit_condition"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.show-run-window",
+  "status": "ported",
+  "evidence": [
+   "static:focus_run_console"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.run-debug.show-debug-window",
+  "status": "partial",
+  "evidence": [
+   "static:focus_run_console"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.refactoring.refactor-this",
+  "status": "partial",
+  "evidence": [
+   "static:rename_symbol"
+  ],
+  "note": "rename ~ refactor menu"
+ },
+ {
+  "spec_id": "jetbrains.refactoring.rename",
+  "status": "ported",
+  "evidence": [
+   "static:rename_symbol"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.refactoring.move",
+  "status": "partial",
+  "evidence": [
+   "typable:move"
+  ],
+  "note": "move file"
+ },
+ {
+  "spec_id": "jetbrains.refactoring.extract-method",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "via LSP code action"
+ },
+ {
+  "spec_id": "jetbrains.refactoring.introduce-variable",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "via LSP code action"
+ },
+ {
+  "spec_id": "jetbrains.vcs.vcs-operations-popup",
+  "status": "ported",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": "magit status popup"
+ },
+ {
+  "spec_id": "jetbrains.vcs.commit",
+  "status": "ported",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": "magit commit"
+ },
+ {
+  "spec_id": "jetbrains.vcs.update-project",
+  "status": "partial",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": "magit fetch/pull"
+ },
+ {
+  "spec_id": "jetbrains.vcs.rollback",
+  "status": "ported",
+  "evidence": [
+   "typable:hunk-reset"
+  ],
+  "note": "revert hunk"
+ },
+ {
+  "spec_id": "jetbrains.vcs.push",
+  "status": "partial",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": "magit push"
+ },
+ {
+  "spec_id": "jetbrains.vcs.next-change",
+  "status": "ported",
+  "evidence": [
+   "typable:hunk-next"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.vcs.previous-change",
+  "status": "ported",
+  "evidence": [
+   "typable:hunk-prev"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.vcs.show-version-control-window",
+  "status": "ported",
+  "evidence": [
+   "static:focus_git_panel"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.vcs.show-commit-window",
+  "status": "ported",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.diff.show-diff",
+  "status": "ported",
+  "evidence": [
+   "typable:diff"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.diff.compare-files",
+  "status": "ported",
+  "evidence": [
+   "typable:diff"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.diff.next-difference",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_change"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.diff.previous-difference",
+  "status": "ported",
+  "evidence": [
+   "static:goto_prev_change"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.diff.accept-left-side",
+  "status": "ported",
+  "evidence": [
+   "typable:conflict-ours"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.diff.accept-right-side",
+  "status": "ported",
+  "evidence": [
+   "typable:conflict-theirs"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.hide-active-tool-window",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_ide"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.hide-all-tool-windows",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_ide"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.jump-to-last-tool-window",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_ide"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.show-project-window",
+  "status": "ported",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.show-bookmarks-window",
+  "status": "partial",
+  "evidence": [
+   "static:harpoon_menu"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.show-find-window",
+  "status": "partial",
+  "evidence": [
+   "static:search_in_files"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.show-structure-window",
+  "status": "ported",
+  "evidence": [
+   "static:focus_structure"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.show-services-window",
+  "status": "partial",
+  "evidence": [
+   "static:focus_ci_panel"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.show-terminal-window",
+  "status": "ported",
+  "evidence": [
+   "static:terminal"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.settings",
+  "status": "ported",
+  "evidence": [
+   "static:preferences"
   ],
   "note": ""
  }
