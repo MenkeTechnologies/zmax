@@ -1514,7 +1514,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "p" => package_search,             // SPC h p : search language packages
                 "n" => command_palette,            // SPC h n : browse emacs news
                 "r" => help,                       // SPC h r : search documentation files (Help browser)
-                "." => command_palette,            // SPC h . : search dotfile variables
+                "." => config_variable_search,     // SPC h . : search config variables (dotfile vars)
                 "i" => info_search,                // SPC h i : search info manuals (apropos, seeded at point)
                 "m" => man_page_search,            // SPC h m : search man pages (apropos picker)
                 "d" => { "Describe"

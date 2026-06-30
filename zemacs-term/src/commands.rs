@@ -513,6 +513,7 @@ impl MappableCommand {
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
         describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
         package_search, "Search configured language packages and describe one (SPC h p)",
+        config_variable_search, "Search editor config variables, copy path on select (SPC h .)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7907,6 +7908,54 @@ fn describe_language_package(cx: &mut Context) {
     };
     show_text_in_scratch(cx.editor, &report);
     cx.editor.set_status("describe language package");
+}
+
+/// SPC h . : "search dotfile variables" — a picker over every editor config variable (dotted path
+/// + current value). Selecting one copies its path to the clipboard for pasting into config.toml.
+/// zemacs' config is the analogue of the Spacemacs dotfile. Spacemacs `helm-spacemacs-help-dotspacemacs`.
+fn config_variable_search(cx: &mut Context) {
+    struct ConfigVar {
+        path: String,
+        value: String,
+    }
+    fn flatten(v: &toml::Value, prefix: &str, out: &mut Vec<ConfigVar>) {
+        match v {
+            toml::Value::Table(t) => {
+                let mut keys: Vec<&String> = t.keys().collect();
+                keys.sort();
+                for k in keys {
+                    let p = if prefix.is_empty() {
+                        k.clone()
+                    } else {
+                        format!("{prefix}.{k}")
+                    };
+                    flatten(&t[k], &p, out);
+                }
+            }
+            other => out.push(ConfigVar {
+                path: prefix.to_string(),
+                value: other.to_string(),
+            }),
+        }
+    }
+    let mut items: Vec<ConfigVar> = Vec::new();
+    if let Ok(cfg) = toml::Value::try_from(&*cx.editor.config()) {
+        flatten(&cfg, "editor", &mut items);
+    }
+    if items.is_empty() {
+        cx.editor.set_error("no config variables found");
+        return;
+    }
+    let columns = [
+        PickerColumn::new("variable", |it: &ConfigVar, _: &()| it.path.clone().into()),
+        PickerColumn::new("value", |it: &ConfigVar, _: &()| it.value.clone().into()),
+    ];
+    let picker = Picker::new(columns, 0, items, (), |cx, it: &ConfigVar, _action| {
+        let _ = cx.editor.registers.write('+', vec![it.path.clone()]);
+        cx.editor
+            .set_status(format!("{} = {} (path copied)", it.path, it.value));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// SPC h p : "search packages" — a picker over every configured language (zemacs' analogue of a
