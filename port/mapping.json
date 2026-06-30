@@ -19030,5 +19030,21 @@
    "static:rotate_view_reverse"
   ],
   "note": "cycle splits (reverse)"
+ },
+ {
+  "spec_id": "jetbrains.editing.reload-from-disk",
+  "status": "ported",
+  "evidence": [
+   "typable:reload"
+  ],
+  "note": "revert buffer to on-disk"
+ },
+ {
+  "spec_id": "jetbrains.editing.synchronize",
+  "status": "ported",
+  "evidence": [
+   "typable:reload-all"
+  ],
+  "note": "refresh all buffers from disk"
  }
 ]
