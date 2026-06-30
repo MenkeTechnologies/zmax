@@ -969,7 +969,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "p" => goto_previous_buffer,       // SPC b p
                 "m" => changed_file_picker,        // SPC b m
                 "M" => kill_buffers_by_regex,      // SPC b M : kill buffers matching a regexp
-                "W" => buffer_picker,              // SPC b W : go to buffer (workspace/window)
+                "W" => goto_buffer_window,         // SPC b W : focus the window already showing a chosen buffer
                 "N" => { "New buffer"
                     "h" => vsplit_new,             // SPC b N h : new buffer in window left (vertical split)
                     "j" => hsplit_new,             // SPC b N j : new buffer in window below

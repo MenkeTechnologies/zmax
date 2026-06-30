@@ -513,6 +513,7 @@ impl MappableCommand {
         copy_last_keys, "Copy the most recently pressed keys to the clipboard (SPC h d l)",
         ace_window, "Jump to a window by its number, prompted (ace-window, SPC w . a)",
         browse_news, "Browse zemacs release notes / NEWS (SPC h n)",
+        goto_buffer_window, "Focus the window already showing a chosen buffer (SPC b w)",
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
         describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
         package_search, "Search configured language packages and describe one (SPC h p)",
@@ -9786,18 +9787,26 @@ impl PathStyleConfig {
 }
 
 fn buffer_picker(cx: &mut Context) {
-    buffer_picker_impl(cx, None);
+    buffer_picker_impl(cx, None, false);
 }
 
 /// SPC b N C-i : open an existing buffer in a split — a second view of that buffer's shared
 /// Document, i.e. an indirect buffer of it (Spacemacs `make-indirect-buffer` from a buffer).
 fn clone_indirect_from_buffer(cx: &mut Context) {
-    buffer_picker_impl(cx, Some(Action::VerticalSplit));
+    buffer_picker_impl(cx, Some(Action::VerticalSplit), false);
+}
+
+/// SPC b w : go to the window already displaying the chosen buffer (focus it instead of reopening),
+/// falling back to opening it in the current window. Spacemacs `spacemacs/goto-buffer-window`.
+fn goto_buffer_window(cx: &mut Context) {
+    buffer_picker_impl(cx, None, true);
 }
 
 /// Shared body for the buffer picker. When `force_action` is set, the chosen buffer always opens
-/// with that action (e.g. always in a split); otherwise the picker's own open action is used.
-fn buffer_picker_impl(cx: &mut Context, force_action: Option<Action>) {
+/// with that action (e.g. always in a split). When `goto_window` is set, an existing window
+/// already showing the buffer is focused instead of opening it again. Otherwise the picker's own
+/// open action is used.
+fn buffer_picker_impl(cx: &mut Context, force_action: Option<Action>, goto_window: bool) {
     let current = view!(cx.editor).doc;
 
     struct BufferMeta<'a> {
@@ -9865,6 +9874,18 @@ fn buffer_picker_impl(cx: &mut Context, force_action: Option<Action>) {
         items,
         PathStyleConfig::new(&cx.editor.theme),
         move |cx, meta, action| {
+            if goto_window {
+                let existing = cx
+                    .editor
+                    .tree
+                    .traverse()
+                    .find(|(_, v)| v.doc == meta.id)
+                    .map(|(id, _)| id);
+                if let Some(view_id) = existing {
+                    cx.editor.focus(view_id);
+                    return;
+                }
+            }
             cx.editor.switch(meta.id, force_action.unwrap_or(action));
         },
     )
