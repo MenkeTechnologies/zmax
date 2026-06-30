@@ -19132,5 +19132,14 @@
    "static:layout_rename"
   ],
   "note": "SPC l w R -> layout_rename"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_r_e_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x r e t",
+   "static:regex_emacs_to_rx_replace"
+  ],
+  "note": "replace Emacs regexp by rx form -> regex_emacs_to_rx_replace"
  }
 ]
