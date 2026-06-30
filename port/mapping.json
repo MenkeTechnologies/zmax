@@ -18310,5 +18310,21 @@
    "key:normal:space x r e /"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_k_a",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space k a"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_b_x_mU_1xxmU_9",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b . A-1"
+  ],
+  "note": ""
  }
 ]

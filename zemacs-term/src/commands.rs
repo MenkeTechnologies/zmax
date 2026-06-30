@@ -880,6 +880,16 @@ impl MappableCommand {
         paredit_raise, "Paredit: raise the current s-expression (SPC k r)",
         paredit_transpose, "Paredit: transpose the s-expressions around point (SPC k t)",
         paredit_split, "Paredit: split the enclosing list at point (SPC j s)",
+        paredit_absorb, "Paredit: absorb the previous sexp into the current form (SPC k a)",
+        buffer_swap_window_1, "Swap current buffer with window 1 (SPC b . M-1)",
+        buffer_swap_window_2, "Swap current buffer with window 2 (SPC b . M-2)",
+        buffer_swap_window_3, "Swap current buffer with window 3 (SPC b . M-3)",
+        buffer_swap_window_4, "Swap current buffer with window 4 (SPC b . M-4)",
+        buffer_swap_window_5, "Swap current buffer with window 5 (SPC b . M-5)",
+        buffer_swap_window_6, "Swap current buffer with window 6 (SPC b . M-6)",
+        buffer_swap_window_7, "Swap current buffer with window 7 (SPC b . M-7)",
+        buffer_swap_window_8, "Swap current buffer with window 8 (SPC b . M-8)",
+        buffer_swap_window_9, "Swap current buffer with window 9 (SPC b . M-9)",
         paredit_splice_kill_forward, "Paredit: splice, killing forward (SPC k e)",
         paredit_splice_kill_backward, "Paredit: splice, killing backward (SPC k E)",
         paredit_insert_sexp_after, "Paredit: insert a new () sexp after the current one (SPC k ))",
@@ -6593,6 +6603,37 @@ fn buffer_to_window_n(cx: &mut Context, n: usize) {
         cx.editor.switch(doc_id, Action::Replace);
     }
 }
+/// Swap the current buffer with the one in window N (Spacemacs `SPC b . M-1..9`).
+fn buffer_swap_window_n(cx: &mut Context, n: usize) {
+    if n == 0 {
+        return;
+    }
+    let cur_view = cx.editor.tree.focus;
+    let cur_doc = doc!(cx.editor).id();
+    let views: Vec<ViewId> = cx.editor.tree.traverse().map(|(id, _)| id).collect();
+    let Some(&target_view) = views.get(n - 1) else {
+        return;
+    };
+    if target_view == cur_view {
+        return;
+    }
+    let target_doc = cx.editor.tree.get(target_view).doc;
+    cx.editor.focus(cur_view);
+    cx.editor.switch(target_doc, Action::Replace);
+    cx.editor.focus(target_view);
+    cx.editor.switch(cur_doc, Action::Replace);
+    cx.editor.focus(cur_view);
+}
+fn buffer_swap_window_1(cx: &mut Context) { buffer_swap_window_n(cx, 1) }
+fn buffer_swap_window_2(cx: &mut Context) { buffer_swap_window_n(cx, 2) }
+fn buffer_swap_window_3(cx: &mut Context) { buffer_swap_window_n(cx, 3) }
+fn buffer_swap_window_4(cx: &mut Context) { buffer_swap_window_n(cx, 4) }
+fn buffer_swap_window_5(cx: &mut Context) { buffer_swap_window_n(cx, 5) }
+fn buffer_swap_window_6(cx: &mut Context) { buffer_swap_window_n(cx, 6) }
+fn buffer_swap_window_7(cx: &mut Context) { buffer_swap_window_n(cx, 7) }
+fn buffer_swap_window_8(cx: &mut Context) { buffer_swap_window_n(cx, 8) }
+fn buffer_swap_window_9(cx: &mut Context) { buffer_swap_window_n(cx, 9) }
+
 fn buffer_to_window_1(cx: &mut Context) { buffer_to_window_n(cx, 1) }
 fn buffer_to_window_2(cx: &mut Context) { buffer_to_window_n(cx, 2) }
 fn buffer_to_window_3(cx: &mut Context) { buffer_to_window_n(cx, 3) }
@@ -14155,6 +14196,25 @@ fn pe_split(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
     Some((out, pos + 3))
 }
 
+/// paredit-absorb-sexp: pull the previous sibling sexp into the enclosing form,
+/// after its first element. `(a (bs <pt> ..)) → ((bs a <pt> ..))`. Pure.
+fn pe_absorb(ch: &[char], pos: usize) -> Option<(Vec<char>, usize)> {
+    let (eo, ec) = pe_enclosing(ch, pos)?; // enclosing form E = (bs ..)
+    let (ps, pe) = pe_sexp_backward(ch, eo)?; // previous sexp P before E
+    let (_fs, fe) = pe_sexp_forward(ch, eo + 1)?; // first element inside E
+    if pe >= eo || fe >= ec {
+        return None;
+    }
+    let p_text: Vec<char> = ch[ps..=pe].to_vec();
+    let mut out = Vec::new();
+    out.extend_from_slice(&ch[..ps]); // up to (and dropping) P
+    out.extend_from_slice(&ch[pe + 1..=fe]); // ws + E-open + first element
+    out.push(' ');
+    out.extend(p_text.iter().copied()); // P moved after the first element
+    out.extend_from_slice(&ch[fe + 1..]); // remainder of E + tail
+    Some((out, eo))
+}
+
 /// A pure paredit transform: given the buffer chars and cursor offset, returns
 /// the new chars and cursor offset, or `None` if the edit doesn't apply.
 type PareditFn = fn(&[char], usize) -> Option<(Vec<char>, usize)>;
@@ -14216,6 +14276,9 @@ fn paredit_transpose(cx: &mut Context) {
 }
 fn paredit_split(cx: &mut Context) {
     apply_paredit(cx, pe_split);
+}
+fn paredit_absorb(cx: &mut Context) {
+    apply_paredit(cx, pe_absorb);
 }
 fn paredit_splice_kill_forward(cx: &mut Context) {
     apply_paredit(cx, pe_splice_kill_forward);
@@ -15565,6 +15628,14 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn paredit_absorb_pulls_previous_into_form() {
+        let ch: Vec<char> = "(a (bs c))".chars().collect();
+        let (out, _) = pe_absorb(&ch, 4).expect("absorb"); // point inside (bs c)
+        // `a` is pulled inside after `bs`; outer now wraps just the inner form
+        assert_eq!(out.iter().collect::<String>(), "( (bs a c))");
     }
 
     #[test]

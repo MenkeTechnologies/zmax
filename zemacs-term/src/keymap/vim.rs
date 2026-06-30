@@ -983,6 +983,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "C-1" => goto_window_1, "C-2" => goto_window_2, "C-3" => goto_window_3,
                     "C-4" => goto_window_4, "C-5" => goto_window_5, "C-6" => goto_window_6,
                     "C-7" => goto_window_7, "C-8" => goto_window_8, "C-9" => goto_window_9,
+                    // swap current buffer with window N (Meta = Alt)
+                    "A-1" => buffer_swap_window_1, "A-2" => buffer_swap_window_2, "A-3" => buffer_swap_window_3,
+                    "A-4" => buffer_swap_window_4, "A-5" => buffer_swap_window_5, "A-6" => buffer_swap_window_6,
+                    "A-7" => buffer_swap_window_7, "A-8" => buffer_swap_window_8, "A-9" => buffer_swap_window_9,
                     "q" => normal_mode,            // SPC b . q : quit the transient
                     // SPC b . d / x -> :buffer-close via typable table
                 },
@@ -1450,6 +1454,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "W" => paredit_splice,             // SPC k W : unwrap (splice) sexp
                 "r" => paredit_raise,              // SPC k r : raise sexp
                 "t" => paredit_transpose,          // SPC k t : transpose sexps
+                "a" => paredit_absorb,             // SPC k a : absorb previous sexp into form
                 "e" => paredit_splice_kill_forward,  // SPC k e : splice, killing forward
                 "E" => paredit_splice_kill_backward, // SPC k E : splice, killing backward
                 "(" => paredit_insert_sexp_before, // SPC k ( : insert sexp before current
