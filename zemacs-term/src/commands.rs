@@ -9255,6 +9255,35 @@ fn ai_fix(cx: &mut Context) {
 /// the workspace (and runs commands if `ZEMACS_AI_AGENT_ALLOW_EXEC=1`) in a tool-use loop, off the
 /// UI thread. A transcript + list of changed files is shown in a scratch buffer; open buffers whose
 /// files changed are picked up by the file watcher. The headline "CLI IDE with AI agents".
+/// Reload the given files from disk into any open buffers (the agent's "IDE auto-refresh"). Only
+/// touches buffers for these paths, so unsaved edits elsewhere are untouched.
+fn reload_docs_for_paths(editor: &mut Editor, paths: &[std::path::PathBuf]) {
+    let default_view = view!(editor).id;
+    for path in paths {
+        let Some(doc_id) = editor.document_id_by_path(path) else {
+            continue;
+        };
+        let vid = editor
+            .tree
+            .traverse()
+            .find(|(_, v)| v.doc == doc_id)
+            .map(|(id, _)| id)
+            .unwrap_or(default_view);
+        let doc = doc_mut!(editor, &doc_id);
+        doc.ensure_view_init(vid);
+        let view = view_mut!(editor, vid);
+        view.sync_changes(doc);
+        let trust = editor
+            .workspace_trust
+            .query(
+                doc.workspace_root(),
+                zemacs_loader::workspace_trust::TrustQuery::Git,
+            )
+            .is_trusted();
+        let _ = doc.reload(view, &editor.diff_providers, trust);
+    }
+}
+
 fn ai_agent(cx: &mut Context) {
     let root = zemacs_loader::find_workspace().0;
     let prompt = crate::ui::prompt::Prompt::new(
@@ -9275,14 +9304,18 @@ fn ai_agent(cx: &mut Context) {
                     .map_err(|e| anyhow::anyhow!(e))?;
                 let mut report = format!("# AI agent ({} steps)\n\n", result.steps);
                 report.push_str(&result.transcript);
-                let changed = result.changed_files.len();
+                let changed_paths: Vec<std::path::PathBuf> =
+                    result.changed_files.into_iter().collect();
+                let changed = changed_paths.len();
                 if changed > 0 {
                     report.push_str("\n## Changed files\n");
-                    for f in &result.changed_files {
+                    for f in &changed_paths {
                         report.push_str(&format!("- {}\n", f.display()));
                     }
                 }
                 Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+                    // IDE auto-refresh: reload open buffers the agent edited.
+                    reload_docs_for_paths(editor, &changed_paths);
                     show_text_in_scratch(editor, &report);
                     editor.set_status(format!("AI agent done: {changed} file(s) changed"));
                 })))
