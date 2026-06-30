@@ -505,6 +505,7 @@ impl MappableCommand {
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
         git_init, "Initialize a new git repository (SPC g i)",
+        view_file_at_rev, "View the current file at a branch/commit (SPC g f f)",
         extend_line, "Select current line, if already selected, extend to another line based on the anchor",
         extend_line_below, "Select current line, if already selected, extend to next line",
         extend_line_above, "Select current line, if already selected, extend to previous line",
@@ -7406,6 +7407,65 @@ fn git_init(cx: &mut Context) {
             .set_error(String::from_utf8_lossy(&out.stderr).trim().to_string()),
         Err(e) => cx.editor.set_error(format!("git init failed: {e}")),
     }
+}
+
+/// Load `content` into a fresh scratch buffer in the current window (replacing the view's
+/// document, which stays in the buffer list). Used to display read-only generated text.
+fn show_text_in_scratch(editor: &mut Editor, content: &str) {
+    editor.new_file(Action::Replace);
+    let (view, doc) = current!(editor);
+    doc.ensure_view_init(view.id);
+    let transaction =
+        Transaction::insert(doc.text(), doc.selection(view.id), content.into())
+            .with_selection(Selection::point(0));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// SPC g f f : prompt for a branch/commit and show the current file as it was at that revision
+/// (`git show <rev>:<file>`) in a scratch buffer (Spacemacs `magit-find-file` / git-timemachine).
+fn view_file_at_rev(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("buffer has no file path");
+        return;
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        "view file at rev (branch/commit):".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let rev = input.trim();
+            let dir = path.parent().unwrap_or_else(|| std::path::Path::new("."));
+            let fname = path.file_name().map(|f| f.to_string_lossy().into_owned());
+            let Some(fname) = fname else {
+                cx.editor.set_error("bad file name");
+                return;
+            };
+            // `<rev>:./<name>` resolves relative to the prefix git is run in.
+            let spec = format!("{rev}:./{fname}");
+            let out = std::process::Command::new("git")
+                .arg("-C")
+                .arg(dir)
+                .arg("show")
+                .arg(&spec)
+                .output();
+            match out {
+                Ok(o) if o.status.success() => {
+                    let content = String::from_utf8_lossy(&o.stdout).into_owned();
+                    show_text_in_scratch(cx.editor, &content);
+                    cx.editor.set_status(format!("{spec}"));
+                }
+                Ok(o) => cx
+                    .editor
+                    .set_error(String::from_utf8_lossy(&o.stderr).trim().to_string()),
+                Err(e) => cx.editor.set_error(format!("git show failed: {e}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 // ---------------------------------------------------------------------------

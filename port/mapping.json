@@ -10540,11 +10540,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_g_f_f",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space g f f"
+   "key:normal:space g f f",
+   "static:view_file_at_rev"
   ],
-  "note": ""
+  "note": "view file at branch/commit -> view_file_at_rev (git show <rev>:<file> in scratch buffer)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_k_r_n",
