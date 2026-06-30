@@ -4001,7 +4001,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_c_p",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space c p"
   ],
@@ -7201,7 +7201,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_w_3",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space w 3"
   ],
@@ -7209,7 +7209,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_w_4",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space w 4"
   ],
@@ -7217,7 +7217,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_u_spc_w_2",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space u space w 2"
   ],
@@ -7225,7 +7225,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_u_spc_w_3",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space u space w 3"
   ],
@@ -7233,7 +7233,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_u_spc_w_4",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space u space w 4"
   ],
@@ -12004,6 +12004,30 @@
   "status": "ported",
   "evidence": [
    "static:preferences"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_n_f",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space n f"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_n_fU",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space n F"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_b",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g b"
   ],
   "note": ""
  }

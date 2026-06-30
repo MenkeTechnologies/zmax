@@ -1060,8 +1060,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "|" => wonly,
                 "1" => wonly,
                 "2" => vsplit,
-                "3" => vsplit,
-                "4" => vsplit,
+                "3" => make_3_windows,
+                "4" => make_4_windows,
                 "_" => wonly,
                 "D" => wclose,
                 "M" => transpose_view,
@@ -1287,6 +1287,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "_" => decrement,                  // SPC n _ : decrease number under point
                 "r" => narrow_to_region,           // SPC n r : narrow buffer to selection (fold outside)
                 "w" => fold_open_all,              // SPC n w : widen (show whole buffer again)
+                "f" => narrow_to_function,         // SPC n f : narrow to the enclosing function
+                "F" => narrow_to_function,         // SPC n F : narrow to function (indirect approx)
             },
             "g" => { "Goto (LSP)"
                 "d" => goto_definition,
@@ -1502,8 +1504,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                         "d" => wclose,             // SPC u SPC w d : delete window + buffer
                         "1" => wonly,              // SPC u SPC w 1 : single-window layout (force)
                         "2" => vsplit,             // SPC u SPC w 2 : two-window layout (force)
-                        "3" => vsplit,             // SPC u SPC w 3 : three-window layout (force)
-                        "4" => vsplit,             // SPC u SPC w 4 : four-window layout (force)
+                        "3" => make_3_windows,     // SPC u SPC w 3 : three-window layout (force)
+                        "4" => make_4_windows,     // SPC u SPC w 4 : four-window layout (force)
                     },
                 },
             },

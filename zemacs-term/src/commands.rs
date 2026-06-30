@@ -417,6 +417,9 @@ impl MappableCommand {
         goto_next_close_paren, "Go forward to next closing paren (SPC k j)",
         goto_prev_open_paren, "Go backward to previous opening paren (SPC k k)",
         ediff_windows, "Diff the two front windows side by side (SPC D w w)",
+        make_3_windows, "Lay out three vertical windows (SPC w 3)",
+        make_4_windows, "Lay out a 2x2 window grid (SPC w 4)",
+        narrow_to_function, "Narrow the buffer to the enclosing function (SPC n f)",
         align_at_equals, "Align region at = (SPC x a =)",
         align_at_comma, "Align region at , (SPC x a ,)",
         align_at_colon, "Align region at : (SPC x a :)",
@@ -6126,6 +6129,56 @@ fn goto_prev_open_paren(cx: &mut Context) {
             return;
         }
     }
+}
+
+/// SPC w 3: lay out three vertical windows.
+fn make_3_windows(cx: &mut Context) {
+    wonly(cx);
+    vsplit(cx);
+    vsplit(cx);
+}
+
+/// SPC w 4: lay out a 2x2 window grid.
+fn make_4_windows(cx: &mut Context) {
+    wonly(cx);
+    vsplit(cx);
+    hsplit(cx);
+    jump_view_left(cx);
+    hsplit(cx);
+}
+
+/// SPC n f: narrow the buffer to the enclosing function (≈ paragraph), folding
+/// everything outside it (reuses the narrowing fold machinery).
+fn narrow_to_function(cx: &mut Context) {
+    let (start, end, last) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let last = text.len_lines().saturating_sub(1);
+        let cur = text
+            .char_to_line(doc.selection(view.id).primary().head.min(text.len_chars()))
+            .min(last);
+        let is_blank = |l: usize| text.line(l).to_string().trim().is_empty();
+        let mut start = cur;
+        while start > 0 && !is_blank(start - 1) {
+            start -= 1;
+        }
+        let mut end = cur;
+        while end < last && !is_blank(end + 1) {
+            end += 1;
+        }
+        (start, end, last)
+    };
+    let (view, doc) = current!(cx.editor);
+    for (s, e) in narrow_outside_ranges(start, end, last) {
+        doc.folds_mut().create(s, e);
+    }
+    doc.folds_mut().clamp(last);
+    fold_goto_line(view, doc, start);
+    cx.editor.set_status(format!(
+        "narrowed to function (lines {}-{})",
+        start + 1,
+        end + 1
+    ));
 }
 
 /// Compare the two front windows' buffers side by side (Spacemacs `SPC D w w/l`).
