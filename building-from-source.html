@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-71233b28.js";
+            window.path_to_searchindex_js = "searchindex-f081feef.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-c0d3b1d1.js"></script>
@@ -276,7 +276,7 @@ your <code>~/.bashrc</code> or equivalent:</p>
 <pre><code class="language-sh">export ZEMACS_RUNTIME=~/src/zemacs/runtime
 </code></pre>
 <p>Or, create a symbolic link:</p>
-<pre><code class="language-sh">ln -Tsf $PWD/runtime ~/.config/zemacs/runtime
+<pre><code class="language-sh">ln -Tsf $PWD/runtime ~/.zemacs/runtime
 </code></pre>
 <h4 id="windows"><a class="header" href="#windows">Windows</a></h4>
 <p>Either set the <code>ZEMACS_RUNTIME</code> environment variable to point to the runtime files using the Windows setting (search for
@@ -332,7 +332,7 @@ script could follow are:</p>
 <li><code>cp target/opt/hx $BUILD_DIR/usr/bin/hx</code></li>
 </ol>
 <p>This way the resulting <code>hx</code> binary will always look for its runtime directory in
-<code>/usr/lib/zemacs/runtime</code> if the user has no custom runtime in <code>~/.config/zemacs</code>
+<code>/usr/lib/zemacs/runtime</code> if the user has no custom runtime in <code>~/.zemacs</code>
 or <code>ZEMACS_RUNTIME</code>.</p>
 <h3 id="validating-the-installation"><a class="header" href="#validating-the-installation">Validating the installation</a></h3>
 <p>To make sure everything is set up as expected you should run the Zemacs health

@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-71233b28.js";
+            window.path_to_searchindex_js = "searchindex-f081feef.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-c0d3b1d1.js"></script>
@@ -205,6 +205,20 @@ can be accessed via the command <code>hx --tutor</code> or <code>:tutor</code>.<
 <p>Also inspired by Kakoune, multiple selections are a core mode of interaction in Zemacs. For example, the standard way of replacing multiple instances of a word is to first select all instances (so there is one selection per instance) and then use the change action (<code>c</code>) to edit them all at the same time.</p>
 <h2 id="motions"><a class="header" href="#motions">Motions</a></h2>
 <p>Motions are commands that move the cursor or modify selections. They’re used for navigation and text manipulation. Examples include <code>w</code> to move to the next word, or <code>f</code> to find a character. See the <a href="./keymap.html#movement">Movement</a> section of the keymap for more motions.</p>
+<h2 id="wildfire"><a class="header" href="#wildfire">Wildfire</a></h2>
+<p><code>&lt;ret&gt;</code> (Enter) in normal mode selects the closest text object around the cursor; pressing it again grows the selection to the next enclosing object (word → pair → larger pair → …). <code>&lt;backspace&gt;</code> shrinks back to the previous selection. This is the “expand selection by syntax” workflow without picking an explicit text object each time.</p>
+<h2 id="snippets"><a class="header" href="#snippets">Snippets</a></h2>
+<p>A snippet is a template with tab stops written in LSP snippet syntax — <code>${1:default}</code> for the Nth stop with a placeholder, <code>$0</code> for where the cursor finally rests, and a number repeated (e.g. <code>${1}</code>) to mirror an edit at several sites at once.</p>
+<p>Snippets reach you two ways:</p>
+<ul>
+<li><strong>Language-server snippets</strong> appear as completion candidates; accept one and it expands with the tab stops queued.</li>
+<li><strong>Your own library</strong> is edited with <code>:snippets</code>, which opens a panel for creating, editing, and deleting reusable snippets (each with a trigger word, a scope — a language name, or <code>*</code>/empty for every language — a description, and a body). The library is saved to <code>snippets.toml</code> in your config directory.</li>
+</ul>
+<p>To use a library snippet, type its trigger word and press <code>Tab</code>: if the word before the cursor matches a trigger whose scope applies to the current language, the body expands in place (user triggers take priority over emmet). Once a snippet is active, <code>Tab</code> and <code>Shift-Tab</code> walk forward and backward through its tab stops.</p>
+<h2 id="hex-editing"><a class="header" href="#hex-editing">Hex editing</a></h2>
+<p><code>:hex</code> (also <code>:hexview</code>/<code>:hexedit</code>) opens a byte-faithful, xxd-style view of a file’s raw bytes — an offset column, the hex bytes, and the ASCII rendering side by side. It takes an optional path and otherwise uses the current buffer’s file. Binary files opened the normal way are routed here automatically rather than rejected. Press <code>i</code>/<code>R</code> to edit, type into the hex or ASCII column (<code>Tab</code> toggles between them), <code>Ctrl-s</code> to write the raw bytes back, and <code>q</code> to close.</p>
+<h2 id="merge-conflicts"><a class="header" href="#merge-conflicts">Merge conflicts</a></h2>
+<p>When a file has git merge conflicts, <code>:merge</code> (also <code>:resolve</code>) opens a three-pane resolver — <em>ours</em> on the left, the <em>result</em> you are building in the middle, <em>theirs</em> on the right, with a diff3 <em>base</em> pane — modeled on JetBrains’ merge tool, with inline character highlighting and horizontal scrolling. <code>]n</code> and <code>[n</code> jump between conflict markers, and the space-<code>g</code> git menu resolves them: <code>SPC g m</code> (or <code>SPC g c r</code>) opens the resolver, <code>SPC g c O</code>/<code>SPC g c T</code> take all of our/their side, and <code>SPC g =</code> shows a read-only diff of the buffer against git <code>HEAD</code> (<code>:diff</code>). The per-conflict typable commands <code>:conflict-ours</code>/<code>:conflict-theirs</code>/<code>:conflict-both</code> resolve the conflict at the cursor.</p>
 
                     </main>
 

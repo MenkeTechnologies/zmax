@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-71233b28.js";
+            window.path_to_searchindex_js = "searchindex-f081feef.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-c0d3b1d1.js"></script>
@@ -635,10 +635,41 @@ useful when you’re simply looking over text and not actively editing it.</p>
 <tr><td><code>[g</code></td><td>Go to previous change</td><td><code>goto_prev_change</code></td></tr>
 <tr><td><code>]G</code></td><td>Go to last change</td><td><code>goto_last_change</code></td></tr>
 <tr><td><code>[G</code></td><td>Go to first change</td><td><code>goto_first_change</code></td></tr>
+<tr><td><code>]n</code></td><td>Go to next merge-conflict marker</td><td><code>goto_next_conflict</code></td></tr>
+<tr><td><code>[n</code></td><td>Go to previous merge-conflict marker</td><td><code>goto_prev_conflict</code></td></tr>
 <tr><td><code>[x</code></td><td>Go to next (X)HTML element</td><td><code>goto_next_xml_element</code></td></tr>
 <tr><td><code>]x</code></td><td>Go to previous (X)HTML element</td><td><code>goto_prev_xml_element</code></td></tr>
 <tr><td><code>]Space</code></td><td>Add newline below</td><td><code>add_newline_below</code></td></tr>
 <tr><td><code>[Space</code></td><td>Add newline above</td><td><code>add_newline_above</code></td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="wildfire"><a class="header" href="#wildfire">Wildfire</a></h4>
+<p>In normal mode, expand or shrink the selection by syntax-aware text objects.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Description</th><th>Command</th></tr>
+</thead>
+<tbody>
+<tr><td><code>&lt;ret&gt;</code></td><td>Select / grow to the closest enclosing text object</td><td><code>wildfire</code></td></tr>
+<tr><td><code>&lt;backspace&gt;</code></td><td>Shrink to the previously selected text object</td><td><code>wildfire_shrink</code></td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="git-conflicts-and-merge"><a class="header" href="#git-conflicts-and-merge">Git conflicts and merge</a></h4>
+<p>These live under the space-<code>g</code> git menu (see <a href="#space-mode">Space mode</a>) and the
+unimpaired <code>]n</code>/<code>[n</code> motions above.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Description</th><th>Command</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SPC g m</code>, <code>SPC g c r</code></td><td>Open the 3-pane merge-conflict resolver (<code>:merge</code>)</td><td><code>resolve_conflicts</code></td></tr>
+<tr><td><code>SPC g c O</code></td><td>Resolve all conflicts by keeping our side</td><td><code>conflict_take_all_ours</code></td></tr>
+<tr><td><code>SPC g c T</code></td><td>Resolve all conflicts by keeping their side</td><td><code>conflict_take_all_theirs</code></td></tr>
+<tr><td><code>SPC g =</code></td><td>Side-by-side diff of the buffer vs. git <code>HEAD</code> (<code>:diff</code>)</td><td><code>git_diff</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -669,11 +700,17 @@ to get the smoothest experience.</p>
 <tr><td><code>Ctrl-h</code>, <code>Backspace</code>, <code>Shift-Backspace</code></td><td>Delete previous char</td><td><code>delete_char_backward</code></td></tr>
 <tr><td><code>Ctrl-d</code>, <code>Delete</code></td><td>Delete next char</td><td><code>delete_char_forward</code></td></tr>
 <tr><td><code>Ctrl-j</code>, <code>Enter</code></td><td>Insert new line</td><td><code>insert_newline</code></td></tr>
-<tr><td><code>Tab</code></td><td><a href="./editor.html#editorsmart-tab-section">Smart tab</a> (configurable)</td><td><code>smart_tab</code></td></tr>
+<tr><td><code>Tab</code></td><td>Advance a snippet tab stop, else expand a snippet trigger or emmet abbreviation, else <a href="./editor.html#editorsmart-tab-section">smart tab</a></td><td><code>emmet_expand</code></td></tr>
 <tr><td><code>Shift-Tab</code></td><td>Insert tab</td><td><code>insert_tab</code></td></tr>
 </tbody>
 </table>
 </div>
+<blockquote>
+<p>💡 <code>Tab</code> is overloaded in insert mode: if a snippet is active it jumps to the
+next tab stop; otherwise it tries to expand the word before the cursor as a
+<a href="./usage.html#snippets">snippet</a> trigger or an emmet abbreviation; failing
+both, it behaves as a <a href="./editor.html#editorsmart-tab-section">smart tab</a>.</p>
+</blockquote>
 <p>These keys are not recommended, but are included for new users less familiar
 with modal editors.</p>
 <div class="table-wrapper">
