@@ -596,31 +596,89 @@ impl ui::menu::Item for CodeActionItem {
 }
 
 pub fn code_action(cx: &mut Context) {
+    code_action_filtered(cx, None, "No code actions available");
+}
+
+/// Request only `refactor.extract` actions (Extract Method/Variable/Constant/
+/// Field/Parameter) — IntelliJ's Extract family.
+pub fn extract_refactor(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_EXTRACT]),
+        "No extract refactoring available here",
+    );
+}
+
+/// Request only `refactor.inline` actions (Inline Variable/Method) — IntelliJ's
+/// Inline refactoring.
+pub fn inline_refactor(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_INLINE]),
+        "No inline refactoring available here",
+    );
+}
+
+/// Request only `refactor.rewrite` actions (Change Signature and similar
+/// in-place rewrites).
+pub fn rewrite_refactor(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR_REWRITE]),
+        "No rewrite refactoring available here",
+    );
+}
+
+/// Shared code-action driver. `only` filters the request to the given kinds (and
+/// is re-applied client-side, since some servers ignore the `only` hint and
+/// return everything). `empty_msg` is shown when no matching action is found.
+fn code_action_filtered(
+    cx: &mut Context,
+    only: Option<Vec<CodeActionKind>>,
+    empty_msg: &'static str,
+) {
     let (view, doc) = current!(cx.editor);
 
     let selection_range = doc.selection(view.id).primary();
 
     let mut futures: FuturesUnordered<_> =
-        code_actions_for_range(doc, selection_range, None, CodeActionTriggerKind::INVOKED)
+        code_actions_for_range(doc, selection_range, only.clone(), CodeActionTriggerKind::INVOKED)
             .into_iter()
-            .map(|(request, ls_id)| async move {
-                let Some(mut actions) = request.await? else {
-                    return anyhow::Ok(Vec::new());
-                };
+            .map(|(request, ls_id)| {
+                let only = only.clone();
+                async move {
+                    let Some(mut actions) = request.await? else {
+                        return anyhow::Ok(Vec::new());
+                    };
 
-                // remove disabled code actions
-                actions.retain(|action| {
-                    matches!(
-                        action,
-                        CodeActionOrCommand::Command(_)
-                            | CodeActionOrCommand::CodeAction(CodeAction { disabled: None, .. })
-                    )
-                });
+                    actions.retain(|action| {
+                        // remove disabled code actions
+                        let enabled = matches!(
+                            action,
+                            CodeActionOrCommand::Command(_)
+                                | CodeActionOrCommand::CodeAction(CodeAction { disabled: None, .. })
+                        );
+                        if !enabled {
+                            return false;
+                        }
+                        // when a kind filter is requested, keep only matching
+                        // CodeActions (bare Commands carry no kind, so drop them).
+                        match &only {
+                            None => true,
+                            Some(kinds) => match action {
+                                CodeActionOrCommand::CodeAction(ca) => {
+                                    kinds.iter().any(|k| code_action_kind_matches(ca, k))
+                                }
+                                CodeActionOrCommand::Command(_) => false,
+                            },
+                        }
+                    });
 
-                Ok(actions
-                    .into_iter()
-                    .map(|lsp_item| CodeActionItem::lsp(ls_id, lsp_item))
-                    .collect())
+                    Ok(actions
+                        .into_iter()
+                        .map(|lsp_item| CodeActionItem::lsp(ls_id, lsp_item))
+                        .collect())
+                }
             })
             .collect();
 
@@ -646,7 +704,7 @@ pub fn code_action(cx: &mut Context) {
 
         let call = move |editor: &mut Editor, compositor: &mut Compositor| {
             if actions.is_empty() {
-                editor.set_error("No code actions available");
+                editor.set_error(empty_msg);
                 return;
             }
             let mut picker = ui::Menu::new(actions, (), move |editor, action, event| {
