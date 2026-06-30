@@ -331,6 +331,7 @@ impl MappableCommand {
         extend_visual_line_down, "Extend down",
         copy_selection_on_next_line, "Copy selection on next line",
         copy_selection_on_prev_line, "Copy selection on previous line",
+        column_selection, "Turn the selection into a rectangular column block (IntelliJ column selection)",
         move_next_word_start, "Move to start of next word",
         move_prev_word_start, "Move to start of previous word",
         move_next_word_end, "Move to end of next word",
@@ -5459,6 +5460,55 @@ fn copy_selection_on_prev_line(cx: &mut Context) {
 
 fn copy_selection_on_next_line(cx: &mut Context) {
     copy_selection_on_line(cx, Direction::Forward)
+}
+
+/// Normalize two visual corners `(row, col)` into inclusive rectangle bounds
+/// `(row0, row1, col0, col1)` with `row0 <= row1` and `col0 <= col1`.
+fn rectangle_bounds(a: (usize, usize), b: (usize, usize)) -> (usize, usize, usize, usize) {
+    (a.0.min(b.0), a.0.max(b.0), a.1.min(b.1), a.1.max(b.1))
+}
+
+/// Convert the primary selection into a rectangular column block: one selection
+/// per spanned row, each covering the same visual column range — IntelliJ-style
+/// column / block selection. Rows too short to reach the left column are skipped
+/// (matching IntelliJ, where the block only lands where a line is wide enough).
+fn column_selection(cx: &mut Context) {
+    use zemacs_core::{pos_at_visual_coords, visual_coords_at_pos};
+
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let tab_width = doc.tab_width();
+    let range = doc.selection(view.id).primary();
+
+    // Selection heads are exclusive; make the head inclusive for the corner,
+    // mirroring copy_selection_on_line.
+    let (head, anchor) = if range.anchor < range.head {
+        (range.head - 1, range.anchor)
+    } else {
+        (range.head, range.anchor.saturating_sub(1))
+    };
+    let head_pos = visual_coords_at_pos(text, head, tab_width);
+    let anchor_pos = visual_coords_at_pos(text, anchor, tab_width);
+    let (r0, r1, c0, c1) =
+        rectangle_bounds((anchor_pos.row, anchor_pos.col), (head_pos.row, head_pos.col));
+
+    let mut ranges = SmallVec::new();
+    for row in r0..=r1 {
+        let left = pos_at_visual_coords(text, Position::new(row, c0), tab_width);
+        // Skip rows whose content does not reach the left column of the block.
+        if visual_coords_at_pos(text, left, tab_width).col != c0 {
+            continue;
+        }
+        let right = pos_at_visual_coords(text, Position::new(row, c1), tab_width);
+        // point + put_cursor places the cursor on the correct column; for a
+        // zero-width block (c0 == c1) this collapses to a caret per row.
+        ranges.push(Range::point(left).put_cursor(text, right, true));
+    }
+    if ranges.is_empty() {
+        return;
+    }
+    let primary_index = ranges.len() - 1;
+    doc.set_selection(view.id, Selection::new(ranges, primary_index));
 }
 
 /// Given the full text of the line-block being duplicated, return the string to
@@ -17295,6 +17345,19 @@ fn lsp_or_syntax_workspace_symbol_picker(cx: &mut Context) {
 #[cfg(test)]
 mod insert_generator_tests {
     use super::*;
+
+    #[test]
+    fn rectangle_bounds_normalizes_corners() {
+        // already ordered
+        assert_eq!(rectangle_bounds((1, 2), (4, 6)), (1, 4, 2, 6));
+        // head before anchor on both axes
+        assert_eq!(rectangle_bounds((4, 6), (1, 2)), (1, 4, 2, 6));
+        // mixed: lower row but higher column
+        assert_eq!(rectangle_bounds((4, 2), (1, 6)), (1, 4, 2, 6));
+        // degenerate column (caret block) and single row
+        assert_eq!(rectangle_bounds((3, 5), (7, 5)), (3, 7, 5, 5));
+        assert_eq!(rectangle_bounds((2, 9), (2, 1)), (2, 2, 1, 9));
+    }
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()

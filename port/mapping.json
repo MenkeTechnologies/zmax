@@ -18486,11 +18486,11 @@
  },
  {
   "spec_id": "jetbrains.multiple-carets.toggle-column-selection-mode",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:copy_selection_on_next_line"
+   "static:column_selection"
   ],
-  "note": "column carets via copy_selection_on_next_line (C) ~ column selection mode"
+  "note": "column_selection turns the selection into a rectangular block (Helix/Kakoune selection->block model rather than a persistent mouse-mode)"
  },
  {
   "spec_id": "jetbrains.coding-assistance.complete-current-statement",
