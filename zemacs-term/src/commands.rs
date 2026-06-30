@@ -500,6 +500,7 @@ impl MappableCommand {
         kill_buffers_by_regex, "Kill all buffers whose name matches a regex (SPC b M)",
         narrow_to_page, "Narrow the buffer to the current page (SPC n p)",
         copy_file, "Copy the current file to a prompted destination (SPC f c)",
+        find_file_replace_buffer, "Open a file and replace the current buffer with it (SPC f A)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7309,6 +7310,34 @@ fn copy_file(cx: &mut Context) {
             match std::fs::copy(&src, &dest) {
                 Ok(_) => cx.editor.set_status(format!("copied to {}", dest.display())),
                 Err(e) => cx.editor.set_error(format!("copy failed: {e}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// SPC f A : open a prompted file and replace the current buffer with it, closing the old buffer
+/// (Spacemacs `spacemacs/find-file-and-replace-buffer`).
+fn find_file_replace_buffer(cx: &mut Context) {
+    let old_id = doc!(cx.editor).id();
+    let prompt = crate::ui::prompt::Prompt::new(
+        "find file (replace buffer):".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let path = std::path::PathBuf::from(input.trim());
+            match cx.editor.open(&path, Action::Replace) {
+                Ok(new_id) => {
+                    // Only retire the previous buffer if we actually switched away from it
+                    // and it has no unsaved changes (force=false leaves a dirty buffer alone).
+                    if new_id != old_id {
+                        let _ = cx.editor.close_document(old_id, false);
+                    }
+                }
+                Err(e) => cx.editor.set_error(format!("open {}: {e}", path.display())),
             }
         },
     );

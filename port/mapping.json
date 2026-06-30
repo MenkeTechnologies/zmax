@@ -6209,11 +6209,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_a",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space f A"
+   "key:normal:space f A",
+   "static:find_file_replace_buffer"
   ],
-  "note": "open file replace buffer -> file picker"
+  "note": "find-file-and-replace-buffer -> find_file_replace_buffer (open w/ Action::Replace, close old buffer)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_o",

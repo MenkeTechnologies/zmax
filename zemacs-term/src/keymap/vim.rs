@@ -917,7 +917,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "f" => { "Files"
                 "f" => file_picker,                            // SPC f f
                 "l" => file_picker,                            // SPC f l : open file literally
-                "A" => file_picker,                            // SPC f A : open file, replace buffer
+                "A" => find_file_replace_buffer,               // SPC f A : open file, replace + close current buffer
                 "o" => open_file_external,                     // SPC f o : open with external program
                 "F" => goto_file,                              // SPC f F : open file under point
                 "h" => open_hex,                               // SPC f h : open binary file in hex editor (hexl)
