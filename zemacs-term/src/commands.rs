@@ -497,6 +497,7 @@ impl MappableCommand {
         toggle_soft_wrap, "Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap)",
         toggle_whitespace_render, "Toggle rendering of whitespace characters (IntelliJ View > Show Whitespaces)",
         toggle_line_numbers, "Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers)",
+        toggle_indent_guides, "Toggle indentation guides (IntelliJ View > Show Indent Guides)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
         ediff_3_buffers, "3-way diff of three open buffers, read-only (SPC D b 3)",
@@ -7227,6 +7228,17 @@ fn toggle_line_numbers(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("line numbers: {}", if on { "on" } else { "off" }));
+}
+
+/// Toggle indentation guides (IntelliJ "View > Active Editor > Show Indent Guides").
+fn toggle_indent_guides(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        on = !c.indent_guides.render;
+        c.indent_guides.render = on;
+    });
+    cx.editor
+        .set_status(format!("indent guides: {}", if on { "on" } else { "off" }));
 }
 
 /// Prompt for a file and diff it against the current buffer (Spacemacs `SPC D f f`).

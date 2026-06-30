@@ -1686,5 +1686,13 @@
   "name": "Show Line Numbers",
   "desc": "IntelliJ IDEA default keymap: View > Active Editor > Show Line Numbers",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.view.show-indent-guides",
+  "source": "jetbrains",
+  "category": "view",
+  "name": "Show Indent Guides",
+  "desc": "IntelliJ IDEA default keymap: View > Active Editor > Show Indent Guides",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]
