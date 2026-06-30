@@ -7,6 +7,12 @@
 //! the region and writes the result lives in [`super::run_awk_filter`].
 
 /// Run `program` over `input` and return its captured `print`/`printf` output.
+#[cfg(unix)]
 pub(super) fn run(program: &str, input: &str) -> Result<String, String> {
     awkrs::run_program(program, input).map_err(|e| e.to_string())
+}
+
+#[cfg(not(unix))]
+pub(super) fn run(_program: &str, _input: &str) -> Result<String, String> {
+    Err("embedded awk is only supported on unix".into())
 }

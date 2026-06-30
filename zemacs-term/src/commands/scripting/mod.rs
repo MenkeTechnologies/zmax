@@ -277,11 +277,14 @@ pub fn load_init_scripts(cx: &mut compositor::Context) {
         }
     }
 
-    let init_vim = dir.join("init.vim");
-    if init_vim.exists() {
-        let _guard = CxGuard::new(cx);
-        if let Err(e) = vimlrs::fusevm_bridge::eval_file(&init_vim) {
-            cx.editor.set_error(format!("init.vim: {}", e.0));
+    #[cfg(unix)]
+    {
+        let init_vim = dir.join("init.vim");
+        if init_vim.exists() {
+            let _guard = CxGuard::new(cx);
+            if let Err(e) = vimlrs::fusevm_bridge::eval_file(&init_vim) {
+                cx.editor.set_error(format!("init.vim: {}", e.0));
+            }
         }
     }
 }
@@ -304,6 +307,7 @@ mod tests {
     }
 
     /// The embedded vimlrs interpreter links, evaluates, and captures `:echo`.
+    #[cfg(unix)]
     #[test]
     fn viml_eval_and_echo() {
         assert_eq!(super::viml::eval("3 + 4").unwrap(), "7");
@@ -311,6 +315,7 @@ mod tests {
     }
 
     /// VimL globals persist across separate eval calls (thread-local state).
+    #[cfg(unix)]
     #[test]
     fn viml_state_persists() {
         super::viml::eval("let g:zz = 41").unwrap();
@@ -318,6 +323,7 @@ mod tests {
     }
 
     /// The embedded awkrs interpreter filters string input → string output.
+    #[cfg(unix)]
     #[test]
     fn awk_filter_runs() {
         assert_eq!(
