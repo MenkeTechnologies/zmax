@@ -302,6 +302,19 @@ def parse_builtins():
         # numeric count prefix (1-9 …) consumed before a command, and {count}<Del>
         # editing it back, are handled by the count machinery in EditorView.
         builtins.add("count")
+    # Vimscript builtins implemented by the embedded vimlrs interpreter
+    # (callable via `:vim`/`:viml`). Each `pub fn f_<name>` is a real impl,
+    # re-parsed from source; catalogued as `viml:<name>` so a neovim `function`
+    # item resolves via `builtin:viml:<name>`.
+    import os as _os, re as _re
+    _viml=_os.path.join(ROOT,"vendor","vimlrs","src")
+    if _os.path.isdir(_viml):
+        for dp,_d,fs in _os.walk(_viml):
+            for fn in fs:
+                if fn.endswith(".rs"):
+                    try: t=open(_os.path.join(dp,fn),encoding="utf-8").read()
+                    except OSError: continue
+                    for m in _re.finditer(r"\bpub fn f_([a-z0-9_]+)",t): builtins.add("viml:"+m.group(1))
     return builtins
 
 
