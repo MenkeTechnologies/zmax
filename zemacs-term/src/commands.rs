@@ -511,6 +511,8 @@ impl MappableCommand {
         toggle_diagnostics, "Toggle diagnostics display / flycheck (SPC t s)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
+        ediff_regions, "Ediff two regions linewise: mark A, then diff B (SPC D r l)",
+        ediff_merge_file, "Merge a picked file into the current buffer (editable, SPC D m f f)",
         ediff_3_buffers, "3-way diff of three open buffers, read-only (SPC D b 3)",
         kill_buffers_by_regex, "Kill all buffers whose name matches a regex (SPC b M)",
         narrow_to_page, "Narrow the buffer to the current page (SPC n p)",
@@ -7816,6 +7818,95 @@ fn ediff_3_files(cx: &mut Context) {
             let call = crate::job::Callback::EditorCompositor(Box::new(
                 move |_e: &mut Editor, comp: &mut crate::compositor::Compositor| {
                     comp.push(Box::new(view));
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Region A marked by the first `ediff_regions` call, diffed against region B
+/// (the selection) on the second call. Mirrors Emacs `ediff-regions-linewise`.
+static EDIFF_REGION_A: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Spacemacs `SPC D r l`: ediff two regions linewise. The first invocation marks
+/// the current selection as region A; the second diffs the current selection
+/// (region B) against it in a read-only DiffView.
+fn ediff_regions(cx: &mut Context) {
+    let (sel_text, cur_id, cur_name) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        (
+            text.slice(range.from()..range.to()).to_string(),
+            doc.id(),
+            doc.display_name().into_owned(),
+        )
+    };
+    let region_a = EDIFF_REGION_A.lock().unwrap().take();
+    match region_a {
+        None => {
+            *EDIFF_REGION_A.lock().unwrap() = Some(sel_text);
+            cx.editor
+                .set_status("ediff: region A marked — select region B and run SPC D r l again");
+        }
+        Some(region_a) => {
+            let view = crate::ui::merge::DiffView::new(
+                format!("ediff regions ({cur_name})"),
+                cur_id,
+                &region_a,
+                &sel_text,
+            )
+            .read_only();
+            let call = crate::job::Callback::EditorCompositor(Box::new(
+                move |_e: &mut Editor, comp: &mut crate::compositor::Compositor| {
+                    comp.push(Box::new(view));
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        }
+    }
+}
+
+/// Spacemacs `SPC D m f f`: merge a picked file into the current buffer via an
+/// editable 2-way diff — accept the file's hunks into this buffer (unlike
+/// `ediff_file`, which is read-only comparison).
+fn ediff_merge_file(cx: &mut Context) {
+    let (cur_name, cur_text, cur_id) = {
+        let doc = doc!(cx.editor);
+        (
+            doc.display_name().into_owned(),
+            doc.text().to_string(),
+            doc.id(),
+        )
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ediff-merge with file:".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let path = std::path::PathBuf::from(input.trim());
+            let other = match std::fs::read_to_string(&path) {
+                Ok(s) => s,
+                Err(e) => {
+                    cx.editor.set_error(format!("read {}: {e}", path.display()));
+                    return;
+                }
+            };
+            // Editable (no read_only): hunks resolve into the current buffer.
+            let view = crate::ui::merge::DiffView::new(
+                format!("merge {} ⇒ {}", path.display(), cur_name),
+                cur_id,
+                &other,
+                &cur_text,
+            );
+            let call = crate::job::Callback::EditorCompositor(Box::new(
+                move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
+                    compositor.push(Box::new(view));
                 },
             ));
             cx.jobs.callback(async move { Ok(call) });

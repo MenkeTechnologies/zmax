@@ -19617,5 +19617,21 @@
       "static:ai_docs_context"
     ],
     "note": "@docs keyword retrieval over a docs directory (ZEMACS_AI_DOCS_DIR or docs/ doc/ documentation/) into AI context; grep-based, not an embeddings index"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_d_m_f_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space D m f f"
+    ],
+    "note": "spacemacs SPC D m f f -> merge a file into current buffer -> ediff_merge_file"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_d_r_l",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space D r l"
+    ],
+    "note": "spacemacs SPC D r l -> ediff two regions linewise -> ediff_regions"
   }
 ]
