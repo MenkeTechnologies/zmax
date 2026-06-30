@@ -886,6 +886,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             ";"     => toggle_comments,            // SPC ;   : comment operator
 
             "a" => { "Applications"
+                "i" => ai_chat,                    // SPC a i : ask the AI provider (Cursor-style assistant)
                 "r" => repl,                       // SPC a r : embedded-language REPL (elisp/viml/stryke/awk/zsh)
                 "d" => file_explorer,              // SPC a d : dired (file manager)
                 "f" => file_explorer,              // SPC a f : file tree

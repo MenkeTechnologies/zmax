@@ -523,6 +523,7 @@ impl MappableCommand {
         info_search, "Search GNU info manuals (apropos) and view the selected node (SPC h i)",
         diagnostics_verify_setup, "Report the buffer's diagnostics/LSP setup (SPC e v)",
         clear_diagnostics, "Clear all diagnostics for the current buffer (SPC e c)",
+        ai_chat, "Ask the AI provider about the selection/buffer (SPC a i)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
         describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
         copy_system_info, "Copy system info (version/OS/arch) to the clipboard (SPC h d s)",
@@ -8849,6 +8850,60 @@ fn show_text_in_scratch(editor: &mut Editor, content: &str) {
             .with_selection(Selection::point(0));
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
+}
+
+/// SPC a i : ask the configured AI provider a question. The current selection (if any) is sent as
+/// code context; the response is shown in a scratch buffer. The network call runs off the UI
+/// thread. This is Phase 1 of the Cursor-style AI integration (the chat panel + agent build on it).
+fn ai_chat(cx: &mut Context) {
+    let (context, lang) = {
+        let (view, doc) = current!(cx.editor);
+        let sel = doc.selection(view.id).primary();
+        let ctx = if sel.from() != sel.to() {
+            Some(doc.text().slice(sel.from()..sel.to()).to_string())
+        } else {
+            None
+        };
+        (ctx, doc.language_name().map(|s| s.to_string()))
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ai:".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let q = input.trim().to_string();
+            let ctx = context.clone();
+            let lang = lang.clone();
+            cx.editor.set_status("AI: thinking…");
+            cx.jobs.callback(async move {
+                let text = tokio::task::spawn_blocking(move || {
+                    let provider = crate::ai::provider().map_err(|e| anyhow::anyhow!(e))?;
+                    let mut user = q;
+                    if let Some(code) = ctx {
+                        let l = lang.unwrap_or_default();
+                        user = format!("{user}\n\nRelevant code:\n```{l}\n{code}\n```");
+                    }
+                    let msgs = vec![crate::ai::Message::user(user)];
+                    provider
+                        .chat(
+                            Some("You are a coding assistant embedded in the zemacs editor. Answer concisely; use fenced code blocks for code."),
+                            &msgs,
+                        )
+                        .map_err(|e| anyhow::anyhow!(e))
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!("ai task: {e}"))??;
+                Ok(crate::job::Callback::Editor(Box::new(move |editor: &mut Editor| {
+                    show_text_in_scratch(editor, &text);
+                    editor.set_status("AI response (scratch buffer)");
+                })))
+            });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 /// SPC g f f : prompt for a branch/commit and show the current file as it was at that revision
