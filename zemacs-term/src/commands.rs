@@ -502,6 +502,7 @@ impl MappableCommand {
         copy_file, "Copy the current file to a prompted destination (SPC f c)",
         find_file_replace_buffer, "Open a file and replace the current buffer with it (SPC f A)",
         open_file_literally, "Open a file with no syntax/language (fundamental mode, SPC f l)",
+        locate_file, "Locate a file via system locate/mdfind and open it (SPC f L)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7418,6 +7419,62 @@ fn open_file_literally(cx: &mut Context) {
         },
     );
     cx.push_layer(Box::new(prompt));
+}
+
+/// SPC f L : fuzzy "locate" picker. Runs the system `locate` against the typed query (falling
+/// back to macOS Spotlight's `mdfind -name` when the locate database is unavailable) and opens
+/// the chosen path — Spacemacs `helm-locate`.
+fn locate_file(cx: &mut Context) {
+    let columns = [PickerColumn::new("path", |item: &PathBuf, _: &()| {
+        item.display().to_string().into()
+    })];
+
+    let get_files = |query: &str,
+                     _editor: &mut Editor,
+                     _config: std::sync::Arc<()>,
+                     injector: &ui::picker::Injector<PathBuf, ()>| {
+        let query = query.trim().to_owned();
+        if query.is_empty() {
+            return async { Ok(()) }.boxed();
+        }
+        let injector = injector.clone();
+        async move {
+            let run = |prog: &str, args: &[&str]| {
+                std::process::Command::new(prog)
+                    .args(args)
+                    .output()
+                    .ok()
+                    .filter(|o| o.status.success())
+                    .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+            };
+            let out = run("locate", &["-l", "200", &query])
+                .filter(|s| !s.trim().is_empty())
+                .or_else(|| run("mdfind", &["-name", &query]));
+            if let Some(out) = out {
+                for line in out.lines().take(500) {
+                    let line = line.trim();
+                    if line.is_empty() {
+                        continue;
+                    }
+                    if injector.push(PathBuf::from(line)).is_err() {
+                        break;
+                    }
+                }
+            }
+            Ok(())
+        }
+        .boxed()
+    };
+
+    let picker = Picker::new(columns, 0, [], (), |cx, item: &PathBuf, action| {
+        if let Err(e) = cx.editor.open(item, action) {
+            cx.editor.set_error(format!("open {}: {e}", item.display()));
+        }
+    })
+    .with_preview(|_editor, item: &PathBuf| Some((item.as_path().into(), None)))
+    .with_dynamic_query(get_files, Some(275));
+
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// `git init` in the current working directory (Spacemacs `SPC g i`).

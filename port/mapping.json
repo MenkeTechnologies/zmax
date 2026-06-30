@@ -8332,11 +8332,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_lU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space f L"
+   "key:normal:space f L",
+   "static:locate_file"
   ],
-  "note": "locate file -> file_picker"
+  "note": "helm-locate -> locate_file (dynamic picker over system locate, mdfind fallback)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_b_x_n",
