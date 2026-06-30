@@ -6217,7 +6217,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_o",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space f o"
   ],
@@ -6257,7 +6257,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_c_y",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space c y"
   ],
@@ -7025,7 +7025,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_b_n_h",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space b N h"
   ],
@@ -7033,7 +7033,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_b_n_j",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space b N j"
   ],
@@ -7041,7 +7041,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_b_n_k",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space b N k"
   ],
@@ -7049,7 +7049,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_b_n_l",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space b N l"
   ],
@@ -8425,7 +8425,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_c_yU",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space c Y"
   ],
@@ -10502,5 +10502,45 @@
    "key:normal:space w . a"
   ],
   "note": "ace-window (cycle focus approx)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_f_h",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space f h"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_i",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g i"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_f_d",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space g f d"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_f_m",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space g f m"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_g_f_f",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space g f f"
+  ],
+  "note": ""
  }
 ]

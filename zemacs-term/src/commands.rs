@@ -433,6 +433,9 @@ impl MappableCommand {
         goto_window_8, "Go to window 8 (SPC 8)",
         goto_window_9, "Go to window 9 (SPC 9)",
         delete_window_and_buffer, "Close window and kill its buffer (SPC w . x)",
+        open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
+        open_file_external, "Open the current file with the OS default program (SPC f o)",
+        git_init, "Initialize a new git repository (SPC g i)",
         extend_line, "Select current line, if already selected, extend to another line based on the anchor",
         extend_line_below, "Select current line, if already selected, extend to next line",
         extend_line_above, "Select current line, if already selected, extend to previous line",
@@ -5987,6 +5990,51 @@ fn delete_window_and_buffer(cx: &mut Context) {
     let _ = cx.editor.close_document(doc_id, false);
     if cx.editor.tree.views().count() > 1 {
         cx.editor.close(view_id);
+    }
+}
+
+/// Open the current buffer's bytes in the hex editor (Spacemacs `SPC f h`, hexl).
+fn open_hex(cx: &mut Context) {
+    let (name, path, bytes) = {
+        let doc = doc!(cx.editor);
+        (
+            doc.display_name().into_owned(),
+            doc.path().map(|p| p.to_path_buf()),
+            doc.text().to_string().into_bytes(),
+        )
+    };
+    cx.push_layer(Box::new(crate::ui::hex::HexView::new(name, path, bytes)));
+}
+
+/// Open the current file with the OS default program (Spacemacs `SPC f o`).
+fn open_file_external(cx: &mut Context) {
+    let path = doc!(cx.editor).path().map(|p| p.to_path_buf());
+    match path {
+        Some(p) => match open_in_browser(&p.to_string_lossy()) {
+            Ok(()) => cx
+                .editor
+                .set_status(format!("Opening {} externally", p.display())),
+            Err(e) => cx.editor.set_error(e),
+        },
+        None => cx.editor.set_error("buffer has no file path"),
+    }
+}
+
+/// `git init` in the current working directory (Spacemacs `SPC g i`).
+fn git_init(cx: &mut Context) {
+    let dir = zemacs_stdx::env::current_working_dir();
+    match std::process::Command::new("git")
+        .arg("init")
+        .current_dir(&dir)
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            cx.editor.set_status("Initialized empty git repository")
+        }
+        Ok(out) => cx
+            .editor
+            .set_error(String::from_utf8_lossy(&out.stderr).trim().to_string()),
+        Err(e) => cx.editor.set_error(format!("git init failed: {e}")),
     }
 }
 
