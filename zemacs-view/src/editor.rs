@@ -1365,6 +1365,18 @@ use futures_util::stream::{Flatten, Once};
 
 type Diagnostics = BTreeMap<Uri, Vec<(lsp::Diagnostic, DiagnosticProvider)>>;
 
+/// A single entry in a vim-style quickfix or location list: a jumpable
+/// `{path, line, col}` plus a preview/message. Lines and columns are
+/// 0-indexed (matching the editor's internal convention; the `:cgetexpr`
+/// parser converts from vim's 1-based output).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QfEntry {
+    pub path: PathBuf,
+    pub line: usize,
+    pub col: usize,
+    pub text: String,
+}
+
 /// A snapshot of the latest in-flight LSP `$/progress` work, mirrored onto the
 /// [`Editor`] so UI surfaces can render a determinate gauge when a percentage is
 /// reported (e.g. rust-analyzer indexing) or a spinner-style label otherwise.
@@ -1440,6 +1452,12 @@ pub struct Editor {
 
     pub debug_adapters: dap::registry::Registry,
     pub breakpoints: HashMap<PathBuf, Vec<Breakpoint>>,
+
+    /// The global vim quickfix list and the index of the current entry. Filled
+    /// by `:cgetexpr`/`:cbuffer`/`:Diagnostics`/`:make`, navigated with
+    /// `:cnext`/`:cprev`/`:cc`, displayed by `:copen`.
+    pub quickfix: Vec<QfEntry>,
+    pub quickfix_idx: Option<usize>,
 
     pub syn_loader: Arc<ArcSwap<syntax::Loader>>,
     pub theme_loader: Arc<theme::Loader>,
@@ -1668,6 +1686,8 @@ impl Editor {
             diff_providers: DiffProviderRegistry::default(),
             debug_adapters: dap::registry::Registry::new(),
             breakpoints: HashMap::new(),
+            quickfix: Vec::new(),
+            quickfix_idx: None,
             syn_loader,
             theme_loader,
             last_theme: None,

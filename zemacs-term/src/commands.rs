@@ -55,7 +55,7 @@ use zemacs_core::{
 };
 use zemacs_view::{
     document::{FormatterError, Mode, SCRATCH_BUFFER_NAME},
-    editor::{Action, Motion},
+    editor::{Action, Motion, QfEntry},
     expansion,
     info::Info,
     input::KeyEvent,
@@ -825,6 +825,16 @@ impl MappableCommand {
         swap_view_up, "Swap with split above",
         swap_view_down, "Swap with split below",
         transpose_view, "Transpose splits",
+        quickfix_next, "Quickfix: jump to next entry (:cnext)",
+        quickfix_prev, "Quickfix: jump to previous entry (:cprev)",
+        quickfix_first, "Quickfix: jump to first entry (:cfirst)",
+        quickfix_last, "Quickfix: jump to last entry (:clast)",
+        quickfix_open, "Quickfix: open the quickfix list window (:copen)",
+        loclist_next, "Location list: jump to next entry (:lnext)",
+        loclist_prev, "Location list: jump to previous entry (:lprev)",
+        loclist_first, "Location list: jump to first entry (:lfirst)",
+        loclist_last, "Location list: jump to last entry (:llast)",
+        loclist_open, "Location list: open the location list window (:lopen)",
         move_to_opposite_group, "Move the current editor to the opposite split group (JetBrains)",
         rotate_view, "Goto next window",
         rotate_view_reverse, "Goto previous window",
@@ -11945,6 +11955,304 @@ pub(crate) fn build_jumplist_picker(editor: &mut Editor) -> Box<dyn Component> {
     Box::new(overlaid(picker))
 }
 
+// ===========================================================================
+// Quickfix list + location list (vim `:copen`/`:cnext`/`:lopen`/… family).
+//
+// The quickfix list is a single global list of jumpable `{path,line,col,text}`
+// entries on the `Editor`; the location list is the same but scoped to a
+// window (`View`). Entries are produced by parsing compiler/grep output with
+// `qf_entry_from_line` (a small built-in 'errorformat'), then navigated and
+// displayed by the commands below. See `commands/typed.rs` for the `:` wiring.
+// ===========================================================================
+
+/// Which list a quickfix operation targets.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum QfKind {
+    Quickfix,
+    Location,
+}
+
+/// Parse one line of compiler/grep output into a [`QfEntry`]. Recognises the
+/// common `path:line[:col][: message]` shape (rustc, gcc, `rg --vimgrep`,
+/// `grep -n`). Lines/cols in the input are 1-based (vim convention); the
+/// returned entry is 0-based. Returns `None` for lines with no file reference
+/// (so plain log noise is skipped, matching vim's errorformat behaviour).
+pub(crate) fn qf_entry_from_line(line: &str) -> Option<QfEntry> {
+    // Find the first whitespace-delimited token that looks like `path:line…`.
+    for raw in line.split(char::is_whitespace) {
+        let tok = raw.trim_matches(|c| matches!(c, ':' | ',' | '(' | ')' | '[' | ']' | '"' | '\''));
+        let mut parts = tok.split(':');
+        let path = parts.next()?;
+        // Must look like a path (rejects timestamps like `12:34`).
+        if path.is_empty() || !(path.contains('/') || path.contains('.')) {
+            continue;
+        }
+        let Some(Ok(lineno)) = parts.next().map(|s| s.parse::<usize>()) else {
+            continue;
+        };
+        if lineno == 0 {
+            continue;
+        }
+        let col = parts.next().and_then(|c| c.parse::<usize>().ok()).unwrap_or(1);
+        // The remainder of the original line (after the matched token) is the
+        // message; fall back to the whole trimmed line.
+        let text = line
+            .split_once(raw)
+            .map(|(_, rest)| rest.trim_start_matches(|c| matches!(c, ':' | ' ')).to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| line.trim().to_string());
+        return Some(QfEntry {
+            path: PathBuf::from(path),
+            line: lineno - 1,
+            col: col.saturating_sub(1),
+            text,
+        });
+    }
+    None
+}
+
+/// Parse a block of text (compiler output, a buffer, an expression) into
+/// quickfix entries, skipping lines with no file reference.
+pub(crate) fn qf_entries_from_text(text: &str) -> Vec<QfEntry> {
+    text.lines().filter_map(qf_entry_from_line).collect()
+}
+
+/// Clamp/advance a list index by `delta`, staying within `[0, len)`. Returns
+/// `None` when the list is empty. Saturates at the ends (vim does not wrap
+/// `:cnext` past the last entry).
+pub(crate) fn qf_advance_index(idx: Option<usize>, len: usize, delta: isize) -> Option<usize> {
+    if len == 0 {
+        return None;
+    }
+    match idx {
+        // No entry selected yet: the first navigation lands on the first entry.
+        None => Some(0),
+        Some(cur) => Some((cur as isize + delta).clamp(0, len as isize - 1) as usize),
+    }
+}
+
+fn qf_entries(editor: &Editor, kind: QfKind) -> Vec<QfEntry> {
+    match kind {
+        QfKind::Quickfix => editor.quickfix.clone(),
+        QfKind::Location => view!(editor).loclist.clone(),
+    }
+}
+
+fn qf_len(editor: &Editor, kind: QfKind) -> usize {
+    match kind {
+        QfKind::Quickfix => editor.quickfix.len(),
+        QfKind::Location => view!(editor).loclist.len(),
+    }
+}
+
+fn qf_index(editor: &Editor, kind: QfKind) -> Option<usize> {
+    match kind {
+        QfKind::Quickfix => editor.quickfix_idx,
+        QfKind::Location => view!(editor).loclist_idx,
+    }
+}
+
+fn qf_set_index(editor: &mut Editor, kind: QfKind, idx: Option<usize>) {
+    match kind {
+        QfKind::Quickfix => editor.quickfix_idx = idx,
+        QfKind::Location => view_mut!(editor).loclist_idx = idx,
+    }
+}
+
+/// Replace (or append to) a list's entries, resetting the current index to the
+/// first entry when the list was previously empty/unset.
+pub(crate) fn qf_set_entries(
+    editor: &mut Editor,
+    kind: QfKind,
+    new_entries: Vec<QfEntry>,
+    append: bool,
+) -> usize {
+    let added = new_entries.len();
+    match kind {
+        QfKind::Quickfix => {
+            if append {
+                editor.quickfix.extend(new_entries);
+            } else {
+                editor.quickfix = new_entries;
+                editor.quickfix_idx = None;
+            }
+            if editor.quickfix_idx.is_none() && !editor.quickfix.is_empty() {
+                editor.quickfix_idx = Some(0);
+            }
+        }
+        QfKind::Location => {
+            let view = view_mut!(editor);
+            if append {
+                view.loclist.extend(new_entries);
+            } else {
+                view.loclist = new_entries;
+                view.loclist_idx = None;
+            }
+            if view.loclist_idx.is_none() && !view.loclist.is_empty() {
+                view.loclist_idx = Some(0);
+            }
+        }
+    }
+    added
+}
+
+/// Open the file referenced by a quickfix entry and place the cursor there,
+/// pushing the prior position onto the jumplist. Mirrors the inline jump used
+/// by the global-search picker.
+fn qf_jump_to(editor: &mut Editor, kind: QfKind, idx: usize, action: Action) {
+    let entries = qf_entries(editor, kind);
+    let Some(entry) = entries.get(idx).cloned() else {
+        editor.set_error("quickfix list is empty");
+        return;
+    };
+    qf_set_index(editor, kind, Some(idx));
+    let id = match editor.open(&entry.path, action) {
+        Ok(id) => id,
+        Err(e) => {
+            editor.set_error(format!("Failed to open '{}': {}", entry.path.display(), e));
+            return;
+        }
+    };
+    let doc = doc_mut!(editor, &id);
+    let view = view_mut!(editor);
+    let text = doc.text();
+    if entry.line >= text.len_lines() {
+        editor.set_error("the entry's line no longer exists (file changed)");
+        return;
+    }
+    let line_start = text.line_to_char(entry.line);
+    let line_len = text.line(entry.line).len_chars().saturating_sub(1);
+    let pos = line_start + entry.col.min(line_len);
+    push_jump(view, doc);
+    doc.set_selection(view.id, Selection::point(pos));
+    if action.align_view(view, doc.id()) {
+        align_view(doc, view, Align::Center);
+    }
+}
+
+/// `:cnext`/`:cprev` (and location twins): step the current index by `delta`
+/// and jump. Reports vim's "no more items" at the boundary.
+pub(crate) fn qf_step(editor: &mut Editor, kind: QfKind, delta: isize) {
+    let len = qf_len(editor, kind);
+    if len == 0 {
+        editor.set_error("quickfix list is empty");
+        return;
+    }
+    let cur = qf_index(editor, kind);
+    let next = qf_advance_index(cur, len, delta);
+    if next == cur && cur.map(|c| (delta > 0 && c + 1 >= len) || (delta < 0 && c == 0)).unwrap_or(false)
+    {
+        editor.set_status(if delta > 0 { "no more items" } else { "at top of list" });
+    }
+    if let Some(i) = next {
+        qf_jump_to(editor, kind, i, Action::Replace);
+    }
+}
+
+/// `:cnfile`/`:cpfile`: jump to the first entry of the next/previous file.
+pub(crate) fn qf_step_file(editor: &mut Editor, kind: QfKind, forward: bool) {
+    let entries = qf_entries(editor, kind);
+    if entries.is_empty() {
+        editor.set_error("quickfix list is empty");
+        return;
+    }
+    let cur = qf_index(editor, kind).unwrap_or(0);
+    let cur_path = entries.get(cur).map(|e| e.path.clone());
+    let target = if forward {
+        (cur + 1..entries.len()).find(|&i| Some(&entries[i].path) != cur_path.as_ref())
+    } else {
+        (0..cur).rev().find(|&i| Some(&entries[i].path) != cur_path.as_ref())
+    };
+    match target {
+        Some(i) => qf_jump_to(editor, kind, i, Action::Replace),
+        None => editor.set_status(if forward { "no more files" } else { "no previous files" }),
+    }
+}
+
+/// `:cc [nr]`/`:ll [nr]`: jump to entry `nr` (1-based) or the current entry.
+pub(crate) fn qf_jump_nth(editor: &mut Editor, kind: QfKind, nr: Option<usize>) {
+    let len = qf_len(editor, kind);
+    if len == 0 {
+        editor.set_error("quickfix list is empty");
+        return;
+    }
+    let idx = match nr {
+        Some(n) if n >= 1 && n <= len => n - 1,
+        Some(_) => {
+            editor.set_error("entry number out of range");
+            return;
+        }
+        None => qf_index(editor, kind).unwrap_or(0),
+    };
+    qf_jump_to(editor, kind, idx, Action::Replace);
+}
+
+/// Build the quickfix/location-list picker (the `:copen`/`:lopen` window).
+pub(crate) fn build_qf_picker(editor: &mut Editor, kind: QfKind) -> Box<dyn Component> {
+    let entries = qf_entries(editor, kind);
+    let columns = [
+        ui::PickerColumn::new("path", |item: &QfEntry, _| {
+            zemacs_stdx::path::get_relative_path(item.path.clone())
+                .to_string_lossy()
+                .into_owned()
+                .into()
+        }),
+        ui::PickerColumn::new("line", |item: &QfEntry, _| (item.line + 1).to_string().into()),
+        ui::PickerColumn::new("text", |item: &QfEntry, _| item.text.as_str().into()),
+    ];
+    let picker = Picker::new(columns, 0, entries, (), move |cx, entry, action| {
+        let kind = kind;
+        // Locate this entry's index so navigation continues from here.
+        let idx = qf_entries(cx.editor, kind)
+            .iter()
+            .position(|e| e == entry)
+            .unwrap_or(0);
+        qf_jump_to(cx.editor, kind, idx, action);
+    })
+    .with_preview(|_editor, entry: &QfEntry| {
+        Some((entry.path.as_path().into(), Some((entry.line, entry.line))))
+    });
+    Box::new(overlaid(picker))
+}
+
+// --- Static (normal-mode-callable) quickfix commands ----------------------
+
+fn quickfix_next(cx: &mut Context) {
+    qf_step(cx.editor, QfKind::Quickfix, 1);
+}
+fn quickfix_prev(cx: &mut Context) {
+    qf_step(cx.editor, QfKind::Quickfix, -1);
+}
+fn quickfix_first(cx: &mut Context) {
+    qf_jump_nth(cx.editor, QfKind::Quickfix, Some(1));
+}
+fn quickfix_last(cx: &mut Context) {
+    let len = qf_len(cx.editor, QfKind::Quickfix);
+    qf_jump_nth(cx.editor, QfKind::Quickfix, (len > 0).then_some(len));
+}
+fn quickfix_open(cx: &mut Context) {
+    let picker = build_qf_picker(cx.editor, QfKind::Quickfix);
+    cx.push_layer(picker);
+}
+
+fn loclist_next(cx: &mut Context) {
+    qf_step(cx.editor, QfKind::Location, 1);
+}
+fn loclist_prev(cx: &mut Context) {
+    qf_step(cx.editor, QfKind::Location, -1);
+}
+fn loclist_first(cx: &mut Context) {
+    qf_jump_nth(cx.editor, QfKind::Location, Some(1));
+}
+fn loclist_last(cx: &mut Context) {
+    let len = qf_len(cx.editor, QfKind::Location);
+    qf_jump_nth(cx.editor, QfKind::Location, (len > 0).then_some(len));
+}
+fn loclist_open(cx: &mut Context) {
+    let picker = build_qf_picker(cx.editor, QfKind::Location);
+    cx.push_layer(picker);
+}
+
 /// Pin the current file to the project's harpoon list (jump to it later with
 /// `harpoon_jump`/`SPC H 1..9` or the menu). Idempotent.
 fn harpoon_add(cx: &mut Context) {
@@ -19635,6 +19943,66 @@ fn lsp_or_syntax_workspace_symbol_picker(cx: &mut Context) {
         lsp::workspace_symbol_picker(cx);
     } else {
         syntax_workspace_symbol_picker(cx);
+    }
+}
+
+#[cfg(test)]
+mod quickfix_tests {
+    use super::*;
+
+    #[test]
+    fn parses_vimgrep_and_compiler_lines() {
+        // rg --vimgrep / grep -n style: path:line:col:text
+        let e = qf_entry_from_line("src/foo.rs:42:7:    let x = 1").unwrap();
+        assert_eq!(e.path, PathBuf::from("src/foo.rs"));
+        assert_eq!(e.line, 41); // 0-indexed
+        assert_eq!(e.col, 6); // 0-indexed
+        assert!(e.text.contains("let x = 1"));
+
+        // rustc style: path:line:col: error: msg
+        let e = qf_entry_from_line("src/main.rs:10:5: error: mismatched types").unwrap();
+        assert_eq!(e.line, 9);
+        assert_eq!(e.col, 4);
+
+        // path:line (no col) -> col 0
+        let e = qf_entry_from_line("lib/bar.rs:3: warning here").unwrap();
+        assert_eq!(e.line, 2);
+        assert_eq!(e.col, 0);
+    }
+
+    #[test]
+    fn rejects_non_file_lines() {
+        // bare timestamp must not be treated as path:line
+        assert!(qf_entry_from_line("12:34 some log message").is_none());
+        // no file reference at all
+        assert!(qf_entry_from_line("Compiling zemacs-term v0.1.0").is_none());
+        // empty
+        assert!(qf_entry_from_line("").is_none());
+    }
+
+    #[test]
+    fn entries_from_text_skips_noise() {
+        let text = "Compiling foo\nsrc/a.rs:1:1: error: x\nrandom noise\nsrc/b.rs:2: note: y\n";
+        let entries = qf_entries_from_text(text);
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].path, PathBuf::from("src/a.rs"));
+        assert_eq!(entries[1].line, 1);
+    }
+
+    #[test]
+    fn index_advances_and_saturates() {
+        // empty list -> None
+        assert_eq!(qf_advance_index(None, 0, 1), None);
+        // first step from unset lands on 0
+        assert_eq!(qf_advance_index(None, 3, 1), Some(0));
+        // forward
+        assert_eq!(qf_advance_index(Some(0), 3, 1), Some(1));
+        // saturate at end (no wrap, matching vim)
+        assert_eq!(qf_advance_index(Some(2), 3, 1), Some(2));
+        // backward
+        assert_eq!(qf_advance_index(Some(1), 3, -1), Some(0));
+        // saturate at start
+        assert_eq!(qf_advance_index(Some(0), 3, -1), Some(0));
     }
 }
 

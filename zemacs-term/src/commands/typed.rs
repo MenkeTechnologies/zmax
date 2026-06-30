@@ -2481,6 +2481,204 @@ fn grep(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
+// --- Quickfix / location list (`:copen`, `:cnext`, `:lopen`, … ) -----------
+use crate::commands::QfKind;
+
+/// Open the quickfix/location-list window (a picker overlay) from a typable.
+fn qf_open_window(cx: &mut compositor::Context, kind: QfKind) {
+    let call = job::Callback::EditorCompositor(Box::new(move |editor, compositor| {
+        compositor.push(crate::commands::build_qf_picker(editor, kind));
+    }));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Parse `text` into list entries (replacing or appending), report the count,
+/// and optionally jump to the first entry. Shared by the `:c*`/`:l*` populators.
+fn qf_populate(
+    cx: &mut compositor::Context,
+    kind: QfKind,
+    text: &str,
+    append: bool,
+    jump: bool,
+) -> anyhow::Result<()> {
+    let entries = crate::commands::qf_entries_from_text(text);
+    if entries.is_empty() && !append {
+        bail!("no valid entries found (expected `path:line[:col]` lines)");
+    }
+    let n = crate::commands::qf_set_entries(cx.editor, kind, entries, append);
+    cx.editor.set_status(format!("{} entr{} added", n, if n == 1 { "y" } else { "ies" }));
+    if jump {
+        crate::commands::qf_jump_nth(cx.editor, kind, Some(1));
+    }
+    Ok(())
+}
+
+/// The whole current buffer as a string (source for `:cbuffer`/`:lbuffer`).
+fn current_buffer_text(cx: &compositor::Context) -> String {
+    doc!(cx.editor).text().to_string()
+}
+
+macro_rules! qf_nav_cmd {
+    ($name:ident, $kind:expr, $body:expr) => {
+        fn $name(
+            cx: &mut compositor::Context,
+            args: Args,
+            event: PromptEvent,
+        ) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let _ = &args;
+            let f: fn(&mut compositor::Context, &Args) -> anyhow::Result<()> = $body;
+            f(cx, &args)
+        }
+    };
+}
+
+qf_nav_cmd!(quickfix_open_cmd, QfKind::Quickfix, |cx, _a| {
+    qf_open_window(cx, QfKind::Quickfix);
+    Ok(())
+});
+qf_nav_cmd!(quickfix_close_cmd, QfKind::Quickfix, |cx, _a| {
+    // The qf window is a transient overlay (Esc/Enter dismisses it); there is
+    // no persistent split to close, so just acknowledge.
+    cx.editor.set_status("quickfix window closed");
+    Ok(())
+});
+qf_nav_cmd!(quickfix_next_cmd, QfKind::Quickfix, |cx, _a| {
+    crate::commands::qf_step(cx.editor, QfKind::Quickfix, 1);
+    Ok(())
+});
+qf_nav_cmd!(quickfix_prev_cmd, QfKind::Quickfix, |cx, _a| {
+    crate::commands::qf_step(cx.editor, QfKind::Quickfix, -1);
+    Ok(())
+});
+qf_nav_cmd!(quickfix_first_cmd, QfKind::Quickfix, |cx, _a| {
+    crate::commands::qf_jump_nth(cx.editor, QfKind::Quickfix, Some(1));
+    Ok(())
+});
+qf_nav_cmd!(quickfix_last_cmd, QfKind::Quickfix, |cx, _a| {
+    let len = cx.editor.quickfix.len();
+    crate::commands::qf_jump_nth(cx.editor, QfKind::Quickfix, (len > 0).then_some(len));
+    Ok(())
+});
+qf_nav_cmd!(quickfix_cc_cmd, QfKind::Quickfix, |cx, a| {
+    let nr = a.first().and_then(|s| s.parse::<usize>().ok());
+    crate::commands::qf_jump_nth(cx.editor, QfKind::Quickfix, nr);
+    Ok(())
+});
+qf_nav_cmd!(quickfix_nfile_cmd, QfKind::Quickfix, |cx, _a| {
+    crate::commands::qf_step_file(cx.editor, QfKind::Quickfix, true);
+    Ok(())
+});
+qf_nav_cmd!(quickfix_pfile_cmd, QfKind::Quickfix, |cx, _a| {
+    crate::commands::qf_step_file(cx.editor, QfKind::Quickfix, false);
+    Ok(())
+});
+qf_nav_cmd!(quickfix_buffer_cmd, QfKind::Quickfix, |cx, _a| {
+    let t = current_buffer_text(cx);
+    qf_populate(cx, QfKind::Quickfix, &t, false, true)
+});
+qf_nav_cmd!(quickfix_getbuffer_cmd, QfKind::Quickfix, |cx, _a| {
+    let t = current_buffer_text(cx);
+    qf_populate(cx, QfKind::Quickfix, &t, false, false)
+});
+qf_nav_cmd!(quickfix_addbuffer_cmd, QfKind::Quickfix, |cx, _a| {
+    let t = current_buffer_text(cx);
+    qf_populate(cx, QfKind::Quickfix, &t, true, false)
+});
+qf_nav_cmd!(quickfix_expr_cmd, QfKind::Quickfix, |cx, a| {
+    let t = a.join(" ");
+    qf_populate(cx, QfKind::Quickfix, &t, false, true)
+});
+qf_nav_cmd!(quickfix_getexpr_cmd, QfKind::Quickfix, |cx, a| {
+    let t = a.join(" ");
+    qf_populate(cx, QfKind::Quickfix, &t, false, false)
+});
+qf_nav_cmd!(quickfix_addexpr_cmd, QfKind::Quickfix, |cx, a| {
+    let t = a.join(" ");
+    qf_populate(cx, QfKind::Quickfix, &t, true, false)
+});
+qf_nav_cmd!(quickfix_file_cmd, QfKind::Quickfix, |cx, a| {
+    let path = a.join(" ");
+    if path.trim().is_empty() {
+        bail!("usage: :cfile <path>");
+    }
+    let t = std::fs::read_to_string(path.trim())?;
+    qf_populate(cx, QfKind::Quickfix, &t, false, true)
+});
+qf_nav_cmd!(quickfix_getfile_cmd, QfKind::Quickfix, |cx, a| {
+    let path = a.join(" ");
+    if path.trim().is_empty() {
+        bail!("usage: :cgetfile <path>");
+    }
+    let t = std::fs::read_to_string(path.trim())?;
+    qf_populate(cx, QfKind::Quickfix, &t, false, false)
+});
+
+qf_nav_cmd!(loclist_open_cmd, QfKind::Location, |cx, _a| {
+    qf_open_window(cx, QfKind::Location);
+    Ok(())
+});
+qf_nav_cmd!(loclist_close_cmd, QfKind::Location, |cx, _a| {
+    cx.editor.set_status("location-list window closed");
+    Ok(())
+});
+qf_nav_cmd!(loclist_next_cmd, QfKind::Location, |cx, _a| {
+    crate::commands::qf_step(cx.editor, QfKind::Location, 1);
+    Ok(())
+});
+qf_nav_cmd!(loclist_prev_cmd, QfKind::Location, |cx, _a| {
+    crate::commands::qf_step(cx.editor, QfKind::Location, -1);
+    Ok(())
+});
+qf_nav_cmd!(loclist_first_cmd, QfKind::Location, |cx, _a| {
+    crate::commands::qf_jump_nth(cx.editor, QfKind::Location, Some(1));
+    Ok(())
+});
+qf_nav_cmd!(loclist_last_cmd, QfKind::Location, |cx, _a| {
+    let len = view!(cx.editor).loclist.len();
+    crate::commands::qf_jump_nth(cx.editor, QfKind::Location, (len > 0).then_some(len));
+    Ok(())
+});
+qf_nav_cmd!(loclist_ll_cmd, QfKind::Location, |cx, a| {
+    let nr = a.first().and_then(|s| s.parse::<usize>().ok());
+    crate::commands::qf_jump_nth(cx.editor, QfKind::Location, nr);
+    Ok(())
+});
+qf_nav_cmd!(loclist_buffer_cmd, QfKind::Location, |cx, _a| {
+    let t = current_buffer_text(cx);
+    qf_populate(cx, QfKind::Location, &t, false, true)
+});
+qf_nav_cmd!(loclist_getbuffer_cmd, QfKind::Location, |cx, _a| {
+    let t = current_buffer_text(cx);
+    qf_populate(cx, QfKind::Location, &t, false, false)
+});
+qf_nav_cmd!(loclist_expr_cmd, QfKind::Location, |cx, a| {
+    let t = a.join(" ");
+    qf_populate(cx, QfKind::Location, &t, false, true)
+});
+qf_nav_cmd!(loclist_getexpr_cmd, QfKind::Location, |cx, a| {
+    let t = a.join(" ");
+    qf_populate(cx, QfKind::Location, &t, false, false)
+});
+qf_nav_cmd!(loclist_file_cmd, QfKind::Location, |cx, a| {
+    let path = a.join(" ");
+    if path.trim().is_empty() {
+        bail!("usage: :lfile <path>");
+    }
+    let t = std::fs::read_to_string(path.trim())?;
+    qf_populate(cx, QfKind::Location, &t, false, true)
+});
+qf_nav_cmd!(loclist_getfile_cmd, QfKind::Location, |cx, a| {
+    let path = a.join(" ");
+    if path.trim().is_empty() {
+        bail!("usage: :lgetfile <path>");
+    }
+    let t = std::fs::read_to_string(path.trim())?;
+    qf_populate(cx, QfKind::Location, &t, false, false)
+});
+
 /// `:shell-quote` — wrap the selection in safe shell single-quotes (for pasting a
 /// path or string into a shell command). Reuses [`shell_single_quote`].
 fn shell_quote_cmd(
@@ -14926,6 +15124,248 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             positionals: (0, None),
             ..Signature::DEFAULT
         },
+    },
+    // --- Quickfix list ---
+    TypableCommand {
+        name: "copen",
+        aliases: &["cwindow", "cw"],
+        doc: "Open the quickfix list window.",
+        fun: quickfix_open_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cclose",
+        aliases: &["ccl"],
+        doc: "Close the quickfix list window.",
+        fun: quickfix_close_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cnext",
+        aliases: &["cn"],
+        doc: "Jump to the next quickfix entry.",
+        fun: quickfix_next_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cprevious",
+        aliases: &["cprev", "cp", "cN"],
+        doc: "Jump to the previous quickfix entry.",
+        fun: quickfix_prev_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cfirst",
+        aliases: &["crewind", "cr"],
+        doc: "Jump to the first quickfix entry.",
+        fun: quickfix_first_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "clast",
+        aliases: &["cla"],
+        doc: "Jump to the last quickfix entry.",
+        fun: quickfix_last_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cc",
+        aliases: &[],
+        doc: "Jump to the [count]th quickfix entry (or the current one).",
+        fun: quickfix_cc_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cnfile",
+        aliases: &["cnf"],
+        doc: "Jump to the first quickfix entry in the next file.",
+        fun: quickfix_nfile_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cpfile",
+        aliases: &["cpf"],
+        doc: "Jump to the last quickfix entry in the previous file.",
+        fun: quickfix_pfile_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cbuffer",
+        aliases: &["cb"],
+        doc: "Read the current buffer as error lines into the quickfix list.",
+        fun: quickfix_buffer_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cgetbuffer",
+        aliases: &[],
+        doc: "Read the current buffer into the quickfix list without jumping.",
+        fun: quickfix_getbuffer_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "caddbuffer",
+        aliases: &[],
+        doc: "Append the current buffer's error lines to the quickfix list.",
+        fun: quickfix_addbuffer_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cexpr",
+        aliases: &["cex"],
+        doc: "Parse the argument text into the quickfix list and jump to the first entry.",
+        fun: quickfix_expr_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cgetexpr",
+        aliases: &[],
+        doc: "Parse the argument text into the quickfix list without jumping.",
+        fun: quickfix_getexpr_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "caddexpr",
+        aliases: &[],
+        doc: "Append the argument text's entries to the quickfix list.",
+        fun: quickfix_addexpr_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cfile",
+        aliases: &["cf"],
+        doc: "Read a file of error lines into the quickfix list and jump to the first entry.",
+        fun: quickfix_file_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cgetfile",
+        aliases: &[],
+        doc: "Read a file of error lines into the quickfix list without jumping.",
+        fun: quickfix_getfile_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    // --- Location list (per-window) ---
+    TypableCommand {
+        name: "lopen",
+        aliases: &["lwindow", "lw"],
+        doc: "Open the location list window for the current window.",
+        fun: loclist_open_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lclose",
+        aliases: &["lcl"],
+        doc: "Close the location list window.",
+        fun: loclist_close_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lnext",
+        aliases: &["lne", "ln"],
+        doc: "Jump to the next location list entry.",
+        fun: loclist_next_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lprevious",
+        aliases: &["lprev", "lp", "lN"],
+        doc: "Jump to the previous location list entry.",
+        fun: loclist_prev_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lfirst",
+        aliases: &["lrewind", "lr"],
+        doc: "Jump to the first location list entry.",
+        fun: loclist_first_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "llast",
+        aliases: &["lla"],
+        doc: "Jump to the last location list entry.",
+        fun: loclist_last_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "ll",
+        aliases: &[],
+        doc: "Jump to the [count]th location list entry (or the current one).",
+        fun: loclist_ll_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lbuffer",
+        aliases: &["lb"],
+        doc: "Read the current buffer as error lines into the location list.",
+        fun: loclist_buffer_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lgetbuffer",
+        aliases: &[],
+        doc: "Read the current buffer into the location list without jumping.",
+        fun: loclist_getbuffer_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lexpr",
+        aliases: &["lex"],
+        doc: "Parse the argument text into the location list and jump to the first entry.",
+        fun: loclist_expr_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lgetexpr",
+        aliases: &[],
+        doc: "Parse the argument text into the location list without jumping.",
+        fun: loclist_getexpr_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lfile",
+        aliases: &["lf"],
+        doc: "Read a file of error lines into the location list and jump to the first entry.",
+        fun: loclist_file_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lgetfile",
+        aliases: &[],
+        doc: "Read a file of error lines into the location list without jumping.",
+        fun: loclist_getfile_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "shell-quote",
