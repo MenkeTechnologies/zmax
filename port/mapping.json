@@ -12937,11 +12937,11 @@
  },
  {
   "spec_id": "functionality.clipboard.paste-from-history-kill-ring",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:register_picker"
+   "static:yank_pop"
   ],
-  "note": ""
+  "note": "emacs Step B"
  },
  {
   "spec_id": "functionality.search.incremental-search",
@@ -14542,5 +14542,157 @@
    "key:normal:space t 8"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "emacs.command.pop_global_mark",
+  "status": "ported",
+  "evidence": [
+   "static:pop_to_mark"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.exchange_point_and_mark",
+  "status": "ported",
+  "evidence": [
+   "static:flip_selections"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.point_to_register",
+  "status": "ported",
+  "evidence": [
+   "static:point_to_register"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.jump_to_register",
+  "status": "ported",
+  "evidence": [
+   "static:jump_to_register"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.number_to_register",
+  "status": "ported",
+  "evidence": [
+   "static:number_to_register"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.increment_register",
+  "status": "ported",
+  "evidence": [
+   "static:increment_register"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.insert_register",
+  "status": "ported",
+  "evidence": [
+   "static:emacs_insert_register"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.kill_rectangle",
+  "status": "ported",
+  "evidence": [
+   "static:kill_rectangle"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.delete_rectangle",
+  "status": "ported",
+  "evidence": [
+   "static:delete_rectangle"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.clear_rectangle",
+  "status": "ported",
+  "evidence": [
+   "static:clear_rectangle"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.copy_rectangle_as_kill",
+  "status": "ported",
+  "evidence": [
+   "static:copy_rectangle_as_kill"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.yank_rectangle",
+  "status": "ported",
+  "evidence": [
+   "static:yank_rectangle"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.bookmark_set",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_set"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.bookmark_jump",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_jump"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.list_bookmarks",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_jump"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.expand_abbrev",
+  "status": "ported",
+  "evidence": [
+   "static:expand_abbrev"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "emacs.command.add_global_abbrev",
+  "status": "ported",
+  "evidence": [
+   "static:define_abbrev"
+  ],
+  "note": "emacs port (Step B)"
+ },
+ {
+  "spec_id": "functionality.selection.true-rectangle-insert-replace",
+  "status": "ported",
+  "evidence": [
+   "static:kill_rectangle"
+  ],
+  "note": "emacs Step B"
+ },
+ {
+  "spec_id": "functionality.editing.abbreviations-auto-correct",
+  "status": "partial",
+  "evidence": [
+   "static:expand_abbrev"
+  ],
+  "note": "emacs Step B"
  }
 ]
