@@ -514,6 +514,7 @@ impl MappableCommand {
         ace_window, "Jump to a window by its number, prompted (ace-window, SPC w . a)",
         browse_news, "Browse zemacs release notes / NEWS (SPC h n)",
         show_environment, "Show the editor's environment variables (SPC f e e)",
+        reimport_shell_env, "Re-import the shell environment into the editor (SPC f e C-e)",
         goto_buffer_window, "Focus the window already showing a chosen buffer (SPC b w)",
         git_file_dispatch, "Magit-style file operations dispatch for the current file (SPC g f m)",
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
@@ -8081,6 +8082,34 @@ fn show_environment(cx: &mut Context) {
     }
     show_text_in_scratch(cx.editor, &out);
     cx.editor.set_status("environment variables");
+}
+
+/// SPC f e C-e : re-import the shell environment into the editor's process environment by running
+/// the login shell and capturing its `env` (like `exec-path-from-shell` / Spacemacs' env reinit).
+/// Newly-spawned subprocesses (LSP servers, formatters, terminals) then see the refreshed env.
+fn reimport_shell_env(cx: &mut Context) {
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+    match std::process::Command::new(&shell).args(["-lc", "env"]).output() {
+        Ok(o) if o.status.success() => {
+            let text = String::from_utf8_lossy(&o.stdout);
+            let mut n = 0;
+            for line in text.lines() {
+                if let Some((k, v)) = line.split_once('=') {
+                    if !k.is_empty() && !k.contains(char::is_whitespace) {
+                        std::env::set_var(k, v);
+                        n += 1;
+                    }
+                }
+            }
+            cx.editor
+                .set_status(format!("imported {n} environment variables from {shell}"));
+        }
+        Ok(o) => cx.editor.set_error(format!(
+            "env import failed: {}",
+            String::from_utf8_lossy(&o.stderr).trim()
+        )),
+        Err(e) => cx.editor.set_error(format!("could not run {shell}: {e}")),
+    }
 }
 
 /// SPC h n : browse zemacs' release notes (the editor's NEWS), embedded at build time and shown
