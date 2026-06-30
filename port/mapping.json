@@ -5049,7 +5049,7 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_c_h",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:space c h"
   ],

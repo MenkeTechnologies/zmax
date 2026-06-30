@@ -320,6 +320,7 @@ impl MappableCommand {
         drag_line_down, "Drag the current line down (SPC x . j)",
         drag_line_up, "Drag the current line up (SPC x . k)",
         toggle_test_file, "Toggle between implementation and test file (SPC p a)",
+        fold_comments, "Fold multi-line comment blocks (SPC c h)",
         move_visual_line_up, "Move up",
         move_visual_line_down, "Move down",
         extend_char_left, "Extend left",
@@ -14669,6 +14670,66 @@ fn goto_prev_test(cx: &mut Context) {
     goto_ts_object_impl(cx, "test", Direction::Backward)
 }
 
+/// Runs of ≥2 consecutive `true` flags as inclusive (start, end) ranges. Pure.
+fn comment_fold_runs(flags: &[bool]) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    let n = flags.len();
+    let mut l = 0;
+    while l < n {
+        if flags[l] {
+            let s = l;
+            while l < n && flags[l] {
+                l += 1;
+            }
+            if l - 1 > s {
+                out.push((s, l - 1));
+            }
+        } else {
+            l += 1;
+        }
+    }
+    out
+}
+
+/// SPC c h: hide/show comments by folding multi-line comment blocks (lines whose
+/// trimmed text starts with the language's line-comment token). Toggles: if any
+/// comment fold is open, re-fold; the widen is on SPC n w / zR.
+fn fold_comments(cx: &mut Context) {
+    let loader = cx.editor.syn_loader.load();
+    let (view, doc) = current!(cx.editor);
+    let tokens: Vec<String> = doc
+        .language_config_at(&loader, 0)
+        .and_then(|c| c.comment_tokens.as_deref())
+        .map(|t| t.iter().cloned().collect())
+        .unwrap_or_default();
+    if tokens.is_empty() {
+        cx.editor.set_status("no comment syntax for this buffer");
+        return;
+    }
+    let text = doc.text();
+    let n = text.len_lines();
+    let flags: Vec<bool> = (0..n)
+        .map(|l| {
+            let s = text.line(l).to_string();
+            let t = s.trim_start();
+            tokens.iter().any(|tok| t.starts_with(tok.as_str()))
+        })
+        .collect();
+    let runs = comment_fold_runs(&flags);
+    if runs.is_empty() {
+        cx.editor.set_status("no multi-line comment blocks to fold");
+        return;
+    }
+    let count = runs.len();
+    for (s, e) in runs {
+        doc.folds_mut().create(s, e);
+    }
+    doc.folds_mut().clamp(n.saturating_sub(1));
+    let _ = view;
+    cx.editor
+        .set_status(format!("folded {count} comment block(s)"));
+}
+
 /// Candidate counterpart file names for impl<->test toggling. If `name` looks
 /// like a test file, returns the implementation name; otherwise returns common
 /// test-file names. Pure (tested).
@@ -15973,6 +16034,13 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn comment_fold_runs_groups_consecutive() {
+        assert_eq!(comment_fold_runs(&[true, true, false, true]), vec![(0, 1)]);
+        assert_eq!(comment_fold_runs(&[false, true, true, true]), vec![(1, 3)]);
+        assert!(comment_fold_runs(&[true, false, true]).is_empty()); // singles don't fold
     }
 
     #[test]

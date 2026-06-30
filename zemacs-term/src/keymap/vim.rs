@@ -1254,7 +1254,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "c" => toggle_comments,            // SPC c c
                 "b" => toggle_block_comments,      // SPC c b
                 "p" => toggle_comments,            // SPC c p : comment paragraph
-                "h" => toggle_comments,            // SPC c h : hide/show comments (toggle)
+                "h" => fold_comments,              // SPC c h : hide comments (fold comment blocks)
                 "t" => toggle_comments,            // SPC c t : comment to line
                 "y" => [yank, toggle_comments],    // SPC c y : comment and yank
                 "d" => wclose,                     // SPC c d : close compilation window
