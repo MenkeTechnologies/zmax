@@ -31,6 +31,7 @@ tracks that build-out.
 | `spacemacs_layers.json` | Spacemacs `layers/` git tree |
 | `fzf_vim.json` | junegunn/fzf.vim — Commands reference |
 | `jetbrains_keymap.json` | JetBrains IntelliJ IDEA — macOS Default Keymap reference (`jetbrains.com/help/idea/reference-keymap-mac-default.html`) |
+| `functionality.json` | **Primary measure.** A curated taxonomy of distinct editor *capabilities*, deduplicated across the sources above — one row per feature, not per source. The report leads with this; the per-source rows are secondary muscle-memory-compatibility views. Includes capabilities zemacs lacks (absent) so the denominator stays fair. |
 
 Each item carries a `doc_ref` back to its source line/anchor.
 

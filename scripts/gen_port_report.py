@@ -592,6 +592,40 @@ def write_md(stats, src_agg, agg, broken):
         for sid, why, ev in broken:
             L.append(f"- `{sid}` — {why} — evidence: `{ev}`")
         L.append("")
+    if "functionality" in src_agg:
+        f = src_agg["functionality"]
+        fa = f["total"] - f["ported"] - f["partial"]
+        L.append("## Functionality coverage (capabilities, deduplicated)\n")
+        L.append(
+            "The primary measure: distinct editor *capabilities*, one row each, "
+            "regardless of how many ancestor editors expose the same feature. It "
+            "answers \"what can zemacs do\" without counting `go-to-line` four "
+            "times across Vim, Emacs, Spacemacs and JetBrains.\n"
+        )
+        L.append(f"- Capabilities tracked: **{f['total']}**")
+        L.append(f"- Implemented (ported): **{f['ported']}** ({pct(f['ported'], f['total']):.1f}%)")
+        L.append(f"- Partial / different model: **{f['partial']}**")
+        L.append(f"- Absent (genuine gaps): **{fa}**\n")
+        L.append("| Area | Total | Ported | Partial | % |")
+        L.append("|---|--:|--:|--:|--:|")
+        for (src, cat) in sorted(agg):
+            if src != "functionality":
+                continue
+            a = agg[(src, cat)]
+            L.append(
+                f"| {cat} | {a['total']} | {a['ported']} | {a['partial']} | "
+                f"{pct(a['ported'], a['total']):.1f}% |"
+            )
+        L.append("")
+        L.append(
+            "> The per-source tables below measure *muscle-memory compatibility* "
+            "with each ancestor editor instead. They overlap heavily (the same "
+            "capability is counted once per source) and the Emacs denominator is "
+            "the entire GNU Emacs manual — games, Dired, Gnus, Calc, TeX-mode and "
+            "all — so a low per-source percentage reflects scope and duplication, "
+            "not missing functionality. Read functionality coverage above for the "
+            "honest capability picture.\n"
+        )
     L.append("## Coverage by source\n")
     L.append("| Source | Total | Ported | Partial | Ported % |")
     L.append("|---|--:|--:|--:|--:|")
@@ -662,6 +696,47 @@ def write_html(stats, src_agg, agg, broken, rows):
     h.append(f'        <div class="stat-card"><div class="stat-val">{stats["typable_cmds"]}</div><div class="stat-label">Typable Commands</div></div>')
     h.append(f'        <div class="stat-card"><div class="stat-val">{stats["keybindings"]}</div><div class="stat-label">Default Keybindings</div></div>')
     h.append('      </div>')
+
+    if "functionality" in src_agg:
+        f = src_agg["functionality"]
+        fa = f["total"] - f["ported"] - f["partial"]
+        h.append('      <hr class="section-rule">')
+        h.append('      <h2 class="tutorial-title"><span class="step-hash">&gt;_</span>FUNCTIONALITY COVERAGE</h2>')
+        h.append(
+            '      <p class="tutorial-subtitle">The primary measure: distinct editor '
+            '<strong>capabilities</strong>, one row each, regardless of how many ancestor '
+            'editors expose the same feature &mdash; what zemacs can do, without counting '
+            '<code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>'
+        )
+        h.append('      <div class="stat-grid">')
+        h.append(f'        <div class="stat-card"><div class="stat-val">{f["total"]}</div><div class="stat-label">Capabilities</div></div>')
+        h.append(f'        <div class="stat-card"><div class="stat-val green">{f["ported"]}</div><div class="stat-label">Ported ({pct(f["ported"], f["total"]):.1f}%)</div></div>')
+        h.append(f'        <div class="stat-card"><div class="stat-val accent">{f["partial"]}</div><div class="stat-label">Partial</div></div>')
+        h.append(f'        <div class="stat-card"><div class="stat-val">{fa}</div><div class="stat-label">Absent (genuine gaps)</div></div>')
+        h.append('      </div>')
+        h.append('      <table class="file-table">')
+        h.append('        <thead><tr><th>Area</th><th class="num">Total</th><th class="num">Ported</th><th class="num">Partial</th><th>Progress</th></tr></thead>')
+        h.append('        <tbody>')
+        for (src, cat) in sorted(agg):
+            if src != "functionality":
+                continue
+            a = agg[(src, cat)]
+            h.append(
+                f'          <tr><td>{cat}</td><td class="num">{a["total"]}</td>'
+                f'<td class="num" style="color:var(--green);">{a["ported"]}</td>'
+                f'<td class="num" style="color:var(--accent);">{a["partial"]}</td>'
+                f'<td>{bar(a["ported"], a["total"])}</td></tr>'
+            )
+        h.append('        </tbody>')
+        h.append('      </table>')
+        h.append(
+            '      <p class="tutorial-subtitle">The per-source tables below measure '
+            '<em>muscle-memory compatibility</em> with each ancestor editor instead. They '
+            'overlap heavily (the same capability counted once per source), and the Emacs '
+            'denominator is the entire GNU Emacs manual &mdash; games, Dired, Gnus, Calc, '
+            'TeX-mode and all &mdash; so a low per-source percentage reflects scope and '
+            'duplication, not missing functionality.</p>'
+        )
 
     if broken:
         h.append('      <hr class="section-rule">')

@@ -12534,5 +12534,1453 @@
    "key:normal:space x t p"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_t_e",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x t e"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_t_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x t s"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.char-left-right-up-down",
+  "status": "ported",
+  "evidence": [
+   "key:normal:l"
+  ],
+  "note": "hjkl"
+ },
+ {
+  "spec_id": "functionality.motion.word-word-forward-backward",
+  "status": "ported",
+  "evidence": [
+   "key:normal:w"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.line-start-first-non-blank-end",
+  "status": "ported",
+  "evidence": [
+   "static:goto_line_start"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.buffer-start-end",
+  "status": "ported",
+  "evidence": [
+   "static:goto_file_start"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.go-to-line-n",
+  "status": "ported",
+  "evidence": [
+   "typable:goto"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.go-to-absolute-char-offset",
+  "status": "ported",
+  "evidence": [
+   "typable:goto-offset"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.matching-bracket",
+  "status": "ported",
+  "evidence": [
+   "static:match_brackets_or_goto_percent"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.next-prev-paragraph",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.next-prev-function-class",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_function"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.find-char-in-line-f-t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:f"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.screen-top-middle-bottom",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_top"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.half-full-page-scroll",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-d"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.jumplist-back-forward",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-o"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.leap-sneak-label-jump",
+  "status": "ported",
+  "evidence": [
+   "static:goto_word"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.motion.go-to-last-edit-location",
+  "status": "ported",
+  "evidence": [
+   "static:goto_last_modification"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.selection.visual-char-line-selection",
+  "status": "ported",
+  "evidence": [
+   "key:normal:v"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.selection.multiple-cursors",
+  "status": "ported",
+  "evidence": [
+   "static:select_references_to_symbol_under_cursor"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.selection.add-cursor-on-next-match",
+  "status": "ported",
+  "evidence": [
+   "static:search_selection"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.selection.syntactic-expand-shrink-wildfire",
+  "status": "ported",
+  "evidence": [
+   "static:wildfire"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.selection.column-block-selection",
+  "status": "partial",
+  "evidence": [
+   "static:duplicate_selection_down"
+  ],
+  "note": "multicursor-emulated"
+ },
+ {
+  "spec_id": "functionality.selection.select-all-occurrences",
+  "status": "partial",
+  "evidence": [
+   "static:select_references_to_symbol_under_cursor"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.text-objects.inner-around-word",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_function"
+  ],
+  "note": "diw/daw"
+ },
+ {
+  "spec_id": "functionality.text-objects.inner-around-pair",
+  "status": "ported",
+  "evidence": [
+   "static:surround_add"
+  ],
+  "note": "di(/ci{"
+ },
+ {
+  "spec_id": "functionality.text-objects.tag-object-cit-cat",
+  "status": "ported",
+  "evidence": [
+   "static:surround_add"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.text-objects.tree-sitter-function-class-param-comment",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_function"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.text-objects.sentence-paragraph-object",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_paragraph"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.delete-change-yank-motion",
+  "status": "ported",
+  "evidence": [
+   "key:normal:p"
+  ],
+  "note": "d{m}/c{m}/y{m}"
+ },
+ {
+  "spec_id": "functionality.editing.operator-text-object",
+  "status": "ported",
+  "evidence": [
+   "static:surround_add"
+  ],
+  "note": "ciw/di("
+ },
+ {
+  "spec_id": "functionality.editing.operator-find-char",
+  "status": "ported",
+  "evidence": [
+   "key:normal:f"
+  ],
+  "note": "df,/ct)"
+ },
+ {
+  "spec_id": "functionality.editing.dot-repeat-last-change",
+  "status": "ported",
+  "evidence": [
+   "key:normal:."
+  ],
+  "note": "insert-class"
+ },
+ {
+  "spec_id": "functionality.editing.replace-overtype-mode",
+  "status": "ported",
+  "evidence": [
+   "key:normal:R"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.join-lines",
+  "status": "ported",
+  "evidence": [
+   "static:join_selections"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.indent-outdent",
+  "status": "ported",
+  "evidence": [
+   "typable:indent-lines"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.reindent-format",
+  "status": "ported",
+  "evidence": [
+   "typable:format"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.toggle-comment-line-block",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_comments"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.change-case-upper-lower-toggle",
+  "status": "ported",
+  "evidence": [
+   "typable:swapcase"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.increment-decrement-number",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-a"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.move-line-statement-up-down",
+  "status": "ported",
+  "evidence": [
+   "static:move_line_up"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.duplicate-line-selection",
+  "status": "ported",
+  "evidence": [
+   "typable:duplicate-line"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.split-join-line",
+  "status": "ported",
+  "evidence": [
+   "typable:split-line"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.surround-add-change-delete",
+  "status": "ported",
+  "evidence": [
+   "static:surround_add"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.transpose-chars-words",
+  "status": "ported",
+  "evidence": [
+   "typable:transpose-chars"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.align-on-delimiter",
+  "status": "ported",
+  "evidence": [
+   "typable:align"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.reflow-hard-wrap",
+  "status": "ported",
+  "evidence": [
+   "typable:reflow"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.sort-lines",
+  "status": "ported",
+  "evidence": [
+   "typable:sort"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.editing.filter-selection-through-shell",
+  "status": "ported",
+  "evidence": [
+   "typable:pipe"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.clipboard.yank-paste-registers",
+  "status": "ported",
+  "evidence": [
+   "key:normal:p"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.clipboard.named-registers",
+  "status": "ported",
+  "evidence": [
+   "static:register_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.clipboard.system-clipboard-yank-paste",
+  "status": "ported",
+  "evidence": [
+   "typable:clipboard-yank"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.clipboard.primary-selection-x11",
+  "status": "ported",
+  "evidence": [
+   "typable:primary-clipboard-yank"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.clipboard.paste-from-history-kill-ring",
+  "status": "partial",
+  "evidence": [
+   "static:register_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.search.incremental-search",
+  "status": "ported",
+  "evidence": [
+   "static:search"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.search.search-word-under-cursor",
+  "status": "ported",
+  "evidence": [
+   "static:search_selection_detect_word_boundaries"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.search.search-history",
+  "status": "ported",
+  "evidence": [
+   "static:search_history_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.search.substitute-s",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.search.global-command-on-matching-lines-g",
+  "status": "ported",
+  "evidence": [
+   "typable:global"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.search.project-wide-grep-ripgrep",
+  "status": "ported",
+  "evidence": [
+   "static:search_in_files"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.search.replace-across-files",
+  "status": "partial",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.search.buffer-local-textual-rename",
+  "status": "ported",
+  "evidence": [
+   "typable:rename-word"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.folding.create-toggle-open-close-fold",
+  "status": "ported",
+  "evidence": [
+   "static:fold_toggle"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.folding.open-close-all-folds",
+  "status": "ported",
+  "evidence": [
+   "static:fold_open_all"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.folding.next-prev-fold",
+  "status": "ported",
+  "evidence": [
+   "static:fold_next"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.folding.narrow-to-region",
+  "status": "ported",
+  "evidence": [
+   "static:narrow_to_region"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.folding.structure-symbol-outline",
+  "status": "ported",
+  "evidence": [
+   "static:focus_structure"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.marks.set-goto-named-mark",
+  "status": "ported",
+  "evidence": [
+   "static:goto_mark"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.marks.marks-picker",
+  "status": "ported",
+  "evidence": [
+   "static:marks_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.marks.jumplist-picker",
+  "status": "ported",
+  "evidence": [
+   "static:jumplist_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.marks.harpoon-pinned-file-jump",
+  "status": "ported",
+  "evidence": [
+   "static:harpoon_add"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.macros.record-replay-keyboard-macro",
+  "status": "ported",
+  "evidence": [
+   "key:normal:q"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.macros.macro-counter",
+  "status": "ported",
+  "evidence": [
+   "static:kmacro_add_counter"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.windows.split-horizontal-vertical",
+  "status": "ported",
+  "evidence": [
+   "typable:hsplit"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.windows.focus-window-by-direction",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-w h"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.windows.resize-equalize-windows",
+  "status": "ported",
+  "evidence": [
+   "static:resize_view_narrower"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.windows.jump-to-window-by-number",
+  "status": "ported",
+  "evidence": [
+   "static:goto_window_1"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.windows.saved-workspace-layouts",
+  "status": "ported",
+  "evidence": [
+   "static:layout_goto_1"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.open-file",
+  "status": "ported",
+  "evidence": [
+   "typable:open"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.fuzzy-file-picker",
+  "status": "ported",
+  "evidence": [
+   "static:file_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.recent-files-frecency",
+  "status": "ported",
+  "evidence": [
+   "static:frecent_file_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.buffer-picker-switch",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.next-prev-close-buffer",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_buffer"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.save-save-all",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.reopen-last-closed",
+  "status": "ported",
+  "evidence": [
+   "static:reopen_last_closed"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.rename-move-file",
+  "status": "ported",
+  "evidence": [
+   "typable:move"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.delete-file",
+  "status": "ported",
+  "evidence": [
+   "typable:delete-file"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.make-directory",
+  "status": "ported",
+  "evidence": [
+   "typable:mkdir"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.chmod-x",
+  "status": "ported",
+  "evidence": [
+   "typable:chmod-x"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.read-file-into-buffer",
+  "status": "ported",
+  "evidence": [
+   "typable:read"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.change-dir-directory-stack",
+  "status": "ported",
+  "evidence": [
+   "typable:pushd"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.file-tree-sidebar",
+  "status": "ported",
+  "evidence": [
+   "static:focus_file_tree"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.files.reveal-current-file-in-tree",
+  "status": "ported",
+  "evidence": [
+   "static:reveal_in_tree"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.lsp.go-to-definition-declaration-type-impl",
+  "status": "ported",
+  "evidence": [
+   "static:goto_definition"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.lsp.find-references",
+  "status": "ported",
+  "evidence": [
+   "static:goto_reference"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.lsp.hover-documentation",
+  "status": "ported",
+  "evidence": [
+   "static:hover"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.lsp.signature-help",
+  "status": "ported",
+  "evidence": [
+   "static:signature_help"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.lsp.rename-symbol",
+  "status": "ported",
+  "evidence": [
+   "static:rename_symbol"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.lsp.code-actions-quick-fixes",
+  "status": "ported",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.lsp.completion",
+  "status": "ported",
+  "evidence": [
+   "static:completion"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.lsp.format-via-language-server",
+  "status": "ported",
+  "evidence": [
+   "typable:format"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.lsp.document-symbol-picker",
+  "status": "ported",
+  "evidence": [
+   "static:symbol_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.lsp.workspace-symbol-picker",
+  "status": "ported",
+  "evidence": [
+   "static:workspace_symbol_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.lsp.restart-stop-server",
+  "status": "ported",
+  "evidence": [
+   "typable:lsp-restart"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.diagnostics.next-prev-diagnostic",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_diag"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.diagnostics.diagnostics-picker",
+  "status": "ported",
+  "evidence": [
+   "static:diagnostics_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.diagnostics.workspace-diagnostics",
+  "status": "ported",
+  "evidence": [
+   "static:workspace_diagnostics_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.diagnostics.problems-panel",
+  "status": "ported",
+  "evidence": [
+   "static:focus_problems"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.debug.launch-debug-session",
+  "status": "ported",
+  "evidence": [
+   "static:dap_launch"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.debug.step-over-into-out",
+  "status": "ported",
+  "evidence": [
+   "static:dap_next"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.debug.continue-pause",
+  "status": "ported",
+  "evidence": [
+   "static:dap_continue"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.debug.toggle-breakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_toggle_breakpoint"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.debug.conditional-breakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_edit_condition"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.debug.evaluate-expression",
+  "status": "ported",
+  "evidence": [
+   "typable:debug-eval"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.debug.variables-view",
+  "status": "ported",
+  "evidence": [
+   "static:dap_variables"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.debug.switch-frame-thread",
+  "status": "ported",
+  "evidence": [
+   "static:dap_switch_stack_frame"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.debug.terminate-session",
+  "status": "ported",
+  "evidence": [
+   "static:dap_terminate"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.vcs.diff-gutter-hunk-navigation",
+  "status": "ported",
+  "evidence": [
+   "typable:hunk-next"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.vcs.stage-reset-hunk",
+  "status": "ported",
+  "evidence": [
+   "typable:hunk-reset"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.vcs.magit-style-status-buffer",
+  "status": "ported",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.vcs.stage-unstage-file",
+  "status": "ported",
+  "evidence": [
+   "typable:git-stage"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.vcs.commit",
+  "status": "ported",
+  "evidence": [
+   "static:git_status"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.vcs.branch-checkout",
+  "status": "ported",
+  "evidence": [
+   "static:git_branch_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.vcs.stash-pop",
+  "status": "ported",
+  "evidence": [
+   "typable:stash"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.vcs.blame-line",
+  "status": "ported",
+  "evidence": [
+   "static:git_blame_line"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.vcs.file-repo-commit-log",
+  "status": "ported",
+  "evidence": [
+   "static:git_file_log_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.vcs.web-permalink-browse",
+  "status": "ported",
+  "evidence": [
+   "static:open_remote_url"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.vcs.ci-status-panel",
+  "status": "ported",
+  "evidence": [
+   "static:focus_ci_panel"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.diff-merge.side-by-side-diff-vs-head",
+  "status": "ported",
+  "evidence": [
+   "typable:diff"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.diff-merge.3-pane-merge-resolver",
+  "status": "ported",
+  "evidence": [
+   "typable:merge"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.diff-merge.keep-ours-theirs-both",
+  "status": "ported",
+  "evidence": [
+   "typable:conflict-ours"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.diff-merge.next-prev-conflict",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_conflict"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.diff-merge.next-prev-change",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_change"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.refactoring.rename-symbol",
+  "status": "ported",
+  "evidence": [
+   "static:rename_symbol"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.refactoring.extract-method-variable",
+  "status": "partial",
+  "evidence": [
+   "static:code_action"
+  ],
+  "note": "via LSP code action"
+ },
+ {
+  "spec_id": "functionality.project.run-command-configuration",
+  "status": "ported",
+  "evidence": [
+   "static:run_active_config"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.project.run-configuration-manager",
+  "status": "ported",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.project.project-grep-to-console",
+  "status": "ported",
+  "evidence": [
+   "typable:grep"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.project.todo-fixme-scan",
+  "status": "ported",
+  "evidence": [
+   "typable:todos"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.project.run-output-console",
+  "status": "ported",
+  "evidence": [
+   "static:focus_run_console"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.snippets.user-snippet-library",
+  "status": "ported",
+  "evidence": [
+   "typable:snippets"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.snippets.snippet-trigger-expansion",
+  "status": "ported",
+  "evidence": [
+   "static:snippet_expand"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.snippets.tabstop-navigation",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_tabstop"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.snippets.emmet-expansion",
+  "status": "ported",
+  "evidence": [
+   "typable:emmet"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.transforms.json-query-reshape",
+  "status": "ported",
+  "evidence": [
+   "typable:json-query"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.transforms.json-csv-toml",
+  "status": "ported",
+  "evidence": [
+   "typable:json-to-csv"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.transforms.csv-column-table",
+  "status": "ported",
+  "evidence": [
+   "typable:csv-column"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.transforms.numeric-stats-running-totals",
+  "status": "ported",
+  "evidence": [
+   "typable:stats"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.transforms.identifier-case-conversion",
+  "status": "ported",
+  "evidence": [
+   "typable:to-snake"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.transforms.encoders-base32-64-caesar-morse-crc",
+  "status": "ported",
+  "evidence": [
+   "typable:base32-encode"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.transforms.extract-urls-emails-numbers",
+  "status": "ported",
+  "evidence": [
+   "typable:extract-urls"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.transforms.markdown-table-link-list",
+  "status": "ported",
+  "evidence": [
+   "typable:md-table"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.transforms.generators-uuid-lorem-date-seq",
+  "status": "ported",
+  "evidence": [
+   "typable:uuid"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.transforms.line-ops-dedup-shuffle-align",
+  "status": "ported",
+  "evidence": [
+   "typable:dedup"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.org.outline-fold-cycling",
+  "status": "ported",
+  "evidence": [
+   "typable:org-cycle"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.org.todo-state-cycling",
+  "status": "ported",
+  "evidence": [
+   "typable:org-todo"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.org.priority-cycling",
+  "status": "ported",
+  "evidence": [
+   "typable:org-priority"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.org.promote-demote-heading",
+  "status": "ported",
+  "evidence": [
+   "typable:org-promote"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.org.date-aware-agenda",
+  "status": "ported",
+  "evidence": [
+   "typable:org-agenda"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.org.capture-to-inbox",
+  "status": "ported",
+  "evidence": [
+   "typable:org-capture"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.terminal.integrated-terminal-pty",
+  "status": "ported",
+  "evidence": [
+   "typable:terminal"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.terminal.run-shell-command",
+  "status": "ported",
+  "evidence": [
+   "typable:run-shell-command"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.terminal.pipe-selection-to-shell",
+  "status": "ported",
+  "evidence": [
+   "typable:pipe"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.terminal.insert-append-command-output",
+  "status": "ported",
+  "evidence": [
+   "typable:insert-output"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.scripting.elisp-evaluation",
+  "status": "ported",
+  "evidence": [
+   "typable:elisp"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.scripting.vimscript-evaluation",
+  "status": "ported",
+  "evidence": [
+   "typable:vim"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.scripting.awk-filter",
+  "status": "ported",
+  "evidence": [
+   "typable:awk"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.scripting.zsh-shell",
+  "status": "ported",
+  "evidence": [
+   "typable:zsh"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.scripting.stryke-evaluation",
+  "status": "ported",
+  "evidence": [
+   "typable:stryke"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.scripting.multi-language-repl",
+  "status": "ported",
+  "evidence": [
+   "typable:repl"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.ui.ide-workbench-mode",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_ide"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.ui.preferences-window",
+  "status": "ported",
+  "evidence": [
+   "static:preferences"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.ui.keymap-preset-switch",
+  "status": "ported",
+  "evidence": [
+   "typable:keymap"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.ui.theme-switch-picker",
+  "status": "ported",
+  "evidence": [
+   "static:theme_picker"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.ui.command-palette-search-everywhere",
+  "status": "ported",
+  "evidence": [
+   "static:command_palette"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.ui.searchable-help-browser",
+  "status": "ported",
+  "evidence": [
+   "typable:help"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.ui.which-key-discoverable-leader",
+  "status": "ported",
+  "evidence": [
+   "static:command_palette"
+  ],
+  "note": "auto-info popups"
+ },
+ {
+  "spec_id": "functionality.spell.next-prev-misspelling",
+  "status": "ported",
+  "evidence": [
+   "static:goto_next_spell_error"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.spell.add-word-to-dictionary",
+  "status": "ported",
+  "evidence": [
+   "static:spell_add_good"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.spell.suggest-corrections",
+  "status": "ported",
+  "evidence": [
+   "static:spell_suggest"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.structural.paredit-slurp-barf-splice",
+  "status": "ported",
+  "evidence": [
+   "static:paredit_slurp_forward"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "functionality.structural.wrap-s-expression",
+  "status": "ported",
+  "evidence": [
+   "static:wrap_sexp"
+  ],
+  "note": ""
  }
 ]

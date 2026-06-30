@@ -1,0 +1,1490 @@
+[
+ {
+  "id": "functionality.motion.char-left-right-up-down",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Char left/right/up/down",
+  "desc": "hjkl",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.word-word-forward-backward",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Word / WORD forward / backward",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.line-start-first-non-blank-end",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Line start / first non-blank / end",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.buffer-start-end",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Buffer start / end",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.go-to-line-n",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Go to line N",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.go-to-absolute-char-offset",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Go to absolute char offset",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.matching-bracket",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Matching bracket",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.next-prev-paragraph",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Next / prev paragraph",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.next-prev-function-class",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Next / prev function / class",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.find-char-in-line-f-t",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Find char in line (f/t)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.screen-top-middle-bottom",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Screen top / middle / bottom",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.half-full-page-scroll",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Half / full page scroll",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.jumplist-back-forward",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Jumplist back / forward",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.leap-sneak-label-jump",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Leap / sneak label jump",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.motion.go-to-last-edit-location",
+  "source": "functionality",
+  "category": "motion",
+  "name": "Go to last edit location",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.selection.visual-char-line-selection",
+  "source": "functionality",
+  "category": "selection",
+  "name": "Visual char / line selection",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.selection.multiple-cursors",
+  "source": "functionality",
+  "category": "selection",
+  "name": "Multiple cursors",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.selection.add-cursor-on-next-match",
+  "source": "functionality",
+  "category": "selection",
+  "name": "Add cursor on next match",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.selection.syntactic-expand-shrink-wildfire",
+  "source": "functionality",
+  "category": "selection",
+  "name": "Syntactic expand / shrink (wildfire)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.selection.column-block-selection",
+  "source": "functionality",
+  "category": "selection",
+  "name": "Column / block selection",
+  "desc": "multicursor-emulated",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.selection.true-rectangle-insert-replace",
+  "source": "functionality",
+  "category": "selection",
+  "name": "True rectangle insert/replace",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.selection.select-all-occurrences",
+  "source": "functionality",
+  "category": "selection",
+  "name": "Select all occurrences",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.text-objects.inner-around-word",
+  "source": "functionality",
+  "category": "text-objects",
+  "name": "Inner / around word",
+  "desc": "diw/daw",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.text-objects.inner-around-pair",
+  "source": "functionality",
+  "category": "text-objects",
+  "name": "Inner / around pair ()[]{}\"\"",
+  "desc": "di(/ci{",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.text-objects.tag-object-cit-cat",
+  "source": "functionality",
+  "category": "text-objects",
+  "name": "Tag object (cit/cat)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.text-objects.tree-sitter-function-class-param-comment",
+  "source": "functionality",
+  "category": "text-objects",
+  "name": "Tree-sitter function/class/param/comment",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.text-objects.sentence-paragraph-object",
+  "source": "functionality",
+  "category": "text-objects",
+  "name": "Sentence / paragraph object",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.delete-change-yank-motion",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Delete / change / yank + motion",
+  "desc": "d{m}/c{m}/y{m}",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.operator-text-object",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Operator + text object",
+  "desc": "ciw/di(",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.operator-find-char",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Operator + find char",
+  "desc": "df,/ct)",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.dot-repeat-last-change",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Dot-repeat last change",
+  "desc": "insert-class",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.replace-overtype-mode",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Replace / overtype mode",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.join-lines",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Join lines",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.indent-outdent",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Indent / outdent",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.reindent-format",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Reindent / format",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.toggle-comment-line-block",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Toggle comment (line/block)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.change-case-upper-lower-toggle",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Change case (upper/lower/toggle)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.increment-decrement-number",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Increment / decrement number",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.move-line-statement-up-down",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Move line / statement up / down",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.duplicate-line-selection",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Duplicate line / selection",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.split-join-line",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Split / join line",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.surround-add-change-delete",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Surround add / change / delete",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.transpose-chars-words",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Transpose chars / words",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.align-on-delimiter",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Align on delimiter",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.reflow-hard-wrap",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Reflow / hard-wrap",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.sort-lines",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Sort lines",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.filter-selection-through-shell",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Filter selection through shell",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.editing.abbreviations-auto-correct",
+  "source": "functionality",
+  "category": "editing",
+  "name": "Abbreviations / auto-correct",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.clipboard.yank-paste-registers",
+  "source": "functionality",
+  "category": "clipboard",
+  "name": "Yank / paste (registers)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.clipboard.named-registers",
+  "source": "functionality",
+  "category": "clipboard",
+  "name": "Named registers",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.clipboard.system-clipboard-yank-paste",
+  "source": "functionality",
+  "category": "clipboard",
+  "name": "System clipboard yank / paste",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.clipboard.primary-selection-x11",
+  "source": "functionality",
+  "category": "clipboard",
+  "name": "Primary selection (X11)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.clipboard.paste-from-history-kill-ring",
+  "source": "functionality",
+  "category": "clipboard",
+  "name": "Paste-from-history / kill ring",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.search.incremental-search",
+  "source": "functionality",
+  "category": "search",
+  "name": "Incremental search",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.search.search-word-under-cursor",
+  "source": "functionality",
+  "category": "search",
+  "name": "Search word under cursor",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.search.search-history",
+  "source": "functionality",
+  "category": "search",
+  "name": "Search history",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.search.substitute-s",
+  "source": "functionality",
+  "category": "search",
+  "name": "Substitute (:s)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.search.global-command-on-matching-lines-g",
+  "source": "functionality",
+  "category": "search",
+  "name": "Global command on matching lines (:g)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.search.project-wide-grep-ripgrep",
+  "source": "functionality",
+  "category": "search",
+  "name": "Project-wide grep (ripgrep)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.search.replace-across-files",
+  "source": "functionality",
+  "category": "search",
+  "name": "Replace across files",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.search.buffer-local-textual-rename",
+  "source": "functionality",
+  "category": "search",
+  "name": "Buffer-local textual rename",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.folding.create-toggle-open-close-fold",
+  "source": "functionality",
+  "category": "folding",
+  "name": "Create / toggle / open / close fold",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.folding.open-close-all-folds",
+  "source": "functionality",
+  "category": "folding",
+  "name": "Open / close all folds",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.folding.next-prev-fold",
+  "source": "functionality",
+  "category": "folding",
+  "name": "Next / prev fold",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.folding.narrow-to-region",
+  "source": "functionality",
+  "category": "folding",
+  "name": "Narrow to region",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.folding.structure-symbol-outline",
+  "source": "functionality",
+  "category": "folding",
+  "name": "Structure / symbol outline",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.marks.set-goto-named-mark",
+  "source": "functionality",
+  "category": "marks",
+  "name": "Set / goto named mark",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.marks.marks-picker",
+  "source": "functionality",
+  "category": "marks",
+  "name": "Marks picker",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.marks.jumplist-picker",
+  "source": "functionality",
+  "category": "marks",
+  "name": "Jumplist picker",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.marks.harpoon-pinned-file-jump",
+  "source": "functionality",
+  "category": "marks",
+  "name": "Harpoon pinned-file jump",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.macros.record-replay-keyboard-macro",
+  "source": "functionality",
+  "category": "macros",
+  "name": "Record / replay keyboard macro",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.macros.macro-counter",
+  "source": "functionality",
+  "category": "macros",
+  "name": "Macro counter",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.windows.split-horizontal-vertical",
+  "source": "functionality",
+  "category": "windows",
+  "name": "Split horizontal / vertical",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.windows.focus-window-by-direction",
+  "source": "functionality",
+  "category": "windows",
+  "name": "Focus window by direction",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.windows.resize-equalize-windows",
+  "source": "functionality",
+  "category": "windows",
+  "name": "Resize / equalize windows",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.windows.jump-to-window-by-number",
+  "source": "functionality",
+  "category": "windows",
+  "name": "Jump to window by number",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.windows.saved-workspace-layouts",
+  "source": "functionality",
+  "category": "windows",
+  "name": "Saved workspace layouts",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.windows.editor-tabs-tabpages",
+  "source": "functionality",
+  "category": "windows",
+  "name": "Editor tabs / tabpages",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.open-file",
+  "source": "functionality",
+  "category": "files",
+  "name": "Open file",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.fuzzy-file-picker",
+  "source": "functionality",
+  "category": "files",
+  "name": "Fuzzy file picker",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.recent-files-frecency",
+  "source": "functionality",
+  "category": "files",
+  "name": "Recent files (frecency)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.buffer-picker-switch",
+  "source": "functionality",
+  "category": "files",
+  "name": "Buffer picker / switch",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.next-prev-close-buffer",
+  "source": "functionality",
+  "category": "files",
+  "name": "Next / prev / close buffer",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.save-save-all",
+  "source": "functionality",
+  "category": "files",
+  "name": "Save / save all",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.reopen-last-closed",
+  "source": "functionality",
+  "category": "files",
+  "name": "Reopen last closed",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.rename-move-file",
+  "source": "functionality",
+  "category": "files",
+  "name": "Rename / move file",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.delete-file",
+  "source": "functionality",
+  "category": "files",
+  "name": "Delete file",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.make-directory",
+  "source": "functionality",
+  "category": "files",
+  "name": "Make directory",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.chmod-x",
+  "source": "functionality",
+  "category": "files",
+  "name": "chmod +x",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.read-file-into-buffer",
+  "source": "functionality",
+  "category": "files",
+  "name": "Read file into buffer",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.change-dir-directory-stack",
+  "source": "functionality",
+  "category": "files",
+  "name": "Change dir / directory stack",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.file-tree-sidebar",
+  "source": "functionality",
+  "category": "files",
+  "name": "File-tree sidebar",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.files.reveal-current-file-in-tree",
+  "source": "functionality",
+  "category": "files",
+  "name": "Reveal current file in tree",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.go-to-definition-declaration-type-impl",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Go to definition / declaration / type / impl",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.find-references",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Find references",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.hover-documentation",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Hover documentation",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.signature-help",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Signature help",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.rename-symbol",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Rename symbol",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.code-actions-quick-fixes",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Code actions / quick fixes",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.completion",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Completion",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.format-via-language-server",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Format via language server",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.document-symbol-picker",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Document symbol picker",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.workspace-symbol-picker",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Workspace symbol picker",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.restart-stop-server",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Restart / stop server",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.lsp.call-type-hierarchy",
+  "source": "functionality",
+  "category": "lsp",
+  "name": "Call / type hierarchy",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.diagnostics.next-prev-diagnostic",
+  "source": "functionality",
+  "category": "diagnostics",
+  "name": "Next / prev diagnostic",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.diagnostics.diagnostics-picker",
+  "source": "functionality",
+  "category": "diagnostics",
+  "name": "Diagnostics picker",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.diagnostics.workspace-diagnostics",
+  "source": "functionality",
+  "category": "diagnostics",
+  "name": "Workspace diagnostics",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.diagnostics.problems-panel",
+  "source": "functionality",
+  "category": "diagnostics",
+  "name": "Problems panel",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.debug.launch-debug-session",
+  "source": "functionality",
+  "category": "debug",
+  "name": "Launch debug session",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.debug.step-over-into-out",
+  "source": "functionality",
+  "category": "debug",
+  "name": "Step over / into / out",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.debug.continue-pause",
+  "source": "functionality",
+  "category": "debug",
+  "name": "Continue / pause",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.debug.toggle-breakpoint",
+  "source": "functionality",
+  "category": "debug",
+  "name": "Toggle breakpoint",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.debug.conditional-breakpoint",
+  "source": "functionality",
+  "category": "debug",
+  "name": "Conditional breakpoint",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.debug.evaluate-expression",
+  "source": "functionality",
+  "category": "debug",
+  "name": "Evaluate expression",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.debug.variables-view",
+  "source": "functionality",
+  "category": "debug",
+  "name": "Variables view",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.debug.switch-frame-thread",
+  "source": "functionality",
+  "category": "debug",
+  "name": "Switch frame / thread",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.debug.terminate-session",
+  "source": "functionality",
+  "category": "debug",
+  "name": "Terminate session",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.vcs.diff-gutter-hunk-navigation",
+  "source": "functionality",
+  "category": "vcs",
+  "name": "Diff gutter / hunk navigation",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.vcs.stage-reset-hunk",
+  "source": "functionality",
+  "category": "vcs",
+  "name": "Stage / reset hunk",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.vcs.magit-style-status-buffer",
+  "source": "functionality",
+  "category": "vcs",
+  "name": "Magit-style status buffer",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.vcs.stage-unstage-file",
+  "source": "functionality",
+  "category": "vcs",
+  "name": "Stage / unstage file",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.vcs.commit",
+  "source": "functionality",
+  "category": "vcs",
+  "name": "Commit",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.vcs.branch-checkout",
+  "source": "functionality",
+  "category": "vcs",
+  "name": "Branch checkout",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.vcs.stash-pop",
+  "source": "functionality",
+  "category": "vcs",
+  "name": "Stash / pop",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.vcs.blame-line",
+  "source": "functionality",
+  "category": "vcs",
+  "name": "Blame line",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.vcs.file-repo-commit-log",
+  "source": "functionality",
+  "category": "vcs",
+  "name": "File / repo commit log",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.vcs.web-permalink-browse",
+  "source": "functionality",
+  "category": "vcs",
+  "name": "Web permalink (browse)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.vcs.ci-status-panel",
+  "source": "functionality",
+  "category": "vcs",
+  "name": "CI status panel",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.diff-merge.side-by-side-diff-vs-head",
+  "source": "functionality",
+  "category": "diff-merge",
+  "name": "Side-by-side diff vs HEAD",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.diff-merge.3-pane-merge-resolver",
+  "source": "functionality",
+  "category": "diff-merge",
+  "name": "3-pane merge resolver",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.diff-merge.keep-ours-theirs-both",
+  "source": "functionality",
+  "category": "diff-merge",
+  "name": "Keep ours / theirs / both",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.diff-merge.next-prev-conflict",
+  "source": "functionality",
+  "category": "diff-merge",
+  "name": "Next / prev conflict",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.diff-merge.next-prev-change",
+  "source": "functionality",
+  "category": "diff-merge",
+  "name": "Next / prev change",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.refactoring.rename-symbol",
+  "source": "functionality",
+  "category": "refactoring",
+  "name": "Rename symbol",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.refactoring.extract-method-variable",
+  "source": "functionality",
+  "category": "refactoring",
+  "name": "Extract method / variable",
+  "desc": "via LSP code action",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.refactoring.inline",
+  "source": "functionality",
+  "category": "refactoring",
+  "name": "Inline",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.refactoring.change-signature",
+  "source": "functionality",
+  "category": "refactoring",
+  "name": "Change signature",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.refactoring.safe-delete",
+  "source": "functionality",
+  "category": "refactoring",
+  "name": "Safe delete",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.project.run-command-configuration",
+  "source": "functionality",
+  "category": "project",
+  "name": "Run command / configuration",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.project.run-configuration-manager",
+  "source": "functionality",
+  "category": "project",
+  "name": "Run-configuration manager",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.project.project-grep-to-console",
+  "source": "functionality",
+  "category": "project",
+  "name": "Project grep to console",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.project.todo-fixme-scan",
+  "source": "functionality",
+  "category": "project",
+  "name": "TODO / FIXME scan",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.project.run-output-console",
+  "source": "functionality",
+  "category": "project",
+  "name": "Run / output console",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.snippets.user-snippet-library",
+  "source": "functionality",
+  "category": "snippets",
+  "name": "User snippet library",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.snippets.snippet-trigger-expansion",
+  "source": "functionality",
+  "category": "snippets",
+  "name": "Snippet trigger expansion",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.snippets.tabstop-navigation",
+  "source": "functionality",
+  "category": "snippets",
+  "name": "Tabstop navigation",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.snippets.emmet-expansion",
+  "source": "functionality",
+  "category": "snippets",
+  "name": "Emmet expansion",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.transforms.json-query-reshape",
+  "source": "functionality",
+  "category": "transforms",
+  "name": "JSON query / reshape",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.transforms.json-csv-toml",
+  "source": "functionality",
+  "category": "transforms",
+  "name": "JSON <-> CSV / TOML",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.transforms.csv-column-table",
+  "source": "functionality",
+  "category": "transforms",
+  "name": "CSV column / table",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.transforms.numeric-stats-running-totals",
+  "source": "functionality",
+  "category": "transforms",
+  "name": "Numeric stats / running totals",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.transforms.identifier-case-conversion",
+  "source": "functionality",
+  "category": "transforms",
+  "name": "Identifier case conversion",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.transforms.encoders-base32-64-caesar-morse-crc",
+  "source": "functionality",
+  "category": "transforms",
+  "name": "Encoders (base32/64, caesar, morse, crc)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.transforms.extract-urls-emails-numbers",
+  "source": "functionality",
+  "category": "transforms",
+  "name": "Extract urls / emails / numbers",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.transforms.markdown-table-link-list",
+  "source": "functionality",
+  "category": "transforms",
+  "name": "Markdown table / link / list",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.transforms.generators-uuid-lorem-date-seq",
+  "source": "functionality",
+  "category": "transforms",
+  "name": "Generators (uuid / lorem / date / seq)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.transforms.line-ops-dedup-shuffle-align",
+  "source": "functionality",
+  "category": "transforms",
+  "name": "Line ops (dedup / shuffle / align)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.org.outline-fold-cycling",
+  "source": "functionality",
+  "category": "org",
+  "name": "Outline fold cycling",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.org.todo-state-cycling",
+  "source": "functionality",
+  "category": "org",
+  "name": "TODO state cycling",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.org.priority-cycling",
+  "source": "functionality",
+  "category": "org",
+  "name": "Priority cycling",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.org.promote-demote-heading",
+  "source": "functionality",
+  "category": "org",
+  "name": "Promote / demote heading",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.org.date-aware-agenda",
+  "source": "functionality",
+  "category": "org",
+  "name": "Date-aware agenda",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.org.capture-to-inbox",
+  "source": "functionality",
+  "category": "org",
+  "name": "Capture to inbox",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.terminal.integrated-terminal-pty",
+  "source": "functionality",
+  "category": "terminal",
+  "name": "Integrated terminal (PTY)",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.terminal.run-shell-command",
+  "source": "functionality",
+  "category": "terminal",
+  "name": "Run shell command",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.terminal.pipe-selection-to-shell",
+  "source": "functionality",
+  "category": "terminal",
+  "name": "Pipe selection to shell",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.terminal.insert-append-command-output",
+  "source": "functionality",
+  "category": "terminal",
+  "name": "Insert / append command output",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.scripting.elisp-evaluation",
+  "source": "functionality",
+  "category": "scripting",
+  "name": "Elisp evaluation",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.scripting.vimscript-evaluation",
+  "source": "functionality",
+  "category": "scripting",
+  "name": "Vimscript evaluation",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.scripting.awk-filter",
+  "source": "functionality",
+  "category": "scripting",
+  "name": "AWK filter",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.scripting.zsh-shell",
+  "source": "functionality",
+  "category": "scripting",
+  "name": "Zsh shell",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.scripting.stryke-evaluation",
+  "source": "functionality",
+  "category": "scripting",
+  "name": "Stryke evaluation",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.scripting.multi-language-repl",
+  "source": "functionality",
+  "category": "scripting",
+  "name": "Multi-language REPL",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.ui.ide-workbench-mode",
+  "source": "functionality",
+  "category": "ui",
+  "name": "IDE workbench mode",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.ui.preferences-window",
+  "source": "functionality",
+  "category": "ui",
+  "name": "Preferences window",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.ui.keymap-preset-switch",
+  "source": "functionality",
+  "category": "ui",
+  "name": "Keymap preset switch",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.ui.theme-switch-picker",
+  "source": "functionality",
+  "category": "ui",
+  "name": "Theme switch / picker",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.ui.command-palette-search-everywhere",
+  "source": "functionality",
+  "category": "ui",
+  "name": "Command palette / search everywhere",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.ui.searchable-help-browser",
+  "source": "functionality",
+  "category": "ui",
+  "name": "Searchable help browser",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.ui.which-key-discoverable-leader",
+  "source": "functionality",
+  "category": "ui",
+  "name": "Which-key discoverable leader",
+  "desc": "auto-info popups",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.spell.next-prev-misspelling",
+  "source": "functionality",
+  "category": "spell",
+  "name": "Next / prev misspelling",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.spell.add-word-to-dictionary",
+  "source": "functionality",
+  "category": "spell",
+  "name": "Add word to dictionary",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.spell.suggest-corrections",
+  "source": "functionality",
+  "category": "spell",
+  "name": "Suggest corrections",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.structural.paredit-slurp-barf-splice",
+  "source": "functionality",
+  "category": "structural",
+  "name": "Paredit slurp / barf / splice",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ },
+ {
+  "id": "functionality.structural.wrap-s-expression",
+  "source": "functionality",
+  "category": "structural",
+  "name": "Wrap s-expression",
+  "desc": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains).",
+  "doc_ref": "Curated editor-capability taxonomy (functional units, deduplicated across Vim/Emacs/Spacemacs/JetBrains)."
+ }
+]
