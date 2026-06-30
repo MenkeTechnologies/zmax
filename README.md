@@ -100,6 +100,13 @@ leaving the editor:
   menus.
 - **Org-mode** — outline folding, `TODO` state cycling, capture, and a
   date-aware agenda.
+- **Transform library** — 200+ selection-transform `:` commands: JSON/CSV/TOML
+  reshaping, number/stats ops, identifier-case conversion, encoders
+  (Base32/Base64/Caesar/Morse/CRC32), extraction (URLs/emails/numbers),
+  Markdown/typography, line ops (`:align`/`:reflow`/`:dedup`/`:sort-by-field`),
+  and generators (`:uuid`/`:lorem`/`:date`/`:seq`) — each running on the
+  selection (or whole buffer). When a transform needs real logic, drop to the
+  embedded languages.
 - **IDE workbench** (`:ide` / `F2`) — a project file-tree, a tree-sitter
   structure outline, problems/run panels, and an error-stripe minimap; the
   whole layout persists to appdata.

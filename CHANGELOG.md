@@ -26,6 +26,18 @@ Changes in the zemacs fork, on top of the upstream Helix history below.
 
 Features:
 
+* Transform library: 200+ selection-transform `:` commands — JSON/CSV/TOML
+  reshaping (`:json-query`, `:json-to-csv`, `:json-flatten`, `:json-group-by`,
+  `:csv-column`, `:md-table`, …), number/stats ops (`:stats`, `:running-total`,
+  `:percent-of-total`, `:scale`, `:sum-fields`, `:bases`), identifier case
+  (`:to-snake`/`:to-camel`/`:to-kebab`/`:to-pascal`/`:to-constant`), encoders
+  (`:base32`, `:caesar`, `:morse`, `:crc32`, `:nato`, plus `SPC x` URL/Base64/
+  HTML/JWT/roman/colour), extraction (`:extract-urls`/`-emails`/`-numbers`),
+  Markdown/typography, line ops (`:align`, `:reflow`, `:dedup`, `:shuffle`,
+  `:sort-by-field`), and generators (`:uuid`, `:lorem`, `:date`, `:seq`). They
+  run on the selection (or whole buffer) as one undoable change.
+* Org-mode: outline folding, `TODO`/priority cycling, promote/demote, capture,
+  and a date-aware agenda across `.org` files (`SPC m …`, `SPC a o …`).
 * Snippet library: a `:snippets` editor TUI for reusable snippets (trigger,
   scope, description, LSP-syntax body), persisted to `snippets.toml`. Typing a
   trigger word and pressing `Tab` expands the body with live tab stops; user
@@ -39,8 +51,6 @@ Features:
   `HEAD` (`:diff`). The IDE Git tab lists conflicted files.
 * Magit-style git TUI: interactive rebase, per-hunk staging, and branch and
   stash menus.
-* Org-mode: outline folding, `TODO` state cycling, capture, and a date-aware
-  agenda (overdue/today/upcoming).
 * Wildfire: `<ret>` selects/expands to the closest text object and grows to the
   next enclosing one; `<backspace>` shrinks back.
 * REPL panel (`:repl`, `SPC a r`) fronting all five embedded languages.
