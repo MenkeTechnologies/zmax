@@ -19313,5 +19313,14 @@
    "static:layout_goto_1"
   ],
   "note": "switch to nth workspace (transient) -> layout_goto C-1..C-9"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_e_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space e c",
+   "static:clear_diagnostics"
+  ],
+  "note": "clear all errors -> clear_diagnostics (clears doc diagnostics per language server; flycheck-clear semantics)"
  }
 ]
