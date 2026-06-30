@@ -10,6 +10,19 @@
 [target."cfg(all())"]
 rustflags = ["--cfg", "tokio_unstable", "-C", "target-feature=-crt-static"]
 
+# The `scripting` feature embeds five fusevm interpreters (zsh, elisp, viml, awk,
+# stryke). Each unconditionally `#[no_mangle]`-exports `fusevm_aot_register_builtins`
+# — the startup hook fusevm calls in a *standalone* single-interpreter AOT binary
+# (`zbuild --native`). That symbol is never called in the embedded host, but
+# linking all five interpreters into one binary places five identical definitions
+# in the link. macOS `ld` tolerates the duplicates; Linux `rust-lld` is strict and
+# errors. Allow the (intentional, uncalled) duplicates on Linux so the default
+# build links. The architecturally-clean fix is to gate each export behind a
+# feature only the standalone AOT build enables — that lives in the interpreter
+# submodules and is tracked there; this keeps the host build green meanwhile.
+[target.'cfg(target_os = "linux")']
+rustflags = ["-C", "link-arg=-Wl,--allow-multiple-definition"]
+
 
 # Bake the in-repo runtime/ directory (grammars, queries, themes, tutor) in as
 # the build-time fallback runtime path, so a directly-launched `zemacs` binary
