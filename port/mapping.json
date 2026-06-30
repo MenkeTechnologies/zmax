@@ -18454,5 +18454,13 @@
    "static:dap_run_to_cursor"
   ],
   "note": "jetbrains run to cursor"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_p_v",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space p v"
+  ],
+  "note": "open project in magit -> git_status"
  }
 ]
