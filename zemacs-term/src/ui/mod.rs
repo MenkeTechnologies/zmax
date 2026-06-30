@@ -27,6 +27,7 @@ pub mod run_config;
 pub mod search;
 mod select;
 pub mod settings;
+pub mod snippets;
 mod spinner;
 pub mod startify;
 mod statusline;

@@ -1734,6 +1734,24 @@ pub(crate) fn push_hex_view(cx: &mut compositor::Context, path: std::path::PathB
     cx.jobs.callback(async move { Ok(call) });
 }
 
+/// `:snippets` — open the user snippet library editor: a full-screen two-pane
+/// TUI to create / edit / delete reusable snippets (trigger + scope + body in
+/// LSP snippet syntax). The library persists to `<config-dir>/snippets.toml`.
+/// Expansion-on-trigger is a later slice; this opens the manager only.
+fn snippets(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let view = crate::ui::snippets::SnippetPanel::new();
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(view));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 // --- Org-mode (slice 1: outline folding + TODO cycling) ----------------------
 // Pure logic lives in `super::org`; these typable commands wire it to the focused
 // buffer. Folding reuses the document's `Folds` model exactly like the vim `z*`
@@ -13769,6 +13787,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "snippets",
+        aliases: &["snip"],
+        doc: "Open the user snippet library editor (create/edit/delete reusable snippets).",
+        fun: snippets,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "org-cycle",
         aliases: &["org-fold"],
         doc: "Toggle a fold over the current org heading's subtree (TAB-style outline cycling).",
@@ -13973,6 +14002,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Toggle the IDE workbench (Zen / focus mode).",
         fun: zen_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "emmet",
+        aliases: &["zencode"],
+        doc: "Expand the emmet/zen HTML abbreviation before the cursor.",
+        fun: emmet_expand_cmd,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
@@ -17550,6 +17590,23 @@ fn editor_context<'a>(cx: &'a mut compositor::Context) -> super::Context<'a> {
         on_next_key_callback: None,
         jobs: cx.jobs,
     }
+}
+
+/// `:emmet` — expand the emmet/zen abbreviation before the cursor.
+fn emmet_expand_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut ecx = editor_context(cx);
+    if !super::try_emmet_expand(&mut ecx) {
+        ecx.editor
+            .set_error("no emmet abbreviation before the cursor");
+    }
+    Ok(())
 }
 
 /// `:wc` — report document line/word/char counts (and selection stats).
