@@ -495,6 +495,7 @@ impl MappableCommand {
         toggle_fill_column, "Toggle a fill-column ruler (SPC t f)",
         toggle_long_line_marker, "Toggle an 80th-column ruler (SPC t 8)",
         toggle_soft_wrap, "Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap)",
+        toggle_whitespace_render, "Toggle rendering of whitespace characters (IntelliJ View > Show Whitespaces)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
         ediff_3_buffers, "3-way diff of three open buffers, read-only (SPC D b 3)",
@@ -7186,6 +7187,23 @@ fn toggle_soft_wrap(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("soft-wrap: {}", if on { "on" } else { "off" }));
+}
+
+/// Toggle rendering of whitespace characters (IntelliJ "View > Active Editor > Show Whitespaces").
+fn toggle_whitespace_render(cx: &mut Context) {
+    use zemacs_view::editor::{WhitespaceRender, WhitespaceRenderValue};
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        let showing = !matches!(c.whitespace.render.space(), WhitespaceRenderValue::None);
+        on = !showing;
+        c.whitespace.render = WhitespaceRender::Basic(if on {
+            WhitespaceRenderValue::All
+        } else {
+            WhitespaceRenderValue::None
+        });
+    });
+    cx.editor
+        .set_status(format!("show whitespace: {}", if on { "on" } else { "off" }));
 }
 
 /// Prompt for a file and diff it against the current buffer (Spacemacs `SPC D f f`).

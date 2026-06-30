@@ -1670,5 +1670,13 @@
   "name": "Soft-Wrap",
   "desc": "IntelliJ IDEA default keymap: View > Active Editor > Soft-Wrap",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.view.show-whitespaces",
+  "source": "jetbrains",
+  "category": "view",
+  "name": "Show Whitespaces",
+  "desc": "IntelliJ IDEA default keymap: View > Active Editor > Show Whitespaces",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]

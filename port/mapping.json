@@ -19075,5 +19075,13 @@
    "static:toggle_soft_wrap"
   ],
   "note": "toggle soft-wrap of long lines"
+ },
+ {
+  "spec_id": "jetbrains.view.show-whitespaces",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_whitespace_render"
+  ],
+  "note": "toggle whitespace rendering"
  }
 ]
