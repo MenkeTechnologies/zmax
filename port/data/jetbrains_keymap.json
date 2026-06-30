@@ -1678,5 +1678,13 @@
   "name": "Show Whitespaces",
   "desc": "IntelliJ IDEA default keymap: View > Active Editor > Show Whitespaces",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.view.show-line-numbers",
+  "source": "jetbrains",
+  "category": "view",
+  "name": "Show Line Numbers",
+  "desc": "IntelliJ IDEA default keymap: View > Active Editor > Show Line Numbers",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]

@@ -19083,5 +19083,13 @@
    "static:toggle_whitespace_render"
   ],
   "note": "toggle whitespace rendering"
+ },
+ {
+  "spec_id": "jetbrains.view.show-line-numbers",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_line_numbers"
+  ],
+  "note": "toggle line-numbers gutter"
  }
 ]

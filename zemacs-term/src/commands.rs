@@ -496,6 +496,7 @@ impl MappableCommand {
         toggle_long_line_marker, "Toggle an 80th-column ruler (SPC t 8)",
         toggle_soft_wrap, "Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap)",
         toggle_whitespace_render, "Toggle rendering of whitespace characters (IntelliJ View > Show Whitespaces)",
+        toggle_line_numbers, "Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
         ediff_3_buffers, "3-way diff of three open buffers, read-only (SPC D b 3)",
@@ -7204,6 +7205,28 @@ fn toggle_whitespace_render(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("show whitespace: {}", if on { "on" } else { "off" }));
+}
+
+/// Toggle the line-numbers gutter (IntelliJ "View > Active Editor > Show Line Numbers").
+fn toggle_line_numbers(cx: &mut Context) {
+    use zemacs_view::editor::GutterType;
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        let layout = &mut c.gutters.layout;
+        if let Some(pos) = layout.iter().position(|g| *g == GutterType::LineNumbers) {
+            layout.remove(pos);
+        } else {
+            // Re-insert just before the diff gutter (its usual home), or at the end.
+            let pos = layout
+                .iter()
+                .position(|g| *g == GutterType::Diff)
+                .unwrap_or(layout.len());
+            layout.insert(pos, GutterType::LineNumbers);
+            on = true;
+        }
+    });
+    cx.editor
+        .set_status(format!("line numbers: {}", if on { "on" } else { "off" }));
 }
 
 /// Prompt for a file and diff it against the current buffer (Spacemacs `SPC D f f`).
