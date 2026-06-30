@@ -100,6 +100,15 @@ leaving the editor:
   menus.
 - **Org-mode** — outline folding, `TODO` state cycling, capture, and a
   date-aware agenda.
+- **IDE workbench** (`:ide` / `F2`) — a project file-tree, a tree-sitter
+  structure outline, problems/run panels, and an error-stripe minimap; the
+  whole layout persists to appdata.
+- **Integrated terminal** (`:terminal`) — a PTY shell in a pane, with a `C-\`
+  window leader for split/focus and click-to-focus across panes.
+- **Help browser** (`:help`, `SPC h h`) — searchable across every command, key,
+  and topic; `SPC h` describe-* routes symbol lookups through LSP hover.
+- **Start screen** — a startify-style recent-files page (frecency + MRU) shown
+  on launch.
 - **Wildfire** — press `<ret>` in normal mode to select the closest text
   object and again to grow to the next enclosing one; `<backspace>` shrinks.
 

@@ -46,8 +46,30 @@ Features:
 * REPL panel (`:repl`, `SPC a r`) fronting all five embedded languages.
 * Run-configuration manager and a unified Preferences window
   (Settings/Keymap/Theme/Run-Configs).
+* Three live keymaps on one engine: a vim default with the operator-pending
+  grammar emulated on the selection engine (`d`/`c`/`y` with motions, `ciw`/`di(`
+  text objects, `df,`/`ct)` finds, `.` dot-repeat, `q`/`@` macros, named marks,
+  Replace mode), an emacs layer, and a Spacemacs `SPC` leader; switch presets at
+  runtime with `:keymap` (vim/helix/emacs).
+* Spacemacs-style discoverable leader: a labelled `SPC` command tree with
+  which-key popups (`auto-info`, tunable per-prefix via `auto-info-exclude`) and
+  hundreds of ported bindings across files/buffers/windows/search/git/help/text.
+* IDE mode / workbench (`:ide`, `:workbench`, `F2`): a project file-tree, a
+  tree-sitter structure outline, problems/run panels, and an error-stripe
+  minimap, with the full layout persisted to appdata.
+* Integrated terminal (`:terminal`/`:term`): a PTY shell in a pane, with a `C-\`
+  window leader for split/focus and click-to-focus across panes.
+* Startify-style start screen on launch: recent files ranked by frecency and by
+  MRU, under a fortune/cowsay header.
+* Mouse support: click to focus a pane, scroll, click tabs and the gutter, and
+  drag the split divider to resize windows.
+* Searchable Help browser (`:help`/`SPC h h`) over every command, key, and
+  topic; the `SPC h` describe-* family routes symbol lookups through LSP hover.
 
 Commands:
+
+* `:ide`/`:workbench` (`F2`, `SPC z`), `:terminal`/`:term` (`SPC p '`), `:repl`
+  (`SPC a r`), `:preferences` (`SPC ,`), `:help`/`:h` (`SPC h h`), `:keymap`
 
 * `:snippets`/`:snip`, `snippet_expand`, `goto_next_tabstop`/`goto_prev_tabstop`
 * `:hex`/`:hexview`/`:hexedit`
