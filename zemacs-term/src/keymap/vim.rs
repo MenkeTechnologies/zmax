@@ -891,9 +891,14 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "a" => { "Applications"
                 "a" => ai_agent,                   // SPC a a : autonomous AI agent (reads/writes files, tool-use)
                 "i" => ai_chat,                    // SPC a i : ask the AI provider (Cursor-style assistant)
+                "p" => ai_chat_panel,              // SPC a p : streaming AI chat drawer (on-the-fly generation)
                 "e" => ai_inline_edit,             // SPC a e : AI inline edit/generate (Cursor Cmd+K)
                 "x" => ai_explain,                 // SPC a x : AI explain selection
                 "F" => ai_fix,                     // SPC a F : AI fix diagnostic on current line
+                "m" => ai_model_picker,            // SPC a m : pick AI model
+                "P" => toggle_ai_privacy,          // SPC a P : toggle AI privacy mode
+                "y" => ai_apply_block,             // SPC a y : apply last AI code block
+                "@" => ai_add_file_context,        // SPC a @ : add @file context for next chat
                 "u" => ai_generate_tests,          // SPC a u : AI generate unit tests
                 "c" => ai_commit_message,          // SPC a c : AI git commit message
                 "r" => repl,                       // SPC a r : embedded-language REPL (elisp/viml/stryke/awk/zsh)
