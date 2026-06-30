@@ -42,7 +42,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space b R", "Buffers", ":reload"),           // SPC b R : revert
     ("space b N n", "Buffers", ":new"),            // SPC b N n : new buffer, current window
     ("space b N i", "Buffers", "clone_indirect_buffer"), // SPC b N i : indirect clone (shared-doc split)
-    ("space b N C-i", "Buffers", ":new"),          // SPC b N C-i : indirect buffer (approx new)
+    ("space b N C-i", "Buffers", "clone_indirect_from_buffer"), // SPC b N C-i : indirect from existing buffer (shared-doc split)
     ("space q q", "Quit",    ":quit-all"),         // SPC q q : quit
     ("space q Q", "Quit",    ":quit-all!"),        // SPC q Q : force quit
     ("space q s", "Quit",    ":write-quit-all"),   // SPC q s : save and quit
