@@ -60,6 +60,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t a",   "Toggles", ":toggle auto-completion"),               // auto-complete
     ("space t h h", "Toggles", ":toggle cursorline"),                    // highlight line
     ("space t w",   "Toggles", ":toggle whitespace.render all none"),    // whitespace
+    ("space t c",   "Toggles", "toggle_subword"),                        // SPC t c : sub-word motion
     ("space x d w", "Text",    ":delete-trailing-whitespace"),           // SPC x d w
     ("space x l d", "Text",    ":duplicate-line"),                       // SPC x l d
     ("space x J",   "Text",    ":move-line-down"),                       // SPC x J : drag down
@@ -236,9 +237,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // --- word motions ---------------------------------------------------
         // vim caret semantics: land *on* the target char, not Helix's
         // off-by-one block-cursor position. See `move_word_vim_impl`.
-        "w" => vim_move_next_word_start,
-        "b" => vim_move_prev_word_start,
-        "e" => vim_move_next_word_end,
+        "w" => subword_w,
+        "b" => subword_b,
+        "e" => subword_e,
         "W" => vim_move_next_long_word_start,
         "B" => vim_move_prev_long_word_start,
         "E" => vim_move_next_long_word_end,
@@ -335,11 +336,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // --- operator-pending: delete --------------------------------------
         "d" => { "delete"
             "d" => [collapse_selection, extend_to_line_bounds, delete_selection],
-            "w" => [collapse_selection, extend_next_word_start, delete_selection],
+            "w" => [collapse_selection, subword_extend_w, delete_selection],
             "W" => [collapse_selection, extend_next_long_word_start, delete_selection],
-            "e" => [collapse_selection, extend_next_word_end, delete_selection],
+            "e" => [collapse_selection, subword_extend_e, delete_selection],
             "E" => [collapse_selection, extend_next_long_word_end, delete_selection],
-            "b" => [collapse_selection, extend_prev_word_start, delete_selection],
+            "b" => [collapse_selection, subword_extend_b, delete_selection],
             "B" => [collapse_selection, extend_prev_long_word_start, delete_selection],
             "$" => [collapse_selection, extend_to_line_end, delete_selection],
             "0" => [collapse_selection, extend_to_line_start, delete_selection],
@@ -360,11 +361,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // --- operator-pending: change --------------------------------------
         "c" => { "change"
             "c" => [collapse_selection, extend_to_line_bounds, change_selection],
-            "w" => [collapse_selection, extend_next_word_end, change_selection],
+            "w" => [collapse_selection, subword_extend_e, change_selection],
             "W" => [collapse_selection, extend_next_long_word_end, change_selection],
-            "e" => [collapse_selection, extend_next_word_end, change_selection],
+            "e" => [collapse_selection, subword_extend_e, change_selection],
             "E" => [collapse_selection, extend_next_long_word_end, change_selection],
-            "b" => [collapse_selection, extend_prev_word_start, change_selection],
+            "b" => [collapse_selection, subword_extend_b, change_selection],
             "B" => [collapse_selection, extend_prev_long_word_start, change_selection],
             "$" => [collapse_selection, extend_to_line_end, change_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, change_selection],
@@ -379,10 +380,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // --- operator-pending: yank ----------------------------------------
         "y" => { "yank"
             "y" => [collapse_selection, extend_to_line_bounds, yank, collapse_selection],
-            "w" => [collapse_selection, extend_next_word_start, yank, collapse_selection],
+            "w" => [collapse_selection, subword_extend_w, yank, collapse_selection],
             "W" => [collapse_selection, extend_next_long_word_start, yank, collapse_selection],
-            "e" => [collapse_selection, extend_next_word_end, yank, collapse_selection],
-            "b" => [collapse_selection, extend_prev_word_start, yank, collapse_selection],
+            "e" => [collapse_selection, subword_extend_e, yank, collapse_selection],
+            "b" => [collapse_selection, subword_extend_b, yank, collapse_selection],
             "$" => [collapse_selection, extend_to_line_end, yank, collapse_selection],
             "0" => [collapse_selection, extend_to_line_start, yank, collapse_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, yank, collapse_selection],
@@ -440,28 +441,28 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             // case-change operators (gU / gu / g~ + motion)
             "U" => { "Uppercase"
                 "U" => [extend_to_line_bounds, switch_to_uppercase, collapse_selection],
-                "w" => [collapse_selection, extend_next_word_start, switch_to_uppercase, collapse_selection],
+                "w" => [collapse_selection, subword_extend_w, switch_to_uppercase, collapse_selection],
                 "W" => [collapse_selection, extend_next_long_word_start, switch_to_uppercase, collapse_selection],
-                "e" => [collapse_selection, extend_next_word_end, switch_to_uppercase, collapse_selection],
-                "b" => [collapse_selection, extend_prev_word_start, switch_to_uppercase, collapse_selection],
+                "e" => [collapse_selection, subword_extend_e, switch_to_uppercase, collapse_selection],
+                "b" => [collapse_selection, subword_extend_b, switch_to_uppercase, collapse_selection],
                 "$" => [collapse_selection, extend_to_line_end, switch_to_uppercase, collapse_selection],
                 "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_to_uppercase, collapse_selection],
             },
             "u" => { "Lowercase"
                 "u" => [extend_to_line_bounds, switch_to_lowercase, collapse_selection],
-                "w" => [collapse_selection, extend_next_word_start, switch_to_lowercase, collapse_selection],
+                "w" => [collapse_selection, subword_extend_w, switch_to_lowercase, collapse_selection],
                 "W" => [collapse_selection, extend_next_long_word_start, switch_to_lowercase, collapse_selection],
-                "e" => [collapse_selection, extend_next_word_end, switch_to_lowercase, collapse_selection],
-                "b" => [collapse_selection, extend_prev_word_start, switch_to_lowercase, collapse_selection],
+                "e" => [collapse_selection, subword_extend_e, switch_to_lowercase, collapse_selection],
+                "b" => [collapse_selection, subword_extend_b, switch_to_lowercase, collapse_selection],
                 "$" => [collapse_selection, extend_to_line_end, switch_to_lowercase, collapse_selection],
                 "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_to_lowercase, collapse_selection],
             },
             "~" => { "Toggle case"
                 "~" => [extend_to_line_bounds, switch_case, collapse_selection],
-                "w" => [collapse_selection, extend_next_word_start, switch_case, collapse_selection],
+                "w" => [collapse_selection, subword_extend_w, switch_case, collapse_selection],
                 "W" => [collapse_selection, extend_next_long_word_start, switch_case, collapse_selection],
-                "e" => [collapse_selection, extend_next_word_end, switch_case, collapse_selection],
-                "b" => [collapse_selection, extend_prev_word_start, switch_case, collapse_selection],
+                "e" => [collapse_selection, subword_extend_e, switch_case, collapse_selection],
+                "b" => [collapse_selection, subword_extend_b, switch_case, collapse_selection],
                 "$" => [collapse_selection, extend_to_line_end, switch_case, collapse_selection],
                 "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_case, collapse_selection],
             },
@@ -470,9 +471,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "?" => [extend_to_line_bounds, rot13, collapse_selection],          // g?? current line
                 "j" => [extend_to_line_bounds, extend_line_below, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
                 "k" => [extend_to_line_bounds, extend_line_up, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
-                "w" => [collapse_selection, extend_next_word_start, rot13, collapse_selection],
-                "e" => [collapse_selection, extend_next_word_end, rot13, collapse_selection],
-                "b" => [collapse_selection, extend_prev_word_start, rot13, collapse_selection],
+                "w" => [collapse_selection, subword_extend_w, rot13, collapse_selection],
+                "e" => [collapse_selection, subword_extend_e, rot13, collapse_selection],
+                "b" => [collapse_selection, subword_extend_b, rot13, collapse_selection],
                 "$" => [collapse_selection, extend_to_line_end, rot13, collapse_selection],
                 "G" => [extend_to_last_line, rot13, collapse_selection],
                 "g" => { "Rot13 line"
@@ -1528,12 +1529,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "d" => { "Delete"
                     "x" => [expand_selection, delete_selection], // SPC k dx : delete sexp
                     "s" => [expand_selection, delete_selection], // SPC k ds : delete symbol
-                    "w" => [collapse_selection, extend_next_word_start, delete_selection], // SPC k dw
+                    "w" => [collapse_selection, subword_extend_w, delete_selection], // SPC k dw
                 },
                 "D" => { "Delete backward"
                     "x" => [expand_selection, delete_selection], // SPC k Dx : delete sexp backward
                     "s" => [expand_selection, delete_selection], // SPC k Ds : delete symbol backward
-                    "w" => [collapse_selection, extend_prev_word_start, delete_selection], // SPC k Dw
+                    "w" => [collapse_selection, subword_extend_b, delete_selection], // SPC k Dw
                 },
             },
             "h" => { "Help"
@@ -1623,9 +1624,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "k" | "up"    => [extend_visual_line_up, block_reproject],
         "l" | "right" => [extend_char_right, block_reproject],
 
-        "w" => [extend_next_word_start, block_reproject],
-        "b" => [extend_prev_word_start, block_reproject],
-        "e" => [extend_next_word_end, block_reproject],
+        "w" => [subword_extend_w, block_reproject],
+        "b" => [subword_extend_b, block_reproject],
+        "e" => [subword_extend_e, block_reproject],
         "W" => [extend_next_long_word_start, block_reproject],
         "B" => [extend_prev_long_word_start, block_reproject],
         "E" => [extend_next_long_word_end, block_reproject],
