@@ -15,6 +15,7 @@ pub mod closed_files;
 pub mod commands;
 pub mod compositor;
 pub mod config;
+pub mod emacs_bookmark;
 pub mod emacs_kill;
 pub mod emacs_mark;
 pub mod emacs_rect;

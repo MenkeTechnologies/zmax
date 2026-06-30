@@ -138,6 +138,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "c" => clear_rectangle,          // C-x r c: clear-rectangle
                 "y" => yank_rectangle,           // C-x r y: yank-rectangle
                 "A-w" => copy_rectangle_as_kill, // C-x r M-w: copy-rectangle-as-kill
+                "m" => bookmark_set,             // C-x r m: bookmark-set
+                "b" => bookmark_jump,            // C-x r b: bookmark-jump
+                "l" => bookmark_jump,            // C-x r l: list-bookmarks
             },
         },
     });

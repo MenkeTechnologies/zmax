@@ -661,6 +661,8 @@ impl MappableCommand {
         clear_rectangle, "Blank the rectangle with spaces (emacs C-x r c)",
         copy_rectangle_as_kill, "Copy the rectangle without deleting (emacs C-x r M-w)",
         yank_rectangle, "Insert the saved rectangle at point (emacs C-x r y)",
+        bookmark_set, "Set a named persistent bookmark at point (emacs C-x r m)",
+        bookmark_jump, "Jump to a bookmark via a picker (emacs C-x r b / C-x r l)",
         paste_clipboard_after, "Paste clipboard after selections",
         paste_clipboard_before, "Paste clipboard before selections",
         paste_primary_clipboard_after, "Paste primary clipboard after selections",
@@ -7844,6 +7846,69 @@ fn copy_rectangle_as_kill(cx: &mut Context) {
 /// Emacs `yank-rectangle` (C-x r y): insert the saved rectangle at point.
 fn yank_rectangle(cx: &mut Context) {
     rectangle_op(cx, RectOp::Yank);
+}
+
+/// Emacs `bookmark-set` (C-x r m): prompt for a name and store the current
+/// file + point as a persistent bookmark.
+fn bookmark_set(cx: &mut Context) {
+    let (file, pos) = {
+        let (view, doc) = current!(cx.editor);
+        let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+        (doc.path().map(|p| p.to_path_buf()), pos)
+    };
+    let Some(file) = file else {
+        cx.editor.set_error("Buffer has no file to bookmark");
+        return;
+    };
+    ui::prompt(
+        cx,
+        "bookmark name: ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate || input.is_empty() {
+                return;
+            }
+            crate::emacs_bookmark::set(input, &file, pos);
+            cx.editor.set_status(format!("Bookmark '{input}' set"));
+        },
+    );
+}
+
+/// Emacs `bookmark-jump`/`list-bookmarks` (C-x r b / C-x r l): pick a bookmark
+/// and jump to its file and position.
+fn bookmark_jump(cx: &mut Context) {
+    let marks = crate::emacs_bookmark::list();
+    if marks.is_empty() {
+        cx.editor
+            .set_status("No bookmarks yet — set one with C-x r m");
+        return;
+    }
+    let columns = [
+        PickerColumn::new("name", |item: &(String, PathBuf, usize), _: &()| {
+            item.0.clone().into()
+        }),
+        PickerColumn::new("file", |item: &(String, PathBuf, usize), _: &()| {
+            item.1.display().to_string().into()
+        }),
+    ];
+    let picker = Picker::new(
+        columns,
+        0,
+        marks,
+        (),
+        |cx, item: &(String, PathBuf, usize), action| {
+            if let Err(e) = cx.editor.open(&item.1, action) {
+                cx.editor
+                    .set_error(format!("unable to open \"{}\": {e}", item.1.display()));
+                return;
+            }
+            let (view, doc) = current!(cx.editor);
+            let pos = item.2.min(doc.text().len_chars());
+            doc.set_selection(view.id, Selection::point(pos));
+        },
+    );
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 fn ensure_selections_forward(cx: &mut Context) {
