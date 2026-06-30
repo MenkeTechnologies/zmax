@@ -1297,7 +1297,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "S" => paredit_split,              // SPC j S : split sexp, newline (approx: split)
             },
             "F" => { "Frames"
-                "n" => hsplit_new,                 // SPC F n : create a new frame (new window)
+                "n" => layout_create,              // SPC F n : new frame -> new layout (window-config workspace)
             },
             "o" => { "Org / user"
                 "c" => org_capture,                // SPC o c : org-mode capture
