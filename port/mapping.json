@@ -10622,5 +10622,221 @@
    "key:normal:space D f v"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_l",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l l"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_n",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l n"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_p",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l p"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_nU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l N"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_cU_l",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l C-l"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_cU_h",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l C-h"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_tUaUbU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l tab"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_h",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l h"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_d",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l d"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_x",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l x"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_xU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l X"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_dU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l D"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_s",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l s"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_lU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l L"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_b",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l b"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l t"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_0xx9",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space l 1"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space l w w"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_w",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space l w w"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_n",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space l w n"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_l",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space l w l"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_p",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space l w p"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_nU",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space l w N"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_h",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space l w h"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_d",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space l w d"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_tUaUbU",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space l w tab"
+  ],
+  "note": ""
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_l_w_0xx9",
+  "status": "partial",
+  "evidence": [
+   "key:normal:space l w 1"
+  ],
+  "note": ""
  }
 ]

@@ -855,6 +855,41 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     },
                 },
             },
+            "l" => { "Layouts"
+                "l" => layout_create,              // SPC l l : create/select a layout
+                "n" => layout_next,                // SPC l n : next layout
+                "C-l" => layout_next,              // SPC l C-l : next layout (transient)
+                "p" => layout_prev,                // SPC l p : previous layout
+                "N" => layout_prev,                // SPC l N : previous layout
+                "C-h" => layout_prev,              // SPC l C-h : previous layout (transient)
+                "tab" => layout_last,              // SPC l TAB : last used layout
+                "h" => layout_default,             // SPC l h : default layout
+                "d" => layout_delete,              // SPC l d : delete layout (keep buffers)
+                "x" => layout_delete,              // SPC l x : kill layout
+                "X" => layout_delete,              // SPC l X : kill other layouts (approx: delete)
+                "D" => layout_delete,              // SPC l D : delete other layouts (approx)
+                "s" => layout_save,                // SPC l s : save layouts to file
+                "L" => layout_load,                // SPC l L : load layouts from file
+                "b" => buffer_picker,              // SPC l b : select a buffer in the layout
+                "t" => buffer_picker,              // SPC l t : display a buffer
+                "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
+                "4" => layout_goto_4, "5" => layout_goto_5, "6" => layout_goto_6,
+                "7" => layout_goto_7, "8" => layout_goto_8, "9" => layout_goto_9,
+                // Workspaces (eyebrowse) tier — approximated by the same layout ring.
+                "w" => { "Workspaces"
+                    "w" => layout_create,          // SPC l w w : tagged workspace
+                    "n" => layout_next,            // SPC l w n : next workspace
+                    "l" => layout_next,            // SPC l w l : next workspace
+                    "p" => layout_prev,            // SPC l w p : previous workspace
+                    "N" => layout_prev,            // SPC l w N : previous workspace
+                    "h" => layout_prev,            // SPC l w h : previous workspace
+                    "d" => layout_delete,          // SPC l w d : close workspace
+                    "tab" => layout_last,          // SPC l w TAB : last workspace
+                    "1" => layout_goto_1, "2" => layout_goto_2, "3" => layout_goto_3,
+                    "4" => layout_goto_4, "5" => layout_goto_5, "6" => layout_goto_6,
+                    "7" => layout_goto_7, "8" => layout_goto_8, "9" => layout_goto_9,
+                },
+            },
             "K" => { "Macros"
                 "c" => { "Counter"
                     "a" => kmacro_add_counter,     // SPC K c a : increment macro counter
