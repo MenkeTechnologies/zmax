@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-e800d38b.js";
+            window.path_to_searchindex_js = "searchindex-72146ca3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-c0d3b1d1.js"></script>
@@ -3417,6 +3417,8 @@ Its settings will be merged with the configuration directory and the built-in co
 <tr><td><code>editor-config</code></td><td>Whether to read settings from <a href="https://editorconfig.org">EditorConfig</a> files</td><td><code>true</code></td></tr>
 <tr><td><code>rainbow-brackets</code></td><td>Whether to render rainbow colors for matching brackets. Requires tree-sitter <code>rainbows.scm</code> queries for the language.</td><td><code>false</code></td></tr>
 <tr><td><code>kitty-keyboard-protocol</code></td><td>Whether to enable Kitty Keyboard Protocol. Can be <code>enabled</code>, <code>disabled</code> or <code>auto</code></td><td><code>"auto"</code></td></tr>
+<tr><td><code>startup</code></td><td>What to open when launched with no file arguments. <code>startify</code> shows the start screen, <code>recent</code> opens the most-recently-used file, <code>session</code> restores the previous session’s tabs and cursor, <code>file</code> opens <code>startup-file</code>. Each falls back to <code>startify</code> when its target is unavailable.</td><td><code>"startify"</code></td></tr>
+<tr><td><code>startup-file</code></td><td>File to open on launch when <code>startup</code> is <code>"file"</code>. Ignored otherwise.</td><td><code>""</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -5672,11 +5674,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6493</strong></li>
-<li>Ported: <strong>2267</strong> (34.9%)</li>
-<li>Partial: <strong>244</strong> (3.8%)</li>
+<li>Ported: <strong>2269</strong> (34.9%)</li>
+<li>Partial: <strong>242</strong> (3.7%)</li>
 <li>Absent: <strong>3982</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 823 static commands, 665 typable <code>:</code> commands, 1569 default keybindings</li>
+<li>zemacs source surface: 823 static commands, 667 typable <code>:</code> commands, 1569 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -5736,7 +5738,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">18</td><td style="text-align: right">4</td><td style="text-align: right">69.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">183</td><td style="text-align: right">35</td><td style="text-align: right">83.9%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1110</td><td style="text-align: right">148</td><td style="text-align: right">53.4%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1112</td><td style="text-align: right">146</td><td style="text-align: right">53.5%</td></tr>
 <tr><td>spacemacs</td><td style="text-align: right">945</td><td style="text-align: right">582</td><td style="text-align: right">0</td><td style="text-align: right">61.6%</td></tr>
 </tbody>
 </table>
@@ -5800,7 +5802,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">14</td><td style="text-align: right">1</td><td style="text-align: right">93.3%</td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">34</td><td style="text-align: right">1</td><td style="text-align: right">64.2%</td></tr>
-<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">80</td><td style="text-align: right">15</td><td style="text-align: right">14.3%</td></tr>
+<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">82</td><td style="text-align: right">13</td><td style="text-align: right">14.6%</td></tr>
 <tr><td>neovim</td><td>function</td><td style="text-align: right">451</td><td style="text-align: right">426</td><td style="text-align: right">0</td><td style="text-align: right">94.5%</td></tr>
 <tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">58</td><td style="text-align: right">16</td><td style="text-align: right">59.2%</td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">414</td><td style="text-align: right">30</td><td style="text-align: right">86.4%</td></tr>

@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-e800d38b.js";
+            window.path_to_searchindex_js = "searchindex-72146ca3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-c0d3b1d1.js"></script>
@@ -260,6 +260,8 @@
 <tr><td><code>editor-config</code></td><td>Whether to read settings from <a href="https://editorconfig.org">EditorConfig</a> files</td><td><code>true</code></td></tr>
 <tr><td><code>rainbow-brackets</code></td><td>Whether to render rainbow colors for matching brackets. Requires tree-sitter <code>rainbows.scm</code> queries for the language.</td><td><code>false</code></td></tr>
 <tr><td><code>kitty-keyboard-protocol</code></td><td>Whether to enable Kitty Keyboard Protocol. Can be <code>enabled</code>, <code>disabled</code> or <code>auto</code></td><td><code>"auto"</code></td></tr>
+<tr><td><code>startup</code></td><td>What to open when launched with no file arguments. <code>startify</code> shows the start screen, <code>recent</code> opens the most-recently-used file, <code>session</code> restores the previous session’s tabs and cursor, <code>file</code> opens <code>startup-file</code>. Each falls back to <code>startify</code> when its target is unavailable.</td><td><code>"startify"</code></td></tr>
+<tr><td><code>startup-file</code></td><td>File to open on launch when <code>startup</code> is <code>"file"</code>. Ignored otherwise.</td><td><code>""</code></td></tr>
 </tbody>
 </table>
 </div>
