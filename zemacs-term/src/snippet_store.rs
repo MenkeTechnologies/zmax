@@ -7,10 +7,21 @@
 //! `appdata.toml`), tolerant of a missing file (loads as an empty store). The
 //! editor TUI (`ui::snippets::SnippetPanel`) does CRUD over the list.
 //!
-//! Slice 1 is the store + editor only; expansion-on-trigger is a later slice.
+//! Trigger expansion: when the word before the cursor matches a snippet's
+//! `trigger` (and its scope applies to the current language), Tab expands the
+//! body through the shared snippet engine — activating its tabstops — via
+//! [`lookup_trigger`] from the `snippet_expand` command. A process-wide cache
+//! keeps that hot path off the disk.
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::RwLock;
+
+/// Process-wide cache of the snippet store, so trigger expansion (which runs on
+/// every Tab press) does not hit the disk each time. Populated lazily on the
+/// first lookup and refreshed by [`save`] whenever the editor TUI writes a
+/// change, so it never goes stale relative to on-disk state we control.
+static CACHE: RwLock<Option<SnippetStore>> = RwLock::new(None);
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -30,6 +41,21 @@ pub struct UserSnippet {
 pub struct SnippetStore {
     #[serde(rename = "snippet", default)]
     pub snippets: Vec<UserSnippet>,
+}
+
+impl SnippetStore {
+    /// Find the snippet whose trigger exactly matches `word` and whose scope
+    /// applies to the current language. A scope of `*` (or empty) matches every
+    /// language; otherwise it must equal the document's language *name*.
+    pub fn find_trigger(&self, lang: Option<&str>, word: &str) -> Option<&UserSnippet> {
+        if word.is_empty() {
+            return None;
+        }
+        self.snippets.iter().find(|s| {
+            s.trigger == word
+                && (s.scope == "*" || s.scope.is_empty() || Some(s.scope.as_str()) == lang)
+        })
+    }
 }
 
 fn store_path() -> PathBuf {
@@ -52,6 +78,32 @@ pub fn save(data: &SnippetStore) {
         let _ = std::fs::create_dir_all(parent);
     }
     let _ = std::fs::write(path, contents);
+    // Keep the expansion cache in step with what we just persisted.
+    if let Ok(mut cache) = CACHE.write() {
+        *cache = Some(data.clone());
+    }
+}
+
+/// Look up the body of a user snippet whose trigger matches `word` for the
+/// given language, using the process-wide cache (loaded from disk on first
+/// use). Returns `None` when nothing matches. This is the hot path called by
+/// Tab-driven trigger expansion.
+pub fn lookup_trigger(lang: Option<&str>, word: &str) -> Option<String> {
+    if word.is_empty() {
+        return None;
+    }
+    if let Ok(cache) = CACHE.read() {
+        if let Some(store) = cache.as_ref() {
+            return store.find_trigger(lang, word).map(|s| s.body.clone());
+        }
+    }
+    // Cache miss: load from disk, answer, then populate the cache.
+    let store = load();
+    let result = store.find_trigger(lang, word).map(|s| s.body.clone());
+    if let Ok(mut cache) = CACHE.write() {
+        *cache = Some(store);
+    }
+    result
 }
 
 /// Validate a snippet body against the engine's LSP-snippet parser. Returns an
@@ -89,7 +141,10 @@ mod tests {
         assert_eq!(parsed.snippets.len(), 2);
         assert_eq!(parsed.snippets[0].trigger, "fori");
         assert_eq!(parsed.snippets[0].scope, "rust");
-        assert_eq!(parsed.snippets[0].body, "for ${1:i} in ${2:iter} {\n    $0\n}");
+        assert_eq!(
+            parsed.snippets[0].body,
+            "for ${1:i} in ${2:iter} {\n    $0\n}"
+        );
         assert_eq!(parsed.snippets[1].scope, "*");
     }
 
@@ -103,6 +158,65 @@ mod tests {
     #[test]
     fn valid_body_parses() {
         assert!(validate_body("${1:foo} bar $0").is_ok());
+    }
+
+    fn sample() -> SnippetStore {
+        SnippetStore {
+            snippets: vec![
+                UserSnippet {
+                    trigger: "fori".into(),
+                    scope: "rust".into(),
+                    description: "for loop".into(),
+                    body: "for ${1:i} in ${2:iter} {\n    $0\n}".into(),
+                },
+                UserSnippet {
+                    trigger: "todo".into(),
+                    scope: "*".into(),
+                    description: "todo marker".into(),
+                    body: "TODO: ${1:what}".into(),
+                },
+                UserSnippet {
+                    trigger: "anyscope".into(),
+                    scope: "".into(),
+                    description: "empty scope = all langs".into(),
+                    body: "X $0".into(),
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn find_trigger_matches_scoped_language() {
+        let store = sample();
+        assert_eq!(
+            store
+                .find_trigger(Some("rust"), "fori")
+                .map(|s| s.body.as_str()),
+            Some("for ${1:i} in ${2:iter} {\n    $0\n}")
+        );
+        // Wrong language: scoped snippet must not match.
+        assert!(store.find_trigger(Some("python"), "fori").is_none());
+        // No language at all: scoped snippet still must not match.
+        assert!(store.find_trigger(None, "fori").is_none());
+    }
+
+    #[test]
+    fn find_trigger_wildcard_and_empty_scope_match_any_language() {
+        let store = sample();
+        assert!(store.find_trigger(Some("python"), "todo").is_some());
+        assert!(store.find_trigger(None, "todo").is_some());
+        assert!(store.find_trigger(Some("go"), "anyscope").is_some());
+    }
+
+    #[test]
+    fn find_trigger_requires_exact_word_and_rejects_empty() {
+        let store = sample();
+        // Prefix of a trigger must not match.
+        assert!(store.find_trigger(Some("rust"), "for").is_none());
+        // Unknown trigger.
+        assert!(store.find_trigger(Some("rust"), "nope").is_none());
+        // Empty word never matches.
+        assert!(store.find_trigger(Some("rust"), "").is_none());
     }
 
     #[test]

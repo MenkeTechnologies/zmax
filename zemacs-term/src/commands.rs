@@ -882,6 +882,7 @@ impl MappableCommand {
         goto_next_tabstop, "Goto next snippet placeholder",
         goto_prev_tabstop, "Goto next snippet placeholder",
         emmet_expand, "Expand emmet/zen HTML abbreviation (or Tab)",
+        snippet_expand, "Expand the user snippet whose trigger precedes the cursor",
         rotate_selections_first, "Make the first selection your primary one",
         rotate_selections_last, "Make the last selection your primary one",
     );
@@ -12750,11 +12751,87 @@ fn emmet_expand(cx: &mut Context) {
             return;
         }
     }
+    // User-defined snippets take priority over emmet's abbreviation guessing:
+    // they are explicit, scoped triggers, whereas emmet only fires in HTML/CSS.
+    if try_user_snippet_expand(cx) {
+        return;
+    }
     if try_emmet_expand(cx) {
         return;
     }
     // No abbreviation to expand — behave like a normal smart Tab.
     smart_tab(cx);
+}
+
+/// Expand the user-defined snippet whose trigger is the word before the cursor,
+/// or advance to the next tabstop if a snippet is already active. Bound for
+/// users who want snippet expansion on a dedicated key rather than via Tab.
+fn snippet_expand(cx: &mut Context) {
+    {
+        let (_, doc) = current_ref!(cx.editor);
+        if doc.active_snippet.is_some() {
+            goto_next_tabstop(cx);
+            return;
+        }
+    }
+    if !try_user_snippet_expand(cx) {
+        cx.editor.set_status("no snippet trigger before the cursor");
+    }
+}
+
+/// Attempt to expand a user-defined snippet at the primary cursor: the trailing
+/// run of word characters before the cursor is matched against the snippet
+/// store (scoped to the current language). Returns `true` if a snippet matched
+/// and was expanded (activating its tabstops), `false` otherwise.
+fn try_user_snippet_expand(cx: &mut Context) -> bool {
+    let (view, doc) = current!(cx.editor);
+    let view_id = view.id;
+
+    let (from, cursor, body, selection) = {
+        let text = doc.text();
+        let slice = text.slice(..);
+        let selection = doc.selection(view_id);
+        // Single cursor only.
+        if selection.ranges().len() != 1 {
+            return false;
+        }
+        let cursor = selection.primary().cursor(slice);
+        let line = text.char_to_line(cursor);
+        let line_start = text.line_to_char(line);
+        // The trigger is the trailing run of word chars immediately before the
+        // cursor on the current line.
+        let before: Vec<char> = slice.slice(line_start..cursor).chars().collect();
+        let trigger_len = before
+            .iter()
+            .rev()
+            .take_while(|c| zemacs_core::chars::char_is_word(**c))
+            .count();
+        if trigger_len == 0 {
+            return false;
+        }
+        let trigger: String = before[before.len() - trigger_len..].iter().collect();
+        let Some(body) = crate::snippet_store::lookup_trigger(doc.language_name(), &trigger) else {
+            return false;
+        };
+        (cursor - trigger_len, cursor, body, selection.clone())
+    };
+
+    let Ok(snippet) = zemacs_core::snippets::Snippet::parse(&body) else {
+        return false;
+    };
+    let edit_offset = Some((from as i128 - cursor as i128, 0i128));
+    let (transaction, rendered) = zemacs_lsp::util::generate_transaction_from_snippet(
+        doc.text(),
+        &selection,
+        edit_offset,
+        false,
+        snippet,
+        &mut doc.snippet_ctx(),
+    );
+    doc.apply(&transaction, view_id);
+    doc.append_changes_to_history(view);
+    doc.active_snippet = zemacs_core::snippets::ActiveSnippet::new(rendered);
+    true
 }
 
 /// Attempt emmet expansion at the primary cursor. Returns `true` if an
