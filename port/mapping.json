@@ -10945,11 +10945,11 @@
  },
  {
   "spec_id": "jetbrains.editing.paste-from-history",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:register_picker"
   ],
-  "note": "register picker ~ paste-from-history"
+  "note": "jetbrains"
  },
  {
   "spec_id": "jetbrains.editing.copy-paths",
@@ -11193,19 +11193,19 @@
  },
  {
   "spec_id": "jetbrains.multiple-carets.clone-caret-above",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:duplicate_selection_up"
+   "static:copy_selection_on_prev_line"
   ],
-  "note": ""
+  "note": "jetbrains"
  },
  {
   "spec_id": "jetbrains.multiple-carets.clone-caret-below",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:duplicate_selection_down"
+   "static:copy_selection_on_next_line"
   ],
-  "note": ""
+  "note": "jetbrains"
  },
  {
   "spec_id": "jetbrains.multiple-carets.add-selection-for-next-occurrence",
