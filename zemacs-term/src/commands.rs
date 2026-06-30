@@ -1114,6 +1114,7 @@ impl MappableCommand {
         dap_variables, "List variables",
         dap_terminate, "End debug session",
         dap_edit_condition, "Edit breakpoint condition on current line",
+        dap_breakpoints_picker, "View all breakpoints in a picker (JetBrains View Breakpoints)",
         dap_edit_log, "Edit breakpoint log message on current line",
         dap_switch_thread, "Switch current thread",
         dap_switch_stack_frame, "Switch stack frame",
@@ -14260,6 +14261,79 @@ pub(crate) fn build_marks_picker(editor: &mut Editor) -> Option<Box<dyn Componen
     })
     .with_preview(|_editor, meta| Some((meta.doc_id.into(), Some((meta.line, meta.line)))));
     Some(Box::new(overlaid(picker)))
+}
+
+/// JetBrains "View Breakpoints" (Cmd Shift F8): a picker over every set breakpoint across all files
+/// (file:line + verified/condition/log flags); selecting one jumps to it.
+fn dap_breakpoints_picker(cx: &mut Context) {
+    struct BpMeta {
+        path: PathBuf,
+        line: usize,
+        verified: bool,
+        condition: Option<String>,
+        log_message: Option<String>,
+    }
+
+    let mut items: Vec<BpMeta> = cx
+        .editor
+        .breakpoints
+        .iter()
+        .flat_map(|(path, bps)| {
+            bps.iter().map(move |bp| BpMeta {
+                path: path.clone(),
+                line: bp.line,
+                verified: bp.verified,
+                condition: bp.condition.clone(),
+                log_message: bp.log_message.clone(),
+            })
+        })
+        .collect();
+    if items.is_empty() {
+        cx.editor.set_status("No breakpoints set");
+        return;
+    }
+    items.sort_by(|a, b| a.path.cmp(&b.path).then(a.line.cmp(&b.line)));
+
+    let columns = [
+        ui::PickerColumn::new("file", |m: &BpMeta, _: &()| {
+            m.path.to_string_lossy().into_owned().into()
+        }),
+        ui::PickerColumn::new("line", |m: &BpMeta, _: &()| (m.line + 1).to_string().into()),
+        ui::PickerColumn::new("flags", |m: &BpMeta, _: &()| {
+            let mut s = String::new();
+            if !m.verified {
+                s.push('?');
+            }
+            if m.condition.is_some() {
+                s.push('c');
+            }
+            if m.log_message.is_some() {
+                s.push('l');
+            }
+            s.into()
+        }),
+        ui::PickerColumn::new("condition", |m: &BpMeta, _: &()| {
+            m.condition
+                .as_deref()
+                .or(m.log_message.as_deref())
+                .unwrap_or("")
+                .into()
+        }),
+    ];
+
+    let picker = Picker::new(columns, 0, items, (), |cx, meta, action| {
+        if let Err(e) = cx.editor.open(&meta.path, action) {
+            cx.editor
+                .set_error(format!("Failed to open {}: {e}", meta.path.display()));
+            return;
+        }
+        let (view, doc) = current!(cx.editor);
+        push_jump(view, doc);
+        let line = meta.line.min(doc.text().len_lines().saturating_sub(1));
+        let pos = doc.text().line_to_char(line);
+        doc.set_selection(view.id, Selection::point(pos));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// fzf.vim `:BLines`: fuzzy-search every line of the current buffer and jump to

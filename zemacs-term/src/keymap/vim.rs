@@ -1213,6 +1213,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "d" => { "Debug"
                 "d" => dap_launch,                 // SPC d d : start debugging
                 "b" => dap_toggle_breakpoint,      // SPC d b : toggle breakpoint
+                "B" => dap_breakpoints_picker,     // SPC d B : view all breakpoints (JetBrains View Breakpoints)
                 "c" => dap_continue,               // SPC d c : continue
                 "C" => dap_run_to_cursor,          // SPC d C : run to cursor (JetBrains Run To Cursor)
                 "i" => dap_step_in,                // SPC d i : step in

@@ -11799,11 +11799,12 @@
   },
   {
     "spec_id": "jetbrains.run-debug.view-breakpoints",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:dap_edit_condition"
+      "key:normal:space d B",
+      "static:dap_breakpoints_picker"
     ],
-    "note": ""
+    "note": "View Breakpoints (Cmd Shift F8) = dap_breakpoints_picker: a real picker over all set breakpoints (file:line + verified/condition/log flags) that jumps to the selected one (SPC d B)"
   },
   {
     "spec_id": "jetbrains.run-debug.show-run-window",
