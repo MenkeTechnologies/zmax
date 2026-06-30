@@ -506,6 +506,7 @@ impl MappableCommand {
         toggle_line_numbers, "Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers)",
         toggle_indent_guides, "Toggle indentation guides (IntelliJ View > Show Indent Guides)",
         toggle_inlay_hints, "Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints)",
+        toggle_auto_highlight, "Toggle automatic symbol-under-cursor highlight (SPC t h a)",
         toggle_syntax_highlighting, "Toggle syntax highlighting for the current buffer (SPC t h s)",
         toggle_diagnostics, "Toggle diagnostics display / flycheck (SPC t s)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
@@ -7520,6 +7521,20 @@ fn toggle_inlay_hints(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("inlay hints: {}", if on { "on" } else { "off" }));
+}
+
+/// SPC t h a : toggle automatic highlighting of the symbol under the cursor (Spacemacs
+/// `spacemacs/toggle-automatic-symbol-highlight`).
+fn toggle_auto_highlight(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        on = !c.lsp.auto_document_highlight;
+        c.lsp.auto_document_highlight = on;
+    });
+    cx.editor.set_status(format!(
+        "auto symbol highlight: {}",
+        if on { "on" } else { "off" }
+    ));
 }
 
 /// SPC t h s : toggle syntax highlighting for the current buffer (Spacemacs
