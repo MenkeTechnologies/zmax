@@ -6938,11 +6938,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_e_e",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space f e e"
+   "key:normal:space f e e",
+   "static:show_environment"
   ],
-  "note": "open env file -> :config-open"
+  "note": "user-env / .spacemacs.env -> show_environment (display inherited env vars in scratch)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_e_c_e",

@@ -513,6 +513,7 @@ impl MappableCommand {
         copy_last_keys, "Copy the most recently pressed keys to the clipboard (SPC h d l)",
         ace_window, "Jump to a window by its number, prompted (ace-window, SPC w . a)",
         browse_news, "Browse zemacs release notes / NEWS (SPC h n)",
+        show_environment, "Show the editor's environment variables (SPC f e e)",
         goto_buffer_window, "Focus the window already showing a chosen buffer (SPC b w)",
         git_file_dispatch, "Magit-style file operations dispatch for the current file (SPC g f m)",
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
@@ -8066,6 +8067,20 @@ fn package_search(cx: &mut Context) {
         cx.editor.set_status(format!("package: {}", it.name));
     });
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// SPC f e e : show the editor's environment variables (inherited from the shell) in a scratch
+/// buffer. A terminal editor has no `.spacemacs.env` file — env vars live in the process
+/// environment — so this displays where they are actually set. Spacemacs `dotspacemacs/user-env`.
+fn show_environment(cx: &mut Context) {
+    let mut vars: Vec<(String, String)> = std::env::vars().collect();
+    vars.sort();
+    let mut out = String::from("Editor environment variables (inherited from the shell)\n\n");
+    for (k, v) in vars {
+        out.push_str(&format!("{k}={v}\n"));
+    }
+    show_text_in_scratch(cx.editor, &out);
+    cx.editor.set_status("environment variables");
 }
 
 /// SPC h n : browse zemacs' release notes (the editor's NEWS), embedded at build time and shown

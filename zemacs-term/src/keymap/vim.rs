@@ -153,7 +153,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space h d c", "Help",    ":character-info"),                     // SPC h d c : describe char under point
     ("space p e",   "Project", "edit_project_config"),                // SPC p e : edit project-local .zemacs/config.toml (dir-locals)
     ("space f e i", "Files",   ":config-open"),                       // SPC f e i : open init/config
-    ("space f e e", "Files",   ":config-open"),                       // SPC f e e : open env/config
+    ("space f e e", "Files",   "show_environment"),                   // SPC f e e : show editor environment variables
     ("space f e R", "Files",   ":config-reload"),                     // SPC f e R : resync the dotfile
     ("space f e C-e", "Files",  ":config-reload"),                    // SPC f e C-e : reinit env
     ("space f C d", "Files",   ":line-ending crlf"),                  // SPC f C d : unix -> dos line endings
