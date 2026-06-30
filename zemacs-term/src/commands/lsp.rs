@@ -1316,6 +1316,85 @@ fn call_hierarchy_impl(cx: &mut Context, incoming: bool) {
     });
 }
 
+/// JetBrains "Type Hierarchy" (Ctrl-H), supertypes: the parent types/interfaces of the symbol.
+pub fn type_hierarchy_supertypes(cx: &mut Context) {
+    type_hierarchy_impl(cx, true);
+}
+
+/// Type hierarchy, subtypes: the types that extend/implement the symbol under the cursor.
+pub fn type_hierarchy_subtypes(cx: &mut Context) {
+    type_hierarchy_impl(cx, false);
+}
+
+fn type_hierarchy_impl(cx: &mut Context, supertypes: bool) {
+    let (view, doc) = current_ref!(cx.editor);
+    let language_server =
+        language_server_with_feature!(cx.editor, doc, LanguageServerFeature::TypeHierarchy);
+    let ls_id = language_server.id();
+    let offset_encoding = language_server.offset_encoding();
+    let pos = doc.position(view.id, offset_encoding);
+    let prepare = match language_server.prepare_type_hierarchy(doc.identifier(), pos) {
+        Some(future) => future,
+        None => {
+            cx.editor.set_error("Type hierarchy is not available here");
+            return;
+        }
+    };
+    let client = cx.editor.language_servers.get_by_id(ls_id).cloned();
+
+    cx.jobs.callback(async move {
+        let item = prepare.await?.and_then(|items| items.into_iter().next());
+        let Some(item) = item else {
+            return Ok(Callback::EditorCompositor(Box::new(
+                |editor: &mut Editor, _: &mut Compositor| {
+                    editor.set_error("No type under cursor for type hierarchy");
+                },
+            )));
+        };
+        let Some(client) = client else {
+            return Ok(Callback::EditorCompositor(Box::new(
+                |editor: &mut Editor, _: &mut Compositor| {
+                    editor.set_error("language server is no longer available");
+                },
+            )));
+        };
+
+        // The two requests have distinct future types, so await inside each branch.
+        let related = if supertypes {
+            match client.type_hierarchy_supertypes(item) {
+                Some(future) => future.await?,
+                None => None,
+            }
+        } else {
+            match client.type_hierarchy_subtypes(item) {
+                Some(future) => future.await?,
+                None => None,
+            }
+        };
+        let locations: Vec<Location> = related
+            .into_iter()
+            .flatten()
+            .filter_map(|ty| {
+                lsp_location_to_location(
+                    lsp::Location::new(ty.uri.clone(), ty.selection_range),
+                    offset_encoding,
+                )
+            })
+            .collect();
+
+        let noun = if supertypes { "supertypes" } else { "subtypes" };
+        Ok(Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                if locations.is_empty() {
+                    editor.set_error(format!("No {noun} found"));
+                } else {
+                    goto_impl(editor, compositor, locations);
+                }
+            },
+        )))
+    });
+}
+
 pub fn signature_help(cx: &mut Context) {
     cx.editor
         .handlers

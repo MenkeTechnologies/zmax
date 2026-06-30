@@ -407,6 +407,13 @@ impl Client {
                         | CallHierarchyServerCapability::Options(_)
                 )
             ),
+            LanguageServerFeature::TypeHierarchy => matches!(
+                capabilities.type_hierarchy_provider,
+                Some(
+                    TypeHierarchyServerCapability::Simple(true)
+                        | TypeHierarchyServerCapability::Options(_)
+                )
+            ),
         }
     }
 
@@ -732,6 +739,9 @@ impl Client {
                         tooltip_support: Some(false),
                     }),
                     call_hierarchy: Some(lsp::DynamicRegistrationClientCapabilities {
+                        dynamic_registration: Some(false),
+                    }),
+                    type_hierarchy: Some(lsp::DynamicRegistrationClientCapabilities {
                         dynamic_registration: Some(false),
                     }),
                     document_symbol: Some(lsp::DocumentSymbolClientCapabilities {
@@ -1689,6 +1699,78 @@ impl Client {
         };
 
         Some(self.call::<lsp::request::CallHierarchyOutgoingCalls>(params))
+    }
+
+    pub fn prepare_type_hierarchy(
+        &self,
+        text_document: lsp::TextDocumentIdentifier,
+        position: lsp::Position,
+    ) -> Option<impl Future<Output = Result<Option<Vec<lsp::TypeHierarchyItem>>>>> {
+        let capabilities = self.capabilities.get().unwrap();
+
+        match capabilities.type_hierarchy_provider {
+            Some(
+                lsp::TypeHierarchyServerCapability::Simple(true)
+                | lsp::TypeHierarchyServerCapability::Options(_),
+            ) => (),
+            _ => return None,
+        }
+
+        let params = lsp::TypeHierarchyPrepareParams {
+            text_document_position_params: lsp::TextDocumentPositionParams {
+                text_document,
+                position,
+            },
+            work_done_progress_params: lsp::WorkDoneProgressParams::default(),
+        };
+
+        Some(self.call::<lsp::request::TypeHierarchyPrepare>(params))
+    }
+
+    pub fn type_hierarchy_supertypes(
+        &self,
+        item: lsp::TypeHierarchyItem,
+    ) -> Option<impl Future<Output = Result<Option<Vec<lsp::TypeHierarchyItem>>>>> {
+        let capabilities = self.capabilities.get().unwrap();
+
+        match capabilities.type_hierarchy_provider {
+            Some(
+                lsp::TypeHierarchyServerCapability::Simple(true)
+                | lsp::TypeHierarchyServerCapability::Options(_),
+            ) => (),
+            _ => return None,
+        }
+
+        let params = lsp::TypeHierarchySupertypesParams {
+            item,
+            work_done_progress_params: lsp::WorkDoneProgressParams::default(),
+            partial_result_params: lsp::PartialResultParams::default(),
+        };
+
+        Some(self.call::<lsp::request::TypeHierarchySupertypes>(params))
+    }
+
+    pub fn type_hierarchy_subtypes(
+        &self,
+        item: lsp::TypeHierarchyItem,
+    ) -> Option<impl Future<Output = Result<Option<Vec<lsp::TypeHierarchyItem>>>>> {
+        let capabilities = self.capabilities.get().unwrap();
+
+        match capabilities.type_hierarchy_provider {
+            Some(
+                lsp::TypeHierarchyServerCapability::Simple(true)
+                | lsp::TypeHierarchyServerCapability::Options(_),
+            ) => (),
+            _ => return None,
+        }
+
+        let params = lsp::TypeHierarchySubtypesParams {
+            item,
+            work_done_progress_params: lsp::WorkDoneProgressParams::default(),
+            partial_result_params: lsp::PartialResultParams::default(),
+        };
+
+        Some(self.call::<lsp::request::TypeHierarchySubtypes>(params))
     }
 
     pub fn prepare_rename(
