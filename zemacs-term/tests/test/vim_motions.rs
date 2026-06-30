@@ -159,3 +159,28 @@ async fn ctrl_v_o_jumps_to_opposite_corner() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ctrl_v_uppercase_o_swaps_column_edge() -> anyhow::Result<()> {
+    // Build the block (cursor bottom-right), then `O` moves the cursor to the
+    // other column edge on the same row: same rectangle, cursor now bottom-left.
+    test_with_config(
+        vim(),
+        (
+            "#[f|]#oo\nbar\nbaz",
+            "<C-v>jjlO",
+            "#(|fo)#o\n#(|ba)#r\n#[|ba]#z",
+        ),
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ctrl_v_dollar_is_ragged_right() -> anyhow::Result<()> {
+    // CTRL-V $ extends each row to its own line end (ragged right): the two rows
+    // of differing length each select to their end, without swallowing the
+    // newline (head stops at end-of-content, not past it).
+    test_with_config(vim(), ("#[a|]#b\nabcd", "<C-v>j$", "#(ab|)#\n#[abcd|]#")).await?;
+    Ok(())
+}

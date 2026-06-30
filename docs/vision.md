@@ -1,24 +1,93 @@
-The Zemacs project still has a ways to go before reaching its goals.  This document outlines some of those goals and the overall vision for the project.
-
 # Vision
 
-An efficient, batteries-included editor you can take anywhere and be productive... if it's your kind of thing.
+> **The design goal, in one line:** a CLI IDE that is *maximally powerful with
+> zero user configuration* — install the binary, open a project, and have the
+> full power of a graphical IDE in the terminal, with the muscle memory of
+> **Spacemacs** and **JetBrains** already wired in.
 
-* **Cross-platform.**  Whether on Linux, Windows, or OSX, you should be able to take your editor with you.
-* **Terminal first.**  Not all environments have a windowing system, and you shouldn't have to abandon your preferred editor in those cases.
-* **Native.**  No Electron or HTML DOM here.  We want an efficient, native-compiled editor that can run with minimal resources when needed.  If you're working on a Raspberry Pi, your editor shouldn't consume half of your RAM.
-* **Batteries included.**  Both the default configuration and bundled features should be enough to have a good editing experience and be productive.  You shouldn't need a massive custom config or external executables and plugins for basic features and functionality.
-* **Don't try to be everything for everyone.**  There are many great editors out there to choose from.  Let's make Zemacs *one of* those great options, with its own take on things.
+zemacs is a modal text editor in Rust, forked from
+[Helix](https://github.com/helix-editor/helix) and built on its tree-sitter +
+LSP engine. Where Helix aims to be *one of* many good editors, zemacs aims at a
+single, opinionated target: **the most capable out-of-the-box terminal IDE you
+can `brew install`.**
 
-# Goals
+## The four pillars
 
-Vision statements are all well and good, but are also vague and subjective.  Here is a (non-exhaustive) list of some of Zemacs's more concrete goals, to help give a clearer idea of the project's direction:
+1. **Zero user config.** Everything works on first launch. No `init.el`, no
+   `init.vim`, no plugin manager, no Mason, no `:PackerSync`, no external
+   language-server bootstrap ritual. The defaults *are* the product. (You *can*
+   still customize — keymaps, themes, settings, `~/.zemacs/init.el` — but you
+   should never *have* to in order to be productive.)
 
-* **Modal.**  Vim is a great idea.
-* **Selection -> Action**, not Verb -> Object.  Interaction models aren't linguistics, and "selection first" lets you see what you're doing (among other benefits).
-* **We aren't playing code golf.**  It's more important for the keymap to be consistent and easy to memorize than it is to save a key stroke or two when editing.
-* **Built-in tools** for working with code bases efficiently.  Most projects aren't a single file, and an editor should handle that as a first-class use case.  In Zemacs's case, this means (among other things) a fuzzy-search file navigator and LSP support.
-* **Edit anything** that comes up when coding, within reason.  Whether it's a 200 MB XML file, a megabyte of minified javascript on a single line, or Japanese text encoded in ShiftJIS, you should be able to open it and edit it without problems.  (Note: this doesn't mean handle every esoteric use case.  Sometimes you do just need a specialized tool, and Zemacs isn't that.)
-* **Configurable**, within reason.  Although the defaults should be good, not everyone will agree on what "good" is.  Within the bounds of Zemacs's core interaction models, it should be reasonably configurable so that it can be "good" for more people.  This means, for example, custom key maps among other things.
-* **Extensible**, within reason.  Although we want Zemacs to be productive out-of-the-box, it's not practical or desirable to cram every useful feature and use case into the core editor.  The basics should be built-in, but you should be able to extend it with additional functionality as needed.
-* **Clean code base.**  Sometimes other factors (e.g. significant performance gains, important features, correctness, etc.) will trump strict readability, but we nevertheless want to keep the code base straightforward and easy to understand to the extent we can.
+2. **Maximum power.** Not a minimal editor you grow into — the full IDE surface
+   ships in the single static binary: LSP (completion, diagnostics, hover,
+   inlay hints, rename, code actions), a DAP debugger, tree-sitter for the
+   bundled languages, a fuzzy file picker, a project file tree, a real PTY
+   terminal, magit-style git, diff/merge tooling, run configurations, a
+   minimap, narrowing, folding, multiple selections, an org-mode agenda, a hex
+   editor, settings/theme/keymap editors, a searchable help browser, and **five
+   embedded scripting languages with a live REPL** (elisp, vimscript, awk, zsh,
+   stryke) — no FFI, no external executables.
+
+3. **CLI-first, native.** Terminal is the primary surface, not a fallback. No
+   Electron, no DOM, no Node. Native-compiled Rust that runs in an SSH session
+   on a Raspberry Pi as happily as on a workstation — open a 200 MB file, a line
+   of minified JS, or ShiftJIS-encoded text and edit it without flinching.
+
+4. **Parity with Spacemacs and JetBrains.** These are the two reference
+   workflows. A Spacemacs user's `SPC` leader tree and a JetBrains user's
+   keymap and IDE actions should both *just work* — same key, same result — so
+   neither has to relearn anything to switch.
+
+## Is the goal achieved?
+
+**Substantially, yes — and the project refuses to claim it without proof.**
+
+Coverage is not asserted by hand; it is **re-derived from zemacs source on every
+report run** and measured against the *exhaustive, cited* feature inventories of
+Vim/Neovim, Emacs, Spacemacs, and JetBrains (parsed from each tool's own
+documentation). A mapping that points at non-existent code is flagged as broken,
+not counted. See [`port/README.md`](../port/README.md) for the honesty contract.
+
+The headline measure is **functionality coverage** — distinct editor
+*capabilities*, counted once regardless of how many ancestor editors expose the
+same feature (it answers "what can zemacs *do*," not "how many keys overlap").
+By that measure the great majority of the tracked capability surface is
+implemented today, with only a handful of genuine gaps remaining. Per the
+muscle-memory tables, **JetBrains** and **Spacemacs** are both well into the
+high range — every cited JetBrains action is at least partially covered, and the
+Spacemacs `SPC` tree is largely complete — while the Emacs *chord* surface is
+intentionally low because zemacs is modal (vim keys), not a chord editor.
+
+Live numbers — denominator, ported, partial, broken, and the per-source and
+per-capability breakdowns — are in the generated reports, never hardcoded here so
+they cannot go stale:
+
+- [`docs/port_report.md`](port_report.md) — full capability + per-source coverage
+- [`docs/keybinding_report.md`](keybinding_report.md) — the key-press surface
+- [`docs/spacemacs_gaps.md`](spacemacs_gaps.md) — remaining Spacemacs deltas
+
+### What "achieved" does **not** mean
+
+Honesty cuts both ways:
+
+- **Not 100% parity with three giant editors.** The Emacs manual denominator
+  includes Dired, Gnus, Calc, TeX-mode and games; zemacs deliberately does not
+  chase that tail. "Parity" here means the Spacemacs and JetBrains *daily
+  workflows*, not every esoteric command in every ancestor.
+- **Refactoring is the known weak area.** Symbol-level refactors (extract,
+  inline, change-signature) are mostly LSP-delegated and only partially wired;
+  this is the largest open gap and the clearest place new work moves the number.
+- **"Zero config" is the standard, and regressions count as bugs.** Any feature
+  that needs a manual setup step to function is treated as not-yet-meeting the
+  goal, not as "configurable."
+
+## Non-goals
+
+- **Not "everything for everyone."** zemacs has an opinion (modal, selection →
+  action, batteries-included). It is not trying to be a blank canvas.
+- **Not a code-golf keymap.** Consistency and memorability beat saving a
+  keystroke.
+- **Not a GUI app.** Native terminal first; no Electron/DOM.
+- **Not config-mandatory.** Customization is allowed and supported, but the
+  measure of success is how much you can do having configured *nothing*.
