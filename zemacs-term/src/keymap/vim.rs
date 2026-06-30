@@ -119,6 +119,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t -",   "Toggles", "toggle_centered_cursor"),             // SPC t - : centered-cursor mode
     ("space t f",   "Toggles", "toggle_fill_column"),                 // SPC t f : show fill-column ruler
     ("space t 8",   "Toggles", "toggle_long_line_marker"),            // SPC t 8 : highlight 80th column
+    ("space t C-8", "Toggles", "toggle_long_line_marker"),            // SPC t C-8 : global 80-col highlight
     ("space t C-W", "Toggles", ":toggle trim-trailing-whitespace"),    // SPC t C-W : global whitespace cleanup
     ("space D f v", "Diff",    "git_diff"),                            // SPC D f v : ediff file versions (vs HEAD)
     ("space D b b", "Diff",    "ediff_buffer"),                        // SPC D b b : ediff two buffers (current vs picked)
@@ -974,6 +975,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "C-1" => goto_window_1, "C-2" => goto_window_2, "C-3" => goto_window_3,
                     "C-4" => goto_window_4, "C-5" => goto_window_5, "C-6" => goto_window_6,
                     "C-7" => goto_window_7, "C-8" => goto_window_8, "C-9" => goto_window_9,
+                    "q" => normal_mode,            // SPC b . q : quit the transient
                     // SPC b . d / x -> :buffer-close via typable table
                 },
                 "P" => [select_all, replace_with_yanked], // SPC b P : paste-replace buffer
@@ -1259,6 +1261,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "(" => goto_prev_unmatched_paren,  // SPC j ( : jump to first unbalanced paren
                 "D" => file_explorer_in_current_buffer_directory, // SPC j D : current directory listing
                 "U" => goto_file,                  // SPC j U : select URL and follow
+                "s" => paredit_split,              // SPC j s : split sexp/string at point
+                "S" => paredit_split,              // SPC j S : split sexp, newline (approx: split)
             },
             "F" => { "Frames"
                 "n" => hsplit_new,                 // SPC F n : create a new frame (new window)
