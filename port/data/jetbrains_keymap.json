@@ -1710,5 +1710,13 @@
   "name": "Collapse Recursively",
   "desc": "IntelliJ IDEA default keymap: Cmd Minus",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.view.inlay-hints",
+  "source": "jetbrains",
+  "category": "view",
+  "name": "Inlay Hints",
+  "desc": "IntelliJ IDEA default keymap: View > Inlay Hints",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]

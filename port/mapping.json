@@ -19115,5 +19115,13 @@
    "static:fold_close_recursive"
   ],
   "note": "fold under cursor + all nested"
+ },
+ {
+  "spec_id": "jetbrains.view.inlay-hints",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_inlay_hints"
+  ],
+  "note": "toggle LSP inlay hints"
  }
 ]
