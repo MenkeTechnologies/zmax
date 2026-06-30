@@ -196,6 +196,7 @@ pub fn run(task: String, root: PathBuf) -> Result<AgentResult, String> {
         ));
     }
     let tools = tools();
+    let system = super::system_with_rules(SYSTEM);
     let mut turns = vec![Turn::user_text(task)];
     let mut transcript = String::new();
     let mut changed = BTreeSet::new();
@@ -203,7 +204,7 @@ pub fn run(task: String, root: PathBuf) -> Result<AgentResult, String> {
 
     while steps < MAX_STEPS {
         steps += 1;
-        let reply = provider.agent_turn(Some(SYSTEM), &turns, &tools)?;
+        let reply = provider.agent_turn(Some(&system), &turns, &tools)?;
         if !reply.text.trim().is_empty() {
             transcript.push_str(reply.text.trim());
             transcript.push_str("\n\n");
