@@ -5567,8 +5567,12 @@ fn block_reproject(cx: &mut Context) {
             continue;
         }
         let (anchor_char, head_char) = if block.to_eol {
-            // ragged right (CTRL-V $): each row runs to its own line end.
-            (left, line_end_char_index(&text, row))
+            // ragged right (CTRL-V $): each row runs to its own line end. Target
+            // the line's last char so `put_cursor`'s +1 (block-cursor width)
+            // lands exactly at the line end and never swallows the newline.
+            let end = line_end_char_index(&text, row);
+            let line_start = text.line_to_char(row);
+            (left, end.saturating_sub(1).max(line_start))
         } else {
             let head = pos_at_visual_coords(text, Position::new(row, cc), tab_width);
             let anchor = pos_at_visual_coords(text, Position::new(row, other), tab_width);

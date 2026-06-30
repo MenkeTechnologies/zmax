@@ -19,11 +19,21 @@
 
 A modal text editor in Rust, forked from [Helix](https://github.com/helix-editor/helix).
 
+**Design goal: a maximally powerful CLI IDE with zero user configuration.**
+Install the binary, open a project, and get the full power of a graphical IDE
+in the terminal — LSP, a debugger, tree-sitter, fuzzy file picker, project
+tree, a real PTY terminal, magit-style git, run configs, and five embedded
+scripting languages — all in one static binary, working on first launch with no
+`init.el`, no plugin manager, and no setup ritual. The reference workflows are
+**Spacemacs** and **JetBrains**: the same keys you already press should do the
+same thing here. See [`docs/vision.md`](docs/vision.md) for the full design goal
+and an honest, source-derived account of how far it's met.
+
 zemacs runs on the Zemacs engine — tree-sitter syntax, LSP, multiple
 selections — but targets **vim/emacs semantics**, not Zemacs's selection-first
 model. The default keymap is vim: the keys you press are the keys vim binds,
 including operator-pending edits (`dd`, `dw`, `cw`, `yy`) emulated on the Zemacs
-engine, with emacs and Spacemacs-style functionality layered on top.
+engine, with emacs, Spacemacs, and JetBrains functionality layered on top.
 
 ## Port report
 
