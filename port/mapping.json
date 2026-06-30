@@ -6772,11 +6772,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_d_t",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space h d t"
+   "key:normal:space h d t",
+   "static:describe_text_properties"
   ],
-  "note": "describe text props -> command palette"
+  "note": "describe-text-properties -> describe_text_properties (tree-sitter node stack + char at point)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_d_x",

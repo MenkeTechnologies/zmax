@@ -1525,7 +1525,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "m" => command_palette,        // SPC h d m : describe modes
                     "a" => hover,                  // SPC h d a : describe expression under point
                     "p" => command_palette,        // SPC h d p : describe package
-                    "t" => command_palette,        // SPC h d t : describe text properties
+                    "t" => describe_text_properties, // SPC h d t : describe text properties (syntax node stack)
                     "x" => help,                   // SPC h d x : describe ex-command (Help browser)
                     "l" => command_palette,        // SPC h d l : copy last keys
                     "s" => command_palette,        // SPC h d s : copy system info

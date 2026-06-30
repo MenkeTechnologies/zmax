@@ -507,6 +507,7 @@ impl MappableCommand {
         man_page_search, "Search man pages via apropos and view the selected page (SPC h m)",
         diagnostics_verify_setup, "Report the buffer's diagnostics/LSP setup (SPC e v)",
         describe_diagnostics_checker, "Describe the buffer's checkers/language servers (SPC e h)",
+        describe_text_properties, "Describe the tree-sitter node stack at the cursor (SPC h d t)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
         open_hex, "Open the current file in the hex editor (SPC f h, hexl)",
         open_file_external, "Open the current file with the OS default program (SPC f o)",
@@ -7684,6 +7685,60 @@ fn describe_diagnostics_checker(cx: &mut Context) {
     };
     show_text_in_scratch(cx.editor, &report);
     cx.editor.set_status("describe checker");
+}
+
+/// SPC h d t : describe the "text properties" at the cursor. In a structural editor that means the
+/// tree-sitter node stack at point (innermost → outermost) plus the character under the cursor —
+/// the zemacs analogue of Emacs' `describe-text-properties`.
+fn describe_text_properties(cx: &mut Context) {
+    let report = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let byte = text.char_to_byte(cursor) as u32;
+        let line = text.char_to_line(cursor);
+        let col = cursor - text.line_to_char(line);
+        let mut out = format!(
+            "Text properties at line {}, col {} (char {cursor}, byte {byte})\n",
+            line + 1,
+            col + 1
+        );
+        out.push_str(&format!(
+            "char: {}\n\n",
+            match slice.get_char(cursor) {
+                Some(c) => format!("{c:?} (U+{:04X})", c as u32),
+                None => "(end of buffer)".to_string(),
+            }
+        ));
+        match doc.syntax() {
+            None => out.push_str("No syntax tree (fundamental mode / unsupported language).\n"),
+            Some(syntax) => match syntax.descendant_for_byte_range(byte, byte) {
+                None => out.push_str("No syntax node at point.\n"),
+                Some(node) => {
+                    out.push_str("Syntax nodes (innermost \u{2192} outermost):\n");
+                    let mut cur = Some(node);
+                    let mut depth = 0usize;
+                    while let Some(n) = cur {
+                        let r = n.byte_range();
+                        out.push_str(&format!(
+                            "  {}{}{}  [{}..{}]\n",
+                            "  ".repeat(depth),
+                            n.kind(),
+                            if n.is_named() { "" } else { " (anon)" },
+                            r.start,
+                            r.end
+                        ));
+                        cur = n.parent();
+                        depth += 1;
+                    }
+                }
+            },
+        }
+        out
+    };
+    show_text_in_scratch(cx.editor, &report);
+    cx.editor.set_status("describe text properties");
 }
 
 /// SPC p e : open the project-local config (`<workspace>/.zemacs/config.toml`), creating it (and
