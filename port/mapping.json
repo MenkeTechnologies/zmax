@@ -18326,5 +18326,21 @@
    "key:normal:space b . A-1"
   ],
   "note": ""
+ },
+ {
+  "spec_id": "neovim.insert-mode.ctrl_a",
+  "status": "ported",
+  "evidence": [
+   "key:insert:C-a"
+  ],
+  "note": "insert previously-inserted text (i_CTRL-A/i_CTRL-@)"
+ },
+ {
+  "spec_id": "neovim.insert-mode.ctrl_at",
+  "status": "ported",
+  "evidence": [
+   "key:insert:C-@"
+  ],
+  "note": "insert previously-inserted text (i_CTRL-A/i_CTRL-@)"
  }
 ]

@@ -729,6 +729,8 @@ impl MappableCommand {
         wonly, "Close windows except current",
         select_register, "Select register",
         insert_register, "Insert register",
+        insert_last_inserted_text, "Insert the previously inserted text (vim i_CTRL-A)",
+        insert_last_inserted_and_stop, "Insert previously inserted text and stop insert (vim i_CTRL-@)",
         copy_between_registers, "Copy between two registers",
         align_view_middle, "Align view middle",
         align_view_top, "Align view top",
@@ -8499,8 +8501,20 @@ fn ensure_selections_forward(cx: &mut Context) {
     doc.set_selection(view.id, selection);
 }
 
+/// Char offset where the current insert session began, and the text of the most
+/// recently completed insert session — backing vim's `i_CTRL-A`/`i_CTRL-@`
+/// (insert previously-inserted text). The text is captured on leaving insert as
+/// the span from the insert anchor to the exit cursor (a close approximation of
+/// vim's `.` register; intra-insert cursor jumps make it best-effort).
+static INSERT_ANCHOR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+static LAST_INSERTED_TEXT: Lazy<std::sync::Mutex<String>> =
+    Lazy::new(|| std::sync::Mutex::new(String::new()));
+
 fn enter_insert_mode(cx: &mut Context) {
     cx.editor.mode = Mode::Insert;
+    let (view, doc) = current!(cx.editor);
+    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    INSERT_ANCHOR.store(pos, std::sync::atomic::Ordering::Relaxed);
 }
 
 // inserts at the start of each selection
@@ -9579,7 +9593,37 @@ fn open_above(cx: &mut Context) {
 }
 
 fn normal_mode(cx: &mut Context) {
+    // Capture the text inserted this session (for i_CTRL-A) before leaving insert.
+    if cx.editor.mode == Mode::Insert {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let end = doc.selection(view.id).primary().cursor(text);
+        let start = INSERT_ANCHOR
+            .load(std::sync::atomic::Ordering::Relaxed)
+            .min(text.len_chars());
+        if end > start {
+            let s: String = text.slice(start..end).chars().collect();
+            *LAST_INSERTED_TEXT.lock().unwrap() = s;
+        }
+    }
     cx.editor.enter_normal_mode();
+}
+
+/// vim `i_CTRL-A`: insert the text of the most recently completed insert session.
+fn insert_last_inserted_text(cx: &mut Context) {
+    let text = LAST_INSERTED_TEXT.lock().unwrap().clone();
+    if text.is_empty() {
+        return;
+    }
+    let mode = cx.editor.mode;
+    let (view, doc) = current!(cx.editor);
+    paste_impl(&[text], doc, view, Paste::Cursor, 1, mode);
+}
+
+/// vim `i_CTRL-@`: insert the last-inserted text and then leave insert mode.
+fn insert_last_inserted_and_stop(cx: &mut Context) {
+    insert_last_inserted_text(cx);
+    normal_mode(cx);
 }
 
 // Store a jump on the jumplist.

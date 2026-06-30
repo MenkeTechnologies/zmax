@@ -1727,6 +1727,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "tab"   => emmet_expand,            // expand emmet/zen abbrev, else Tab
 
         "C-r"   => insert_register,
+        "C-a"   => insert_last_inserted_text,    // i_CTRL-A: insert previously inserted text
+        "C-@"   => insert_last_inserted_and_stop, // i_CTRL-@: insert previously inserted text, stop insert
         "C-e"   => copy_char_below,         // vim i_CTRL-E: insert the character below the cursor
         "C-y"   => copy_char_above,         // vim i_CTRL-Y: insert the character above the cursor
         "ins"   => replace_mode,           // <Insert>: switch to Replace (overtype) mode
