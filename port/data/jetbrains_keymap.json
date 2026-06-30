@@ -1598,5 +1598,37 @@
   "name": "Push Members Down",
   "desc": "IntelliJ IDEA default keymap",
   "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.tool-windows.quick-switch-scheme",
+  "source": "jetbrains",
+  "category": "tool-windows",
+  "name": "Quick Switch Scheme",
+  "desc": "IntelliJ IDEA default keymap: Ctrl Backtick",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.tool-windows.show-todo-window",
+  "source": "jetbrains",
+  "category": "tool-windows",
+  "name": "TODO",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.run-debug.restart",
+  "source": "jetbrains",
+  "category": "run-debug",
+  "name": "Restart",
+  "desc": "IntelliJ IDEA default keymap: Cmd Shift F5",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
+ },
+ {
+  "id": "jetbrains.run-debug.edit-configurations",
+  "source": "jetbrains",
+  "category": "run-debug",
+  "name": "Edit Configurations",
+  "desc": "IntelliJ IDEA default keymap",
+  "doc_ref": "https://www.jetbrains.com/help/idea/reference-keymap-mac-default.html"
  }
 ]

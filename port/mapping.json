@@ -2701,7 +2701,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -18989,5 +18989,37 @@
    "static:code_action"
   ],
   "note": "via LSP code action"
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.quick-switch-scheme",
+  "status": "ported",
+  "evidence": [
+   "static:theme_picker"
+  ],
+  "note": "scheme/theme switch"
+ },
+ {
+  "spec_id": "jetbrains.tool-windows.show-todo-window",
+  "status": "ported",
+  "evidence": [
+   "static:focus_todo_panel"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.run-debug.restart",
+  "status": "ported",
+  "evidence": [
+   "static:dap_restart"
+  ],
+  "note": "jetbrains"
+ },
+ {
+  "spec_id": "jetbrains.run-debug.edit-configurations",
+  "status": "ported",
+  "evidence": [
+   "static:run_config_manager"
+  ],
+  "note": "jetbrains"
  }
 ]
