@@ -485,6 +485,7 @@ impl MappableCommand {
         toggle_centered_cursor, "Keep the cursor vertically centered (SPC t -)",
         toggle_fill_column, "Toggle a fill-column ruler (SPC t f)",
         toggle_long_line_marker, "Toggle an 80th-column ruler (SPC t 8)",
+        ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
         kill_buffers_by_regex, "Kill all buffers whose name matches a regex (SPC b M)",
         narrow_to_page, "Narrow the buffer to the current page (SPC n p)",
         copy_file, "Copy the current file to a prompted destination (SPC f c)",
@@ -6935,6 +6936,45 @@ fn toggle_long_line_marker(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("long-line marker (col 80): {}", if on { "on" } else { "off" }));
+}
+
+/// Prompt for a file and diff it against the current buffer (Spacemacs `SPC D f f`).
+fn ediff_file(cx: &mut Context) {
+    let (cur_name, cur_text, cur_id) = {
+        let doc = doc!(cx.editor);
+        (doc.display_name().into_owned(), doc.text().to_string(), doc.id())
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ediff with file:".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let path = std::path::PathBuf::from(input.trim());
+            let other = match std::fs::read_to_string(&path) {
+                Ok(s) => s,
+                Err(e) => {
+                    cx.editor.set_error(format!("read {}: {e}", path.display()));
+                    return;
+                }
+            };
+            let view = crate::ui::merge::DiffView::new(
+                format!("{} ⇔ {}", path.display(), cur_name),
+                cur_id,
+                &other,
+                &cur_text,
+            );
+            let call = crate::job::Callback::EditorCompositor(Box::new(
+                move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
+                    compositor.push(Box::new(view));
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 /// Kill all buffers whose name matches a prompted regex (Spacemacs `SPC b M`).
