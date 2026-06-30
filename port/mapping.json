@@ -11279,11 +11279,11 @@
   },
   {
     "spec_id": "jetbrains.multiple-carets.add-selection-for-next-occurrence",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:search_selection"
+      "static:add_selection_to_next_match"
     ],
-    "note": ""
+    "note": "Ctrl-G Add Selection for Next Occurrence = add_selection_to_next_match (incremental multi-cursor at next match of the selection)"
   },
   {
     "spec_id": "jetbrains.multiple-carets.select-all-occurrences",
