@@ -408,6 +408,15 @@ impl MappableCommand {
         global_search, "Global search in workspace folder",
         global_search_symbol, "Global search seeded with the symbol under the cursor",
         clear_search_highlight, "Clear persistent search highlight (SPC s c)",
+        justify_left, "Left-justify (fill) the region (SPC x j l)",
+        justify_right, "Right-justify the region (SPC x j r)",
+        justify_center, "Center-justify the region (SPC x j c)",
+        justify_full, "Full-justify the region (SPC x j f)",
+        justify_none, "Remove justification / left-fill (SPC x j n)",
+        count_words_region, "Count occurrences per word in the selection (SPC x w c)",
+        goto_next_close_paren, "Go forward to next closing paren (SPC k j)",
+        goto_prev_open_paren, "Go backward to previous opening paren (SPC k k)",
+        ediff_windows, "Diff the two front windows side by side (SPC D w w)",
         align_at_equals, "Align region at = (SPC x a =)",
         align_at_comma, "Align region at , (SPC x a ,)",
         align_at_colon, "Align region at : (SPC x a :)",
@@ -5947,6 +5956,196 @@ fn align_region(cx: &mut Context, pat: regex::Regex, right: bool) {
     let transaction =
         Transaction::change(doc.text(), std::iter::once((from, to, Some(out.into()))));
     doc.apply(&transaction, view.id);
+}
+
+// --- region justification (Spacemacs `SPC x j *`, set-justification + fill) ---
+#[derive(Clone, Copy)]
+enum Justify {
+    Left,
+    Right,
+    Center,
+    Full,
+    None,
+}
+
+fn full_justify_line(words: &[&str], width: usize) -> String {
+    if words.len() < 2 {
+        return words.join(" ");
+    }
+    let text_len: usize = words.iter().map(|w| w.chars().count()).sum();
+    let gaps = words.len() - 1;
+    let spaces = width.saturating_sub(text_len).max(gaps);
+    let base = spaces / gaps;
+    let extra = spaces % gaps;
+    let mut s = String::new();
+    for (i, w) in words.iter().enumerate() {
+        s.push_str(w);
+        if i < gaps {
+            let n = base + usize::from(i < extra);
+            s.push_str(&" ".repeat(n.max(1)));
+        }
+    }
+    s
+}
+
+/// Reflow `text` to fill `width` columns, aligning each line per `mode`. Pure.
+fn fill_justify(text: &str, width: usize, mode: Justify) -> String {
+    let width = width.max(1);
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if words.is_empty() {
+        return String::new();
+    }
+    let mut lines: Vec<Vec<&str>> = Vec::new();
+    let mut cur: Vec<&str> = Vec::new();
+    let mut len = 0usize;
+    for w in words {
+        let add = if cur.is_empty() {
+            w.chars().count()
+        } else {
+            w.chars().count() + 1
+        };
+        if len + add > width && !cur.is_empty() {
+            lines.push(std::mem::take(&mut cur));
+            len = 0;
+        }
+        len += if cur.is_empty() {
+            w.chars().count()
+        } else {
+            w.chars().count() + 1
+        };
+        cur.push(w);
+    }
+    if !cur.is_empty() {
+        lines.push(cur);
+    }
+    let n = lines.len();
+    let mut out = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        let joined = line.join(" ");
+        let pad = width.saturating_sub(joined.chars().count());
+        let s = match mode {
+            Justify::Left | Justify::None => joined,
+            Justify::Right => format!("{}{}", " ".repeat(pad), joined),
+            Justify::Center => format!("{}{}", " ".repeat(pad / 2), joined),
+            Justify::Full => {
+                if i + 1 == n {
+                    joined
+                } else {
+                    full_justify_line(line, width)
+                }
+            }
+        };
+        out.push(s);
+    }
+    out.join("\n")
+}
+
+fn justify_region(cx: &mut Context, mode: Justify) {
+    let width = {
+        let w = cx.editor.config().text_width;
+        if w == 0 {
+            80
+        } else {
+            w
+        }
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let (from, to) = (sel.from(), sel.to().max(sel.from() + 1).min(text.len_chars()));
+    let start_line = text.char_to_line(from);
+    let end_line = text.char_to_line(to.saturating_sub(1).max(from));
+    let lstart = text.line_to_char(start_line);
+    let lend = text.line_to_char((end_line + 1).min(text.len_lines()));
+    let src = text.slice(lstart..lend).to_string();
+    let trailing_nl = src.ends_with('\n');
+    let le = doc.line_ending.as_str();
+    let mut filled = fill_justify(&src, width, mode).replace('\n', le);
+    if trailing_nl {
+        filled.push_str(le);
+    }
+    if filled == src {
+        return;
+    }
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((lstart, lend, Some(filled.into()))));
+    doc.apply(&transaction, view.id);
+}
+
+fn justify_left(cx: &mut Context) { justify_region(cx, Justify::Left) }
+fn justify_right(cx: &mut Context) { justify_region(cx, Justify::Right) }
+fn justify_center(cx: &mut Context) { justify_region(cx, Justify::Center) }
+fn justify_full(cx: &mut Context) { justify_region(cx, Justify::Full) }
+fn justify_none(cx: &mut Context) { justify_region(cx, Justify::None) }
+
+/// Count occurrences per word in the selection (Spacemacs `SPC x w c`).
+fn count_words_region(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let frag = doc.selection(view.id).primary().fragment(text);
+    let mut counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+    for w in frag.split_whitespace() {
+        *counts.entry(w).or_insert(0) += 1;
+    }
+    let total: usize = counts.values().sum();
+    let uniq = counts.len();
+    let top = counts
+        .iter()
+        .max_by_key(|(_, &c)| c)
+        .map(|(w, c)| format!("; most: \"{w}\"×{c}"))
+        .unwrap_or_default();
+    cx.editor
+        .set_status(format!("{total} words, {uniq} unique{top}"));
+}
+
+/// SPC k j: move to the next closing parenthesis/bracket/brace.
+fn goto_next_close_paren(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let pos = doc.selection(view.id).primary().cursor(text);
+    let mut i = pos + 1;
+    while i < text.len_chars() {
+        if matches!(text.char(i), ')' | ']' | '}') {
+            doc.set_selection(view.id, Selection::point(i));
+            return;
+        }
+        i += 1;
+    }
+}
+
+/// SPC k k: move to the previous opening parenthesis/bracket/brace.
+fn goto_prev_open_paren(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let pos = doc.selection(view.id).primary().cursor(text);
+    let mut i = pos;
+    while i > 0 {
+        i -= 1;
+        if matches!(text.char(i), '(' | '[' | '{') {
+            doc.set_selection(view.id, Selection::point(i));
+            return;
+        }
+    }
+}
+
+/// Compare the two front windows' buffers side by side (Spacemacs `SPC D w w/l`).
+fn ediff_windows(cx: &mut Context) {
+    let docs: Vec<DocumentId> = cx.editor.tree.traverse().map(|(_, v)| v.doc).collect();
+    if docs.len() < 2 {
+        cx.editor.set_status("ediff needs two windows");
+        return;
+    }
+    let get = |cx: &Context, id: DocumentId| {
+        cx.editor
+            .documents()
+            .find(|d| d.id() == id)
+            .map(|d| (d.display_name().into_owned(), d.text().to_string()))
+    };
+    let (Some((na, ta)), Some((nb, tb))) = (get(cx, docs[0]), get(cx, docs[1])) else {
+        return;
+    };
+    let view = crate::ui::merge::DiffView::new(format!("{na} ⇔ {nb}"), docs[1], &ta, &tb);
+    cx.push_layer(Box::new(view));
 }
 
 fn align_region_lit(cx: &mut Context, delim: &str, right: bool) {
@@ -14029,6 +14228,22 @@ mod insert_generator_tests {
 
     fn lines(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn fill_justify_wraps_and_aligns() {
+        let t = "the quick brown fox jumps over the lazy dog";
+        let left = fill_justify(t, 20, Justify::Left);
+        assert!(left.lines().all(|l| l.chars().count() <= 20), "left: {left:?}");
+        let right = fill_justify(t, 20, Justify::Right);
+        // every non-final wrapped line is padded to the width on the right
+        let rlines: Vec<&str> = right.lines().collect();
+        assert!(rlines.len() >= 2);
+        assert_eq!(rlines[0].chars().count(), 20, "right pads to width: {right:?}");
+        // full justification pads interior lines to exactly the width
+        let full = fill_justify(t, 20, Justify::Full);
+        let flines: Vec<&str> = full.lines().collect();
+        assert_eq!(flines[0].chars().count(), 20, "full fills width: {full:?}");
     }
 
     #[test]

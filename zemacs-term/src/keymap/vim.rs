@@ -111,6 +111,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t W",   "Toggles", ":toggle trim-trailing-whitespace"),    // SPC t W : auto whitespace cleanup on save
     ("space t C-W", "Toggles", ":toggle trim-trailing-whitespace"),    // SPC t C-W : global whitespace cleanup
     ("space D f v", "Diff",    "git_diff"),                            // SPC D f v : ediff file versions (vs HEAD)
+    ("space D w w", "Diff",    "ediff_windows"),                       // SPC D w w : compare the two windows (wordwise)
+    ("space D w l", "Diff",    "ediff_windows"),                       // SPC D w l : compare the two windows (linewise)
     ("space t V",   "Toggles", ":toggle line-number absolute relative"), // SPC t V : visual line numbers
     ("space t h i", "Toggles", ":toggle indent-guides.render"),        // SPC t h i : highlight indentation
     ("space t C-i", "Toggles", ":toggle indent-guides.render"),        // SPC t C-i : global indent guide
@@ -1337,15 +1339,15 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "r" => randomize_lines_in_region, // SPC x l r : randomize lines
                 },
                 "w" => { "Words"
-                    "c" => count_selection,        // SPC x w c : count occurrences per word
+                    "c" => count_words_region,     // SPC x w c : count occurrences per word
                     "r" => randomize_words_in_region, // SPC x w r : randomize words
                 },
                 "j" => { "Justify"
-                    "l" => format_selections,      // SPC x j l : justify left (reflow)
-                    "c" => format_selections,      // SPC x j c : justify center (reflow)
-                    "f" => format_selections,      // SPC x j f : justify full (reflow)
-                    "r" => format_selections,      // SPC x j r : justify right (reflow)
-                    "n" => format_selections,      // SPC x j n : justify none (reflow)
+                    "l" => justify_left,           // SPC x j l : justify left (fill)
+                    "c" => justify_center,         // SPC x j c : justify center
+                    "f" => justify_full,           // SPC x j f : justify full
+                    "r" => justify_right,          // SPC x j r : justify right
+                    "n" => justify_none,           // SPC x j n : justify none (left-fill)
                 },
                 "tab" => indent,                   // SPC x TAB : indent region
                 "a" => { "Align"
@@ -1386,8 +1388,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "I" => [move_parent_node_start, insert_mode], // SPC k I : begin + insert
                 "h" => select_prev_sibling,        // SPC k h : previous symbol
                 "l" => select_next_sibling,        // SPC k l : next symbol
-                "j" => shrink_selection,           // SPC k j : into child
-                "k" => expand_selection,           // SPC k k : out to parent
+                "j" => goto_next_close_paren,      // SPC k j : forward to next closing paren
+                "k" => goto_prev_open_paren,       // SPC k k : backward to previous opening paren
                 "y" => [expand_selection, yank, collapse_selection], // SPC k y : copy expression
                 "v" => select_mode,                // SPC k v : visual select
                 "V" => extend_line,                // SPC k V : line-wise visual select
