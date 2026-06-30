@@ -2701,7 +2701,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -6145,11 +6145,12 @@
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_d_m",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:space h d m"
+   "key:normal:space h d m",
+   "static:describe_current_modes"
   ],
-  "note": "describe modes -> command palette"
+  "note": "describe-mode -> describe_current_modes (mode/language/encoding/line-ending/indent/servers)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_h_spc",
