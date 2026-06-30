@@ -11784,11 +11784,11 @@
  },
  {
   "spec_id": "jetbrains.refactoring.refactor-this",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:rename_symbol"
+   "static:refactor_this"
   ],
-  "note": "rename ~ refactor menu"
+  "note": "popup of all applicable refactor.* actions, matching IntelliJ Refactor This"
  },
  {
   "spec_id": "jetbrains.refactoring.rename",

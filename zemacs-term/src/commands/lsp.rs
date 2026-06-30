@@ -629,6 +629,18 @@ pub fn rewrite_refactor(cx: &mut Context) {
     );
 }
 
+/// Request every `refactor.*` action — extract/inline/rewrite/move — as a single
+/// popup. Mirrors IntelliJ's "Refactor This" (the menu of all applicable
+/// refactorings), without the quickfix/source actions the generic code-action
+/// menu also surfaces.
+pub fn refactor_this(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::REFACTOR]),
+        "No refactorings available here",
+    );
+}
+
 /// Shared code-action driver. `only` filters the request to the given kinds (and
 /// is re-applied client-side, since some servers ignore the `only` hint and
 /// return everything). `empty_msg` is shown when no matching action is found.
