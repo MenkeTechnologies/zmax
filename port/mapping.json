@@ -20215,5 +20215,21 @@
       "typable:just-one-space"
     ],
     "note": "emacs cycle-spacing (M-SPC) default = zemacs :just-one-space"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_delmarks",
+    "status": "ported",
+    "evidence": [
+      "typable:delmarks"
+    ],
+    "note": ":delmarks {marks} deletes named marks; :delmarks! clears all letter marks"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_delm",
+    "status": "ported",
+    "evidence": [
+      "typable:delm"
+    ],
+    "note": ":delm alias of :delmarks"
   }
 ]
