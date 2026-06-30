@@ -19242,5 +19242,14 @@
    "static:copy_version"
   ],
   "note": "display and copy version -> copy_version"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_h_a",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t h a",
+   "static:toggle_auto_highlight"
+  ],
+  "note": "toggle automatic symbol highlight -> toggle_auto_highlight (auto_document_highlight config)"
  }
 ]
