@@ -927,6 +927,8 @@ impl MappableCommand {
         narrow_to_region, "Narrow the buffer to the selected region (SPC n r)",
         widen, "Widen: remove narrowing and reveal the whole buffer (SPC n w)",
         narrow_to_function_indirect, "Narrow to the function in an indirect (split) view (SPC n F)",
+        narrow_region_indirect, "Narrow to the selected region in an indirect (split) view (SPC n R)",
+        copy_version, "Display and copy the zemacs version to the clipboard (SPC f e v)",
         narrow_to_page_indirect, "Narrow to the page in an indirect (split) view (SPC n P)",
         kmacro_ring_next, "Cycle to the next macro in the ring (SPC K r n)",
         kmacro_ring_prev, "Cycle to the previous macro in the ring (SPC K r p)",
@@ -8639,6 +8641,14 @@ fn copy_system_info(cx: &mut Context) {
     ));
 }
 
+/// SPC f e v : display and copy the zemacs version to the clipboard (Spacemacs
+/// `spacemacs/display-and-copy-version`).
+fn copy_version(cx: &mut Context) {
+    let v = zemacs_loader::VERSION_AND_GIT_HASH.to_string();
+    let _ = cx.editor.registers.write('+', vec![v.clone()]);
+    cx.editor.set_status(format!("zemacs {v} (copied to clipboard)"));
+}
+
 /// SPC h d t : describe the "text properties" at the cursor. In a structural editor that means the
 /// tree-sitter node stack at point (innermost → outermost) plus the character under the cursor —
 /// the zemacs analogue of Emacs' `describe-text-properties`.
@@ -15640,6 +15650,26 @@ fn narrow_to_function_indirect(cx: &mut Context) {
     doc.set_selection(view.id, Selection::point(lo));
     cx.editor
         .set_status("narrowed to function in an indirect view (SPC n w widens)");
+}
+
+/// SPC n R : narrow to the selected text in an indirect (split) view — clones the buffer into a
+/// split and narrows only that view to the current selection, leaving the original full.
+fn narrow_region_indirect(cx: &mut Context) {
+    let (lo, hi) = {
+        let (view, doc) = current!(cx.editor);
+        let r = doc.selection(view.id).primary();
+        (r.from(), r.to())
+    };
+    if lo == hi {
+        cx.editor.set_status("select a region first (SPC n R)");
+        return;
+    }
+    split(cx.editor, Action::VerticalSplit);
+    let (view, doc) = current!(cx.editor);
+    doc.set_view_narrow(view.id, lo, hi);
+    doc.set_selection(view.id, Selection::point(lo));
+    cx.editor
+        .set_status("narrowed to region in an indirect view (SPC n w widens)");
 }
 
 /// SPC n P : narrow to the current page (form-feed delimited) in an *indirect* view.
