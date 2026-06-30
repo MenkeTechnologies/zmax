@@ -700,6 +700,17 @@ pub fn refactor_this(cx: &mut Context) {
     );
 }
 
+/// IntelliJ "Optimize Imports" (Ctrl-Alt-O): apply the server's `source.organizeImports` action
+/// directly (the title filter pins it to the single import action and auto-applies it).
+pub fn organize_imports(cx: &mut Context) {
+    code_action_filtered(
+        cx,
+        Some(vec![CodeActionKind::SOURCE_ORGANIZE_IMPORTS]),
+        Some(&["import"]),
+        "No organize-imports action available here",
+    );
+}
+
 /// Shared code-action driver. `only` filters the request to the given kinds (and
 /// is re-applied client-side, since some servers ignore the `only` hint and
 /// return everything). `title_filter`, when set, keeps only actions whose title

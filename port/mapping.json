@@ -18718,11 +18718,12 @@
   },
   {
     "spec_id": "jetbrains.coding-assistance.optimize-imports",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:code_action"
+      "key:normal:space l O",
+      "static:organize_imports"
     ],
-    "note": "via LSP source action"
+    "note": "Optimize Imports (Ctrl-Alt-O) = organize_imports: dedicated source.organizeImports code action, auto-applied (SPC l O)"
   },
   {
     "spec_id": "jetbrains.coding-assistance.cyclic-expand-word",
