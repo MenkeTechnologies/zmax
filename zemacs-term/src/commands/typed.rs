@@ -12393,6 +12393,122 @@ fn parse_vim_substitute(input: &str) -> Option<(bool, String, String, String)> {
     Some((whole, pattern, replacement, flags))
 }
 
+/// Parse a vim-abolish `:Subvert` / `:S` command line: `S/pat/rep/flags`,
+/// `%S/pat/rep/g`. Case-sensitive command name (does not collide with `:s`).
+fn parse_subvert(input: &str) -> Option<(bool, String, String, String)> {
+    let s = input.trim_start();
+    let (whole, s) = match s.strip_prefix('%') {
+        Some(rest) => (true, rest.trim_start()),
+        None => (false, s),
+    };
+    let name_len = (1..="Subvert".len())
+        .rev()
+        .find(|&n| s.starts_with(&"Subvert"[..n]))?;
+    let after = &s[name_len..];
+    let delim = after.chars().next()?;
+    if delim.is_alphanumeric() || delim.is_whitespace() {
+        return None;
+    }
+    let body = &after[delim.len_utf8()..];
+    let mut parts = body.splitn(3, delim);
+    let pattern = parts.next()?.to_string();
+    if pattern.is_empty() {
+        return None;
+    }
+    let replacement = parts.next().unwrap_or("").to_string();
+    let flags = parts.next().unwrap_or("").to_string();
+    Some((whole, pattern, replacement, flags))
+}
+
+/// Capitalize like vim-abolish: first char upper, remainder lower.
+fn abolish_capitalize(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(f) => f.to_uppercase().collect::<String>() + &chars.as_str().to_lowercase(),
+        None => String::new(),
+    }
+}
+
+/// vim-abolish `:Subvert`: a case-preserving substitute. A single occurrence of
+/// `pattern` is matched case-insensitively, and the replacement adopts the case
+/// of what it replaced — `foo`→`bar`, `Foo`→`Bar`, `FOO`→`BAR` in one pass.
+pub(crate) fn do_subvert(
+    editor: &mut zemacs_view::Editor,
+    whole_file: bool,
+    pattern: &str,
+    replacement: &str,
+    flags: &str,
+) -> anyhow::Result<()> {
+    let global = flags.contains('g');
+    let re = regex::RegexBuilder::new(&regex::escape(pattern))
+        .case_insensitive(true)
+        .build()
+        .map_err(|e| anyhow!("invalid pattern: {e}"))?;
+
+    let lower = (pattern.to_lowercase(), replacement.to_lowercase());
+    let upper = (pattern.to_uppercase(), replacement.to_uppercase());
+    let title = (abolish_capitalize(pattern), abolish_capitalize(replacement));
+
+    editor.last_substitute = Some((
+        pattern.to_string(),
+        replacement.to_string(),
+        flags.to_string(),
+    ));
+
+    let (view, doc) = current!(editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+
+    let (first_line, last_line) = if whole_file {
+        (0, total.saturating_sub(1))
+    } else {
+        let sel = doc.selection(view.id).primary();
+        (
+            slice.char_to_line(sel.from()),
+            slice.char_to_line(sel.to().min(slice.len_chars().saturating_sub(1))),
+        )
+    };
+
+    let mut changes: Vec<(usize, usize, Option<Tendril>)> = Vec::new();
+    for line in (first_line..=last_line).filter(|&l| l < total) {
+        let lstart = slice.line_to_char(line);
+        let lend = line_ending::line_end_char_index(&slice, line);
+        if lstart > lend {
+            continue;
+        }
+        let text: std::borrow::Cow<str> = slice.slice(lstart..lend).into();
+        let mut count = 0usize;
+        for m in re.find_iter(&text) {
+            if !global && count >= 1 {
+                break;
+            }
+            count += 1;
+            let matched = m.as_str();
+            let out = if matched == upper.0 {
+                upper.1.clone()
+            } else if matched == lower.0 {
+                lower.1.clone()
+            } else if matched == title.0 {
+                title.1.clone()
+            } else {
+                replacement.to_string()
+            };
+            let from = lstart + text[..m.start()].chars().count();
+            let to = lstart + text[..m.end()].chars().count();
+            changes.push((from, to, Some(Tendril::from(out.as_str()))));
+        }
+    }
+
+    if changes.is_empty() {
+        return Ok(());
+    }
+
+    let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 /// Run a substitute over the target lines. `whole_file` selects the whole
 /// buffer; otherwise the lines spanned by the primary selection are used.
 pub(crate) fn do_substitute(
@@ -13258,6 +13374,29 @@ fn substitute(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
         bail!("usage: :s/pattern/replacement/[flags]");
     }
     do_substitute(cx.editor, false, pattern, replacement, flags)
+}
+
+/// `:Subvert /pat/rep/flags` (space form). The no-space vim form `:S/p/r/g` is
+/// handled earlier in execute_command_line.
+fn subvert(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let raw = args[0].trim();
+    let delim = raw
+        .chars()
+        .next()
+        .filter(|c| !c.is_alphanumeric() && !c.is_whitespace())
+        .ok_or_else(|| anyhow!("usage: :S/pattern/replacement/[flags]"))?;
+    let body = &raw[delim.len_utf8()..];
+    let mut parts = body.splitn(3, delim);
+    let pattern = parts.next().unwrap_or("");
+    let replacement = parts.next().unwrap_or("");
+    let flags = parts.next().unwrap_or("");
+    if pattern.is_empty() {
+        bail!("usage: :S/pattern/replacement/[flags]");
+    }
+    do_subvert(cx.editor, false, pattern, replacement, flags)
 }
 
 fn split_line(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -19604,6 +19743,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "Subvert",
+        aliases: &["S"],
+        doc: "vim-abolish case-preserving substitute: :S/foo/bar/g rewrites foo/Foo/FOO → bar/Bar/BAR.",
+        fun: subvert,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "split-line",
         aliases: &[],
         doc: "Split the current line at the cursor, keeping the cursor in place.",
@@ -20334,6 +20484,14 @@ fn execute_command_line(
             return Ok(());
         }
         return do_substitute(cx.editor, whole, &pattern, &replacement, &flags);
+    }
+
+    // vim-abolish subvert (case-preserving): `:S/pat/rep/g`, `:%S/pat/rep/g`.
+    if let Some((whole, pattern, replacement, flags)) = parse_subvert(input) {
+        if event != PromptEvent::Validate {
+            return Ok(());
+        }
+        return do_subvert(cx.editor, whole, &pattern, &replacement, &flags);
     }
 
     // vim-style global: `:g/pat/d`, `:g!/pat/d`, `:v/pat/d`.
