@@ -323,6 +323,13 @@ impl Component for HexView {
         use ratatui::text::{Line, Span};
         use ratatui::widgets::Paragraph;
 
+        // Confine the viewer to the focused editor pane rather than the whole
+        // terminal: in IDE mode this keeps the file tree, tabs, and bottom
+        // drawer visible, and with splits it stays inside the current pane.
+        // (EditorView underneath still paints the surrounding chrome.)
+        let pane = ctx.editor.tree.get(ctx.editor.tree.focus).area;
+        let area = area.intersection(pane);
+
         let theme = &ctx.editor.theme;
         let bg = theme.get("ui.background");
         let text_style = theme.get("ui.text");
