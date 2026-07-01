@@ -115,6 +115,24 @@ impl FileTree {
         // Speed-search: descend into every directory (ignoring expand state) and
         // keep only the paths leading to a name that matches the query. Directories
         // on a matching path render auto-expanded. Depth-capped to stay snappy.
+        // fzf-style fuzzy match: every char of `q` (already lowercased) appears in
+        // `name` in order (a subsequence), case-insensitively.
+        fn fuzzy(name: &str, q: &str) -> bool {
+            if q.is_empty() {
+                return true;
+            }
+            let mut qc = q.chars().peekable();
+            for nc in name.chars().flat_map(|c| c.to_lowercase()) {
+                match qc.peek() {
+                    Some(&want) if nc == want => {
+                        qc.next();
+                    }
+                    Some(_) => {}
+                    None => break,
+                }
+            }
+            qc.peek().is_none()
+        }
         fn walk_filtered(dir: &Path, depth: usize, q: &str, out: &mut Vec<Row>) -> bool {
             if depth > 16 {
                 return false;
@@ -122,7 +140,7 @@ impl FileTree {
             let mut any = false;
             for (path, name, is_dir) in FileTree::read_dir_sorted(dir) {
                 if is_dir {
-                    let name_match = name.to_lowercase().contains(q);
+                    let name_match = fuzzy(&name, q);
                     let mut kids = Vec::new();
                     let child_match = walk_filtered(&path, depth + 1, q, &mut kids);
                     if name_match || child_match {
@@ -136,7 +154,7 @@ impl FileTree {
                         out.append(&mut kids);
                         any = true;
                     }
-                } else if name.to_lowercase().contains(q) {
+                } else if fuzzy(&name, q) {
                     out.push(Row {
                         path,
                         name,
