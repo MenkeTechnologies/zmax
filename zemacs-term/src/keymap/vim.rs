@@ -271,6 +271,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "j" | "down"  => move_visual_line_down,
         "k" | "up"    => move_visual_line_up,
         "l" | "right" => move_char_right,
+        // JetBrains Move Statement Up/Down (relocate the line/selection).
+        "A-up"   => shift_line_up,
+        "A-down" => shift_line_down,
         // Wildfire (vim plugin port): <BS> shrinks back to the previously
         // selected text object. Replaces vim's `move_char_left` on backspace.
         "backspace"   => wildfire_shrink,
@@ -485,6 +488,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // the spacemacs preset (where top-level C-x becomes the emacs prefix).
             "C-a" => increment,
             "C-x" => decrement,
+            // undo-tree time-travel: g- older text state, g+ newer (chronological).
+            "-" => earlier,
+            "+" => later,
             // case-change operators (gU / gu / g~ + motion)
             "U" => { "Uppercase"
                 "U" => [extend_to_line_bounds, switch_to_uppercase, collapse_selection],
