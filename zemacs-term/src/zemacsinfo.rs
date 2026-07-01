@@ -192,6 +192,7 @@ fn render(editor: &Editor, ts: u64, home: Option<&Path>) -> String {
 
     // Letter/auto marks of every open buffer, keyed by canonical path, sorted by
     // mark name — folded into each file's `> path` block below.
+    #[allow(clippy::type_complexity)]
     let mut open_marks: HashMap<PathBuf, Vec<(char, (usize, usize))>> = HashMap::new();
     for doc in editor.documents() {
         let Some(path) = doc.path() else { continue };

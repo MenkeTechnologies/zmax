@@ -79,10 +79,8 @@ pub fn extract_abbreviation(before: &str) -> Option<(usize, String)> {
             } else {
                 break; // unbalanced opener — not part of this abbreviation
             }
-        } else if depth == 0 {
-            if c.is_whitespace() || !is_abbr_char(c) {
-                break;
-            }
+        } else if depth == 0 && (c.is_whitespace() || !is_abbr_char(c)) {
+            break;
         }
         i -= 1;
     }

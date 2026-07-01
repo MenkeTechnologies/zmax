@@ -1,7 +1,7 @@
 //! Emacs rectangle commands (`C-x r k/d/c/y/M-w`).
 //!
 //! zemacs emulates column selection with multiple cursors, but has no true
-//! *rectangle* — a column span [c0,c1) over a line range [l0,l1] operated on as
+//! *rectangle* — a column span `[c0,c1)` over a line range `[l0,l1]` operated on as
 //! a unit. This module is the pure geometry (extract / delete / clear / yank),
 //! tested on a small char grid; `commands.rs` translates the live selection's
 //! two corners into (l0,l1,c0,c1), calls these, and applies the result as one
@@ -86,7 +86,7 @@ pub fn clear(lines: &[String], l0: usize, l1: usize, c0: usize, c1: usize) -> Ve
         .collect()
 }
 
-/// Insert `rect` with its top-left corner at (`line`, `col`): rect[i] goes into
+/// Insert `rect` with its top-left corner at (`line`, `col`): `rect[i]` goes into
 /// line `line + i`, padding short lines with spaces up to `col`. Lines beyond
 /// the buffer are appended.
 pub fn yank(lines: &[String], line: usize, col: usize, rect: &[String]) -> Vec<String> {
