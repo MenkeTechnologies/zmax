@@ -10895,6 +10895,53 @@ fn ex_modifier(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// vim `:normal[!] {commands}` — execute `{commands}` as normal-mode keystrokes,
+/// exactly as if typed. Implemented directly against our own key-dispatch: parse
+/// the argument into a key sequence and replay it through `compositor.handle_event`
+/// (the same path macros use), so every existing motion/operator/command applies.
+fn ex_normal(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    // Everything after the command word is the literal key sequence (vim does not
+    // process backslashes here); a leading space is dropped by the tokenizer, so
+    // rejoin with single spaces.
+    let raw = args.join(" ");
+    let raw = raw.strip_prefix('!').unwrap_or(&raw); // `:normal!` — replay is non-recursive already
+    let raw = raw.trim_start();
+    if raw.is_empty() {
+        return Ok(());
+    }
+    let keys = match zemacs_view::input::parse_macro(raw) {
+        Ok(keys) => keys,
+        Err(err) => {
+            cx.editor.set_error(format!(":normal — invalid keys: {err}"));
+            return Ok(());
+        }
+    };
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            // Guard against a `:normal` that itself replays `:normal` recursing.
+            if editor.macro_replaying.contains(&':') {
+                return;
+            }
+            editor.macro_replaying.push(':');
+            let mut jobs = crate::job::Jobs::new();
+            for key in keys {
+                let mut ctx = compositor::Context {
+                    editor,
+                    scroll: None,
+                    jobs: &mut jobs,
+                };
+                compositor.handle_event(&compositor::Event::Key(key), &mut ctx);
+            }
+            editor.macro_replaying.pop();
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 /// `:redrawstatus` / `:redrawtabline` — approximated by a full redraw.
 fn ex_redraw_alias(
     cx: &mut compositor::Context,
@@ -17825,6 +17872,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     vim_map_command!("nmapclear", vim_map_nmapclear, "Clear runtime normal-mode mappings."),
     vim_map_command!("imapclear", vim_map_imapclear, "Clear runtime insert-mode mappings."),
     vim_map_command!("vmapclear", vim_map_vmapclear, "Clear runtime select/visual-mode mappings."),
+    TypableCommand {
+        name: "normal",
+        aliases: &["norm"],
+        doc: "Execute {commands} as normal-mode keystrokes (vim :normal[!]).",
+        fun: ex_normal,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
     // Vim fold ex-commands → our fold internals.
     TypableCommand {
         name: "fold",
