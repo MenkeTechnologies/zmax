@@ -9475,9 +9475,9 @@
     "spec_id": "fzf.command.files",
     "status": "ported",
     "evidence": [
-      "key:normal:space f f"
+      "typable:Files"
     ],
-    "note": ":Files -> file_picker"
+    "note": "fzf.vim :Files → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `open {}` on the pick."
   },
   {
     "spec_id": "fzf.command.gfiles",
@@ -9499,17 +9499,17 @@
     "spec_id": "fzf.command.buffers",
     "status": "ported",
     "evidence": [
-      "key:normal:space b b"
+      "typable:Buffers"
     ],
-    "note": ":Buffers -> buffer_picker"
+    "note": "fzf.vim :Buffers → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `buffer {}` on the pick."
   },
   {
     "spec_id": "fzf.command.colors",
     "status": "ported",
     "evidence": [
-      "key:normal:space T c"
+      "typable:Colors"
     ],
-    "note": ":Colors -> theme_picker (live preview)"
+    "note": "fzf.vim :Colors → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `theme {}` on the pick."
   },
   {
     "spec_id": "fzf.command.ag",
@@ -9621,9 +9621,9 @@
     "spec_id": "fzf.command.commands",
     "status": "ported",
     "evidence": [
-      "key:normal:space ?"
+      "typable:Commands"
     ],
-    "note": ":Commands -> command_palette"
+    "note": "fzf.vim :Commands → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `{}` on the pick."
   },
   {
     "spec_id": "fzf.command.maps",
