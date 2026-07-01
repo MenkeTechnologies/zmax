@@ -90,6 +90,10 @@ pub struct HexView {
     dirty: bool,
     /// `true` once a dirty-quit has been warned; a second `q` then discards.
     quit_armed: bool,
+    /// A transient notice shown in the header (save confirmation, quit warning).
+    /// Rendered *inside* the overlay because the editor statusline is hidden
+    /// behind it. Cleared on the next keypress.
+    message: Option<String>,
 }
 
 impl HexView {
@@ -108,6 +112,7 @@ impl HexView {
             pending_high: None,
             dirty: false,
             quit_armed: false,
+            message: None,
         }
     }
 
@@ -178,24 +183,23 @@ impl HexView {
         }
     }
 
-    /// Write the current bytes to `path` (byte-faithful), reporting via status.
+    /// Write the current bytes to `path` (byte-faithful). Reports both on the
+    /// editor statusline *and* in the overlay's own header (the statusline is
+    /// hidden behind this full-screen overlay, so the in-overlay notice is what
+    /// the user actually sees).
     fn save(&mut self, cx: &mut Context) {
-        match &self.path {
+        let notice = match &self.path {
             Some(path) => match std::fs::write(path, &self.bytes) {
                 Ok(()) => {
                     self.dirty = false;
-                    cx.editor.set_status(format!(
-                        "wrote {} bytes to {}",
-                        self.bytes.len(),
-                        path.display()
-                    ));
+                    format!("✔ wrote {} bytes to {}", self.bytes.len(), path.display())
                 }
-                Err(err) => cx.editor.set_status(format!("hex save failed: {err}")),
+                Err(err) => format!("✘ save failed: {err}"),
             },
-            None => cx
-                .editor
-                .set_status("can't save hex: no file path (opened from bytes)"),
-        }
+            None => "✘ can't save: opened from bytes, no file path".to_string(),
+        };
+        cx.editor.set_status(notice.clone());
+        self.message = Some(notice);
     }
 }
 
@@ -215,9 +219,11 @@ impl Component for HexView {
         };
 
         // Quit-arming only survives consecutive `q` presses: clear it now, and
-        // re-arm only in the quit branch below.
+        // re-arm only in the quit branch below. The transient header notice is
+        // likewise cleared on every key and re-set by save / the quit warning.
         let was_armed = self.quit_armed;
         self.quit_armed = false;
+        self.message = None;
 
         let cursor = self.cursor as isize;
         let bpr = BYTES_PER_ROW as isize;
@@ -278,8 +284,9 @@ impl Component for HexView {
             key!('q') | key!(Esc) | ctrl!('c') => {
                 if self.dirty && !was_armed {
                     self.quit_armed = true;
-                    cx.editor
-                        .set_status("unsaved hex edits — Ctrl-s to save, or q again to discard");
+                    let warn = "unsaved edits — Ctrl-s to save, or press q again to discard";
+                    cx.editor.set_status(warn);
+                    self.message = Some(warn.to_string());
                     return EventResult::Consumed(None);
                 }
                 return EventResult::Consumed(Some(Box::new(
@@ -357,12 +364,28 @@ impl Component for HexView {
             area.width as usize,
             title_style.add_modifier(zemacs_view::graphics::Modifier::BOLD),
         );
-        let hint = if self.edit_mode {
-            " type to edit  Tab col  arrows move  ^s save  Esc nav"
-        } else {
-            " h/l byte  j/k row  Tab col  i edit  ^s save  g/G file  q quit"
-        };
-        surface.set_stringn(area.x, area.y + 1, hint, area.width as usize, linenr_style);
+        // Row 2: a transient notice (save confirmation / quit warning) when one
+        // is pending, otherwise the persistent key hint. The notice must live
+        // here because the editor statusline is hidden behind this overlay.
+        match &self.message {
+            Some(msg) => {
+                surface.set_stringn(
+                    area.x,
+                    area.y + 1,
+                    &format!(" {msg}"),
+                    area.width as usize,
+                    title_style.add_modifier(zemacs_view::graphics::Modifier::BOLD),
+                );
+            }
+            None => {
+                let hint = if self.edit_mode {
+                    " type to edit  ·  Tab hex/ascii  ·  arrows move  ·  ^s save  ·  Esc leave edit"
+                } else {
+                    " h/l/j/k move  ·  i edit  ·  Tab hex/ascii  ·  g/G start/end  ·  ^s save  ·  q quit"
+                };
+                surface.set_stringn(area.x, area.y + 1, hint, area.width as usize, linenr_style);
+            }
+        }
 
         let body_y = area.y + header_h;
         let body_h = area.height.saturating_sub(header_h);
