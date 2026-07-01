@@ -11223,6 +11223,54 @@ fn fzf_jumps(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     Ok(())
 }
 
+/// `:LocalHistory` — JetBrains Local History: fuzzy-pick a saved snapshot of the
+/// current file (newest first) and open that past version.
+fn local_history(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = {
+        let (_, doc) = current_ref!(cx.editor);
+        doc.path().map(|p| p.to_path_buf())
+    };
+    let Some(path) = path else {
+        cx.editor.set_error(":LocalHistory requires a file");
+        return Ok(());
+    };
+    let snaps = crate::local_history::snapshots(&path);
+    if snaps.is_empty() {
+        cx.editor
+            .set_status("no local history yet — snapshots are taken on save");
+        return Ok(());
+    }
+    let cands: Vec<String> = snaps
+        .iter()
+        .map(|(ts, p)| {
+            let age = crate::recent_files::humanize_age(crate::recent_files::age_since(*ts));
+            format!("{age}\t{}", p.to_string_lossy())
+        })
+        .collect();
+    queue_fzf(cx, "LocalHistory", "local-history-open {}", cands, vec!["--no-sort".into()], false);
+    Ok(())
+}
+
+/// Sink for `:LocalHistory` — open the picked snapshot (path is after the tab).
+fn local_history_open(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = args.join(" ");
+    let p = line.rsplit('\t').next().unwrap_or("").trim();
+    if !p.is_empty() {
+        run_command_line(cx, &format!("open {p}"));
+    }
+    Ok(())
+}
+
 /// `:RecentLocations` — JetBrains Recent Locations (⌘⇧E): the jump ring shown
 /// most-recent-first, deduped by file:line, with each line's text as context;
 /// pick one to jump back there.
@@ -18868,6 +18916,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: fzf_recent_locations,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "LocalHistory",
+        aliases: &["local-history"],
+        doc: "Local History (JetBrains): pick a saved snapshot of this file and open it.",
+        fun: local_history,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "local-history-open",
+        aliases: &[],
+        doc: "(internal) open a `:LocalHistory` snapshot pick.",
+        fun: local_history_open,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "Windows",

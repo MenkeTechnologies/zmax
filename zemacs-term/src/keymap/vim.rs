@@ -64,6 +64,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space r j", "Bookmarks", "bookmark_jump"),     // SPC r j : jump to a bookmark (picker)
     ("space b r", "Buffers", "recent_files_switcher"), // SPC b r : Recent Files switcher (JetBrains Cmd-E)
     ("space g I", "Git", "toggle_inline_blame"),     // SPC g I : toggle GitLens-style inline blame
+    ("space f H", "Files", ":LocalHistory"),         // SPC f H : Local History snapshots for this file
     ("space j R", "Jump", ":RecentLocations"),       // SPC j R : Recent Locations (JetBrains Shift-Cmd-E)
     ("space f s", "Files",   ":write"),            // SPC f s : save
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all

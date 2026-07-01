@@ -777,6 +777,10 @@ impl Application {
             }
         };
 
+        // Local History: snapshot every save; invalidate the blame cache.
+        crate::local_history::record(&doc_save_event.path, &doc_save_event.text);
+        crate::blame::invalidate(&doc_save_event.path);
+
         let doc = match self.editor.document_mut(doc_save_event.doc_id) {
             None => {
                 warn!(

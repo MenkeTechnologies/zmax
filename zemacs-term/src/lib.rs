@@ -11,6 +11,7 @@ pub mod ai;
 pub mod appdata;
 pub mod application;
 pub mod blame;
+pub mod local_history;
 pub mod args;
 pub mod ci;
 pub mod closed_files;
