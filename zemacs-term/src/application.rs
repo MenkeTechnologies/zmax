@@ -1515,24 +1515,57 @@ impl Application {
             )
         };
 
+        // Compose the child's FZF_DEFAULT_OPTS: the user's own, plus — for
+        // file/preview commands (:Files/:Buffers) — their FZF_CTRL_T_OPTS, which
+        // is where preview configs conventionally live (fzf reads FZF_CTRL_T_OPTS
+        // only in its CTRL-T *widget*, not for a bare `fzf`; we replicate that so
+        // :Files matches the shell's CTRL-T file finder). fzf parses the whole
+        // string itself, so the complex quoted/multiline preview survives intact.
+        let base_opts = std::env::var("FZF_DEFAULT_OPTS").unwrap_or_default();
+        let mut fzf_opts = base_opts;
+        if req.preview {
+            if let Ok(ct) = std::env::var("FZF_CTRL_T_OPTS") {
+                fzf_opts.push(' ');
+                fzf_opts.push_str(&ct);
+            }
+            if !preview_cmd.is_empty() {
+                fzf_opts.push_str(" --preview '");
+                fzf_opts.push_str(&preview_cmd);
+                fzf_opts.push('\'');
+                if !preview_win.is_empty() {
+                    fzf_opts.push_str(" --preview-window ");
+                    fzf_opts.push_str(&preview_win);
+                }
+            }
+        }
+        for opt in &cfg_opts {
+            fzf_opts.push(' ');
+            fzf_opts.push_str(opt);
+        }
+        // Match the shell's CTRL-T file source when we're finding files.
+        let ctrl_t_cmd = if req.candidates.is_empty() {
+            std::env::var("FZF_CTRL_T_COMMAND").ok().filter(|s| !s.is_empty())
+        } else {
+            None
+        };
+
         if self.restore_term().is_err() {
             return None;
         }
-        let mut args: Vec<String> = vec!["--prompt".into(), format!("{}> ", req.prompt)];
-        args.extend(cfg_opts);
-        if req.preview && !preview_cmd.is_empty() {
-            args.push("--preview".into());
-            args.push(preview_cmd);
-            if !preview_win.is_empty() {
-                args.push("--preview-window".into());
-                args.push(preview_win);
-            }
-        }
-        args.extend(req.options.iter().cloned());
+        // No --prompt override: let the user's own prompt (e.g. ZPWR's
+        // `<<)ZPWR(>>` from FZF_DEFAULT_OPTS/FZF_CTRL_T_OPTS) show through. Only
+        // per-command flags (e.g. `+m`) are passed as args.
+        let _ = &req.prompt;
+        let args: Vec<String> = req.options.clone();
 
         let result = (|| -> std::io::Result<Option<String>> {
             let mut cmd = Command::new("fzf");
-            cmd.args(&args).stdout(Stdio::piped());
+            cmd.args(&args)
+                .env("FZF_DEFAULT_OPTS", &fzf_opts)
+                .stdout(Stdio::piped());
+            if let Some(c) = &ctrl_t_cmd {
+                cmd.env("FZF_DEFAULT_COMMAND", c);
+            }
             if req.candidates.is_empty() {
                 cmd.stdin(Stdio::inherit()); // fzf runs $FZF_DEFAULT_COMMAND
             } else {
