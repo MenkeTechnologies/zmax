@@ -94,6 +94,9 @@ pub struct HexView {
     /// Rendered *inside* the overlay because the editor statusline is hidden
     /// behind it. Cleared on the next keypress.
     message: Option<String>,
+    /// The pane rect the viewer last rendered into. Mouse events outside it are
+    /// passed through so the surrounding IDE chrome stays usable.
+    last_area: Rect,
 }
 
 impl HexView {
@@ -113,6 +116,7 @@ impl HexView {
             dirty: false,
             quit_armed: false,
             message: None,
+            last_area: Rect::default(),
         }
     }
 
@@ -208,6 +212,17 @@ impl Component for HexView {
         let key = match event {
             Event::Key(key) => *key,
             Event::Mouse(ev) => {
+                // Only act on mouse events inside our pane; let everything else
+                // fall through so the surrounding IDE chrome (file tree, tabs,
+                // toolbar, other splits) stays clickable/scrollable.
+                let a = self.last_area;
+                let inside = ev.column >= a.x
+                    && ev.column < a.x + a.width
+                    && ev.row >= a.y
+                    && ev.row < a.y + a.height;
+                if !inside {
+                    return EventResult::Ignored(None);
+                }
                 match ev.kind {
                     MouseEventKind::ScrollDown => self.scroll_by(3),
                     MouseEventKind::ScrollUp => self.scroll_by(-3),
@@ -329,6 +344,7 @@ impl Component for HexView {
         // (EditorView underneath still paints the surrounding chrome.)
         let pane = ctx.editor.tree.get(ctx.editor.tree.focus).area;
         let area = area.intersection(pane);
+        self.last_area = area;
 
         let theme = &ctx.editor.theme;
         let bg = theme.get("ui.background");
