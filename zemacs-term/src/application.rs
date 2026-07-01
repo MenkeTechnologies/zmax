@@ -1542,12 +1542,19 @@ impl Application {
             fzf_opts.push(' ');
             fzf_opts.push_str(opt);
         }
-        // Match the shell's CTRL-T file source when we're finding files.
-        let ctrl_t_cmd = if req.candidates.is_empty() {
-            std::env::var("FZF_CTRL_T_COMMAND").ok().filter(|s| !s.is_empty())
-        } else {
-            None
-        };
+        // Source command: an explicit per-request command (git ls-files, rg, …)
+        // wins; else, when finding files with no candidates, the shell's CTRL-T
+        // file command.
+        let source_cmd = req.command.clone().filter(|s| !s.is_empty()).or_else(|| {
+            if req.candidates.is_empty() {
+                std::env::var("FZF_CTRL_T_COMMAND")
+                    .ok()
+                    .filter(|s| !s.is_empty())
+            } else {
+                None
+            }
+        });
+        let stream_command = req.candidates.is_empty();
 
         if self.restore_term().is_err() {
             return None;
@@ -1563,16 +1570,16 @@ impl Application {
             cmd.args(&args)
                 .env("FZF_DEFAULT_OPTS", &fzf_opts)
                 .stdout(Stdio::piped());
-            if let Some(c) = &ctrl_t_cmd {
+            if let Some(c) = &source_cmd {
                 cmd.env("FZF_DEFAULT_COMMAND", c);
             }
-            if req.candidates.is_empty() {
-                cmd.stdin(Stdio::inherit()); // fzf runs $FZF_DEFAULT_COMMAND
+            if stream_command {
+                cmd.stdin(Stdio::inherit()); // fzf runs FZF_DEFAULT_COMMAND
             } else {
                 cmd.stdin(Stdio::piped());
             }
             let mut child = cmd.spawn()?;
-            if !req.candidates.is_empty() {
+            if !stream_command {
                 if let Some(mut stdin) = child.stdin.take() {
                     // Write on a thread so a large list can't deadlock the pipe.
                     let data = req.candidates.join("\n");

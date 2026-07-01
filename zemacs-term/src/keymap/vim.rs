@@ -32,6 +32,16 @@ use zemacs_view::input::KeyEvent;
 /// same space-joined notation the port report parses, so coverage stays honest.
 #[rustfmt::skip]
 const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
+    // fzf.vim commands under SPC F (external fzf binary; honors $FZF_* env).
+    ("space F f", "fzf", ":Files"),      // SPC F f : files
+    ("space F g", "fzf", ":GFiles"),     // SPC F g : git files
+    ("space F b", "fzf", ":Buffers"),    // SPC F b : buffers
+    ("space F c", "fzf", ":Colors"),     // SPC F c : colorschemes
+    ("space F r", "fzf", ":Rg"),         // SPC F r : ripgrep
+    ("space F a", "fzf", ":Ag"),         // SPC F a : ag (rg backend)
+    ("space F l", "fzf", ":BLines"),     // SPC F l : lines in buffer
+    ("space F o", "fzf", ":Locate"),     // SPC F o : locate
+    ("space F C", "fzf", ":Commands"),   // SPC F C : commands
     ("space f s", "Files",   ":write"),            // SPC f s : save
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all
     ("space a c", "Applications", ":calc"),        // SPC a c : calc-dispatch

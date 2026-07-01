@@ -1477,6 +1477,10 @@ pub struct FzfRequest {
     /// Show a preview pane (the config's `fzf.preview` command over the picked
     /// line). Set for file-listing commands (:Files/:Buffers).
     pub preview: bool,
+    /// Optional shell command whose output fzf streams as its source (fzf.vim's
+    /// `source` — e.g. `git ls-files`, `rg …`). When set, `candidates` is ignored
+    /// and fzf runs this via the shell (set as the child's FZF_DEFAULT_COMMAND).
+    pub command: Option<String>,
 }
 
 /// Configuration for the external-`fzf` integration (fzf.vim-style commands).
