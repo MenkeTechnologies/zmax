@@ -846,6 +846,57 @@ fn new_file(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+/// `:Scratch [lang]` — JetBrains scratch file (⇧⌘N): open a new unnamed buffer,
+/// optionally setting its language for syntax highlighting.
+fn scratch(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.editor.new_file(Action::Replace);
+    if let Some(lang) = args.first() {
+        run_command_line(cx, &format!("set-language {lang}"));
+    }
+    cx.editor.set_status("scratch buffer");
+    Ok(())
+}
+
+/// `:RevealInFinder` — reveal the current file in the OS file manager (JetBrains
+/// "Reveal in Finder"). macOS `open -R`; elsewhere open the parent directory.
+fn reveal_in_finder(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = {
+        let (_, doc) = current_ref!(cx.editor);
+        doc.path().map(|p| p.to_path_buf())
+    };
+    let Some(path) = path else {
+        cx.editor.set_error("no file to reveal");
+        return Ok(());
+    };
+    let mut cmd = if cfg!(target_os = "macos") {
+        let mut c = std::process::Command::new("open");
+        c.arg("-R").arg(&path);
+        c
+    } else {
+        let dir = path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+        let mut c = std::process::Command::new("xdg-open");
+        c.arg(dir);
+        c
+    };
+    let _ = cmd
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+    cx.editor.set_status(format!("revealed {}", path.display()));
+    Ok(())
+}
+
 fn format(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -16080,6 +16131,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["n"],
         doc: "Create a new scratch buffer.",
         fun: new_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "Scratch",
+        aliases: &["scratch"],
+        doc: "Open a new scratch buffer, optionally with a language (JetBrains ⇧⌘N).",
+        fun: scratch,
+        completer: CommandCompleter::positional(&[completers::language]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "RevealInFinder",
+        aliases: &["reveal"],
+        doc: "Reveal the current file in the OS file manager (JetBrains Reveal in Finder).",
+        fun: reveal_in_finder,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
