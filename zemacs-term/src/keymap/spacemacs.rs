@@ -60,7 +60,7 @@ fn cx_prefix() -> KeyTrie {
             "b" => buffer_picker,           // C-x b: switch-to-buffer
             "C-b" => buffer_picker,         // C-x C-b: list-buffers (approx)
             "o" => rotate_view,             // C-x o: other-window
-            "1" => no_op,                   // C-x 1: delete-other-windows (approx)
+            "1" => wonly,                   // C-x 1: delete-other-windows
             "0" => wclose,                  // C-x 0: delete-window
             "2" => hsplit,                  // C-x 2: split-window-below
             "3" => vsplit,                  // C-x 3: split-window-right

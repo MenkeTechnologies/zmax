@@ -76,7 +76,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-n" => move_visual_line_down,
         "C-p" => move_visual_line_up,
         "C-a" => goto_line_start,
-        "C-e" => goto_line_end_newline,
+        "C-e" => goto_line_end,             // move-end-of-line (stops before the newline)
         "A-f" => move_next_word_end,        // M-f: forward-word
         "A-b" => move_prev_word_start,      // M-b: backward-word
         "A-<" => goto_file_start,           // M-<: beginning-of-buffer
@@ -89,7 +89,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "up" => move_visual_line_up,
         "down" => move_visual_line_down,
         "home" => goto_line_start,
-        "end" => goto_line_end_newline,
+        "end" => goto_line_end,
         "pageup" => page_up,
         "pagedown" => page_down,
 
@@ -108,11 +108,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-y" => yank_pop,                  // M-y: yank-pop, cycle to older kill
         "C-u" => kill_to_line_start,
         "C-_" | "C-/" => undo,              // undo
-        "A-/" => redo,
+        "A-/" => completion,                // M-/: dabbrev-expand (dynamic completion)
         "ret" | "C-j" => insert_newline,
         "tab" => emmet_expand,
 
-        // search / files / buffers
+        // commands / search / files / buffers
+        "A-x" => command_palette,           // M-x: execute-extended-command
         "C-s" => search,                    // isearch-forward (approx)
         "C-r" => rsearch,                   // isearch-backward (approx)
         "C-x" => { "C-x"
@@ -121,7 +122,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "b" => buffer_picker,           // switch-to-buffer
             "C-b" => buffer_picker,         // list-buffers (approx)
             "o" => rotate_view,             // other-window
-            "1" => no_op,                   // delete-other-windows (approx)
+            "1" => wonly,                   // delete-other-windows
             "0" => wclose,                  // delete-window
             "2" => hsplit,                  // split-window-below
             "3" => vsplit,                  // split-window-right
@@ -178,7 +179,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-n" | "down"  => move_visual_line_down,
         "C-p" | "up"    => move_visual_line_up,
         "C-a" | "home"  => goto_line_start,
-        "C-e" | "end"   => goto_line_end_newline,
+        "C-e" | "end"   => goto_line_end,
         "A-f" => move_next_word_end,
         "A-b" => move_prev_word_start,
         "C-v" | "pagedown" => page_down,
@@ -188,9 +189,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-d" => delete_char_forward,
         "C-k" => kill_to_line_end,
         "C-_" | "C-/" => undo,
-        "A-/" => redo,
+        "A-/" => completion,                // M-/: dabbrev-expand
         "C-y" => yank_from_kill_ring,
         "A-y" => yank_pop,
+        "A-x" => command_palette,           // M-x: execute-extended-command
         "C-s" => search,
         "C-r" => rsearch,
         "C-x" => { "C-x"
@@ -198,6 +200,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "C-f" => file_picker,
             "b" => buffer_picker,
             "o" => rotate_view,
+            "1" => wonly,
             "0" => wclose,
             "2" => hsplit,
             "3" => vsplit,

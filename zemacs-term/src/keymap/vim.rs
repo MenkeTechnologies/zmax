@@ -447,6 +447,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
         // --- g submap -------------------------------------------------------
         "g" => { "Goto"
+            // g CTRL-A / g CTRL-X: increment / decrement. Also mirrored on the
+            // top-level C-a/C-x, but kept here so decrement stays reachable in
+            // the spacemacs preset (where top-level C-x becomes the emacs prefix).
+            "C-a" => increment,
+            "C-x" => decrement,
             // case-change operators (gU / gu / g~ + motion)
             "U" => { "Uppercase"
                 "U" => [extend_to_line_bounds, switch_to_uppercase, collapse_selection],
@@ -1686,6 +1691,14 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         ";" => repeat_last_motion,
         "," => repeat_find_char_reverse,
 
+        // search in Visual mode extends the selection to the match (vim v_/, v_n)
+        "/" => search,
+        "?" => rsearch,
+        "n" => extend_search_next,
+        "N" => extend_search_prev,
+        "*" => [search_selection_detect_word_boundaries, extend_search_next],
+        "#" => [search_selection_detect_word_boundaries, extend_search_prev],
+
         "i" => select_textobject_inner,
         "a" => select_textobject_around,
 
@@ -1907,11 +1920,34 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
     )
 }
 
-/// The **vim** preset: pure vim, with no spacemacs layer. It is [`base`] with
-/// the `SPC` leader removed from Normal and Select modes, so vim shows no
-/// which-key popup and `<Space>` reverts to vim's "move one char right" (extend
-/// in visual). `C-x` stays vim's `decrement`. `decrement` per-line is still on
-/// `g C-x` in either preset.
+/// Emacs/readline convenience chords that `base()` layers in for the
+/// spacemacs/emacs-flavored experience but that vim does not bind. The pure
+/// `vim` preset strips them so its keys match vim's per-mode index. (Note: vim's
+/// own `C-g` file-info, `C-v`/`C-q` insert-literal, and the `C-w`/`C-u`/`C-t`/
+/// `C-d`/`C-k`/`C-r` insert keys are real vim and are NOT in these lists.)
+#[rustfmt::skip]
+const NON_VIM_NORMAL: &[&str] = &[
+    "A-x", "A-<", "A->", "A-f", "A-b", "A-d", "A-w", "A-v",
+    "C-space", "C-l", "C-s", "C-/", "C-_", "A-;", "A-m", "A-q", "A-^",
+];
+#[rustfmt::skip]
+const NON_VIM_INSERT: &[&str] = &["C-f", "C-b", "A-f", "A-b", "A-v", "A-<", "A->", "A-/", "C-/", "C-_"];
+
+/// Remove `keys` (top-level chords) from `mode` if present. `shift_remove`
+/// preserves the order of the surviving keys and no-ops on absent ones.
+fn strip_keys(keymap: &mut HashMap<Mode, KeyTrie>, mode: Mode, keys: &[&str]) {
+    if let Some(node) = keymap.get_mut(&mode).and_then(KeyTrie::node_mut) {
+        for k in keys {
+            node.shift_remove(&k.parse::<KeyEvent>().expect("valid key"));
+        }
+    }
+}
+
+/// The **vim** preset: pure vim, with no spacemacs/emacs layer. It is [`base`]
+/// with the `SPC` leader removed from Normal and Select (so vim shows no
+/// which-key popup and `<Space>` reverts to vim's "move one char right" / extend
+/// in visual) and the non-vim emacs/readline chords stripped. `C-x` stays vim's
+/// `decrement`.
 pub fn default() -> HashMap<Mode, KeyTrie> {
     let mut keymap = base();
     let space = chord("space")[0];
@@ -1926,6 +1962,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             KeyTrie::MappableCommand(MappableCommand::extend_char_right),
         );
     }
+    strip_keys(&mut keymap, Mode::Normal, NON_VIM_NORMAL);
+    strip_keys(&mut keymap, Mode::Insert, NON_VIM_INSERT);
     keymap
 }
 
@@ -2198,7 +2236,10 @@ mod tests {
 
     #[test]
     fn emacs_readline_keys_bound() {
-        let km = default();
+        // The emacs/readline convenience chords live in the shared base (the
+        // spacemacs preset); the pure `vim` preset strips them — see
+        // `pure_vim_strips_non_vim_chords`.
+        let km = base();
         let n = &km[&Mode::Normal];
         let i = &km[&Mode::Insert];
         // Meta keys in normal mode (M-x, M-f/b, M-w, M-</>)
@@ -2245,6 +2286,37 @@ mod tests {
             cmd_name(resolve(i, "C-v").unwrap()),
             Some("insert_char_interactive")
         );
+    }
+
+    #[test]
+    fn pure_vim_strips_non_vim_chords() {
+        // The pure `vim` preset must NOT carry the emacs/readline chords that the
+        // shared base layers in for spacemacs — they aren't vim bindings.
+        let km = default();
+        let n = &km[&Mode::Normal];
+        let i = &km[&Mode::Insert];
+        for chord in ["A-x", "A-<", "A->", "A-f", "A-b", "A-d", "A-w", "A-v", "C-space", "C-l"] {
+            assert!(
+                resolve(n, chord).is_none(),
+                "vim Normal should not bind emacs chord {chord}"
+            );
+        }
+        for chord in ["C-f", "C-b", "A-f", "A-b", "A-v", "A-/"] {
+            assert!(
+                resolve(i, chord).is_none(),
+                "vim Insert should not bind emacs chord {chord}"
+            );
+        }
+        // But real vim keys survive: C-g (file info) in Normal, the insert-literal
+        // and edit keys in Insert.
+        assert_eq!(cmd_name(resolve(n, "C-g").unwrap()), Some("file_info"));
+        assert_eq!(
+            cmd_name(resolve(i, "C-v").unwrap()),
+            Some("insert_char_interactive")
+        );
+        assert_eq!(cmd_name(resolve(i, "C-w").unwrap()), Some("delete_word_backward"));
+        // And <Space> reverts to vim's move-right (no SPC leader).
+        assert_eq!(cmd_name(resolve(n, "space").unwrap()), Some("move_char_right"));
     }
 
     #[test]
