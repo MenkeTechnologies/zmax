@@ -2879,21 +2879,6 @@ impl Ide {
         self.toolbar_y = area.y;
         self.breadcrumb_hit = (0, 0);
 
-        // active run-config selector on the LEFT (click to open the manager)
-        let cfg = crate::run_config::active()
-            .map(|c| if c.name.is_empty() { c.command } else { c.name })
-            .or_else(|| self.run.as_ref().map(|r| r.lock().unwrap().cmd.clone()))
-            .unwrap_or_else(|| "Edit Configurations…".to_string());
-        let label = format!(" ⚙\u{fe0e} {cfg} ▾\u{fe0e} ");
-        let (lx, _) = surface.set_stringn(
-            area.x,
-            area.y,
-            &label,
-            area.width as usize,
-            theme.get("function"),
-        );
-        self.toolbar_hits.push((area.x, lx, ToolHit::Configs));
-
         // run/debug + settings/help buttons RIGHT-aligned. ⊙ Locate = JetBrains
         // "Select Opened File" (reveals the current buffer in the tree).
         // U+FE0E (VARIATION SELECTOR-15) forces TEXT presentation so terminals
@@ -2912,7 +2897,42 @@ impl Ide {
         let gap = 1u16;
         let total: u16 = buttons.iter().map(|(t, _, _)| disp_width(t)).sum::<u16>()
             + gap * (buttons.len() as u16 - 1);
+        let right_edge = area.x + area.width;
         let buttons_start = area.x + area.width.saturating_sub(total + 1);
+
+        // Render the buttons FIRST and clamp their hit-regions to the toolbar's
+        // right edge, so they always win over the config selector / breadcrumb
+        // when the toolbar is too narrow to fit everything (e.g. after the left
+        // drawer is widened). Previously the config selector was pushed first
+        // with a range that overran the buttons, so every click opened it.
+        let mut x = buttons_start;
+        for (text, style, hit) in buttons {
+            if x >= right_edge {
+                break;
+            }
+            let avail = right_edge.saturating_sub(x) as usize;
+            let (nx, _) = surface.set_stringn(x, area.y, text, avail, style);
+            self.toolbar_hits.push((x, nx.min(right_edge), hit));
+            x = nx + gap;
+        }
+
+        // active run-config selector on the LEFT (click to open the manager),
+        // capped to `buttons_start` so its hit-region never overlaps the buttons.
+        let cfg = crate::run_config::active()
+            .map(|c| if c.name.is_empty() { c.command } else { c.name })
+            .or_else(|| self.run.as_ref().map(|r| r.lock().unwrap().cmd.clone()))
+            .unwrap_or_else(|| "Edit Configurations…".to_string());
+        let label = format!(" ⚙\u{fe0e} {cfg} ▾\u{fe0e} ");
+        let cfg_avail = buttons_start.saturating_sub(area.x) as usize;
+        let lx = if cfg_avail > 0 {
+            let (lx, _) =
+                surface.set_stringn(area.x, area.y, &label, cfg_avail, theme.get("function"));
+            let lx = lx.min(buttons_start);
+            self.toolbar_hits.push((area.x, lx, ToolHit::Configs));
+            lx
+        } else {
+            area.x
+        };
 
         // breadcrumb of the current file in the gap between the selector and buttons
         let bc_start = lx + 2;
@@ -2961,13 +2981,6 @@ impl Ide {
                     surface.set_stringn(bc_start, area.y, &shown, avail, theme.get("comment"));
                 self.breadcrumb_hit = (bc_start, end_x);
             }
-        }
-
-        let mut x = buttons_start;
-        for (text, style, hit) in buttons {
-            let (nx, _) = surface.set_stringn(x, area.y, text, area.width as usize, style);
-            self.toolbar_hits.push((x, nx, hit));
-            x = nx + gap;
         }
     }
 
