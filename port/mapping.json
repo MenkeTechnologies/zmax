@@ -23890,5 +23890,13 @@
       "typable:resize"
     ],
     "note": "vim :resize [+/-]{N} → ex_resize: relative grow/shrink or absolute height via tree.resize_vertical (height-only; :vertical resize width is best-effort)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_buffer",
+    "status": "ported",
+    "evidence": [
+      "typable:buffer"
+    ],
+    "note": "vim :buffer {name} / :b → ex_buffer: switch to the open buffer whose path contains {name} via editor.switch; errors on no match / >1 match (E93/E94). Buffer numbers not modeled."
   }
 ]

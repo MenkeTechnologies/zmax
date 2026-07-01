@@ -10969,6 +10969,37 @@ fn ex_resize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+/// vim `:buffer {name}` / `:b {name}` — switch the current window to the open
+/// buffer whose path contains `{name}`. Errors on no match, or (like vim's E93)
+/// on more than one match. Buffer *numbers* are not modeled; use a name.
+fn ex_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined = args.join(" ");
+    let needle = joined.trim();
+    if needle.is_empty() {
+        return Ok(());
+    }
+    let matches: Vec<_> = cx
+        .editor
+        .documents()
+        .filter(|d| {
+            d.path()
+                .map_or(false, |p| p.to_string_lossy().contains(needle))
+        })
+        .map(|d| d.id())
+        .collect();
+    match matches.as_slice() {
+        [] => cx.editor.set_error(format!("E94: No matching buffer for {needle}")),
+        [id] => cx.editor.switch(*id, zemacs_view::editor::Action::Replace),
+        _ => cx
+            .editor
+            .set_error(format!("E93: More than one match for {needle}")),
+    }
+    Ok(())
+}
+
 /// vim `:mark {x}` / `:k {x}` — set mark `{x}` at the cursor position.
 fn ex_mark(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -17933,6 +17964,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_mark,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "buffer",
+        aliases: &["buf"],
+        doc: "Switch to the open buffer whose path contains {name} (vim :buffer / :b).",
+        fun: ex_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "resize",
