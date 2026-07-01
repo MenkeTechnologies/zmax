@@ -53,6 +53,13 @@ impl PreferencesPanel {
         }
     }
 
+    /// Open directly on the Help tab, pre-filtered to `filter` (fzf.vim `:Helptags`).
+    pub fn new_help(filter: String) -> Self {
+        let mut p = Self::new(4);
+        p.help = HelpPanel::with_filter(filter);
+        p
+    }
+
     fn active(&mut self) -> &mut dyn Component {
         match self.tab {
             0 => &mut self.settings,

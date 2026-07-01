@@ -11350,6 +11350,98 @@ fn fzf_snippet(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// fzf.vim `:Maps` — fuzzy-browse the live keymaps (`mode  keys  command`). The
+/// keymap lives on EditorView (compositor), so candidates are gathered in a
+/// callback that then hands the fzf request to the editor.
+fn fzf_maps(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            use zemacs_view::document::Mode;
+            let Some(view) = compositor.find::<crate::ui::EditorView>() else {
+                return;
+            };
+            let maps = view.keymaps.map();
+            let mut cands = Vec::new();
+            for mode in [Mode::Normal, Mode::Insert, Mode::Select] {
+                let Some(trie) = maps.get(&mode) else { continue };
+                let mut rows: Vec<(String, String)> = trie
+                    .reverse_map()
+                    .iter()
+                    .flat_map(|(name, binds)| {
+                        let name = name.clone();
+                        binds.iter().map(move |b| {
+                            (
+                                b.iter().map(|k| k.key_sequence_format()).collect::<String>(),
+                                name.clone(),
+                            )
+                        })
+                    })
+                    .collect();
+                rows.sort();
+                for (keys, name) in rows {
+                    cands.push(format!("{mode:?}\t{keys}\t{name}"));
+                }
+            }
+            editor.pending_fzf = Some(zemacs_view::editor::FzfRequest {
+                candidates: cands,
+                prompt: "Maps".to_string(),
+                sink: "fzf-map {}".to_string(),
+                options: vec!["--no-sort".into()],
+                preview: false,
+                command: None,
+            });
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// Sink for `:Maps` — echo the picked mapping (discovery; zemacs doesn't replay
+/// key chords the way Vim's `:Maps` re-executes them).
+fn fzf_map(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = args.join(" ");
+    if !line.trim().is_empty() {
+        cx.editor.set_status(line.replace('\t', "  "));
+    }
+    Ok(())
+}
+
+/// fzf.vim `:Helptags` — fuzzy-pick a help tag (command / `:typable` / topic)
+/// and open the inline Help browser pre-filtered to it.
+fn fzf_helptags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        let cands = crate::ui::help::HelpPanel::new().entry_titles();
+        queue_fzf(cx, "Helptags", "fzf-helptag {}", cands, vec!["+m".into()], false);
+    }
+    Ok(())
+}
+
+/// Sink for `:Helptags` — open the Help browser filtered to the picked tag.
+fn fzf_helptag(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let title = args.join(" ").trim().to_string();
+    if title.is_empty() {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(crate::ui::preferences::PreferencesPanel::new_help(
+                title.clone(),
+            )));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 /// Shared body of the `:map`-family typable commands: reconstruct the Vim
 /// command line and either record a mapping (then re-apply the overlay) or —
 /// when there's no rhs — list the current bindings for the command's modes,
@@ -18748,6 +18840,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
+    TypableCommand {
+        name: "Maps",
+        aliases: &[],
+        doc: "Fuzzy-browse the current keymaps with fzf (fzf.vim :Maps).",
+        fun: fzf_maps,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Helptags",
+        aliases: &[],
+        doc: "Fuzzy-pick a help tag with fzf and open the Help browser at it (fzf.vim :Helptags).",
+        fun: fzf_helptags,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
     // Internal sinks for fzf picks (open at file:line, or jump to a buffer line).
     TypableCommand {
         name: "fzf-window",
@@ -18762,6 +18870,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "(internal) insert the body of a `:Snippets` fzf pick.",
         fun: fzf_snippet,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "fzf-map",
+        aliases: &[],
+        doc: "(internal) echo a `:Maps` fzf pick.",
+        fun: fzf_map,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "fzf-helptag",
+        aliases: &[],
+        doc: "(internal) open the Help browser at a `:Helptags` fzf pick.",
+        fun: fzf_helptag,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },

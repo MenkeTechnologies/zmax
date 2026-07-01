@@ -211,7 +211,10 @@ pub struct FilePickerConfig {
 impl Default for FilePickerConfig {
     fn default() -> Self {
         Self {
-            hidden: true,
+            // Show dotfiles in the picker by default (`hidden` here means
+            // "skip hidden files", so false = include them). gitignore and the
+            // .git/.hg/… VCS filter still apply, so no repo internals leak in.
+            hidden: false,
             follow_symlinks: true,
             deduplicate_links: true,
             parents: true,
