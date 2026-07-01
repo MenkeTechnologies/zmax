@@ -51,11 +51,11 @@ fn b64_url(input: &[u8]) -> String {
     out
 }
 
-fn store_path() -> PathBuf {
-    // Per-project, stored under the global config dir so the project tree isn't
-    // polluted with a `.zemacs/`. The directory is `<name>-<base64(full path)>`
-    // so it's readable AND unique (same-named projects never collide):
-    // `~/.zemacs/<project>-<b64>/run-configs.toml`.
+/// The per-project state directory under the global config dir — where all
+/// project-specific files live so the project tree isn't polluted with a
+/// `.zemacs/`. Named `<project>-<base64(full path)>` so it's readable AND unique
+/// (same-named projects never collide): `~/.zemacs/projects/<project>-<b64>/`.
+pub fn project_dir() -> PathBuf {
     let root = zemacs_loader::find_workspace().0;
     let name = root
         .file_name()
@@ -63,8 +63,12 @@ fn store_path() -> PathBuf {
         .unwrap_or_else(|| "global".to_string());
     let key = b64_url(root.to_string_lossy().as_bytes());
     zemacs_loader::config_dir()
+        .join("projects")
         .join(format!("{name}-{key}"))
-        .join("run-configs.toml")
+}
+
+fn store_path() -> PathBuf {
+    project_dir().join("run-configs.toml")
 }
 
 pub fn load() -> RunConfigs {
