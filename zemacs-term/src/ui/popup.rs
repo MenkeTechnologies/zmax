@@ -39,6 +39,9 @@ pub struct Popup<T: Component> {
     ignore_escape_key: bool,
     id: &'static str,
     has_scrollbar: bool,
+    /// When true the popup is pinned to `position` as given (a right-click menu,
+    /// shell output, …) instead of tracking the editor cursor like signature help.
+    anchored: bool,
 }
 
 impl<T: Component> Popup<T> {
@@ -53,7 +56,16 @@ impl<T: Component> Popup<T> {
             ignore_escape_key: false,
             id,
             has_scrollbar: true,
+            anchored: false,
         }
+    }
+
+    /// Pin the popup to its `position` as given rather than tracking the editor
+    /// cursor. Use for right-click menus, shell output, and other popups anchored
+    /// to a screen point unrelated to the text cursor.
+    pub fn anchored(mut self, anchored: bool) -> Self {
+        self.anchored = anchored;
+        self
     }
 
     /// Set the anchor position next to which the popup should be drawn.
@@ -124,15 +136,22 @@ impl<T: Component> Popup<T> {
     }
 
     fn render_info(&mut self, viewport: Rect, editor: &Editor) -> RenderInfo {
-        let mut position = editor.cursor().0.unwrap_or_default();
-        if let Some(old_position) = self
-            .position
-            .filter(|old_position| old_position.row == position.row)
-        {
-            position = old_position;
+        let position = if self.anchored {
+            // Pinned popups (context menus, shell output) use their given anchor
+            // verbatim — never snap to the editor cursor.
+            self.position.unwrap_or_default()
         } else {
-            self.position = Some(position);
-        }
+            let mut position = editor.cursor().0.unwrap_or_default();
+            if let Some(old_position) = self
+                .position
+                .filter(|old_position| old_position.row == position.row)
+            {
+                position = old_position;
+            } else {
+                self.position = Some(position);
+            }
+            position
+        };
 
         let is_menu = self
             .contents

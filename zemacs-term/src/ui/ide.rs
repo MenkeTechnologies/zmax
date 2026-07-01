@@ -4458,6 +4458,7 @@ enum FileActionKind {
     Rename,
     Delete,
     CopyPath,
+    Run,
 }
 
 pub struct ContextAction {
@@ -4501,6 +4502,12 @@ pub fn file_context_menu(
             label: "New Folder",
             kind: FileActionKind::NewFolder,
         });
+    } else {
+        // JetBrains-style "Run 'file'" at the top of the menu for files.
+        items.push(ContextAction {
+            label: "Run",
+            kind: FileActionKind::Run,
+        });
     }
     items.push(ContextAction {
         label: "Rename",
@@ -4527,6 +4534,14 @@ pub fn file_context_menu(
                 let _ = editor.registers.push('"', s.clone());
                 editor.set_status(format!("yanked path: {s}"));
             }
+            FileActionKind::Run => {
+                // Spawn the file's auto-detected run command in the Run window.
+                crate::job::dispatch_blocking(move |editor, compositor| {
+                    if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                        view.run_path(editor, &path);
+                    }
+                });
+            }
             FileActionKind::Delete => {
                 let res = if is_dir {
                     std::fs::remove_dir_all(&path)
@@ -4551,6 +4566,7 @@ pub fn file_context_menu(
 
     crate::ui::popup::Popup::new("file-context-menu", menu)
         .position(Some(zemacs_core::Position::new(row as usize, col as usize)))
+        .anchored(true)
         .auto_close(true)
 }
 

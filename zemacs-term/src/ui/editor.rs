@@ -294,6 +294,31 @@ impl EditorView {
 
     /// Apply a workbench action: open a file, jump to a symbol/diagnostic, or run/debug.
     /// Returns a compositor callback when the action needs to push UI (e.g. the debug picker).
+    /// The file-tree right-click "Run" action: materialize a JetBrains-style run
+    /// configuration for `path` (auto-detected command + dir), make it the active
+    /// config, then run it in the Run tool window.
+    pub fn run_path(&mut self, editor: &mut Editor, path: &std::path::Path) {
+        let (cmd, cwd) = crate::ui::run::smart_command(Some(path));
+        let root = zemacs_loader::find_workspace().0;
+        let dir = cwd
+            .strip_prefix(&root)
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_else(|_| cwd.to_string_lossy().into_owned());
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Run".to_string());
+        let cfg = crate::run_config::upsert_active(name, cmd, dir);
+        let shell = editor.config().shell.clone();
+        let run = crate::ui::run::spawn(
+            cfg.command.clone(),
+            shell,
+            crate::run_config::resolve_dir(&cfg.dir),
+        );
+        self.ide_or_create().set_run(run);
+        editor.set_status(format!("run config '{}' created — running", cfg.name));
+    }
+
     /// Run the active named configuration (or auto-detect a command when none is set).
     /// Shared by the Run toolbar button, the run keybinding, and the config manager.
     pub fn run_active(&mut self, context: &mut crate::compositor::Context) {
