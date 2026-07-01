@@ -336,7 +336,7 @@ impl EditorView {
     /// Run the active named configuration (or auto-detect a command when none is set).
     /// Shared by the Run toolbar button, the run keybinding, and the config manager.
     pub fn run_active(&mut self, context: &mut crate::compositor::Context) {
-        let (cmd, cwd) = match crate::run_config::active() {
+        match crate::run_config::active() {
             Some(c) if !c.command.trim().is_empty() => {
                 let env_prefix: String = c
                     .env
@@ -345,17 +345,23 @@ impl EditorView {
                     .filter(|l| !l.is_empty() && l.contains('='))
                     .map(|l| format!("{l} "))
                     .collect();
-                (
-                    format!("{env_prefix}{}", c.command),
-                    crate::run_config::resolve_dir(&c.dir),
-                )
+                let cmd = format!("{env_prefix}{}", c.command);
+                let cwd = crate::run_config::resolve_dir(&c.dir);
+                self.start_run(context, cmd, cwd);
             }
+            // No active config: JetBrains auto-creates one when you run a file, so
+            // materialize + activate a config for the current file, then run it.
             _ => {
                 let path = doc!(context.editor).path().map(|p| p.to_path_buf());
-                crate::ui::run::smart_command(path.as_deref())
+                match path {
+                    Some(p) => self.run_path(context.editor, &p),
+                    None => {
+                        let (cmd, cwd) = crate::ui::run::smart_command(None);
+                        self.start_run(context, cmd, cwd);
+                    }
+                }
             }
-        };
-        self.start_run(context, cmd, cwd);
+        }
     }
 
     /// Spawn `cmd` in `cwd` and show it in the Run tool window. Shared by the Run
