@@ -219,13 +219,16 @@ fn install_viml_host_hooks() {
     vimlrs::fusevm_bridge::install_map_hook(Box::new(|line: &str| {
         let _ = with_cx(|cx| {
             match crate::keymap::vim_map::register_map_line(line) {
-                Ok(_) => {
+                Ok(crate::keymap::vim_map::MapOutcome::Applied(_)) => {
                     cx.editor
                         .config_events
                         .0
                         .send(zemacs_view::editor::ConfigEvent::ApplyUserMappings)
                         .ok();
                 }
+                // A bare `:map`/`:nmap` query while sourcing a plugin: don't pop a
+                // listing buffer during startup.
+                Ok(crate::keymap::vim_map::MapOutcome::List(_)) => {}
                 Err(e) => log::debug!("vim map `{line}` not applied: {e}"),
             }
         });

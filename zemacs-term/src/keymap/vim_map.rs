@@ -60,7 +60,15 @@ static STATE: Mutex<MapState> = Mutex::new(MapState {
 /// malformed line. Does NOT touch the live keymap — the caller applies the
 /// overlay via [`apply_user_mappings`] afterwards (usually by sending
 /// `ConfigEvent::ApplyUserMappings`).
-pub fn register_map_line(line: &str) -> Result<String, String> {
+/// What a `:map`-family line did, so the caller can react. `Applied` mutated the
+/// overlay (the caller re-applies it); `List` is a no-rhs query that should
+/// display the current bindings for the given modes (vim lists them).
+pub enum MapOutcome {
+    Applied(String),
+    List(Vec<Mode>),
+}
+
+pub fn register_map_line(line: &str) -> Result<MapOutcome, String> {
     let line = line.trim();
     // Command word = leading ASCII letters plus an optional trailing `!`.
     let alpha_end = line
@@ -79,18 +87,20 @@ pub fn register_map_line(line: &str) -> Result<String, String> {
     if clear {
         let mut st = STATE.lock().unwrap();
         st.mappings.retain(|m| !shares_mode(&m.modes, &modes));
-        return Ok(format!("mapclear ({})", modes_desc(&modes)));
+        return Ok(MapOutcome::Applied(format!("mapclear ({})", modes_desc(&modes))));
     }
 
     // Consume the leading `<silent>`/`<buffer>`/`<expr>`/… map arguments.
     let rest = strip_map_args(rest);
+    // No arguments (e.g. `:map`, `:nmap`) — list the bindings for these modes,
+    // exactly as vim does, rather than doing nothing.
+    if rest.is_empty() {
+        return Ok(MapOutcome::List(modes));
+    }
     let (lhs_raw, rhs_raw) = match rest.find(char::is_whitespace) {
         Some(i) => (&rest[..i], rest[i..].trim()),
         None => (rest, ""),
     };
-    if lhs_raw.is_empty() {
-        return Err("empty {lhs}".to_string());
-    }
     let keys = parse_macro(&vim_keys_to_zemacs(lhs_raw))
         .map_err(|e| format!("bad lhs `{lhs_raw}`: {e}"))?;
     if keys.is_empty() {
@@ -101,12 +111,12 @@ pub fn register_map_line(line: &str) -> Result<String, String> {
         let mut st = STATE.lock().unwrap();
         st.mappings
             .retain(|m| !(m.keys == keys && shares_mode(&m.modes, &modes)));
-        return Ok(format!("unmap {lhs_raw}"));
+        return Ok(MapOutcome::Applied(format!("unmap {lhs_raw}")));
     }
 
-    // A bare `:map {lhs}` with no rhs lists the mapping in Vim — a no-op here.
+    // `:map {lhs}` with no rhs is a query in vim — list the bindings for the mode.
     if rhs_raw.is_empty() {
-        return Ok(format!("{lhs_raw} (no rhs; listing is a no-op)"));
+        return Ok(MapOutcome::List(modes));
     }
 
     let value = rhs_to_value(rhs_raw, lhs_raw)
@@ -117,7 +127,7 @@ pub fn register_map_line(line: &str) -> Result<String, String> {
     if let Some(plug) = plug_name(lhs_raw) {
         st.plugs.retain(|(n, _)| n != &plug);
         st.plugs.push((plug.clone(), value));
-        return Ok(format!("<Plug>{plug} defined"));
+        return Ok(MapOutcome::Applied(format!("<Plug>{plug} defined")));
     }
     // Replace any existing overlay entry for the same lhs+modes.
     st.mappings
@@ -127,7 +137,7 @@ pub fn register_map_line(line: &str) -> Result<String, String> {
         keys,
         value,
     });
-    Ok(format!("{} {lhs_raw}", modes_desc(&modes)))
+    Ok(MapOutcome::Applied(format!("{} {lhs_raw}", modes_desc(&modes))))
 }
 
 /// Merge every recorded runtime mapping on top of `keys` (the live
@@ -431,8 +441,28 @@ mod tests {
         assert!(mode_from_cmd("nnoremap").unwrap().3); // noremap flag
     }
 
+    // Serializes tests that mutate the process-global STATE.mappings (they run
+    // in parallel otherwise and would clobber each other).
+    static TEST_GUARD: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn no_rhs_lists_bindings() {
+        let _g = TEST_GUARD.lock().unwrap();
+        assert!(matches!(register_map_line("nmap").unwrap(), MapOutcome::List(ref m) if *m == vec![Mode::Normal]));
+        assert!(matches!(register_map_line("vmap").unwrap(), MapOutcome::List(ref m) if *m == vec![Mode::Select]));
+        assert!(matches!(register_map_line("map").unwrap(), MapOutcome::List(_)));
+        // a bound lhs (no rhs) also lists; a full mapping applies.
+        assert!(matches!(register_map_line("nmap gx").unwrap(), MapOutcome::List(_)));
+        assert!(matches!(
+            register_map_line("nnoremap gx :Foo<CR>").unwrap(),
+            MapOutcome::Applied(_)
+        ));
+        STATE.lock().unwrap().mappings.clear();
+    }
+
     #[test]
     fn register_and_apply_roundtrip() {
+        let _g = TEST_GUARD.lock().unwrap();
         // clean slate for this test
         STATE.lock().unwrap().mappings.clear();
         register_map_line("nnoremap <silent> <leader>w :write<CR>").unwrap();

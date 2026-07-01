@@ -10792,12 +10792,14 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
 }
 
 /// Shared body of the `:map`-family typable commands: reconstruct the Vim
-/// command line, record it in the runtime `:map` overlay, and ask the
-/// application to merge the overlay onto the live keymap.
+/// command line and either record a mapping (then re-apply the overlay) or —
+/// when there's no rhs — list the current bindings for the command's modes,
+/// exactly as vim does.
 fn vim_map_cmd(cx: &mut compositor::Context, word: &str, args: &Args) -> anyhow::Result<()> {
+    use crate::keymap::vim_map::MapOutcome;
     let line = format!("{word} {}", args.join(" "));
     match crate::keymap::vim_map::register_map_line(line.trim()) {
-        Ok(desc) => {
+        Ok(MapOutcome::Applied(desc)) => {
             cx.editor
                 .config_events
                 .0
@@ -10805,8 +10807,53 @@ fn vim_map_cmd(cx: &mut compositor::Context, word: &str, args: &Args) -> anyhow:
             cx.editor.set_status(format!("map: {desc}"));
             Ok(())
         }
+        Ok(MapOutcome::List(modes)) => {
+            list_keybinds(cx, modes);
+            Ok(())
+        }
         Err(e) => Err(anyhow!("{e}")),
     }
+}
+
+/// Display the current keybindings for the given editor modes in a scratch
+/// buffer — the target of a no-rhs `:map`/`:nmap`/`:vmap` (vim lists mappings).
+fn list_keybinds(cx: &mut compositor::Context, modes: Vec<zemacs_view::document::Mode>) {
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            let Some(view) = compositor.find::<crate::ui::EditorView>() else {
+                return;
+            };
+            let maps = view.keymaps.map();
+            let mut out = String::new();
+            for mode in &modes {
+                let Some(trie) = maps.get(mode) else { continue };
+                let mut rows: Vec<(String, String)> = trie
+                    .reverse_map()
+                    .iter()
+                    .flat_map(|(name, binds)| {
+                        let name = name.clone();
+                        binds.iter().map(move |b| {
+                            (
+                                b.iter().map(|k| k.key_sequence_format()).collect::<String>(),
+                                name.clone(),
+                            )
+                        })
+                    })
+                    .collect();
+                rows.sort();
+                out.push_str(&format!("--- {mode:?} mode — {} bindings ---\n", rows.len()));
+                for (keys, name) in rows {
+                    out.push_str(&format!("{keys:<22} {name}\n"));
+                }
+                out.push('\n');
+            }
+            if out.is_empty() {
+                out.push_str("(no bindings)\n");
+            }
+            super::show_text_in_scratch(editor, &out);
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
 }
 
 macro_rules! vim_map_typable {
