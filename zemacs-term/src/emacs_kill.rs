@@ -119,7 +119,7 @@ mod tests {
         record("second".into());
         record("third".into()); // ring: [third, second, first]
         begin_yank(vec![(0, 5)]); // "third" sits at 0..5
-        // wrong selection -> refuses (previous command was not a yank)
+                                  // wrong selection -> refuses (previous command was not a yank)
         assert_eq!(next_entry(&[(2, 9)]), None);
         // matching selection -> next-older entry
         assert_eq!(next_entry(&[(0, 5)]).as_deref(), Some("second"));

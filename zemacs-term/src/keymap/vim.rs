@@ -1953,7 +1953,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
     let space = chord("space")[0];
     if let Some(node) = keymap.get_mut(&Mode::Normal).and_then(KeyTrie::node_mut) {
         node.shift_remove(&space);
-        node.insert(space, KeyTrie::MappableCommand(MappableCommand::move_char_right));
+        node.insert(
+            space,
+            KeyTrie::MappableCommand(MappableCommand::move_char_right),
+        );
     }
     if let Some(node) = keymap.get_mut(&Mode::Select).and_then(KeyTrie::node_mut) {
         node.shift_remove(&space);
@@ -2222,8 +2225,14 @@ mod tests {
             cmd_name(resolve(s, "C-v").unwrap()),
             Some("visual_block_mode")
         );
-        assert_eq!(cmd_name(resolve(s, "o").unwrap()), Some("block_swap_corners"));
-        assert_eq!(cmd_name(resolve(s, "O").unwrap()), Some("block_swap_columns"));
+        assert_eq!(
+            cmd_name(resolve(s, "o").unwrap()),
+            Some("block_swap_corners")
+        );
+        assert_eq!(
+            cmd_name(resolve(s, "O").unwrap()),
+            Some("block_swap_columns")
+        );
         assert_eq!(cmd_name(resolve(s, "K").unwrap()), Some("hover"));
         assert_eq!(cmd_name(resolve(s, "g C-a").unwrap()), Some("increment"));
 
@@ -2295,7 +2304,9 @@ mod tests {
         let km = default();
         let n = &km[&Mode::Normal];
         let i = &km[&Mode::Insert];
-        for chord in ["A-x", "A-<", "A->", "A-f", "A-b", "A-d", "A-w", "A-v", "C-space", "C-l"] {
+        for chord in [
+            "A-x", "A-<", "A->", "A-f", "A-b", "A-d", "A-w", "A-v", "C-space", "C-l",
+        ] {
             assert!(
                 resolve(n, chord).is_none(),
                 "vim Normal should not bind emacs chord {chord}"
@@ -2314,9 +2325,15 @@ mod tests {
             cmd_name(resolve(i, "C-v").unwrap()),
             Some("insert_char_interactive")
         );
-        assert_eq!(cmd_name(resolve(i, "C-w").unwrap()), Some("delete_word_backward"));
+        assert_eq!(
+            cmd_name(resolve(i, "C-w").unwrap()),
+            Some("delete_word_backward")
+        );
         // And <Space> reverts to vim's move-right (no SPC leader).
-        assert_eq!(cmd_name(resolve(n, "space").unwrap()), Some("move_char_right"));
+        assert_eq!(
+            cmd_name(resolve(n, "space").unwrap()),
+            Some("move_char_right")
+        );
     }
 
     #[test]

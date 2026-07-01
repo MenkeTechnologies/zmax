@@ -20,7 +20,9 @@ fn store_path() -> PathBuf {
 }
 
 fn escape(s: &str) -> String {
-    s.replace('\\', "\\\\").replace('\t', "\\t").replace('\n', "\\n")
+    s.replace('\\', "\\\\")
+        .replace('\t', "\\t")
+        .replace('\n', "\\n")
 }
 
 fn unescape(s: &str) -> String {

@@ -24,7 +24,11 @@ impl OpenAi {
     }
 
     /// Build the request body. Unlike Anthropic, the system prompt is just the first message.
-    pub(crate) fn body(model: &str, system: Option<&str>, messages: &[Message]) -> serde_json::Value {
+    pub(crate) fn body(
+        model: &str,
+        system: Option<&str>,
+        messages: &[Message],
+    ) -> serde_json::Value {
         let mut msgs: Vec<serde_json::Value> = Vec::new();
         if let Some(sys) = system {
             msgs.push(serde_json::json!({ "role": "system", "content": sys }));

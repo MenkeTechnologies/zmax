@@ -208,7 +208,10 @@ async fn subword_w_splits_camelcase() -> anyhow::Result<()> {
             Some(&|app| {
                 let view = app.editor.tree.get(app.editor.tree.focus);
                 let doc = app.editor.documents().next().unwrap();
-                let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+                let pos = doc
+                    .selection(view.id)
+                    .primary()
+                    .cursor(doc.text().slice(..));
                 assert_eq!(3, pos, "subword `w` should land on 'B' of Bar (col 3)");
             }),
         )],
@@ -240,7 +243,11 @@ async fn subword_dw_deletes_one_subword() -> anyhow::Result<()> {
             Some("dw"),
             Some(&|app| {
                 let doc = app.editor.documents().next().unwrap();
-                assert_eq!("BarBaz", doc.text().to_string(), "subword `dw` deletes only 'foo'");
+                assert_eq!(
+                    "BarBaz",
+                    doc.text().to_string(),
+                    "subword `dw` deletes only 'foo'"
+                );
             }),
         )],
         false,
@@ -269,7 +276,11 @@ async fn auto_fill_wraps_at_text_width() -> anyhow::Result<()> {
             Some("iaaa bbb ccc"),
             Some(&|app| {
                 let doc = app.editor.documents().next().unwrap();
-                assert_eq!("aaa bbb\nccc\n", doc.text().to_string(), "auto-fill wraps at the last space before col 10");
+                assert_eq!(
+                    "aaa bbb\nccc\n",
+                    doc.text().to_string(),
+                    "auto-fill wraps at the last space before col 10"
+                );
             }),
         )],
         false,

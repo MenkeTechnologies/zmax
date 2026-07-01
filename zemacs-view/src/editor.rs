@@ -2721,7 +2721,8 @@ impl Editor {
             let text = doc.text().slice(..);
             let last_line = text.len_lines().saturating_sub(1);
             // Group scroll = the top window's current anchor line.
-            let group_top = text.char_to_line(doc.view_offset(group[0].1).anchor.min(text.len_chars()));
+            let group_top =
+                text.char_to_line(doc.view_offset(group[0].1).anchor.min(text.len_chars()));
             // Focused window's point line (keeps it visible within its slice).
             let point = doc.selection(focus).primary().cursor(text);
             let point_line = text.char_to_line(point);
@@ -3392,7 +3393,10 @@ mod dedication_tests {
     #[test]
     fn follow_anchor_chain() {
         // Windows tile one continuous view from the group top.
-        assert_eq!(follow_anchor_lines(&[10, 10, 10], 0, 0, 0, 100), vec![0, 10, 20]);
+        assert_eq!(
+            follow_anchor_lines(&[10, 10, 10], 0, 0, 0, 100),
+            vec![0, 10, 20]
+        );
         // Point past the focused (bottom) window's slice scrolls the group down
         // so point stays visible: focused window [16,26) contains line 25.
         assert_eq!(follow_anchor_lines(&[10, 10], 1, 25, 0, 100), vec![6, 16]);

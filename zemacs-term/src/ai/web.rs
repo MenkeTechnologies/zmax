@@ -130,7 +130,10 @@ fn real_url(href: &str) -> String {
 /// Strip HTML tags, unescape entities, and collapse whitespace.
 fn clean(s: &str) -> String {
     let no_tags = TAG.replace_all(s, "");
-    unescape(&no_tags).split_whitespace().collect::<Vec<_>>().join(" ")
+    unescape(&no_tags)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn unescape(s: &str) -> String {
@@ -148,7 +151,9 @@ fn encode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for b in s.bytes() {
         match b {
-            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
             b' ' => out.push('+'),
             _ => out.push_str(&format!("%{b:02X}")),
         }

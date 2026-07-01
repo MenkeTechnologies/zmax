@@ -309,7 +309,11 @@ impl GhostText {
         // never disturbs the layout (the full multi-line text is still inserted on accept).
         let display: String = text.replace('\n', "⏎");
         let annotations = vec![InlineAnnotation::new(pos, display)];
-        Self { pos, text, annotations }
+        Self {
+            pos,
+            text,
+            annotations,
+        }
     }
 }
 
@@ -2717,7 +2721,8 @@ impl Document {
                     let text = self.text.slice(..);
                     let last = text.len_lines().saturating_sub(1);
                     let s_line = text.char_to_line(s.min(text.len_chars()));
-                    let e_line = text.char_to_line(e.saturating_sub(1).max(s).min(text.len_chars()));
+                    let e_line =
+                        text.char_to_line(e.saturating_sub(1).max(s).min(text.len_chars()));
                     if s_line > 0 {
                         folded.push((0, s_line - 1));
                     }

@@ -336,9 +336,13 @@ mod tests {
         let mut f = Folds::default();
         f.create(1, 10); // outer, closed by default
         f.create(3, 5); // nested, closed by default
-        // From a line inside only the outer fold, open it and every descendant.
+                        // From a line inside only the outer fold, open it and every descendant.
         assert!(f.open_recursive(8));
-        assert_eq!(closed(&f), Vec::<(usize, usize)>::new(), "outer + nested opened");
+        assert_eq!(
+            closed(&f),
+            Vec::<(usize, usize)>::new(),
+            "outer + nested opened"
+        );
         assert!(!f.open_recursive(8), "second call is a no-op");
         // From a line inside the nested fold, only the innermost region closes.
         assert!(f.close_recursive(4));

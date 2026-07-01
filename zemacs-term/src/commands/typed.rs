@@ -435,11 +435,7 @@ fn buffers_list(
 }
 
 /// `:jumps` — list the jump list in a picker (vim `:jumps`).
-fn jumps_list(
-    cx: &mut compositor::Context,
-    _args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn jumps_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -474,11 +470,7 @@ fn oldfiles_list(
 }
 
 /// `:marks` — list the buffer's marks in a picker (vim `:marks`).
-fn marks_list(
-    cx: &mut compositor::Context,
-    _args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn marks_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -522,7 +514,10 @@ fn del_marks(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     }
     let spec: String = args.join("");
     let spec = spec.trim();
-    ensure!(!spec.is_empty(), ":delmarks requires marks (or use :delmarks! for all)");
+    ensure!(
+        !spec.is_empty(),
+        ":delmarks requires marks (or use :delmarks! for all)"
+    );
     let n = {
         let doc = doc_mut!(cx.editor);
         spec.chars()
@@ -538,7 +533,11 @@ fn del_marks(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
 /// (Cmd Shift R): regex-replace across every workspace file that matches `pattern` (ripgrep finds the
 /// files; `$1`-style capture refs work in the replacement), writing changed files and reloading any
 /// open buffers. Destructive across the working tree — recoverable via git.
-fn project_replace(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn project_replace(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -548,8 +547,8 @@ fn project_replace(cx: &mut compositor::Context, args: Args, event: PromptEvent)
     let root = zemacs_loader::find_workspace().0;
     cx.editor.set_status("project-replace: searching…");
     cx.jobs.callback(async move {
-        let res = tokio::task::spawn_blocking(
-            move || -> (usize, usize, Vec<std::path::PathBuf>) {
+        let res =
+            tokio::task::spawn_blocking(move || -> (usize, usize, Vec<std::path::PathBuf>) {
                 let out = std::process::Command::new("rg")
                     .arg("-l")
                     .arg("--null")
@@ -582,17 +581,18 @@ fn project_replace(cx: &mut compositor::Context, args: Args, event: PromptEvent)
                     }
                 }
                 (changed.len(), total, changed)
-            },
-        )
-        .await
-        .map_err(|e| anyhow!("project-replace task: {e}"))?;
+            })
+            .await
+            .map_err(|e| anyhow!("project-replace task: {e}"))?;
         let (nfiles, total, paths) = res;
-        Ok(job::Callback::Editor(Box::new(move |editor: &mut Editor| {
-            crate::commands::reload_docs_for_paths(editor, &paths);
-            editor.set_status(format!(
-                "project-replace: {total} replacement(s) in {nfiles} file(s)"
-            ));
-        })))
+        Ok(job::Callback::Editor(Box::new(
+            move |editor: &mut Editor| {
+                crate::commands::reload_docs_for_paths(editor, &paths);
+                editor.set_status(format!(
+                    "project-replace: {total} replacement(s) in {nfiles} file(s)"
+                ));
+            },
+        )))
     });
     Ok(())
 }
@@ -2506,7 +2506,11 @@ fn qf_populate(
         bail!("no valid entries found (expected `path:line[:col]` lines)");
     }
     let n = crate::commands::qf_set_entries(cx.editor, kind, entries, append);
-    cx.editor.set_status(format!("{} entr{} added", n, if n == 1 { "y" } else { "ies" }));
+    cx.editor.set_status(format!(
+        "{} entr{} added",
+        n,
+        if n == 1 { "y" } else { "ies" }
+    ));
     if jump {
         crate::commands::qf_jump_nth(cx.editor, kind, Some(1));
     }
@@ -2689,8 +2693,10 @@ fn tab_new(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     let path = path.trim();
     cx.editor.new_tab();
     if !path.is_empty() {
-        cx.editor
-            .open(std::path::Path::new(path), zemacs_view::editor::Action::Replace)?;
+        cx.editor.open(
+            std::path::Path::new(path),
+            zemacs_view::editor::Action::Replace,
+        )?;
     }
     Ok(())
 }
@@ -2706,7 +2712,11 @@ fn tab_next(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
     Ok(())
 }
 
-fn tab_previous(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn tab_previous(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
