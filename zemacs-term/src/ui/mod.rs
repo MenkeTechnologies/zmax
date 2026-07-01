@@ -1,4 +1,5 @@
 mod completion;
+pub mod context_menu;
 pub mod dashboard;
 mod document;
 pub(crate) mod editor;

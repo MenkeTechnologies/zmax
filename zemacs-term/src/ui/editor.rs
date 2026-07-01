@@ -2185,6 +2185,44 @@ impl EditorView {
                 }
             }
 
+            MouseEventKind::Down(MouseButton::Right) => {
+                // Right-click in the editor body → JetBrains-style context menu.
+                // Gutter right-clicks keep their DAP behavior (handled on Up).
+                if gutter_coords_and_view(cxt.editor, row, column).is_some() {
+                    return EventResult::Ignored(None);
+                }
+                let path = doc!(cxt.editor).path().map(|p| p.to_path_buf());
+                let cb: crate::compositor::Callback =
+                    Box::new(move |compositor: &mut crate::compositor::Compositor, _cx| {
+                        use crate::ui::context_menu::{ContextItem, ContextMenu};
+                        let mut items = Vec::new();
+                        if let Some(path) = path.clone() {
+                            let p = path.clone();
+                            items.push(ContextItem::new("Run", move |compositor, cx| {
+                                if let Some(view) = compositor.find::<EditorView>() {
+                                    view.run_path(cx.editor, &p);
+                                }
+                            }));
+                            let p = path.clone();
+                            items.push(ContextItem::new("Reveal in Tree", move |compositor, _cx| {
+                                if let Some(view) = compositor.find::<EditorView>() {
+                                    view.reveal_in_tree(&p);
+                                }
+                            }));
+                            let p = path.clone();
+                            items.push(ContextItem::new("Copy Path", move |_compositor, cx| {
+                                let s = p.to_string_lossy().to_string();
+                                let _ = cx.editor.registers.push('"', s.clone());
+                                cx.editor.set_status(format!("yanked path: {s}"));
+                            }));
+                        }
+                        if !items.is_empty() {
+                            compositor.push(Box::new(ContextMenu::new(row, column, items)));
+                        }
+                    });
+                EventResult::Consumed(Some(cb))
+            }
+
             MouseEventKind::Up(MouseButton::Right) => {
                 if let Some((pos, view_id)) = gutter_coords_and_view(cxt.editor, row, column) {
                     cxt.editor.focus(view_id);
