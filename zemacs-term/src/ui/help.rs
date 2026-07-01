@@ -271,6 +271,20 @@ impl HelpPanel {
         }
     }
 
+    /// Construct the browser pre-filtered to `filter` — used by `:Helptags` to
+    /// land on the fuzzy-picked entry.
+    pub fn with_filter(filter: String) -> Self {
+        let mut p = Self::new();
+        p.filter = filter;
+        p
+    }
+
+    /// Every entry title (static commands, `:typables`, and topics) — the source
+    /// list for the `:Helptags` fzf picker.
+    pub fn entry_titles(&self) -> Vec<String> {
+        self.entries.iter().map(|e| e.title.clone()).collect()
+    }
+
     fn matches(&self) -> Vec<usize> {
         let f = self.filter.to_lowercase();
         self.entries

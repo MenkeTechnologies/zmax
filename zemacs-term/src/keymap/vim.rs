@@ -53,6 +53,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space F T", "fzf", ":Tags"),       // SPC F T : tags (whole tree)
     ("space F B", "fzf", ":BTags"),      // SPC F B : buffer tags
     ("space F s", "fzf", ":Snippets"),   // SPC F s : snippets
+    ("space F M", "fzf", ":Maps"),       // SPC F M : keymaps
+    ("space F H", "fzf", ":Helptags"),   // SPC F H : help tags
     ("space f s", "Files",   ":write"),            // SPC f s : save
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all
     ("space a c", "Applications", ":calc"),        // SPC a c : calc-dispatch
