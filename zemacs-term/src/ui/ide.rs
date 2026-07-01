@@ -228,6 +228,9 @@ pub enum IdeAction {
         row: u16,
         col: u16,
     },
+    /// Show a pre-built context menu (right-click on a non-tree IDE surface:
+    /// the Run console, Structure outline, Problems list, …).
+    ShowMenu(crate::ui::context_menu::ContextMenu),
 }
 
 #[derive(Clone, Copy)]
@@ -667,6 +670,13 @@ impl Ide {
         self.fold_problems = false;
         self.run_error_idx = usize::MAX;
         true
+    }
+
+    /// Stop the active run (SIGTERM the process). No-op if nothing is running.
+    pub fn stop_run(&mut self) {
+        if let Some(r) = &self.run {
+            crate::ui::run::stop(r);
+        }
     }
 
     /// Wipe the Run console output (keeps the process running; new output still
@@ -1883,6 +1893,7 @@ impl Ide {
                 IdeAction::None
             }
             MouseEventKind::Down(MouseButton::Right) => {
+                use crate::ui::context_menu::{ContextMenu, Entry};
                 // Right-click on a file-tree entry → CRUD context menu.
                 if in_rect(&self.project_rect, col, row) && row > self.project_rect.y {
                     let lr = (row - self.project_rect.y - 1) as usize;
@@ -1894,6 +1905,51 @@ impl Ide {
                             row,
                             col,
                         };
+                    }
+                }
+                // Right-click the bottom drawer (Run console) → run controls.
+                if in_rect(&self.problems_rect, col, row) {
+                    let entries = vec![
+                        Entry::item("Rerun", |compositor, cx| {
+                            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                                view.rerun_last_run(cx);
+                            }
+                        }),
+                        Entry::item("Stop", |compositor, _cx| {
+                            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                                view.stop_active_run();
+                            }
+                        }),
+                        Entry::item("Clear", |compositor, cx| {
+                            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                                view.clear_run_output(cx);
+                            }
+                        }),
+                    ];
+                    return IdeAction::ShowMenu(ContextMenu::new(row, col, entries));
+                }
+                // Right-click the Structure outline → jump to the symbol.
+                if in_rect(&self.structure_rect, col, row) && row > self.structure_rect.y {
+                    let idx = self.structure_state.offset()
+                        + (row - self.structure_rect.y - 1) as usize;
+                    if let Some(o) = self.structure.get(idx) {
+                        let (from, to) = (o.start, o.end);
+                        let name = o.name.clone();
+                        let entries = vec![
+                            Entry::item("Go to Symbol", move |_c, cx| {
+                                let view_id = cx.editor.tree.focus;
+                                let doc_id = cx.editor.tree.get(view_id).doc;
+                                if let Some(doc) = cx.editor.documents.get_mut(&doc_id) {
+                                    doc.set_selection(view_id, goto_selection(from, to));
+                                }
+                                cx.editor.ensure_cursor_in_view(view_id);
+                            }),
+                            Entry::item("Copy Name", move |_c, cx| {
+                                let _ = cx.editor.registers.push('"', name.clone());
+                                cx.editor.set_status(format!("yanked {name}"));
+                            }),
+                        ];
+                        return IdeAction::ShowMenu(ContextMenu::new(row, col, entries));
                     }
                 }
                 IdeAction::None
