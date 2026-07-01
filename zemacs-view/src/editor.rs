@@ -382,6 +382,13 @@ pub struct Config {
     /// are too distracting. Set to false to show which-key for all prefixes (subject
     /// to `auto-info-exclude`). Defaults to true.
     pub auto_info_leader_only: bool,
+    /// Helix-style *global* which-key: when true, every pending key sequence pops
+    /// a which-key infobox (like Helix). When false (the default), only the
+    /// deliberate global prefixes — the `space` leader and the emacs/spacemacs
+    /// `C-x`/`C-c`/`C-h` prefixes — get a popup; operator + text-object prefixes
+    /// (`ci`/`ca`, `di`/`da`, `g`, `y`, `z`, `>`, `C-w`, …) stay quiet. Defaults
+    /// to false.
+    pub which_key_global: bool,
     /// When true, vim-sneak overrides `s`/`S` (jump to a two-character sequence). When false,
     /// `s`/`S` keep vim's substitute-char / substitute-line. Defaults to true.
     pub vim_sneak: bool,
@@ -1294,6 +1301,7 @@ impl Default for Config {
             auto_info: true,
             auto_info_exclude: vec!["g".into(), "y".into(), "z".into(), "d".into()],
             auto_info_leader_only: true,
+            which_key_global: false,
             vim_sneak: true,
             file_picker: FilePickerConfig::default(),
             file_explorer: FileExplorerConfig::default(),

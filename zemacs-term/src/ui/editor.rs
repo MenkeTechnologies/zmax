@@ -1625,30 +1625,31 @@ impl EditorView {
                 execute_command(command);
             }
             KeymapResult::Pending(node) => {
-                // Decide whether to show the which-key popup, matched on the first key of the
-                // pending sequence (e.g. "g"/"y"/"z"/">"/"space").
+                // Decide whether to show the which-key popup, matched on the first
+                // key of the pending sequence (e.g. "g"/"y"/"z"/">"/"space").
                 let config = cxt.editor.config();
-                let suppressed = self.keymaps.pending().first().is_some_and(|key| {
-                    let key = key.to_string();
-                    if config.auto_info_leader_only {
-                        // Only deliberate leader prefixes get a popup: the `space`
-                        // leader and the emacs/spacemacs `C-x` prefix. Every other
-                        // prefix (c, d, g, z, >, ci, di, C-w, ...) is suppressed.
-                        // (In the pure `vim` preset neither is a prefix, so vim
-                        // shows no which-key at all.)
-                        key != "space" && key != "C-x"
-                    } else {
-                        config
-                            .auto_info_exclude
-                            .iter()
-                            .any(|excluded| excluded == &key)
-                    }
-                });
-                cxt.editor.autoinfo = if suppressed {
-                    None
+                // Global = the new `which-key-global` flag, or the legacy
+                // `auto-info-leader-only = false` (kept working for old configs).
+                let global = config.which_key_global || !config.auto_info_leader_only;
+                let show = if global {
+                    // Helix-style global which-key: every pending prefix pops up.
+                    true
                 } else {
-                    Some(node.infobox())
+                    // Default: only the deliberate global prefixes get a popup —
+                    // the `space` leader and the emacs/spacemacs `C-x`/`C-c`/`C-h`
+                    // prefixes. Operator + text-object prefixes (c, d, g, z, >,
+                    // ci/ca, di/da, C-w, ...) stay quiet. (In the pure `vim` preset
+                    // none of these is a prefix, so vim shows no which-key at all.)
+                    matches!(
+                        self.keymaps
+                            .pending()
+                            .first()
+                            .map(KeyEvent::to_string)
+                            .as_deref(),
+                        Some("space" | "C-x" | "C-c" | "C-h")
+                    )
                 };
+                cxt.editor.autoinfo = show.then(|| node.infobox());
             }
             KeymapResult::MatchedSequence(commands) => {
                 for command in commands {
