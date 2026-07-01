@@ -432,6 +432,8 @@ impl Application {
                 }
                 Some(event) = input_stream.next() => {
                     self.handle_terminal_events(event).await;
+                    // A command may have queued an external-fzf request.
+                    self.drain_fzf().await;
                 }
                 Some(callback) = self.jobs.callbacks.recv() => {
                     if let Some(job) = self.jobs.handle_callback(&mut self.editor, &mut self.compositor, Ok(Some(callback))) {
@@ -1469,6 +1471,82 @@ impl Application {
             .show_cursor(CursorKind::Block)
             .ok();
         self.terminal.restore()
+    }
+
+    /// Run a pending fzf.vim-style request: hand the terminal to the external
+    /// `fzf`, then run the request's sink `:` command on the picked line. `fzf`
+    /// draws on `/dev/tty`, so we leave the TUI (restore), let it take over, and
+    /// re-enter (claim) afterwards; the selection comes back on stdout.
+    async fn drain_fzf(&mut self) {
+        let Some(req) = self.editor.pending_fzf.take() else {
+            return;
+        };
+        let selection = self.run_fzf(&req);
+        if let Some(sel) = selection {
+            let sel = sel.trim();
+            if !sel.is_empty() && !req.sink.is_empty() {
+                let line = req.sink.replace("{}", sel);
+                let mut cx = crate::compositor::Context {
+                    editor: &mut self.editor,
+                    scroll: None,
+                    jobs: &mut self.jobs,
+                };
+                crate::commands::typed::run_command_line(&mut cx, &line);
+            }
+        }
+        self.render().await;
+    }
+
+    /// Blocking TTY handoff to `fzf`. Returns the first selected line (or `None`
+    /// on cancel / spawn failure). When `candidates` is empty, `fzf` is left to
+    /// use its own `$FZF_DEFAULT_COMMAND` (file walk) via the inherited tty.
+    fn run_fzf(&mut self, req: &zemacs_view::editor::FzfRequest) -> Option<String> {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+
+        if self.restore_term().is_err() {
+            return None;
+        }
+        let mut args: Vec<String> = vec!["--prompt".into(), format!("{}> ", req.prompt)];
+        args.extend(req.options.iter().cloned());
+
+        let result = (|| -> std::io::Result<Option<String>> {
+            let mut cmd = Command::new("fzf");
+            cmd.args(&args).stdout(Stdio::piped());
+            if req.candidates.is_empty() {
+                cmd.stdin(Stdio::inherit()); // fzf runs $FZF_DEFAULT_COMMAND
+            } else {
+                cmd.stdin(Stdio::piped());
+            }
+            let mut child = cmd.spawn()?;
+            if !req.candidates.is_empty() {
+                if let Some(mut stdin) = child.stdin.take() {
+                    // Write on a thread so a large list can't deadlock the pipe.
+                    let data = req.candidates.join("\n");
+                    std::thread::spawn(move || {
+                        let _ = stdin.write_all(data.as_bytes());
+                    });
+                }
+            }
+            let out = child.wait_with_output()?;
+            if !out.status.success() {
+                return Ok(None); // Esc / Ctrl-C → no pick
+            }
+            Ok(String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .next()
+                .map(str::to_string))
+        })()
+        .ok()
+        .flatten();
+
+        // Re-enter the TUI regardless of how fzf exited.
+        for _ in 0..10 {
+            if self.terminal.claim().is_ok() {
+                break;
+            }
+        }
+        result
     }
 
     #[cfg(all(not(feature = "integration"), not(windows)))]

@@ -10791,6 +10791,66 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     Ok(())
 }
 
+/// Queue an external-`fzf` request (fzf.vim-style). The terminal layer hands the
+/// TTY to `fzf` with `candidates` on stdin, then runs `sink` (a zemacs `:`
+/// command with `{}` = the picked line). Empty `candidates` lets `fzf` use its
+/// own `$FZF_DEFAULT_COMMAND` (file walk).
+fn queue_fzf(
+    cx: &mut compositor::Context,
+    prompt: &str,
+    sink: &str,
+    candidates: Vec<String>,
+    options: Vec<String>,
+) {
+    cx.editor.pending_fzf = Some(zemacs_view::editor::FzfRequest {
+        candidates,
+        prompt: prompt.to_string(),
+        sink: sink.to_string(),
+        options,
+    });
+}
+
+/// fzf.vim `:Files` — fuzzy-find files (fzf walks the tree via its default
+/// command) and open the pick.
+fn fzf_files(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        queue_fzf(cx, "Files", "open {}", Vec::new(), Vec::new());
+    }
+    Ok(())
+}
+
+/// fzf.vim `:Colors` — fuzzy-pick a colorscheme, applied live.
+fn fzf_colors(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        queue_fzf(cx, "Colors", "theme {}", all_theme_names(), vec!["+m".into()]);
+    }
+    Ok(())
+}
+
+/// fzf.vim `:Buffers` — fuzzy-pick an open buffer by path and switch to it.
+fn fzf_buffers(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        let cands: Vec<String> = cx
+            .editor
+            .documents()
+            .filter_map(|d| d.path().map(|p| p.to_string_lossy().into_owned()))
+            .collect();
+        queue_fzf(cx, "Buffers", "buffer {}", cands, Vec::new());
+    }
+    Ok(())
+}
+
+/// fzf.vim `:Commands` — fuzzy-pick a `:` command and run it.
+fn fzf_commands(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        let mut cands: Vec<String> =
+            TYPABLE_COMMAND_LIST.iter().map(|c| c.name.to_string()).collect();
+        cands.sort();
+        queue_fzf(cx, "Commands", "{}", cands, vec!["+m".into()]);
+    }
+    Ok(())
+}
+
 /// Shared body of the `:map`-family typable commands: reconstruct the Vim
 /// command line and either record a mapping (then re-apply the overlay) or —
 /// when there's no rhs — list the current bindings for the command's modes,
@@ -18028,6 +18088,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },
+    // fzf.vim commands — shell out to the external `fzf` binary.
+    TypableCommand {
+        name: "Files",
+        aliases: &[],
+        doc: "Fuzzy-find files with fzf and open the selection (fzf.vim :Files).",
+        fun: fzf_files,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Colors",
+        aliases: &[],
+        doc: "Fuzzy-pick a colorscheme with fzf (fzf.vim :Colors).",
+        fun: fzf_colors,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Buffers",
+        aliases: &[],
+        doc: "Fuzzy-pick an open buffer with fzf and switch to it (fzf.vim :Buffers).",
+        fun: fzf_buffers,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Commands",
+        aliases: &[],
+        doc: "Fuzzy-pick a `:` command with fzf and run it (fzf.vim :Commands).",
+        fun: fzf_commands,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
     // Vim fold ex-commands → our fold internals.
     TypableCommand {
         name: "fold",
@@ -19415,7 +19508,7 @@ fn repl_open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
 /// vim `@:`: re-run the most recently executed command-line (`:` history).
 /// Run a command line (without the leading `:`) from a picker/job callback that
 /// already holds a `compositor::Context`. Used by `command_history_picker`.
-pub(super) fn run_command_line(cx: &mut compositor::Context, line: &str) {
+pub(crate) fn run_command_line(cx: &mut compositor::Context, line: &str) {
     if let Err(err) = execute_command_line(cx, line, PromptEvent::Validate) {
         cx.editor.set_error(err.to_string());
     }

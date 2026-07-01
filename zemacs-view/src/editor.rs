@@ -1460,6 +1460,18 @@ pub struct BlockSelect {
     pub to_eol: bool,
 }
 
+/// A request to run the external `fzf` binary (fzf.vim-style commands). The
+/// terminal layer hands the TTY to `fzf` with `candidates` piped to stdin and
+/// `options` as extra CLI flags, then runs `sink` — a zemacs `:` command line
+/// with each `{}` replaced by the picked line — on the selection.
+#[derive(Debug, Clone)]
+pub struct FzfRequest {
+    pub candidates: Vec<String>,
+    pub prompt: String,
+    pub sink: String,
+    pub options: Vec<String>,
+}
+
 pub struct Editor {
     /// Current editing mode.
     pub mode: Mode,
@@ -1539,6 +1551,11 @@ pub struct Editor {
 
     pub status_msg: Option<(Cow<'static, str>, Severity)>,
     pub autoinfo: Option<Info>,
+    /// A pending external-`fzf` request (fzf.vim `:Files`/`:Colors`/`:Maps`/…).
+    /// A command fills this; the terminal layer (which owns the TTY) drains it,
+    /// hands the terminal to `fzf` with `candidates` on stdin, then runs `sink`
+    /// (a zemacs `:` command line with `{}` replaced by the picked line).
+    pub pending_fzf: Option<FzfRequest>,
 
     /// Latest in-flight LSP `$/progress` work (indexing, building, etc.), mirrored
     /// here by the event loop so UI surfaces (e.g. the IDE workbench gauge) can
@@ -1770,6 +1787,7 @@ impl Editor {
             ))),
             status_msg: None,
             autoinfo: None,
+            pending_fzf: None,
             lsp_progress: None,
             dap_variables: Vec::new(),
             idle_timer: Box::pin(sleep(conf.idle_timeout)),
