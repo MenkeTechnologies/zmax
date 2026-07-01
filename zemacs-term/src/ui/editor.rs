@@ -2208,9 +2208,12 @@ impl EditorView {
             }
 
             MouseEventKind::Down(MouseButton::Right) => {
-                // Right-click in the editor body → JetBrains-style context menu.
-                // Gutter right-clicks keep their DAP behavior (handled on Up).
-                if gutter_coords_and_view(cxt.editor, row, column).is_some() {
+                // Right-click on editor text → JetBrains-style context menu. Only
+                // for actual text positions: gutter right-clicks map to no text
+                // position and fall through to the DAP breakpoint handler (on Up).
+                // (gutter_coords_at_screen_coords returns Some for the whole view,
+                // so it can't distinguish text from gutter — use pos_and_view.)
+                if pos_and_view(cxt.editor, row, column, true).is_none() {
                     return EventResult::Ignored(None);
                 }
                 let path = doc!(cxt.editor).path().map(|p| p.to_path_buf());
