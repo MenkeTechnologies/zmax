@@ -47,6 +47,8 @@ pub struct Prompt {
     pub doc_fn: DocFn,
     next_char_handler: Option<PromptCharHandler>,
     language: Option<(&'static str, Arc<ArcSwap<syntax::Loader>>)>,
+    /// Last text removed by a kill (C-w/C-k/C-u/M-d), for readline `C-y` yank.
+    kill: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -103,6 +105,7 @@ impl Prompt {
             doc_fn: Box::new(|_| None),
             next_char_handler: None,
             language: None,
+            kill: String::new(),
         }
     }
 
@@ -304,6 +307,7 @@ impl Prompt {
 
     pub fn delete_word_backwards(&mut self, editor: &Editor) {
         let pos = self.eval_movement(Movement::BackwardWord(1));
+        self.kill = self.line[pos..self.cursor].to_string();
         self.line.replace_range(pos..self.cursor, "");
         self.cursor = pos;
 
@@ -312,6 +316,7 @@ impl Prompt {
 
     pub fn delete_word_forwards(&mut self, editor: &Editor) {
         let pos = self.eval_movement(Movement::ForwardWord(1));
+        self.kill = self.line[self.cursor..pos].to_string();
         self.line.replace_range(self.cursor..pos, "");
 
         self.recalculate_completion(editor);
@@ -319,6 +324,7 @@ impl Prompt {
 
     pub fn kill_to_start_of_line(&mut self, editor: &Editor) {
         let pos = self.eval_movement(Movement::StartOfLine);
+        self.kill = self.line[pos..self.cursor].to_string();
         self.line.replace_range(pos..self.cursor, "");
         self.cursor = pos;
 
@@ -327,8 +333,20 @@ impl Prompt {
 
     pub fn kill_to_end_of_line(&mut self, editor: &Editor) {
         let pos = self.eval_movement(Movement::EndOfLine);
+        self.kill = self.line[self.cursor..pos].to_string();
         self.line.replace_range(self.cursor..pos, "");
 
+        self.recalculate_completion(editor);
+    }
+
+    /// readline `C-y`: re-insert the most recently killed text at the cursor.
+    pub fn yank(&mut self, editor: &Editor) {
+        if self.kill.is_empty() {
+            return;
+        }
+        let text = self.kill.clone();
+        self.line.insert_str(self.cursor, &text);
+        self.cursor += text.len();
         self.recalculate_completion(editor);
     }
 
@@ -648,6 +666,10 @@ impl Component for Prompt {
             }
             ctrl!('u') => {
                 self.kill_to_start_of_line(cx.editor);
+                (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+            }
+            ctrl!('y') => {
+                self.yank(cx.editor);
                 (self.callback_fn)(cx, &self.line, PromptEvent::Update);
             }
             ctrl!('h') | key!(Backspace) | shift!(Backspace) => {
