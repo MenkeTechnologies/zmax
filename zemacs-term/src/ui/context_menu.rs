@@ -302,7 +302,6 @@ impl Component for ContextMenu {
 
     fn render(&mut self, viewport: Rect, surface: &mut Surface, ctx: &mut Context) {
         use crate::ui::rat::to_rat_style;
-        use ratatui::text::{Line, Span};
         use ratatui::widgets::{Block, BorderType, Borders};
 
         let theme = &ctx.editor.theme;

@@ -26,7 +26,7 @@ use crate::{
     handlers,
     job::Jobs,
     keymap::Keymaps,
-    ui::{self, overlay::overlaid},
+    ui,
 };
 
 use log::{debug, error, info, warn};
@@ -176,8 +176,11 @@ impl Application {
         // `ide.open` in appdata.toml) or when explicitly requested with `--ide`,
         // so `:ide` survives a restart — you get your workbench back, with the
         // stored layout applied above, exactly as you left it.
+        // Opening a directory (`zemacs .`) boots the IDE workbench with a scratch
+        // buffer instead of a file picker — the file tree is the point.
+        let dir_arg = args.files.first().is_some_and(|(p, _)| p.is_dir());
         let reopen_ide = appdata.as_ref().is_some_and(|d| d.ide.open);
-        if args.ide || reopen_ide {
+        if args.ide || reopen_ide || dir_arg {
             editor_view.open_sidebar();
         }
         compositor.push(Box::new(editor_view));
@@ -192,11 +195,10 @@ impl Application {
         } else if !args.files.is_empty() {
             let mut files_it = args.files.into_iter().peekable();
 
-            // If the first file is a directory, skip it and open a picker
-            if let Some((first, _)) = files_it.next_if(|(p, _)| p.is_dir()) {
-                let picker = ui::file_picker(&editor, first);
-                compositor.push(Box::new(overlaid(picker)));
-            }
+            // A leading directory (`zemacs .`) just boots IDE mode (handled above
+            // via `dir_arg`) with the default scratch buffer — consume the dir arg
+            // and don't pop a file picker.
+            let _ = files_it.next_if(|(p, _)| p.is_dir());
 
             // If there are any more files specified, open them
             if files_it.peek().is_some() {
