@@ -129,7 +129,7 @@ async fn test_split_write_quit_same_file() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_changes_in_splits_apply_to_all_views() -> anyhow::Result<()> {
-    // See <https://github.com/helix-editor/helix/issues/4732>.
+    // upstream regression test for split-view change propagation.
     // Transactions must be applied to any view that has the changed document open.
     // This sequence would panic since the jumplist entry would be modified in one
     // window but not the other. Attempting to update the changelist in the other
@@ -167,7 +167,7 @@ async fn test_changes_in_splits_apply_to_all_views() -> anyhow::Result<()> {
     ))
     .await?;
 
-    // See <https://github.com/helix-editor/helix/issues/4957>.
+    // upstream regression test for undo history across splits.
     // This sequence undoes part of the history and then adds new changes, creating a
     // new branch in the history tree. `View::sync_changes` applies transactions down
     // and up to the lowest common ancestor in the path between old and new revision
@@ -198,7 +198,7 @@ async fn test_changes_in_splits_apply_to_all_views() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_changes_in_splits_jumplist_sync() -> anyhow::Result<()> {
-    // See <https://github.com/helix-editor/helix/issues/9833>
+    // upstream regression test for split jumplist sync.
     // When jumping backwards (<C-o>) switches between two documents, we need to
     // ensure that the current view has been synced with all changes to the
     // document that occurred since the last time the view focused this document.
@@ -217,7 +217,7 @@ async fn test_changes_in_splits_jumplist_sync() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_reload_all_with_split_jumplist() -> anyhow::Result<()> {
-    // See reproduction from <https://github.com/helix-editor/helix/issues/9830>
+    // upstream reproduction for reload-all with a split jumplist.
     //
     // The key sequence:
     // * <C-w>s   Horizontal split: two views on the same document.

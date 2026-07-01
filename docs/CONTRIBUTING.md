@@ -71,10 +71,10 @@ package the new MSRV version. When increasing the MSRV, update these three place
 * the `toolchain.channel` key in `rust-toolchain.toml`
 
 [Firefox's MSRV policy]: https://firefox-source-docs.mozilla.org/writing-rust-code/update-policy.html
-[good-first-issue]: https://github.com/helix-editor/helix/labels/E-easy
-[log-file]: https://github.com/helix-editor/helix/wiki/FAQ#access-the-log-file
+[good-first-issue]: https://github.com/MenkeTechnologies/zemacs/labels/E-easy
+[log-file]: https://github.com/MenkeTechnologies/zemacs
 [architecture.md]: ./architecture.md
-[docs]: https://docs.helix-editor.com/
+[docs]: https://github.com/MenkeTechnologies/zemacs
 [xtask]: https://github.com/matklad/cargo-xtask
 [mdbook]: https://rust-lang.github.io/mdBook/guide/installation.html
 [helpers.rs]: ../zemacs-term/tests/test/helpers.rs

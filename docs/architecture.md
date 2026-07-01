@@ -125,4 +125,4 @@ for running cancellable tasks which run after events with _debouncing_.
 
 See the `AsyncHook` type for more information. Events can be created within the
 `events!` macro. Synchronous hooks can be created with `register_hook!`. And
-editor-wide events can be sent to hooks with `helix_event::dispatch`.
+editor-wide events can be sent to hooks with `zemacs_event::dispatch`.

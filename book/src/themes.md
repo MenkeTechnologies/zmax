@@ -49,9 +49,9 @@ Color values must be either a [CSS hex RGB string](https://developer.mozilla.org
 > 💡 Note that Zemacs doesn't support transparency (alpha channel).
 
 For inspiration, you can find the default `theme.toml`
-[here](https://github.com/helix-editor/helix/blob/master/theme.toml) and
+[here](https://github.com/MenkeTechnologies/zemacs/blob/master/theme.toml) and
 user-submitted themes
-[here](https://github.com/helix-editor/helix/blob/master/runtime/themes).
+[here](https://github.com/MenkeTechnologies/zemacs/blob/master/runtime/themes).
 
 
 ## The details of theme creation
@@ -382,4 +382,4 @@ These scopes are used for theming the editor interface:
 | `tabstop`                         | Snippet placeholder                                                                            |
 
 [editor-section]: ./configuration.md#editor-section
-[#2380]: https://github.com/helix-editor/helix/issues/2380
+[#2380]: https://github.com/MenkeTechnologies/zemacs/issues/2380

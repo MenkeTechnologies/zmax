@@ -307,11 +307,11 @@ mod tests {
         assert_eq!(default_keys, keymap::default());
     }
 
-    /// The default (spacemacs) keymap is vim-derived, not the legacy Helix
+    /// The default (spacemacs) keymap is vim-derived, not the legacy
     /// selection-first one. Pin a couple of vim bindings so a regression in the
     /// `keymap::default` re-export (or the vim base) is caught here.
     #[test]
-    fn default_keymap_is_vim_not_helix() {
+    fn default_keymap_is_vim() {
         use crate::keymap::{KeyTrie, MappableCommand};
         use zemacs_view::input::KeyEvent;
 
@@ -333,7 +333,7 @@ mod tests {
             is_static(resolve("C-v"), "visual_block_mode"),
             "C-v should start visual-block mode"
         );
-        // V is the vim linewise-visual sequence, not a single Helix command.
+        // V is the vim linewise-visual sequence, not a single selection command.
         assert!(
             matches!(resolve("V"), Some(KeyTrie::Sequence(_))),
             "V should be linewise visual"
@@ -380,3 +380,5 @@ mod tests {
         );
     }
 }
+
+

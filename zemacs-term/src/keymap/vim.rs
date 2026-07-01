@@ -244,7 +244,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "backspace"   => wildfire_shrink,
 
         // --- word motions ---------------------------------------------------
-        // vim caret semantics: land *on* the target char, not Helix's
+        // vim caret semantics: land *on* the target char, not the selection
         // off-by-one block-cursor position. See `move_word_vim_impl`.
         "w" => subword_w,
         "b" => subword_b,
@@ -1495,7 +1495,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 },
                 "tab" => indent,                   // SPC x TAB : indent region
                 "a" => { "Align"
-                    "a" => align_selections,       // SPC x a a : align cursors (Helix)
+                    "a" => align_selections,       // SPC x a a : align cursors
                     "&" => align_at_ampersand,     // SPC x a & : align at &
                     "c" => indent,                 // SPC x a c : align indentation (reindent)
                     "l" => align_left_at_char,     // SPC x a l : left-align at typed char
@@ -2054,7 +2054,7 @@ mod tests {
     }
 
     #[test]
-    fn vim_g_prefix_is_vim_not_helix() {
+    fn vim_g_prefix_is_vim() {
         let km = default();
         let n = &km[&Mode::Normal];
         // ge/gn/gN carry vim meaning, not the zemacs bindings they collided with.

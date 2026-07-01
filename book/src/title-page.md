@@ -18,8 +18,8 @@ For everything else (e.g., how to install supported language servers), see the [
 
 Refer the [FAQ] for common questions.
 
-[FAQ]: https://github.com/helix-editor/helix/wiki/FAQ
+[FAQ]: https://github.com/MenkeTechnologies/zemacs/wiki/FAQ
 [usage]: ./usage.md
 [keymap]: ./keymap.md
 [configuration]: ./configuration.md
-[Helix Wiki]: https://github.com/helix-editor/helix/wiki
+[Zemacs Wiki]: https://github.com/MenkeTechnologies/zemacs/wiki

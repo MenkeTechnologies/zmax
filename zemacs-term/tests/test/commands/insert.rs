@@ -2,7 +2,7 @@ use super::*;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn change_line_above_comment() -> anyhow::Result<()> {
-    // <https://github.com/helix-editor/helix/issues/12570>
+    // upstream regression test: change line above a comment
     test((
         indoc! {"\
         #[fn main() {}
@@ -58,7 +58,7 @@ async fn insert_newline_many_selections() -> anyhow::Result<()> {
     ))
     .await?;
 
-    // <https://github.com/helix-editor/helix/issues/12495>
+    // upstream regression test: comment continuation handling
     test((
         indoc! {"\
             id #(|1)#,Item #(|1)#,cost #(|1)#,location #(|1)#
@@ -88,7 +88,7 @@ async fn insert_newline_many_selections() -> anyhow::Result<()> {
     ))
     .await?;
 
-    // <https://github.com/helix-editor/helix/issues/12461>
+    // upstream regression test: insert-mode comment handling
     test((
         indoc! {"\
             real R〉 #(||)# 〈real R〉 @ 〈real R〉
@@ -250,7 +250,7 @@ async fn insert_newline_continue_line_comment() -> anyhow::Result<()> {
     .await?;
 
     // Comment continuation should work on multiple selections.
-    // <https://github.com/helix-editor/helix/issues/12539>
+    // upstream regression test: comment continuation across selections
     test((
         indoc! {"\
             ///·Docs#[|·]#
@@ -548,14 +548,14 @@ async fn try_restore_indent() -> anyhow::Result<()> {
 }
 
 // Tests being able to jump in insert mode, then undo the write performed by the jump
-// https://github.com/helix-editor/helix/issues/13480
+// upstream regression test: undo after an insert-mode jump
 #[tokio::test(flavor = "multi_thread")]
 async fn test_jump_undo_redo() -> anyhow::Result<()> {
     use zemacs_core::hashmap;
     use zemacs_term::keymap;
     use zemacs_view::document::Mode;
 
-    // This test drives Helix undo/redo keys (`u`/`U`), so pin the Helix keymap
+    // This test drives selection-keymap undo/redo keys (`u`/`U`), so pin that keymap
     // (the shipped default is now vim, where `U` is not redo).
     let mut config = Config {
         keys: keymap::default::default(),

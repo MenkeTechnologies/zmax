@@ -28,7 +28,7 @@ being published.
 * Link to the release notes in this-week-in-rust
     * [Example PR](https://github.com/rust-lang/this-week-in-rust/pull/3300)
 * Post to reddit
-    * [Example post](https://www.reddit.com/r/rust/comments/uzp5ze/helix_editor_2205_released/)
+    * [Example: the r/rust subreddit](https://www.reddit.com/r/rust/)
 
 [homebrew formula]: https://github.com/Homebrew/homebrew-core/blob/master/Formula/h/zemacs.rb
 
@@ -40,7 +40,7 @@ this. For example, when creating the 22.07 release notes, this compare link
 may be used
 
 ```
-https://github.com/helix-editor/helix/compare/22.05...master
+https://github.com/MenkeTechnologies/zemacs/compare/22.05...master
 ```
 
 Either side of the triple-dot may be replaced with an exact revision, so if
@@ -49,11 +49,11 @@ or so, record the revision where you stopped, and use that as a starting point
 next week:
 
 ```
-https://github.com/helix-editor/helix/compare/7706a4a0d8b67b943c31d0c5f7b00d357b5d838d...master
+https://github.com/MenkeTechnologies/zemacs/compare/7706a4a0d8b67b943c31d0c5f7b00d357b5d838d...master
 ```
 
 A work-in-progress commit for a changelog might look like
-[this example](https://github.com/helix-editor/helix/commit/831adfd4c709ca16b248799bfef19698d5175e55).
+[this example](https://github.com/MenkeTechnologies/zemacs/commit/831adfd4c709ca16b248799bfef19698d5175e55).
 
 Not every PR or commit needs a blurb in the changelog. Each release section
 tends to have a blurb that links to a GitHub comparison between release

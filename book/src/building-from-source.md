@@ -1,6 +1,6 @@
 ## Building from source
 
-- [Configuring Zemacs's runtime files](#configuring-helixs-runtime-files)
+- [Configuring Zemacs's runtime files](#configuring-zemacss-runtime-files)
   - [Linux and macOS](#linux-and-macos)
   - [Windows](#windows)
   - [Multiple runtime directories](#multiple-runtime-directories)
@@ -28,7 +28,7 @@ RUSTFLAGS="-C target-feature=-crt-static"
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/helix-editor/helix
+   git clone https://github.com/MenkeTechnologies/zemacs
    cd zemacs
    ```
 
@@ -169,7 +169,7 @@ hx --health
 ```
 
 For more information on the health check results refer to
-[Health check](https://github.com/helix-editor/helix/wiki/Healthcheck).
+[Health check](https://github.com/MenkeTechnologies/zemacs/wiki/Healthcheck).
 
 ### Configure the desktop shortcut
 

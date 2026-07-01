@@ -1,10 +1,10 @@
-; Concerto Language - Indent Queries (Helix)
+; Concerto Language - Indent Queries (zemacs)
 ; ============================================
-; Helix-specific indentation rules. For use in helix-editor/helix at
+; zemacs-specific indentation rules. For use in zemacs-editor/zemacs at
 ; runtime/queries/concerto/indents.scm
 ;
-; Helix uses @indent and @outdent captures, same as tree-sitter convention.
-; See: https://docs.helix-editor.com/guides/indent.html
+; zemacs uses @indent and @outdent captures, same as tree-sitter convention.
+; See: https://docs.zemacs-editor.com/guides/indent.html
 
 ; Indent inside declaration bodies and decorator argument lists
 [

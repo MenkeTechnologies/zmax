@@ -382,8 +382,8 @@ pub struct Config {
     /// are too distracting. Set to false to show which-key for all prefixes (subject
     /// to `auto-info-exclude`). Defaults to true.
     pub auto_info_leader_only: bool,
-    /// Helix-style *global* which-key: when true, every pending key sequence pops
-    /// a which-key infobox (like Helix). When false (the default), only the
+    /// zemacs *global* which-key: when true, every pending key sequence pops
+    /// a which-key infobox. When false (the default), only the
     /// deliberate global prefixes — the `space` leader and the emacs/spacemacs
     /// `C-x`/`C-c`/`C-h` prefixes — get a popup; operator + text-object prefixes
     /// (`ci`/`ca`, `di`/`da`, `g`, `y`, `z`, `>`, `C-w`, …) stay quiet. Defaults

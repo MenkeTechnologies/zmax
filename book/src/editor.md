@@ -73,7 +73,7 @@
 | `startup` | What to open when launched with no file arguments. `startify` shows the start screen, `recent` opens the most-recently-used file, `session` restores the previous session's tabs and cursor, `file` opens `startup-file`. Each falls back to `startify` when its target is unavailable. | `"startify"` |
 | `startup-file` | File to open on launch when `startup` is `"file"`. Ignored otherwise. | `""` |
 
-[^3]: In most cases, you also need to enable the `auto-format` setting under `languages.toml`. You can find the reasoning [here](https://github.com/helix-editor/helix/discussions/9043#discussioncomment-7811497).
+[^3]: In most cases, you also need to enable the `auto-format` setting under `languages.toml`. You can find the reasoning [here](https://github.com/MenkeTechnologies/zemacs/discussions/9043#discussioncomment-7811497).
 
 ### `[editor.clipboard-provider]` Section
 
@@ -318,7 +318,7 @@ Control auto save behavior.
 
 | Key | Description | Default |
 |--|--|---------|
-| `focus-lost` | Enable automatic saving on the focus moving away from Helix. Requires [focus event support](https://github.com/helix-editor/helix/wiki/Terminal-Support) from your terminal | `false` |
+| `focus-lost` | Enable automatic saving on the focus moving away from zemacs. Requires [focus event support](https://github.com/MenkeTechnologies/zemacs/wiki/Terminal-Support) from your terminal | `false` |
 | `after-delay.enable` | Enable automatic saving after `auto-save.after-delay.timeout` milliseconds have passed since last edit. | `false` |
 | `after-delay.timeout` | Time in milliseconds since last edit before auto save timer triggers. | `3000` |
 
@@ -476,7 +476,7 @@ Options for navigating and editing using tab key.
 | `supersede-menu` | Normally, when a menu is on screen, such as when auto complete is triggered, the tab key is bound to cycling through the items. This means when menus are on screen, one cannot use the tab key to trigger the `smart-tab` command. If this option is set to true, the `smart-tab` command always takes precedence, which means one cannot use the tab key to cycle through menu items. One of the other bindings must be used instead, such as arrow keys or `C-n`/`C-p`. | `false` |
 
 
-Due to lack of support for S-tab in some terminals, the default keybindings don't fully embrace smart-tab editing experience. If you enjoy smart-tab navigation and a terminal that supports the [Enhanced Keyboard protocol](https://github.com/helix-editor/helix/wiki/Terminal-Support#enhanced-keyboard-protocol), consider setting extra keybindings:
+Due to lack of support for S-tab in some terminals, the default keybindings don't fully embrace smart-tab editing experience. If you enjoy smart-tab navigation and a terminal that supports the [Enhanced Keyboard protocol](https://github.com/MenkeTechnologies/zemacs/wiki/Terminal-Support#enhanced-keyboard-protocol), consider setting extra keybindings:
 
 ```toml
 [keys.normal]

@@ -3,7 +3,7 @@ use super::*;
 use zemacs_term::config::Config;
 
 // New vim motions implemented as real commands (g_/gM/go). Pin the vim keymap
-// (harness default is the Helix keymap; see `helpers::test_config`).
+// (harness default is the selection-first keymap; see `helpers::test_config`).
 fn vim() -> AppBuilder {
     AppBuilder::new().with_config(Config {
         keys: zemacs_term::keymap::vim::default(),
@@ -33,7 +33,7 @@ async fn go_goes_to_byte_count() -> anyhow::Result<()> {
 }
 
 // Word motions must land the caret ON the target char like vim, not one short of
-// it (Helix block-cursor semantics). Text "foo bar baz":
+// it (selection block-cursor semantics). Text "foo bar baz":
 // f0 o1 o2 ' '3 b4 a5 r6 ' '7 b8 a9 z10.
 #[tokio::test(flavor = "multi_thread")]
 async fn w_lands_on_next_word_first_char() -> anyhow::Result<()> {

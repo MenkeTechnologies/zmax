@@ -137,31 +137,38 @@ fn cc_prefix() -> KeyTrie {
 fn ch_prefix() -> KeyTrie {
     keymap!({ "overlay"
         "C-h" => { "Help"
-            "C-h" => help,                  // C-h C-h: help-for-help
-            "?" => help,
-            "k" => help,                    // C-h k: describe-key
-            "K" => help,
-            "c" => help,                    // C-h c: describe-key-briefly
-            "w" => help,                    // C-h w: where-is
-            "b" => help,                    // C-h b: describe-bindings
-            "t" => help,                    // C-h t: help-with-tutorial
-            "l" => help,                    // C-h l: view-lossage
-            "e" => help,                    // C-h e: view-echo-area-messages
-            "s" => help,                    // C-h s: describe-syntax
-            "h" => help,                    // C-h h: describe international chars
-            "f" => command_palette,         // C-h f: describe-function
-            "F" => command_palette,
-            "o" => command_palette,         // C-h o: describe-symbol
-            "x" => command_palette,         // C-h x: describe-command
-            "a" => command_palette,         // C-h a: apropos-command
-            "d" => command_palette,         // C-h d: apropos-documentation
-            "m" => describe_current_modes,  // C-h m: describe-mode
-            "i" => info_search,             // C-h i: info
-            "v" => config_variable_search,  // C-h v: describe-variable
-            "p" => package_search,          // C-h p: finder-by-keyword
-            "P" => package_search,          // C-h P: describe-package
-            "L" => layer_search,            // C-h L: spacemacs layers
-            "S" => man_page_search,         // C-h S: info-lookup-symbol (approx)
+            "C-h" => help,                        // help-for-help
+            "?" => help,                          // help-for-help
+            "f" => describe_command,              // describe-function
+            "x" => describe_command,              // describe-command
+            "a" => describe_command,              // apropos-command
+            "d" => describe_command,              // apropos-documentation
+            "o" => describe_command,              // describe-symbol
+            "k" => describe_key,                  // describe-key
+            "c" => describe_key,                  // describe-key-briefly
+            "w" => where_is,                      // where-is
+            "b" => describe_bindings,             // describe-bindings
+            "v" => config_variable_search,        // describe-variable
+            "m" => describe_current_modes,        // describe-mode
+            "s" => describe_syntax,               // describe-syntax
+            "C" => describe_coding_system,        // describe-coding-system
+            "L" => describe_language_environment, // describe-language-environment
+            "l" => view_lossage,                  // view-lossage
+            "p" => package_search,                // finder-by-keyword
+            "P" => package_search,                // describe-package
+            "." => hover,                         // display-local-help (LSP hover)
+            "i" => info_search,                   // info
+            "S" => man_page_search,               // info-lookup-symbol
+            // Manual / info / tutorial navigation → the zemacs help browser.
+            "r" => help,                          // info-emacs-manual
+            "F" => help,                          // Info-goto-emacs-command-node
+            "K" => help,                          // Info-goto-emacs-key-command-node
+            "t" => help,                          // help-with-tutorial
+            "n" => help,                          // view-emacs-news
+            "g" => help,                          // describe-gnu-project
+            "h" => help,                          // view-hello-file
+            "e" => help,                          // view-echo-area-messages
+            "I" => help,                          // describe-input-method
         },
     })
 }
@@ -388,29 +395,34 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             continue;
         };
         // Drop any existing binding on these keys first (vim's insert-mode C-x
-        // completion, C-h backspace, decrement, …) so the Emacs prefix replaces
+        // completion, C-h backspace, decrement, …) so the Emacs prefixes replace
         // them cleanly instead of recursively merging into a hybrid node.
         if let Some(node) = trie.node_mut() {
             for k in &prefix_keys {
                 node.shift_remove(k);
             }
         }
+        // 1. Lay down the full remaining Emacs C-x/C-c/C-h map first (approximate
+        //    where zemacs has no faithful analogue), so every documented chord is
+        //    bound in every mode.
+        if let Some(node) = trie.node_mut() {
+            for (chord, label, cmd) in CXCH_FULL {
+                add_chord(node, chord, label, cmd);
+            }
+        }
+        // 2. Overlay the curated prefixes on top. `merge_nodes` recurses into the
+        //    C-x/C-c/C-h nodes, so the hand-written real bindings WIN over the
+        //    generated fallbacks on any collision, while the non-colliding
+        //    fallbacks survive.
         trie.merge_nodes(cx_prefix());
         trie.merge_nodes(cc_prefix());
         trie.merge_nodes(ch_prefix());
-        // Graft the typable `C-x` bindings (save / write-all / quit / kill-buffer)
-        // the `keymap!` macro can't express, under the freshly-merged `C-x` node.
+        // 3. Graft the typable `C-x` bindings (save / write-all / quit / kill-buffer)
+        //    the `keymap!` macro can't express, under the C-x node.
         if let Some(KeyTrie::Node(cx)) = trie.node_mut().and_then(|n| n.get_mut(&cx_key)) {
             for (key, label, cmd) in CX_TYPABLE {
                 let event = key.parse::<KeyEvent>().expect("valid key");
                 add_command(cx, &[event], label, cmd);
-            }
-        }
-        // The full remaining Emacs C-x/C-c/C-h map (approximate where zemacs has
-        // no faithful analogue) so every documented chord is bound in every mode.
-        if let Some(node) = trie.node_mut() {
-            for (chord, label, cmd) in CXCH_FULL {
-                add_chord(node, chord, label, cmd);
             }
         }
     }
@@ -465,5 +477,35 @@ mod tests {
             cmd(&km, Mode::Normal, "C-h m").as_deref(),
             Some("describe_current_modes")
         );
+    }
+
+    #[test]
+    fn ch_help_maps_to_real_distinct_functions() {
+        let km = default();
+        // The curated real help functions must win over the generated fallbacks.
+        for (chord, want) in [
+            ("C-h f", "describe_command"),
+            ("C-h x", "describe_command"),
+            ("C-h a", "describe_command"),
+            ("C-h k", "describe_key"),
+            ("C-h w", "where_is"),
+            ("C-h b", "describe_bindings"),
+            ("C-h v", "config_variable_search"),
+            ("C-h m", "describe_current_modes"),
+            ("C-h s", "describe_syntax"),
+            ("C-h C", "describe_coding_system"),
+            ("C-h L", "describe_language_environment"),
+            ("C-h l", "view_lossage"),
+            ("C-h p", "package_search"),
+            ("C-h .", "hover"),
+        ] {
+            assert_eq!(
+                cmd(&km, Mode::Normal, chord).as_deref(),
+                Some(want),
+                "{chord} should map to {want}"
+            );
+        }
+        // A non-colliding generated fallback still survives under C-h.
+        assert_eq!(cmd(&km, Mode::Normal, "C-h C-f").as_deref(), Some("browse_faq"));
     }
 }

@@ -46,4 +46,4 @@ for each request the first server in the list that supports it is used, and a
 server's features can be limited with `only-features` / `except-features`.
 
 [lsp]: https://microsoft.github.io/language-server-protocol/
-[wiki]: https://github.com/helix-editor/helix/wiki/Language-Server-Configurations
+[wiki]: https://github.com/MenkeTechnologies/zemacs/wiki/Language-Server-Configurations

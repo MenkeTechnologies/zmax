@@ -4,7 +4,7 @@
 // Changes from upstream:
 // * unused functions (almost all non-trait-implementation functions) have been removed
 // * `#[serde(deny_unknown_fields)]` annotations have been removed on types for compatibility.
-//   (For examples https://github.com/helix-editor/helix/issues/2786, https://github.com/helix-editor/helix/issues/15078)
+//   (see upstream LSP compatibility issues with servers sending extra fields)
 // * some variable names have been lengthened for readability
 
 use serde::de::{self, DeserializeOwned, Visitor};
@@ -121,7 +121,7 @@ where
     // The JSONRPC spec says "Numbers SHOULD NOT contain fractional parts" so we should try to
     // accept them if possible. The JavaScript type system lumps integers and floats together so
     // some languages may serialize integer IDs as floats with a zeroed fractional part.
-    // See <https://github.com/helix-editor/helix/issues/12367>.
+    // upstream fix for servers serializing integer IDs as whole-number floats.
     if let Some(val) = num
         .as_f64()
         .filter(|f| f.is_sign_positive() && f.fract() == 0.0)
@@ -436,7 +436,7 @@ fn success_output_deserialize() {
 fn success_output_deserialize_with_extra_fields() {
     use serde_json::{self, json};
 
-    // https://github.com/helix-editor/helix/issues/2786
+    // upstream fix for extra fields in a success output.
     let dso = r#"{"jsonrpc":"2.0","result":1,"id":1,"requestMethod":"initialize"}"#;
 
     let deserialized: Output = serde_json::from_str(dso).unwrap();
@@ -449,7 +449,7 @@ fn success_output_deserialize_with_extra_fields() {
         })
     );
 
-    // https://github.com/helix-editor/helix/issues/15078
+    // upstream fix for extra top-level fields (e.g. traceparent).
     let json = r#"{"traceparent":"00-84b1954eb787286f09bf07937689f8cb-5f78c8b6ed6bc71a-00","jsonrpc":"2.0","method":"window/logMessage","params":{"type":5,"message":"Initialized"}}"#;
     assert_eq!(
         serde_json::from_str::<Notification>(json).unwrap(),

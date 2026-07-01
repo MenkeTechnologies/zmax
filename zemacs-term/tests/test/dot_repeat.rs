@@ -5,7 +5,7 @@ use zemacs_term::config::Config;
 // vim dot-repeat (`.`) must repeat the last *change* of any kind, not just the
 // last insert session. These cover the normal-mode changes that previously did
 // not repeat at all. They pin the vim keymap explicitly (the harness default is
-// the Helix keymap; see `helpers::test_config`).
+// the selection-first keymap; see `helpers::test_config`).
 fn vim() -> AppBuilder {
     AppBuilder::new().with_config(Config {
         keys: zemacs_term::keymap::vim::default(),
@@ -45,7 +45,7 @@ async fn dot_repeats_operator_motion() -> anyhow::Result<()> {
 }
 
 // NOTE: operator + insert + intermediate motion (e.g. `cwX<esc>w.`) does not yet
-// repeat faithfully — the replayed operator interacts with Helix's selection-model
+// repeat faithfully — the replayed operator interacts with the selection-model
 // motions. Pure normal-mode changes (above) and insert sessions
 // (`commands::vim_dot_repeat_insert`) repeat correctly; the `cw.`-with-motion edge
 // is tracked for a follow-up.

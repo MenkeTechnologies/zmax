@@ -564,6 +564,14 @@ impl MappableCommand {
         goto_buffer_window, "Focus the window already showing a chosen buffer (SPC b w)",
         git_file_dispatch, "Magit-style file operations dispatch for the current file (SPC g f m)",
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
+        describe_command, "Describe a command — its doc and key bindings (C-h f)",
+        where_is, "Show the keys a command is bound to (C-h w)",
+        describe_key, "Describe a key — pick a binding, show its command and doc (C-h k)",
+        describe_bindings, "List every key binding of the current mode (C-h b)",
+        describe_coding_system, "Describe the buffer's coding system / encoding (C-h C)",
+        describe_language_environment, "Describe the language environment / locale (C-h L)",
+        describe_syntax, "Describe the buffer's syntax / tree-sitter status (C-h s)",
+        view_lossage, "Show the recently pressed keys (C-h l)",
         describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
         package_search, "Search configured language packages and describe one (SPC h p)",
         config_variable_search, "Search editor config variables, copy path on select (SPC h .)",
@@ -2277,8 +2285,8 @@ where
 
 /// vim normal-mode word motion (`w`/`b`/`e`/`ge` and their long-word forms).
 ///
-/// The underlying motions are Helix's selection-based ones: they return a range
-/// whose head is one past the target on the side away from the cursor, and Helix
+/// The underlying motions are selection-based ones: they return a range
+/// whose head is one past the target on the side away from the cursor, and the engine
 /// then renders the block cursor at `range.cursor()` — `head - 1` for a forward
 /// range, `head` for a backward one. That is off-by-one from vim for word-START
 /// motions (`w`/`W` must land *on* the next word's first char) and word-END
@@ -6326,7 +6334,7 @@ fn search_selection_impl(cx: &mut Context, detect_word_boundaries: bool) {
     fn is_at_word_start(text: RopeSlice, index: usize) -> bool {
         // This can happen when the cursor is at the last character in
         // the document +1 (ge + j), in this case text.char(index) will panic as
-        // it will index out of bounds. See https://github.com/helix-editor/helix/issues/12609
+        // it will index out of bounds (upstream out-of-bounds fix for ge + j).
         if index == text.len_chars() {
             return false;
         }
@@ -9022,7 +9030,7 @@ fn browse_faq(cx: &mut Context) {
 /// available. (name, one-line summary, detail shown on select).
 const LAYERS: &[(&str, &str, &str)] = &[
     ("vim-keys", "Vim normal/visual/insert keymap with operator-pending edits",
-     "The default keymap is vim: dd/dw/cw/yy and {motion} operators emulated on the Helix engine.\nNormal, visual, and insert modes behave as in vim."),
+     "The default keymap is vim: dd/dw/cw/yy and {motion} operators emulated on the zemacs engine.\nNormal, visual, and insert modes behave as in vim."),
     ("emacs-keys", "Emacs readline chords on command lines and insert mode",
      "C-a/C-e/C-k/C-y/M-f/M-b etc. in insert mode and prompts. Layered on top of the vim keymap."),
     ("spacemacs-leader", "SPC leader tree (this menu, SPC h, SPC g, SPC p, ...)",
@@ -13161,6 +13169,200 @@ pub fn command_palette(cx: &mut Context) {
             compositor.push(Box::new(overlaid(picker)));
         },
     ));
+}
+
+// ── Help system (C-h ...): real describe-* functions, Emacs-style ────────────
+// Each renders a report into a scratch buffer (the zemacs `*Help*`), so nothing
+// is a fake duplicate: describe-command shows docs, where-is shows bindings,
+// describe-bindings lists the whole keymap, etc.
+
+/// Format the key bindings a command has, from a reverse keymap.
+fn help_fmt_bindings(km: &crate::keymap::ReverseKeymap, name: &str) -> String {
+    km.get(name)
+        .map(|binds| {
+            binds
+                .iter()
+                .map(|b| b.iter().map(|k| k.key_sequence_format()).collect::<String>())
+                .collect::<Vec<_>>()
+                .join("   ")
+        })
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "(unbound)".to_string())
+}
+
+fn help_report_full(c: &MappableCommand, km: &crate::keymap::ReverseKeymap) -> String {
+    let kind = if matches!(c, MappableCommand::Typable { .. }) {
+        "typable (:) command"
+    } else {
+        "command"
+    };
+    format!(
+        "{}  —  {kind}\n\nBound to: {}\n\n{}\n",
+        c.name(),
+        help_fmt_bindings(km, c.name()),
+        c.doc()
+    )
+}
+
+fn help_report_bindings(c: &MappableCommand, km: &crate::keymap::ReverseKeymap) -> String {
+    format!("{} is bound to:\n\n  {}\n", c.name(), help_fmt_bindings(km, c.name()))
+}
+
+/// Shared command picker used by describe-command / where-is / describe-key.
+/// `bound_only` limits to commands that have a key binding; `primary` is the
+/// searched column (0 = name, 1 = bindings); on select it renders `report` into
+/// a scratch `*Help*` buffer instead of executing the command.
+fn help_command_picker(
+    cx: &mut Context,
+    bound_only: bool,
+    primary: usize,
+    report: fn(&MappableCommand, &crate::keymap::ReverseKeymap) -> String,
+) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let rmap = compositor.find::<ui::EditorView>().unwrap().keymaps.map()[&cx.editor.mode]
+            .reverse_map();
+        let commands: Vec<MappableCommand> = MappableCommand::STATIC_COMMAND_LIST
+            .iter()
+            .cloned()
+            .chain(
+                typed::TYPABLE_COMMAND_LIST
+                    .iter()
+                    .map(|cmd| MappableCommand::Typable {
+                        name: cmd.name.to_owned(),
+                        args: String::new(),
+                        doc: cmd.doc.to_owned(),
+                    }),
+            )
+            .filter(|c| !bound_only || rmap.contains_key(c.name()))
+            .collect();
+        let columns = [
+            ui::PickerColumn::new(
+                "name",
+                |item: &MappableCommand, _: &crate::keymap::ReverseKeymap| match item {
+                    MappableCommand::Typable { name, .. } => format!(":{name}").into(),
+                    _ => item.name().into(),
+                },
+            ),
+            ui::PickerColumn::new(
+                "bindings",
+                |item: &MappableCommand, km: &crate::keymap::ReverseKeymap| {
+                    help_fmt_bindings(km, item.name()).into()
+                },
+            ),
+            ui::PickerColumn::new(
+                "doc",
+                |item: &MappableCommand, _: &crate::keymap::ReverseKeymap| item.doc().into(),
+            ),
+        ];
+        let rmap_select = rmap.clone();
+        let picker = Picker::new(columns, primary, commands, rmap, move |cx, command, _action| {
+            let text = report(command, &rmap_select);
+            show_text_in_scratch(cx.editor, &text);
+        });
+        compositor.push(Box::new(overlaid(picker)));
+    }));
+}
+
+/// C-h f / C-h x / C-h a: describe / apropos a command — its doc + bindings.
+fn describe_command(cx: &mut Context) {
+    help_command_picker(cx, false, 0, help_report_full);
+}
+
+/// C-h w: where-is — pick a command, show the keys bound to it.
+fn where_is(cx: &mut Context) {
+    help_command_picker(cx, false, 0, help_report_bindings);
+}
+
+/// C-h k: describe-key — search bindings by key, show the command + its doc.
+fn describe_key(cx: &mut Context) {
+    help_command_picker(cx, true, 1, help_report_full);
+}
+
+/// C-h b: describe-bindings — list every key binding of the current mode.
+fn describe_bindings(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let rmap = compositor.find::<ui::EditorView>().unwrap().keymaps.map()[&cx.editor.mode]
+            .reverse_map();
+        let mut rows: Vec<(String, String)> = rmap
+            .iter()
+            .flat_map(|(name, binds)| {
+                let name = name.clone();
+                binds.iter().map(move |b| {
+                    (
+                        b.iter().map(|k| k.key_sequence_format()).collect::<String>(),
+                        name.clone(),
+                    )
+                })
+            })
+            .collect();
+        rows.sort();
+        let mut out = format!("Key bindings — {:?} mode\n\n", cx.editor.mode);
+        for (keys, name) in rows {
+            out.push_str(&format!("{keys:<18} {name}\n"));
+        }
+        show_text_in_scratch(cx.editor, &out);
+    }));
+}
+
+/// C-h C: describe-coding-system — the buffer's encoding and line ending.
+fn describe_coding_system(cx: &mut Context) {
+    let report = {
+        let doc = doc!(cx.editor);
+        format!(
+            "Coding system — {}\n\nencoding: {}\nline ending: {:?}\n",
+            doc.display_name(),
+            doc.encoding().name(),
+            doc.line_ending
+        )
+    };
+    show_text_in_scratch(cx.editor, &report);
+}
+
+/// C-h L: describe-language-environment — language + locale.
+fn describe_language_environment(cx: &mut Context) {
+    let report = {
+        let doc = doc!(cx.editor);
+        format!(
+            "Language environment\n\nlanguage: {}\nencoding: {}\nLANG: {}\nLC_ALL: {}\nLC_CTYPE: {}\n",
+            doc.language_name().unwrap_or("(none)"),
+            doc.encoding().name(),
+            std::env::var("LANG").unwrap_or_default(),
+            std::env::var("LC_ALL").unwrap_or_default(),
+            std::env::var("LC_CTYPE").unwrap_or_default(),
+        )
+    };
+    show_text_in_scratch(cx.editor, &report);
+}
+
+/// C-h s: describe-syntax — the buffer's language + tree-sitter status.
+fn describe_syntax(cx: &mut Context) {
+    let report = {
+        let doc = doc!(cx.editor);
+        format!(
+            "Syntax\n\nlanguage: {}\ntree-sitter: {}\n",
+            doc.language_name().unwrap_or("fundamental (none)"),
+            if doc.syntax().is_some() {
+                "active"
+            } else {
+                "not available for this buffer"
+            }
+        )
+    };
+    show_text_in_scratch(cx.editor, &report);
+}
+
+/// C-h l: view-lossage — the recently pressed keys.
+fn view_lossage(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let ev = compositor.find::<ui::EditorView>().unwrap();
+        let keys: String = ev
+            .recent_keys
+            .iter()
+            .map(|k| k.key_sequence_format())
+            .collect::<Vec<_>>()
+            .join(" ");
+        show_text_in_scratch(cx.editor, &format!("Recent keys (lossage)\n\n{keys}\n"));
+    }));
 }
 
 fn last_picker(cx: &mut Context) {
@@ -19357,7 +19559,14 @@ fn select_textobject_then(
         (" ", "... or any character acting as a pair"),
     ];
 
-    cx.editor.autoinfo = Some(Info::new(title, &help_text));
+    // The text-object hint menu is a which-key-style popup. Only show it under the global
+    // which-key policy (`which-key-global`, or the legacy `auto-info-leader-only =
+    // false`). In the default vim/spacemacs leader-only mode, `ci(` / `di"` / `ca`
+    // / `da` just wait for the object char with no popup — exactly like vim.
+    let cfg = cx.editor.config();
+    if cfg.which_key_global || !cfg.auto_info_leader_only {
+        cx.editor.autoinfo = Some(Info::new(title, &help_text));
+    }
 }
 
 static SURROUND_HELP_TEXT: [(&str, &str); 6] = [

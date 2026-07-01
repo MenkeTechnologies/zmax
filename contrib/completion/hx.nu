@@ -1,4 +1,4 @@
-# Completions for Helix: <https://github.com/helix-editor/helix>
+# Completions for zemacs
 #
 # NOTE: the `+N` syntax is not supported in Nushell (https://github.com/nushell/nushell/issues/13418)
 #       so it has not been specified here and will not be proposed in the autocompletion of Nushell.

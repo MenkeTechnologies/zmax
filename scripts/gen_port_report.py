@@ -176,7 +176,18 @@ def parse_keymap():
         sm = open(sm_path, encoding="utf-8").read()
     except OSError:
         sm = ""
+    # Applied in the same precedence order as spacemacs::default(): the generated
+    # CXCH_FULL fallbacks first, then the curated `*_prefix()` maps override them
+    # on collision (curated real bindings win; non-colliding fallbacks survive).
     overlay = {}
+    # 1. CXCH_FULL: (full-chord, submap-label, command) — the exhaustive map.
+    tbl2 = re.search(r"CXCH_FULL[^=]*=\s*&\[(.*?)\];", sm, re.S)
+    if tbl2:
+        for chord, cmd in re.findall(
+            r'\(\s*"([^"]+)"\s*,\s*"[^"]*"\s*,\s*"([^"]+)"\s*\)', tbl2.group(1)
+        ):
+            overlay[chord] = cmd
+    # 2. Curated C-x/C-c/C-h prefix maps override the fallbacks.
     for fm in re.finditer(r"fn\s+c[xch]_prefix\(\)", sm):
         km = sm.find("keymap!({", fm.end())
         if km == -1:
@@ -184,19 +195,13 @@ def parse_keymap():
         open_idx = km + len("keymap!({")
         end = _match_delim(sm, open_idx, "{", "}")
         _walk_keymap(sm[open_idx : end - 1], [], overlay)
+    # 3. CX_TYPABLE grafts under C-x.
     tbl = re.search(r"CX_TYPABLE[^=]*=\s*&\[(.*?)\];", sm, re.S)
     if tbl:
         for k2, cmd in re.findall(
             r'\(\s*"([^"]+)"\s*,\s*"[^"]*"\s*,\s*"(:?[^"]+)"\s*\)', tbl.group(1)
         ):
             overlay["C-x " + k2] = cmd.lstrip(":")
-    # CXCH_FULL: (full-chord, submap-label, command) — the exhaustive C-x/C-c/C-h map.
-    tbl2 = re.search(r"CXCH_FULL[^=]*=\s*&\[(.*?)\];", sm, re.S)
-    if tbl2:
-        for chord, cmd in re.findall(
-            r'\(\s*"([^"]+)"\s*,\s*"[^"]*"\s*,\s*"([^"]+)"\s*\)', tbl2.group(1)
-        ):
-            overlay[chord] = cmd
     for mode in ("normal", "select", "insert"):
         result[mode].update(overlay)
 

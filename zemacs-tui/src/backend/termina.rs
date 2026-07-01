@@ -419,7 +419,7 @@ impl Backend for TerminaBackend {
             decset!(BracketedPaste),
             decset!(FocusTracking),
             // Clear the buffer. `ClearAndEnableAlternateScreen` **should** do this but some
-            // things like mosh are buggy. See <https://github.com/helix-editor/helix/pull/1944>.
+            // things like mosh are buggy (upstream fix for terminals that don't clear).
             Csi::Edit(csi::Edit::EraseInDisplay(csi::EraseInDisplay::EraseDisplay)),
         )?;
         if let Some(color) = self.background_color {

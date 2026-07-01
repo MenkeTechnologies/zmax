@@ -1,5 +1,5 @@
 #compdef _hx hx
-# Zsh completion script for Helix editor
+# Zsh completion script for zemacs
 
 _hx() {
 	_arguments -C \

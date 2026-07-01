@@ -1,9 +1,9 @@
-; Concerto Language - Locals Queries (Helix)
+; Concerto Language - Locals Queries (zemacs)
 ; ============================================
-; Helix-specific local scope/definition/reference tracking. For use in
-; helix-editor/helix at runtime/queries/concerto/locals.scm
+; zemacs-specific local scope/definition/reference tracking. For use in
+; zemacs-editor/zemacs at runtime/queries/concerto/locals.scm
 ;
-; Helix uses the same @local.scope, @local.definition, and @local.reference
+; zemacs uses the same @local.scope, @local.definition, and @local.reference
 ; capture names as tree-sitter convention.
 
 ; Scopes

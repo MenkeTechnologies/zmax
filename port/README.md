@@ -2,7 +2,7 @@
 
 This directory holds the **port report** infrastructure: the instrument that
 measures how much of the Vim/Neovim + Emacs + Spacemacs + fzf.vim + JetBrains
-(IntelliJ IDEA) feature surface zemacs implements. zemacs starts from the Helix
+(IntelliJ IDEA) feature surface zemacs implements. zemacs starts from a
 modal core and is being built out toward the union of those editors; this report
 tracks that build-out.
 

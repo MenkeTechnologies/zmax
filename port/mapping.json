@@ -3103,7 +3103,7 @@
     "evidence": [
       "typable:cquit"
     ],
-    "note": "vim :cq[uit] -> helix :cquit"
+    "note": "vim :cq[uit] -> :cquit"
   },
   {
     "spec_id": "neovim.ex-command.colon_diffget",
@@ -3111,7 +3111,7 @@
     "evidence": [
       "typable:diffget"
     ],
-    "note": "vim :diffg[et] -> helix :diffget"
+    "note": "vim :diffg[et] -> :diffget"
   },
   {
     "spec_id": "neovim.ex-command.colon_earlier",
@@ -3119,7 +3119,7 @@
     "evidence": [
       "typable:earlier"
     ],
-    "note": "vim :ea[rlier] -> helix :earlier"
+    "note": "vim :ea[rlier] -> :earlier"
   },
   {
     "spec_id": "neovim.ex-command.colon_later",
@@ -3127,7 +3127,7 @@
     "evidence": [
       "typable:later"
     ],
-    "note": "vim :lat[er] -> helix :later"
+    "note": "vim :lat[er] -> :later"
   },
   {
     "spec_id": "neovim.ex-command.colon_redo",
@@ -3417,7 +3417,7 @@
     "evidence": [
       "key:normal:."
     ],
-    "note": "vim . repeat-last-change (helix last_insert replay): insert-class changes (i/a/o/c + text) work; pure operator+motion repeat (dd, dw) is approximate"
+    "note": "vim . repeat-last-change (last_insert replay): insert-class changes (i/a/o/c + text) work; pure operator+motion repeat (dd, dw) is approximate"
   },
   {
     "spec_id": "neovim.normal-mode.bang_lbrace_motion_rbrace_lbrace_filter_rbrace",
@@ -20533,7 +20533,7 @@
     "evidence": [
       "static:search"
     ],
-    "note": "Helix forward search uses regex patterns = isearch-forward-regexp."
+    "note": "Forward search uses regex patterns = isearch-forward-regexp."
   },
   {
     "spec_id": "emacs.command.isearch_backward_regexp",
@@ -20797,7 +20797,7 @@
     "evidence": [
       "static:move_prev_word_start"
     ],
-    "note": "Moves left by one word = left-word (Helix word semantics differ slightly)."
+    "note": "Moves left by one word = left-word (word semantics differ slightly)."
   },
   {
     "spec_id": "emacs.command.global_font_lock_mode",
@@ -20885,7 +20885,7 @@
     "evidence": [
       "static:search"
     ],
-    "note": "Helix/zemacs `search` is a regex search (forward); re-search-forward is regex forward search."
+    "note": "zemacs `search` is a regex search (forward); re-search-forward is regex forward search."
   },
   {
     "spec_id": "emacs.command.re_search_backward",
