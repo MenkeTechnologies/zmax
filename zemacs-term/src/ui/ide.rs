@@ -2012,6 +2012,28 @@ impl Ide {
             None
         };
 
+        // bottom drawer (PROBLEMS/RUN/GIT) — carved FIRST so it spans the FULL
+        // width below everything (like JetBrains), with its divider a clean
+        // full-width separator. The left column + editor are then carved from the
+        // remaining height, so the file tree stops above the drawer instead of
+        // running alongside it (which made the divider look like it bled across).
+        let bh = if self.fold_problems {
+            1
+        } else if self.bottom_zoom {
+            // maximize: leave a thin strip (toolbar + a few editor lines) on top
+            rest.height.saturating_sub(8).max(self.bottom_height)
+        } else {
+            self.bottom_height
+        };
+        if rest.height > bh + 5 {
+            self.problems_rect = Rect::new(rest.x, rest.y + rest.height - bh, rest.width, bh);
+            self.bottom_divider_y = rest.y + rest.height - bh - 1;
+            rest = Rect::new(rest.x, rest.y, rest.width, rest.height - bh - 1);
+        } else {
+            self.problems_rect = empty_rect();
+            self.bottom_divider_y = u16::MAX;
+        }
+
         // left column: project (top) + structure (bottom); drag the seam to resize, collapse to a rail
         if self.left_collapsed {
             self.left_rail_rect = Rect::new(rest.x, rest.y, 1, rest.height);
@@ -2067,24 +2089,6 @@ impl Ide {
             rest = Rect::new(rest.x, rest.y, rest.width - STRIPE_W, rest.height);
         } else {
             self.stripe_rect = empty_rect();
-        }
-
-        // bottom problems — a visible divider line above it is the resize handle (like the left seam)
-        let bh = if self.fold_problems {
-            1
-        } else if self.bottom_zoom {
-            // maximize: leave a thin strip (toolbar + a few editor lines) on top
-            rest.height.saturating_sub(8).max(self.bottom_height)
-        } else {
-            self.bottom_height
-        };
-        if rest.height > bh + 5 {
-            self.problems_rect = Rect::new(rest.x, rest.y + rest.height - bh, rest.width, bh);
-            self.bottom_divider_y = rest.y + rest.height - bh - 1;
-            rest = Rect::new(rest.x, rest.y, rest.width, rest.height - bh - 1);
-        } else {
-            self.problems_rect = empty_rect();
-            self.bottom_divider_y = u16::MAX;
         }
 
         // Two stacked top bars over the editor region: row 1 = open-file tabs
