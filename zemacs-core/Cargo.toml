@@ -1,6 +1,6 @@
 [package]
 name = "zemacs-core"
-description = "Zemacs editor core editing primitives"
+description = "Zemacs IDE core editing primitives"
 include = ["src/**/*", "README.md"]
 version.workspace = true
 authors.workspace = true

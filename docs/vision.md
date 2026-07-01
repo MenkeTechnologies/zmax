@@ -5,7 +5,7 @@
 > full power of a graphical IDE in the terminal, with the muscle memory of
 > **Spacemacs** and **JetBrains** already wired in.
 
-zemacs is a modal text editor in Rust, forked from
+zemacs is a modal IDE in Rust, forked from
 [Helix](https://github.com/helix-editor/helix) and built on its tree-sitter +
 LSP engine. Where Helix aims to be *one of* many good editors, zemacs aims at a
 single, opinionated target: **the most capable out-of-the-box terminal IDE you

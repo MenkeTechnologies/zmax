@@ -45,7 +45,7 @@ KB_BOOK = os.path.join(ROOT, "book", "src", "generated", "keybinding-report.md")
 KEYBIND_CATS = {
     "neovim": {"normal-mode", "visual-mode", "insert-mode", "cmdline-editing"},
     "emacs": {"keybinding"},
-    "spacemacs": {"keybinding"},
+    "spacemacs": {"keybinding", "emacs-prefix"},
     # The entire JetBrains default keymap is key-press surface (every action is a
     # shortcut), so include all of its categories via the "*" wildcard rather
     # than freezing a list that goes stale as new categories are cited.
@@ -165,6 +165,33 @@ def parse_keymap():
     ):
         chord, cmd = tm.group(1), tm.group(2).lstrip(":")
         result["normal"][chord] = cmd
+
+    # The shipped default preset is spacemacs = the vim base + the Emacs
+    # C-x / C-c / C-h prefixes overlaid on normal/select/insert (keymap/
+    # spacemacs.rs, applied by spacemacs::default()). Parse each `fn *_prefix()`
+    # keymap! body and the CX_TYPABLE graft table, then layer them onto all three
+    # modes so evidence like `key:insert:C-x C-f` resolves against what users get.
+    sm_path = os.path.join(ZEMACS_TERM, "keymap", "spacemacs.rs")
+    try:
+        sm = open(sm_path, encoding="utf-8").read()
+    except OSError:
+        sm = ""
+    overlay = {}
+    for fm in re.finditer(r"fn\s+c[xch]_prefix\(\)", sm):
+        km = sm.find("keymap!({", fm.end())
+        if km == -1:
+            continue
+        open_idx = km + len("keymap!({")
+        end = _match_delim(sm, open_idx, "{", "}")
+        _walk_keymap(sm[open_idx : end - 1], [], overlay)
+    tbl = re.search(r"CX_TYPABLE[^=]*=\s*&\[(.*?)\];", sm, re.S)
+    if tbl:
+        for k2, cmd in re.findall(
+            r'\(\s*"([^"]+)"\s*,\s*"[^"]*"\s*,\s*"(:?[^"]+)"\s*\)', tbl.group(1)
+        ):
+            overlay["C-x " + k2] = cmd.lstrip(":")
+    for mode in ("normal", "select", "insert"):
+        result[mode].update(overlay)
 
     # `.` dot-repeat is handled specially in EditorView (ui/editor.rs), not via a
     # keymap binding or a command, so detect that hardcoded handler directly.
@@ -395,14 +422,17 @@ def build():
         src = it["source"]
         cat = it["category"]
         status = "absent"
+        desc = it.get("desc", "")   # what the key does in the upstream editor
+        zmap = ""                    # what zemacs maps it to (mapping note / evidence)
         if sid in by_id and sid not in broken_ids:
-            status = by_id[sid][0]
+            status, ev, note = by_id[sid]
+            zmap = note or ", ".join(ev)
         agg[(src, cat)]["total"] += 1
         src_agg[src]["total"] += 1
         if status in ("ported", "partial"):
             agg[(src, cat)][status] += 1
             src_agg[src][status] += 1
-        rows.append((src, cat, it["name"], status, it.get("doc_ref", "")))
+        rows.append((src, cat, it["name"], status, it.get("doc_ref", ""), desc, zmap))
 
     total = len(items)
     ported = sum(1 for r in rows if r[3] == "ported")
@@ -476,27 +506,12 @@ STRYKE_STYLE = """  <style>
     .feature-card li code { font-size:10px; }
   </style>"""
 
-# Theme/CRT/Neon toggle + bar-fill animation, appended after the footer.
-STRYKE_SCRIPT = """  <script>
-    const html = document.documentElement;
-    const btnTheme = document.getElementById('btnTheme');
-    const btnCrt = document.getElementById('btnCrt');
-    const btnNeon = document.getElementById('btnNeon');
-    const crtH = document.getElementById('crtH');
-    const crtV = document.getElementById('crtV');
-    btnTheme?.addEventListener('click', () => {
-      html.setAttribute('data-theme', html.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
-    });
-    btnCrt?.addEventListener('click', () => {
-      btnCrt.classList.toggle('active');
-      const on = btnCrt.classList.contains('active');
-      if (crtH) crtH.style.display = on ? '' : 'none';
-      if (crtV) crtV.style.display = on ? '' : 'none';
-    });
-    btnNeon?.addEventListener('click', () => {
-      btnNeon.classList.toggle('active');
-      document.querySelector('.app')?.classList.toggle('neon-off');
-    });
+# hud-theme.js owns the Theme / CRT / Neon toggles AND the 8 color schemes
+# (cyberpunk, midnight, matrix, ember, arctic, crimson, toxic, vapor) — it wires
+# #btnTheme/#btnCrt/#btnNeon and auto-injects the color-scheme strip after the
+# header. We only keep the page-specific bar-fill grow animation inline.
+STRYKE_SCRIPT = """  <script src="hud-theme.js"></script>
+  <script>
     document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.bar-fill').forEach(bar => {
         const w = bar.style.width;
@@ -819,7 +834,7 @@ def write_html(stats, src_agg, agg, broken, rows):
     h.append('      <h2 class="tutorial-title"><span class="step-hash">~</span>ITEM DETAIL</h2>')
     h.append('      <p class="tutorial-subtitle">Per-category breakdown; ported and partial items first. Expand a category to see every item and its source reference.</p>')
     cats = defaultdict(list)
-    for src, cat, name, status, ref in rows:
+    for src, cat, name, status, ref, _desc, _zmap in rows:
         cats[(src, cat)].append((name, status, ref))
     order = {"ported": 0, "partial": 1, "absent": 2}
     for (src, cat) in sorted(cats):
@@ -856,14 +871,14 @@ def write_keybinding_report(rows):
     vim/neovim, emacs, spacemacs and the JetBrains default keymap), derived from
     the same resolved `rows`."""
     kb = [
-        (src, cat, name, status, ref)
-        for (src, cat, name, status, ref) in rows
+        (src, cat, name, status, ref, desc, zmap)
+        for (src, cat, name, status, ref, desc, zmap) in rows
         if src in KEYBIND_CATS
         and ("*" in KEYBIND_CATS[src] or cat in KEYBIND_CATS[src])
     ]
     src_agg = defaultdict(lambda: {"total": 0, "ported": 0, "partial": 0})
     cat_agg = defaultdict(lambda: {"total": 0, "ported": 0, "partial": 0})
-    for src, cat, _name, status, _ref in kb:
+    for src, cat, _name, status, _ref, _desc, _zmap in kb:
         for bucket in (src_agg[src], cat_agg[(src, cat)]):
             bucket["total"] += 1
             if status in ("ported", "partial"):
@@ -1003,9 +1018,12 @@ def write_keybinding_report(rows):
     h.append('      <hr class="section-rule">')
     h.append('      <h2 class="tutorial-title"><span class="step-hash">~</span>KEYBINDING DETAIL</h2>')
     h.append('      <p class="tutorial-subtitle">Every cited key, grouped by source and category; ported and partial first.</p>')
+    def esc_html(s):
+        return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
     cats = defaultdict(list)
-    for src, cat, name, status, ref in kb:
-        cats[(src, cat)].append((name, status, ref))
+    for src, cat, name, status, ref, desc, zmap in kb:
+        cats[(src, cat)].append((name, status, ref, desc, zmap))
     order = {"ported": 0, "partial": 1, "absent": 2}
     for (src, cat) in sorted(cats):
         lst = cats[(src, cat)]
@@ -1018,12 +1036,14 @@ def write_keybinding_report(rows):
             f'<span style="color:var(--accent);">{pa_} partial</span>)</span></summary>'
         )
         h.append('      <table class="file-table">')
-        h.append('        <thead><tr><th>Key</th><th>Status</th><th>Source ref</th></tr></thead>')
+        h.append('        <thead><tr><th>Key</th><th>Action (in editor)</th><th>&rarr; zemacs</th><th>Status</th><th>Source ref</th></tr></thead>')
         h.append('        <tbody>')
-        for name, status, ref in sorted(lst, key=lambda x: (order[x[1]], x[0])):
-            esc = name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        for name, status, ref, desc, zmap in sorted(lst, key=lambda x: (order[x[1]], x[0])):
+            zcell = esc_html(zmap) if zmap else '<span style="color:var(--text-muted);">&mdash;</span>'
             h.append(
-                f'          <tr><td>{esc}</td>'
+                f'          <tr><td>{esc_html(name)}</td>'
+                f'<td style="color:var(--text-dim);">{esc_html(desc)}</td>'
+                f'<td style="color:var(--accent-light);">{zcell}</td>'
                 f'<td style="color:{STATUS_COLOR[status]};">{status}</td>'
                 f'<td style="color:var(--text-muted);">{ref}</td></tr>'
             )

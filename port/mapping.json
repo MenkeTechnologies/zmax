@@ -21584,5 +21584,605 @@
       "typable:tabs"
     ],
     "note": "list tabpages and switch (picker)"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.m_x",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-x"
+    ],
+    "note": "M-x"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_a",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h a"
+    ],
+    "note": "command_palette"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h b"
+    ],
+    "note": "help"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h c"
+    ],
+    "note": "help"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_h",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h C-h"
+    ],
+    "note": "help"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h d"
+    ],
+    "note": "command_palette"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_e",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h e"
+    ],
+    "note": "help"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h f"
+    ],
+    "note": "command_palette"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_f_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h F"
+    ],
+    "note": "command_palette"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_h",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h h"
+    ],
+    "note": "help"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_i",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h i"
+    ],
+    "note": "info_search"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_k",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h k"
+    ],
+    "note": "help"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_k_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h K"
+    ],
+    "note": "help"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_l",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h l"
+    ],
+    "note": "help"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_l_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h L"
+    ],
+    "note": "layer_search"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_m",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h m"
+    ],
+    "note": "describe_current_modes"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_o",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h o"
+    ],
+    "note": "command_palette"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_p",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h p"
+    ],
+    "note": "package_search"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_p_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h P"
+    ],
+    "note": "package_search"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h S"
+    ],
+    "note": "man_page_search"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_s_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h s"
+    ],
+    "note": "help"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_t",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h t"
+    ],
+    "note": "help"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_v",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h v"
+    ],
+    "note": "config_variable_search"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_w",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h w"
+    ],
+    "note": "help"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_x",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h x"
+    ],
+    "note": "command_palette"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_0",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 0"
+    ],
+    "note": "wclose"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 1"
+    ],
+    "note": "wonly"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_2",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 2"
+    ],
+    "note": "hsplit"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_3",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 3"
+    ],
+    "note": "vsplit"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_dot",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 4 ."
+    ],
+    "note": "goto_definition"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_0",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 4 0"
+    ],
+    "note": "wclose"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 4 b"
+    ],
+    "note": "buffer_picker"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 4 f"
+    ],
+    "note": "goto_file"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_eq",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x ="
+    ],
+    "note": "file_info"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_a_g",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x a g"
+    ],
+    "note": "define_abbrev"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x b"
+    ],
+    "note": "buffer_picker"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_semi",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-;"
+    ],
+    "note": "toggle_comments"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-b"
+    ],
+    "note": "buffer_picker"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-c"
+    ],
+    "note": "write-quit-all"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-d"
+    ],
+    "note": "file_picker_in_current_directory"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-f"
+    ],
+    "note": "file_picker"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_j",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-j"
+    ],
+    "note": "file_picker_in_current_buffer_directory"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_l",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-l"
+    ],
+    "note": "switch_to_lowercase"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_q",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-q"
+    ],
+    "note": "toggle_readonly"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-r"
+    ],
+    "note": "file_picker"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-s"
+    ],
+    "note": "write"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_u",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-u"
+    ],
+    "note": "switch_to_uppercase"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_v",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-v"
+    ],
+    "note": "file_picker"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_w",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-w"
+    ],
+    "note": "write"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_x",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-x"
+    ],
+    "note": "flip_selections"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x d"
+    ],
+    "note": "file_picker_in_current_directory"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_h",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x h"
+    ],
+    "note": "select_all"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_k",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x k"
+    ],
+    "note": "buffer-close"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_n_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x n d"
+    ],
+    "note": "narrow_to_function"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_n_n",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x n n"
+    ],
+    "note": "narrow_to_region"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_n_p",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x n p"
+    ],
+    "note": "narrow_to_page"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_n_w",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x n w"
+    ],
+    "note": "widen"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_o",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x o"
+    ],
+    "note": "rotate_view"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_plus",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r +"
+    ],
+    "note": "increment_register"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r b"
+    ],
+    "note": "bookmark_jump"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r c"
+    ],
+    "note": "clear_rectangle"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r d"
+    ],
+    "note": "delete_rectangle"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_i",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r i"
+    ],
+    "note": "emacs_insert_register"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_j",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r j"
+    ],
+    "note": "jump_to_register"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_k",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r k"
+    ],
+    "note": "kill_rectangle"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_l",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r l"
+    ],
+    "note": "bookmark_jump"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_m",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r m"
+    ],
+    "note": "bookmark_set"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_n_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r n"
+    ],
+    "note": "number_to_register"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_spc",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r space"
+    ],
+    "note": "point_to_register"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_y",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r y"
+    ],
+    "note": "yank_rectangle"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x s"
+    ],
+    "note": "write-all"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_tab",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x tab"
+    ],
+    "note": "indent"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_u",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x u"
+    ],
+    "note": "undo"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_spc",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x space"
+    ],
+    "note": "visual_block_mode"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_apostrophe",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x '"
+    ],
+    "note": "expand_abbrev"
   }
 ]

@@ -8990,5 +8990,29 @@
     "name": "Z (Dired)",
     "desc": "Operating on Files",
     "doc_ref": "https://www.gnu.org/software/emacs/manual/html_node/emacs/Operating-on-Files.html#index-Z-_0028Dired_0029"
+  },
+  {
+    "id": "emacs.keybinding.c_x_spc",
+    "source": "emacs",
+    "category": "keybinding",
+    "name": "C-x SPC",
+    "desc": "rectangle-mark-mode — toggle a rectangular region",
+    "doc_ref": "https://www.gnu.org/software/emacs/manual/html_node/emacs/Rectangles.html"
+  },
+  {
+    "id": "emacs.keybinding.c_x_apostrophe",
+    "source": "emacs",
+    "category": "keybinding",
+    "name": "C-x '",
+    "desc": "expand-abbrev — expand the abbrev before point",
+    "doc_ref": "https://www.gnu.org/software/emacs/manual/html_node/emacs/Expanding-Abbrevs.html"
+  },
+  {
+    "id": "emacs.keybinding.c_x_asterisk",
+    "source": "emacs",
+    "category": "keybinding",
+    "name": "C-x *",
+    "desc": "calc-dispatch — Calc calculator dispatch prefix",
+    "doc_ref": "https://www.gnu.org/software/emacs/manual/html_node/calc/Starting-Calc.html"
   }
 ]

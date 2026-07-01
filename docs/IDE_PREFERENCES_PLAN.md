@@ -2,7 +2,7 @@
 
 ## Context
 
-zemacs is a Helix/ratatui TUI editor that already has an IDE shell (project tree,
+zemacs is a Helix/ratatui TUI IDE that already has an IDE shell (project tree,
 structure, problems, run window, git, minimap, toolbar) and — added this session —
 a **Run/Debug Configurations** manager and a **Settings** page, both as ratatui
 modal `Component`s with full mouse support. The goal is to grow this into a "full

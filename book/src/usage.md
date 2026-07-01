@@ -9,7 +9,7 @@ can be accessed via the command `hx --tutor` or `:tutor`.
 
 ## Modes
 
-Zemacs is a modal editor, meaning it has different modes for different tasks. The main modes are:
+Zemacs is a modal IDE, meaning it has different modes for different tasks. The main modes are:
 
 * [Normal mode](./keymap.md#normal-mode): For navigation and editing commands. This is the default mode.
 * [Insert mode](./keymap.md#insert-mode): For typing text directly into the document. Access by typing `i` in normal mode.

@@ -1,6 +1,6 @@
 [package]
 name = "zemacs-term"
-description = "A post-modern text editor."
+description = "A post-modern IDE."
 include = ["src/**/*", "README.md"]
 default-run = "zemacs"
 version.workspace = true
