@@ -141,7 +141,7 @@ pub fn clipboard() -> std::io::Result<()> {
                 "For troubleshooting system clipboard issues, refer".red()
             )?;
             writeln!(stdout, "    {}",
-                "https://github.com/helix-editor/helix/wiki/Troubleshooting#copypaste-fromto-system-clipboard-not-working"
+                "https://github.com/MenkeTechnologies/zemacs"
             .red().underlined())?;
         }
         name => writeln!(stdout, "System clipboard provider: {}", name)?,

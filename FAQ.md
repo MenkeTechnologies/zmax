@@ -4,20 +4,17 @@ Frequently asked questions about zemacs. Open this any time with `SPC h f`.
 
 ## What is zemacs?
 
-A modal text editor written in Rust, forked from [Helix](https://github.com/helix-editor/helix).
-It runs on the Helix engine — tree-sitter syntax, LSP, multiple selections — but
-targets **vim/emacs semantics** rather than Helix's selection-first model. The
-default keymap is vim (operator-pending edits like `dd`, `dw`, `cw`, `yy` are
-emulated on the engine), with emacs- and Spacemacs-style functionality layered
-on top.
+A modal IDE written in Rust. It ships tree-sitter syntax, LSP, and multiple
+selections, and targets **vim/emacs semantics**. The default keymap is vim
+(operator-pending edits like `dd`, `dw`, `cw`, `yy` are emulated on the engine),
+with emacs- and Spacemacs-style functionality layered on top.
 
-## How is it different from Helix?
+## What makes zemacs distinct?
 
-The keys you press are the keys vim binds, not Helix's. On top of vim, zemacs
-adds an emacs `C-` readline layer and a Spacemacs `SPC` leader tree, plus
-features Helix doesn't ship: embedded scripting, a REPL, an org-mode, a magit-
-style git UI, a hex editor, an integrated terminal, true buffer narrowing, and
-more (see "What's built in?").
+The keys you press are the keys vim binds. On top of vim, zemacs adds an emacs
+`C-` readline layer and a Spacemacs `SPC` leader tree, plus embedded scripting,
+a REPL, an org-mode, a magit-style git UI, a hex editor, an integrated terminal,
+true buffer narrowing, and more (see "What's built in?").
 
 ## Which keybindings can I use — vim, emacs, or Spacemacs?
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env fish
-# Fish completion script for Helix editor
+# Fish completion script for zemacs
 
 complete -c hx -s h -l help -d "Prints help information"
 complete -c hx -l strict -d "Bail on error for commands that can fail"

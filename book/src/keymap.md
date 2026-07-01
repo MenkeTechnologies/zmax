@@ -25,7 +25,7 @@
 
 > 💡 Mappings marked (**TS**) require a tree-sitter grammar for the file type.
 
-> ⚠️ Some terminals' default key mappings conflict with Helix's. If any of the mappings described on this page do not work as expected, check your terminal's mappings to ensure they do not conflict. See the [wiki](https://github.com/helix-editor/helix/wiki/Terminal-Support) for known conflicts.
+> ⚠️ Some terminals' default key mappings conflict with zemacs's. If any of the mappings described on this page do not work as expected, check your terminal's mappings to ensure they do not conflict. See the [wiki](https://github.com/MenkeTechnologies/zemacs/wiki/Terminal-Support) for known conflicts.
 
 ## Normal mode
 
@@ -182,7 +182,7 @@ These sub-modes are accessible from normal mode and typically switch back to nor
 | `Space`  | Enter [space mode](#space-mode)                    | N/A            |
 
 These modes (except command mode) can be configured by
-[remapping keys](https://docs.helix-editor.com/remapping.html#minor-modes).
+[remapping keys](./remapping.md#minor-modes).
 
 #### View mode
 

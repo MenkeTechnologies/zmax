@@ -1,6 +1,6 @@
-; Concerto Language - Syntax Highlighting Queries (Helix)
+; Concerto Language - Syntax Highlighting Queries (zemacs)
 ; =======================================================
-; Helix-specific capture names. For use in helix-editor/helix at
+; zemacs-specific capture names. For use in zemacs-editor/zemacs at
 ; runtime/queries/concerto/highlights.scm
 ;
 ; Precedence: later patterns override earlier ones (last match wins).

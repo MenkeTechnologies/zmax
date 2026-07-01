@@ -1,6 +1,6 @@
 //! Manual code folds — the vim `zf`/`za`/`zo`/`zc`/`zR`/`zM` family.
 //!
-//! zemacs runs on the Helix engine, which renders the rope line by line and has
+//! zemacs renders the rope line by line and has
 //! no native fold concept. A *closed* fold hides the lines after its first line
 //! from rendering and from line-wise cursor motion; the first line stays visible
 //! (vim shows the fold marker there). Folds are manual (created with `zf` over a

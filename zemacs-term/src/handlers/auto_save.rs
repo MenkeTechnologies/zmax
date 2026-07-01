@@ -61,8 +61,8 @@ impl zemacs_event::AsyncHook for AutoSaveHandler {
 ///
 /// Unlike the `:write-all` command path, this does **not** commit the
 /// in-flight insert-mode changeset to history, so autosaving while typing
-/// never fragments the undo history (the original reason Helix deferred
-/// autosave until leaving insert mode). It also skips formatting / code
+/// never fragments the undo history (the original reason autosave is
+/// deferred until leaving insert mode). It also skips formatting / code
 /// actions so the cursor and buffer are never disturbed mid-edit.
 fn save_changed_docs(editor: &mut Editor) {
     let to_save: Vec<DocumentId> = editor

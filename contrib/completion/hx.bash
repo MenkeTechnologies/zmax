@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bash completion script for Helix editor
+# Bash completion script for zemacs
 
 _hx() {
     local cur prev languages

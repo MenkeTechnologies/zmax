@@ -1,12 +1,12 @@
 # wolf-alabaster-light.toml
 #
 # Author: Wolf <wolf@zv.cx>
-# Project: https://github.com/wolf/alabaster-for-helix
-# Download: https://raw.githubusercontent.com/wolf/alabaster-for-helix/main/helix/dot-config/helix/themes/wolf-alabaster-light.toml
+# Project: https://github.com/wolf/alabaster-for-zemacs
+# Download: https://raw.githubusercontent.com/wolf/alabaster-for-zemacs/main/zemacs/dot-config/zemacs/themes/wolf-alabaster-light.toml
 #
-# This is a light-background theme especically for the Helix editor.
+# This is a light-background theme especically for the zemacs editor.
 #
-# The most important part here is the syntax stuff, but the theme includes UI stuff specifically for Helix, as well.
+# The most important part here is the syntax stuff, but the theme includes UI stuff specifically for zemacs, as well.
 #
 # What I care about is:
 #   * Readable syntax, no matter the language

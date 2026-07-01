@@ -50,7 +50,7 @@ keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "emacs"
 | --- | --- | --- |
 | `spacemacs` *(default)* | Normal | vim/evil keys + the `SPC` leader **and** the Emacs `C-x` prefix; both open a which-key popup. |
 | `vim` | Normal | pure vim — no `SPC` leader and no which-key popup; `C-x` is `decrement`. |
-| `helix` | Normal | the original Helix selection-first keymap with its `SPC` leader. |
+| `helix` | Normal | the original selection-first keymap with its `SPC` leader. |
 | `emacs` | Insert | modeless Emacs bindings (`C-x`, `C-c`, `M-x`, …). |
 
 `decrement` per line is on `g C-x` in every preset. Any `[keys.*]` overrides you

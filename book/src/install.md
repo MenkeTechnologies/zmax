@@ -9,12 +9,12 @@ Note that:
 
 - To take full advantage of Zemacs, install the language servers for your
   preferred programming languages. See the
-  [wiki](https://github.com/helix-editor/helix/wiki/Language-Server-Configurations)
+  [wiki](https://github.com/MenkeTechnologies/zemacs/wiki/Language-Server-Configurations)
   for instructions.
 
 ## Pre-built binaries
 
-Download pre-built binaries from the [GitHub Releases page](https://github.com/helix-editor/helix/releases).
+Download pre-built binaries from the [GitHub Releases page](https://github.com/MenkeTechnologies/zemacs/releases).
 The tarball contents include an `hx` binary and a `runtime` directory.
 To set up Zemacs:
 

@@ -7,7 +7,7 @@ pub mod vim;
 pub use crate::commands::MappableCommand;
 // zemacs ships the spacemacs keymap as the default keymap that `Config` loads:
 // vim/evil keys + the `SPC` leader + the Emacs `C-x` prefix. The pure-vim base
-// is `vim::default`, and the Helix selection-first keymap remains available as
+// is `vim::default`, and the selection-first keymap remains available as
 // `default::default` (module path) for reference, but neither is the default.
 pub use spacemacs::default;
 

@@ -11,6 +11,6 @@ Languages][adding-languages] guide for more language configuration information.
 
 {{#include ./generated/lang-support.md}}
 
-[lsp-config-wiki]: https://github.com/helix-editor/helix/wiki/Language-Server-Configurations
+[lsp-config-wiki]: https://github.com/MenkeTechnologies/zemacs/wiki/Language-Server-Configurations
 [lang-config]: ./languages.md
 [adding-languages]: ./guides/adding_languages.md

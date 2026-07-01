@@ -180,7 +180,7 @@ pub fn show_signature_help(
     // If the signature help invocation is automatic, don't show it outside of Insert Mode:
     // it very probably means the server was a little slow to respond and the user has
     // already moved on to something else, making a signature help popup will just be an
-    // annoyance, see https://github.com/helix-editor/helix/issues/3112
+    // annoyance (upstream fix: suppress auto signature-help outside insert mode)
     // For the most part this should not be needed as the request gets canceled automatically now
     // but it's technically possible for the mode change to just preempt this callback so better safe than sorry
     if invoked == SignatureHelpInvoked::Automatic && editor.mode != Mode::Insert {

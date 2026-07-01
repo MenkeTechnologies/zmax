@@ -37,7 +37,7 @@ If you are running a system older than Debian 13, follow the steps for
 
 ### Ubuntu/Mint
 
-Install the Debian package [from the release page](https://github.com/helix-editor/helix/releases/latest).
+Install the Debian package [from the release page](https://github.com/MenkeTechnologies/zemacs/releases/latest).
 
 If you are running a system older than Ubuntu 22.04, Mint 21, or Debian 12, you can build the `.deb` file locally
 [from source](./building-from-source.md#building-the-debian-package).
@@ -84,11 +84,11 @@ If you are using a version of Nix without flakes enabled,
 
 ### Flatpak
 
-Zemacs is available on [Flathub](https://flathub.org/en-GB/apps/com.helix_editor.Zemacs):
+Zemacs is available on [Flathub](https://flathub.org/en-GB/apps/com.menketechnologies.Zemacs):
 
 ```sh
-flatpak install flathub com.helix_editor.Zemacs
-flatpak run com.helix_editor.Zemacs
+flatpak install flathub com.menketechnologies.Zemacs
+flatpak run com.menketechnologies.Zemacs
 ```
 
 ### Snap
@@ -104,7 +104,7 @@ This will install Zemacs as both `/snap/bin/zemacs` and `/snap/bin/hx`, so make 
 ### AppImage
 
 Install Zemacs using the Linux [AppImage](https://appimage.org/) format.
-Download the official Helix AppImage from the [latest releases](https://github.com/helix-editor/helix/releases/latest) page.
+Download the official Zemacs AppImage from the [latest releases](https://github.com/MenkeTechnologies/zemacs/releases/latest) page.
 
 ```sh
 chmod +x zemacs-*.AppImage # change permission for executable mode

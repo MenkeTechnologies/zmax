@@ -20,14 +20,14 @@
     pkgsFor = eachSystem (system:
       import nixpkgs {
         localSystem.system = system;
-        overlays = [(import rust-overlay) self.overlays.helix];
+        overlays = [(import rust-overlay) self.overlays.zemacs];
       });
     gitRev = self.rev or self.dirtyRev or null;
   in {
     packages = eachSystem (system: {
-      inherit (pkgsFor.${system}) helix;
+      inherit (pkgsFor.${system}) zemacs;
       /*
-      The default Helix build. Uses the latest stable Rust toolchain, and unstable
+      The default Zemacs build. Uses the latest stable Rust toolchain, and unstable
       nixpkgs.
 
       The build inputs can be overridden with the following:
@@ -38,18 +38,18 @@
 
       packages.${system}.default.overrideAttrs { buildType = "debug"; };
       */
-      default = self.packages.${system}.helix;
+      default = self.packages.${system}.zemacs;
     });
     checks =
       lib.mapAttrs (system: pkgs: let
-        # Get Helix's MSRV toolchain to build with by default.
+        # Get Zemacs's MSRV toolchain to build with by default.
         msrvToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
         msrvPlatform = pkgs.makeRustPlatform {
           cargo = msrvToolchain;
           rustc = msrvToolchain;
         };
       in {
-        helix = self.packages.${system}.helix.override {
+        zemacs = self.packages.${system}.zemacs.override {
           rustPlatform = msrvPlatform;
         };
       })
@@ -64,7 +64,7 @@
         in
           pkgs.mkShell {
             inputsFrom = [
-              (self.checks.${system}.helix.override {
+              (self.checks.${system}.zemacs.override {
                 includeGrammarIf = _: false;
               })
             ];
@@ -86,15 +86,11 @@
       pkgsFor;
 
     overlays = {
-      helix = final: prev: {
-        helix = final.callPackage ./default.nix {inherit gitRev;};
+      zemacs = final: prev: {
+        zemacs = final.callPackage ./default.nix {inherit gitRev;};
       };
 
-      default = self.overlays.helix;
+      default = self.overlays.zemacs;
     };
-  };
-  nixConfig = {
-    extra-substituters = ["https://helix.cachix.org"];
-    extra-trusted-public-keys = ["helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="];
   };
 }

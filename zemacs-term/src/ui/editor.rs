@@ -47,6 +47,8 @@ pub struct EditorView {
     pub keymaps: Keymaps,
     on_next_key: Option<(OnKeyCallback, OnKeyCallbackKind)>,
     pseudo_pending: Vec<KeyEvent>,
+    /// Ring of the most recently pressed keys, for `view-lossage` (C-h l).
+    pub recent_keys: std::collections::VecDeque<KeyEvent>,
     pub(crate) last_insert: (commands::MappableCommand, Vec<InsertEvent>),
     pub(crate) completion: Option<Completion>,
     spinners: ProgressSpinners,
@@ -110,6 +112,7 @@ impl EditorView {
             keymaps,
             on_next_key: None,
             pseudo_pending: Vec::new(),
+            recent_keys: std::collections::VecDeque::new(),
             last_insert: (commands::MappableCommand::normal_mode, Vec::new()),
             completion: None,
             spinners: ProgressSpinners::default(),
@@ -1589,6 +1592,11 @@ impl EditorView {
         event: KeyEvent,
     ) -> Option<KeymapResult> {
         let mut last_mode = mode;
+        // Record the key for `view-lossage` (C-h l), keeping a bounded ring.
+        self.recent_keys.push_back(event);
+        if self.recent_keys.len() > 100 {
+            self.recent_keys.pop_front();
+        }
         self.pseudo_pending.extend(self.keymaps.pending());
         let key_result = self.keymaps.get(mode, event);
         cxt.editor.autoinfo = self.keymaps.sticky().map(|node| node.infobox());
@@ -1632,7 +1640,7 @@ impl EditorView {
                 // `auto-info-leader-only = false` (kept working for old configs).
                 let global = config.which_key_global || !config.auto_info_leader_only;
                 let show = if global {
-                    // Helix-style global which-key: every pending prefix pops up.
+                    // Global which-key: every pending prefix pops up.
                     true
                 } else {
                     // Default: only the deliberate global prefixes get a popup —

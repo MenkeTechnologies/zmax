@@ -1,10 +1,10 @@
-; Concerto Language - Text Object Queries (Helix)
+; Concerto Language - Text Object Queries (zemacs)
 ; =================================================
-; Helix-specific text objects. For use in helix-editor/helix at
+; zemacs-specific text objects. For use in zemacs-editor/zemacs at
 ; runtime/queries/concerto/textobjects.scm
 ;
-; Helix uses @<object>.around / @<object>.inside suffixes.
-; See: https://docs.helix-editor.com/guides/textobject.html
+; zemacs uses @<object>.around / @<object>.inside suffixes.
+; See: https://docs.zemacs-editor.com/guides/textobject.html
 
 ; ---------------------------------------------------------------------------
 ; Classes / declarations

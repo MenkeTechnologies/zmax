@@ -67,4 +67,4 @@ the common variants. As with definitions, `@name` captures the identifier:
 repository.
 
 [Code Navigation Systems]: https://tree-sitter.github.io/tree-sitter/4-code-navigation.html
-[example-queries]: https://github.com/search?q=repo%3Ahelix-editor%2Fhelix+path%3A%2A%2A/tags.scm&type=Code
+[example-queries]: https://github.com/search?q=repo%3AMenkeTechnologies%2Fzemacs+path%3A%2A%2A/tags.scm&type=Code

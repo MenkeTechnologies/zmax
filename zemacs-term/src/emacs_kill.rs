@@ -1,6 +1,6 @@
 //! Emacs kill-ring with `yank-pop` cycling.
 //!
-//! zemacs/Helix store the latest kill in a register, which overwrites on every
+//! zemacs stores the latest kill in a register, which overwrites on every
 //! kill — so there is no *ring*. This module keeps a bounded ring of recent
 //! kills (most-recent first) plus the state `yank-pop` needs to cycle.
 //!
