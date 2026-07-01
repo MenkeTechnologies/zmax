@@ -10759,6 +10759,31 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     }
     let tokens: Vec<String> = (0..args.len()).map(|i| args[i].to_string()).collect();
 
+    // vim `:set` with no arguments lists the options — show the current editor
+    // config as `key = value` lines in a scratch buffer.
+    if tokens.is_empty() {
+        let cfg = serde_json::json!(&cx.editor.config().deref());
+        fn flatten(prefix: &str, v: &Value, out: &mut String) {
+            match v {
+                Value::Object(m) => {
+                    for (k, vv) in m {
+                        let key = if prefix.is_empty() {
+                            k.clone()
+                        } else {
+                            format!("{prefix}.{k}")
+                        };
+                        flatten(&key, vv, out);
+                    }
+                }
+                other => out.push_str(&format!("{prefix} = {other}\n")),
+            }
+        }
+        let mut out = String::from("--- options (:set) ---\n\n");
+        flatten("", &cfg, &mut out);
+        super::show_text_in_scratch(cx.editor, &out);
+        return Ok(());
+    }
+
     // Native two-token form `:set <zemacs-key> <value>` when the key resolves.
     if tokens.len() == 2 {
         let cfg = serde_json::json!(&cx.editor.config().deref());
@@ -10791,6 +10816,26 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     Ok(())
 }
 
+/// vim `:let {name} = {expr}` — evaluate the assignment in the embedded vimlrs
+/// interpreter, so the variable persists (readable by `:echo`, sourced plugins,
+/// `&opt` bridges, etc.). Bare `:let` lists variables (vimlrs handles it).
+fn vim_let(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let src = format!("let {}", args.join(" "));
+    match crate::commands::scripting::eval_viml(cx, src.trim_end()) {
+        Ok(out) => {
+            let out = out.trim();
+            if !out.is_empty() {
+                cx.editor.set_status(out.to_string());
+            }
+            Ok(())
+        }
+        Err(e) => Err(anyhow!("{e}")),
+    }
+}
+
 /// Queue an external-`fzf` request (fzf.vim-style). The terminal layer hands the
 /// TTY to `fzf` with `candidates` on stdin, then runs `sink` (a zemacs `:`
 /// command with `{}` = the picked line). Empty `candidates` lets `fzf` use its
@@ -10801,20 +10846,22 @@ fn queue_fzf(
     sink: &str,
     candidates: Vec<String>,
     options: Vec<String>,
+    preview: bool,
 ) {
     cx.editor.pending_fzf = Some(zemacs_view::editor::FzfRequest {
         candidates,
         prompt: prompt.to_string(),
         sink: sink.to_string(),
         options,
+        preview,
     });
 }
 
 /// fzf.vim `:Files` — fuzzy-find files (fzf walks the tree via its default
-/// command) and open the pick.
+/// command) and open the pick, with a preview pane.
 fn fzf_files(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
-        queue_fzf(cx, "Files", "open {}", Vec::new(), Vec::new());
+        queue_fzf(cx, "Files", "open {}", Vec::new(), Vec::new(), true);
     }
     Ok(())
 }
@@ -10822,7 +10869,7 @@ fn fzf_files(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
 /// fzf.vim `:Colors` — fuzzy-pick a colorscheme, applied live.
 fn fzf_colors(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
-        queue_fzf(cx, "Colors", "theme {}", all_theme_names(), vec!["+m".into()]);
+        queue_fzf(cx, "Colors", "theme {}", all_theme_names(), vec!["+m".into()], false);
     }
     Ok(())
 }
@@ -10835,7 +10882,7 @@ fn fzf_buffers(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
             .documents()
             .filter_map(|d| d.path().map(|p| p.to_string_lossy().into_owned()))
             .collect();
-        queue_fzf(cx, "Buffers", "buffer {}", cands, Vec::new());
+        queue_fzf(cx, "Buffers", "buffer {}", cands, Vec::new(), true);
     }
     Ok(())
 }
@@ -10846,7 +10893,7 @@ fn fzf_commands(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
         let mut cands: Vec<String> =
             TYPABLE_COMMAND_LIST.iter().map(|c| c.name.to_string()).collect();
         cands.sort();
-        queue_fzf(cx, "Commands", "{}", cands, vec!["+m".into()]);
+        queue_fzf(cx, "Commands", "{}", cands, vec!["+m".into()], false);
     }
     Ok(())
 }
@@ -18022,11 +18069,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "set",
         aliases: &["se"],
-        doc: "Set options with vim syntax (:set nu, :set nowrap, :set tw=80, :set cursorline) or native :set key value.",
+        doc: "Set options with vim syntax (:set nu, :set nowrap, :set tw=80); no args lists all options.",
         fun: vim_set,
         completer: CommandCompleter::positional(&[completers::setting]),
         signature: Signature {
-            positionals: (1, None),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -18087,6 +18134,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_resize,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "let",
+        aliases: &[],
+        doc: "Set a vimscript variable via the embedded interpreter (:let x = 42).",
+        fun: vim_let,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     // fzf.vim commands — shell out to the external `fzf` binary.
     TypableCommand {

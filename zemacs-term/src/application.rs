@@ -1504,10 +1504,30 @@ impl Application {
         use std::io::Write;
         use std::process::{Command, Stdio};
 
+        // Configurable popup size/layout + preview pane (applied on top of the
+        // user's own $FZF_DEFAULT_OPTS, which fzf reads itself).
+        let (cfg_opts, preview_cmd, preview_win) = {
+            let c = self.editor.config();
+            (
+                c.fzf.options.clone(),
+                c.fzf.preview.clone(),
+                c.fzf.preview_window.clone(),
+            )
+        };
+
         if self.restore_term().is_err() {
             return None;
         }
         let mut args: Vec<String> = vec!["--prompt".into(), format!("{}> ", req.prompt)];
+        args.extend(cfg_opts);
+        if req.preview && !preview_cmd.is_empty() {
+            args.push("--preview".into());
+            args.push(preview_cmd);
+            if !preview_win.is_empty() {
+                args.push("--preview-window".into());
+                args.push(preview_win);
+            }
+        }
         args.extend(req.options.iter().cloned());
 
         let result = (|| -> std::io::Result<Option<String>> {

@@ -394,6 +394,9 @@ pub struct Config {
     /// regardless of `which_key_global` / `auto_info_leader_only` / `auto_info_exclude`
     /// — other autoinfo (mark/register/help prompts) still works. Defaults to true.
     pub which_key: bool,
+    /// External-`fzf` integration (fzf.vim-style `:Files`/`:Colors`/… commands):
+    /// popup size/layout options, and the preview-pane command.
+    pub fzf: FzfConfig,
     /// When true, vim-sneak overrides `s`/`S` (jump to a two-character sequence). When false,
     /// `s`/`S` keep vim's substitute-char / substitute-line. Defaults to true.
     pub vim_sneak: bool,
@@ -1308,6 +1311,7 @@ impl Default for Config {
             auto_info_leader_only: true,
             which_key_global: false,
             which_key: true,
+            fzf: FzfConfig::default(),
             vim_sneak: true,
             file_picker: FilePickerConfig::default(),
             file_explorer: FileExplorerConfig::default(),
@@ -1470,6 +1474,39 @@ pub struct FzfRequest {
     pub prompt: String,
     pub sink: String,
     pub options: Vec<String>,
+    /// Show a preview pane (the config's `fzf.preview` command over the picked
+    /// line). Set for file-listing commands (:Files/:Buffers).
+    pub preview: bool,
+}
+
+/// Configuration for the external-`fzf` integration (fzf.vim-style commands).
+/// `fzf` also honors the user's `$FZF_DEFAULT_OPTS`; these apply on top.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case", default, deny_unknown_fields)]
+pub struct FzfConfig {
+    /// Extra `fzf` CLI flags added to every fzf.vim-style command — popup size
+    /// (`--height=95%`), layout, border, etc.
+    pub options: Vec<String>,
+    /// Preview command for file-listing commands; `{}` is the picked file.
+    /// Empty disables the preview pane.
+    pub preview: String,
+    /// `fzf` `--preview-window` spec (position/size of the preview pane).
+    pub preview_window: String,
+}
+
+impl Default for FzfConfig {
+    fn default() -> Self {
+        Self {
+            options: vec![
+                "--height=95%".into(),
+                "--layout=reverse".into(),
+                "--border=rounded".into(),
+                "--info=inline".into(),
+            ],
+            preview: "bat --style=numbers --color=always -- {} 2>/dev/null || cat -- {}".into(),
+            preview_window: "right:55%".into(),
+        }
+    }
 }
 
 pub struct Editor {
