@@ -12,6 +12,8 @@ use zemacs_view::info::Info;
 const MAX_ROWS: usize = 16;
 /// Widest a single `KEY : description` column is allowed to grow.
 const COL_CAP: usize = 48;
+/// Max columns the which-key grid fills across the width (Spacemacs uses up to 8).
+const MAX_COLS: usize = 8;
 /// Spaces between columns.
 const SEP: usize = 3;
 
@@ -33,9 +35,10 @@ fn grid(
     let widest = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
     let budget = max_width.saturating_sub(6); // borders + margin
     let cols_fit = (budget / (widest.min(COL_CAP).max(8) + SEP)).max(1);
-    // Use the fewest columns that still fit vertically, capped by what fits
-    // horizontally; anything beyond that scrolls.
-    let cols = n.div_ceil(max_rows.max(1)).clamp(1, cols_fit).min(n);
+    // Use as many columns as fit the full width (Spacemacs' which-key fills the
+    // window — up to MAX_COLS), so the grid is wide and short; only overflow
+    // scrolls.
+    let cols = cols_fit.min(MAX_COLS).min(n).max(1);
     let rows_total = n.div_ceil(cols);
     let visible = rows_total.min(max_rows);
     let scroll = scroll.min(rows_total.saturating_sub(visible));
@@ -106,12 +109,14 @@ impl Component for Info {
             self.title.to_string()
         };
 
-        let width = (body_w.max(title.len())) as u16 + 2 + 2; // +2 border, +2 margin
+        // Full editor width, anchored at the bottom (above the statusline) —
+        // Spacemacs' which-key bar. (`body_w` still drives column layout inside.)
+        let _ = body_w;
         let height = body_h as u16 + 2; // +2 border
         let area = viewport.intersection(Rect::new(
-            viewport.width.saturating_sub(width),
-            viewport.height.saturating_sub(height + 2), // +2 for statusline
-            width,
+            viewport.x,
+            viewport.y + viewport.height.saturating_sub(height + 1),
+            viewport.width,
             height,
         ));
         surface.clear_with(area, popup_style);
