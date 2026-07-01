@@ -110,7 +110,10 @@ serde = { version = "1.0", features = ["derive"] }
 
 # CI status panel: GitHub Actions REST API over HTTP (blocking; called on a
 # spawn_blocking task). Already in the graph transitively, so no new TLS stack.
-ureq = "2"
+# `json` feature is required for `.send_json()` in src/ai/*. Declare it here so
+# the minimal build (--no-default-features, no scripting crates to unify it) still
+# has it — otherwise the release's minimal target fails to compile.
+ureq = { version = "2", features = ["json"] }
 
 dashmap = "6.2"
 
