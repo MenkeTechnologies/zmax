@@ -340,9 +340,14 @@ impl EditorView {
         match action {
             IdeAction::None => None,
             IdeAction::OpenFile(path) => {
-                let _ = context
+                // A binary file (e.g. .zwc) opens in the hex editor instead of
+                // being silently rejected — same routing as :open / the pickers.
+                if let Err(zemacs_view::DocumentOpenError::BinaryFile) = context
                     .editor
-                    .open(&path, zemacs_view::editor::Action::Replace);
+                    .open(&path, zemacs_view::editor::Action::Replace)
+                {
+                    crate::commands::typed::push_hex_view(context, path);
+                }
                 None
             }
             IdeAction::OpenUrl(url) => {

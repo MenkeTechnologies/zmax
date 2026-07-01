@@ -6366,15 +6366,33 @@ fn search_selection_impl(cx: &mut Context, detect_word_boundaries: bool) {
         .selection(view.id)
         .iter()
         .map(|selection| {
-            let add_boundary_prefix =
-                detect_word_boundaries && is_at_word_start(text, selection.from());
-            let add_boundary_suffix =
-                detect_word_boundaries && is_at_word_end(text, selection.to());
+            // Vim `*`/`#`: with a bare cursor (no real selection) search the WORD
+            // under the cursor, not the single char. Expand a ≤1-char range that
+            // sits on a word char to its surrounding word; leave real multi-char
+            // selections (Helix `*`) untouched.
+            let (from, to) = {
+                let (f, t) = (selection.from(), selection.to());
+                if t.saturating_sub(f) <= 1 && f < text.len_chars() && char_is_word(text.char(f)) {
+                    let mut s = f;
+                    while s > 0 && char_is_word(text.char(s - 1)) {
+                        s -= 1;
+                    }
+                    let mut e = f;
+                    while e < text.len_chars() && char_is_word(text.char(e)) {
+                        e += 1;
+                    }
+                    (s, e)
+                } else {
+                    (f, t)
+                }
+            };
+            let add_boundary_prefix = detect_word_boundaries && is_at_word_start(text, from);
+            let add_boundary_suffix = detect_word_boundaries && is_at_word_end(text, to);
 
             let prefix = if add_boundary_prefix { "\\b" } else { "" };
             let suffix = if add_boundary_suffix { "\\b" } else { "" };
 
-            let word = regex::escape(&selection.fragment(text));
+            let word = regex::escape(&text.slice(from..to).to_string());
             format!("{}{}{}", prefix, word, suffix)
         })
         .collect::<HashSet<_>>() // Collect into hashset to deduplicate identical regexes
