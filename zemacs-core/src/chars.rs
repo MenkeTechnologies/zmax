@@ -41,8 +41,7 @@ pub fn char_is_whitespace(ch: char) -> bool {
     // categorization based on e.g. breaking vs non-breaking spaces
     // and whether they're zero-width or not.
     match ch {
-        //'\u{1680}' | // Ogham Space Mark (here for completeness, but usually displayed as a dash, not as whitespace)
-        '\u{0009}' | // Character Tabulation
+        //'\u{1680}' | // Ogham Space Mark (here for completeness, but usually displayed as a dash, not as whitespace)        '\u{0009}' | // Character Tabulation
         '\u{0020}' | // Space
         '\u{00A0}' | // No-break Space
         '\u{180E}' | // Mongolian Vowel Separator

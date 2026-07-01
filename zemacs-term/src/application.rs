@@ -1540,12 +1540,17 @@ impl Application {
         .ok()
         .flatten();
 
-        // Re-enter the TUI regardless of how fzf exited.
+        // Re-enter the TUI regardless of how fzf exited, then force a FULL
+        // repaint: fzf drew over our screen while we were out, so the diff
+        // cache is stale — clear it (same dance as the SIGCONT/resume path).
         for _ in 0..10 {
             if self.terminal.claim().is_ok() {
                 break;
             }
         }
+        let area = self.terminal.size();
+        self.compositor.resize(area);
+        let _ = self.terminal.clear();
         result
     }
 
