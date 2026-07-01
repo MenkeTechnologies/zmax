@@ -4456,21 +4456,6 @@ enum FileActionKind {
     NewFile,
     NewFolder,
     Rename,
-    Delete,
-    CopyPath,
-    Run,
-}
-
-pub struct ContextAction {
-    label: &'static str,
-    kind: FileActionKind,
-}
-
-impl crate::ui::menu::Item for ContextAction {
-    type Data = ();
-    fn format(&self, _: &()) -> crate::ui::menu::Row<'_> {
-        crate::ui::menu::Row::new(vec![crate::ui::menu::Cell::from(self.label)])
-    }
 }
 
 /// Rebuild the file tree on the main thread (from a background callback context).
@@ -4482,92 +4467,64 @@ fn refresh_tree_async() {
     });
 }
 
-/// Build the right-click CRUD context menu for a file-tree entry at (row, col).
+/// Build the right-click context menu for a file-tree entry at (row, col):
+/// JetBrains-style Run (files) + CRUD, as a ratatui `ContextMenu`.
 pub fn file_context_menu(
     path: PathBuf,
     is_dir: bool,
     row: u16,
     col: u16,
-) -> crate::ui::popup::Popup<crate::ui::menu::Menu<ContextAction>> {
-    use crate::ui::menu::Menu;
-    use crate::ui::PromptEvent;
+) -> crate::ui::context_menu::ContextMenu {
+    use crate::ui::context_menu::{ContextItem, ContextMenu};
 
     let mut items = Vec::new();
     if is_dir {
-        items.push(ContextAction {
-            label: "New File",
-            kind: FileActionKind::NewFile,
-        });
-        items.push(ContextAction {
-            label: "New Folder",
-            kind: FileActionKind::NewFolder,
-        });
+        let p = path.clone();
+        items.push(ContextItem::new("New File", move |compositor, _cx| {
+            compositor.push(Box::new(name_prompt(FileActionKind::NewFile, p.clone(), true)));
+        }));
+        let p = path.clone();
+        items.push(ContextItem::new("New Folder", move |compositor, _cx| {
+            compositor.push(Box::new(name_prompt(
+                FileActionKind::NewFolder,
+                p.clone(),
+                true,
+            )));
+        }));
     } else {
-        // JetBrains-style "Run 'file'" at the top of the menu for files.
-        items.push(ContextAction {
-            label: "Run",
-            kind: FileActionKind::Run,
-        });
+        // JetBrains-style "Run" — materializes + runs a run configuration.
+        let p = path.clone();
+        items.push(ContextItem::new("Run", move |compositor, cx| {
+            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                view.run_path(cx.editor, &p);
+            }
+        }));
     }
-    items.push(ContextAction {
-        label: "Rename",
-        kind: FileActionKind::Rename,
-    });
-    items.push(ContextAction {
-        label: "Delete",
-        kind: FileActionKind::Delete,
-    });
-    items.push(ContextAction {
-        label: "Copy Path",
-        kind: FileActionKind::CopyPath,
-    });
-
-    let menu = Menu::new(items, (), move |editor, item, event| {
-        if !matches!(event, PromptEvent::Validate) {
-            return;
+    let p = path.clone();
+    items.push(ContextItem::new("Rename", move |compositor, _cx| {
+        compositor.push(Box::new(name_prompt(FileActionKind::Rename, p.clone(), is_dir)));
+    }));
+    let p = path.clone();
+    items.push(ContextItem::new("Delete", move |_compositor, cx| {
+        let res = if is_dir {
+            std::fs::remove_dir_all(&p)
+        } else {
+            std::fs::remove_file(&p)
+        };
+        match res {
+            Ok(()) => cx.editor.set_status(format!("deleted {}", p.display())),
+            Err(e) => cx.editor.set_error(format!("delete failed: {e}")),
         }
-        let Some(item) = item else { return };
-        let path = path.clone();
-        match item.kind {
-            FileActionKind::CopyPath => {
-                let s = path.to_string_lossy().to_string();
-                let _ = editor.registers.push('"', s.clone());
-                editor.set_status(format!("yanked path: {s}"));
-            }
-            FileActionKind::Run => {
-                // Spawn the file's auto-detected run command in the Run window.
-                crate::job::dispatch_blocking(move |editor, compositor| {
-                    if let Some(view) = compositor.find::<crate::ui::EditorView>() {
-                        view.run_path(editor, &path);
-                    }
-                });
-            }
-            FileActionKind::Delete => {
-                let res = if is_dir {
-                    std::fs::remove_dir_all(&path)
-                } else {
-                    std::fs::remove_file(&path)
-                };
-                match res {
-                    Ok(()) => editor.set_status(format!("deleted {}", path.display())),
-                    Err(e) => editor.set_error(format!("delete failed: {e}")),
-                }
-                refresh_tree_async();
-            }
-            kind => {
-                // New File / New Folder / Rename need a name prompt, which requires
-                // compositor access — hop onto the main loop to push it.
-                crate::job::dispatch_blocking(move |_editor, compositor| {
-                    compositor.push(Box::new(name_prompt(kind, path.clone(), is_dir)));
-                });
-            }
-        }
-    });
+        refresh_tree_async();
+    }));
+    let p = path.clone();
+    items.push(ContextItem::new("Copy Path", move |_compositor, cx| {
+        let s = p.to_string_lossy().to_string();
+        let _ = cx.editor.registers.push('"', s.clone());
+        cx.editor.set_status(format!("yanked path: {s}"));
+    }));
 
-    crate::ui::popup::Popup::new("file-context-menu", menu)
-        .position(Some(zemacs_core::Position::new(row as usize, col as usize)))
-        .anchored(true)
-        .auto_close(true)
+    ContextMenu::new(row, col, items)
 }
 
 /// Prompt for a name, then create/rename the target and refresh the tree.
@@ -4577,7 +4534,6 @@ fn name_prompt(kind: FileActionKind, target: PathBuf, _is_dir: bool) -> crate::u
         FileActionKind::NewFile => "New file: ".into(),
         FileActionKind::NewFolder => "New folder: ".into(),
         FileActionKind::Rename => "Rename to: ".into(),
-        _ => "".into(),
     };
     crate::ui::Prompt::new(
         label,
@@ -4605,7 +4561,6 @@ fn name_prompt(kind: FileActionKind, target: PathBuf, _is_dir: bool) -> crate::u
                     let np = parent.join(input);
                     std::fs::rename(&target, &np).map(|_| np)
                 }
-                _ => return,
             };
             match result {
                 Ok(p) => cx.editor.set_status(format!("created {}", p.display())),
