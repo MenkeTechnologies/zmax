@@ -57,6 +57,11 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space F H", "fzf", ":Helptags"),   // SPC F H : help tags
     ("space F d", "fzf", ":Todo"),       // SPC F d : TODO/FIXME tool window
     ("space p T", "fzf", ":Todo"),       // SPC p T : project TODOs
+    ("space p r", "Projects", ":project-replace"),   // SPC p r : Replace in Path (JetBrains)
+    ("space r t", "Bookmarks", "bookmark_toggle"),   // SPC r t : toggle bookmark (JetBrains F11)
+    ("space r n", "Bookmarks", "bookmark_next"),     // SPC r n : next bookmark
+    ("space r N", "Bookmarks", "bookmark_prev"),     // SPC r N : previous bookmark
+    ("space r j", "Bookmarks", "bookmark_jump"),     // SPC r j : jump to a bookmark (picker)
     ("space f s", "Files",   ":write"),            // SPC f s : save
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all
     ("space a c", "Applications", ":calc"),        // SPC a c : calc-dispatch
