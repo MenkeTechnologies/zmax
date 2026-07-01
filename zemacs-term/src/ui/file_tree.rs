@@ -37,6 +37,9 @@ pub struct FileTree {
     filter: String,
     /// True while the user is typing into the speed-search field.
     filtering: bool,
+    /// Rows the filter box occupies at the top of the tree area (0 when hidden).
+    /// Recorded each render so mouse hit-testing offsets the list correctly.
+    list_offset: u16,
 }
 
 impl FileTree {
@@ -49,6 +52,7 @@ impl FileTree {
             scroll: 0,
             filter: String::new(),
             filtering: false,
+            list_offset: 0,
         };
         tree.expanded.insert(root);
         tree.rebuild();
@@ -184,6 +188,8 @@ impl FileTree {
     /// The (path, is_dir) at a visible list row, without changing selection or
     /// expand state. Used by the right-click context menu.
     pub fn path_at_row(&self, list_row: usize) -> Option<(std::path::PathBuf, bool)> {
+        // Rows above the list (the filter box) aren't entries.
+        let list_row = list_row.checked_sub(self.list_offset as usize)?;
         let idx = self.scroll + list_row;
         self.rows.get(idx).map(|r| (r.path.clone(), r.is_dir))
     }
@@ -191,6 +197,10 @@ impl FileTree {
     /// Mouse click on the visible list row `list_row` (0-based, below the header):
     /// select it, then toggle a directory or open a file.
     pub fn click_row(&mut self, list_row: usize) -> TreeAction {
+        // A click on the filter box (the rows above the list) isn't a row hit.
+        let Some(list_row) = list_row.checked_sub(self.list_offset as usize) else {
+            return TreeAction::None;
+        };
         let idx = self.scroll + list_row;
         if idx >= self.rows.len() {
             return TreeAction::None;
@@ -398,6 +408,7 @@ impl FileTree {
         // fzf-style speed-search: a bordered ratatui filter box at the top of the
         // tree while active (`/` opens it; keystrokes fuzzy-filter the rows live).
         let mut area = area;
+        self.list_offset = 0;
         if self.filtering || !self.filter.is_empty() {
             use crate::ui::rat::to_rat_style;
             use ratatui::text::{Line, Span};
@@ -432,6 +443,7 @@ impl FileTree {
             )]);
             let para = Paragraph::new(content).block(block);
             crate::ui::rat::render(para, box_area, surface);
+            self.list_offset = box_h;
 
             area = Rect::new(
                 area.x,

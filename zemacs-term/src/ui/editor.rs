@@ -346,9 +346,16 @@ impl EditorView {
                     .editor
                     .open(&path, zemacs_view::editor::Action::Replace)
                 {
+                    // push_hex_view replaces any existing hex overlay.
                     crate::commands::typed::push_hex_view(context, path);
+                    None
+                } else {
+                    // Opened as text — dismiss any hex overlay left over from a
+                    // previously-opened binary file so the new buffer is visible.
+                    Some(Box::new(|compositor, _cx| {
+                        compositor.remove("hex");
+                    }))
                 }
-                None
             }
             IdeAction::OpenUrl(url) => {
                 let _ = open::that(&url);

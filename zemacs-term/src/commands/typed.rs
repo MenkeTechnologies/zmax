@@ -1961,6 +1961,9 @@ pub(crate) fn push_hex_view(cx: &mut compositor::Context, path: std::path::PathB
 
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
         move |_editor: &mut Editor, compositor: &mut Compositor| {
+            // Replace any existing hex overlay so opening a second binary file
+            // doesn't stack a new viewer on top of the old one.
+            compositor.remove("hex");
             compositor.push(Box::new(view));
         },
     ));
