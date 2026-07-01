@@ -13,11 +13,11 @@
 [![docs](https://img.shields.io/badge/docs-online-9b5de5?style=flat-square)](https://menketechnologies.github.io/zemacs/)
 ![status](https://img.shields.io/badge/status-stable-39ff14?style=flat-square)
 
-### `[A MODAL EDITOR ON THE HELIX ENGINE // VIM KEYS · EMACS · SPACEMACS]`
+### `[A MODAL IDE ON THE HELIX ENGINE // VIM KEYS · EMACS · SPACEMACS]`
 
 # zemacs
 
-A modal text editor in Rust, forked from [Helix](https://github.com/helix-editor/helix).
+A modal IDE in Rust, forked from [Helix](https://github.com/helix-editor/helix).
 
 **Design goal: a maximally powerful CLI IDE with zero user configuration.**
 Install the binary, open a project, and get the full power of a graphical IDE
@@ -85,7 +85,7 @@ formula — see `.github/workflows/release.yml`. The tap update needs a
 
 ## Embedded scripting
 
-**A world first: the only editor to embed 5 scripting languages with zero
+**A world first: the only IDE to embed 5 scripting languages with zero
 external dependencies and no FFI between them** — every interpreter is a
 pure-Rust crate compiled into the binary, sharing one host API rather than
 bridging through a C ABI.

@@ -2,7 +2,7 @@
 
 Embed **elisprs** (Emacs Lisp), **zemacs-viml/vimlrs** (Vimscript), **strykelang**
 (Perl 5), **awkrs** (AWK) and **zshrs** (zsh) into the editor so all five can drive
-zemacs through one **uniform full editor API**.
+zemacs through one **uniform full IDE API**.
 
 Decisions taken: dependencies wired as **git submodules / path deps** (editable, since
 4 of 5 need source changes); **all five built in parallel**; every language gets the
