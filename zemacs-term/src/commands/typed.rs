@@ -10840,6 +10840,7 @@ fn vim_let(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
 /// TTY to `fzf` with `candidates` on stdin, then runs `sink` (a zemacs `:`
 /// command with `{}` = the picked line). Empty `candidates` lets `fzf` use its
 /// own `$FZF_DEFAULT_COMMAND` (file walk).
+/// Candidate-sourced fzf request (candidates piped on stdin).
 fn queue_fzf(
     cx: &mut compositor::Context,
     prompt: &str,
@@ -10854,7 +10855,68 @@ fn queue_fzf(
         sink: sink.to_string(),
         options,
         preview,
+        command: None,
     });
+}
+
+/// Command-sourced fzf request: fzf streams `command`'s output (fzf.vim `source`).
+fn queue_fzf_cmd(
+    cx: &mut compositor::Context,
+    prompt: &str,
+    sink: &str,
+    command: String,
+    options: Vec<String>,
+    preview: bool,
+) {
+    cx.editor.pending_fzf = Some(zemacs_view::editor::FzfRequest {
+        candidates: Vec::new(),
+        prompt: prompt.to_string(),
+        sink: sink.to_string(),
+        options,
+        preview,
+        command: Some(command),
+    });
+}
+
+/// Sink for grep/jumplist picks (`file:line:col:text`) — open the file at the
+/// line/col, dropping the trailing text.
+fn fzf_goto(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = args.join(" ");
+    let mut parts = line.splitn(4, ':');
+    let file = parts.next().unwrap_or("").trim();
+    if file.is_empty() {
+        return Ok(());
+    }
+    fn numeric(s: Option<&str>) -> Option<&str> {
+        s.filter(|t| !t.is_empty() && t.bytes().all(|b| b.is_ascii_digit()))
+    }
+    let mut target = file.to_string();
+    if let Some(l) = numeric(parts.next()) {
+        target.push(':');
+        target.push_str(l);
+        if let Some(c) = numeric(parts.next()) {
+            target.push(':');
+            target.push_str(c);
+        }
+    }
+    run_command_line(cx, &format!("open {target}"));
+    Ok(())
+}
+
+/// Sink for current-buffer line picks (`N: text`) — jump to line N.
+fn fzf_line(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = args.join(" ");
+    let num: String = line.chars().take_while(|c| c.is_ascii_digit()).collect();
+    if !num.is_empty() {
+        run_command_line(cx, &format!("goto {num}"));
+    }
+    Ok(())
 }
 
 /// fzf.vim `:Files` — fuzzy-find files (fzf walks the tree via its default
@@ -10863,6 +10925,62 @@ fn fzf_files(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     if event == PromptEvent::Validate {
         queue_fzf(cx, "Files", "open {}", Vec::new(), Vec::new(), true);
     }
+    Ok(())
+}
+
+/// fzf.vim `:GFiles` — fuzzy-find git-tracked files and open the pick.
+fn fzf_gfiles(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        queue_fzf_cmd(cx, "GFiles", "open {}", "git ls-files".into(), Vec::new(), true);
+    }
+    Ok(())
+}
+
+/// fzf.vim `:Rg`/`:Ag` [pattern] — ripgrep across the tree, open the pick at its
+/// line. With no pattern, matches every line (fuzzy-filter live in fzf).
+fn fzf_rg(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pat = args.join(" ");
+    let pat = pat.trim();
+    let needle = if pat.is_empty() { ".".to_string() } else { pat.replace('\'', "'\\''") };
+    let cmd = format!(
+        "rg --column --line-number --no-heading --color=never --smart-case -- '{needle}'"
+    );
+    queue_fzf_cmd(cx, "Rg", "fzf-goto {}", cmd, vec!["--no-sort".into()], false);
+    Ok(())
+}
+
+/// fzf.vim `:Locate {pattern}` — locate files and open the pick.
+fn fzf_locate(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pat = args.join(" ");
+    let pat = pat.trim();
+    if pat.is_empty() {
+        cx.editor.set_error(":Locate requires a pattern");
+        return Ok(());
+    }
+    let cmd = format!("locate '{}'", pat.replace('\'', "'\\''"));
+    queue_fzf_cmd(cx, "Locate", "open {}", cmd, Vec::new(), true);
+    Ok(())
+}
+
+/// fzf.vim `:BLines` — fuzzy-search lines of the current buffer, jump to the pick.
+fn fzf_blines(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cands: Vec<String> = {
+        let (_, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        (0..text.len_lines())
+            .map(|i| format!("{}: {}", i + 1, text.line(i).to_string().trim_end()))
+            .collect()
+    };
+    queue_fzf(cx, "BLines", "fzf-line {}", cands, vec!["--no-sort".into()], false);
     Ok(())
 }
 
@@ -18149,6 +18267,55 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Fuzzy-find files with fzf and open the selection (fzf.vim :Files).",
         fun: fzf_files,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "GFiles",
+        aliases: &["GitFiles"],
+        doc: "Fuzzy-find git-tracked files with fzf and open the pick (fzf.vim :GFiles).",
+        fun: fzf_gfiles,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Rg",
+        aliases: &["Ag", "RG"],
+        doc: "Ripgrep the tree with fzf; open the pick at its line (fzf.vim :Rg/:Ag).",
+        fun: fzf_rg,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Locate",
+        aliases: &[],
+        doc: "locate(1) files with fzf and open the pick (fzf.vim :Locate).",
+        fun: fzf_locate,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "BLines",
+        aliases: &[],
+        doc: "Fuzzy-search the current buffer's lines with fzf, jump to the pick (fzf.vim :BLines).",
+        fun: fzf_blines,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    // Internal sinks for fzf picks (open at file:line, or jump to a buffer line).
+    TypableCommand {
+        name: "fzf-goto",
+        aliases: &[],
+        doc: "(internal) open a `file:line:col:text` fzf pick at the line.",
+        fun: fzf_goto,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "fzf-line",
+        aliases: &[],
+        doc: "(internal) jump to the line of an `N: text` fzf pick.",
+        fun: fzf_line,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },

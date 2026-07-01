@@ -9481,11 +9481,11 @@
   },
   {
     "spec_id": "fzf.command.gfiles",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:space f f"
+      "typable:GFiles"
     ],
-    "note": "file_picker is not git-ls-files aware"
+    "note": "fzf.vim :GFiles via external fzf binary (Application::run_fzf); git ls-files → open."
   },
   {
     "spec_id": "fzf.command.gfiles_status",
@@ -9515,26 +9515,25 @@
     "spec_id": "fzf.command.ag",
     "status": "ported",
     "evidence": [
-      "key:normal:space s a a"
+      "typable:Rg"
     ],
-    "note": ":Ag -> global_search"
+    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
   },
   {
     "spec_id": "fzf.command.rg",
     "status": "ported",
     "evidence": [
-      "key:normal:space s r r"
+      "typable:Rg"
     ],
-    "note": ":Rg -> global_search"
+    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
   },
   {
     "spec_id": "fzf.command.rg_reload",
     "status": "ported",
     "evidence": [
-      "key:normal:space s r r",
-      "static:global_search"
+      "typable:Rg"
     ],
-    "note": ":RG -> global_search; dynamic injector re-runs regex on every keystroke (reload-on-keystroke)"
+    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
   },
   {
     "spec_id": "fzf.command.lines",
@@ -9548,9 +9547,9 @@
     "spec_id": "fzf.command.blines",
     "status": "ported",
     "evidence": [
-      "key:normal:space s L"
+      "typable:BLines"
     ],
-    "note": ":BLines -> buffer_line_picker"
+    "note": "fzf.vim :BLines via external fzf binary (Application::run_fzf); current-buffer lines → goto (fzf-line)."
   },
   {
     "spec_id": "fzf.command.tags",
@@ -9588,9 +9587,9 @@
     "spec_id": "fzf.command.locate",
     "status": "ported",
     "evidence": [
-      "key:normal:space f L"
+      "typable:Locate"
     ],
-    "note": ":Locate -> file_picker"
+    "note": "fzf.vim :Locate via external fzf binary (Application::run_fzf); locate → open."
   },
   {
     "spec_id": "fzf.command.history",
