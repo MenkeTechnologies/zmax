@@ -42,6 +42,11 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space F l", "fzf", ":BLines"),     // SPC F l : lines in buffer
     ("space F o", "fzf", ":Locate"),     // SPC F o : locate
     ("space F C", "fzf", ":Commands"),   // SPC F C : commands
+    ("space F h", "fzf", ":History"),    // SPC F h : recent files
+    ("space F L", "fzf", ":Lines"),      // SPC F L : lines (all buffers)
+    ("space F t", "fzf", ":Filetypes"),  // SPC F t : filetypes
+    ("space F v", "fzf", ":Commits"),    // SPC F v : commits
+    ("space F V", "fzf", ":BCommits"),   // SPC F V : buffer commits
     ("space f s", "Files",   ":write"),            // SPC f s : save
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all
     ("space a c", "Applications", ":calc"),        // SPC a c : calc-dispatch
