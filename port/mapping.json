@@ -23642,5 +23642,221 @@
       "key:normal:C-x *"
     ],
     "note": "command_palette"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_fold",
+    "status": "ported",
+    "evidence": [
+      "typable:fold"
+    ],
+    "note": "vim :fold → fold_create (create a fold over the range)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_foldopen",
+    "status": "ported",
+    "evidence": [
+      "typable:foldopen"
+    ],
+    "note": "vim :foldopen → fold_open"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_foldclose",
+    "status": "ported",
+    "evidence": [
+      "typable:foldclose"
+    ],
+    "note": "vim :foldclose → fold_close"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_silent",
+    "status": "partial",
+    "evidence": [
+      "typable:silent"
+    ],
+    "note": "vim :silent modifier — wrapped command runs via our :dispatcher; modifier effect (suppress messages) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_unsilent",
+    "status": "partial",
+    "evidence": [
+      "typable:unsilent"
+    ],
+    "note": "vim :unsilent modifier — wrapped command runs via our :dispatcher; modifier effect (show messages (default)) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_verbose",
+    "status": "partial",
+    "evidence": [
+      "typable:verbose"
+    ],
+    "note": "vim :verbose modifier — wrapped command runs via our :dispatcher; modifier effect (verbose level (leading count dropped)) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_noautocmd",
+    "status": "partial",
+    "evidence": [
+      "typable:noautocmd"
+    ],
+    "note": "vim :noautocmd modifier — wrapped command runs via our :dispatcher; modifier effect (skip autocommands) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_keepalt",
+    "status": "partial",
+    "evidence": [
+      "typable:keepalt"
+    ],
+    "note": "vim :keepalt modifier — wrapped command runs via our :dispatcher; modifier effect (keep alternate file) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_keepjumps",
+    "status": "partial",
+    "evidence": [
+      "typable:keepjumps"
+    ],
+    "note": "vim :keepjumps modifier — wrapped command runs via our :dispatcher; modifier effect (keep jumplist) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_keepmarks",
+    "status": "partial",
+    "evidence": [
+      "typable:keepmarks"
+    ],
+    "note": "vim :keepmarks modifier — wrapped command runs via our :dispatcher; modifier effect (keep marks) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_keeppatterns",
+    "status": "partial",
+    "evidence": [
+      "typable:keeppatterns"
+    ],
+    "note": "vim :keeppatterns modifier — wrapped command runs via our :dispatcher; modifier effect (keep search pattern) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lockmarks",
+    "status": "partial",
+    "evidence": [
+      "typable:lockmarks"
+    ],
+    "note": "vim :lockmarks modifier — wrapped command runs via our :dispatcher; modifier effect (do not adjust marks) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sandbox",
+    "status": "partial",
+    "evidence": [
+      "typable:sandbox"
+    ],
+    "note": "vim :sandbox modifier — wrapped command runs via our :dispatcher; modifier effect (sandbox) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_confirm",
+    "status": "partial",
+    "evidence": [
+      "typable:confirm"
+    ],
+    "note": "vim :confirm modifier — wrapped command runs via our :dispatcher; modifier effect (confirm prompts) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_browse",
+    "status": "partial",
+    "evidence": [
+      "typable:browse"
+    ],
+    "note": "vim :browse modifier — wrapped command runs via our :dispatcher; modifier effect (file dialog (N/A in TUI)) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_noswapfile",
+    "status": "partial",
+    "evidence": [
+      "typable:noswapfile"
+    ],
+    "note": "vim :noswapfile modifier — wrapped command runs via our :dispatcher; modifier effect (no swapfile) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_hide",
+    "status": "partial",
+    "evidence": [
+      "typable:hide"
+    ],
+    "note": "vim :hide modifier — wrapped command runs via our :dispatcher; modifier effect (hidden buffer) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_vertical",
+    "status": "partial",
+    "evidence": [
+      "typable:vertical"
+    ],
+    "note": "vim :vertical modifier — wrapped command runs via our :dispatcher; modifier effect (vertical split placement) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_horizontal",
+    "status": "partial",
+    "evidence": [
+      "typable:horizontal"
+    ],
+    "note": "vim :horizontal modifier — wrapped command runs via our :dispatcher; modifier effect (horizontal split placement) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_aboveleft",
+    "status": "partial",
+    "evidence": [
+      "typable:aboveleft"
+    ],
+    "note": "vim :aboveleft modifier — wrapped command runs via our :dispatcher; modifier effect (split above/left) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_belowright",
+    "status": "partial",
+    "evidence": [
+      "typable:belowright"
+    ],
+    "note": "vim :belowright modifier — wrapped command runs via our :dispatcher; modifier effect (split below/right) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_leftabove",
+    "status": "partial",
+    "evidence": [
+      "typable:leftabove"
+    ],
+    "note": "vim :leftabove modifier — wrapped command runs via our :dispatcher; modifier effect (split left/above) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_rightbelow",
+    "status": "partial",
+    "evidence": [
+      "typable:rightbelow"
+    ],
+    "note": "vim :rightbelow modifier — wrapped command runs via our :dispatcher; modifier effect (split right/below) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_topleft",
+    "status": "partial",
+    "evidence": [
+      "typable:topleft"
+    ],
+    "note": "vim :topleft modifier — wrapped command runs via our :dispatcher; modifier effect (split at top/left) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_botright",
+    "status": "partial",
+    "evidence": [
+      "typable:botright"
+    ],
+    "note": "vim :botright modifier — wrapped command runs via our :dispatcher; modifier effect (split at bottom/right) is best-effort/not enforced."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_redrawstatus",
+    "status": "partial",
+    "evidence": [
+      "typable:redrawstatus"
+    ],
+    "note": "vim :redrawstatus → full redraw (approximation)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_redrawtabline",
+    "status": "partial",
+    "evidence": [
+      "typable:redrawtabline"
+    ],
+    "note": "vim :redrawtabline → full redraw (approximation)"
   }
 ]

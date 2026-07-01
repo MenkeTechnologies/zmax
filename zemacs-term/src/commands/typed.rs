@@ -10848,6 +10848,80 @@ vim_map_typable!(vim_map_nmapclear, "nmapclear");
 vim_map_typable!(vim_map_imapclear, "imapclear");
 vim_map_typable!(vim_map_vmapclear, "vmapclear");
 
+/// Wrap a no-argument static editor command as a vim `:`-command, ported to our
+/// Rust internals — reachable from the `:` line AND, via the vimlrs bridge, from
+/// vimscript. Runs the static against an editor-only `commands::Context`.
+macro_rules! ex_static_cmd {
+    ($fn:ident, $static:path) => {
+        fn $fn(
+            cx: &mut compositor::Context,
+            _args: Args,
+            event: PromptEvent,
+        ) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            $static(&mut editor_context(cx));
+            Ok(())
+        }
+    };
+}
+
+ex_static_cmd!(ex_fold, super::fold_create);
+ex_static_cmd!(ex_foldopen, super::fold_open);
+ex_static_cmd!(ex_foldclose, super::fold_close);
+
+/// A vim command *modifier* (`:silent`, `:verbose N`, `:noautocmd`, `:keepjumps`,
+/// `:vertical`, `:lockmarks`, …): strip the modifier word (and an optional
+/// leading count for `:verbose 9 …`), then run the remaining command line through
+/// our own `:` dispatcher. The message-/mark-/jump-/direction-suppression
+/// nuances are best-effort; the wrapped command itself runs faithfully. A bare
+/// modifier with no trailing command is a no-op.
+fn ex_modifier(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined = args.join(" ");
+    let mut rest = joined.trim();
+    if let Some((first, tail)) = rest.split_once(char::is_whitespace) {
+        if !first.is_empty() && first.chars().all(|c| c.is_ascii_digit()) {
+            rest = tail.trim_start(); // drop a leading `:verbose N` count
+        }
+    }
+    if rest.is_empty() {
+        return Ok(());
+    }
+    run_command_line(cx, rest);
+    Ok(())
+}
+
+/// `:redrawstatus` / `:redrawtabline` — approximated by a full redraw.
+fn ex_redraw_alias(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    redraw(cx, args, event)
+}
+
+/// Build a `TypableCommand` list entry for a vim command modifier (all share
+/// [`ex_modifier`]).
+macro_rules! ex_modifier_entry {
+    ($name:literal, $aliases:expr, $doc:literal) => {
+        TypableCommand {
+            name: $name,
+            aliases: $aliases,
+            doc: $doc,
+            fun: ex_modifier,
+            completer: CommandCompleter::none(),
+            signature: Signature {
+                positionals: (0, None),
+                ..Signature::DEFAULT
+            },
+        }
+    };
+}
+
 /// Build a `TypableCommand` list entry for a `:map`-family command.
 macro_rules! vim_map_command {
     ($name:literal, $fun:ident, $doc:literal) => {
@@ -17751,6 +17825,73 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     vim_map_command!("nmapclear", vim_map_nmapclear, "Clear runtime normal-mode mappings."),
     vim_map_command!("imapclear", vim_map_imapclear, "Clear runtime insert-mode mappings."),
     vim_map_command!("vmapclear", vim_map_vmapclear, "Clear runtime select/visual-mode mappings."),
+    // Vim fold ex-commands → our fold internals.
+    TypableCommand {
+        name: "fold",
+        aliases: &["fo"],
+        doc: "Create a fold over the selected/current lines (vim :fold).",
+        fun: ex_fold,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "foldopen",
+        aliases: &["foldo"],
+        doc: "Open the fold under the cursor (vim :foldopen).",
+        fun: ex_foldopen,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "foldclose",
+        aliases: &["foldc"],
+        doc: "Close the fold under the cursor (vim :foldclose).",
+        fun: ex_foldclose,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    // Vim :redraw variants (approximated by a full redraw).
+    TypableCommand {
+        name: "redrawstatus",
+        aliases: &[],
+        doc: "Redraw the status line (vim :redrawstatus; approximated by a full redraw).",
+        fun: ex_redraw_alias,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "redrawtabline",
+        aliases: &[],
+        doc: "Redraw the tab line (vim :redrawtabline; approximated by a full redraw).",
+        fun: ex_redraw_alias,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    // Vim command modifiers — strip the modifier and run the wrapped command
+    // through our own `:` dispatcher (message/mark/jump/direction nuances are
+    // best-effort; the wrapped command runs faithfully).
+    ex_modifier_entry!("silent", &["sil"], "Run {cmd} silently (vim :silent[!]); message suppression is best-effort."),
+    ex_modifier_entry!("unsilent", &[], "Run {cmd} with messages shown (vim :unsilent)."),
+    ex_modifier_entry!("verbose", &["verb"], "Run {cmd} verbosely, optional leading count (vim :verbose)."),
+    ex_modifier_entry!("noautocmd", &["noa"], "Run {cmd} without triggering autocommands (vim :noautocmd)."),
+    ex_modifier_entry!("keepalt", &["keepa"], "Run {cmd} keeping the alternate file (vim :keepalt)."),
+    ex_modifier_entry!("keepjumps", &["keepj"], "Run {cmd} without changing the jumplist (vim :keepjumps)."),
+    ex_modifier_entry!("keepmarks", &["kee"], "Run {cmd} keeping marks (vim :keepmarks)."),
+    ex_modifier_entry!("keeppatterns", &["keepp"], "Run {cmd} keeping the search pattern (vim :keeppatterns)."),
+    ex_modifier_entry!("lockmarks", &["loc"], "Run {cmd} without adjusting marks (vim :lockmarks)."),
+    ex_modifier_entry!("sandbox", &["san"], "Run {cmd} in the sandbox (vim :sandbox; best-effort)."),
+    ex_modifier_entry!("confirm", &["conf"], "Run {cmd} confirming risky actions (vim :confirm; best-effort)."),
+    ex_modifier_entry!("browse", &["bro"], "Run {cmd} (vim :browse; file dialog not applicable in a TUI)."),
+    ex_modifier_entry!("noswapfile", &["noswap"], "Run {cmd} without a swapfile (vim :noswapfile)."),
+    ex_modifier_entry!("hide", &["hid"], "Run {cmd} keeping the current buffer hidden (vim :hide)."),
+    ex_modifier_entry!("vertical", &["vert"], "Run {cmd} with vertical split placement (vim :vertical; best-effort)."),
+    ex_modifier_entry!("horizontal", &["hor"], "Run {cmd} with horizontal split placement (vim :horizontal)."),
+    ex_modifier_entry!("aboveleft", &["abo"], "Run {cmd} placing a new split above/left (vim :aboveleft; best-effort)."),
+    ex_modifier_entry!("belowright", &["bel"], "Run {cmd} placing a new split below/right (vim :belowright; best-effort)."),
+    ex_modifier_entry!("leftabove", &["lefta"], "Run {cmd} placing a new split left/above (vim :leftabove; best-effort)."),
+    ex_modifier_entry!("rightbelow", &["rightb"], "Run {cmd} placing a new split right/below (vim :rightbelow; best-effort)."),
+    ex_modifier_entry!("topleft", &["to"], "Run {cmd} placing a new split at the top/left (vim :topleft; best-effort)."),
+    ex_modifier_entry!("botright", &["bo"], "Run {cmd} placing a new split at the bottom/right (vim :botright; best-effort)."),
     TypableCommand {
         name: "lsp-stop",
         aliases: &[],
