@@ -1601,6 +1601,10 @@ pub enum ConfigEvent {
     /// Carries the preset name; the terminal layer rebuilds the keymap and sets
     /// the appropriate mode (it owns the keymap preset registry).
     SetKeymap(String),
+    /// Re-merge the runtime `:map` overlay (from vimscript `:map`/init.vim/
+    /// plugins) onto the live `config.keys`. The terminal layer owns the overlay
+    /// registry (`keymap::vim_map`) and the keymap, so it applies it.
+    ApplyUserMappings,
 }
 
 enum ThemeAction {

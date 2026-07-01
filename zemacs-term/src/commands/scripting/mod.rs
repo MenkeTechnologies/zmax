@@ -195,10 +195,47 @@ pub fn eval_elisp(cx: &mut compositor::Context, src: &str) -> Result<String, Str
 /// Evaluate a VimL source string against the live editor. Returns captured
 /// `:echo` output plus the trailing expression value. Globals/functions persist
 /// across calls (vimlrs thread-local state). Runs synchronously.
+thread_local! {
+    static VIML_HOOKS_INSTALLED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Install vimlrs → editor host hooks once per thread. Currently bridges the
+/// `:set` ex-command: whenever vimlrs runs `:set` (from `:vim`, `init.vim`, or a
+/// sourced plugin) it mirrors the option onto the live editor by running
+/// zemacs's own `:set` command through [`with_cx`]. This is the first editor
+/// ex-command wired through; `:map`/`:command`/`:autocmd` follow the same shape.
+fn install_viml_host_hooks() {
+    if VIML_HOOKS_INSTALLED.with(|c| c.replace(true)) {
+        return;
+    }
+    vimlrs::fusevm_bridge::install_set_hook(Box::new(|args: &str| {
+        let _ = with_cx(|cx| {
+            crate::commands::typed::run_command_line(cx, &format!("set {args}"));
+        });
+    }));
+    // `:map`/`:nmap`/`:nnoremap`/… → the live zemacs keymap. vimlrs fires the
+    // raw command line; we record it in the runtime overlay and ask the
+    // application to merge the overlay onto `config.keys`.
+    vimlrs::fusevm_bridge::install_map_hook(Box::new(|line: &str| {
+        let _ = with_cx(|cx| {
+            match crate::keymap::vim_map::register_map_line(line) {
+                Ok(_) => {
+                    cx.editor
+                        .config_events
+                        .0
+                        .send(zemacs_view::editor::ConfigEvent::ApplyUserMappings)
+                        .ok();
+                }
+                Err(e) => log::debug!("vim map `{line}` not applied: {e}"),
+            }
+        });
+    }));
+}
+
 pub fn eval_viml(cx: &mut compositor::Context, src: &str) -> Result<String, String> {
-    // Install the context now so editor builtins work as soon as vimlrs grows a
-    // host hook; today's eval-only path simply doesn't touch it.
+    // Publish the context so host hooks (e.g. `:set`) can reach the live editor.
     let _guard = CxGuard::new(cx);
+    install_viml_host_hooks();
     viml::eval(src)
 }
 
@@ -282,6 +319,7 @@ pub fn load_init_scripts(cx: &mut compositor::Context) {
         let init_vim = dir.join("init.vim");
         if init_vim.exists() {
             let _guard = CxGuard::new(cx);
+            install_viml_host_hooks();
             if let Err(e) = vimlrs::fusevm_bridge::eval_file(&init_vim) {
                 cx.editor.set_error(format!("init.vim: {}", e.0));
             }

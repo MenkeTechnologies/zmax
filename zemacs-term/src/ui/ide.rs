@@ -120,6 +120,41 @@ enum BottomTab {
     Ci,
 }
 
+impl BottomTab {
+    /// Stable name for session persistence.
+    fn persist_name(self) -> &'static str {
+        match self {
+            BottomTab::Problems => "problems",
+            BottomTab::Run => "run",
+            BottomTab::Git => "git",
+            BottomTab::Debug => "debug",
+            BottomTab::Registers => "registers",
+            BottomTab::Todo => "todo",
+            BottomTab::Marks => "marks",
+            BottomTab::Jumplist => "jumplist",
+            BottomTab::Recent => "recent",
+            BottomTab::Harpoon => "harpoon",
+            BottomTab::Ci => "ci",
+        }
+    }
+    fn from_persist_name(s: &str) -> Option<Self> {
+        Some(match s {
+            "problems" => BottomTab::Problems,
+            "run" => BottomTab::Run,
+            "git" => BottomTab::Git,
+            "debug" => BottomTab::Debug,
+            "registers" => BottomTab::Registers,
+            "todo" => BottomTab::Todo,
+            "marks" => BottomTab::Marks,
+            "jumplist" => BottomTab::Jumplist,
+            "recent" => BottomTab::Recent,
+            "harpoon" => BottomTab::Harpoon,
+            "ci" => BottomTab::Ci,
+            _ => return None,
+        })
+    }
+}
+
 #[derive(Clone, Copy)]
 enum BottomHit {
     TabProblems,
@@ -769,6 +804,15 @@ impl Ide {
             bottom_zoom: self.bottom_zoom,
             bottom_splits: self.bottom_splits,
             bottom_mid_folded: self.bottom_mid_folded,
+            auto_reveal: self.auto_reveal,
+            bottom_tabs: self.bottom_tabs.iter().map(|t| t.persist_name().to_string()).collect(),
+            bottom_focus_col: self.bottom_focus_col,
+            expanded_dirs: self
+                .project
+                .expanded_paths()
+                .into_iter()
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect(),
         }
     }
 
@@ -800,6 +844,20 @@ impl Ide {
             self.bottom_splits = l.bottom_splits;
         }
         self.bottom_mid_folded = l.bottom_mid_folded;
+        self.auto_reveal = l.auto_reveal;
+        if l.bottom_focus_col < 3 {
+            self.bottom_focus_col = l.bottom_focus_col;
+        }
+        for (i, name) in l.bottom_tabs.iter().enumerate().take(3) {
+            if let Some(tab) = BottomTab::from_persist_name(name) {
+                self.bottom_tabs[i] = tab;
+            }
+        }
+        self.bottom_tab = self.bottom_tabs[self.bottom_focus_col];
+        if !l.expanded_dirs.is_empty() {
+            self.project
+                .set_expanded_paths(l.expanded_dirs.iter().map(PathBuf::from));
+        }
     }
 
     /// F2: toggle the whole workbench (and focus the tree when showing).

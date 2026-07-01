@@ -55,6 +55,20 @@ impl FileTree {
         tree
     }
 
+    /// The set of currently-expanded directory paths (for session persistence).
+    pub fn expanded_paths(&self) -> Vec<PathBuf> {
+        self.expanded.iter().cloned().collect()
+    }
+
+    /// Restore a persisted set of expanded directories, then rebuild the view.
+    /// The project root stays expanded regardless. Paths that no longer exist are
+    /// harmless (they just won't render).
+    pub fn set_expanded_paths(&mut self, paths: impl IntoIterator<Item = PathBuf>) {
+        self.expanded.extend(paths);
+        self.expanded.insert(self.root.clone());
+        self.rebuild();
+    }
+
     /// Directory entries, dirs first, then case-insensitive by name; dotfiles skipped.
     fn read_dir_sorted(dir: &Path) -> Vec<(PathBuf, String, bool)> {
         let mut entries: Vec<(PathBuf, String, bool)> = std::fs::read_dir(dir)

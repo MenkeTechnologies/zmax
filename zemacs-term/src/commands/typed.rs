@@ -10791,6 +10791,80 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     Ok(())
 }
 
+/// Shared body of the `:map`-family typable commands: reconstruct the Vim
+/// command line, record it in the runtime `:map` overlay, and ask the
+/// application to merge the overlay onto the live keymap.
+fn vim_map_cmd(cx: &mut compositor::Context, word: &str, args: &Args) -> anyhow::Result<()> {
+    let line = format!("{word} {}", args.join(" "));
+    match crate::keymap::vim_map::register_map_line(line.trim()) {
+        Ok(desc) => {
+            cx.editor
+                .config_events
+                .0
+                .send(ConfigEvent::ApplyUserMappings)?;
+            cx.editor.set_status(format!("map: {desc}"));
+            Ok(())
+        }
+        Err(e) => Err(anyhow!("{e}")),
+    }
+}
+
+macro_rules! vim_map_typable {
+    ($fn:ident, $word:literal) => {
+        fn $fn(
+            cx: &mut compositor::Context,
+            args: Args,
+            event: PromptEvent,
+        ) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            vim_map_cmd(cx, $word, &args)
+        }
+    };
+}
+
+vim_map_typable!(vim_map_map, "map");
+vim_map_typable!(vim_map_noremap, "noremap");
+vim_map_typable!(vim_map_nmap, "nmap");
+vim_map_typable!(vim_map_nnoremap, "nnoremap");
+vim_map_typable!(vim_map_imap, "imap");
+vim_map_typable!(vim_map_inoremap, "inoremap");
+vim_map_typable!(vim_map_vmap, "vmap");
+vim_map_typable!(vim_map_vnoremap, "vnoremap");
+vim_map_typable!(vim_map_xmap, "xmap");
+vim_map_typable!(vim_map_xnoremap, "xnoremap");
+vim_map_typable!(vim_map_smap, "smap");
+vim_map_typable!(vim_map_snoremap, "snoremap");
+vim_map_typable!(vim_map_omap, "omap");
+vim_map_typable!(vim_map_onoremap, "onoremap");
+vim_map_typable!(vim_map_unmap, "unmap");
+vim_map_typable!(vim_map_nunmap, "nunmap");
+vim_map_typable!(vim_map_iunmap, "iunmap");
+vim_map_typable!(vim_map_vunmap, "vunmap");
+vim_map_typable!(vim_map_xunmap, "xunmap");
+vim_map_typable!(vim_map_mapclear, "mapclear");
+vim_map_typable!(vim_map_nmapclear, "nmapclear");
+vim_map_typable!(vim_map_imapclear, "imapclear");
+vim_map_typable!(vim_map_vmapclear, "vmapclear");
+
+/// Build a `TypableCommand` list entry for a `:map`-family command.
+macro_rules! vim_map_command {
+    ($name:literal, $fun:ident, $doc:literal) => {
+        TypableCommand {
+            name: $name,
+            aliases: &[],
+            doc: $doc,
+            fun: $fun,
+            completer: CommandCompleter::none(),
+            signature: Signature {
+                positionals: (0, None),
+                ..Signature::DEFAULT
+            },
+        }
+    };
+}
+
 fn set_option(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -17651,6 +17725,32 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             ..Signature::DEFAULT
         },
     },
+    // Vim `:map`-family commands. `{lhs}` uses Vim key notation (`<C-x>`,
+    // `<CR>`, `<leader>`…); `{rhs}` is a `:Cmd<CR>` typable or a key sequence.
+    // Same path plugins use through the vimlrs `:map` bridge.
+    vim_map_command!("map", vim_map_map, "Map {lhs} to {rhs} in normal+select modes (Vim :map)."),
+    vim_map_command!("noremap", vim_map_noremap, "Non-recursive :map in normal+select modes."),
+    vim_map_command!("nmap", vim_map_nmap, "Map {lhs} to {rhs} in normal mode (Vim :nmap)."),
+    vim_map_command!("nnoremap", vim_map_nnoremap, "Non-recursive normal-mode map (Vim :nnoremap)."),
+    vim_map_command!("imap", vim_map_imap, "Map {lhs} to {rhs} in insert mode (Vim :imap)."),
+    vim_map_command!("inoremap", vim_map_inoremap, "Non-recursive insert-mode map (Vim :inoremap)."),
+    vim_map_command!("vmap", vim_map_vmap, "Map {lhs} to {rhs} in select/visual mode (Vim :vmap)."),
+    vim_map_command!("vnoremap", vim_map_vnoremap, "Non-recursive select/visual-mode map (Vim :vnoremap)."),
+    vim_map_command!("xmap", vim_map_xmap, "Map {lhs} to {rhs} in visual mode (Vim :xmap)."),
+    vim_map_command!("xnoremap", vim_map_xnoremap, "Non-recursive visual-mode map (Vim :xnoremap)."),
+    vim_map_command!("smap", vim_map_smap, "Map {lhs} to {rhs} in select mode (Vim :smap)."),
+    vim_map_command!("snoremap", vim_map_snoremap, "Non-recursive select-mode map (Vim :snoremap)."),
+    vim_map_command!("omap", vim_map_omap, "Map {lhs} to {rhs} in operator-pending mode (Vim :omap)."),
+    vim_map_command!("onoremap", vim_map_onoremap, "Non-recursive operator-pending map (Vim :onoremap)."),
+    vim_map_command!("unmap", vim_map_unmap, "Remove a runtime {lhs} mapping (normal+select)."),
+    vim_map_command!("nunmap", vim_map_nunmap, "Remove a runtime normal-mode {lhs} mapping."),
+    vim_map_command!("iunmap", vim_map_iunmap, "Remove a runtime insert-mode {lhs} mapping."),
+    vim_map_command!("vunmap", vim_map_vunmap, "Remove a runtime select/visual-mode {lhs} mapping."),
+    vim_map_command!("xunmap", vim_map_xunmap, "Remove a runtime visual-mode {lhs} mapping."),
+    vim_map_command!("mapclear", vim_map_mapclear, "Clear runtime normal+select-mode mappings."),
+    vim_map_command!("nmapclear", vim_map_nmapclear, "Clear runtime normal-mode mappings."),
+    vim_map_command!("imapclear", vim_map_imapclear, "Clear runtime insert-mode mappings."),
+    vim_map_command!("vmapclear", vim_map_vmapclear, "Clear runtime select/visual-mode mappings."),
     TypableCommand {
         name: "lsp-stop",
         aliases: &[],

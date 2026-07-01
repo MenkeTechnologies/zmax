@@ -164,10 +164,12 @@ impl Application {
         if let Some(data) = &appdata {
             editor_view.set_ide_layout(data.ide.clone());
         }
-        // The IDE only auto-opens when explicitly requested with `--ide`; we don't
-        // reopen it from the persisted `open` flag (that surprised users who
-        // launched without `--ide`). Opening applies the stored layout above.
-        if args.ide {
+        // Reopen the IDE workbench when it was open last session (persisted
+        // `ide.open` in appdata.toml) or when explicitly requested with `--ide`,
+        // so `:ide` survives a restart — you get your workbench back, with the
+        // stored layout applied above, exactly as you left it.
+        let reopen_ide = appdata.as_ref().is_some_and(|d| d.ide.open);
+        if args.ide || reopen_ide {
             editor_view.open_sidebar();
         }
         compositor.push(Box::new(editor_view));
@@ -516,11 +518,21 @@ impl Application {
                 );
                 return;
             }
+            ConfigEvent::ApplyUserMappings => {
+                // Merge the runtime `:map` overlay onto the live keymap.
+                let mut app_config = (*self.config.load().clone()).clone();
+                crate::keymap::vim_map::apply_user_mappings(&mut app_config.keys);
+                self.config.store(Arc::new(app_config));
+                return;
+            }
             ConfigEvent::SetKeymap(name) => {
                 match crate::keymap::preset(&name) {
-                    Some(keys) => {
+                    Some(mut keys) => {
                         // Swap the live keymap by storing a new app config; the
                         // editor view reads `config.keys` through this ArcSwap.
+                        // Re-apply the runtime `:map` overlay on top of the fresh
+                        // preset so live mappings survive the switch.
+                        crate::keymap::vim_map::apply_user_mappings(&mut keys);
                         let mut app_config = (*self.config.load().clone()).clone();
                         app_config.keys = keys;
                         app_config.keymap = name.clone();
@@ -590,6 +602,11 @@ impl Application {
             }
 
             self.terminal.reconfigure((&default_config.editor).into())?;
+            // Re-apply the runtime `:map` overlay: reloading from disk rebuilds
+            // `config.keys` from the preset + config file and would drop any live
+            // vimscript `:map`s otherwise.
+            let mut default_config = default_config;
+            crate::keymap::vim_map::apply_user_mappings(&mut default_config.keys);
             // Store new config
             self.config.store(Arc::new(default_config));
             Ok(())
@@ -1560,6 +1577,30 @@ impl Application {
             // saved widths/folds instead of clobbering them with zeroed defaults.
             data.ide = prev.ide;
         }
+        // Breakpoints — persist the user-set fields per file.
+        data.breakpoints = self
+            .editor
+            .breakpoints
+            .iter()
+            .filter(|(_, bps)| !bps.is_empty())
+            .map(|(path, bps)| crate::appdata::FileBreakpoints {
+                path: path.to_string_lossy().into_owned(),
+                breakpoints: bps
+                    .iter()
+                    .map(|b| crate::appdata::BreakpointData {
+                        line: b.line,
+                        column: b.column,
+                        condition: b.condition.clone(),
+                        hit_condition: b.hit_condition.clone(),
+                        log_message: b.log_message.clone(),
+                    })
+                    .collect(),
+            })
+            .collect();
+        // Window split layout (arrangement + files + focus). Cursors for the
+        // focused view are already captured in `data.cursor` above.
+        let shape = self.editor.tree.shape();
+        data.splits = Some(shape_to_split(&self.editor, &shape));
         crate::appdata::save(&data);
     }
 
@@ -1598,9 +1639,49 @@ impl Application {
 /// back to a scratch buffer + start screen.
 #[cfg(not(feature = "integration"))]
 fn restore_session(appdata: Option<&crate::appdata::AppData>, editor: &mut Editor) -> bool {
-    use zemacs_view::editor::Action;
+    use zemacs_view::editor::{Action, Breakpoint};
 
     let Some(data) = appdata else { return false };
+
+    // Debugger breakpoints — restore the user-set fields (runtime id/verified are
+    // re-established when a debug session attaches). Independent of open files.
+    for fb in &data.breakpoints {
+        let bps: Vec<Breakpoint> = fb
+            .breakpoints
+            .iter()
+            .map(|b| Breakpoint {
+                id: None,
+                verified: false,
+                message: None,
+                line: b.line,
+                column: b.column,
+                condition: b.condition.clone(),
+                hit_condition: b.hit_condition.clone(),
+                log_message: b.log_message.clone(),
+            })
+            .collect();
+        if !bps.is_empty() {
+            editor.breakpoints.insert(std::path::PathBuf::from(&fb.path), bps);
+        }
+    }
+
+    // Prefer the full split layout when a previous session saved one.
+    if let Some(node) = &data.splits {
+        if restore_splits(node, editor) {
+            if let Some(pos) = data.cursor {
+                let view_id = editor.tree.focus;
+                if editor.tree.try_get(view_id).is_some() {
+                    let doc_id = editor.tree.get(view_id).doc;
+                    let doc = doc_mut!(editor, &doc_id);
+                    let pos = pos.min(doc.text().len_chars());
+                    doc.set_selection(view_id, Selection::point(pos));
+                }
+            }
+            return editor.tree.try_get(editor.tree.focus).is_some();
+        }
+    }
+
+    // Fallback: flat reopen (sessions saved before the split tree existed).
     if data.open_files.is_empty() {
         return false;
     }
@@ -1626,6 +1707,124 @@ fn restore_session(appdata: Option<&crate::appdata::AppData>, editor: &mut Edito
     // A focused view only exists if `focused_file` actually reopened; background
     // `Action::Load` calls create no view on their own.
     editor.tree.try_get(editor.tree.focus).is_some()
+}
+
+/// Capture the live window split tree as a persistable [`crate::appdata::SplitNode`]
+/// (paths + horizontal/vertical arrangement + weights).
+#[cfg(not(feature = "integration"))]
+fn shape_to_split(editor: &Editor, shape: &zemacs_view::tree::TreeShape) -> crate::appdata::SplitNode {
+    use zemacs_view::tree::{Layout, TreeShape};
+    match shape {
+        TreeShape::Leaf { doc, focused } => {
+            let path = editor
+                .documents
+                .get(doc)
+                .and_then(|d| d.path())
+                .map(|p| p.to_string_lossy().into_owned());
+            crate::appdata::SplitNode {
+                kind: "leaf".into(),
+                weight: 1.0,
+                path,
+                focused: *focused,
+                cursor: None,
+                children: Vec::new(),
+            }
+        }
+        TreeShape::Split { layout, children } => crate::appdata::SplitNode {
+            kind: if matches!(layout, Layout::Horizontal) { "h" } else { "v" }.into(),
+            weight: 1.0,
+            path: None,
+            focused: false,
+            cursor: None,
+            children: children
+                .iter()
+                .map(|(w, c)| {
+                    let mut n = shape_to_split(editor, c);
+                    n.weight = *w;
+                    n
+                })
+                .collect(),
+        },
+    }
+}
+
+/// Reopen every file referenced by `node` and rebuild the split tree from it.
+/// Returns false (caller falls back to flat restore) if nothing usable remains.
+#[cfg(not(feature = "integration"))]
+fn restore_splits(node: &crate::appdata::SplitNode, editor: &mut Editor) -> bool {
+    use zemacs_view::editor::Action;
+
+    let mut paths = Vec::new();
+    collect_leaf_paths(node, &mut paths);
+    if paths.is_empty() {
+        return false;
+    }
+    let mut map: std::collections::HashMap<String, zemacs_view::DocumentId> = Default::default();
+    for p in &paths {
+        if map.contains_key(p) {
+            continue;
+        }
+        let path = std::path::Path::new(p);
+        if path.is_file() {
+            if let Ok(doc_id) = editor.open(path, Action::Load) {
+                map.insert(p.clone(), doc_id);
+            }
+        }
+    }
+    let Some(shape) = node_to_shape(node, &map) else {
+        return false;
+    };
+    let gutters = editor.config().gutters.clone();
+    let mut make = |doc| zemacs_view::view::View::new(doc, gutters.clone());
+    editor.tree.build_from_shape(&shape, &mut make);
+    true
+}
+
+#[cfg(not(feature = "integration"))]
+fn collect_leaf_paths(node: &crate::appdata::SplitNode, out: &mut Vec<String>) {
+    if node.kind == "leaf" {
+        if let Some(p) = &node.path {
+            out.push(p.clone());
+        }
+    } else {
+        for c in &node.children {
+            collect_leaf_paths(c, out);
+        }
+    }
+}
+
+/// Convert a persisted [`crate::appdata::SplitNode`] into a live [`TreeShape`],
+/// dropping leaves whose file failed to open and collapsing now-empty splits.
+#[cfg(not(feature = "integration"))]
+fn node_to_shape(
+    node: &crate::appdata::SplitNode,
+    map: &std::collections::HashMap<String, zemacs_view::DocumentId>,
+) -> Option<zemacs_view::tree::TreeShape> {
+    use zemacs_view::tree::{Layout, TreeShape};
+    if node.kind == "leaf" {
+        let path = node.path.as_ref()?;
+        let doc = *map.get(path)?;
+        Some(TreeShape::Leaf {
+            doc,
+            focused: node.focused,
+        })
+    } else {
+        let layout = if node.kind == "h" {
+            Layout::Horizontal
+        } else {
+            Layout::Vertical
+        };
+        let children: Vec<(f32, TreeShape)> = node
+            .children
+            .iter()
+            .filter_map(|c| node_to_shape(c, map).map(|s| (c.weight, s)))
+            .collect();
+        match children.len() {
+            0 => None,
+            1 => Some(children.into_iter().next().unwrap().1),
+            _ => Some(TreeShape::Split { layout, children }),
+        }
+    }
 }
 
 impl ui::menu::Item for lsp::MessageActionItem {

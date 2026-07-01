@@ -3,6 +3,7 @@ pub mod emacs;
 pub mod macros;
 pub mod spacemacs;
 pub mod vim;
+pub mod vim_map;
 
 pub use crate::commands::MappableCommand;
 // zemacs ships the spacemacs keymap as the default keymap that `Config` loads:

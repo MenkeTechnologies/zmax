@@ -18540,11 +18540,13 @@
   },
   {
     "spec_id": "jetbrains.coding-assistance.complete-current-statement",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:open_below"
+      "static:complete_current_statement",
+      "key:insert:C-c ;",
+      "key:normal:C-c ;"
     ],
-    "note": "open line below to continue ~ complete-statement (no semantic syntax insertion)"
+    "note": "Complete Current Statement (Cmd-Shift-Enter) = complete_current_statement, bound under the Emacs major-mode prefix C-c as `C-c ;` — active in Insert, Normal AND Select (spacemacs), so it fires while typing like JetBrains. Closes brackets/parens left open on the line, appends the language terminator (; for C/Rust/Java/JS/... via lang_uses_semicolons), leaves `{` blocks open, then opens an indented line below in insert mode. Line-local heuristic (not full PSI)."
   },
   {
     "spec_id": "jetbrains.coding-assistance.generate",

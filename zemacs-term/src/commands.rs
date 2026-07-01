@@ -665,6 +665,7 @@ impl MappableCommand {
         insert_at_line_end, "Insert at end of line",
         open_below, "Open new line below selection",
         open_above, "Open new line above selection",
+        complete_current_statement, "Complete the current statement (close brackets, add terminator, open next line) (JetBrains)",
         normal_mode, "Enter normal mode",
         select_mode, "Enter selection extend mode",
         exit_select_mode, "Exit selection mode",
@@ -13659,6 +13660,167 @@ fn open_above(cx: &mut Context) {
     open(cx, Open::Above, CommentContinuation::Enabled)
 }
 
+/// Whether a language terminates statements with `;` (so Complete Statement
+/// should append one). Conservative allow-list keyed on the tree-sitter
+/// language name; languages with implicit terminators (Go), significant
+/// newlines (Python), or none (Lisp) are intentionally absent.
+fn lang_uses_semicolons(lang: &str) -> bool {
+    matches!(
+        lang,
+        "rust"
+            | "c"
+            | "cpp"
+            | "cuda"
+            | "c-sharp"
+            | "csharp"
+            | "java"
+            | "javascript"
+            | "jsx"
+            | "typescript"
+            | "tsx"
+            | "php"
+            | "scala"
+            | "kotlin"
+            | "dart"
+            | "swift"
+            | "objc"
+            | "glsl"
+            | "hlsl"
+            | "css"
+            | "scss"
+            | "less"
+            | "perl"
+            | "pascal"
+            | "d"
+            | "zig"
+    )
+}
+
+/// Given the current line's text, compute the suffix that "completes the
+/// statement": closers for any brackets/parens opened but not closed on the
+/// line, followed by a `;` terminator when the language uses one and the line
+/// doesn't already end in a terminator/opener/comment. Best-effort, line-local
+/// (JetBrains uses full-PSI analysis; this covers the common finish-this-call /
+/// finish-this-declaration cases).
+fn statement_completion_suffix(line: &str, uses_semicolon: bool) -> String {
+    // Track unclosed openers, skipping bracket chars inside strings/char
+    // literals; stop at a line comment (`//`, `#`) so nothing after it counts.
+    // `code_end` marks where the code portion ends (comment start, or EOL).
+    let mut stack: Vec<char> = Vec::new();
+    let mut it = line.char_indices().peekable();
+    let mut in_str: Option<char> = None; // the active quote char
+    let mut escaped = false;
+    let mut code_end = line.len();
+    while let Some((i, c)) = it.next() {
+        if let Some(q) = in_str {
+            if escaped {
+                escaped = false;
+            } else if c == '\\' {
+                escaped = true;
+            } else if c == q {
+                in_str = None;
+            }
+            continue;
+        }
+        match c {
+            '"' | '\'' | '`' => in_str = Some(c),
+            // Line comment (`//` or `#`): stop — nothing after affects the
+            // statement. (`#` also covers Rust attributes / C preprocessor,
+            // which correctly get no terminator.)
+            '/' if matches!(it.peek(), Some((_, '/'))) => {
+                code_end = i;
+                break;
+            }
+            '#' => {
+                code_end = i;
+                break;
+            }
+            '(' | '[' | '{' => stack.push(c),
+            ')' => {
+                if stack.last() == Some(&'(') {
+                    stack.pop();
+                }
+            }
+            ']' => {
+                if stack.last() == Some(&'[') {
+                    stack.pop();
+                }
+            }
+            '}' => {
+                if stack.last() == Some(&'{') {
+                    stack.pop();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut suffix = String::new();
+    // Close only `(`/`[` — a dangling `{` opens a block the user wants to keep
+    // writing inside, so we leave it open (and skip the `;` below).
+    let mut has_open_brace = false;
+    for &opener in stack.iter().rev() {
+        match opener {
+            '(' => suffix.push(')'),
+            '[' => suffix.push(']'),
+            '{' => has_open_brace = true,
+            _ => {}
+        }
+    }
+
+    if uses_semicolon && !has_open_brace {
+        // Decide the terminator on the code portion only (comment stripped). A
+        // trailing `(`/`[` is NOT a terminator — we just closed it into `()`/`[]`,
+        // so the statement is complete and should be terminated.
+        let code = line[..code_end].trim_end();
+        let last = code.chars().last();
+        let already_terminated =
+            matches!(last, None | Some(';') | Some('{') | Some('}') | Some(',') | Some(':'));
+        if !already_terminated {
+            suffix.push(';');
+        }
+    }
+
+    suffix
+}
+
+/// JetBrains "Complete Current Statement" (Cmd Shift Enter): finish the
+/// statement the caret is on — close any brackets/parens left open on the line
+/// and append the language's terminator (`;`) — then open a fresh indented line
+/// below in insert mode, ready to continue. Operates on the primary selection.
+fn complete_current_statement(cx: &mut Context) {
+    let uses_semicolon = {
+        let (_, doc) = current_ref!(cx.editor);
+        doc.language_name()
+            .map(lang_uses_semicolons)
+            .unwrap_or(false)
+    };
+
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let line = slice.char_to_line(cursor);
+        let line_start = slice.line_to_char(line);
+        let line_end = line_end_char_index(&slice, line);
+        let line_str: String = slice.slice(line_start..line_end).to_string();
+
+        let suffix = statement_completion_suffix(&line_str, uses_semicolon);
+        if !suffix.is_empty() {
+            let transaction = Transaction::change(
+                text,
+                std::iter::once((line_end, line_end, Some(suffix.into()))),
+            );
+            doc.apply(&transaction, view.id);
+        }
+    }
+
+    // Open a new line below (enters insert mode with the right indent), matching
+    // JetBrains leaving the caret on a fresh line to keep typing.
+    open(cx, Open::Below, CommentContinuation::Disabled);
+}
+
 fn normal_mode(cx: &mut Context) {
     // Capture the text inserted this session (for i_CTRL-A) before leaving insert.
     if cx.editor.mode == Mode::Insert {
@@ -20606,6 +20768,58 @@ fn lsp_or_syntax_workspace_symbol_picker(cx: &mut Context) {
         lsp::workspace_symbol_picker(cx);
     } else {
         syntax_workspace_symbol_picker(cx);
+    }
+}
+
+#[cfg(test)]
+mod complete_statement_tests {
+    use super::statement_completion_suffix;
+
+    #[test]
+    fn closes_parens_and_adds_semicolon() {
+        // finish a call: close the open paren, then terminate.
+        assert_eq!(statement_completion_suffix("foo(bar", true), ");");
+        assert_eq!(statement_completion_suffix("let x = foo(a, b(c)", true), ");");
+        // nested brackets close in the right order.
+        assert_eq!(statement_completion_suffix("x = a[i](", true), ");");
+        assert_eq!(statement_completion_suffix("m[k", true), "];");
+    }
+
+    #[test]
+    fn adds_only_semicolon_when_balanced() {
+        assert_eq!(statement_completion_suffix("let x = 1", true), ";");
+        assert_eq!(statement_completion_suffix("return value", true), ";");
+    }
+
+    #[test]
+    fn no_double_terminator_or_after_openers() {
+        assert_eq!(statement_completion_suffix("let x = 1;", true), "");
+        assert_eq!(statement_completion_suffix("struct S {", true), ""); // block stays open
+        assert_eq!(statement_completion_suffix("arr = [", true), "];"); // close bracket + terminate
+        assert_eq!(statement_completion_suffix("foo(a,", true), ")"); // close paren, no ; (trailing comma)
+    }
+
+    #[test]
+    fn open_brace_keeps_block_open_no_semicolon() {
+        // `if x {` → nothing appended (leave the block open to type inside).
+        assert_eq!(statement_completion_suffix("if x {", true), "");
+        assert_eq!(statement_completion_suffix("fn main() {", true), "");
+    }
+
+    #[test]
+    fn skips_strings_and_comments() {
+        // brackets inside a string don't count.
+        assert_eq!(statement_completion_suffix(r#"let s = "a(b[c""#, true), ";");
+        // a line comment ends bracket tracking.
+        assert_eq!(statement_completion_suffix("x = 1 // note (", true), ";");
+        // comment-only line gets nothing.
+        assert_eq!(statement_completion_suffix("// hello", true), "");
+    }
+
+    #[test]
+    fn no_semicolon_for_non_semicolon_langs() {
+        assert_eq!(statement_completion_suffix("foo(bar", false), ")");
+        assert_eq!(statement_completion_suffix("x = 1", false), "");
     }
 }
 

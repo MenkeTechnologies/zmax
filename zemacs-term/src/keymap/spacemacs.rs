@@ -126,8 +126,9 @@ fn cx_prefix() -> KeyTrie {
 fn cc_prefix() -> KeyTrie {
     keymap!({ "overlay"
         "C-c" => { "C-c (mode prefix)"
-            "C-c" => run_active_config,     // C-c C-c: execute / compile (major-mode action)
-            "C-r" => rerun_last_run,        // C-c C-r: re-run
+            "C-c" => run_active_config,          // C-c C-c: execute / compile (major-mode action)
+            "C-r" => rerun_last_run,             // C-c C-r: re-run
+            ";" => complete_current_statement,   // C-c ;: complete current statement (JetBrains Cmd-Shift-Enter); works in insert mode
         },
     })
 }
@@ -476,6 +477,25 @@ mod tests {
         assert_eq!(
             cmd(&km, Mode::Normal, "C-h m").as_deref(),
             Some("describe_current_modes")
+        );
+    }
+
+    #[test]
+    fn complete_statement_bound_under_cc_in_insert() {
+        let km = default();
+        // JetBrains "Complete Current Statement" lives under the Emacs major-mode
+        // prefix C-c and must fire while typing → active in Insert (and Normal).
+        for mode in [Mode::Insert, Mode::Normal, Mode::Select] {
+            assert_eq!(
+                cmd(&km, mode, "C-c ;").as_deref(),
+                Some("complete_current_statement"),
+                "C-c ; must complete the statement in {mode}"
+            );
+        }
+        // …without clobbering the existing C-c C-c major-mode action.
+        assert_eq!(
+            cmd(&km, Mode::Insert, "C-c C-c").as_deref(),
+            Some("run_active_config")
         );
     }
 
