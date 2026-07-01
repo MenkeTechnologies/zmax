@@ -91,6 +91,30 @@ pub enum CachedPreview {
     NotFound,
 }
 
+/// xxd-style hex dump of `bytes` (8-digit offset, 16 bytes/row grouped 8+8, then
+/// the printable ASCII gutter) — the file picker's preview for binary files.
+fn hex_preview(bytes: &[u8]) -> String {
+    let mut out = String::with_capacity(bytes.len() * 4);
+    for (i, chunk) in bytes.chunks(16).enumerate() {
+        let mut hex = String::new();
+        for j in 0..16 {
+            match chunk.get(j) {
+                Some(b) => hex.push_str(&format!("{b:02x} ")),
+                None => hex.push_str("   "),
+            }
+            if j == 7 {
+                hex.push(' ');
+            }
+        }
+        let ascii: String = chunk
+            .iter()
+            .map(|&b| if (0x20..0x7f).contains(&b) { b as char } else { '.' })
+            .collect();
+        out.push_str(&format!("{:08x}  {hex}|{ascii}|\n", i * 16));
+    }
+    out
+}
+
 // We don't store this enum in the cache so as to avoid lifetime constraints
 // from borrowing a document already opened in the editor.
 pub enum Preview<'picker, 'editor> {
@@ -688,7 +712,19 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                                 Ok(is_binary)
                             })?;
                             if is_binary {
-                                return Ok(CachedPreview::Binary);
+                                // Preview binary files as an xxd-style hex dump
+                                // (first 64 KiB) instead of a bare placeholder.
+                                let bytes = std::fs::read(&path)
+                                    .map(|b| b[..b.len().min(64 * 1024)].to_vec())
+                                    .unwrap_or_default();
+                                let text = zemacs_core::Rope::from(hex_preview(&bytes).as_str());
+                                let doc = Document::from(
+                                    text,
+                                    None,
+                                    editor.config.clone(),
+                                    editor.syn_loader.clone(),
+                                );
+                                return Ok(CachedPreview::Document(Box::new(doc)));
                             }
                             // Binary files are now rejected by Document::open
                             let mut doc = match Document::open(
