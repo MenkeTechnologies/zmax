@@ -59,6 +59,11 @@ impl FileTree {
         tree
     }
 
+    /// The workspace root the tree is rooted at (for root-level New actions).
+    pub fn root_path(&self) -> PathBuf {
+        self.root.clone()
+    }
+
     /// The set of currently-expanded directory paths (for session persistence).
     pub fn expanded_paths(&self) -> Vec<PathBuf> {
         self.expanded.iter().cloned().collect()

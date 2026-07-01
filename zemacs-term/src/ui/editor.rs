@@ -256,6 +256,13 @@ impl EditorView {
         }
     }
 
+    /// Toggle a workbench panel's fold state (context-menu "Fold").
+    pub fn ide_toggle_fold(&mut self, which: &str) {
+        if let Some(ide) = self.ide.as_mut() {
+            ide.toggle_fold_panel(which);
+        }
+    }
+
     /// Clear the Run console output (no-op with a status hint when nothing ran).
     pub fn clear_run_output(&mut self, cx: &mut crate::compositor::Context) {
         let cleared = self.ide.as_mut().is_some_and(Ide::clear_run);
@@ -1932,6 +1939,240 @@ impl EditorView {
 
 /// Whether the focused doc's workspace is in restricted mode and running `trust` would
 /// change something visible at the workspace level.
+/// Run a normal-mode command from a context-menu callback, then dispatch any
+/// compositor callbacks it queued (LSP pickers, rename prompt, code-action menu…).
+fn run_editor_command(
+    compositor: &mut crate::compositor::Compositor,
+    cx: &mut crate::compositor::Context,
+    cmd: impl FnOnce(&mut commands::Context),
+) {
+    let cbs = {
+        let mut c = commands::Context {
+            editor: cx.editor,
+            count: None,
+            register: None,
+            callback: Vec::new(),
+            on_next_key_callback: None,
+            jobs: cx.jobs,
+        };
+        cmd(&mut c);
+        std::mem::take(&mut c.callback)
+    };
+    for cb in cbs {
+        cb(compositor, cx);
+    }
+}
+
+/// Spawn a detached command (Open In Finder/Terminal/GitHub, gist).
+fn ctx_spawn(program: &str, args: &[&str]) {
+    let _ = std::process::Command::new(program)
+        .args(args)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+}
+
+/// The JetBrains in-editor context menu (right-click on editor text). Actions map
+/// to real zemacs commands; the Run/Debug + Open In/Git/Gist groups appear only
+/// for a file backed by a path.
+fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::context_menu::Entry> {
+    use crate::commands::MappableCommand as MC;
+    use crate::ui::context_menu::Entry;
+
+    let mut e = vec![
+        Entry::item_key("Show Context Actions", "⌥↵", |co, cx| {
+            run_editor_command(co, cx, |c| {
+                MC::code_action.execute(c);
+            })
+        }),
+        Entry::sep(),
+        Entry::item_key("Paste", "⌘V", |co, cx| {
+            run_editor_command(co, cx, |c| {
+                MC::paste_clipboard_after.execute(c);
+            })
+        }),
+        Entry::item("Copy Reference", |_co, cx| {
+            let (view, doc) = zemacs_view::current_ref!(cx.editor);
+            let text = doc.text();
+            let pos = doc.selection(view.id).primary().cursor(text.slice(..));
+            let line = text.char_to_line(pos) + 1;
+            let name = doc
+                .path()
+                .map(|p| p.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "[scratch]".into());
+            let r = format!("{name}:{line}");
+            let _ = cx.editor.registers.push('"', r.clone());
+            cx.editor.set_status(format!("yanked {r}"));
+        }),
+        Entry::sep(),
+        Entry::item_key("Find Usages", "⌥F7", |co, cx| {
+            run_editor_command(co, cx, |c| {
+                MC::goto_reference.execute(c);
+            })
+        }),
+        Entry::sub(
+            "Go To",
+            vec![
+                Entry::item("Declaration", |co, cx| {
+                    run_editor_command(co, cx, |c| {
+                        MC::goto_declaration.execute(c);
+                    })
+                }),
+                Entry::item("Definition", |co, cx| {
+                    run_editor_command(co, cx, |c| {
+                        MC::goto_definition.execute(c);
+                    })
+                }),
+                Entry::item("Type Definition", |co, cx| {
+                    run_editor_command(co, cx, |c| {
+                        MC::goto_type_definition.execute(c);
+                    })
+                }),
+                Entry::item("Implementation", |co, cx| {
+                    run_editor_command(co, cx, |c| {
+                        MC::goto_implementation.execute(c);
+                    })
+                }),
+            ],
+        ),
+        Entry::sep(),
+        Entry::sub(
+            "Folding",
+            vec![
+                Entry::item("Fold", |co, cx| {
+                    run_editor_command(co, cx, |c| {
+                        MC::fold_create.execute(c);
+                    })
+                }),
+                Entry::item("Toggle Fold", |co, cx| {
+                    run_editor_command(co, cx, |c| {
+                        MC::fold_toggle.execute(c);
+                    })
+                }),
+                Entry::item("Fold All", |co, cx| {
+                    run_editor_command(co, cx, |c| {
+                        MC::fold_close_all.execute(c);
+                    })
+                }),
+                Entry::item("Unfold All", |co, cx| {
+                    run_editor_command(co, cx, |c| {
+                        MC::fold_open_all.execute(c);
+                    })
+                }),
+            ],
+        ),
+        Entry::sep(),
+        Entry::item_key("Rename…", "⇧F6", |co, cx| {
+            run_editor_command(co, cx, |c| {
+                MC::rename_symbol.execute(c);
+            })
+        }),
+        Entry::sub(
+            "Refactor",
+            vec![
+                Entry::item("Rename…", |co, cx| {
+                    run_editor_command(co, cx, |c| {
+                        MC::rename_symbol.execute(c);
+                    })
+                }),
+                Entry::item("Reformat Code", |co, cx| {
+                    run_editor_command(co, cx, |c| {
+                        MC::format_selections.execute(c);
+                    })
+                }),
+            ],
+        ),
+        Entry::item_key("Generate…", "⌘N", |_co, cx| {
+            crate::commands::typed::run_command_line(cx, "Snippets");
+        }),
+    ];
+
+    if let Some(path) = path {
+        let dir = path
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::path::PathBuf::from("."));
+
+        // Run / Debug — standalone file.
+        e.push(Entry::sep());
+        {
+            let p = path.clone();
+            e.push(Entry::item("Run", move |co, cx| {
+                if let Some(v) = co.find::<EditorView>() {
+                    v.run_path(cx.editor, &p);
+                }
+            }));
+        }
+        e.push(Entry::item("Debug", |co, cx| {
+            run_editor_command(co, cx, |c| {
+                crate::commands::dap::dap_launch(c);
+            })
+        }));
+
+        // Open In ›
+        e.push(Entry::sep());
+        {
+            let (pf, dt, pg) = (path.clone(), dir.clone(), path.clone());
+            e.push(Entry::sub(
+                "Open In",
+                vec![
+                    Entry::item("Finder", move |_co, _cx| {
+                        ctx_spawn("open", &["-R", pf.to_str().unwrap_or("")]);
+                    }),
+                    Entry::item("Terminal", move |_co, _cx| {
+                        ctx_spawn("open", &["-a", "Terminal", dt.to_str().unwrap_or("")]);
+                    }),
+                    Entry::item("GitHub", move |_co, _cx| {
+                        ctx_spawn("gh", &["browse", "--", pg.to_str().unwrap_or("")]);
+                    }),
+                ],
+            ));
+        }
+
+        // Git › + Local History (git log -p)
+        e.push(Entry::sep());
+        fn mkgit(
+            label: &'static str,
+            tmpl: &'static str,
+            p: std::path::PathBuf,
+            d: std::path::PathBuf,
+        ) -> crate::ui::context_menu::Entry {
+            crate::ui::context_menu::Entry::item(label, move |co, cx| {
+                if let Some(v) = co.find::<EditorView>() {
+                    let quoted = p.to_string_lossy().replace('\'', "'\\''");
+                    v.start_run(cx, tmpl.replace("{}", &quoted), d.clone());
+                }
+            })
+        }
+        e.push(Entry::sub(
+            "Git",
+            vec![
+                mkgit("Blame", "git --no-pager blame '{}'", path.clone(), dir.clone()),
+                mkgit("Diff", "git --no-pager diff '{}'", path.clone(), dir.clone()),
+                mkgit("Log", "git --no-pager log --oneline -- '{}'", path.clone(), dir.clone()),
+            ],
+        ));
+        e.push(mkgit(
+            "Local History",
+            "git --no-pager log -p -- '{}'",
+            path.clone(),
+            dir.clone(),
+        ));
+
+        // Create Gist…
+        e.push(Entry::sep());
+        {
+            let p = path.clone();
+            e.push(Entry::item("Create Gist…", move |_co, _cx| {
+                ctx_spawn("gh", &["gist", "create", "--web", p.to_str().unwrap_or("")]);
+            }));
+        }
+    }
+
+    e
+}
+
 fn workspace_trust_indicator_visible(editor: &Editor) -> bool {
     if editor.workspace_trust.implicit_level()
         == zemacs_loader::workspace_trust::ImplicitTrustLevel::Insecure
@@ -2220,24 +2461,15 @@ impl EditorView {
                 let cb: crate::compositor::Callback =
                     Box::new(move |compositor: &mut crate::compositor::Compositor, _cx| {
                         use crate::ui::context_menu::{ContextMenu, Entry};
-                        let mut entries = match path.clone() {
-                            // Same JetBrains menu as the file tree, plus Reveal in Tree.
-                            Some(path) => {
-                                let mut e = crate::ui::ide::file_menu_entries(path.clone(), false);
-                                e.push(Entry::sep());
-                                e.push(Entry::item("Reveal in Tree", move |compositor, _cx| {
-                                    if let Some(view) = compositor.find::<EditorView>() {
-                                        view.reveal_in_tree(&path);
-                                    }
-                                }));
-                                e
-                            }
-                            // Scratch buffer with no path: offer clipboard paste only.
-                            None => vec![Entry::item("(no file)", |_c, _cx| {})],
-                        };
-                        // Drop a trailing separator if any.
-                        if matches!(entries.last(), Some(Entry::Sep)) {
-                            entries.pop();
+                        let mut entries = editor_menu_entries(path.clone());
+                        // Reveal in Tree at the end when the buffer has a path.
+                        if let Some(path) = path.clone() {
+                            entries.push(Entry::sep());
+                            entries.push(Entry::item("Reveal in Tree", move |compositor, _cx| {
+                                if let Some(view) = compositor.find::<EditorView>() {
+                                    view.reveal_in_tree(&path);
+                                }
+                            }));
                         }
                         compositor.push(Box::new(ContextMenu::new(row, column, entries)));
                     });

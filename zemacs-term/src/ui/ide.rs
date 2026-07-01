@@ -679,6 +679,18 @@ impl Ide {
         }
     }
 
+    /// Toggle a panel's fold state (context-menu "Fold"): project / structure /
+    /// problems (bottom drawer) / minimap.
+    pub fn toggle_fold_panel(&mut self, which: &str) {
+        match which {
+            "project" => self.fold_project = !self.fold_project,
+            "structure" => self.fold_structure = !self.fold_structure,
+            "problems" => self.fold_problems = !self.fold_problems,
+            "minimap" => self.fold_minimap = !self.fold_minimap,
+            _ => {}
+        }
+    }
+
     /// Wipe the Run console output (keeps the process running; new output still
     /// streams in) and reveal the Run tab so the cleared console is in view.
     /// Returns false when there's no run to clear.
@@ -1894,7 +1906,16 @@ impl Ide {
             }
             MouseEventKind::Down(MouseButton::Right) => {
                 use crate::ui::context_menu::{ContextMenu, Entry};
-                // Right-click on a file-tree entry → CRUD context menu.
+                // A "Fold <panel>" entry that toggles the given panel's fold state.
+                fn fold_item(label: &'static str, which: &'static str) -> Entry {
+                    Entry::item(label, move |compositor, _cx| {
+                        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                            view.ide_toggle_fold(which);
+                        }
+                    })
+                }
+
+                // Right-click a file-tree entry → CRUD context menu (+ Fold Panel).
                 if in_rect(&self.project_rect, col, row) && row > self.project_rect.y {
                     let lr = (row - self.project_rect.y - 1) as usize;
                     if let Some((path, is_dir)) = self.project.path_at_row(lr) {
@@ -1907,7 +1928,41 @@ impl Ide {
                         };
                     }
                 }
-                // Right-click the bottom drawer (Run console) → run controls.
+                // Right-click the file-tree header / empty area → root New + Fold.
+                if in_rect(&self.project_rect, col, row) {
+                    let root = self.project.root_path();
+                    let entries = vec![
+                        Entry::sub(
+                            "New",
+                            vec![
+                                {
+                                    let r = root.clone();
+                                    Entry::item("File", move |compositor, _cx| {
+                                        compositor.push(Box::new(name_prompt(
+                                            FileActionKind::NewFile,
+                                            r.clone(),
+                                            true,
+                                        )));
+                                    })
+                                },
+                                {
+                                    let r = root.clone();
+                                    Entry::item("Directory", move |compositor, _cx| {
+                                        compositor.push(Box::new(name_prompt(
+                                            FileActionKind::NewFolder,
+                                            r.clone(),
+                                            true,
+                                        )));
+                                    })
+                                },
+                            ],
+                        ),
+                        Entry::sep(),
+                        fold_item("Fold Panel", "project"),
+                    ];
+                    return IdeAction::ShowMenu(ContextMenu::new(row, col, entries));
+                }
+                // Right-click the bottom drawer (Run console) → run controls + Fold.
                 if in_rect(&self.problems_rect, col, row) {
                     let entries = vec![
                         Entry::item("Rerun", |compositor, cx| {
@@ -1925,32 +1980,43 @@ impl Ide {
                                 view.clear_run_output(cx);
                             }
                         }),
+                        Entry::sep(),
+                        fold_item("Fold Panel", "problems"),
                     ];
                     return IdeAction::ShowMenu(ContextMenu::new(row, col, entries));
                 }
-                // Right-click the Structure outline → jump to the symbol.
-                if in_rect(&self.structure_rect, col, row) && row > self.structure_rect.y {
+                // Right-click the Structure outline → jump to the symbol (+ Fold).
+                if in_rect(&self.structure_rect, col, row) {
                     let idx = self.structure_state.offset()
-                        + (row - self.structure_rect.y - 1) as usize;
-                    if let Some(o) = self.structure.get(idx) {
-                        let (from, to) = (o.start, o.end);
-                        let name = o.name.clone();
-                        let entries = vec![
-                            Entry::item("Go to Symbol", move |_c, cx| {
+                        + (row.saturating_sub(self.structure_rect.y + 1)) as usize;
+                    let mut entries = Vec::new();
+                    if row > self.structure_rect.y {
+                        if let Some(o) = self.structure.get(idx) {
+                            let (from, to) = (o.start, o.end);
+                            let name = o.name.clone();
+                            entries.push(Entry::item("Go to Symbol", move |_c, cx| {
                                 let view_id = cx.editor.tree.focus;
                                 let doc_id = cx.editor.tree.get(view_id).doc;
                                 if let Some(doc) = cx.editor.documents.get_mut(&doc_id) {
                                     doc.set_selection(view_id, goto_selection(from, to));
                                 }
                                 cx.editor.ensure_cursor_in_view(view_id);
-                            }),
-                            Entry::item("Copy Name", move |_c, cx| {
+                            }));
+                            entries.push(Entry::item("Copy Name", move |_c, cx| {
                                 let _ = cx.editor.registers.push('"', name.clone());
                                 cx.editor.set_status(format!("yanked {name}"));
-                            }),
-                        ];
-                        return IdeAction::ShowMenu(ContextMenu::new(row, col, entries));
+                            }));
+                            entries.push(Entry::sep());
+                        }
                     }
+                    entries.push(fold_item("Fold Panel", "structure"));
+                    return IdeAction::ShowMenu(ContextMenu::new(row, col, entries));
+                }
+                // Right-click the minimap → fold it (or expand when collapsed).
+                if in_rect(&self.stripe_rect, col, row) {
+                    let label = if self.fold_minimap { "Expand Minimap" } else { "Fold Minimap" };
+                    let entries = vec![fold_item(label, "minimap")];
+                    return IdeAction::ShowMenu(ContextMenu::new(row, col, entries));
                 }
                 IdeAction::None
             }
@@ -4546,7 +4612,15 @@ pub fn file_context_menu(
     row: u16,
     col: u16,
 ) -> crate::ui::context_menu::ContextMenu {
-    crate::ui::context_menu::ContextMenu::new(row, col, file_menu_entries(path, is_dir))
+    use crate::ui::context_menu::Entry;
+    let mut entries = file_menu_entries(path, is_dir);
+    entries.push(Entry::sep());
+    entries.push(Entry::item("Fold Panel", |compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.ide_toggle_fold("project");
+        }
+    }));
+    crate::ui::context_menu::ContextMenu::new(row, col, entries)
 }
 
 /// The JetBrains project-view context menu, as a tree of `Entry`s. Shared by the
