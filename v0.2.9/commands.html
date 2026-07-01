@@ -1,0 +1,1195 @@
+<!DOCTYPE HTML>
+<html lang="en" class="colibri sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Commands</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-d5706b94.svg">
+        <link rel="shortcut icon" href="favicon-cc1a8b51.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-0392ca55.css">
+        <link rel="stylesheet" href="css/chrome-fc474251.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="custom-16ed19e8.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "colibri";
+            const default_dark_theme = "colibri";
+            window.path_to_searchindex_js = "searchindex-bcb2c5a6.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-c0d3b1d1.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('colibri')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-colibri">Colibri</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title"></h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/MenkeTechnologies/zemacs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/MenkeTechnologies/zemacs/edit/main/book/src/commands.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="commands"><a class="header" href="#commands">Commands</a></h1>
+<ul>
+<li><a href="#typable-commands">Typable commands</a></li>
+<li><a href="#static-commands">Static commands</a></li>
+</ul>
+<h2 id="typable-commands"><a class="header" href="#typable-commands">Typable commands</a></h2>
+<p>Typable commands are used from command mode and may take arguments. Command mode can be activated by pressing <code>:</code>. The built-in typable commands are:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>:terminal</code>, <code>:term</code></td><td>Open an integrated terminal (PTY shell) running $SHELL.</td></tr>
+<tr><td><code>:ide</code>, <code>:workbench</code></td><td>Enter IDE mode (file-tree sidebar + panels, like <code>--ide</code> / F2).</td></tr>
+<tr><td><code>:diff</code>, <code>:gdiff</code></td><td>Open a read-only side-by-side diff of the buffer vs. its git HEAD version.</td></tr>
+<tr><td><code>:merge</code>, <code>:resolve</code></td><td>Resolve the buffer’s git merge conflicts in a 3-pane (ours/result/theirs) view.</td></tr>
+<tr><td><code>:magit</code>, <code>:git</code>, <code>:gst</code></td><td>Open the Magit-style git status (stage/unstage/discard/commit changes by section).</td></tr>
+<tr><td><code>:hex</code>, <code>:hexview</code>, <code>:hexedit</code></td><td>Open a read-only xxd-style hex viewer of a file’s raw bytes (optional path; defaults to the buffer’s file).</td></tr>
+<tr><td><code>:snippets</code>, <code>:snip</code></td><td>Open the user snippet library editor (create/edit/delete reusable snippets).</td></tr>
+<tr><td><code>:org-cycle</code>, <code>:org-fold</code></td><td>Toggle a fold over the current org heading’s subtree (TAB-style outline cycling).</td></tr>
+<tr><td><code>:org-todo</code></td><td>Cycle the current org heading’s TODO keyword: none -&gt; TODO -&gt; DONE -&gt; none.</td></tr>
+<tr><td><code>:org-promote</code></td><td>Promote the current org heading one level (remove a leading star).</td></tr>
+<tr><td><code>:org-demote</code></td><td>Demote the current org heading one level (add a leading star).</td></tr>
+<tr><td><code>:org-next-heading</code></td><td>Move the cursor to the next org heading line.</td></tr>
+<tr><td><code>:org-prev-heading</code></td><td>Move the cursor to the previous org heading line.</td></tr>
+<tr><td><code>:org-fold-all</code></td><td>Fold every org heading subtree in the buffer.</td></tr>
+<tr><td><code>:org-unfold-all</code></td><td>Unfold every fold in the buffer.</td></tr>
+<tr><td><code>:org-agenda</code>, <code>:agenda</code></td><td>Open the org agenda: TODO/DONE items across open .org buffers and *.org files under the working directory, grouped by scheduled/deadline date.</td></tr>
+<tr><td><code>:org-priority</code></td><td>Cycle the current org heading’s priority cookie: none -&gt; [#A] -&gt; [#B] -&gt; [#C] -&gt; none.</td></tr>
+<tr><td><code>:org-capture</code>, <code>:capture</code></td><td>Prompt for a line of text and append it as a ‘* TODO <text>’ entry to an inbox org file (default <working-dir>/inbox.org, or an explicit path argument).</working-dir></text></td></tr>
+<tr><td><code>:exit</code>, <code>:x</code>, <code>:xit</code></td><td>Write changes to disk if the buffer is modified and then quit. Accepts an optional path (:exit some/path.txt).</td></tr>
+<tr><td><code>:exit!</code>, <code>:x!</code>, <code>:xit!</code></td><td>Force write changes to disk, creating necessary subdirectories, if the buffer is modified and then quit. Accepts an optional path (:exit! some/path.txt).</td></tr>
+<tr><td><code>:quit</code>, <code>:q</code></td><td>Close the current view.</td></tr>
+<tr><td><code>:help</code>, <code>:h</code></td><td>Open the inline Help browser (searchable: commands, keybindings, topics).</td></tr>
+<tr><td><code>:wc</code>, <code>:words</code>, <code>:count</code></td><td>Show document line/word/char counts (and selection stats).</td></tr>
+<tr><td><code>:blame</code></td><td>Show git blame for the current line in the status bar.</td></tr>
+<tr><td><code>:reopen</code>, <code>:reopen-closed</code></td><td>Reopen the most recently closed file.</td></tr>
+<tr><td><code>:zen</code></td><td>Toggle the IDE workbench (Zen / focus mode).</td></tr>
+<tr><td><code>:emmet</code>, <code>:zencode</code></td><td>Expand the emmet/zen HTML abbreviation before the cursor.</td></tr>
+<tr><td><code>:quit!</code>, <code>:q!</code></td><td>Force close the current view, ignoring unsaved changes.</td></tr>
+<tr><td><code>:open</code>, <code>:o</code>, <code>:edit</code>, <code>:e</code></td><td>Open a file from disk into the current view.</td></tr>
+<tr><td><code>:buffer-close</code>, <code>:bc</code>, <code>:bclose</code></td><td>Close the current buffer.</td></tr>
+<tr><td><code>:buffer-close!</code>, <code>:bc!</code>, <code>:bclose!</code></td><td>Close the current buffer forcefully, ignoring unsaved changes.</td></tr>
+<tr><td><code>:buffer-close-others</code>, <code>:bco</code>, <code>:bcloseother</code></td><td>Close all buffers but the currently focused one.</td></tr>
+<tr><td><code>:buffer-close-others!</code>, <code>:bco!</code>, <code>:bcloseother!</code></td><td>Force close all buffers but the currently focused one.</td></tr>
+<tr><td><code>:buffer-close-all</code>, <code>:bca</code>, <code>:bcloseall</code></td><td>Close all buffers without quitting.</td></tr>
+<tr><td><code>:buffer-close-all!</code>, <code>:bca!</code>, <code>:bcloseall!</code></td><td>Force close all buffers ignoring unsaved changes without quitting.</td></tr>
+<tr><td><code>:buffer-next</code>, <code>:bn</code>, <code>:bnext</code></td><td>Goto next buffer.</td></tr>
+<tr><td><code>:buffer-previous</code>, <code>:bp</code>, <code>:bprev</code></td><td>Goto previous buffer.</td></tr>
+<tr><td><code>:write</code>, <code>:w</code></td><td>Write changes to disk. Accepts an optional path (:write some/path.txt)</td></tr>
+<tr><td><code>:write!</code>, <code>:w!</code></td><td>Force write changes to disk creating necessary subdirectories. Accepts an optional path (:write! some/path.txt)</td></tr>
+<tr><td><code>:write-buffer-close</code>, <code>:wbc</code></td><td>Write changes to disk and closes the buffer. Accepts an optional path (:write-buffer-close some/path.txt)</td></tr>
+<tr><td><code>:write-buffer-close!</code>, <code>:wbc!</code></td><td>Force write changes to disk creating necessary subdirectories and closes the buffer. Accepts an optional path (:write-buffer-close! some/path.txt)</td></tr>
+<tr><td><code>:new</code>, <code>:n</code></td><td>Create a new scratch buffer.</td></tr>
+<tr><td><code>:format</code>, <code>:fmt</code></td><td>Format the file using an external formatter or language server.</td></tr>
+<tr><td><code>:indent-style</code></td><td>Set the indentation style for editing. (‘t’ for tabs or 1-16 for number of spaces.)</td></tr>
+<tr><td><code>:line-ending</code></td><td>Set the document’s default line ending. Options: crlf, lf.</td></tr>
+<tr><td><code>:earlier</code>, <code>:ear</code></td><td>Jump back to an earlier point in edit history. Accepts a number of steps or a time span.</td></tr>
+<tr><td><code>:later</code>, <code>:lat</code></td><td>Jump to a later point in edit history. Accepts a number of steps or a time span.</td></tr>
+<tr><td><code>:write-quit</code>, <code>:wq</code></td><td>Write changes to disk and close the current view. Accepts an optional path (:wq some/path.txt)</td></tr>
+<tr><td><code>:write-quit!</code>, <code>:wq!</code></td><td>Write changes to disk and close the current view forcefully. Accepts an optional path (:wq! some/path.txt)</td></tr>
+<tr><td><code>:write-all</code>, <code>:wa</code></td><td>Write changes from all buffers to disk.</td></tr>
+<tr><td><code>:write-all!</code>, <code>:wa!</code></td><td>Forcefully write changes from all buffers to disk creating necessary subdirectories.</td></tr>
+<tr><td><code>:write-quit-all</code>, <code>:wqa</code>, <code>:xa</code></td><td>Write changes from all buffers to disk and close all views.</td></tr>
+<tr><td><code>:write-quit-all!</code>, <code>:wqa!</code>, <code>:xa!</code></td><td>Forcefully write changes from all buffers to disk, creating necessary subdirectories, and close all views (ignoring unsaved changes).</td></tr>
+<tr><td><code>:quit-all</code>, <code>:qa</code></td><td>Close all views.</td></tr>
+<tr><td><code>:quit-all!</code>, <code>:qa!</code></td><td>Force close all views ignoring unsaved changes.</td></tr>
+<tr><td><code>:cquit</code>, <code>:cq</code></td><td>Quit with exit code (default 1). Accepts an optional integer exit code (:cq 2).</td></tr>
+<tr><td><code>:cquit!</code>, <code>:cq!</code></td><td>Force quit with exit code (default 1) ignoring unsaved changes. Accepts an optional integer exit code (:cq! 2).</td></tr>
+<tr><td><code>:theme</code></td><td>Change the editor theme (show current theme if no name specified).</td></tr>
+<tr><td><code>:hunk-reset</code>, <code>:reset-hunk</code>, <code>:hunk-undo</code></td><td>Undo the git hunk under the cursor, restoring it from HEAD (gitsigns reset_hunk).</td></tr>
+<tr><td><code>:hunk-next</code>, <code>:next-hunk</code></td><td>Move the cursor to the next git hunk.</td></tr>
+<tr><td><code>:hunk-prev</code>, <code>:prev-hunk</code></td><td>Move the cursor to the previous git hunk.</td></tr>
+<tr><td><code>:conflict-ours</code>, <code>:diffget-ours</code>, <code>:conflict-keep-ours</code></td><td>Resolve the merge conflict at the cursor by keeping OUR side (HEAD).</td></tr>
+<tr><td><code>:conflict-theirs</code>, <code>:diffget-theirs</code>, <code>:conflict-keep-theirs</code></td><td>Resolve the merge conflict at the cursor by keeping THEIR side (incoming).</td></tr>
+<tr><td><code>:conflict-both</code>, <code>:conflict-keep-both</code></td><td>Resolve the merge conflict at the cursor by keeping BOTH sides.</td></tr>
+<tr><td><code>:conflict-next</code></td><td>Jump to the next merge-conflict marker.</td></tr>
+<tr><td><code>:conflict-prev</code></td><td>Jump to the previous merge-conflict marker.</td></tr>
+<tr><td><code>:theme-toggle</code>, <code>:toggle-theme</code>, <code>:light-dark</code></td><td>Toggle between a dark and light theme (<code>:theme-toggle [dark] [light]</code>).</td></tr>
+<tr><td><code>:theme-next</code></td><td>Switch to the next theme (alphabetical).</td></tr>
+<tr><td><code>:theme-prev</code></td><td>Switch to the previous theme (alphabetical).</td></tr>
+<tr><td><code>:run</code>, <code>:r!</code></td><td>Run a command in the IDE Run tool window (defaults to <code>cargo run</code>).</td></tr>
+<tr><td><code>:grep</code>, <code>:rg</code>, <code>:search-project</code></td><td>Search the project (ripgrep) and show jumpable results in the Run console.</td></tr>
+<tr><td><code>:shell-quote</code>, <code>:sh-quote</code></td><td>Wrap the selection in safe shell single-quotes.</td></tr>
+<tr><td><code>:wrap-tag</code>, <code>:tag</code></td><td>Wrap each selection in <tag>…</tag>.</td></tr>
+<tr><td><code>:csv-column</code>, <code>:csv-col</code></td><td>Replace the selected CSV/TSV with just its Nth column (1-based).</td></tr>
+<tr><td><code>:code-fence</code>, <code>:fence</code></td><td>Wrap the selection in a fenced Markdown code block with optional language.</td></tr>
+<tr><td><code>:md-table</code>, <code>:table-fmt</code></td><td>Align the selected Markdown pipe table (pad columns, rebuild separator row).</td></tr>
+<tr><td><code>:json-query</code>, <code>:json-get</code></td><td>Replace the selected JSON with the value at a dot-path (e.g. users.0.name).</td></tr>
+<tr><td><code>:json-flatten</code>, <code>:json-paths</code></td><td>Flatten the selected JSON into greppable <code>path = value</code> lines.</td></tr>
+<tr><td><code>:json-to-csv</code>, <code>:json-csv</code></td><td>Convert the selected JSON array of objects to CSV (sorted header union).</td></tr>
+<tr><td><code>:json-unflatten</code>, <code>:json-unpaths</code></td><td>Rebuild nested JSON from <code>path = value</code> lines (inverse of :json-flatten).</td></tr>
+<tr><td><code>:toml-to-json</code>, <code>:toml-json</code></td><td>Convert the selected TOML to pretty-printed JSON.</td></tr>
+<tr><td><code>:json-to-toml</code>, <code>:json-toml</code></td><td>Convert the selected JSON to pretty-printed TOML.</td></tr>
+<tr><td><code>:json-sort</code>, <code>:json-sort-array</code></td><td>Sort the selected JSON array (optionally by an object field: :json-sort name).</td></tr>
+<tr><td><code>:json-pick</code>, <code>:json-select</code></td><td>Keep only the named keys in the selected JSON object/array (e.g. :json-pick name age).</td></tr>
+<tr><td><code>:json-omit</code>, <code>:json-drop</code></td><td>Drop the named keys from the selected JSON object/array (e.g. :json-omit password).</td></tr>
+<tr><td><code>:json-unique</code>, <code>:json-uniq</code></td><td>Remove duplicate elements from the selected JSON array (optionally by a field).</td></tr>
+<tr><td><code>:json-group-by</code>, <code>:json-group</code></td><td>Group the selected JSON array of objects by a field (e.g. :json-group-by city).</td></tr>
+<tr><td><code>:extract</code>, <code>:matches</code></td><td>Replace the selection with every regex match, one per line (group 1 if present).</td></tr>
+<tr><td><code>:filter</code>, <code>:keep-lines</code></td><td>Keep only the selected lines matching a regex (in-buffer grep).</td></tr>
+<tr><td><code>:reject</code>, <code>:remove-lines</code></td><td>Drop the selected lines matching a regex (in-buffer grep -v).</td></tr>
+<tr><td><code>:count-matches</code>, <code>:count-regex</code></td><td>Report how many regex matches (and matching lines) are in the selection.</td></tr>
+<tr><td><code>:uniq-count</code>, <code>:frequency</code></td><td>Collapse the selected lines to <code>count line</code>, sorted by frequency (uniq -c</td></tr>
+<tr><td><code>:stats</code>, <code>:describe</code></td><td>Show count/sum/mean/min/max of the numbers in the selection (non-destructive).</td></tr>
+<tr><td><code>:seq</code>, <code>:sequence</code></td><td>Insert an integer sequence, one per line: :seq <start> <end> [step].</end></start></td></tr>
+<tr><td><code>:field</code>, <code>:cut</code></td><td>Keep only the Nth whitespace field of each selected line (awk ‘{print $N}’).</td></tr>
+<tr><td><code>:running-total</code>, <code>:cumsum</code></td><td>Replace each numeric line with the cumulative total so far.</td></tr>
+<tr><td><code>:diff-lines</code>, <code>:deltas</code></td><td>Replace each numeric line with its delta from the previous (inverse of running-total).</td></tr>
+<tr><td><code>:sum-column</code>, <code>:sumcol</code></td><td>Sum the Nth whitespace field across the selected lines (non-destructive).</td></tr>
+<tr><td><code>:shuffle</code>, <code>:shuf</code></td><td>Randomly reorder the selected lines (Fisher-Yates).</td></tr>
+<tr><td><code>:sample</code>, <code>:random-lines</code></td><td>Keep N random lines from the selection, preserving order (:sample 10).</td></tr>
+<tr><td><code>:jsonl-to-json</code>, <code>:jsonl-json</code></td><td>Convert the selected JSONL/NDJSON (one value per line) to a JSON array.</td></tr>
+<tr><td><code>:json-to-jsonl</code>, <code>:json-jsonl</code></td><td>Convert the selected JSON array to JSONL (one compact value per line).</td></tr>
+<tr><td><code>:head</code>, <code>:first-lines</code></td><td>Keep only the first N lines of the selection (:head 10).</td></tr>
+<tr><td><code>:tail</code>, <code>:last-lines</code></td><td>Keep only the last N lines of the selection (:tail 10).</td></tr>
+<tr><td><code>:rev</code>, <code>:reverse-each-line</code></td><td>Reverse the characters of each selected line independently (Unix rev).</td></tr>
+<tr><td><code>:json-table</code>, <code>:json-tbl</code></td><td>Render the selected JSON array of objects as an aligned plain-text table.</td></tr>
+<tr><td><code>:hexdump</code>, <code>:xxd</code></td><td>Render the selection as an xxd-style hex dump (offset, hex bytes, ASCII).</td></tr>
+<tr><td><code>:dedup</code>, <code>:unique-lines</code></td><td>Remove all duplicate lines globally, keeping first occurrence and order.</td></tr>
+<tr><td><code>:caesar</code>, <code>:shift-letters</code></td><td>Caesar-shift the selection’s letters by N (e.g. :caesar 13 = ROT13; N may be negative).</td></tr>
+<tr><td><code>:base32-encode</code>, <code>:base32</code></td><td>Base32-encode the selection (RFC 4648).</td></tr>
+<tr><td><code>:base32-decode</code>, <code>:unbase32</code></td><td>Base32-decode the selection (RFC 4648).</td></tr>
+<tr><td><code>:crc32</code>, <code>:checksum</code></td><td>Show the CRC32 (IEEE) checksum of the selection in hex and decimal (non-destructive).</td></tr>
+<tr><td><code>:rot47</code>, <code>:rot-47</code></td><td>Apply ROT47 to the selection (rotates all printable ASCII; self-inverse).</td></tr>
+<tr><td><code>:morse-encode</code>, <code>:morse</code></td><td>Encode the selection (A-Z, 0-9) to Morse code (words separated by /).</td></tr>
+<tr><td><code>:morse-decode</code>, <code>:unmorse</code></td><td>Decode Morse code in the selection back to text.</td></tr>
+<tr><td><code>:human-bytes</code>, <code>:humanize-size</code></td><td>Convert each numeric line (a byte count) to a human-readable size like 1.5 KiB.</td></tr>
+<tr><td><code>:ordinal</code>, <code>:ordinalize</code></td><td>Convert each numeric line to its ordinal (1 → 1st, 22 → 22nd).</td></tr>
+<tr><td><code>:to-snake</code>, <code>:snake-case</code></td><td>Convert the selected identifier to snake_case.</td></tr>
+<tr><td><code>:to-kebab</code>, <code>:kebab-case</code></td><td>Convert the selected identifier to kebab-case.</td></tr>
+<tr><td><code>:to-camel</code>, <code>:camel-case</code></td><td>Convert the selected identifier to camelCase.</td></tr>
+<tr><td><code>:to-pascal</code>, <code>:pascal-case</code></td><td>Convert the selected identifier to PascalCase.</td></tr>
+<tr><td><code>:to-constant</code>, <code>:screaming-snake</code>, <code>:upper-snake</code></td><td>Convert the selected identifier to CONSTANT_CASE.</td></tr>
+<tr><td><code>:to-binary</code>, <code>:text-to-binary</code></td><td>Convert the selection to space-separated 8-bit binary.</td></tr>
+<tr><td><code>:from-binary</code>, <code>:binary-to-text</code></td><td>Convert space-separated binary in the selection back to text.</td></tr>
+<tr><td><code>:natural-sort</code>, <code>:sort-natural</code></td><td>Sort the selected lines in natural order (file2 before file10).</td></tr>
+<tr><td><code>:pad-right</code>, <code>:ljust</code></td><td>Left-justify each selected line, padding with spaces to a minimum width.</td></tr>
+<tr><td><code>:pad-left</code>, <code>:rjust</code></td><td>Right-justify each selected line, padding with spaces to a minimum width.</td></tr>
+<tr><td><code>:json-keys</code>, <code>:json-fields</code></td><td>List the keys of the selected JSON object (or union across an array of objects).</td></tr>
+<tr><td><code>:json-type</code>, <code>:json-describe</code></td><td>Show the JSON type and size of the selection in the status line (non-destructive).</td></tr>
+<tr><td><code>:after</code>, <code>:cut-after</code></td><td>Keep the text after the first <delimiter> on each selected line.</delimiter></td></tr>
+<tr><td><code>:before</code>, <code>:cut-before</code></td><td>Keep the text before the first <delimiter> on each selected line.</delimiter></td></tr>
+<tr><td><code>:swapcase</code>, <code>:invert-case</code></td><td>Invert the case of each character in the selection (Hello → hELLO).</td></tr>
+<tr><td><code>:strip-invisible</code>, <code>:strip-zero-width</code></td><td>Remove zero-width / invisible Unicode characters from the selection.</td></tr>
+<tr><td><code>:lines-to-json</code>, <code>:lines-to-array</code></td><td>Wrap the selected lines into a JSON array of strings.</td></tr>
+<tr><td><code>:json-to-lines</code>, <code>:array-to-lines</code></td><td>Unwrap a JSON array in the selection into one line per element.</td></tr>
+<tr><td><code>:checkbox-list</code>, <code>:task-list</code></td><td>Turn the selected lines into a Markdown task list (- [ ] item).</td></tr>
+<tr><td><code>:unwrap-paragraphs</code>, <code>:unhardwrap</code></td><td>Join hard-wrapped lines within each paragraph into single lines.</td></tr>
+<tr><td><code>:sql-in</code>, <code>:sql-in-list</code></td><td>Build a SQL IN-list (‘a’, ‘b’, ‘c’) from the selected lines.</td></tr>
+<tr><td><code>:dec-to-hex</code>, <code>:to-hex-num</code></td><td>Convert each decimal number line to hexadecimal.</td></tr>
+<tr><td><code>:hex-to-dec</code>, <code>:from-hex-num</code></td><td>Convert each hexadecimal number line to decimal.</td></tr>
+<tr><td><code>:unicode-escape</code>, <code>:u-escape</code></td><td>Escape non-ASCII characters in the selection as \u{XXXX}.</td></tr>
+<tr><td><code>:unicode-unescape</code>, <code>:u-unescape</code></td><td>Decode \u{XXXX} and \uXXXX escapes in the selection back to characters.</td></tr>
+<tr><td><code>:sort-by-length</code>, <code>:sortlen</code></td><td>Sort the selected lines by length (shortest first).</td></tr>
+<tr><td><code>:count-unique</code>, <code>:distinct-count</code></td><td>Report the number of distinct vs total selected lines (non-destructive).</td></tr>
+<tr><td><code>:rotate-lines</code>, <code>:rotate</code></td><td>Cyclically rotate the selected lines by N (negative rotates the other way).</td></tr>
+<tr><td><code>:unquote-lines</code>, <code>:strip-quotes-lines</code></td><td>Remove surrounding quotes from each selected line independently.</td></tr>
+<tr><td><code>:quote-lines</code>, <code>:quote-each</code></td><td>Wrap each selected line in double quotes (escaping \ and “).</td></tr>
+<tr><td><code>:repeat</code>, <code>:repeat-text</code></td><td>Repeat the selected text N times (:repeat 3).</td></tr>
+<tr><td><code>:capitalize-lines</code>, <code>:capitalize</code></td><td>Uppercase the first letter of each selected line.</td></tr>
+<tr><td><code>:remove-blank-lines</code>, <code>:remove-empty</code></td><td>Remove all blank (whitespace-only) lines from the selection.</td></tr>
+<tr><td><code>:trim-lines</code>, <code>:trim</code></td><td>Trim leading and trailing whitespace from each selected line.</td></tr>
+<tr><td><code>:kv-to-json</code>, <code>:env-to-json</code></td><td>Convert key=value / key: value lines in the selection to a JSON object.</td></tr>
+<tr><td><code>:json-to-kv</code>, <code>:json-to-env</code></td><td>Convert the selected JSON object to key=value lines.</td></tr>
+<tr><td><code>:json-pluck</code>, <code>:json-values-of</code></td><td>Extract one field’s value from each object in a JSON array, one per line.</td></tr>
+<tr><td><code>:to-html-list</code>, <code>:html-list</code></td><td>Convert the selected lines into an HTML 
+<ul> list.</ul>
+</td></tr>
+<tr><td><code>:from-html-list</code>, <code>:html-list-to-lines</code></td><td>Extract 
+<li> item text from an HTML list in the selection, one per line.</li>
+</td></tr>
+<tr><td><code>:csv-to-html-table</code>, <code>:csv-to-html</code></td><td>Convert the selected CSV/TSV (first row = headers) to an HTML 
+<table>.</table>
+</td></tr>
+<tr><td><code>:slugify-lines</code>, <code>:slug-lines</code></td><td>Slugify each selected line independently (URL-friendly).</td></tr>
+<tr><td><code>:lines-to-csv-row</code>, <code>:join-csv</code></td><td>Join the selected lines into one CSV row (RFC-4180 quoting).</td></tr>
+<tr><td><code>:csv-row-to-lines</code>, <code>:split-csv</code></td><td>Split a CSV row in the selection into one field per line (quote-aware).</td></tr>
+<tr><td><code>:deslugify</code>, <code>:unslugify</code></td><td>Turn a slug back into a Title Cased phrase (hyphens/underscores to spaces).</td></tr>
+<tr><td><code>:csv-to-tsv</code>, <code>:csv-tsv</code></td><td>Convert the selected CSV to tab-separated values (quote-aware).</td></tr>
+<tr><td><code>:tsv-to-csv</code>, <code>:tsv-csv</code></td><td>Convert the selected TSV to CSV (RFC-4180 quoting).</td></tr>
+<tr><td><code>:strip-line-numbers</code>, <code>:unnumber</code></td><td>Remove a leading line number (and separator) from each selected line.</td></tr>
+<tr><td><code>:markdown-link</code>, <code>:md-link</code></td><td>Wrap the selected text as a Markdown link <a href="url">text</a>.</td></tr>
+<tr><td><code>:extract-urls</code>, <code>:urls</code></td><td>Replace the selection with the http(s) URLs found in it, one per line.</td></tr>
+<tr><td><code>:extract-emails</code>, <code>:emails</code></td><td>Replace the selection with the email addresses found in it, one per line.</td></tr>
+<tr><td><code>:extract-ips</code>, <code>:ips</code></td><td>Replace the selection with the IPv4 addresses found in it, one per line.</td></tr>
+<tr><td><code>:extract-quoted</code>, <code>:quoted-strings</code></td><td>Replace the selection with the contents of double-quoted strings, one per line.</td></tr>
+<tr><td><code>:extract-between</code>, <code>:between</code></td><td>Extract substrings between <start> and <end> delimiters, one per line.</end></start></td></tr>
+<tr><td><code>:wrap-with</code>, <code>:surround-with</code></td><td>Wrap the selection with the given text on both sides (:wrap-with **).</td></tr>
+<tr><td><code>:extract-numbers</code>, <code>:numbers</code></td><td>Replace the selection with the numbers found in it, one per line.</td></tr>
+<tr><td><code>:json-validate</code>, <code>:json-check</code></td><td>Report whether the selection is valid JSON (with error location) — non-destructive.</td></tr>
+<tr><td><code>:csv-validate</code>, <code>:csv-check</code></td><td>Check all CSV rows have the same field count (non-destructive).</td></tr>
+<tr><td><code>:ordered-list</code>, <code>:numbered-list</code></td><td>Turn the selected lines into a Markdown ordered list (1. 2. 3.).</td></tr>
+<tr><td><code>:strip-list-markers</code>, <code>:unlist</code></td><td>Strip leading bullet/number/checkbox list markers from each selected line.</td></tr>
+<tr><td><code>:sort-words</code>, <code>:sort-fields</code></td><td>Sort the whitespace-separated words within each selected line.</td></tr>
+<tr><td><code>:unique-words</code>, <code>:dedup-words</code></td><td>Remove duplicate words within each selected line (first occurrence kept).</td></tr>
+<tr><td><code>:sum-fields</code>, <code>:row-sum</code></td><td>Replace each line with the sum of its numeric fields (row total).</td></tr>
+<tr><td><code>:avg-fields</code>, <code>:row-avg</code></td><td>Replace each line with the mean of its numeric fields.</td></tr>
+<tr><td><code>:max-fields</code>, <code>:row-max</code></td><td>Replace each line with the maximum of its numeric fields.</td></tr>
+<tr><td><code>:min-fields</code>, <code>:row-min</code></td><td>Replace each line with the minimum of its numeric fields.</td></tr>
+<tr><td><code>:range-fields</code>, <code>:row-range</code></td><td>Replace each line with the range (max - min) of its numeric fields.</td></tr>
+<tr><td><code>:to-env-export</code>, <code>:export-vars</code></td><td>Prefix each KEY=value line with <code>export </code> (turn a .env into shell exports).</td></tr>
+<tr><td><code>:strip-export</code>, <code>:unexport</code></td><td>Remove a leading <code>export </code> from each selected line.</td></tr>
+<tr><td><code>:dos2unix</code>, <code>:crlf-to-lf</code></td><td>Convert CRLF/CR line endings in the selection to LF.</td></tr>
+<tr><td><code>:unix2dos</code>, <code>:lf-to-crlf</code></td><td>Convert LF line endings in the selection to CRLF.</td></tr>
+<tr><td><code>:percent-of-total</code>, <code>:percentages</code></td><td>Replace each numeric line with its percentage of the column total.</td></tr>
+<tr><td><code>:running-max</code>, <code>:cummax</code></td><td>Replace each numeric line with the running maximum so far.</td></tr>
+<tr><td><code>:running-min</code>, <code>:cummin</code></td><td>Replace each numeric line with the running minimum so far.</td></tr>
+<tr><td><code>:to-fixed</code>, <code>:round-to</code></td><td>Format each numeric line to N decimal places (:to-fixed 2).</td></tr>
+<tr><td><code>:clamp</code>, <code>:clip</code></td><td>Clamp each numeric line to the [min, max] range (:clamp 0 100).</td></tr>
+<tr><td><code>:scale</code>, <code>:multiply-by</code></td><td>Multiply each numeric line by a factor (:scale 1.5).</td></tr>
+<tr><td><code>:offset</code>, <code>:add-to-each</code></td><td>Add N to each numeric line (:offset 10; negative subtracts).</td></tr>
+<tr><td><code>:abs</code>, <code>:absolute-value</code></td><td>Replace each numeric line with its absolute value.</td></tr>
+<tr><td><code>:linkify</code>, <code>:auto-link</code></td><td>Wrap bare URLs in the selection with Markdown link syntax <a href="url">url</a>.</td></tr>
+<tr><td><code>:strip-markdown-links</code>, <code>:unlink</code></td><td>Replace <a href="url">text</a> Markdown links with just their text.</td></tr>
+<tr><td><code>:strip-emphasis</code>, <code>:strip-md-emphasis</code></td><td>Remove Markdown bold/italic/code emphasis markers from the selection.</td></tr>
+<tr><td><code>:strip-html-comments</code>, <code>:strip-comments-html</code></td><td>Remove <!-- ... --> HTML/Markdown comments from the selection.</td></tr>
+<tr><td><code>:remove-trailing-commas</code>, <code>:fix-trailing-commas</code></td><td>Remove trailing commas before } or ] (JSON5/JS to strict JSON).</td></tr>
+<tr><td><code>:add-trailing-commas</code>, <code>:trailing-commas</code></td><td>Add trailing commas before } or ] (cleaner JS/JSON5 diffs).</td></tr>
+<tr><td><code>:smart-quotes</code>, <code>:curly-quotes</code></td><td>Convert straight quotes to typographic curly quotes (context-aware).</td></tr>
+<tr><td><code>:typographic-dashes</code>, <code>:em-dash</code></td><td>Convert — to em dash, – to en dash, … to ellipsis.</td></tr>
+<tr><td><code>:de-typography</code>, <code>:ascii-punctuation</code></td><td>Normalize curly quotes/dashes/ellipsis back to ASCII punctuation.</td></tr>
+<tr><td><code>:to-ascii</code>, <code>:transliterate</code></td><td>Transliterate accented Latin characters to ASCII (café → cafe).</td></tr>
+<tr><td><code>:nato</code>, <code>:phonetic</code></td><td>Spell the selection in the NATO phonetic alphabet (A → Alfa).</td></tr>
+<tr><td><code>:transpose-grid</code>, <code>:transpose-ws</code></td><td>Transpose a whitespace-separated grid (rows become columns).</td></tr>
+<tr><td><code>:repeat-lines</code>, <code>:duplicate-each</code></td><td>Repeat each selected line N times (:repeat-lines 3).</td></tr>
+<tr><td><code>:rename-word</code>, <code>:rename-local</code></td><td>Rename every whole-word occurrence of the symbol under the cursor in this buffer.</td></tr>
+<tr><td><code>:grep-word</code>, <code>:gw</code>, <code>:find-references</code></td><td>Search the project for the whole word under the cursor (jumpable in Run).</td></tr>
+<tr><td><code>:todos</code>, <code>:project-todos</code>, <code>:fixme</code></td><td>Scan the whole project for TODO/FIXME/HACK/XXX/BUG/NOTE markers (jumpable in Run).</td></tr>
+<tr><td><code>:registers</code>, <code>:reg</code>, <code>:display</code></td><td>Show the contents of all registers.</td></tr>
+<tr><td><code>:yank-join</code></td><td>Yank joined selections. A separator can be provided as first argument. Default value is newline.</td></tr>
+<tr><td><code>:clipboard-yank</code></td><td>Yank main selection into system clipboard.</td></tr>
+<tr><td><code>:clipboard-yank-join</code></td><td>Yank joined selections into system clipboard. A separator can be provided as first argument. Default value is newline.</td></tr>
+<tr><td><code>:primary-clipboard-yank</code></td><td>Yank main selection into system primary clipboard.</td></tr>
+<tr><td><code>:primary-clipboard-yank-join</code></td><td>Yank joined selections into system primary clipboard. A separator can be provided as first argument. Default value is newline.</td></tr>
+<tr><td><code>:clipboard-paste-after</code></td><td>Paste system clipboard after selections.</td></tr>
+<tr><td><code>:clipboard-paste-before</code></td><td>Paste system clipboard before selections.</td></tr>
+<tr><td><code>:clipboard-paste-replace</code></td><td>Replace selections with content of system clipboard.</td></tr>
+<tr><td><code>:primary-clipboard-paste-after</code></td><td>Paste primary clipboard after selections.</td></tr>
+<tr><td><code>:primary-clipboard-paste-before</code></td><td>Paste primary clipboard before selections.</td></tr>
+<tr><td><code>:primary-clipboard-paste-replace</code></td><td>Replace selections with content of system primary clipboard.</td></tr>
+<tr><td><code>:show-clipboard-provider</code></td><td>Show clipboard provider name in status bar.</td></tr>
+<tr><td><code>:change-current-directory</code>, <code>:cd</code></td><td>Change the current working directory.</td></tr>
+<tr><td><code>:show-directory-stack</code></td><td>Show the directory stack as a <space> delimited string.</space></td></tr>
+<tr><td><code>:push-directory</code>, <code>:pushd</code></td><td>Save and then change the current directory.</td></tr>
+<tr><td><code>:pop-directory</code>, <code>:popd</code></td><td>Remove the top entry from the directory stack, and cd to the new top directory..</td></tr>
+<tr><td><code>:show-directory</code>, <code>:pwd</code></td><td>Show the current working directory.</td></tr>
+<tr><td><code>:encoding</code></td><td>Set encoding. Based on <code>https://encoding.spec.whatwg.org</code>.</td></tr>
+<tr><td><code>:character-info</code>, <code>:char</code></td><td>Get info about the character under the primary cursor.</td></tr>
+<tr><td><code>:reload</code>, <code>:rl</code></td><td>Discard changes and reload from the source file.</td></tr>
+<tr><td><code>:reload-all</code>, <code>:rla</code></td><td>Discard changes and reload all documents from the source files.</td></tr>
+<tr><td><code>:git-stage</code>, <code>:stage</code>, <code>:git-add</code></td><td>Stage the current buffer’s file (git add).</td></tr>
+<tr><td><code>:git-unstage</code>, <code>:unstage</code></td><td>Unstage the current buffer’s file (git reset HEAD).</td></tr>
+<tr><td><code>:stash</code>, <code>:git-stash</code></td><td>git stash the working-tree changes (then reload open buffers).</td></tr>
+<tr><td><code>:stash-pop</code>, <code>:git-stash-pop</code></td><td>git stash pop the most recent stash (then reload open buffers).</td></tr>
+<tr><td><code>:update</code>, <code>:u</code></td><td>Write changes only if the file has been modified.</td></tr>
+<tr><td><code>:lsp-workspace-command</code></td><td>Open workspace command picker</td></tr>
+<tr><td><code>:lsp-restart</code></td><td>Restarts the given language servers, or all language servers that are used by the current file if no arguments are supplied</td></tr>
+<tr><td><code>:set</code>, <code>:se</code></td><td>Set options with vim syntax (:set nu, :set nowrap, :set tw=80, :set cursorline) or native :set key value.</td></tr>
+<tr><td><code>:lsp-stop</code></td><td>Stops the given language servers, or all language servers that are used by the current file if no arguments are supplied</td></tr>
+<tr><td><code>:tree-sitter-scopes</code></td><td>Display tree sitter scopes, primarily for theming and development.</td></tr>
+<tr><td><code>:tree-sitter-highlight-name</code></td><td>Display name of tree-sitter highlight scope under the cursor.</td></tr>
+<tr><td><code>:tree-sitter-layers</code></td><td>Display language names of tree-sitter injection layers under the cursor.</td></tr>
+<tr><td><code>:debug-start</code>, <code>:dbg</code></td><td>Start a debug session from a given template with given parameters.</td></tr>
+<tr><td><code>:debug-remote</code>, <code>:dbg-tcp</code></td><td>Connect to a debug adapter by TCP address and start a debugging session from a given template with given parameters.</td></tr>
+<tr><td><code>:debug-eval</code></td><td>Evaluate expression in current debug context.</td></tr>
+<tr><td><code>:vsplit</code>, <code>:vs</code></td><td>Open the file in a vertical split.</td></tr>
+<tr><td><code>:vsplit-new</code>, <code>:vnew</code></td><td>Open a scratch buffer in a vertical split.</td></tr>
+<tr><td><code>:hsplit</code>, <code>:hs</code>, <code>:sp</code></td><td>Open the file in a horizontal split.</td></tr>
+<tr><td><code>:hsplit-new</code>, <code>:hnew</code></td><td>Open a scratch buffer in a horizontal split.</td></tr>
+<tr><td><code>:tutor</code></td><td>Open the tutorial.</td></tr>
+<tr><td><code>:goto</code>, <code>:g</code></td><td>Goto line number.</td></tr>
+<tr><td><code>:set-language</code>, <code>:lang</code></td><td>Set the language of current buffer (show current language if no value specified).</td></tr>
+<tr><td><code>:set-option</code></td><td>Set a config option at runtime.<br>For example to disable smart case search, use <code>:set-option search.smart-case false</code>.</td></tr>
+<tr><td><code>:toggle-option</code>, <code>:toggle</code></td><td>Toggle a config option at runtime.<br>For example to toggle smart case search, use <code>:toggle search.smart-case</code>.</td></tr>
+<tr><td><code>:get-option</code>, <code>:get</code></td><td>Get the current value of a config option.</td></tr>
+<tr><td><code>:move-line-down</code></td><td>Move the current line down by one (drag down).</td></tr>
+<tr><td><code>:move-line-up</code></td><td>Move the current line up by one (drag up).</td></tr>
+<tr><td><code>:cycle-case</code></td><td>Cycle the case style of the symbol under the cursor.</td></tr>
+<tr><td><code>:change-case</code></td><td>Change the symbol under the cursor to camel</td></tr>
+<tr><td><code>:left</code>, <code>:le</code></td><td>Left-align line(s), setting leading indent to {n} (default 0) — vim :left.</td></tr>
+<tr><td><code>:right</code>, <code>:ri</code></td><td>Right-align line(s) to width {n} (default 80) — vim :right.</td></tr>
+<tr><td><code>:center</code>, <code>:ce</code></td><td>Center line(s) within width {n} (default 80) — vim :center.</td></tr>
+<tr><td><code>:undo</code></td><td>Undo the last change (vim :undo).</td></tr>
+<tr><td><code>:redo</code>, <code>:red</code></td><td>Redo the last undone change (vim :redo).</td></tr>
+<tr><td><code>:retab</code></td><td>Replace tabs with spaces (tab-width per buffer) — vim :retab.</td></tr>
+<tr><td><code>:join</code>, <code>:j</code></td><td>Join the current line(s) with the next, separated by a space (vim :j).</td></tr>
+<tr><td><code>:join!</code>, <code>:j!</code></td><td>Join the current line(s) with the next, no separating space (vim :j!).</td></tr>
+<tr><td><code>:put</code>, <code>:pu</code></td><td>Put (paste) a register’s contents as new line(s) below the cursor (vim :put).</td></tr>
+<tr><td><code>:put!</code>, <code>:pu!</code></td><td>Put (paste) a register’s contents as new line(s) above the cursor (vim :put!).</td></tr>
+<tr><td><code>:delete-lines</code>, <code>:d</code>, <code>:del</code>, <code>:delete</code></td><td>Delete the current line(s) into the unnamed register (vim :d).</td></tr>
+<tr><td><code>:yank-lines</code>, <code>:y</code>, <code>:ya</code>, <code>:yank</code></td><td>Yank the current line(s) into the unnamed register (vim :y).</td></tr>
+<tr><td><code>:indent-lines</code></td><td>Indent the current line(s) by one shiftwidth (vim :&gt;).</td></tr>
+<tr><td><code>:dedent-lines</code></td><td>Dedent the current line(s) by one shiftwidth (vim :&lt;).</td></tr>
+<tr><td><code>:move-lines</code>, <code>:m</code></td><td>Move the current line to after line {address}: :m{addr} (e.g. :m0, :m$, :m.+2).</td></tr>
+<tr><td><code>:copy-lines</code>, <code>:t</code>, <code>:co</code>, <code>:copy</code></td><td>Copy the current line to after line {address}: :t{addr} (e.g. :t0, :t$).</td></tr>
+<tr><td><code>:global</code></td><td>Run a command on matching lines: :g/pattern/d (delete). Also :g!/pat/d.</td></tr>
+<tr><td><code>:vglobal</code></td><td>Run a command on non-matching lines: :v/pattern/d (delete).</td></tr>
+<tr><td><code>:substitute</code>, <code>:s</code></td><td>Substitute: :s/pattern/replacement/[flags]. Also :%s/…/…/g for the whole file.</td></tr>
+<tr><td><code>:split-line</code></td><td>Split the current line at the cursor, keeping the cursor in place.</td></tr>
+<tr><td><code>:just-one-space</code></td><td>Collapse spaces and tabs around the cursor to a single space.</td></tr>
+<tr><td><code>:delete-blank-lines</code></td><td>Collapse consecutive blank lines down to a single blank line.</td></tr>
+<tr><td><code>:uniquify-lines</code>, <code>:uniq</code></td><td>Delete duplicate lines, keeping the first occurrence.</td></tr>
+<tr><td><code>:reverse</code>, <code>:reverse-lines</code>, <code>:tac</code></td><td>Reverse the order of the selected lines (or the whole buffer).</td></tr>
+<tr><td><code>:uuid</code>, <code>:guid</code></td><td>Insert a random UUID v4 at each cursor (replaces any selection).</td></tr>
+<tr><td><code>:goto-offset</code>, <code>:goto-char</code></td><td>Move the cursor to an absolute character offset.</td></tr>
+<tr><td><code>:pad-numbers</code>, <code>:zero-pad</code></td><td>Zero-pad every integer in the selection to <width> digits.</width></td></tr>
+<tr><td><code>:increment-numbers</code>, <code>:incr-numbers</code></td><td>Add N (default 1; negative to decrement) to every integer in the selection.</td></tr>
+<tr><td><code>:bases</code>, <code>:base-info</code></td><td>Show the selected integer in decimal, hex, octal, and binary.</td></tr>
+<tr><td><code>:lorem</code>, <code>:lipsum</code></td><td>Insert N words (default 30) of lorem-ipsum placeholder text.</td></tr>
+<tr><td><code>:date</code></td><td>Insert the current UTC date (YYYY-MM-DD) at each cursor.</td></tr>
+<tr><td><code>:datetime</code>, <code>:now</code></td><td>Insert the current UTC date and time (YYYY-MM-DD HH:MM:SS) at each cursor.</td></tr>
+<tr><td><code>:timestamp</code>, <code>:epoch</code></td><td>Insert the current Unix epoch (seconds) at each cursor.</td></tr>
+<tr><td><code>:sum</code>, <code>:total</code></td><td>Sum the numbers in the selection; reports sum/avg/min/max/count in the status line.</td></tr>
+<tr><td><code>:calc</code>, <code>:eval-math</code></td><td>Evaluate an arithmetic expression (+ - * / % ^), or each selection in place.</td></tr>
+<tr><td><code>:join-with</code>, <code>:joinw</code></td><td>Join the selected lines into one with a separator (default “, “).</td></tr>
+<tr><td><code>:split-on</code>, <code>:splito</code></td><td>Split the selected line(s) on a separator (default “,”) into one item per line.</td></tr>
+<tr><td><code>:squeeze-blank-lines</code>, <code>:squeeze</code></td><td>Collapse consecutive blank lines in the selection to one (cat -s).</td></tr>
+<tr><td><code>:dedup-adjacent</code>, <code>:uniq-adjacent</code></td><td>Collapse consecutive duplicate lines in the selection (Unix uniq).</td></tr>
+<tr><td><code>:number-lines</code>, <code>:nl</code></td><td>Prepend line numbers to the selected lines (optional start, default 1).</td></tr>
+<tr><td><code>:align</code>, <code>:tabularize</code></td><td>Align the selected lines on a delimiter (default <code>=</code>) so it shares a column.</td></tr>
+<tr><td><code>:sort-by-field</code>, <code>:sortf</code></td><td>Sort the selected lines by their Nth whitespace field (default 1).</td></tr>
+<tr><td><code>:sort-lines</code>, <code>:sortl</code></td><td>Sort the selected lines (or the whole buffer) — vim-style line sort.</td></tr>
+<tr><td><code>:transpose-words</code></td><td>Transpose the word before the cursor with the word after it.</td></tr>
+<tr><td><code>:transpose-chars</code></td><td>Transpose the two characters around the cursor.</td></tr>
+<tr><td><code>:duplicate-line</code>, <code>:dup</code></td><td>Duplicate the current line below.</td></tr>
+<tr><td><code>:delete-trailing-whitespace</code>, <code>:dtw</code></td><td>Delete trailing whitespace from every line in the buffer.</td></tr>
+<tr><td><code>:sort</code></td><td>Sort ranges in selection.</td></tr>
+<tr><td><code>:reflow</code></td><td>Hard-wrap the current selection of lines to a given width.</td></tr>
+<tr><td><code>:tree-sitter-subtree</code>, <code>:ts-subtree</code></td><td>Display the smallest tree-sitter subtree that spans the primary selection, primarily for debugging queries.</td></tr>
+<tr><td><code>:config-reload</code></td><td>Refresh user config.</td></tr>
+<tr><td><code>:keymap</code></td><td>Switch the active keymap preset: vim, helix, or emacs.</td></tr>
+<tr><td><code>:config-open</code></td><td>Open the user config.toml file.</td></tr>
+<tr><td><code>:config-open-workspace</code></td><td>Open the workspace config.toml file.</td></tr>
+<tr><td><code>:log-open</code></td><td>Open the zemacs log file.</td></tr>
+<tr><td><code>:insert-output</code></td><td>Run shell command, inserting output before each selection.</td></tr>
+<tr><td><code>:append-output</code></td><td>Run shell command, appending output after each selection.</td></tr>
+<tr><td><code>:pipe</code>, <code>:|</code></td><td>Pipe each selection to the shell command.</td></tr>
+<tr><td><code>:pipe-to</code></td><td>Pipe each selection to the shell command, ignoring output.</td></tr>
+<tr><td><code>:run-shell-command</code>, <code>:sh</code>, <code>:!</code></td><td>Run a shell command</td></tr>
+<tr><td><code>:elisp</code>, <code>:eval-expression</code>, <code>:el</code></td><td>Evaluate an Emacs Lisp expression against the editor (embedded elisprs).</td></tr>
+<tr><td><code>:vim</code>, <code>:viml</code>, <code>:vimscript</code></td><td>Evaluate a Vimscript (VimL) expression via the embedded vimlrs interpreter.</td></tr>
+<tr><td><code>:awk</code>, <code>:awk-filter</code></td><td>Filter the selection (or whole buffer) through an awk program (embedded awkrs).</td></tr>
+<tr><td><code>:zsh</code>, <code>:zshell</code></td><td>Run a command in the embedded zsh shell (state persists); output shown in a popup.</td></tr>
+<tr><td><code>:stryke</code>, <code>:st</code></td><td>Evaluate stryke (strykelang) source via the embedded interpreter (state persists).</td></tr>
+<tr><td><code>:repl</code></td><td>Open the embedded-language REPL (elisp/viml/stryke/awk/zsh); optional starting language.</td></tr>
+<tr><td><code>:reset-diff-change</code>, <code>:diffget</code>, <code>:diffg</code></td><td>Reset the diff change at the cursor position.</td></tr>
+<tr><td><code>:clear-register</code></td><td>Clear given register. If no argument is provided, clear all registers.</td></tr>
+<tr><td><code>:set-register</code></td><td>Set contents of the given register.</td></tr>
+<tr><td><code>:redraw</code></td><td>Clear and re-render the whole UI</td></tr>
+<tr><td><code>:move</code>, <code>:mv</code></td><td>Move the current buffer and its corresponding file to a different path</td></tr>
+<tr><td><code>:move!</code>, <code>:mv!</code></td><td>Move the current buffer and its corresponding file to a different path creating necessary subdirectories</td></tr>
+<tr><td><code>:delete-file</code>, <code>:remove-file</code></td><td>Delete the current buffer’s file from disk and close the buffer (vim-eunuch :Delete).</td></tr>
+<tr><td><code>:chmod-x</code>, <code>:chmodx</code>, <code>:make-executable</code></td><td>Make the current file executable (chmod a+x). Unix only.</td></tr>
+<tr><td><code>:mkdir</code></td><td>Create a directory and any missing parents; with no arg, the current file’s parent.</td></tr>
+<tr><td><code>:yank-diagnostic</code></td><td>Yank diagnostic(s) under primary cursor to register, or clipboard by default</td></tr>
+<tr><td><code>:read</code>, <code>:r</code></td><td>Load a file into buffer</td></tr>
+<tr><td><code>:echo</code></td><td>Prints the given arguments to the statusline.</td></tr>
+<tr><td><code>:noop</code></td><td>Does nothing.</td></tr>
+<tr><td><code>:workspace-trust</code></td><td>Allow language servers and local config for the current workspace.</td></tr>
+<tr><td><code>:workspace-untrust</code></td><td>Revoke the current workspace’s trust grant or exclusion.</td></tr>
+<tr><td><code>:workspace-exclude</code></td><td>Mark the current workspace as never-prompt. Never prompts for trust again.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="static-commands"><a class="header" href="#static-commands">Static Commands</a></h2>
+<p>Static commands take no arguments and can be bound to keys. Static commands can also be executed from the command picker (<code>&lt;space&gt;?</code>). The built-in static commands are:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Description</th><th>Default keybinds</th></tr>
+</thead>
+<tbody>
+<tr><td><code>no_op</code></td><td>Do nothing</td><td></td></tr>
+<tr><td><code>move_char_left</code></td><td>Move left</td><td>normal: <code>h</code>, <code>&lt;C-h&gt;</code>, <code>&lt;left&gt;</code>, insert: <code>&lt;C-b&gt;</code>, <code>&lt;left&gt;</code></td></tr>
+<tr><td><code>move_char_right</code></td><td>Move right</td><td>normal: <code>l</code>, <code>&lt;right&gt;</code>, insert: <code>&lt;C-f&gt;</code>, <code>&lt;right&gt;</code></td></tr>
+<tr><td><code>move_line_up</code></td><td>Move up</td><td>normal: <code>gk</code>, <code>g&lt;up&gt;</code></td></tr>
+<tr><td><code>move_line_down</code></td><td>Move down</td><td>normal: <code>gj</code>, <code>g&lt;down&gt;</code></td></tr>
+<tr><td><code>move_visual_line_up</code></td><td>Move up</td><td>normal: <code>k</code>, <code>&lt;up&gt;</code>, <code>&lt;C-p&gt;</code>, insert: <code>&lt;up&gt;</code>, <code>&lt;C-g&gt;k</code>, <code>&lt;C-g&gt;&lt;up&gt;</code>, <code>&lt;C-g&gt;&lt;C-k&gt;</code></td></tr>
+<tr><td><code>move_visual_line_down</code></td><td>Move down</td><td>normal: <code>j</code>, <code>&lt;C-j&gt;</code>, <code>&lt;C-n&gt;</code>, <code>&lt;down&gt;</code>, insert: <code>&lt;C-g&gt;j</code>, <code>&lt;down&gt;</code>, <code>&lt;C-g&gt;&lt;C-j&gt;</code>, <code>&lt;C-g&gt;&lt;down&gt;</code></td></tr>
+<tr><td><code>extend_char_left</code></td><td>Extend left</td><td>select: <code>h</code>, <code>&lt;left&gt;</code></td></tr>
+<tr><td><code>extend_char_right</code></td><td>Extend right</td><td>select: <code>l</code>, <code>&lt;right&gt;</code></td></tr>
+<tr><td><code>extend_line_up</code></td><td>Extend up</td><td></td></tr>
+<tr><td><code>extend_line_down</code></td><td>Extend down</td><td></td></tr>
+<tr><td><code>extend_visual_line_up</code></td><td>Extend up</td><td>select: <code>k</code>, <code>&lt;up&gt;</code></td></tr>
+<tr><td><code>extend_visual_line_down</code></td><td>Extend down</td><td>select: <code>j</code>, <code>&lt;down&gt;</code></td></tr>
+<tr><td><code>copy_selection_on_next_line</code></td><td>Copy selection on next line</td><td>select: <code>&lt;C-v&gt;</code></td></tr>
+<tr><td><code>copy_selection_on_prev_line</code></td><td>Copy selection on previous line</td><td></td></tr>
+<tr><td><code>move_next_word_start</code></td><td>Move to start of next word</td><td>normal: <code>&lt;A-f&gt;</code>, <code>&lt;C-right&gt;</code>, <code>&lt;S-right&gt;</code>, insert: <code>&lt;A-f&gt;</code>, <code>&lt;C-right&gt;</code>, <code>&lt;S-right&gt;</code></td></tr>
+<tr><td><code>move_prev_word_start</code></td><td>Move to start of previous word</td><td>normal: <code>&lt;A-b&gt;</code>, <code>&lt;C-left&gt;</code>, <code>&lt;S-left&gt;</code>, insert: <code>&lt;A-b&gt;</code>, <code>&lt;C-left&gt;</code>, <code>&lt;S-left&gt;</code></td></tr>
+<tr><td><code>move_next_word_end</code></td><td>Move to end of next word</td><td></td></tr>
+<tr><td><code>move_prev_word_end</code></td><td>Move to end of previous word</td><td></td></tr>
+<tr><td><code>move_next_long_word_start</code></td><td>Move to start of next long word</td><td></td></tr>
+<tr><td><code>move_prev_long_word_start</code></td><td>Move to start of previous long word</td><td></td></tr>
+<tr><td><code>move_next_long_word_end</code></td><td>Move to end of next long word</td><td></td></tr>
+<tr><td><code>move_prev_long_word_end</code></td><td>Move to end of previous long word</td><td></td></tr>
+<tr><td><code>move_next_sub_word_start</code></td><td>Move to start of next sub word</td><td></td></tr>
+<tr><td><code>move_prev_sub_word_start</code></td><td>Move to start of previous sub word</td><td></td></tr>
+<tr><td><code>move_next_sub_word_end</code></td><td>Move to end of next sub word</td><td></td></tr>
+<tr><td><code>move_prev_sub_word_end</code></td><td>Move to end of previous sub word</td><td></td></tr>
+<tr><td><code>vim_move_next_word_start</code></td><td>Move to start of next word (vim caret)</td><td>normal: <code>w</code></td></tr>
+<tr><td><code>vim_move_prev_word_start</code></td><td>Move to start of previous word (vim caret)</td><td>normal: <code>b</code></td></tr>
+<tr><td><code>vim_move_next_word_end</code></td><td>Move to end of next word (vim caret)</td><td>normal: <code>e</code></td></tr>
+<tr><td><code>vim_move_prev_word_end</code></td><td>Move to end of previous word (vim caret)</td><td>normal: <code>ge</code></td></tr>
+<tr><td><code>vim_move_next_long_word_start</code></td><td>Move to start of next long word (vim caret)</td><td>normal: <code>W</code></td></tr>
+<tr><td><code>vim_move_prev_long_word_start</code></td><td>Move to start of previous long word (vim caret)</td><td>normal: <code>B</code></td></tr>
+<tr><td><code>vim_move_next_long_word_end</code></td><td>Move to end of next long word (vim caret)</td><td>normal: <code>E</code></td></tr>
+<tr><td><code>vim_move_prev_long_word_end</code></td><td>Move to end of previous long word (vim caret)</td><td>normal: <code>gE</code></td></tr>
+<tr><td><code>move_parent_node_end</code></td><td>Move to end of the parent node</td><td>normal: <code>&lt;space&gt;k$</code>, select: <code>&lt;space&gt;k$</code></td></tr>
+<tr><td><code>move_parent_node_start</code></td><td>Move to beginning of the parent node</td><td>normal: <code>&lt;space&gt;k0</code>, select: <code>&lt;space&gt;k0</code></td></tr>
+<tr><td><code>extend_next_word_start</code></td><td>Extend to start of next word</td><td>select: <code>w</code></td></tr>
+<tr><td><code>extend_prev_word_start</code></td><td>Extend to start of previous word</td><td>select: <code>b</code></td></tr>
+<tr><td><code>extend_next_word_end</code></td><td>Extend to end of next word</td><td>select: <code>e</code></td></tr>
+<tr><td><code>extend_prev_word_end</code></td><td>Extend to end of previous word</td><td></td></tr>
+<tr><td><code>extend_next_long_word_start</code></td><td>Extend to start of next long word</td><td>select: <code>W</code></td></tr>
+<tr><td><code>extend_prev_long_word_start</code></td><td>Extend to start of previous long word</td><td>select: <code>B</code></td></tr>
+<tr><td><code>extend_next_long_word_end</code></td><td>Extend to end of next long word</td><td>select: <code>E</code></td></tr>
+<tr><td><code>extend_prev_long_word_end</code></td><td>Extend to end of prev long word</td><td></td></tr>
+<tr><td><code>extend_next_sub_word_start</code></td><td>Extend to start of next sub word</td><td></td></tr>
+<tr><td><code>extend_prev_sub_word_start</code></td><td>Extend to start of previous sub word</td><td></td></tr>
+<tr><td><code>extend_next_sub_word_end</code></td><td>Extend to end of next sub word</td><td></td></tr>
+<tr><td><code>extend_prev_sub_word_end</code></td><td>Extend to end of prev sub word</td><td></td></tr>
+<tr><td><code>extend_parent_node_end</code></td><td>Extend to end of the parent node</td><td></td></tr>
+<tr><td><code>extend_parent_node_start</code></td><td>Extend to beginning of the parent node</td><td></td></tr>
+<tr><td><code>find_till_char</code></td><td>Move till next occurrence of char</td><td>normal: <code>t</code></td></tr>
+<tr><td><code>find_next_char</code></td><td>Move to next occurrence of char</td><td>normal: <code>f</code></td></tr>
+<tr><td><code>extend_till_char</code></td><td>Extend till next occurrence of char</td><td>select: <code>t</code></td></tr>
+<tr><td><code>extend_next_char</code></td><td>Extend to next occurrence of char</td><td>select: <code>f</code></td></tr>
+<tr><td><code>till_prev_char</code></td><td>Move till previous occurrence of char</td><td>normal: <code>T</code></td></tr>
+<tr><td><code>find_prev_char</code></td><td>Move to previous occurrence of char</td><td>normal: <code>F</code></td></tr>
+<tr><td><code>sneak_forward</code></td><td>Sneak: jump forward to a two-character sequence</td><td></td></tr>
+<tr><td><code>sneak_backward</code></td><td>Sneak: jump backward to a two-character sequence</td><td></td></tr>
+<tr><td><code>sneak_or_substitute_char</code></td><td>Sneak forward, or substitute char when vim-sneak is off</td><td>normal: <code>s</code></td></tr>
+<tr><td><code>sneak_or_substitute_line</code></td><td>Sneak backward, or substitute line when vim-sneak is off</td><td>normal: <code>S</code></td></tr>
+<tr><td><code>extend_till_prev_char</code></td><td>Extend till previous occurrence of char</td><td>select: <code>T</code></td></tr>
+<tr><td><code>extend_prev_char</code></td><td>Extend to previous occurrence of char</td><td>select: <code>F</code></td></tr>
+<tr><td><code>repeat_last_motion</code></td><td>Repeat last motion</td><td>normal: <code>;</code>, select: <code>;</code></td></tr>
+<tr><td><code>repeat_find_char_reverse</code></td><td>Repeat last find in opposite direction (,)</td><td>normal: <code>,</code>, select: <code>,</code></td></tr>
+<tr><td><code>replace</code></td><td>Replace with new char</td><td>normal: <code>r</code>, select: <code>r</code></td></tr>
+<tr><td><code>switch_case</code></td><td>Switch (toggle) case</td><td>normal: <code>~</code>, select: <code>~</code></td></tr>
+<tr><td><code>switch_to_uppercase</code></td><td>Switch to uppercase</td><td>normal: <code>&lt;space&gt;xU</code>, select: <code>&lt;space&gt;xU</code></td></tr>
+<tr><td><code>switch_to_lowercase</code></td><td>Switch to lowercase</td><td>normal: <code>&lt;space&gt;xu</code>, select: <code>&lt;space&gt;xu</code></td></tr>
+<tr><td><code>page_up</code></td><td>Move page up</td><td>normal: <code>z^</code>, <code>&lt;A-v&gt;</code>, <code>&lt;C-b&gt;</code>, <code>&lt;S-up&gt;</code>, <code>&lt;pageup&gt;</code>, <code>&lt;S-minus&gt;</code>, insert: <code>&lt;A-v&gt;</code>, <code>&lt;S-up&gt;</code>, <code>&lt;pageup&gt;</code></td></tr>
+<tr><td><code>page_down</code></td><td>Move page down</td><td>normal: <code>z+</code>, <code>&lt;C-f&gt;</code>, <code>&lt;S-+&gt;</code>, <code>&lt;S-ret&gt;</code>, <code>&lt;S-down&gt;</code>, <code>&lt;pagedown&gt;</code>, insert: <code>&lt;S-down&gt;</code>, <code>&lt;pagedown&gt;</code></td></tr>
+<tr><td><code>half_page_up</code></td><td>Move half page up</td><td></td></tr>
+<tr><td><code>half_page_down</code></td><td>Move half page down</td><td></td></tr>
+<tr><td><code>page_cursor_up</code></td><td>Move page and cursor up</td><td></td></tr>
+<tr><td><code>page_cursor_down</code></td><td>Move page and cursor down</td><td></td></tr>
+<tr><td><code>page_cursor_half_up</code></td><td>Move page and cursor half up</td><td>normal: <code>&lt;C-u&gt;</code></td></tr>
+<tr><td><code>page_cursor_half_down</code></td><td>Move page and cursor half down</td><td>normal: <code>&lt;C-d&gt;</code></td></tr>
+<tr><td><code>select_all</code></td><td>Select whole document</td><td></td></tr>
+<tr><td><code>select_regex</code></td><td>Select all regex matches inside selections</td><td></td></tr>
+<tr><td><code>select_all_instances</code></td><td>Select all occurrences of the current selection in the buffer</td><td></td></tr>
+<tr><td><code>split_selection</code></td><td>Split selections on regex matches</td><td></td></tr>
+<tr><td><code>split_selection_on_newline</code></td><td>Split selection on newlines</td><td></td></tr>
+<tr><td><code>merge_selections</code></td><td>Merge selections</td><td></td></tr>
+<tr><td><code>merge_consecutive_selections</code></td><td>Merge consecutive selections</td><td></td></tr>
+<tr><td><code>search</code></td><td>Search for regex pattern</td><td>normal: <code>/</code>, <code>&lt;C-s&gt;</code></td></tr>
+<tr><td><code>rsearch</code></td><td>Reverse search for regex pattern</td><td>normal: <code>?</code></td></tr>
+<tr><td><code>search_next</code></td><td>Select next search match</td><td>normal: <code>n</code>, <code>gn</code>, <code>&lt;space&gt;sH</code>, select: <code>&lt;space&gt;sH</code></td></tr>
+<tr><td><code>search_prev</code></td><td>Select previous search match</td><td>normal: <code>N</code>, <code>gN</code></td></tr>
+<tr><td><code>extend_search_next</code></td><td>Add next search match to selection</td><td></td></tr>
+<tr><td><code>extend_search_prev</code></td><td>Add previous search match to selection</td><td></td></tr>
+<tr><td><code>search_selection</code></td><td>Use current selection as search pattern</td><td></td></tr>
+<tr><td><code>search_selection_detect_word_boundaries</code></td><td>Use current selection as the search pattern, automatically wrapping with <code>\b</code> on word boundaries</td><td></td></tr>
+<tr><td><code>make_search_word_bounded</code></td><td>Modify current search to make it word bounded</td><td></td></tr>
+<tr><td><code>global_search</code></td><td>Global search in workspace folder</td><td>normal: <code>&lt;space&gt;/</code>, <code>&lt;space&gt;po</code>, <code>&lt;space&gt;ps</code>, <code>&lt;space&gt;sB</code>, <code>&lt;space&gt;sD</code>, <code>&lt;space&gt;sF</code>, <code>&lt;space&gt;sP</code>, <code>&lt;space&gt;sb</code>, <code>&lt;space&gt;sd</code>, <code>&lt;space&gt;sf</code>, <code>&lt;space&gt;sp</code>, <code>&lt;space&gt;ss</code>, <code>&lt;space&gt;saA</code>, <code>&lt;space&gt;saB</code>, <code>&lt;space&gt;saD</code>, <code>&lt;space&gt;saF</code>, <code>&lt;space&gt;saP</code>, <code>&lt;space&gt;saa</code>, <code>&lt;space&gt;sab</code>, <code>&lt;space&gt;sad</code>, <code>&lt;space&gt;saf</code>, <code>&lt;space&gt;sap</code>, <code>&lt;space&gt;sgB</code>, <code>&lt;space&gt;sgF</code>, <code>&lt;space&gt;sgG</code>, <code>&lt;space&gt;sgb</code>, <code>&lt;space&gt;sgd</code>, <code>&lt;space&gt;sgf</code>, <code>&lt;space&gt;sgg</code>, <code>&lt;space&gt;sgp</code>, <code>&lt;space&gt;skB</code>, <code>&lt;space&gt;skD</code>, <code>&lt;space&gt;skF</code>, <code>&lt;space&gt;skP</code>, <code>&lt;space&gt;skb</code>, <code>&lt;space&gt;skd</code>, <code>&lt;space&gt;skf</code>, <code>&lt;space&gt;skp</code>, <code>&lt;space&gt;srB</code>, <code>&lt;space&gt;srD</code>, <code>&lt;space&gt;srF</code>, <code>&lt;space&gt;srP</code>, <code>&lt;space&gt;srR</code>, <code>&lt;space&gt;srb</code>, <code>&lt;space&gt;srd</code>, <code>&lt;space&gt;srf</code>, <code>&lt;space&gt;srp</code>, <code>&lt;space&gt;srr</code>, select: <code>&lt;space&gt;/</code>, <code>&lt;space&gt;po</code>, <code>&lt;space&gt;ps</code>, <code>&lt;space&gt;sB</code>, <code>&lt;space&gt;sD</code>, <code>&lt;space&gt;sF</code>, <code>&lt;space&gt;sP</code>, <code>&lt;space&gt;sb</code>, <code>&lt;space&gt;sd</code>, <code>&lt;space&gt;sf</code>, <code>&lt;space&gt;sp</code>, <code>&lt;space&gt;ss</code>, <code>&lt;space&gt;saA</code>, <code>&lt;space&gt;saB</code>, <code>&lt;space&gt;saD</code>, <code>&lt;space&gt;saF</code>, <code>&lt;space&gt;saP</code>, <code>&lt;space&gt;saa</code>, <code>&lt;space&gt;sab</code>, <code>&lt;space&gt;sad</code>, <code>&lt;space&gt;saf</code>, <code>&lt;space&gt;sap</code>, <code>&lt;space&gt;sgB</code>, <code>&lt;space&gt;sgF</code>, <code>&lt;space&gt;sgG</code>, <code>&lt;space&gt;sgb</code>, <code>&lt;space&gt;sgd</code>, <code>&lt;space&gt;sgf</code>, <code>&lt;space&gt;sgg</code>, <code>&lt;space&gt;sgp</code>, <code>&lt;space&gt;skB</code>, <code>&lt;space&gt;skD</code>, <code>&lt;space&gt;skF</code>, <code>&lt;space&gt;skP</code>, <code>&lt;space&gt;skb</code>, <code>&lt;space&gt;skd</code>, <code>&lt;space&gt;skf</code>, <code>&lt;space&gt;skp</code>, <code>&lt;space&gt;srB</code>, <code>&lt;space&gt;srD</code>, <code>&lt;space&gt;srF</code>, <code>&lt;space&gt;srP</code>, <code>&lt;space&gt;srR</code>, <code>&lt;space&gt;srb</code>, <code>&lt;space&gt;srd</code>, <code>&lt;space&gt;srf</code>, <code>&lt;space&gt;srp</code>, <code>&lt;space&gt;srr</code></td></tr>
+<tr><td><code>extend_line</code></td><td>Select current line, if already selected, extend to another line based on the anchor</td><td>normal: <code>&lt;space&gt;kV</code>, select: <code>&lt;space&gt;kV</code></td></tr>
+<tr><td><code>extend_line_below</code></td><td>Select current line, if already selected, extend to next line</td><td></td></tr>
+<tr><td><code>extend_line_above</code></td><td>Select current line, if already selected, extend to previous line</td><td></td></tr>
+<tr><td><code>select_line_above</code></td><td>Select current line, if already selected, extend or shrink line above based on the anchor</td><td></td></tr>
+<tr><td><code>select_line_below</code></td><td>Select current line, if already selected, extend or shrink line below based on the anchor</td><td></td></tr>
+<tr><td><code>extend_to_line_bounds</code></td><td>Extend selection to line bounds</td><td>select: <code>V</code></td></tr>
+<tr><td><code>shrink_to_line_bounds</code></td><td>Shrink selection to line bounds</td><td></td></tr>
+<tr><td><code>delete_selection</code></td><td>Delete selection</td><td>normal: <code>x</code>, <code>&lt;del&gt;</code></td></tr>
+<tr><td><code>delete_selection_noyank</code></td><td>Delete selection without yanking</td><td></td></tr>
+<tr><td><code>change_selection</code></td><td>Change selection</td><td>select: <code>c</code>, <code>s</code></td></tr>
+<tr><td><code>change_selection_noyank</code></td><td>Change selection without yanking</td><td></td></tr>
+<tr><td><code>collapse_selection</code></td><td>Collapse selection into single cursor</td><td>normal: <code>&lt;esc&gt;</code></td></tr>
+<tr><td><code>flip_selections</code></td><td>Flip selection cursor and anchor</td><td>select: <code>O</code>, <code>o</code></td></tr>
+<tr><td><code>ensure_selections_forward</code></td><td>Ensure all selections face forward</td><td></td></tr>
+<tr><td><code>insert_mode</code></td><td>Insert before selection</td><td>normal: <code>i</code>, <code>&lt;ins&gt;</code>, <code>&lt;space&gt;ki</code>, select: <code>&lt;space&gt;ki</code></td></tr>
+<tr><td><code>append_mode</code></td><td>Append after selection</td><td>normal: <code>a</code>, select: <code>A</code></td></tr>
+<tr><td><code>replace_mode</code></td><td>Enter Replace mode (overtype)</td><td>normal: <code>R</code>, <code>gR</code>, insert: <code>&lt;ins&gt;</code></td></tr>
+<tr><td><code>command_mode</code></td><td>Enter command mode</td><td>normal: <code>:</code>, <code>gQ</code>, <code>&lt;space&gt;:</code>, <code>&lt;space&gt;k:</code>, select: <code>:</code>, <code>&lt;space&gt;:</code>, <code>&lt;space&gt;k:</code></td></tr>
+<tr><td><code>file_picker</code></td><td>Open file picker</td><td>normal: <code>&lt;space&gt;fA</code>, <code>&lt;space&gt;fL</code>, <code>&lt;space&gt;ff</code>, <code>&lt;space&gt;fl</code>, <code>&lt;space&gt;pf</code>, <code>&lt;space&gt;ph</code>, <code>&lt;space&gt;pp</code>, select: <code>&lt;space&gt;fA</code>, <code>&lt;space&gt;fL</code>, <code>&lt;space&gt;ff</code>, <code>&lt;space&gt;fl</code>, <code>&lt;space&gt;pf</code>, <code>&lt;space&gt;ph</code>, <code>&lt;space&gt;pp</code></td></tr>
+<tr><td><code>file_picker_in_current_buffer_directory</code></td><td>Open file picker at current buffer’s directory</td><td></td></tr>
+<tr><td><code>file_picker_in_current_directory</code></td><td>Open file picker at current working directory</td><td></td></tr>
+<tr><td><code>file_explorer</code></td><td>Open file explorer in workspace root</td><td>normal: <code>&lt;space&gt;ad</code>, <code>&lt;space&gt;af</code>, <code>&lt;space&gt;ft</code>, <code>&lt;space&gt;pd</code>, <code>&lt;space&gt;pt</code>, <code>&lt;space&gt;atrd</code>, <code>&lt;space&gt;atrr</code>, select: <code>&lt;space&gt;ad</code>, <code>&lt;space&gt;af</code>, <code>&lt;space&gt;ft</code>, <code>&lt;space&gt;pd</code>, <code>&lt;space&gt;pt</code>, <code>&lt;space&gt;atrd</code>, <code>&lt;space&gt;atrr</code></td></tr>
+<tr><td><code>file_explorer_in_current_buffer_directory</code></td><td>Open file explorer at current buffer’s directory</td><td>normal: <code>&lt;space&gt;fd</code>, <code>&lt;space&gt;fj</code>, <code>&lt;space&gt;jD</code>, <code>&lt;space&gt;jd</code>, select: <code>&lt;space&gt;fd</code>, <code>&lt;space&gt;fj</code>, <code>&lt;space&gt;jD</code>, <code>&lt;space&gt;jd</code></td></tr>
+<tr><td><code>file_explorer_in_current_directory</code></td><td>Open file explorer at current working directory</td><td></td></tr>
+<tr><td><code>code_action</code></td><td>Perform code action</td><td>normal: <code>&lt;space&gt;la</code>, select: <code>&lt;space&gt;la</code></td></tr>
+<tr><td><code>buffer_picker</code></td><td>Open buffer picker</td><td>normal: <code>&lt;space&gt;bW</code>, <code>&lt;space&gt;bb</code>, <code>&lt;space&gt;pb</code>, <code>&lt;space&gt;b.b</code>, select: <code>&lt;space&gt;bW</code>, <code>&lt;space&gt;bb</code>, <code>&lt;space&gt;pb</code>, <code>&lt;space&gt;b.b</code></td></tr>
+<tr><td><code>jumplist_picker</code></td><td>Open jumplist picker</td><td>normal: <code>&lt;space&gt;jj</code>, select: <code>&lt;space&gt;jj</code></td></tr>
+<tr><td><code>register_picker</code></td><td>Browse registers and paste the chosen one</td><td>normal: <code>&lt;space&gt;re</code>, <code>&lt;space&gt;rr</code>, <code>&lt;space&gt;ry</code>, select: <code>&lt;space&gt;re</code>, <code>&lt;space&gt;rr</code>, <code>&lt;space&gt;ry</code></td></tr>
+<tr><td><code>marks_picker</code></td><td>Fuzzy-pick a vim mark and jump to it (:Marks)</td><td>normal: <code>&lt;space&gt;fb</code>, <code>&lt;space&gt;rm</code>, select: <code>&lt;space&gt;fb</code>, <code>&lt;space&gt;rm</code></td></tr>
+<tr><td><code>buffer_line_picker</code></td><td>Fuzzy-search lines in the current buffer (:BLines)</td><td>normal: <code>&lt;space&gt;sL</code>, select: <code>&lt;space&gt;sL</code></td></tr>
+<tr><td><code>command_history_picker</code></td><td>Fuzzy-pick and run a past command line (:History:)</td><td>normal: <code>&lt;space&gt;r:</code>, select: <code>&lt;space&gt;r:</code></td></tr>
+<tr><td><code>search_history_picker</code></td><td>Fuzzy-pick and re-run a past search (:History/)</td><td>normal: <code>&lt;space&gt;r/</code>, select: <code>&lt;space&gt;r/</code></td></tr>
+<tr><td><code>unicode_picker</code></td><td>Fuzzy-pick a character/digraph and insert it (helm-unicode)</td><td>normal: <code>&lt;space&gt;iu</code>, select: <code>&lt;space&gt;iu</code></td></tr>
+<tr><td><code>git_file_log_picker</code></td><td>Commit log for the current file (:BCommits)</td><td>normal: <code>&lt;space&gt;gt</code>, <code>&lt;space&gt;gfl</code>, select: <code>&lt;space&gt;gt</code>, <code>&lt;space&gt;gfl</code></td></tr>
+<tr><td><code>git_repo_log_picker</code></td><td>Commit log for the whole repo (:Commits)</td><td>normal: <code>&lt;space&gt;gL</code>, select: <code>&lt;space&gt;gL</code></td></tr>
+<tr><td><code>theme_picker</code></td><td>Open fuzzy theme picker with live preview</td><td>normal: <code>&lt;space&gt;Tc</code>, select: <code>&lt;space&gt;Tc</code></td></tr>
+<tr><td><code>wrap_sexp</code></td><td>Wrap the selection in parentheses</td><td>normal: <code>&lt;space&gt;kw</code>, select: <code>&lt;space&gt;kw</code></td></tr>
+<tr><td><code>symbol_picker</code></td><td>Open symbol picker</td><td>normal: <code>&lt;space&gt;ji</code>, <code>&lt;space&gt;pg</code>, <code>&lt;space&gt;sj</code>, select: <code>&lt;space&gt;ji</code>, <code>&lt;space&gt;pg</code>, <code>&lt;space&gt;sj</code></td></tr>
+<tr><td><code>syntax_symbol_picker</code></td><td>Open symbol picker from syntax information</td><td></td></tr>
+<tr><td><code>lsp_or_syntax_symbol_picker</code></td><td>Open symbol picker from LSP or syntax information</td><td></td></tr>
+<tr><td><code>changed_file_picker</code></td><td>Open changed file picker</td><td>normal: <code>&lt;space&gt;bm</code>, select: <code>&lt;space&gt;bm</code></td></tr>
+<tr><td><code>frecent_file_picker</code></td><td>Open recent files ranked by frecency (z algorithm)</td><td>normal: <code>&lt;space&gt;fr</code>, select: <code>&lt;space&gt;fr</code></td></tr>
+<tr><td><code>reopen_last_closed</code></td><td>Reopen the most recently closed file</td><td>normal: <code>&lt;space&gt;bu</code>, <code>&lt;space&gt;fu</code>, select: <code>&lt;space&gt;bu</code>, <code>&lt;space&gt;fu</code></td></tr>
+<tr><td><code>harpoon_add</code></td><td>Pin the current file to the harpoon list</td><td>normal: <code>&lt;space&gt;Ha</code>, select: <code>&lt;space&gt;Ha</code></td></tr>
+<tr><td><code>harpoon_jump</code></td><td>Jump to the harpoon mark in slot [count]</td><td>normal: <code>&lt;space&gt;Hj</code>, select: <code>&lt;space&gt;Hj</code></td></tr>
+<tr><td><code>harpoon_1</code></td><td>Jump to harpoon mark 1</td><td>normal: <code>&lt;space&gt;H1</code>, select: <code>&lt;space&gt;H1</code></td></tr>
+<tr><td><code>harpoon_2</code></td><td>Jump to harpoon mark 2</td><td>normal: <code>&lt;space&gt;H2</code>, select: <code>&lt;space&gt;H2</code></td></tr>
+<tr><td><code>harpoon_3</code></td><td>Jump to harpoon mark 3</td><td>normal: <code>&lt;space&gt;H3</code>, select: <code>&lt;space&gt;H3</code></td></tr>
+<tr><td><code>harpoon_4</code></td><td>Jump to harpoon mark 4</td><td>normal: <code>&lt;space&gt;H4</code>, select: <code>&lt;space&gt;H4</code></td></tr>
+<tr><td><code>harpoon_next</code></td><td>Open the next harpoon mark</td><td>normal: <code>&lt;space&gt;Hn</code>, select: <code>&lt;space&gt;Hn</code></td></tr>
+<tr><td><code>harpoon_prev</code></td><td>Open the previous harpoon mark</td><td>normal: <code>&lt;space&gt;Hp</code>, select: <code>&lt;space&gt;Hp</code></td></tr>
+<tr><td><code>harpoon_menu</code></td><td>Open the harpoon marks menu</td><td>normal: <code>&lt;space&gt;Hh</code>, <code>&lt;space&gt;Hl</code>, select: <code>&lt;space&gt;Hh</code>, <code>&lt;space&gt;Hl</code></td></tr>
+<tr><td><code>harpoon_remove</code></td><td>Unpin the current file from harpoon</td><td>normal: <code>&lt;space&gt;Hd</code>, select: <code>&lt;space&gt;Hd</code></td></tr>
+<tr><td><code>select_references_to_symbol_under_cursor</code></td><td>Select symbol references</td><td>normal: <code>&lt;space&gt;se</code>, <code>&lt;space&gt;sh</code>, select: <code>&lt;space&gt;se</code>, <code>&lt;space&gt;sh</code></td></tr>
+<tr><td><code>workspace_symbol_picker</code></td><td>Open workspace symbol picker</td><td>normal: <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code>, select: <code>&lt;space&gt;jI</code>, <code>&lt;space&gt;sS</code></td></tr>
+<tr><td><code>syntax_workspace_symbol_picker</code></td><td>Open workspace symbol picker from syntax information</td><td></td></tr>
+<tr><td><code>lsp_or_syntax_workspace_symbol_picker</code></td><td>Open workspace symbol picker from LSP or syntax information</td><td></td></tr>
+<tr><td><code>diagnostics_picker</code></td><td>Open diagnostic picker</td><td>normal: <code>&lt;space&gt;el</code>, select: <code>&lt;space&gt;el</code></td></tr>
+<tr><td><code>workspace_diagnostics_picker</code></td><td>Open workspace diagnostic picker</td><td>normal: <code>&lt;space&gt;eL</code>, select: <code>&lt;space&gt;eL</code></td></tr>
+<tr><td><code>last_picker</code></td><td>Open last picker</td><td>normal: <code>&lt;space&gt;'</code>, <code>&lt;space&gt;rl</code>, <code>&lt;space&gt;sl</code>, select: <code>&lt;space&gt;'</code>, <code>&lt;space&gt;rl</code>, <code>&lt;space&gt;sl</code></td></tr>
+<tr><td><code>insert_at_line_start</code></td><td>Insert at start of line</td><td>normal: <code>I</code>, <code>gI</code></td></tr>
+<tr><td><code>insert_at_line_end</code></td><td>Insert at end of line</td><td>normal: <code>A</code></td></tr>
+<tr><td><code>open_below</code></td><td>Open new line below selection</td><td>normal: <code>o</code></td></tr>
+<tr><td><code>open_above</code></td><td>Open new line above selection</td><td>normal: <code>O</code></td></tr>
+<tr><td><code>normal_mode</code></td><td>Enter normal mode</td><td>normal: <code>&lt;C-c&gt;</code>, <code>&lt;C-\&gt;&lt;C-g&gt;</code>, <code>&lt;C-\&gt;&lt;C-n&gt;</code></td></tr>
+<tr><td><code>select_mode</code></td><td>Enter selection extend mode</td><td>normal: <code>v</code>, <code>gh</code>, <code>&lt;C-v&gt;</code>, <code>g&lt;C-h&gt;</code>, <code>&lt;C-space&gt;</code>, <code>&lt;space&gt;kv</code>, <code>&lt;space&gt;k&lt;C-v&gt;</code>, select: <code>&lt;space&gt;kv</code>, <code>&lt;space&gt;k&lt;C-v&gt;</code></td></tr>
+<tr><td><code>exit_select_mode</code></td><td>Exit selection mode</td><td></td></tr>
+<tr><td><code>goto_definition</code></td><td>Goto definition</td><td>normal: <code>g]</code>, <code>gd</code>, <code>&lt;C-]&gt;</code>, <code>&lt;C-w&gt;]</code>, <code>]&lt;C-d&gt;</code>, <code>g&lt;C-]&gt;</code>, <code>&lt;C-w&gt;g]</code>, <code>&lt;space&gt;gd</code>, <code>&lt;space&gt;jf</code>, <code>&lt;space&gt;jv</code>, <code>&lt;space&gt;w]</code>, <code>&lt;C-w&gt;&lt;C-]&gt;</code>, <code>&lt;space&gt;mgg</code>, <code>&lt;space&gt;wg]</code>, <code>&lt;C-w&gt;g&lt;C-]&gt;</code>, <code>&lt;space&gt;w&lt;C-]&gt;</code>, <code>&lt;space&gt;wg&lt;C-]&gt;</code>, select: <code>&lt;C-]&gt;</code>, <code>&lt;space&gt;gd</code>, <code>&lt;space&gt;jf</code>, <code>&lt;space&gt;jv</code>, <code>&lt;space&gt;w]</code>, <code>&lt;space&gt;mgg</code>, <code>&lt;space&gt;wg]</code>, <code>&lt;space&gt;w&lt;C-]&gt;</code>, <code>&lt;space&gt;wg&lt;C-]&gt;</code></td></tr>
+<tr><td><code>goto_declaration</code></td><td>Goto declaration</td><td>normal: <code>gD</code>, <code>&lt;C-w&gt;i</code>, <code>[&lt;C-d&gt;</code>, <code>&lt;space&gt;gD</code>, <code>&lt;space&gt;wi</code>, <code>&lt;C-w&gt;&lt;C-i&gt;</code>, <code>&lt;space&gt;w&lt;C-i&gt;</code>, select: <code>&lt;space&gt;gD</code>, <code>&lt;space&gt;wi</code>, <code>&lt;space&gt;w&lt;C-i&gt;</code></td></tr>
+<tr><td><code>add_newline_above</code></td><td>Add newline above</td><td></td></tr>
+<tr><td><code>add_newline_below</code></td><td>Add newline below</td><td></td></tr>
+<tr><td><code>goto_type_definition</code></td><td>Goto type definition</td><td>normal: <code>gy</code>, <code>&lt;space&gt;gy</code>, select: <code>&lt;space&gt;gy</code></td></tr>
+<tr><td><code>goto_implementation</code></td><td>Goto implementation</td><td>normal: <code>&lt;space&gt;gi</code>, select: <code>&lt;space&gt;gi</code></td></tr>
+<tr><td><code>goto_file_start</code></td><td>Goto line number <code>&lt;n&gt;</code> else file start</td><td>normal: <code>gg</code>, <code>&lt;A-lt&gt;</code>, <code>&lt;C-home&gt;</code>, insert: <code>&lt;A-lt&gt;</code>, <code>&lt;C-home&gt;</code></td></tr>
+<tr><td><code>goto_file_end</code></td><td>Goto file end</td><td>insert: <code>&lt;A-gt&gt;</code>, <code>&lt;C-end&gt;</code></td></tr>
+<tr><td><code>extend_to_file_start</code></td><td>Extend to line number <code>&lt;n&gt;</code> else file start</td><td>select: <code>gg</code></td></tr>
+<tr><td><code>extend_to_file_end</code></td><td>Extend to file end</td><td></td></tr>
+<tr><td><code>goto_file</code></td><td>Goto files/URLs in selections</td><td>normal: <code>[f</code>, <code>]f</code>, <code>gf</code>, <code>gx</code>, <code>&lt;C-w&gt;gF</code>, <code>&lt;C-w&gt;gf</code>, <code>&lt;space&gt;fF</code>, <code>&lt;space&gt;fo</code>, <code>&lt;space&gt;jU</code>, <code>&lt;space&gt;ju</code>, <code>&lt;space&gt;xo</code>, <code>&lt;space&gt;wgF</code>, <code>&lt;space&gt;wgf</code>, select: <code>&lt;space&gt;fF</code>, <code>&lt;space&gt;fo</code>, <code>&lt;space&gt;jU</code>, <code>&lt;space&gt;ju</code>, <code>&lt;space&gt;xo</code>, <code>&lt;space&gt;wgF</code>, <code>&lt;space&gt;wgf</code></td></tr>
+<tr><td><code>goto_file_hsplit</code></td><td>Goto files in selections (hsplit)</td><td>normal: <code>&lt;C-w&gt;F</code>, <code>&lt;C-w&gt;f</code>, <code>&lt;space&gt;wF</code>, <code>&lt;space&gt;wf</code>, <code>&lt;C-w&gt;&lt;C-f&gt;</code>, <code>&lt;space&gt;w&lt;C-f&gt;</code>, select: <code>&lt;space&gt;wF</code>, <code>&lt;space&gt;wf</code>, <code>&lt;space&gt;w&lt;C-f&gt;</code></td></tr>
+<tr><td><code>goto_file_vsplit</code></td><td>Goto files in selections (vsplit)</td><td></td></tr>
+<tr><td><code>goto_reference</code></td><td>Goto references</td><td>normal: <code>gr</code></td></tr>
+<tr><td><code>goto_window_top</code></td><td>Goto window top</td><td>normal: <code>H</code></td></tr>
+<tr><td><code>goto_window_center</code></td><td>Goto window center</td><td>normal: <code>M</code></td></tr>
+<tr><td><code>goto_window_bottom</code></td><td>Goto window bottom</td><td>normal: <code>L</code></td></tr>
+<tr><td><code>goto_last_accessed_file</code></td><td>Goto last accessed file</td><td>normal: <code>&lt;C-^&gt;</code>, <code>&lt;C-w&gt;^</code>, <code>g&lt;tab&gt;</code>, <code>&lt;C-tab&gt;</code>, <code>&lt;space&gt;w^</code>, <code>&lt;C-w&gt;&lt;C-^&gt;</code>, <code>&lt;C-w&gt;g&lt;tab&gt;</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code>, select: <code>&lt;space&gt;w^</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code></td></tr>
+<tr><td><code>goto_last_modified_file</code></td><td>Goto last modified file</td><td>normal: <code>&lt;space&gt;pr</code>, select: <code>&lt;space&gt;pr</code></td></tr>
+<tr><td><code>goto_last_modification</code></td><td>Goto last modification</td><td>normal: <code>g,</code>, <code>g.</code>, <code>g;</code></td></tr>
+<tr><td><code>goto_line</code></td><td>Goto line</td><td></td></tr>
+<tr><td><code>goto_last_line</code></td><td>Goto last line</td><td>normal: <code>G</code>, <code>&lt;A-gt&gt;</code>, <code>&lt;C-end&gt;</code></td></tr>
+<tr><td><code>extend_to_last_line</code></td><td>Extend to last line</td><td>select: <code>G</code>, <code>ge</code></td></tr>
+<tr><td><code>goto_first_diag</code></td><td>Goto first diagnostic</td><td>normal: <code>&lt;space&gt;ef</code>, select: <code>&lt;space&gt;ef</code></td></tr>
+<tr><td><code>copy_diagnostic</code></td><td>Copy the diagnostic message(s) on the current line</td><td></td></tr>
+<tr><td><code>goto_last_diag</code></td><td>Goto last diagnostic</td><td>normal: <code>&lt;space&gt;e.</code>, select: <code>&lt;space&gt;e.</code></td></tr>
+<tr><td><code>goto_next_diag</code></td><td>Goto next diagnostic</td><td>normal: <code>]d</code>, <code>&lt;space&gt;en</code>, select: <code>&lt;space&gt;en</code></td></tr>
+<tr><td><code>goto_prev_diag</code></td><td>Goto previous diagnostic</td><td>normal: <code>[d</code>, <code>&lt;space&gt;ep</code>, select: <code>&lt;space&gt;ep</code></td></tr>
+<tr><td><code>goto_next_change</code></td><td>Goto next change</td><td>normal: <code>]g</code></td></tr>
+<tr><td><code>goto_prev_change</code></td><td>Goto previous change</td><td>normal: <code>[g</code></td></tr>
+<tr><td><code>goto_next_conflict</code></td><td>Goto next merge-conflict marker</td><td>normal: <code>]n</code></td></tr>
+<tr><td><code>goto_prev_conflict</code></td><td>Goto previous merge-conflict marker</td><td>normal: <code>[n</code></td></tr>
+<tr><td><code>conflict_take_all_ours</code></td><td>Resolve ALL conflicts: keep our side</td><td>normal: <code>&lt;space&gt;gcO</code>, select: <code>&lt;space&gt;gcO</code></td></tr>
+<tr><td><code>conflict_take_all_theirs</code></td><td>Resolve ALL conflicts: keep their side</td><td>normal: <code>&lt;space&gt;gcT</code>, select: <code>&lt;space&gt;gcT</code></td></tr>
+<tr><td><code>git_diff</code></td><td>Open side-by-side diff vs HEAD</td><td>normal: <code>&lt;space&gt;g=</code>, select: <code>&lt;space&gt;g=</code></td></tr>
+<tr><td><code>resolve_conflicts</code></td><td>Resolve merge conflicts (3-way)</td><td>normal: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code>, select: <code>&lt;space&gt;gm</code>, <code>&lt;space&gt;gcr</code></td></tr>
+<tr><td><code>git_status</code></td><td>Magit status</td><td>normal: <code>&lt;space&gt;gs</code>, select: <code>&lt;space&gt;gs</code></td></tr>
+<tr><td><code>org_cycle</code></td><td>Org: toggle subtree fold</td><td>normal: <code>&lt;space&gt;mz</code>, <code>&lt;space&gt;m&lt;tab&gt;</code>, select: <code>&lt;space&gt;mz</code>, <code>&lt;space&gt;m&lt;tab&gt;</code></td></tr>
+<tr><td><code>org_todo</code></td><td>Org: cycle TODO keyword</td><td>normal: <code>&lt;space&gt;mt</code>, select: <code>&lt;space&gt;mt</code></td></tr>
+<tr><td><code>org_priority</code></td><td>Org: cycle priority cookie</td><td>normal: <code>&lt;space&gt;mp</code>, select: <code>&lt;space&gt;mp</code></td></tr>
+<tr><td><code>org_promote</code></td><td>Org: promote heading</td><td>normal: <code>&lt;space&gt;mH</code>, select: <code>&lt;space&gt;mH</code></td></tr>
+<tr><td><code>org_demote</code></td><td>Org: demote heading</td><td>normal: <code>&lt;space&gt;ml</code>, select: <code>&lt;space&gt;ml</code></td></tr>
+<tr><td><code>org_next_heading</code></td><td>Org: next heading</td><td>normal: <code>&lt;space&gt;mj</code>, select: <code>&lt;space&gt;mj</code></td></tr>
+<tr><td><code>org_prev_heading</code></td><td>Org: previous heading</td><td>normal: <code>&lt;space&gt;mk</code>, select: <code>&lt;space&gt;mk</code></td></tr>
+<tr><td><code>org_fold_all</code></td><td>Org: fold all headings</td><td>normal: <code>&lt;space&gt;ma</code>, select: <code>&lt;space&gt;ma</code></td></tr>
+<tr><td><code>org_unfold_all</code></td><td>Org: unfold all</td><td>normal: <code>&lt;space&gt;mA</code>, select: <code>&lt;space&gt;mA</code></td></tr>
+<tr><td><code>org_agenda</code></td><td>Org: open agenda</td><td>normal: <code>&lt;space&gt;aoa</code>, select: <code>&lt;space&gt;aoa</code></td></tr>
+<tr><td><code>org_capture</code></td><td>Org: capture note</td><td>normal: <code>&lt;space&gt;aoc</code>, select: <code>&lt;space&gt;aoc</code></td></tr>
+<tr><td><code>goto_first_change</code></td><td>Goto first change</td><td></td></tr>
+<tr><td><code>goto_last_change</code></td><td>Goto last change</td><td>normal: <code>&lt;space&gt;jc</code>, select: <code>&lt;space&gt;jc</code></td></tr>
+<tr><td><code>goto_line_start</code></td><td>Goto line start</td><td>normal: <code>0</code>, <code>g0</code>, <code>&lt;home&gt;</code>, <code>g&lt;home&gt;</code>, <code>&lt;space&gt;j0</code>, select: <code>&lt;space&gt;j0</code>, insert: <code>&lt;home&gt;</code></td></tr>
+<tr><td><code>goto_line_end</code></td><td>Goto line end</td><td>normal: <code>$</code>, <code>g$</code>, <code>gl</code>, <code>&lt;end&gt;</code>, <code>g&lt;end&gt;</code>, <code>&lt;space&gt;j$</code>, select: <code>&lt;space&gt;j$</code></td></tr>
+<tr><td><code>goto_column</code></td><td>Goto column</td><td>normal: <code>|</code></td></tr>
+<tr><td><code>extend_to_column</code></td><td>Extend to column</td><td></td></tr>
+<tr><td><code>goto_next_buffer</code></td><td>Goto next buffer</td><td>normal: <code>]b</code>, <code>gt</code>, <code>&lt;C-w&gt;gt</code>, <code>&lt;space&gt;bn</code>, <code>&lt;space&gt;b.n</code>, <code>&lt;space&gt;wgt</code>, select: <code>&lt;space&gt;bn</code>, <code>&lt;space&gt;b.n</code>, <code>&lt;space&gt;wgt</code></td></tr>
+<tr><td><code>goto_previous_buffer</code></td><td>Goto previous buffer</td><td>normal: <code>[b</code>, <code>gT</code>, <code>&lt;C-w&gt;gT</code>, <code>&lt;space&gt;bp</code>, <code>&lt;space&gt;b.N</code>, <code>&lt;space&gt;b.p</code>, <code>&lt;space&gt;wgT</code>, select: <code>&lt;space&gt;bp</code>, <code>&lt;space&gt;b.N</code>, <code>&lt;space&gt;b.p</code>, <code>&lt;space&gt;wgT</code></td></tr>
+<tr><td><code>goto_line_end_newline</code></td><td>Goto newline at line end</td><td>insert: <code>&lt;end&gt;</code></td></tr>
+<tr><td><code>goto_first_nonwhitespace</code></td><td>Goto first non-blank in line</td><td>normal: <code>^</code>, <code>_</code>, <code>g^</code>, <code>&lt;A-m&gt;</code></td></tr>
+<tr><td><code>trim_selections</code></td><td>Trim whitespace from selections</td><td></td></tr>
+<tr><td><code>extend_to_line_start</code></td><td>Extend to line start</td><td>select: <code>0</code>, <code>&lt;home&gt;</code></td></tr>
+<tr><td><code>extend_to_first_nonwhitespace</code></td><td>Extend to first non-blank in line</td><td>select: <code>^</code>, <code>gh</code></td></tr>
+<tr><td><code>extend_to_line_end</code></td><td>Extend to line end</td><td>select: <code>$</code>, <code>g$</code>, <code>gl</code>, <code>&lt;end&gt;</code></td></tr>
+<tr><td><code>extend_to_line_end_newline</code></td><td>Extend to line end</td><td></td></tr>
+<tr><td><code>signature_help</code></td><td>Show signature help</td><td>normal: <code>&lt;space&gt;ls</code>, select: <code>&lt;space&gt;ls</code></td></tr>
+<tr><td><code>smart_tab</code></td><td>Insert tab if all cursors have all whitespace to their left; otherwise, run a separate command.</td><td></td></tr>
+<tr><td><code>insert_tab</code></td><td>Insert tab char</td><td></td></tr>
+<tr><td><code>insert_newline</code></td><td>Insert newline char</td><td>insert: <code>&lt;C-j&gt;</code>, <code>&lt;ret&gt;</code></td></tr>
+<tr><td><code>insert_char_interactive</code></td><td>Insert an interactively-chosen char</td><td>insert: <code>&lt;C-q&gt;</code>, <code>&lt;C-v&gt;</code></td></tr>
+<tr><td><code>append_char_interactive</code></td><td>Append an interactively-chosen char</td><td></td></tr>
+<tr><td><code>delete_char_backward</code></td><td>Delete previous char</td><td>normal: <code>X</code>, insert: <code>&lt;C-h&gt;</code>, <code>&lt;backspace&gt;</code></td></tr>
+<tr><td><code>delete_char_forward</code></td><td>Delete next char</td><td>insert: <code>&lt;del&gt;</code></td></tr>
+<tr><td><code>delete_word_backward</code></td><td>Delete previous word</td><td>insert: <code>&lt;C-w&gt;</code>, <code>&lt;A-backspace&gt;</code></td></tr>
+<tr><td><code>delete_word_forward</code></td><td>Delete next word</td><td>normal: <code>&lt;A-d&gt;</code>, insert: <code>&lt;A-d&gt;</code></td></tr>
+<tr><td><code>kill_to_line_start</code></td><td>Delete till start of line</td><td>insert: <code>&lt;C-u&gt;</code></td></tr>
+<tr><td><code>kill_to_line_end</code></td><td>Delete till end of line</td><td></td></tr>
+<tr><td><code>undo</code></td><td>Undo change</td><td>normal: <code>U</code>, <code>u</code>, <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code>, <code>&lt;space&gt;ku</code>, select: <code>&lt;space&gt;ku</code>, insert: <code>&lt;C-/&gt;</code>, <code>&lt;C-_&gt;</code></td></tr>
+<tr><td><code>redo</code></td><td>Redo change</td><td>normal: <code>&lt;C-r&gt;</code>, <code>&lt;space&gt;k&lt;C-r&gt;</code>, select: <code>&lt;space&gt;k&lt;C-r&gt;</code></td></tr>
+<tr><td><code>earlier</code></td><td>Move backward in history</td><td>normal: <code>g&lt;minus&gt;</code></td></tr>
+<tr><td><code>later</code></td><td>Move forward in history</td><td>normal: <code>g+</code></td></tr>
+<tr><td><code>commit_undo_checkpoint</code></td><td>Commit changes to new checkpoint</td><td>insert: <code>&lt;C-g&gt;U</code>, <code>&lt;C-g&gt;u</code></td></tr>
+<tr><td><code>yank</code></td><td>Yank selection</td><td>normal: <code>&lt;A-w&gt;</code></td></tr>
+<tr><td><code>yank_to_clipboard</code></td><td>Yank selections to clipboard</td><td></td></tr>
+<tr><td><code>yank_to_primary_clipboard</code></td><td>Yank selections to primary clipboard</td><td></td></tr>
+<tr><td><code>yank_joined</code></td><td>Join and yank selections</td><td></td></tr>
+<tr><td><code>yank_joined_to_clipboard</code></td><td>Join and yank selections to clipboard</td><td></td></tr>
+<tr><td><code>yank_main_selection_to_clipboard</code></td><td>Yank main selection to clipboard</td><td></td></tr>
+<tr><td><code>yank_joined_to_primary_clipboard</code></td><td>Join and yank selections to primary clipboard</td><td></td></tr>
+<tr><td><code>yank_main_selection_to_primary_clipboard</code></td><td>Yank main selection to primary clipboard</td><td></td></tr>
+<tr><td><code>replace_with_yanked</code></td><td>Replace with yanked text</td><td>select: <code>P</code>, <code>p</code></td></tr>
+<tr><td><code>replace_selections_with_clipboard</code></td><td>Replace selections by clipboard content</td><td></td></tr>
+<tr><td><code>replace_selections_with_primary_clipboard</code></td><td>Replace selections by primary clipboard</td><td></td></tr>
+<tr><td><code>paste_after</code></td><td>Paste after selection</td><td>normal: <code>p</code>, <code>]p</code>, <code>gp</code>, <code>zp</code>, <code>&lt;space&gt;kp</code>, select: <code>&lt;space&gt;kp</code></td></tr>
+<tr><td><code>paste_before</code></td><td>Paste before selection</td><td>normal: <code>P</code>, <code>[P</code>, <code>[p</code>, <code>]P</code>, <code>gP</code>, <code>zP</code>, <code>&lt;space&gt;kP</code>, select: <code>&lt;space&gt;kP</code></td></tr>
+<tr><td><code>paste_clipboard_after</code></td><td>Paste clipboard after selections</td><td></td></tr>
+<tr><td><code>paste_clipboard_before</code></td><td>Paste clipboard before selections</td><td></td></tr>
+<tr><td><code>paste_primary_clipboard_after</code></td><td>Paste primary clipboard after selections</td><td></td></tr>
+<tr><td><code>paste_primary_clipboard_before</code></td><td>Paste primary clipboard before selections</td><td></td></tr>
+<tr><td><code>indent</code></td><td>Indent selection</td><td>normal: <code>==</code>, <code>&lt;gt&gt;&lt;gt&gt;</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, select: <code>&lt;space&gt;x&lt;tab&gt;</code>, insert: <code>&lt;C-t&gt;</code></td></tr>
+<tr><td><code>unindent</code></td><td>Unindent selection</td><td>normal: <code>&lt;lt&gt;&lt;lt&gt;</code>, insert: <code>&lt;C-d&gt;</code></td></tr>
+<tr><td><code>format_selections</code></td><td>Format selection</td><td>normal: <code>&lt;A-q&gt;</code>, <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code>, <code>&lt;space&gt;xjc</code>, <code>&lt;space&gt;xjf</code>, <code>&lt;space&gt;xjl</code>, <code>&lt;space&gt;xjn</code>, <code>&lt;space&gt;xjr</code>, select: <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code>, <code>&lt;space&gt;xjc</code>, <code>&lt;space&gt;xjf</code>, <code>&lt;space&gt;xjl</code>, <code>&lt;space&gt;xjn</code>, <code>&lt;space&gt;xjr</code></td></tr>
+<tr><td><code>join_selections</code></td><td>Join lines inside selection</td><td>normal: <code>J</code>, <code>&lt;A-^&gt;</code>, <code>&lt;space&gt;kJ</code>, select: <code>&lt;space&gt;kJ</code></td></tr>
+<tr><td><code>join_selections_space</code></td><td>Join lines inside selection and select spaces</td><td></td></tr>
+<tr><td><code>keep_selections</code></td><td>Keep selections matching regex</td><td></td></tr>
+<tr><td><code>remove_selections</code></td><td>Remove selections matching regex</td><td></td></tr>
+<tr><td><code>align_selections</code></td><td>Align selections in column</td><td>normal: <code>&lt;space&gt;xa&amp;</code>, <code>&lt;space&gt;xa(</code>, <code>&lt;space&gt;xa)</code>, <code>&lt;space&gt;xa,</code>, <code>&lt;space&gt;xa.</code>, <code>&lt;space&gt;xa:</code>, <code>&lt;space&gt;xa;</code>, <code>&lt;space&gt;xa=</code>, <code>&lt;space&gt;xaL</code>, <code>&lt;space&gt;xa[</code>, <code>&lt;space&gt;xa]</code>, <code>&lt;space&gt;xaa</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;xal</code>, <code>&lt;space&gt;xam</code>, <code>&lt;space&gt;xar</code>, <code>&lt;space&gt;xa{</code>, <code>&lt;space&gt;xa}</code>, select: <code>&lt;space&gt;xa&amp;</code>, <code>&lt;space&gt;xa(</code>, <code>&lt;space&gt;xa)</code>, <code>&lt;space&gt;xa,</code>, <code>&lt;space&gt;xa.</code>, <code>&lt;space&gt;xa:</code>, <code>&lt;space&gt;xa;</code>, <code>&lt;space&gt;xa=</code>, <code>&lt;space&gt;xaL</code>, <code>&lt;space&gt;xa[</code>, <code>&lt;space&gt;xa]</code>, <code>&lt;space&gt;xaa</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;xal</code>, <code>&lt;space&gt;xam</code>, <code>&lt;space&gt;xar</code>, <code>&lt;space&gt;xa{</code>, <code>&lt;space&gt;xa}</code></td></tr>
+<tr><td><code>keep_primary_selection</code></td><td>Keep primary selection</td><td></td></tr>
+<tr><td><code>remove_primary_selection</code></td><td>Remove primary selection</td><td></td></tr>
+<tr><td><code>completion</code></td><td>Invoke completion popup</td><td>insert: <code>&lt;A-/&gt;</code>, <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-x&gt;s</code>, <code>&lt;C-x&gt;&lt;C-]&gt;</code>, <code>&lt;C-x&gt;&lt;C-d&gt;</code>, <code>&lt;C-x&gt;&lt;C-f&gt;</code>, <code>&lt;C-x&gt;&lt;C-i&gt;</code>, <code>&lt;C-x&gt;&lt;C-k&gt;</code>, <code>&lt;C-x&gt;&lt;C-l&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;C-o&gt;</code>, <code>&lt;C-x&gt;&lt;C-p&gt;</code>, <code>&lt;C-x&gt;&lt;C-r&gt;</code>, <code>&lt;C-x&gt;&lt;C-s&gt;</code>, <code>&lt;C-x&gt;&lt;C-t&gt;</code>, <code>&lt;C-x&gt;&lt;C-u&gt;</code>, <code>&lt;C-x&gt;&lt;C-v&gt;</code></td></tr>
+<tr><td><code>hover</code></td><td>Show docs for item under cursor</td><td>normal: <code>K</code>, <code>&lt;C-w&gt;}</code>, <code>&lt;C-w&gt;g}</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;w}</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;mhh</code>, <code>&lt;space&gt;wg}</code>, select: <code>K</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;w}</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;mhh</code>, <code>&lt;space&gt;wg}</code></td></tr>
+<tr><td><code>toggle_comments</code></td><td>Comment/uncomment selections</td><td>normal: <code>&lt;A-;&gt;</code>, <code>&lt;space&gt;;</code>, <code>&lt;space&gt;cP</code>, <code>&lt;space&gt;cT</code>, <code>&lt;space&gt;cc</code>, <code>&lt;space&gt;ch</code>, <code>&lt;space&gt;cp</code>, <code>&lt;space&gt;ct</code>, select: <code>&lt;space&gt;;</code>, <code>&lt;space&gt;cP</code>, <code>&lt;space&gt;cT</code>, <code>&lt;space&gt;cc</code>, <code>&lt;space&gt;ch</code>, <code>&lt;space&gt;cp</code>, <code>&lt;space&gt;ct</code></td></tr>
+<tr><td><code>toggle_line_comments</code></td><td>Line comment/uncomment selections</td><td>normal: <code>&lt;space&gt;cL</code>, <code>&lt;space&gt;cl</code>, select: <code>&lt;space&gt;cL</code>, <code>&lt;space&gt;cl</code></td></tr>
+<tr><td><code>toggle_block_comments</code></td><td>Block comment/uncomment selections</td><td>normal: <code>&lt;space&gt;cb</code>, select: <code>&lt;space&gt;cb</code></td></tr>
+<tr><td><code>rotate_selections_forward</code></td><td>Rotate selections forward</td><td></td></tr>
+<tr><td><code>rotate_selections_backward</code></td><td>Rotate selections backward</td><td></td></tr>
+<tr><td><code>rotate_selection_contents_forward</code></td><td>Rotate selection contents forward</td><td></td></tr>
+<tr><td><code>rotate_selection_contents_backward</code></td><td>Rotate selections contents backward</td><td></td></tr>
+<tr><td><code>reverse_selection_contents</code></td><td>Reverse selections contents</td><td></td></tr>
+<tr><td><code>expand_selection</code></td><td>Expand selection to parent syntax node</td><td>normal: <code>&lt;space&gt;v</code>, <code>&lt;space&gt;kU</code>, <code>&lt;space&gt;kk</code>, select: <code>&lt;space&gt;v</code>, <code>&lt;space&gt;kU</code>, <code>&lt;space&gt;kk</code></td></tr>
+<tr><td><code>shrink_selection</code></td><td>Shrink selection to previously expanded syntax node</td><td>normal: <code>&lt;space&gt;kj</code>, select: <code>&lt;space&gt;kj</code></td></tr>
+<tr><td><code>wildfire</code></td><td>Wildfire: select/expand to the closest text object</td><td>normal: <code>&lt;ret&gt;</code></td></tr>
+<tr><td><code>wildfire_shrink</code></td><td>Wildfire: shrink to the previously selected text object</td><td>normal: <code>&lt;backspace&gt;</code></td></tr>
+<tr><td><code>select_next_sibling</code></td><td>Select next sibling in the syntax tree</td><td>normal: <code>&lt;space&gt;kL</code>, <code>&lt;space&gt;kl</code>, select: <code>&lt;space&gt;kL</code>, <code>&lt;space&gt;kl</code></td></tr>
+<tr><td><code>select_prev_sibling</code></td><td>Select previous sibling the in syntax tree</td><td>normal: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code>, select: <code>&lt;space&gt;kH</code>, <code>&lt;space&gt;kh</code></td></tr>
+<tr><td><code>select_all_siblings</code></td><td>Select all siblings of the current node</td><td></td></tr>
+<tr><td><code>select_all_children</code></td><td>Select all children of the current node</td><td></td></tr>
+<tr><td><code>jump_forward</code></td><td>Jump forward on jumplist</td><td>normal: <code>&lt;C-i&gt;</code>, <code>&lt;tab&gt;</code></td></tr>
+<tr><td><code>jump_backward</code></td><td>Jump backward on jumplist</td><td>normal: <code>&lt;C-o&gt;</code>, <code>&lt;C-t&gt;</code>, <code>&lt;space&gt;jb</code>, <code>&lt;space&gt;s`</code>, select: <code>&lt;space&gt;jb</code>, <code>&lt;space&gt;s`</code></td></tr>
+<tr><td><code>save_selection</code></td><td>Save current selection to jumplist</td><td></td></tr>
+<tr><td><code>jump_view_right</code></td><td>Jump to right split</td><td>normal: <code>&lt;C-w&gt;l</code>, <code>&lt;C-w&gt;.l</code>, <code>&lt;space&gt;wl</code>, <code>&lt;C-w&gt;&lt;C-l&gt;</code>, <code>&lt;space&gt;w.l</code>, <code>&lt;C-w&gt;&lt;right&gt;</code>, <code>&lt;space&gt;w&lt;C-l&gt;</code>, <code>&lt;space&gt;w&lt;right&gt;</code>, select: <code>&lt;space&gt;wl</code>, <code>&lt;space&gt;w.l</code>, <code>&lt;space&gt;w&lt;C-l&gt;</code>, <code>&lt;space&gt;w&lt;right&gt;</code></td></tr>
+<tr><td><code>jump_view_left</code></td><td>Jump to left split</td><td>normal: <code>&lt;C-w&gt;h</code>, <code>&lt;C-w&gt;.h</code>, <code>&lt;space&gt;wh</code>, <code>&lt;C-w&gt;&lt;C-h&gt;</code>, <code>&lt;space&gt;w.h</code>, <code>&lt;C-w&gt;&lt;left&gt;</code>, <code>&lt;space&gt;w&lt;C-h&gt;</code>, <code>&lt;space&gt;w&lt;left&gt;</code>, select: <code>&lt;space&gt;wh</code>, <code>&lt;space&gt;w.h</code>, <code>&lt;space&gt;w&lt;C-h&gt;</code>, <code>&lt;space&gt;w&lt;left&gt;</code></td></tr>
+<tr><td><code>jump_view_up</code></td><td>Jump to split above</td><td>normal: <code>&lt;C-w&gt;k</code>, <code>&lt;C-w&gt;t</code>, <code>&lt;C-w&gt;.k</code>, <code>&lt;C-w&gt;&lt;up&gt;</code>, <code>&lt;space&gt;wk</code>, <code>&lt;space&gt;wt</code>, <code>&lt;C-w&gt;&lt;C-k&gt;</code>, <code>&lt;C-w&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;w.k</code>, <code>&lt;space&gt;w&lt;up&gt;</code>, <code>&lt;space&gt;w&lt;C-k&gt;</code>, <code>&lt;space&gt;w&lt;C-t&gt;</code>, select: <code>&lt;space&gt;wk</code>, <code>&lt;space&gt;wt</code>, <code>&lt;space&gt;w.k</code>, <code>&lt;space&gt;w&lt;up&gt;</code>, <code>&lt;space&gt;w&lt;C-k&gt;</code>, <code>&lt;space&gt;w&lt;C-t&gt;</code></td></tr>
+<tr><td><code>jump_view_down</code></td><td>Jump to split below</td><td>normal: <code>&lt;C-w&gt;b</code>, <code>&lt;C-w&gt;j</code>, <code>&lt;C-w&gt;.j</code>, <code>&lt;space&gt;wb</code>, <code>&lt;space&gt;wj</code>, <code>&lt;C-w&gt;&lt;C-b&gt;</code>, <code>&lt;C-w&gt;&lt;C-j&gt;</code>, <code>&lt;space&gt;w.j</code>, <code>&lt;C-w&gt;&lt;down&gt;</code>, <code>&lt;space&gt;w&lt;C-b&gt;</code>, <code>&lt;space&gt;w&lt;C-j&gt;</code>, <code>&lt;space&gt;w&lt;down&gt;</code>, select: <code>&lt;space&gt;wb</code>, <code>&lt;space&gt;wj</code>, <code>&lt;space&gt;w.j</code>, <code>&lt;space&gt;w&lt;C-b&gt;</code>, <code>&lt;space&gt;w&lt;C-j&gt;</code>, <code>&lt;space&gt;w&lt;down&gt;</code></td></tr>
+<tr><td><code>swap_view_right</code></td><td>Swap with right split</td><td>normal: <code>&lt;C-w&gt;L</code>, <code>&lt;C-w&gt;.L</code>, <code>&lt;space&gt;wL</code>, <code>&lt;space&gt;w.L</code>, select: <code>&lt;space&gt;wL</code>, <code>&lt;space&gt;w.L</code></td></tr>
+<tr><td><code>swap_view_left</code></td><td>Swap with left split</td><td>normal: <code>&lt;C-w&gt;H</code>, <code>&lt;C-w&gt;.H</code>, <code>&lt;space&gt;wH</code>, <code>&lt;space&gt;w.H</code>, select: <code>&lt;space&gt;wH</code>, <code>&lt;space&gt;w.H</code></td></tr>
+<tr><td><code>swap_view_up</code></td><td>Swap with split above</td><td>normal: <code>&lt;C-w&gt;K</code>, <code>&lt;C-w&gt;.K</code>, <code>&lt;space&gt;wK</code>, <code>&lt;space&gt;w.K</code>, select: <code>&lt;space&gt;wK</code>, <code>&lt;space&gt;w.K</code></td></tr>
+<tr><td><code>swap_view_down</code></td><td>Swap with split below</td><td>normal: <code>&lt;C-w&gt;J</code>, <code>&lt;C-w&gt;.J</code>, <code>&lt;space&gt;wJ</code>, <code>&lt;space&gt;w.J</code>, select: <code>&lt;space&gt;wJ</code>, <code>&lt;space&gt;w.J</code></td></tr>
+<tr><td><code>transpose_view</code></td><td>Transpose splits</td><td>normal: <code>&lt;C-w&gt;M</code>, <code>&lt;C-w&gt;x</code>, <code>&lt;space&gt;wM</code>, <code>&lt;space&gt;wx</code>, <code>&lt;C-w&gt;&lt;C-x&gt;</code>, <code>&lt;space&gt;w&lt;C-x&gt;</code>, select: <code>&lt;space&gt;wM</code>, <code>&lt;space&gt;wx</code>, <code>&lt;space&gt;w&lt;C-x&gt;</code></td></tr>
+<tr><td><code>rotate_view</code></td><td>Goto next window</td><td>normal: <code>&lt;C-w&gt;p</code>, <code>&lt;C-w&gt;r</code>, <code>&lt;C-w&gt;w</code>, <code>&lt;C-w&gt;.o</code>, <code>&lt;C-w&gt;.r</code>, <code>&lt;C-w&gt;.w</code>, <code>&lt;space&gt;wp</code>, <code>&lt;space&gt;wr</code>, <code>&lt;space&gt;ww</code>, <code>&lt;C-w&gt;&lt;C-p&gt;</code>, <code>&lt;C-w&gt;&lt;C-r&gt;</code>, <code>&lt;C-w&gt;&lt;C-w&gt;</code>, <code>&lt;C-w&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;b.o</code>, <code>&lt;space&gt;w.o</code>, <code>&lt;space&gt;w.r</code>, <code>&lt;space&gt;w.w</code>, <code>&lt;space&gt;w&lt;C-p&gt;</code>, <code>&lt;space&gt;w&lt;C-r&gt;</code>, <code>&lt;space&gt;w&lt;C-w&gt;</code>, <code>&lt;space&gt;w&lt;tab&gt;</code>, select: <code>&lt;space&gt;wp</code>, <code>&lt;space&gt;wr</code>, <code>&lt;space&gt;ww</code>, <code>&lt;space&gt;b.o</code>, <code>&lt;space&gt;w.o</code>, <code>&lt;space&gt;w.r</code>, <code>&lt;space&gt;w.w</code>, <code>&lt;space&gt;w&lt;C-p&gt;</code>, <code>&lt;space&gt;w&lt;C-r&gt;</code>, <code>&lt;space&gt;w&lt;C-w&gt;</code>, <code>&lt;space&gt;w&lt;tab&gt;</code></td></tr>
+<tr><td><code>rotate_view_reverse</code></td><td>Goto previous window</td><td>normal: <code>&lt;C-w&gt;R</code>, <code>&lt;C-w&gt;W</code>, <code>&lt;C-w&gt;.R</code>, <code>&lt;space&gt;wR</code>, <code>&lt;space&gt;wW</code>, <code>&lt;space&gt;w.R</code>, select: <code>&lt;space&gt;wR</code>, <code>&lt;space&gt;wW</code>, <code>&lt;space&gt;w.R</code></td></tr>
+<tr><td><code>hsplit</code></td><td>Horizontal bottom split</td><td>normal: <code>&lt;C-w&gt;S</code>, <code>&lt;C-w&gt;s</code>, <code>&lt;C-w&gt;.S</code>, <code>&lt;C-w&gt;.s</code>, <code>&lt;space&gt;wS</code>, <code>&lt;space&gt;ws</code>, <code>&lt;C-w&gt;&lt;C-s&gt;</code>, <code>&lt;space&gt;w.S</code>, <code>&lt;space&gt;w.s</code>, <code>&lt;C-w&gt;.&lt;minus&gt;</code>, <code>&lt;space&gt;w&lt;C-s&gt;</code>, <code>&lt;space&gt;w.&lt;minus&gt;</code>, select: <code>&lt;space&gt;wS</code>, <code>&lt;space&gt;ws</code>, <code>&lt;space&gt;w.S</code>, <code>&lt;space&gt;w.s</code>, <code>&lt;space&gt;w&lt;C-s&gt;</code>, <code>&lt;space&gt;w.&lt;minus&gt;</code></td></tr>
+<tr><td><code>hsplit_new</code></td><td>Horizontal bottom split scratch buffer</td><td>normal: <code>&lt;C-w&gt;n</code>, <code>&lt;space&gt;Fn</code>, <code>&lt;space&gt;wn</code>, <code>&lt;C-w&gt;&lt;C-n&gt;</code>, <code>&lt;space&gt;bNh</code>, <code>&lt;space&gt;bNj</code>, <code>&lt;space&gt;bNk</code>, <code>&lt;space&gt;bNl</code>, <code>&lt;space&gt;w&lt;C-n&gt;</code>, select: <code>&lt;space&gt;Fn</code>, <code>&lt;space&gt;wn</code>, <code>&lt;space&gt;bNh</code>, <code>&lt;space&gt;bNj</code>, <code>&lt;space&gt;bNk</code>, <code>&lt;space&gt;bNl</code>, <code>&lt;space&gt;w&lt;C-n&gt;</code></td></tr>
+<tr><td><code>vsplit</code></td><td>Vertical right split</td><td>normal: <code>&lt;C-w&gt;/</code>, <code>&lt;C-w&gt;2</code>, <code>&lt;C-w&gt;3</code>, <code>&lt;C-w&gt;4</code>, <code>&lt;C-w&gt;V</code>, <code>&lt;C-w&gt;v</code>, <code>&lt;C-w&gt;./</code>, <code>&lt;C-w&gt;.V</code>, <code>&lt;C-w&gt;.v</code>, <code>&lt;space&gt;w/</code>, <code>&lt;space&gt;w2</code>, <code>&lt;space&gt;w3</code>, <code>&lt;space&gt;w4</code>, <code>&lt;space&gt;wV</code>, <code>&lt;space&gt;wv</code>, <code>&lt;C-w&gt;&lt;C-v&gt;</code>, <code>&lt;space&gt;w./</code>, <code>&lt;space&gt;w.V</code>, <code>&lt;space&gt;w.v</code>, <code>&lt;space&gt;w&lt;C-v&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w2</code>, <code>&lt;space&gt;u&lt;space&gt;w3</code>, <code>&lt;space&gt;u&lt;space&gt;w4</code>, select: <code>&lt;space&gt;w/</code>, <code>&lt;space&gt;w2</code>, <code>&lt;space&gt;w3</code>, <code>&lt;space&gt;w4</code>, <code>&lt;space&gt;wV</code>, <code>&lt;space&gt;wv</code>, <code>&lt;space&gt;w./</code>, <code>&lt;space&gt;w.V</code>, <code>&lt;space&gt;w.v</code>, <code>&lt;space&gt;w&lt;C-v&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w2</code>, <code>&lt;space&gt;u&lt;space&gt;w3</code>, <code>&lt;space&gt;u&lt;space&gt;w4</code></td></tr>
+<tr><td><code>vsplit_new</code></td><td>Vertical right split scratch buffer</td><td></td></tr>
+<tr><td><code>wclose</code></td><td>Close window</td><td>normal: <code>&lt;C-w&gt;D</code>, <code>&lt;C-w&gt;c</code>, <code>&lt;C-w&gt;d</code>, <code>&lt;C-w&gt;q</code>, <code>&lt;C-w&gt;.d</code>, <code>&lt;space&gt;cd</code>, <code>&lt;space&gt;wD</code>, <code>&lt;space&gt;wc</code>, <code>&lt;space&gt;wd</code>, <code>&lt;space&gt;wq</code>, <code>&lt;C-w&gt;&lt;C-d&gt;</code>, <code>&lt;C-w&gt;&lt;C-q&gt;</code>, <code>&lt;space&gt;w.d</code>, <code>&lt;space&gt;w&lt;C-d&gt;</code>, <code>&lt;space&gt;w&lt;C-q&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;wd</code>, select: <code>&lt;space&gt;cd</code>, <code>&lt;space&gt;wD</code>, <code>&lt;space&gt;wc</code>, <code>&lt;space&gt;wd</code>, <code>&lt;space&gt;wq</code>, <code>&lt;space&gt;w.d</code>, <code>&lt;space&gt;w&lt;C-d&gt;</code>, <code>&lt;space&gt;w&lt;C-q&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;wd</code></td></tr>
+<tr><td><code>wonly</code></td><td>Close windows except current</td><td>normal: <code>&lt;C-w&gt;1</code>, <code>&lt;C-w&gt;_</code>, <code>&lt;C-w&gt;m</code>, <code>&lt;C-w&gt;o</code>, <code>&lt;C-w&gt;.D</code>, <code>&lt;C-w&gt;._</code>, <code>&lt;C-w&gt;|</code>, <code>&lt;C-w&gt;.|</code>, <code>&lt;space&gt;w1</code>, <code>&lt;space&gt;w_</code>, <code>&lt;space&gt;wm</code>, <code>&lt;space&gt;wo</code>, <code>&lt;C-w&gt;&lt;C-o&gt;</code>, <code>&lt;space&gt;w.D</code>, <code>&lt;space&gt;w._</code>, <code>&lt;space&gt;w|</code>, <code>&lt;space&gt;w.|</code>, <code>&lt;space&gt;w&lt;C-o&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w1</code>, select: <code>&lt;space&gt;w1</code>, <code>&lt;space&gt;w_</code>, <code>&lt;space&gt;wm</code>, <code>&lt;space&gt;wo</code>, <code>&lt;space&gt;w.D</code>, <code>&lt;space&gt;w._</code>, <code>&lt;space&gt;w|</code>, <code>&lt;space&gt;w.|</code>, <code>&lt;space&gt;w&lt;C-o&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w1</code></td></tr>
+<tr><td><code>select_register</code></td><td>Select register</td><td>normal: <code>"</code></td></tr>
+<tr><td><code>insert_register</code></td><td>Insert register</td><td>insert: <code>&lt;C-r&gt;</code></td></tr>
+<tr><td><code>copy_between_registers</code></td><td>Copy between two registers</td><td></td></tr>
+<tr><td><code>align_view_middle</code></td><td>Align view middle</td><td></td></tr>
+<tr><td><code>align_view_top</code></td><td>Align view top</td><td>normal: <code>zt</code></td></tr>
+<tr><td><code>align_view_center</code></td><td>Align view center</td><td>normal: <code>zz</code>, <code>&lt;C-l&gt;</code>, <code>&lt;C-w&gt;.z</code>, <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code>, select: <code>&lt;space&gt;b.z</code>, <code>&lt;space&gt;w.z</code></td></tr>
+<tr><td><code>align_view_bottom</code></td><td>Align view bottom</td><td>normal: <code>zb</code></td></tr>
+<tr><td><code>scroll_up</code></td><td>Scroll view up</td><td>normal: <code>&lt;C-y&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-y&gt;</code></td></tr>
+<tr><td><code>scroll_down</code></td><td>Scroll view down</td><td>normal: <code>&lt;C-e&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-e&gt;</code></td></tr>
+<tr><td><code>scroll_column_left</code></td><td>Scroll view left one column (zh)</td><td>normal: <code>zh</code>, <code>z&lt;left&gt;</code></td></tr>
+<tr><td><code>scroll_column_right</code></td><td>Scroll view right one column (zl)</td><td>normal: <code>zl</code>, <code>z&lt;right&gt;</code></td></tr>
+<tr><td><code>scroll_half_column_left</code></td><td>Scroll view left half a screen (zH)</td><td>normal: <code>zH</code>, <code>ze</code></td></tr>
+<tr><td><code>scroll_half_column_right</code></td><td>Scroll view right half a screen (zL)</td><td>normal: <code>zL</code>, <code>zs</code></td></tr>
+<tr><td><code>resize_view_wider</code></td><td>Make current window wider (CTRL-W &gt;)</td><td>normal: <code>&lt;C-w&gt;.]</code>, <code>&lt;C-w&gt;&lt;gt&gt;</code>, <code>&lt;space&gt;w.]</code>, <code>&lt;space&gt;w&lt;gt&gt;</code>, select: <code>&lt;space&gt;w.]</code>, <code>&lt;space&gt;w&lt;gt&gt;</code></td></tr>
+<tr><td><code>resize_view_narrower</code></td><td>Make current window narrower (CTRL-W &lt;)</td><td>normal: <code>&lt;C-w&gt;[</code>, <code>&lt;C-w&gt;.[</code>, <code>&lt;C-w&gt;&lt;lt&gt;</code>, <code>&lt;space&gt;w[</code>, <code>&lt;space&gt;w.[</code>, <code>&lt;space&gt;w&lt;lt&gt;</code>, select: <code>&lt;space&gt;w[</code>, <code>&lt;space&gt;w.[</code>, <code>&lt;space&gt;w&lt;lt&gt;</code></td></tr>
+<tr><td><code>resize_view_taller</code></td><td>Make current window taller (CTRL-W +)</td><td>normal: <code>&lt;C-w&gt;+</code>, <code>&lt;C-w&gt;.}</code>, <code>&lt;space&gt;w+</code>, <code>&lt;space&gt;w.}</code>, select: <code>&lt;space&gt;w+</code>, <code>&lt;space&gt;w.}</code></td></tr>
+<tr><td><code>resize_view_shorter</code></td><td>Make current window shorter (CTRL-W -)</td><td>normal: <code>&lt;C-w&gt;{</code>, <code>&lt;C-w&gt;.{</code>, <code>&lt;space&gt;w{</code>, <code>&lt;space&gt;w.{</code>, <code>&lt;C-w&gt;&lt;minus&gt;</code>, <code>&lt;space&gt;w&lt;minus&gt;</code>, select: <code>&lt;space&gt;w{</code>, <code>&lt;space&gt;w.{</code>, <code>&lt;space&gt;w&lt;minus&gt;</code></td></tr>
+<tr><td><code>resize_view_equalize</code></td><td>Make all windows equal size (CTRL-W =)</td><td>normal: <code>&lt;C-w&gt;=</code>, <code>&lt;space&gt;w=</code>, select: <code>&lt;space&gt;w=</code></td></tr>
+<tr><td><code>rot13</code></td><td>ROT13-encode the selection (g?)</td><td></td></tr>
+<tr><td><code>url_encode</code></td><td>Percent-encode (URL-encode) the selection</td><td></td></tr>
+<tr><td><code>url_decode</code></td><td>Percent-decode (URL-decode) the selection</td><td></td></tr>
+<tr><td><code>parse_query_selection</code></td><td>Expand a URL query string into decoded key=value lines</td><td></td></tr>
+<tr><td><code>build_query_selection</code></td><td>Build a URL query string from key=value lines</td><td></td></tr>
+<tr><td><code>url_info_selection</code></td><td>Break the selected URL into scheme/host/port/path/query lines</td><td></td></tr>
+<tr><td><code>encode_base64</code></td><td>Base64-encode the selection</td><td></td></tr>
+<tr><td><code>decode_base64</code></td><td>Base64-decode the selection</td><td></td></tr>
+<tr><td><code>encode_base64url</code></td><td>URL-safe base64-encode the selection (no padding)</td><td></td></tr>
+<tr><td><code>decode_base64url</code></td><td>URL-safe base64-decode the selection (JWT-friendly)</td><td></td></tr>
+<tr><td><code>jwt_decode_selection</code></td><td>Decode the selected JWT into pretty header + payload JSON</td><td></td></tr>
+<tr><td><code>encode_html</code></td><td>HTML-escape the selection (&amp; &lt; &gt; “ ’)</td><td></td></tr>
+<tr><td><code>decode_html</code></td><td>Decode HTML entities in the selection</td><td></td></tr>
+<tr><td><code>html_to_text_selection</code></td><td>Strip HTML tags and decode entities to plain text</td><td></td></tr>
+<tr><td><code>title_case_selection</code></td><td>Title-case the selection (capitalize each word)</td><td></td></tr>
+<tr><td><code>sentence_case_selection</code></td><td>Capitalize the first letter of each sentence in the selection</td><td></td></tr>
+<tr><td><code>straighten_quotes_selection</code></td><td>Convert smart quotes/dashes in the selection to plain ASCII</td><td></td></tr>
+<tr><td><code>hex_to_rgb_selection</code></td><td>Convert a #hex color in the selection to rgb(r, g, b)</td><td></td></tr>
+<tr><td><code>rgb_to_hex_selection</code></td><td>Convert an rgb(r, g, b) color in the selection to #hex</td><td></td></tr>
+<tr><td><code>to_roman_selection</code></td><td>Convert the selected integer to a Roman numeral</td><td></td></tr>
+<tr><td><code>from_roman_selection</code></td><td>Convert the selected Roman numeral to an integer</td><td></td></tr>
+<tr><td><code>add_commas_selection</code></td><td>Add thousands separators to numbers in the selection</td><td></td></tr>
+<tr><td><code>strip_commas_selection</code></td><td>Remove thousands separators from numbers in the selection</td><td></td></tr>
+<tr><td><code>swap_quotes_selection</code></td><td>Swap ’ and “ quote characters in the selection</td><td></td></tr>
+<tr><td><code>strip_quotes_selection</code></td><td>Remove surrounding quotes from the selection</td><td></td></tr>
+<tr><td><code>reverse_words_selection</code></td><td>Reverse the word order within each selected line</td><td></td></tr>
+<tr><td><code>unwrap_tag_selection</code></td><td>Strip the outermost <tag>…</tag> wrapper from the selection</td><td></td></tr>
+<tr><td><code>sort_paragraphs_selection</code></td><td>Sort blank-line-separated paragraphs in the selection</td><td></td></tr>
+<tr><td><code>lighten_selection</code></td><td>Lighten the hex color in the selection by 10%</td><td></td></tr>
+<tr><td><code>darken_selection</code></td><td>Darken the hex color in the selection by 10%</td><td></td></tr>
+<tr><td><code>contrast_text</code></td><td>Recommend black/white text for the selected hex background color</td><td></td></tr>
+<tr><td><code>toggle_value_selection</code></td><td>Toggle the boolean/keyword in the selection (true&lt;-&gt;false, …)</td><td></td></tr>
+<tr><td><code>normalize_whitespace_selection</code></td><td>Collapse internal whitespace runs in the selection</td><td></td></tr>
+<tr><td><code>insert_toc</code></td><td>Insert a markdown table of contents from the buffer’s headings</td><td></td></tr>
+<tr><td><code>slugify_selection</code></td><td>Slugify the selection (lowercase, hyphen-separated)</td><td></td></tr>
+<tr><td><code>humanize_selection</code></td><td>Humanize a slug/identifier into a Title-Cased label</td><td></td></tr>
+<tr><td><code>transpose_csv_selection</code></td><td>Transpose the selected CSV/TSV table (rows &lt;-&gt; columns)</td><td></td></tr>
+<tr><td><code>csv_to_json_selection</code></td><td>Convert the selected CSV/TSV to a JSON array of objects</td><td></td></tr>
+<tr><td><code>regex_escape_selection</code></td><td>Escape regex metacharacters in the selection</td><td></td></tr>
+<tr><td><code>blockquote_selection</code></td><td>Prefix each selected line with “&gt; “ (markdown blockquote)</td><td></td></tr>
+<tr><td><code>unblockquote_selection</code></td><td>Strip a leading “&gt; “ from each selected line</td><td></td></tr>
+<tr><td><code>bullet_list_selection</code></td><td>Make a markdown bullet list from the selected lines</td><td></td></tr>
+<tr><td><code>unbullet_selection</code></td><td>Strip a leading bullet (- * +) from each selected line</td><td></td></tr>
+<tr><td><code>strip_ansi_selection</code></td><td>Strip ANSI/VT escape codes from the selection</td><td></td></tr>
+<tr><td><code>html_escape_selection</code></td><td>HTML-escape the selection (&amp; &lt; &gt; “ ’ to entities)</td><td></td></tr>
+<tr><td><code>html_unescape_selection</code></td><td>HTML-unescape entities in the selection back to characters</td><td></td></tr>
+<tr><td><code>reverse_chars_selection</code></td><td>Reverse the characters in the selection</td><td></td></tr>
+<tr><td><code>json_escape_selection</code></td><td>JSON-escape the selection (for a string literal)</td><td></td></tr>
+<tr><td><code>to_json_string_selection</code></td><td>Wrap the selection in quotes as a JSON string literal</td><td></td></tr>
+<tr><td><code>json_unescape_selection</code></td><td>JSON-unescape the selection</td><td></td></tr>
+<tr><td><code>to_hex_selection</code></td><td>Encode the selection as hex bytes</td><td></td></tr>
+<tr><td><code>from_hex_selection</code></td><td>Decode hex bytes in the selection back to text</td><td></td></tr>
+<tr><td><code>format_table_selection</code></td><td>Align the selected markdown table’s columns</td><td></td></tr>
+<tr><td><code>csv_to_table_selection</code></td><td>Convert the selected CSV/TSV to a markdown table</td><td></td></tr>
+<tr><td><code>table_to_csv_selection</code></td><td>Convert the selected markdown table to CSV</td><td></td></tr>
+<tr><td><code>json_pretty_selection</code></td><td>Pretty-print the selected JSON (preserves key order)</td><td></td></tr>
+<tr><td><code>json_minify_selection</code></td><td>Minify the selected JSON</td><td></td></tr>
+<tr><td><code>xml_pretty_selection</code></td><td>Pretty-print the selected XML/HTML</td><td></td></tr>
+<tr><td><code>insert_digraph</code></td><td>Insert a digraph by two-character mnemonic (CTRL-K)</td><td>insert: <code>&lt;C-k&gt;</code></td></tr>
+<tr><td><code>insert_uuid_v4</code></td><td>Insert a random UUIDv4 (SPC i U 4)</td><td>normal: <code>&lt;space&gt;iU4</code>, <code>&lt;space&gt;iUU</code>, select: <code>&lt;space&gt;iU4</code>, <code>&lt;space&gt;iUU</code></td></tr>
+<tr><td><code>insert_uuid_v1</code></td><td>Insert a time-based UUIDv1 (SPC i U 1)</td><td>normal: <code>&lt;space&gt;iU1</code>, select: <code>&lt;space&gt;iU1</code></td></tr>
+<tr><td><code>insert_lorem_sentence</code></td><td>Insert a lorem-ipsum sentence (SPC i l s)</td><td>normal: <code>&lt;space&gt;ils</code>, select: <code>&lt;space&gt;ils</code></td></tr>
+<tr><td><code>insert_lorem_paragraph</code></td><td>Insert a lorem-ipsum paragraph (SPC i l p)</td><td>normal: <code>&lt;space&gt;ilp</code>, select: <code>&lt;space&gt;ilp</code></td></tr>
+<tr><td><code>insert_lorem_list</code></td><td>Insert a lorem-ipsum list (SPC i l l)</td><td>normal: <code>&lt;space&gt;ill</code>, select: <code>&lt;space&gt;ill</code></td></tr>
+<tr><td><code>insert_password_simple</code></td><td>Insert a simple alphanumeric password (SPC i p 1)</td><td>normal: <code>&lt;space&gt;ip1</code>, select: <code>&lt;space&gt;ip1</code></td></tr>
+<tr><td><code>insert_password_strong</code></td><td>Insert a stronger password with symbols (SPC i p 2)</td><td>normal: <code>&lt;space&gt;ip2</code>, select: <code>&lt;space&gt;ip2</code></td></tr>
+<tr><td><code>insert_password_paranoid</code></td><td>Insert a long password for paranoids (SPC i p 3)</td><td>normal: <code>&lt;space&gt;ip3</code>, select: <code>&lt;space&gt;ip3</code></td></tr>
+<tr><td><code>insert_password_numerical</code></td><td>Insert a numeric password (SPC i p n)</td><td>normal: <code>&lt;space&gt;ipn</code>, select: <code>&lt;space&gt;ipn</code></td></tr>
+<tr><td><code>insert_password_phonetic</code></td><td>Insert a phonetically easy password (SPC i p p)</td><td>normal: <code>&lt;space&gt;ipp</code>, select: <code>&lt;space&gt;ipp</code></td></tr>
+<tr><td><code>symbol_upper_camel</code></td><td>Change symbol style to UpperCamelCase (SPC x i C)</td><td>normal: <code>&lt;space&gt;xiC</code>, select: <code>&lt;space&gt;xiC</code></td></tr>
+<tr><td><code>symbol_up_case</code></td><td>Change symbol style to UP_CASE (SPC x i U)</td><td>normal: <code>&lt;space&gt;xiU</code>, select: <code>&lt;space&gt;xiU</code></td></tr>
+<tr><td><code>symbol_under_score</code></td><td>Change symbol style to under_score (SPC x i _)</td><td>normal: <code>&lt;space&gt;xi_</code>, select: <code>&lt;space&gt;xi_</code></td></tr>
+<tr><td><code>randomize_lines_in_region</code></td><td>Randomize lines in the selection (SPC x l r)</td><td>normal: <code>&lt;space&gt;xlr</code>, select: <code>&lt;space&gt;xlr</code></td></tr>
+<tr><td><code>randomize_words_in_region</code></td><td>Randomize words in the selection (SPC x w r)</td><td>normal: <code>&lt;space&gt;xwr</code>, select: <code>&lt;space&gt;xwr</code></td></tr>
+<tr><td><code>copy_char_below</code></td><td>Insert the character below the cursor (i_CTRL-E)</td><td>insert: <code>&lt;C-e&gt;</code></td></tr>
+<tr><td><code>copy_char_above</code></td><td>Insert the character above the cursor (i_CTRL-Y)</td><td>insert: <code>&lt;C-y&gt;</code></td></tr>
+<tr><td><code>file_info</code></td><td>Show file name and cursor position (CTRL-G)</td><td>normal: <code>&lt;C-g&gt;</code></td></tr>
+<tr><td><code>document_stats</code></td><td>Show document line/word/char counts (g CTRL-G)</td><td>normal: <code>g&lt;C-g&gt;</code>, select: <code>g&lt;C-g&gt;</code></td></tr>
+<tr><td><code>git_blame_line</code></td><td>Show git blame for the current line (g b)</td><td>normal: <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code>, select: <code>&lt;space&gt;gM</code>, <code>&lt;space&gt;gb</code></td></tr>
+<tr><td><code>git_branch_picker</code></td><td>Pick a git branch and check it out</td><td></td></tr>
+<tr><td><code>preferences</code></td><td>Open the unified Preferences window</td><td>normal: <code>&lt;space&gt;,</code>, select: <code>&lt;space&gt;,</code></td></tr>
+<tr><td><code>help</code></td><td>Open the inline Help browser</td><td>normal: <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, select: <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code></td></tr>
+<tr><td><code>dashboard</code></td><td>Open the system-stats Dashboard (Preferences)</td><td>normal: <code>&lt;space&gt;bh</code>, select: <code>&lt;space&gt;bh</code></td></tr>
+<tr><td><code>search_in_files</code></td><td>Open the project-wide Find in Files panel</td><td></td></tr>
+<tr><td><code>terminal</code></td><td>Open an integrated terminal (PTY shell)</td><td>normal: <code>&lt;space&gt;p'</code>, select: <code>&lt;space&gt;p'</code></td></tr>
+<tr><td><code>run_config_manager</code></td><td>Manage run/debug configurations</td><td>normal: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code>, select: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code></td></tr>
+<tr><td><code>run_active_config</code></td><td>Run the active run configuration</td><td>normal: <code>&lt;F5&gt;</code>, <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, select: <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code></td></tr>
+<tr><td><code>clear_run_output</code></td><td>Clear the Run tool window output</td><td>normal: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, select: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code></td></tr>
+<tr><td><code>rerun_last_run</code></td><td>Re-run the last command in the Run console</td><td>normal: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code>, select: <code>&lt;space&gt;RR</code>, <code>&lt;space&gt;cr</code></td></tr>
+<tr><td><code>run_next_error</code></td><td>Jump to the next file:line in the run output</td><td>normal: <code>&lt;space&gt;Rn</code>, select: <code>&lt;space&gt;Rn</code></td></tr>
+<tr><td><code>run_prev_error</code></td><td>Jump to the previous file:line in the run output</td><td>normal: <code>&lt;space&gt;Rp</code>, select: <code>&lt;space&gt;Rp</code></td></tr>
+<tr><td><code>reveal_in_tree</code></td><td>Reveal the current file in the project tree</td><td>normal: <code>&lt;space&gt;pv</code>, select: <code>&lt;space&gt;pv</code></td></tr>
+<tr><td><code>toggle_auto_reveal</code></td><td>Toggle always-select-opened-file (autoscroll from source)</td><td>normal: <code>&lt;space&gt;pV</code>, select: <code>&lt;space&gt;pV</code></td></tr>
+<tr><td><code>focus_file_tree</code></td><td>Focus the project file tree panel</td><td>normal: <code>&lt;space&gt;Wp</code>, <code>&lt;space&gt;Wt</code>, select: <code>&lt;space&gt;Wp</code>, <code>&lt;space&gt;Wt</code></td></tr>
+<tr><td><code>focus_structure</code></td><td>Focus the structure/symbol outline panel</td><td>normal: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code>, select: <code>&lt;space&gt;Wo</code>, <code>&lt;space&gt;Ws</code></td></tr>
+<tr><td><code>focus_problems</code></td><td>Focus the problems/diagnostics panel</td><td>normal: <code>&lt;space&gt;We</code>, select: <code>&lt;space&gt;We</code></td></tr>
+<tr><td><code>focus_run_console</code></td><td>Focus the Run console (scroll output with j/k/PgUp/PgDn)</td><td>normal: <code>&lt;space&gt;Wr</code>, select: <code>&lt;space&gt;Wr</code></td></tr>
+<tr><td><code>focus_git_panel</code></td><td>Focus the Git changes panel (j/k select, Enter opens)</td><td>normal: <code>&lt;space&gt;Wg</code>, <code>&lt;space&gt;gG</code>, select: <code>&lt;space&gt;Wg</code>, <code>&lt;space&gt;gG</code></td></tr>
+<tr><td><code>focus_ci_panel</code></td><td>Focus the CI status panel (GitHub Actions runs; Enter opens in browser)</td><td>normal: <code>&lt;space&gt;Wc</code>, select: <code>&lt;space&gt;Wc</code></td></tr>
+<tr><td><code>toggle_bottom_zoom</code></td><td>Maximize / restore the bottom panel</td><td>normal: <code>&lt;space&gt;Wm</code>, select: <code>&lt;space&gt;Wm</code></td></tr>
+<tr><td><code>toggle_drawer_mid</code></td><td>Fold / unfold the middle column of the bottom drawer</td><td>normal: <code>&lt;space&gt;Wf</code>, select: <code>&lt;space&gt;Wf</code></td></tr>
+<tr><td><code>toggle_ide</code></td><td>Toggle the IDE workbench (Zen / focus mode)</td><td>normal: <code>&lt;space&gt;z</code>, select: <code>&lt;space&gt;z</code></td></tr>
+<tr><td><code>settings_page</code></td><td>Open the settings page (config.toml editor)</td><td>normal: <code>&lt;space&gt;S</code>, select: <code>&lt;space&gt;S</code></td></tr>
+<tr><td><code>goto_next_spell_error</code></td><td>Move to the next misspelled word (]s)</td><td>normal: <code>]s</code></td></tr>
+<tr><td><code>goto_prev_spell_error</code></td><td>Move to the previous misspelled word ([s)</td><td>normal: <code>[s</code></td></tr>
+<tr><td><code>spell_add_good</code></td><td>Mark word under cursor as correctly spelled (zg)</td><td>normal: <code>zG</code>, <code>zg</code></td></tr>
+<tr><td><code>spell_add_bad</code></td><td>Mark word under cursor as misspelled (zw)</td><td>normal: <code>zW</code>, <code>zw</code></td></tr>
+<tr><td><code>spell_undo</code></td><td>Undo a zg/zw for the word under cursor (zug)</td><td>normal: <code>zuG</code>, <code>zuW</code>, <code>zug</code>, <code>zuw</code></td></tr>
+<tr><td><code>spell_suggest</code></td><td>Show spelling suggestions for the word under cursor (z=)</td><td>normal: <code>z=</code></td></tr>
+<tr><td><code>fold_create</code></td><td>Create a fold over the selection (zf)</td><td></td></tr>
+<tr><td><code>fold_toggle</code></td><td>Toggle fold under cursor (za)</td><td>normal: <code>zA</code>, <code>za</code>, <code>zi</code></td></tr>
+<tr><td><code>fold_open</code></td><td>Open fold under cursor (zo)</td><td>normal: <code>zO</code>, <code>zo</code>, <code>zv</code>, <code>zx</code></td></tr>
+<tr><td><code>fold_close</code></td><td>Close fold under cursor (zc)</td><td>normal: <code>zC</code>, <code>zc</code></td></tr>
+<tr><td><code>fold_open_all</code></td><td>Open all folds (zR)</td><td>normal: <code>zR</code>, <code>zX</code>, <code>zn</code>, <code>zr</code>, <code>&lt;space&gt;nw</code>, select: <code>&lt;space&gt;nw</code></td></tr>
+<tr><td><code>fold_close_all</code></td><td>Close all folds (zM)</td><td>normal: <code>zM</code>, <code>zN</code>, <code>zm</code></td></tr>
+<tr><td><code>fold_delete</code></td><td>Delete fold under cursor (zd)</td><td>normal: <code>zD</code>, <code>zd</code></td></tr>
+<tr><td><code>fold_delete_all</code></td><td>Delete all folds (zE)</td><td>normal: <code>zE</code></td></tr>
+<tr><td><code>narrow_to_region</code></td><td>Narrow the view to the selected region (SPC n r)</td><td>normal: <code>&lt;space&gt;nr</code>, select: <code>&lt;space&gt;nr</code></td></tr>
+<tr><td><code>kmacro_add_counter</code></td><td>Add [count] to the keyboard-macro counter (SPC K c a)</td><td>normal: <code>&lt;space&gt;Kca</code>, select: <code>&lt;space&gt;Kca</code></td></tr>
+<tr><td><code>kmacro_insert_counter</code></td><td>Insert the macro counter value, then increment (SPC K c c)</td><td>normal: <code>&lt;space&gt;Kcc</code>, select: <code>&lt;space&gt;Kcc</code></td></tr>
+<tr><td><code>toggle_readonly</code></td><td>Toggle the buffer’s read-only (writable) state (SPC b w)</td><td>normal: <code>&lt;space&gt;bw</code>, select: <code>&lt;space&gt;bw</code></td></tr>
+<tr><td><code>paredit_slurp_forward</code></td><td>Paredit: slurp the next s-expression forward (SPC k s)</td><td>normal: <code>&lt;space&gt;ks</code>, <code>&lt;space&gt;k`s</code>, select: <code>&lt;space&gt;ks</code>, <code>&lt;space&gt;k`s</code></td></tr>
+<tr><td><code>paredit_barf_forward</code></td><td>Paredit: barf the last s-expression forward (SPC k b)</td><td>normal: <code>&lt;space&gt;kb</code>, select: <code>&lt;space&gt;kb</code></td></tr>
+<tr><td><code>paredit_slurp_backward</code></td><td>Paredit: slurp the previous s-expression backward (SPC k S)</td><td>normal: <code>&lt;space&gt;kS</code>, select: <code>&lt;space&gt;kS</code></td></tr>
+<tr><td><code>paredit_barf_backward</code></td><td>Paredit: barf the first s-expression backward (SPC k B)</td><td>normal: <code>&lt;space&gt;kB</code>, select: <code>&lt;space&gt;kB</code></td></tr>
+<tr><td><code>paredit_splice</code></td><td>Paredit: splice/unwrap the enclosing s-expression (SPC k W)</td><td>normal: <code>&lt;space&gt;kW</code>, select: <code>&lt;space&gt;kW</code></td></tr>
+<tr><td><code>paredit_raise</code></td><td>Paredit: raise the current s-expression (SPC k r)</td><td>normal: <code>&lt;space&gt;kr</code>, select: <code>&lt;space&gt;kr</code></td></tr>
+<tr><td><code>paredit_transpose</code></td><td>Paredit: transpose the s-expressions around point (SPC k t)</td><td>normal: <code>&lt;space&gt;kt</code>, <code>&lt;space&gt;k`p</code>, <code>&lt;space&gt;k`t</code>, select: <code>&lt;space&gt;kt</code>, <code>&lt;space&gt;k`p</code>, <code>&lt;space&gt;k`t</code></td></tr>
+<tr><td><code>paredit_splice_kill_forward</code></td><td>Paredit: splice, killing forward (SPC k e)</td><td>normal: <code>&lt;space&gt;ke</code>, select: <code>&lt;space&gt;ke</code></td></tr>
+<tr><td><code>paredit_splice_kill_backward</code></td><td>Paredit: splice, killing backward (SPC k E)</td><td>normal: <code>&lt;space&gt;kE</code>, select: <code>&lt;space&gt;kE</code></td></tr>
+<tr><td><code>paredit_insert_sexp_after</code></td><td>Paredit: insert a new () sexp after the current one (SPC k ))</td><td>normal: <code>&lt;space&gt;k)</code>, select: <code>&lt;space&gt;k)</code></td></tr>
+<tr><td><code>paredit_insert_sexp_before</code></td><td>Paredit: insert a new () sexp before the current one (SPC k ()</td><td>normal: <code>&lt;space&gt;k(</code>, select: <code>&lt;space&gt;k(</code></td></tr>
+<tr><td><code>fold_next</code></td><td>Move to next fold (zj)</td><td>normal: <code>]z</code>, <code>zj</code></td></tr>
+<tr><td><code>fold_prev</code></td><td>Move to previous fold (zk)</td><td>normal: <code>[z</code>, <code>zk</code></td></tr>
+<tr><td><code>goto_line_last_nonblank</code></td><td>Goto last non-blank on line (g_)</td><td>normal: <code>g_</code></td></tr>
+<tr><td><code>goto_line_middle</code></td><td>Goto middle of text line (gM)</td><td>normal: <code>gM</code>, <code>gm</code></td></tr>
+<tr><td><code>goto_byte</code></td><td>Goto byte {count} in buffer (go)</td><td>normal: <code>go</code></td></tr>
+<tr><td><code>goto_prev_unmatched_paren</code></td><td>Goto previous unmatched ( ([()</td><td>normal: <code>[(</code>, <code>&lt;space&gt;j(</code>, select: <code>&lt;space&gt;j(</code></td></tr>
+<tr><td><code>goto_prev_unmatched_brace</code></td><td>Goto previous unmatched { ([{)</td><td>normal: <code>[{</code></td></tr>
+<tr><td><code>goto_next_unmatched_paren</code></td><td>Goto next unmatched ) (])</td><td>normal: <code>])</code></td></tr>
+<tr><td><code>goto_next_unmatched_brace</code></td><td>Goto next unmatched } (]})</td><td>normal: <code>]}</code></td></tr>
+<tr><td><code>goto_prev_mark</code></td><td>Goto previous lowercase mark ([`)</td><td>normal: <code>[`</code></td></tr>
+<tr><td><code>goto_next_mark</code></td><td>Goto next lowercase mark (]`)</td><td>normal: <code>]`</code></td></tr>
+<tr><td><code>goto_prev_mark_line</code></td><td>Goto previous lowercase mark, line start ([’])</td><td>normal: <code>['</code></td></tr>
+<tr><td><code>goto_next_mark_line</code></td><td>Goto next lowercase mark, line start (]’)</td><td>normal: <code>]'</code></td></tr>
+<tr><td><code>yank_file_path</code></td><td>Yank current file path to clipboard</td><td>normal: <code>&lt;space&gt;fyC</code>, <code>&lt;space&gt;fyY</code>, <code>&lt;space&gt;fyy</code>, select: <code>&lt;space&gt;fyC</code>, <code>&lt;space&gt;fyY</code>, <code>&lt;space&gt;fyy</code></td></tr>
+<tr><td><code>yank_file_name</code></td><td>Yank current file name to clipboard</td><td>normal: <code>&lt;space&gt;fyN</code>, <code>&lt;space&gt;fyn</code>, select: <code>&lt;space&gt;fyN</code>, <code>&lt;space&gt;fyn</code></td></tr>
+<tr><td><code>yank_file_path_with_line</code></td><td>Yank current file path:line to clipboard</td><td>normal: <code>&lt;space&gt;fyL</code>, <code>&lt;space&gt;fyl</code>, select: <code>&lt;space&gt;fyL</code>, <code>&lt;space&gt;fyl</code></td></tr>
+<tr><td><code>yank_file_path_with_line_col</code></td><td>Yank current file path:line:col to clipboard</td><td>normal: <code>&lt;space&gt;fyc</code>, select: <code>&lt;space&gt;fyc</code></td></tr>
+<tr><td><code>yank_file_dir</code></td><td>Yank current file’s directory to clipboard</td><td>normal: <code>&lt;space&gt;fyD</code>, <code>&lt;space&gt;fyd</code>, select: <code>&lt;space&gt;fyD</code>, <code>&lt;space&gt;fyd</code></td></tr>
+<tr><td><code>copy_remote_url</code></td><td>Copy web permalink (host/blob/<sha>/path#Ln) for current line</sha></td><td>normal: <code>&lt;space&gt;glC</code>, <code>&lt;space&gt;glL</code>, <code>&lt;space&gt;glP</code>, select: <code>&lt;space&gt;glC</code>, <code>&lt;space&gt;glL</code>, <code>&lt;space&gt;glP</code></td></tr>
+<tr><td><code>open_remote_url</code></td><td>Open current line’s web permalink in the browser</td><td>normal: <code>&lt;space&gt;glc</code>, <code>&lt;space&gt;gll</code>, <code>&lt;space&gt;glp</code>, select: <code>&lt;space&gt;glc</code>, <code>&lt;space&gt;gll</code>, <code>&lt;space&gt;glp</code></td></tr>
+<tr><td><code>open_url_under_cursor</code></td><td>Open the URL under the cursor in the browser</td><td></td></tr>
+<tr><td><code>duplicate_selection_down</code></td><td>Duplicate current line(s) downward</td><td></td></tr>
+<tr><td><code>duplicate_selection_up</code></td><td>Duplicate current line(s) upward</td><td></td></tr>
+<tr><td><code>move_text_line_down</code></td><td>Move current line(s) down past the next line</td><td></td></tr>
+<tr><td><code>move_text_line_up</code></td><td>Move current line(s) up past the previous line</td><td></td></tr>
+<tr><td><code>count_selection</code></td><td>Count chars/words/lines in selection</td><td>normal: <code>&lt;space&gt;xc</code>, <code>&lt;space&gt;xwc</code>, select: <code>&lt;space&gt;xc</code>, <code>&lt;space&gt;xwc</code></td></tr>
+<tr><td><code>match_brackets</code></td><td>Goto matching bracket</td><td>normal: <code>&lt;space&gt;k%</code>, select: <code>&lt;space&gt;k%</code></td></tr>
+<tr><td><code>match_brackets_or_goto_percent</code></td><td>Goto matching bracket, or {count} percent through the file</td><td>normal: <code>%</code>, select: <code>%</code></td></tr>
+<tr><td><code>surround_add</code></td><td>Surround add</td><td></td></tr>
+<tr><td><code>surround_replace</code></td><td>Surround replace</td><td></td></tr>
+<tr><td><code>surround_delete</code></td><td>Surround delete</td><td></td></tr>
+<tr><td><code>select_textobject_around</code></td><td>Select around object</td><td>select: <code>a</code></td></tr>
+<tr><td><code>select_textobject_inner</code></td><td>Select inside object</td><td>select: <code>i</code></td></tr>
+<tr><td><code>change_textobject_inner</code></td><td>Change inside object (ci)</td><td>normal: <code>ci</code></td></tr>
+<tr><td><code>change_textobject_around</code></td><td>Change around object (ca)</td><td>normal: <code>ca</code></td></tr>
+<tr><td><code>delete_textobject_inner</code></td><td>Delete inside object (di)</td><td>normal: <code>di</code></td></tr>
+<tr><td><code>delete_textobject_around</code></td><td>Delete around object (da)</td><td>normal: <code>da</code></td></tr>
+<tr><td><code>yank_textobject_inner</code></td><td>Yank inside object (yi)</td><td>normal: <code>yi</code></td></tr>
+<tr><td><code>yank_textobject_around</code></td><td>Yank around object (ya)</td><td>normal: <code>ya</code></td></tr>
+<tr><td><code>delete_find_char_forward</code></td><td>Delete to next char (df)</td><td>normal: <code>df</code></td></tr>
+<tr><td><code>delete_till_char_forward</code></td><td>Delete till next char (dt)</td><td>normal: <code>dt</code></td></tr>
+<tr><td><code>delete_find_char_backward</code></td><td>Delete to prev char (dF)</td><td>normal: <code>dF</code></td></tr>
+<tr><td><code>delete_till_char_backward</code></td><td>Delete till prev char (dT)</td><td>normal: <code>dT</code></td></tr>
+<tr><td><code>change_find_char_forward</code></td><td>Change to next char (cf)</td><td>normal: <code>cf</code></td></tr>
+<tr><td><code>change_till_char_forward</code></td><td>Change till next char (ct)</td><td>normal: <code>ct</code></td></tr>
+<tr><td><code>change_find_char_backward</code></td><td>Change to prev char (cF)</td><td>normal: <code>cF</code></td></tr>
+<tr><td><code>change_till_char_backward</code></td><td>Change till prev char (cT)</td><td>normal: <code>cT</code></td></tr>
+<tr><td><code>yank_find_char_forward</code></td><td>Yank to next char (yf)</td><td>normal: <code>yf</code></td></tr>
+<tr><td><code>yank_till_char_forward</code></td><td>Yank till next char (yt)</td><td>normal: <code>yt</code></td></tr>
+<tr><td><code>yank_find_char_backward</code></td><td>Yank to prev char (yF)</td><td>normal: <code>yF</code></td></tr>
+<tr><td><code>yank_till_char_backward</code></td><td>Yank till prev char (yT)</td><td>normal: <code>yT</code></td></tr>
+<tr><td><code>set_mark</code></td><td>Set mark (m{a-z})</td><td>normal: <code>m</code></td></tr>
+<tr><td><code>goto_mark</code></td><td>Goto mark exact (`{a-z})</td><td>normal: <code>`</code>, <code>g`</code></td></tr>
+<tr><td><code>goto_mark_line</code></td><td>Goto mark line (’{a-z})</td><td>normal: <code>'</code>, <code>g'</code></td></tr>
+<tr><td><code>repeat_substitute</code></td><td>Repeat last :substitute (&amp;)</td><td>normal: <code>&amp;</code></td></tr>
+<tr><td><code>repeat_substitute_global</code></td><td>Repeat last :substitute on whole file (g&amp;)</td><td>normal: <code>g&amp;</code></td></tr>
+<tr><td><code>vim_record_macro</code></td><td>Record macro into register (q{reg})</td><td>normal: <code>q</code></td></tr>
+<tr><td><code>vim_replay_macro</code></td><td>Replay macro from register (@{reg})</td><td>normal: <code>@</code></td></tr>
+<tr><td><code>save_visual_selection</code></td><td>Save the visual selection (for gv)</td><td></td></tr>
+<tr><td><code>reselect_visual</code></td><td>Reselect the last visual area (gv)</td><td>normal: <code>gv</code>, select: <code>gv</code></td></tr>
+<tr><td><code>mark_insert_exit</code></td><td>Record the insert-exit position (for gi)</td><td></td></tr>
+<tr><td><code>insert_at_last_insert</code></td><td>Insert at the last insert position (gi)</td><td>normal: <code>gi</code></td></tr>
+<tr><td><code>goto_next_function</code></td><td>Goto next function</td><td>normal: <code>][</code>, <code>]m</code></td></tr>
+<tr><td><code>goto_prev_function</code></td><td>Goto previous function</td><td>normal: <code>[]</code>, <code>[m</code></td></tr>
+<tr><td><code>goto_next_class</code></td><td>Goto next type definition</td><td></td></tr>
+<tr><td><code>goto_prev_class</code></td><td>Goto previous type definition</td><td></td></tr>
+<tr><td><code>goto_next_parameter</code></td><td>Goto next parameter</td><td></td></tr>
+<tr><td><code>goto_prev_parameter</code></td><td>Goto previous parameter</td><td></td></tr>
+<tr><td><code>goto_next_comment</code></td><td>Goto next comment</td><td>normal: <code>]*</code>, <code>]/</code></td></tr>
+<tr><td><code>goto_prev_comment</code></td><td>Goto previous comment</td><td>normal: <code>[*</code>, <code>[/</code></td></tr>
+<tr><td><code>goto_next_test</code></td><td>Goto next test</td><td>normal: <code>&lt;space&gt;pa</code>, select: <code>&lt;space&gt;pa</code></td></tr>
+<tr><td><code>goto_prev_test</code></td><td>Goto previous test</td><td></td></tr>
+<tr><td><code>goto_next_xml_element</code></td><td>Goto next (X)HTML element</td><td></td></tr>
+<tr><td><code>goto_prev_xml_element</code></td><td>Goto previous (X)HTML element</td><td></td></tr>
+<tr><td><code>goto_next_entry</code></td><td>Goto next pairing</td><td></td></tr>
+<tr><td><code>goto_prev_entry</code></td><td>Goto previous pairing</td><td></td></tr>
+<tr><td><code>goto_next_paragraph</code></td><td>Goto next paragraph</td><td>normal: <code>}</code>, <code>]]</code>, select: <code>}</code></td></tr>
+<tr><td><code>goto_prev_paragraph</code></td><td>Goto previous paragraph</td><td>normal: <code>{</code>, <code>[[</code>, select: <code>{</code></td></tr>
+<tr><td><code>move_sentence_forward</code></td><td>Move to next sentence</td><td>normal: <code>)</code>, select: <code>)</code></td></tr>
+<tr><td><code>move_sentence_backward</code></td><td>Move to previous sentence</td><td>normal: <code>(</code>, select: <code>(</code></td></tr>
+<tr><td><code>dap_launch</code></td><td>Launch debug target</td><td>normal: <code>&lt;S-F5&gt;</code>, <code>&lt;space&gt;dd</code>, select: <code>&lt;space&gt;dd</code></td></tr>
+<tr><td><code>dap_restart</code></td><td>Restart debugging session</td><td>normal: <code>&lt;space&gt;dr</code>, select: <code>&lt;space&gt;dr</code></td></tr>
+<tr><td><code>dap_toggle_breakpoint</code></td><td>Toggle breakpoint</td><td>normal: <code>&lt;F9&gt;</code>, <code>&lt;space&gt;db</code>, select: <code>&lt;space&gt;db</code></td></tr>
+<tr><td><code>dap_continue</code></td><td>Continue program execution</td><td>normal: <code>&lt;space&gt;dc</code>, select: <code>&lt;space&gt;dc</code></td></tr>
+<tr><td><code>dap_pause</code></td><td>Pause program execution</td><td>normal: <code>&lt;space&gt;dp</code>, select: <code>&lt;space&gt;dp</code></td></tr>
+<tr><td><code>dap_step_in</code></td><td>Step in</td><td>normal: <code>&lt;F11&gt;</code>, <code>&lt;space&gt;di</code>, select: <code>&lt;space&gt;di</code></td></tr>
+<tr><td><code>dap_step_out</code></td><td>Step out</td><td>normal: <code>&lt;S-F11&gt;</code>, <code>&lt;space&gt;do</code>, select: <code>&lt;space&gt;do</code></td></tr>
+<tr><td><code>dap_next</code></td><td>Step to next</td><td>normal: <code>&lt;F10&gt;</code>, <code>&lt;space&gt;dn</code>, select: <code>&lt;space&gt;dn</code></td></tr>
+<tr><td><code>dap_variables</code></td><td>List variables</td><td>normal: <code>&lt;space&gt;dv</code>, select: <code>&lt;space&gt;dv</code></td></tr>
+<tr><td><code>dap_terminate</code></td><td>End debug session</td><td>normal: <code>&lt;space&gt;dq</code>, select: <code>&lt;space&gt;dq</code></td></tr>
+<tr><td><code>dap_edit_condition</code></td><td>Edit breakpoint condition on current line</td><td></td></tr>
+<tr><td><code>dap_edit_log</code></td><td>Edit breakpoint log message on current line</td><td></td></tr>
+<tr><td><code>dap_switch_thread</code></td><td>Switch current thread</td><td></td></tr>
+<tr><td><code>dap_switch_stack_frame</code></td><td>Switch stack frame</td><td></td></tr>
+<tr><td><code>dap_enable_exceptions</code></td><td>Enable exception breakpoints</td><td></td></tr>
+<tr><td><code>dap_disable_exceptions</code></td><td>Disable exception breakpoints</td><td></td></tr>
+<tr><td><code>shell_pipe</code></td><td>Pipe selections through shell command</td><td></td></tr>
+<tr><td><code>shell_pipe_to</code></td><td>Pipe selections into shell command ignoring output</td><td></td></tr>
+<tr><td><code>shell_insert_output</code></td><td>Insert shell command output before selections</td><td></td></tr>
+<tr><td><code>shell_append_output</code></td><td>Append shell command output after selections</td><td></td></tr>
+<tr><td><code>shell_keep_pipe</code></td><td>Filter selections with shell predicate</td><td></td></tr>
+<tr><td><code>suspend</code></td><td>Suspend and return to shell</td><td>normal: <code>&lt;C-z&gt;</code></td></tr>
+<tr><td><code>rename_symbol</code></td><td>Rename symbol</td><td>normal: <code>&lt;space&gt;lr</code>, select: <code>&lt;space&gt;lr</code></td></tr>
+<tr><td><code>increment</code></td><td>Increment item under cursor</td><td>normal: <code>&lt;C-a&gt;</code>, <code>&lt;space&gt;n+</code>, <code>&lt;space&gt;n=</code>, select: <code>&lt;C-a&gt;</code>, <code>g&lt;C-a&gt;</code>, <code>&lt;space&gt;n+</code>, <code>&lt;space&gt;n=</code></td></tr>
+<tr><td><code>decrement</code></td><td>Decrement item under cursor</td><td>normal: <code>&lt;C-x&gt;</code>, <code>&lt;space&gt;n_</code>, <code>&lt;space&gt;n&lt;minus&gt;</code>, select: <code>&lt;C-x&gt;</code>, <code>g&lt;C-x&gt;</code>, <code>&lt;space&gt;n_</code>, <code>&lt;space&gt;n&lt;minus&gt;</code></td></tr>
+<tr><td><code>record_macro</code></td><td>Record macro</td><td></td></tr>
+<tr><td><code>replay_macro</code></td><td>Replay macro</td><td>normal: <code>Q</code></td></tr>
+<tr><td><code>command_palette</code></td><td>Open command palette</td><td>normal: <code>&lt;F1&gt;</code>, <code>&lt;A-x&gt;</code>, <code>&lt;space&gt;?</code>, <code>&lt;space&gt;eh</code>, <code>&lt;space&gt;ev</code>, <code>&lt;space&gt;h.</code>, <code>&lt;space&gt;hf</code>, <code>&lt;space&gt;hi</code>, <code>&lt;space&gt;hl</code>, <code>&lt;space&gt;hm</code>, <code>&lt;space&gt;hn</code>, <code>&lt;space&gt;hp</code>, <code>&lt;space&gt;hr</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdl</code>, <code>&lt;space&gt;hdm</code>, <code>&lt;space&gt;hdp</code>, <code>&lt;space&gt;hds</code>, <code>&lt;space&gt;hdt</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;&lt;space&gt;</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, select: <code>&lt;space&gt;?</code>, <code>&lt;space&gt;eh</code>, <code>&lt;space&gt;ev</code>, <code>&lt;space&gt;h.</code>, <code>&lt;space&gt;hf</code>, <code>&lt;space&gt;hi</code>, <code>&lt;space&gt;hl</code>, <code>&lt;space&gt;hm</code>, <code>&lt;space&gt;hn</code>, <code>&lt;space&gt;hp</code>, <code>&lt;space&gt;hr</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdl</code>, <code>&lt;space&gt;hdm</code>, <code>&lt;space&gt;hdp</code>, <code>&lt;space&gt;hds</code>, <code>&lt;space&gt;hdt</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;&lt;space&gt;</code>, <code>&lt;space&gt;h&lt;space&gt;</code></td></tr>
+<tr><td><code>repl</code></td><td>Open the embedded-language REPL (elisp/viml/stryke/awk/zsh)</td><td>normal: <code>&lt;space&gt;ar</code>, select: <code>&lt;space&gt;ar</code></td></tr>
+<tr><td><code>goto_word</code></td><td>Jump to a two-character label</td><td>normal: <code>&lt;space&gt;jl</code>, <code>&lt;space&gt;jw</code>, select: <code>&lt;space&gt;jl</code>, <code>&lt;space&gt;jw</code></td></tr>
+<tr><td><code>extend_to_word</code></td><td>Extend to a two-character label</td><td></td></tr>
+<tr><td><code>goto_next_tabstop</code></td><td>Goto next snippet placeholder</td><td></td></tr>
+<tr><td><code>goto_prev_tabstop</code></td><td>Goto next snippet placeholder</td><td></td></tr>
+<tr><td><code>emmet_expand</code></td><td>Expand emmet/zen HTML abbreviation (or Tab)</td><td>insert: <code>&lt;tab&gt;</code></td></tr>
+<tr><td><code>snippet_expand</code></td><td>Expand the user snippet whose trigger precedes the cursor</td><td></td></tr>
+<tr><td><code>rotate_selections_first</code></td><td>Make the first selection your primary one</td><td></td></tr>
+<tr><td><code>rotate_selections_last</code></td><td>Make the last selection your primary one</td><td></td></tr>
+</tbody>
+</table>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="command-line.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="scripting.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="command-line.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="scripting.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="ts-query-56018970.js"></script>
+        <script src="version-8daa2c19.js"></script>
+
+        <script src="book-c22b7243.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
