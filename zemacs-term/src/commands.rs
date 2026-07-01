@@ -963,6 +963,7 @@ impl MappableCommand {
         file_info, "Show file name and cursor position (CTRL-G)",
         document_stats, "Show document line/word/char counts (g CTRL-G)",
         git_blame_line, "Show git blame for the current line (g b)",
+        toggle_inline_blame, "Toggle GitLens-style inline blame on the current line",
         git_branch_picker, "Pick a git branch and check it out",
         preferences, "Open the unified Preferences window",
         help, "Open the inline Help browser",
@@ -18216,6 +18217,17 @@ fn document_stats(cx: &mut Context) {
 
 /// GitLens-style blame: show who last changed the line under the cursor in the
 /// status line (`git blame -L`), on demand so there's no per-move cost.
+/// Toggle GitLens-style inline blame: when on, the current line's last-commit
+/// author/date/summary is shown as an idle status hint.
+fn toggle_inline_blame(cx: &mut Context) {
+    let on = crate::blame::toggle();
+    cx.editor.set_status(if on {
+        "inline blame: on"
+    } else {
+        "inline blame: off"
+    });
+}
+
 fn git_blame_line(cx: &mut Context) {
     let info = {
         let (view, doc) = current_ref!(cx.editor);

@@ -1939,6 +1939,24 @@ impl EditorView {
     pub fn handle_idle_timeout(&mut self, cx: &mut commands::Context) -> EventResult {
         commands::compute_inlay_hints_for_all_views(cx.editor, cx.jobs);
 
+        // GitLens-style inline blame: show the current line's author/date/summary
+        // as an idle status hint (cached per file).
+        if crate::blame::enabled() {
+            let info = {
+                let (view, doc) = zemacs_view::current_ref!(cx.editor);
+                doc.path().map(|p| {
+                    let text = doc.text();
+                    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+                    (p.to_path_buf(), text.char_to_line(cursor) + 1)
+                })
+            };
+            if let Some((path, line)) = info {
+                if let Some(b) = crate::blame::line_blame(&path, line) {
+                    cx.editor.set_status(format!("  {b}"));
+                }
+            }
+        }
+
         EventResult::Ignored(None)
     }
 }
