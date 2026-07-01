@@ -12424,7 +12424,11 @@ fn parse_subvert(input: &str) -> Option<(bool, String, String, String)> {
 fn abolish_capitalize(s: &str) -> String {
     let mut chars = s.chars();
     match chars.next() {
-        Some(f) => f.to_uppercase().collect::<String>() + &chars.as_str().to_lowercase(),
+        Some(f) => {
+            let mut out: String = f.to_uppercase().collect();
+            out.push_str(&chars.as_str().to_lowercase());
+            out
+        }
         None => String::new(),
     }
 }
@@ -13397,6 +13401,110 @@ fn subvert(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
         bail!("usage: :S/pattern/replacement/[flags]");
     }
     do_subvert(cx.editor, false, pattern, replacement, flags)
+}
+
+/// The word under the primary cursor as an owned string (inner-word text object).
+fn word_under_cursor(editor: &zemacs_view::Editor) -> String {
+    use zemacs_core::textobject::{self, TextObject};
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let word = textobject::textobject_word(text, range, TextObject::Inside, 1, false);
+    text.slice(word.from()..word.to()).to_string()
+}
+
+/// Replace the word under the primary cursor with `replacement`.
+fn replace_word_under_cursor(editor: &mut zemacs_view::Editor, replacement: &str) {
+    use zemacs_core::textobject::{self, TextObject};
+    let (view, doc) = current!(editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let word = textobject::textobject_word(text, range, TextObject::Inside, 1, false);
+    let (from, to) = (word.from(), word.to());
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((from, to, Some(Tendril::from(replacement)))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.set_selection(
+        view.id,
+        Selection::point(from + replacement.chars().count()),
+    );
+    doc.append_changes_to_history(view);
+}
+
+/// Blocking synonym lookup via the free Datamuse API (no key required).
+/// Runs on a `spawn_blocking` task — ureq is synchronous.
+fn fetch_synonyms(word: &str) -> Vec<String> {
+    let url = format!(
+        "https://api.datamuse.com/words?rel_syn={}&max=80",
+        word.trim().replace(' ', "+")
+    );
+    let body = match ureq::get(&url).set("User-Agent", "zemacs").call() {
+        Ok(resp) => match resp.into_string() {
+            Ok(b) => b,
+            Err(_) => return Vec::new(),
+        },
+        Err(_) => return Vec::new(),
+    };
+    let json: Value = match serde_json::from_str(&body) {
+        Ok(v) => v,
+        Err(_) => return Vec::new(),
+    };
+    json.as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|e| e.get("word").and_then(|w| w.as_str()).map(String::from))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// `:Thesaurus [word]` (vim-online-thesaurus): look up synonyms for the word
+/// under the cursor (or the argument) and replace it with the chosen synonym.
+fn thesaurus(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let word = if !args.is_empty() {
+        args[0].trim().to_string()
+    } else {
+        word_under_cursor(cx.editor)
+    };
+    if word.is_empty() {
+        bail!("no word under cursor");
+    }
+    let query = word.clone();
+    let callback = async move {
+        let syns = tokio::task::spawn_blocking(move || fetch_synonyms(&query))
+            .await
+            .unwrap_or_default();
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                if syns.is_empty() {
+                    editor.set_status(format!("thesaurus: no synonyms for '{word}'"));
+                    return;
+                }
+                let columns = [ui::PickerColumn::new(
+                    "synonym",
+                    |s: &String, _: &()| s.as_str().into(),
+                )];
+                let picker = ui::Picker::new(
+                    columns,
+                    0,
+                    syns,
+                    (),
+                    move |cx, syn: &String, _action| {
+                        replace_word_under_cursor(cx.editor, syn);
+                    },
+                );
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
 }
 
 fn split_line(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -19750,6 +19858,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "Thesaurus",
+        aliases: &["thesaurus"],
+        doc: "Look up synonyms for the word under the cursor (or :Thesaurus word) and replace it.",
+        fun: thesaurus,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
