@@ -39,10 +39,12 @@ impl Info {
             .unwrap();
         let mut text = String::new();
 
+        // `KEY : description`, keys right-aligned so the colons line up — the
+        // Spacemacs / Emacs which-key look.
         for (item, desc) in body {
             let _ = writeln!(
                 text,
-                "{:width$}  {}",
+                "{:>width$} : {}",
                 item.as_ref(),
                 desc.as_ref(),
                 width = item_width
