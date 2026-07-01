@@ -346,6 +346,9 @@ pub struct Ide {
     /// Hit region of the PROJECT header's "select opened file" button:
     /// `(row, x0, x1)`. Zeroed when the project panel is hidden/collapsed.
     locate_hit: (u16, u16, u16),
+    /// Hit regions of the PROJECT header's Collapse All / Expand All buttons.
+    collapse_hit: (u16, u16, u16),
+    expand_hit: (u16, u16, u16),
     view_lines: usize,
     /// Per source line: which columns hold a non-whitespace glyph (for the braille minimap).
     minimap_dots: Vec<Vec<bool>>,
@@ -501,6 +504,8 @@ impl Ide {
             harpoon_total: 0,
             breadcrumb_hit: (0, 0),
             locate_hit: (0, 0, 0),
+            collapse_hit: (0, 0, 0),
+            expand_hit: (0, 0, 0),
             view_lines: 0,
             minimap_dots: Vec::new(),
             minimap_key: (None, usize::MAX),
@@ -1576,6 +1581,23 @@ impl Ide {
                     self.reveal_current();
                     return IdeAction::None;
                 }
+                // Collapse All / Expand All buttons on the PROJECT header.
+                if self.collapse_hit.2 > 0
+                    && row == self.collapse_hit.0
+                    && col >= self.collapse_hit.1
+                    && col < self.collapse_hit.2
+                {
+                    self.project.collapse_all();
+                    return IdeAction::None;
+                }
+                if self.expand_hit.2 > 0
+                    && row == self.expand_hit.0
+                    && col >= self.expand_hit.1
+                    && col < self.expand_hit.2
+                {
+                    self.project.expand_all();
+                    return IdeAction::None;
+                }
                 // clicking a drawer's header row folds/unfolds it
                 if in_rect(&self.project_rect, col, row) && row == self.project_rect.y {
                     self.focus = Focus::Project;
@@ -2260,6 +2282,19 @@ impl Ide {
                 };
                 surface.set_stringn(ix, self.project_rect.y, icon, 1, st);
                 self.locate_hit = (self.project_rect.y, ix, ix + 1);
+            }
+            // JetBrains-style Collapse All (⊟) / Expand All (⊞) buttons, to the
+            // left of the "select opened file" button.
+            self.collapse_hit = (0, 0, 0);
+            self.expand_hit = (0, 0, 0);
+            if self.project_rect.width > 12 {
+                let cc = theme.get("comment");
+                let cx0 = self.project_rect.x + self.project_rect.width - 4;
+                let ex0 = self.project_rect.x + self.project_rect.width - 6;
+                surface.set_stringn(ex0, self.project_rect.y, "⊞", 1, cc);
+                surface.set_stringn(cx0, self.project_rect.y, "⊟", 1, cc);
+                self.expand_hit = (self.project_rect.y, ex0, ex0 + 1);
+                self.collapse_hit = (self.project_rect.y, cx0, cx0 + 1);
             }
             if !self.fold_project && self.project_rect.height > 1 {
                 self.project

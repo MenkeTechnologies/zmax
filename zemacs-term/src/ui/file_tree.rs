@@ -251,6 +251,41 @@ impl FileTree {
         self.rebuild();
     }
 
+    /// Expand every (non-hidden, non-noise) directory under the root — the
+    /// JetBrains "Expand All" toolbar button. Bounded so a huge tree can't stall.
+    pub fn expand_all(&mut self) {
+        fn collect(dir: &Path, out: &mut HashSet<PathBuf>, budget: &mut usize) {
+            if *budget == 0 {
+                return;
+            }
+            let Ok(rd) = std::fs::read_dir(dir) else { return };
+            for entry in rd.flatten() {
+                let p = entry.path();
+                if !p.is_dir() {
+                    continue;
+                }
+                let name = entry.file_name();
+                let name = name.to_string_lossy();
+                if name.starts_with('.')
+                    || matches!(
+                        name.as_ref(),
+                        "target" | "node_modules" | "dist" | "build" | ".cache"
+                    )
+                {
+                    continue;
+                }
+                out.insert(p.clone());
+                *budget -= 1;
+                collect(&p, out, budget);
+            }
+        }
+        let mut budget = 5000usize;
+        let root = self.root.clone();
+        collect(&root, &mut self.expanded, &mut budget);
+        self.expanded.insert(root);
+        self.rebuild();
+    }
+
     /// Reveal `path` in the tree (JetBrains "Select Opened File"): expand every
     /// ancestor directory down to the file and move the selection onto it. Any
     /// active speed-search filter is cleared first. No-op if it's outside root.
@@ -373,16 +408,43 @@ impl FileTree {
                 TreeAction::None
             }
             KeyCode::Esc => TreeAction::Close,
+            // Left: collapse an expanded dir, else jump to the parent directory.
             KeyCode::Char('h') | KeyCode::Left => {
                 if let Some(row) = self.rows.get(self.selected) {
                     if row.is_dir && self.expanded.contains(&row.path) {
                         self.expanded.remove(&row.path);
                         self.rebuild();
+                    } else if let Some(parent) = row.path.parent().map(|p| p.to_path_buf()) {
+                        if let Some(idx) = self.rows.iter().position(|r| r.path == parent) {
+                            self.selected = idx;
+                        }
                     }
                 }
                 TreeAction::None
             }
-            KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => {
+            // Right: expand a collapsed dir; on an already-expanded dir descend to
+            // the first child; on a file, open it.
+            KeyCode::Char('l') | KeyCode::Right => {
+                if let Some(row) = self.rows.get(self.selected) {
+                    if row.is_dir {
+                        if self.expanded.contains(&row.path) {
+                            if self.selected + 1 < self.rows.len() {
+                                self.selected += 1;
+                            }
+                        } else {
+                            self.expanded.insert(row.path.clone());
+                            self.rebuild();
+                        }
+                        TreeAction::None
+                    } else {
+                        TreeAction::Open(row.path.clone())
+                    }
+                } else {
+                    TreeAction::None
+                }
+            }
+            // Enter: toggle a dir, open a file.
+            KeyCode::Enter => {
                 if let Some(row) = self.rows.get(self.selected) {
                     if row.is_dir {
                         if self.expanded.contains(&row.path) {
