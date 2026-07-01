@@ -9491,9 +9491,9 @@
     "spec_id": "fzf.command.gfiles_status",
     "status": "ported",
     "evidence": [
-      "key:normal:space b m"
+      "typable:GFiles"
     ],
-    "note": ":GFiles? -> changed_file_picker"
+    "note": "fzf.vim :GFiles via external fzf binary; git status --porcelain → open."
   },
   {
     "spec_id": "fzf.command.buffers",
@@ -9537,11 +9537,11 @@
   },
   {
     "spec_id": "fzf.command.lines",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:space s B"
+      "typable:Lines"
     ],
-    "note": "search all open buffers (regex, not a fuzzy line picker)"
+    "note": "fzf.vim :Lines via external fzf binary; all-buffer lines → open at line."
   },
   {
     "spec_id": "fzf.command.blines",
@@ -9593,28 +9593,27 @@
   },
   {
     "spec_id": "fzf.command.history",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:space f r",
-      "static:frecent_file_picker"
+      "typable:History"
     ],
-    "note": ":History -> frecent_file_picker (recent files); frecency not pure MRU"
+    "note": "fzf.vim :History via external fzf binary; recent files → open."
   },
   {
     "spec_id": "fzf.command.history_cmd",
     "status": "ported",
     "evidence": [
-      "key:normal:space r :"
+      "typable:History:"
     ],
-    "note": ":History: -> command_history_picker"
+    "note": "fzf.vim :History: via external fzf binary; command history → run."
   },
   {
     "spec_id": "fzf.command.history_search",
     "status": "ported",
     "evidence": [
-      "key:normal:space r /"
+      "typable:History/"
     ],
-    "note": ":History/ -> search_history_picker"
+    "note": "fzf.vim :History/ via external fzf binary; search history → search."
   },
   {
     "spec_id": "fzf.command.commands",
@@ -9636,17 +9635,17 @@
     "spec_id": "fzf.command.bcommits",
     "status": "ported",
     "evidence": [
-      "key:normal:space g f l"
+      "typable:BCommits"
     ],
-    "note": ":BCommits -> git_file_log_picker"
+    "note": "fzf.vim :BCommits via external fzf binary; git log -- file → git show."
   },
   {
     "spec_id": "fzf.command.commits",
     "status": "ported",
     "evidence": [
-      "key:normal:space g L"
+      "typable:Commits"
     ],
-    "note": ":Commits -> git_repo_log_picker"
+    "note": "fzf.vim :Commits via external fzf binary; git log → git show."
   },
   {
     "spec_id": "spacemacs.keybinding.spc_g_f_l",

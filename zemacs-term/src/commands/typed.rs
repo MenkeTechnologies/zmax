@@ -10928,10 +10928,17 @@ fn fzf_files(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     Ok(())
 }
 
-/// fzf.vim `:GFiles` — fuzzy-find git-tracked files and open the pick.
-fn fzf_gfiles(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+/// fzf.vim `:GFiles [?]` — fuzzy-find git files and open the pick. `:GFiles?`
+/// (the `?` arg) picks from git *status* (changed files) instead of tracked files.
+fn fzf_gfiles(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
-        queue_fzf_cmd(cx, "GFiles", "open {}", "git ls-files".into(), Vec::new(), true);
+        let cmd = if args.join(" ").trim() == "?" {
+            // `cut -c4-` strips the `XY ` porcelain prefix, keeping paths with spaces.
+            "git status --porcelain | cut -c4-".to_string()
+        } else {
+            "git ls-files".to_string()
+        };
+        queue_fzf_cmd(cx, "GFiles", "open {}", cmd, Vec::new(), true);
     }
     Ok(())
 }
@@ -11012,6 +11019,161 @@ fn fzf_commands(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
             TYPABLE_COMMAND_LIST.iter().map(|c| c.name.to_string()).collect();
         cands.sort();
         queue_fzf(cx, "Commands", "{}", cands, vec!["+m".into()], false);
+    }
+    Ok(())
+}
+
+/// Read all values of a register as candidate lines.
+fn register_lines(cx: &compositor::Context, reg: char) -> Vec<String> {
+    cx.editor
+        .registers
+        .read(reg, cx.editor)
+        .map(|vals| vals.map(|v| v.to_string()).collect())
+        .unwrap_or_default()
+}
+
+/// fzf.vim `:History` — fuzzy-pick a recently opened file and open it.
+fn fzf_history(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        let cands: Vec<String> = crate::recent_files::load_frecent()
+            .iter()
+            .map(|p| p.to_string_lossy().into_owned())
+            .collect();
+        queue_fzf(cx, "History", "open {}", cands, Vec::new(), true);
+    }
+    Ok(())
+}
+
+/// fzf.vim `:History:` — fuzzy-pick a past `:` command line and run it.
+fn fzf_cmd_history(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        let cands = register_lines(cx, ':');
+        queue_fzf(cx, "History:", "{}", cands, vec!["+m".into()], false);
+    }
+    Ok(())
+}
+
+/// fzf.vim `:History/` — fuzzy-pick a past search and re-run it.
+fn fzf_search_history(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        let cands = register_lines(cx, '/');
+        queue_fzf(cx, "History/", "search {}", cands, vec!["+m".into()], false);
+    }
+    Ok(())
+}
+
+/// fzf.vim `:Lines` — fuzzy-search lines across ALL open buffers, open the pick.
+fn fzf_lines(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut cands = Vec::new();
+    for doc in cx.editor.documents() {
+        let Some(path) = doc.path().map(|p| p.to_string_lossy().into_owned()) else {
+            continue;
+        };
+        let text = doc.text();
+        for i in 0..text.len_lines() {
+            let l = text.line(i).to_string();
+            let l = l.trim_end();
+            if !l.is_empty() {
+                cands.push(format!("{path}:{}:1:{l}", i + 1));
+            }
+        }
+    }
+    queue_fzf(cx, "Lines", "fzf-goto {}", cands, vec!["--no-sort".into()], false);
+    Ok(())
+}
+
+/// Sink for `:Commits`/`:BCommits` picks (`<sha> subject`) — show the commit.
+fn fzf_git_show(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = args.join(" ");
+    let sha = line.split_whitespace().next().unwrap_or("");
+    if sha.is_empty() {
+        return Ok(());
+    }
+    match std::process::Command::new("git")
+        .args(["show", "--stat", "-p", sha])
+        .output()
+    {
+        Ok(o) if o.status.success() => {
+            super::show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&o.stdout));
+        }
+        _ => cx.editor.set_error(format!("git show {sha} failed")),
+    }
+    Ok(())
+}
+
+/// fzf.vim `:Commits` — fuzzy-pick a repo commit and show it.
+fn fzf_commits(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        queue_fzf_cmd(
+            cx,
+            "Commits",
+            "fzf-git-show {}",
+            "git log --oneline --color=never".into(),
+            vec!["--no-sort".into()],
+            false,
+        );
+    }
+    Ok(())
+}
+
+/// fzf.vim `:BCommits` — fuzzy-pick a commit touching the current file and show it.
+fn fzf_bcommits(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = {
+        let (_, doc) = current_ref!(cx.editor);
+        doc.path().map(|p| p.to_string_lossy().into_owned())
+    };
+    let Some(path) = path else {
+        cx.editor.set_error(":BCommits needs a file");
+        return Ok(());
+    };
+    let cmd = format!(
+        "git log --oneline --color=never -- '{}'",
+        path.replace('\'', "'\\''")
+    );
+    queue_fzf_cmd(cx, "BCommits", "fzf-git-show {}", cmd, vec!["--no-sort".into()], false);
+    Ok(())
+}
+
+/// fzf.vim `:Filetypes` — fuzzy-pick a language and set the buffer's filetype.
+fn fzf_filetypes(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        let loader: &zemacs_core::syntax::Loader = &cx.editor.syn_loader.load();
+        let mut cands: Vec<String> = loader
+            .language_configs()
+            .map(|c| c.language_id.clone())
+            .collect();
+        cands.sort();
+        cands.dedup();
+        queue_fzf(cx, "Filetypes", "set-language {}", cands, vec!["+m".into()], false);
     }
     Ok(())
 }
@@ -18299,6 +18461,70 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Fuzzy-search the current buffer's lines with fzf, jump to the pick (fzf.vim :BLines).",
         fun: fzf_blines,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Lines",
+        aliases: &[],
+        doc: "Fuzzy-search lines across all open buffers with fzf, open the pick (fzf.vim :Lines).",
+        fun: fzf_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "History",
+        aliases: &[],
+        doc: "Fuzzy-pick a recently opened file with fzf and open it (fzf.vim :History).",
+        fun: fzf_history,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "History:",
+        aliases: &[],
+        doc: "Fuzzy-pick a past `:` command with fzf and run it (fzf.vim :History:).",
+        fun: fzf_cmd_history,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "History/",
+        aliases: &[],
+        doc: "Fuzzy-pick a past search with fzf and re-run it (fzf.vim :History/).",
+        fun: fzf_search_history,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Filetypes",
+        aliases: &[],
+        doc: "Fuzzy-pick a language with fzf and set the buffer's filetype (fzf.vim :Filetypes).",
+        fun: fzf_filetypes,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Commits",
+        aliases: &[],
+        doc: "Fuzzy-pick a repo commit with fzf and show it (fzf.vim :Commits).",
+        fun: fzf_commits,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "BCommits",
+        aliases: &[],
+        doc: "Fuzzy-pick a commit touching the current file with fzf and show it (fzf.vim :BCommits).",
+        fun: fzf_bcommits,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "fzf-git-show",
+        aliases: &[],
+        doc: "(internal) show a `<sha> subject` fzf pick via git show.",
+        fun: fzf_git_show,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },

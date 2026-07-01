@@ -110,21 +110,21 @@ def parse_typable_commands():
     src = open(path, encoding="utf-8").read()
     names = set()
     # Command names may be capitalized (fzf.vim ports: :Files, :GFiles, :Rg, …).
-    for cm in re.finditer(r'name:\s*"([A-Za-z0-9!_-]+)"', src):
+    for cm in re.finditer(r'name:\s*"([A-Za-z0-9!:/_-]+)"', src):
         names.add(cm.group(1))
     # aliases: aliases: &["..","..']
     for am in re.finditer(r"aliases:\s*&\[([^\]]*)\]", src):
-        for a in re.finditer(r'"([A-Za-z0-9!_-]+)"', am.group(1)):
+        for a in re.finditer(r'"([A-Za-z0-9!:/_-]+)"', am.group(1)):
             names.add(a.group(1))
     # macro-generated list entries: `ex_modifier_entry!("name", &["alias"], ...)`
     # and `vim_map_command!("name", ...)` — same effect as a literal entry.
     for mm in re.finditer(
-        r'(?:ex_modifier_entry|vim_map_command)!\(\s*"([A-Za-z0-9!_-]+)"\s*(?:,\s*&\[([^\]]*)\])?',
+        r'(?:ex_modifier_entry|vim_map_command)!\(\s*"([A-Za-z0-9!:/_-]+)"\s*(?:,\s*&\[([^\]]*)\])?',
         src,
     ):
         names.add(mm.group(1))
         if mm.group(2):
-            for a in re.finditer(r'"([A-Za-z0-9!_-]+)"', mm.group(2)):
+            for a in re.finditer(r'"([A-Za-z0-9!:/_-]+)"', mm.group(2)):
                 names.add(a.group(1))
     return names
 
