@@ -7108,7 +7108,7 @@ dependencies = [
  "xxhash-rust",
  "xz2",
  "zip",
- "zshrs 0.12.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zshrs 0.12.5",
  "zstd",
 ]
 
@@ -9288,7 +9288,7 @@ dependencies = [
  "zemacs-vcs",
  "zemacs-view",
  "zemacs-viml",
- "zshrs 0.12.5",
+ "zshrs 0.12.6",
 ]
 
 [[package]]
@@ -9536,6 +9536,8 @@ dependencies = [
 [[package]]
 name = "zshrs"
 version = "0.12.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9ec52b9b77c13f8673de157d23d89ea208a42eee19a992d33b2e90efad6fdc5"
 dependencies = [
  "atty",
  "bincode",
@@ -9585,9 +9587,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs"
-version = "0.12.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9ec52b9b77c13f8673de157d23d89ea208a42eee19a992d33b2e90efad6fdc5"
+version = "0.12.6"
 dependencies = [
  "atty",
  "bincode",
@@ -9631,13 +9631,15 @@ dependencies = [
  "tracing-subscriber",
  "unicode-width 0.2.0",
  "walkdir",
- "zshrs-daemon 0.12.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zshrs-daemon 0.12.6",
  "zstd",
 ]
 
 [[package]]
 name = "zshrs-daemon"
 version = "0.12.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be6b15d4c1651832e235d0d5143dc47ca058a8748c2b5515073821167ce11036"
 dependencies = [
  "atty",
  "axum",
@@ -9674,9 +9676,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs-daemon"
-version = "0.12.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be6b15d4c1651832e235d0d5143dc47ca058a8748c2b5515073821167ce11036"
+version = "0.12.6"
 dependencies = [
  "atty",
  "axum",

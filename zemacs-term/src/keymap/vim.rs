@@ -47,6 +47,12 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space F t", "fzf", ":Filetypes"),  // SPC F t : filetypes
     ("space F v", "fzf", ":Commits"),    // SPC F v : commits
     ("space F V", "fzf", ":BCommits"),   // SPC F V : buffer commits
+    ("space F j", "fzf", ":Jumps"),      // SPC F j : jumplist
+    ("space F w", "fzf", ":Windows"),    // SPC F w : windows
+    ("space F m", "fzf", ":Marks"),      // SPC F m : marks
+    ("space F T", "fzf", ":Tags"),       // SPC F T : tags (whole tree)
+    ("space F B", "fzf", ":BTags"),      // SPC F B : buffer tags
+    ("space F s", "fzf", ":Snippets"),   // SPC F s : snippets
     ("space f s", "Files",   ":write"),            // SPC f s : save
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all
     ("space a c", "Applications", ":calc"),        // SPC a c : calc-dispatch

@@ -2210,7 +2210,13 @@ impl Ide {
             }
         }
 
-        // resize seam / collapse rail down the left edge
+        // resize seam / collapse rail down the left edge — only as tall as the
+        // left column (stop at the full-width bottom drawer, not through it).
+        let seam_h = if self.bottom_divider_y != u16::MAX {
+            self.bottom_divider_y.saturating_sub(full.y)
+        } else {
+            full.height
+        };
         if self.left_collapsed && self.left_rail_rect.height > 0 {
             surface.set_string(
                 self.left_rail_rect.x,
@@ -2218,7 +2224,7 @@ impl Ide {
                 "›",
                 theme.get("ui.text.focus"),
             );
-            for y in 1..full.height {
+            for y in 1..seam_h {
                 surface.set_string(
                     self.left_rail_rect.x,
                     full.y + y,
@@ -2228,7 +2234,7 @@ impl Ide {
             }
         } else if self.seam_x != u16::MAX {
             let style = theme.get("ui.window");
-            for y in 0..full.height {
+            for y in 0..seam_h {
                 surface.set_string(self.seam_x, full.y + y, "│", style);
             }
         }

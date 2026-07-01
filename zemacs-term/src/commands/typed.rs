@@ -11178,6 +11178,175 @@ fn fzf_filetypes(
     Ok(())
 }
 
+/// fzf.vim `:Jumps` — fuzzy-pick an entry from the jumplist and open it.
+fn fzf_jumps(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let entries: Vec<(zemacs_view::DocumentId, usize)> = {
+        let (view, _) = current_ref!(cx.editor);
+        view.jumps
+            .iter()
+            .map(|(id, sel)| (*id, sel.primary().head))
+            .collect()
+    };
+    let mut cands = Vec::new();
+    for (id, pos) in entries {
+        let Some(doc) = cx.editor.document(id) else {
+            continue;
+        };
+        let Some(path) = doc.path().map(|p| p.to_string_lossy().into_owned()) else {
+            continue;
+        };
+        let text = doc.text();
+        let p = pos.min(text.len_chars());
+        let line = text.char_to_line(p) + 1;
+        let ltext = text.line(line - 1).to_string();
+        cands.push(format!("{path}:{line}:1: {}", ltext.trim_end()));
+    }
+    queue_fzf(cx, "Jumps", "fzf-goto {}", cands, vec!["--no-sort".into()], false);
+    Ok(())
+}
+
+/// fzf.vim `:Windows` — fuzzy-pick an open window and focus it.
+fn fzf_windows(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let docs: Vec<zemacs_view::DocumentId> =
+        cx.editor.tree.views().map(|(v, _)| v.doc).collect();
+    let cands: Vec<String> = docs
+        .iter()
+        .enumerate()
+        .map(|(i, id)| {
+            let name = cx
+                .editor
+                .document(*id)
+                .map(|d| d.display_name().into_owned())
+                .unwrap_or_else(|| "[scratch]".into());
+            format!("{}: {name}", i + 1)
+        })
+        .collect();
+    queue_fzf(cx, "Windows", "fzf-window {}", cands, vec!["+m".into()], false);
+    Ok(())
+}
+
+/// Sink for `:Windows` — focus the Nth window (1-based, matching the list order).
+fn fzf_window(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let num: String = args.join(" ").chars().take_while(|c| c.is_ascii_digit()).collect();
+    let Ok(n) = num.parse::<usize>() else {
+        return Ok(());
+    };
+    if n == 0 {
+        return Ok(());
+    }
+    let view_ids: Vec<zemacs_view::ViewId> =
+        cx.editor.tree.views().map(|(v, _)| v.id).collect();
+    if let Some(&id) = view_ids.get(n - 1) {
+        cx.editor.focus(id);
+    }
+    Ok(())
+}
+
+/// fzf.vim `:Marks` — fuzzy-pick a mark in the current buffer and jump to it.
+fn fzf_marks(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cands: Vec<String> = {
+        let (_, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let mut m: Vec<(usize, char)> =
+            doc.marks().iter().map(|(&ch, &pos)| (pos, ch)).collect();
+        m.sort();
+        m.iter()
+            .map(|&(pos, ch)| {
+                let p = pos.min(text.len_chars());
+                let line = text.char_to_line(p) + 1;
+                let ltext = text.line(line - 1).to_string();
+                format!("{line}: {ch}  {}", ltext.trim_end())
+            })
+            .collect()
+    };
+    queue_fzf(cx, "Marks", "fzf-line {}", cands, vec!["--no-sort".into()], false);
+    Ok(())
+}
+
+/// fzf.vim `:Tags` — ctags across the whole tree; jump to the picked tag.
+/// `ctags -x` columns are `name kind line file text…`; awk reorders to
+/// `file:line:col: name` so the existing `fzf-goto` sink can open it.
+fn fzf_tags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        let cmd = "ctags -x -R . 2>/dev/null | awk '{print $4\":\"$3\":1: \"$1}'".to_string();
+        queue_fzf_cmd(cx, "Tags", "fzf-goto {}", cmd, vec!["--no-sort".into()], false);
+    }
+    Ok(())
+}
+
+/// fzf.vim `:BTags` — ctags for the current file only.
+fn fzf_btags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = {
+        let (_, doc) = current_ref!(cx.editor);
+        doc.path().map(|p| p.to_string_lossy().into_owned())
+    };
+    let Some(path) = path else {
+        cx.editor.set_error(":BTags requires a file on disk");
+        return Ok(());
+    };
+    let cmd = format!(
+        "ctags -x '{}' 2>/dev/null | awk '{{print $4\":\"$3\":1: \"$1}}'",
+        path.replace('\'', "'\\''")
+    );
+    queue_fzf_cmd(cx, "BTags", "fzf-goto {}", cmd, vec!["--no-sort".into()], false);
+    Ok(())
+}
+
+/// fzf.vim `:Snippets` — fuzzy-pick a snippet trigger and insert its body.
+fn fzf_snippets(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let store = crate::snippet_store::load();
+    let cands: Vec<String> = store
+        .snippets
+        .iter()
+        .map(|s| format!("{}\t{}\t{}", s.trigger, s.scope, s.description))
+        .collect();
+    queue_fzf(cx, "Snippets", "fzf-snippet {}", cands, vec!["+m".into()], false);
+    Ok(())
+}
+
+/// Sink for `:Snippets` — insert the picked snippet's body at the cursor.
+fn fzf_snippet(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = args.join(" ");
+    let trigger = line.split('\t').next().unwrap_or("").trim();
+    if trigger.is_empty() {
+        return Ok(());
+    }
+    let store = crate::snippet_store::load();
+    let (view, doc) = current!(cx.editor);
+    let lang = doc.language_name().map(|s| s.to_string());
+    let Some(snip) = store.find_trigger(lang.as_deref(), trigger) else {
+        return Ok(());
+    };
+    let body: zemacs_core::Tendril = snip.body.clone().into();
+    let sel = doc.selection(view.id).clone();
+    let tx = zemacs_core::Transaction::change_by_selection(doc.text(), &sel, |r| {
+        (r.from(), r.to(), Some(body.clone()))
+    });
+    doc.apply(&tx, view.id);
+    Ok(())
+}
+
 /// Shared body of the `:map`-family typable commands: reconstruct the Vim
 /// command line and either record a mapping (then re-apply the overlay) or —
 /// when there's no rhs — list the current bindings for the command's modes,
@@ -18528,7 +18697,71 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
+    TypableCommand {
+        name: "Jumps",
+        aliases: &[],
+        doc: "Fuzzy-pick a jumplist entry with fzf and open it (fzf.vim :Jumps).",
+        fun: fzf_jumps,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Windows",
+        aliases: &[],
+        doc: "Fuzzy-pick an open window with fzf and focus it (fzf.vim :Windows).",
+        fun: fzf_windows,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Marks",
+        aliases: &[],
+        doc: "Fuzzy-pick a mark in the current buffer with fzf and jump to it (fzf.vim :Marks).",
+        fun: fzf_marks,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Tags",
+        aliases: &[],
+        doc: "Fuzzy-pick a ctags tag across the tree with fzf and jump to it (fzf.vim :Tags).",
+        fun: fzf_tags,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "BTags",
+        aliases: &[],
+        doc: "Fuzzy-pick a ctags tag in the current file with fzf and jump to it (fzf.vim :BTags).",
+        fun: fzf_btags,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Snippets",
+        aliases: &[],
+        doc: "Fuzzy-pick a snippet with fzf and insert its body (fzf.vim :Snippets).",
+        fun: fzf_snippets,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
     // Internal sinks for fzf picks (open at file:line, or jump to a buffer line).
+    TypableCommand {
+        name: "fzf-window",
+        aliases: &[],
+        doc: "(internal) focus the Nth window of a `:Windows` fzf pick.",
+        fun: fzf_window,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "fzf-snippet",
+        aliases: &[],
+        doc: "(internal) insert the body of a `:Snippets` fzf pick.",
+        fun: fzf_snippet,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
     TypableCommand {
         name: "fzf-goto",
         aliases: &[],

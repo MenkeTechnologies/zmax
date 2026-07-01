@@ -1830,6 +1830,11 @@ impl Document {
         self.marks.insert(mark, pos);
     }
 
+    /// All named marks (`a`-`z`, auto-marks `.`/`[`/`]`, …) → char position.
+    pub fn marks(&self) -> &std::collections::HashMap<char, usize> {
+        &self.marks
+    }
+
     /// Remove a single named mark (vim `:delmarks {m}`); returns whether it was set.
     pub fn remove_mark(&mut self, mark: char) -> bool {
         self.marks.remove(&mark).is_some()
