@@ -10,6 +10,7 @@ extern crate zemacs_view;
 pub mod ai;
 pub mod appdata;
 pub mod application;
+pub mod blame;
 pub mod args;
 pub mod ci;
 pub mod closed_files;
