@@ -6,47 +6,64 @@ use zemacs_view::graphics::{Margin, Rect};
 use zemacs_view::info::Info;
 
 /// Hard cap on which-key popup rows regardless of frame height — keeps a huge
-/// prefix map (e.g. the emacs `C-x` tree) from filling the screen, matching
-/// Spacemacs' `which-key` side window (which docks a short, multi-column grid).
+/// prefix map (e.g. the emacs/Spacemacs `C-x` tree) from filling the screen.
+/// When a map has more entries than fit (cols × this), the popup becomes
+/// vertically scrollable (PgDn/PgUp or the mouse wheel; see `Info::scroll`).
 const MAX_ROWS: usize = 16;
+/// Widest a single `KEY : description` column is allowed to grow.
+const COL_CAP: usize = 48;
+/// Spaces between columns.
+const SEP: usize = 3;
 
-/// Reflow `lines` (each `"key  desc"`) into a column-major grid at most `rows`
-/// tall, so a long list becomes a short, wide grid instead of a full-screen
-/// column. Columns and per-column width are bounded so the grid fits `max_width`
-/// (descriptions are truncated to their column budget). Returns the grid text
-/// plus its width and height in cells.
-fn reflow_columns(lines: &[&str], rows: usize, max_width: usize) -> (String, usize, usize) {
+/// Lay `lines` (each `"key : desc"`) into a fixed, width-bounded column grid
+/// (column-major, like Emacs' `describe-bindings`) and return the visible slice
+/// starting at `scroll` rows down. Returns `(text, body_width, body_height,
+/// rows_total, cols)` so the caller can size the box and decide whether a scroll
+/// indicator is needed.
+fn grid(
+    lines: &[&str],
+    scroll: usize,
+    max_rows: usize,
+    max_width: usize,
+) -> (String, usize, usize, usize, usize) {
     let n = lines.len();
-    let rows = rows.max(1);
-    let cols = n.div_ceil(rows);
-    const SEP: usize = 3; // spaces between columns
+    if n == 0 {
+        return (String::new(), 0, 0, 0, 1);
+    }
+    let widest = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
     let budget = max_width.saturating_sub(6); // borders + margin
-    // Split the width budget evenly across columns, then clamp each column to
-    // the width its own longest cell actually needs.
-    let col_cap = (budget / cols.max(1)).saturating_sub(SEP).max(8);
+    let cols_fit = (budget / (widest.min(COL_CAP).max(8) + SEP)).max(1);
+    // Use the fewest columns that still fit vertically, capped by what fits
+    // horizontally; anything beyond that scrolls.
+    let cols = n.div_ceil(max_rows.max(1)).clamp(1, cols_fit).min(n);
+    let rows_total = n.div_ceil(cols);
+    let visible = rows_total.min(max_rows);
+    let scroll = scroll.min(rows_total.saturating_sub(visible));
+
+    // Column-major: column `c` holds items [c*rows_total .. (c+1)*rows_total).
     let col_w: Vec<usize> = (0..cols)
         .map(|c| {
-            let s = c * rows;
-            let e = ((c + 1) * rows).min(n);
+            let s = c * rows_total;
+            let e = ((c + 1) * rows_total).min(n);
             lines[s..e]
                 .iter()
                 .map(|l| l.chars().count())
                 .max()
                 .unwrap_or(0)
-                .min(col_cap)
+                .min(COL_CAP)
         })
         .collect();
-    let real_rows = rows.min(n);
+
     let mut out = String::new();
-    for r in 0..real_rows {
+    for r in scroll..scroll + visible {
         let mut line = String::new();
         for (c, &w) in col_w.iter().enumerate() {
-            let idx = c * rows + r;
+            let idx = c * rows_total + r;
             if idx >= n {
                 break;
             }
             if c > 0 {
-                line.push_str("   ");
+                line.push_str(&" ".repeat(SEP));
             }
             let cell: String = lines[idx].chars().take(w).collect();
             line.push_str(&format!("{cell:w$}"));
@@ -55,7 +72,7 @@ fn reflow_columns(lines: &[&str], rows: usize, max_width: usize) -> (String, usi
         out.push('\n');
     }
     let width = col_w.iter().sum::<usize>() + SEP * cols.saturating_sub(1);
-    (out, width, real_rows)
+    (out, width, visible, rows_total, cols)
 }
 
 impl Component for Info {
@@ -63,23 +80,34 @@ impl Component for Info {
         let text_style = cx.editor.theme.get("ui.text.info");
         let popup_style = cx.editor.theme.get("ui.popup.info");
 
-        // Cap the popup at ~40% of the frame height (Spacemacs-style); anything
-        // taller reflows into extra columns rather than a full-screen list.
+        // Cap body height at ~the frame minus chrome, and never taller than
+        // MAX_ROWS (Spacemacs-style short grid); overflow scrolls.
         let avail = (viewport.height as usize).saturating_sub(6);
         let cap = avail.min(MAX_ROWS).max(1);
 
         let lines: Vec<&str> = self.text.lines().collect();
-        let (text, body_w, body_h) = if lines.len() > cap {
-            reflow_columns(&lines, cap, viewport.width as usize)
+        let (text, body_w, body_h, rows_total, _cols) =
+            grid(&lines, self.scroll as usize, cap, viewport.width as usize);
+
+        // Clamp the stored scroll so PgDn past the end / a shrunk map is corrected.
+        let scrollable = rows_total > body_h;
+        let max_scroll = rows_total.saturating_sub(body_h);
+        self.scroll = (self.scroll as usize).min(max_scroll) as u16;
+
+        // Title carries a scroll indicator when there's more below/above.
+        let title = if scrollable {
+            let pct = if max_scroll == 0 {
+                0
+            } else {
+                (self.scroll as usize * 100) / max_scroll
+            };
+            format!("{}  [{pct}%  PgDn/PgUp]", self.title)
         } else {
-            (self.text.clone(), self.width as usize, self.height as usize)
+            self.title.to_string()
         };
 
-        // Calculate the area of the terminal to modify. Because we want to
-        // render at the bottom right, we use the viewport's width and height
-        // which evaluate to the most bottom right coordinate.
-        let width = body_w as u16 + 2 + 2; // +2 for border, +2 for margin
-        let height = body_h as u16 + 2; // +2 for border
+        let width = (body_w.max(title.len())) as u16 + 2 + 2; // +2 border, +2 margin
+        let height = body_h as u16 + 2; // +2 border
         let area = viewport.intersection(Rect::new(
             viewport.width.saturating_sub(width),
             viewport.height.saturating_sub(height + 2), // +2 for statusline
@@ -88,9 +116,7 @@ impl Component for Info {
         ));
         surface.clear_with(area, popup_style);
 
-        let block = Block::bordered()
-            .title(self.title.as_ref())
-            .border_style(popup_style);
+        let block = Block::bordered().title(title).border_style(popup_style);
 
         let margin = Margin::horizontal(1);
         let inner = block.inner(area).inner(margin);

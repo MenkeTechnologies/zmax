@@ -13,6 +13,10 @@ pub struct Info {
     pub width: u16,
     /// Body height.
     pub height: u16,
+    /// Vertical scroll offset in grid rows (for large which-key prefix maps that
+    /// don't fit — page/scroll with PgDn/PgUp or the mouse wheel). Clamped by the
+    /// renderer.
+    pub scroll: u16,
 }
 
 impl Info {
@@ -29,6 +33,7 @@ impl Info {
                 width: title.len() as u16,
                 text: "".to_string(),
                 title,
+                scroll: 0,
             };
         }
 
@@ -56,6 +61,7 @@ impl Info {
             width: text.lines().map(|l| l.width()).max().unwrap() as u16,
             height: body.len() as u16,
             text,
+            scroll: 0,
         }
     }
 

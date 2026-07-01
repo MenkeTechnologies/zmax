@@ -1592,6 +1592,24 @@ impl EditorView {
         event: KeyEvent,
     ) -> Option<KeymapResult> {
         let mut last_mode = mode;
+        // While a which-key popup is up, PgDn/PgUp scroll/page it (large prefix
+        // maps overflow) instead of being treated as bindings. Preserves the
+        // pending key sequence — we don't consult the keymap or regenerate the
+        // popup, just nudge its scroll offset (the renderer clamps it).
+        if let Some(info) = cxt.editor.autoinfo.as_mut() {
+            const PAGE: u16 = 8;
+            match event.code {
+                zemacs_view::input::KeyCode::PageDown => {
+                    info.scroll = info.scroll.saturating_add(PAGE);
+                    return None;
+                }
+                zemacs_view::input::KeyCode::PageUp => {
+                    info.scroll = info.scroll.saturating_sub(PAGE);
+                    return None;
+                }
+                _ => {}
+            }
+        }
         // Record the key for `view-lossage` (C-h l), keeping a bounded ring.
         self.recent_keys.push_back(event);
         if self.recent_keys.len() > 100 {
