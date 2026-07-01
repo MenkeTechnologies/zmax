@@ -1496,14 +1496,13 @@ pub struct FzfConfig {
 
 impl Default for FzfConfig {
     fn default() -> Self {
+        // Empty by default so zemacs adds NOTHING that would override the user's
+        // own `$FZF_DEFAULT_OPTS` (preview, layout, colors, size — fzf reads it,
+        // and command-line args we'd add here would clobber it). Set these to opt
+        // in to zemacs-provided defaults when you have no env config.
         Self {
-            options: vec![
-                "--height=95%".into(),
-                "--layout=reverse".into(),
-                "--border=rounded".into(),
-                "--info=inline".into(),
-            ],
-            preview: "bat --style=numbers --color=always -- {} 2>/dev/null || cat -- {}".into(),
+            options: Vec::new(),
+            preview: String::new(),
             preview_window: "right:55%".into(),
         }
     }
