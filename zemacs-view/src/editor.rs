@@ -389,6 +389,11 @@ pub struct Config {
     /// (`ci`/`ca`, `di`/`da`, `g`, `y`, `z`, `>`, `C-w`, …) stay quiet. Defaults
     /// to false.
     pub which_key_global: bool,
+    /// Master switch for the which-key prefix popups (the `space`/`C-x`/`C-c`/`C-h`
+    /// and per-prefix menus). When false, NO which-key popup is ever shown,
+    /// regardless of `which_key_global` / `auto_info_leader_only` / `auto_info_exclude`
+    /// — other autoinfo (mark/register/help prompts) still works. Defaults to true.
+    pub which_key: bool,
     /// When true, vim-sneak overrides `s`/`S` (jump to a two-character sequence). When false,
     /// `s`/`S` keep vim's substitute-char / substitute-line. Defaults to true.
     pub vim_sneak: bool,
@@ -1302,6 +1307,7 @@ impl Default for Config {
             auto_info_exclude: vec!["g".into(), "y".into(), "z".into(), "d".into()],
             auto_info_leader_only: true,
             which_key_global: false,
+            which_key: true,
             vim_sneak: true,
             file_picker: FilePickerConfig::default(),
             file_explorer: FileExplorerConfig::default(),

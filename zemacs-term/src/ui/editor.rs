@@ -1617,7 +1617,11 @@ impl EditorView {
         }
         self.pseudo_pending.extend(self.keymaps.pending());
         let key_result = self.keymaps.get(mode, event);
-        cxt.editor.autoinfo = self.keymaps.sticky().map(|node| node.infobox());
+        cxt.editor.autoinfo = if cxt.editor.config().which_key {
+            self.keymaps.sticky().map(|node| node.infobox())
+        } else {
+            None
+        };
 
         let mut execute_command = |command: &commands::MappableCommand| {
             command.execute(cxt);
@@ -1657,7 +1661,10 @@ impl EditorView {
                 // Global = the new `which-key-global` flag, or the legacy
                 // `auto-info-leader-only = false` (kept working for old configs).
                 let global = config.which_key_global || !config.auto_info_leader_only;
-                let show = if global {
+                let show = if !config.which_key {
+                    // Master which-key off switch — never show a prefix popup.
+                    false
+                } else if global {
                     // Global which-key: every pending prefix pops up.
                     true
                 } else {
