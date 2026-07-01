@@ -317,6 +317,8 @@ impl MappableCommand {
         move_char_right, "Move right",
         move_line_up, "Move up",
         move_line_down, "Move down",
+        shift_line_up, "Move the line/selection up (JetBrains Move Statement Up)",
+        shift_line_down, "Move the line/selection down (JetBrains Move Statement Down)",
         drag_line_down, "Drag the current line down (SPC x . j)",
         drag_line_up, "Drag the current line up (SPC x . k)",
         toggle_test_file, "Toggle between implementation and test file (SPC p a)",
@@ -5869,6 +5871,97 @@ fn duplicate_selection_down(cx: &mut Context) {
 
 fn duplicate_selection_up(cx: &mut Context) {
     duplicate_selection_impl(cx, false)
+}
+
+/// Swap adjacent line-groups `upper`/`lower` (which together form one region).
+/// `lower_at_eof`: the lower group is the file's final line and lacks a trailing
+/// '\n' — after the swap the NEW lower group must lack it instead. Returns the
+/// rewritten region and the char length of what is now the upper group (so the
+/// caller can move the selection onto the relocated block).
+fn swap_line_groups(upper: &str, lower: &str, lower_at_eof: bool) -> (String, usize) {
+    if lower_at_eof {
+        // `upper` ends with '\n', `lower` doesn't. Result: lower, newline, then
+        // upper with its trailing newline dropped (it's the last line now).
+        let up_trim = upper.strip_suffix('\n').unwrap_or(upper);
+        (format!("{lower}\n{up_trim}"), lower.chars().count() + 1)
+    } else {
+        // Both end with '\n' — a clean swap.
+        (format!("{lower}{upper}"), lower.chars().count())
+    }
+}
+
+/// JetBrains "Move Statement/Line Up/Down": relocate the current line (or the
+/// selected line span) one line in `down` direction, keeping the selection on it.
+fn shift_lines(cx: &mut Context, down: bool) {
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().clone();
+    let slice = text.slice(..);
+    let len = slice.len_chars();
+    let n_lines = slice.len_lines();
+    let range = doc.selection(view.id).primary();
+    let first = slice.char_to_line(range.from());
+    let last = slice.char_to_line(range.to().saturating_sub(1).max(range.from()));
+    let span = last - first;
+
+    if down {
+        // Region = block + the line below it; swap them.
+        let a = slice.line_to_char(first);
+        let b = slice.line_to_char(last + 1);
+        let c = if last + 2 <= n_lines {
+            slice.line_to_char(last + 2)
+        } else {
+            len
+        };
+        if b >= c {
+            return; // nothing (real) below
+        }
+        let block: String = slice.slice(a..b).into();
+        let below: String = slice.slice(b..c).into();
+        let (region, upper_len) = swap_line_groups(&block, &below, !below.ends_with('\n'));
+        let tx = Transaction::change(&text, std::iter::once((a, c, Some(region.into()))));
+        doc.apply(&tx, view.id);
+        select_line_span(doc, view.id, a + upper_len, span);
+    } else {
+        if first == 0 {
+            return;
+        }
+        // Region = line above + block; swap them (block ends up first, at `p`).
+        let p = slice.line_to_char(first - 1);
+        let a = slice.line_to_char(first);
+        let c = if last + 1 <= n_lines {
+            slice.line_to_char(last + 1)
+        } else {
+            len
+        };
+        let above: String = slice.slice(p..a).into();
+        let block: String = slice.slice(a..c).into();
+        let (region, _) = swap_line_groups(&above, &block, !block.ends_with('\n'));
+        let tx = Transaction::change(&text, std::iter::once((p, c, Some(region.into()))));
+        doc.apply(&tx, view.id);
+        select_line_span(doc, view.id, p, span);
+    }
+    let (view, doc) = current!(cx.editor);
+    view.ensure_cursor_in_view(doc, scrolloff);
+}
+
+/// Select the `span + 1` lines starting at char `start` (keeps a moved block
+/// selected so the move can be repeated).
+fn select_line_span(doc: &mut Document, view_id: ViewId, start: usize, span: usize) {
+    let text = doc.text();
+    let first = text.char_to_line(start.min(text.len_chars()));
+    let last = (first + span).min(text.len_lines().saturating_sub(1));
+    let s = text.line_to_char(first);
+    let e = text.line_to_char((last + 1).min(text.len_lines()));
+    doc.set_selection(view_id, Selection::single(s, e.max(s + 1).min(text.len_chars())));
+}
+
+fn shift_line_down(cx: &mut Context) {
+    shift_lines(cx, true)
+}
+
+fn shift_line_up(cx: &mut Context) {
+    shift_lines(cx, false)
 }
 
 /// Reorder a `block` (ends with a newline unless it is the file's last line) with
