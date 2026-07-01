@@ -10942,6 +10942,33 @@ fn ex_normal(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+/// vim `:resize [+/-]{N}` — adjust the current window's height. `+N`/`-N` grow or
+/// shrink relative; a bare `{N}` sets the height absolutely; bare `:resize` is a
+/// no-op (as in vim). `:vertical resize` still routes here (height) — width
+/// resizing via the `:vertical` modifier is best-effort.
+fn ex_resize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined = args.join(" ");
+    let a = joined.trim();
+    let view = cx.editor.tree.focus;
+    let delta: i16 = if let Some(n) = a.strip_prefix('+') {
+        n.trim().parse().unwrap_or(1)
+    } else if let Some(n) = a.strip_prefix('-') {
+        -(n.trim().parse::<i16>().unwrap_or(1))
+    } else if a.is_empty() {
+        return Ok(());
+    } else if let Ok(target) = a.parse::<i16>() {
+        target - cx.editor.tree.node_height(view) as i16
+    } else {
+        cx.editor.set_error(format!(":resize — invalid argument `{a}`"));
+        return Ok(());
+    };
+    cx.editor.tree.resize_vertical(view, delta);
+    Ok(())
+}
+
 /// vim `:mark {x}` / `:k {x}` — set mark `{x}` at the cursor position.
 fn ex_mark(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -17906,6 +17933,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_mark,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "resize",
+        aliases: &["res"],
+        doc: "Adjust the current window height (vim :resize [+/-]{N}).",
+        fun: ex_resize,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },
     // Vim fold ex-commands → our fold internals.
     TypableCommand {

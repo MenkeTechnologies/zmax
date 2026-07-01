@@ -23882,5 +23882,13 @@
       "typable:mark"
     ],
     "note": "vim :k {x} → ex_mark (alias of :mark)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_resize",
+    "status": "ported",
+    "evidence": [
+      "typable:resize"
+    ],
+    "note": "vim :resize [+/-]{N} → ex_resize: relative grow/shrink or absolute height via tree.resize_vertical (height-only; :vertical resize width is best-effort)."
   }
 ]

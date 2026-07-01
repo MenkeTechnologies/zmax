@@ -610,7 +610,7 @@ impl Tree {
     }
 
     /// Width of a node's current laid-out area (view or container).
-    fn node_width(&self, id: ViewId) -> u16 {
+    pub fn node_width(&self, id: ViewId) -> u16 {
         match &self.nodes[id].content {
             Content::View(view) => view.area.width,
             Content::Container(container) => container.area.width,
@@ -618,7 +618,7 @@ impl Tree {
     }
 
     /// Height of a node's current laid-out area (view or container).
-    fn node_height(&self, id: ViewId) -> u16 {
+    pub fn node_height(&self, id: ViewId) -> u16 {
         match &self.nodes[id].content {
             Content::View(view) => view.area.height,
             Content::Container(container) => container.area.height,
