@@ -2341,6 +2341,16 @@ impl Component for EditorView {
                 let cb = self.apply_ide_action(action, context);
                 return EventResult::Consumed(cb);
             }
+            // A left-click in the editor body (outside every IDE panel) hands
+            // keyboard focus back to the editor, so keys stop routing to a panel
+            // (e.g. after opening a file from the tree, which keeps tree focus).
+            if matches!(me.kind, MouseEventKind::Down(MouseButton::Left)) {
+                if let Some(ide) = self.ide.as_mut() {
+                    if ide.visible() && ide.capturing() {
+                        ide.focus_editor();
+                    }
+                }
+            }
         }
 
         let mut cx = commands::Context {

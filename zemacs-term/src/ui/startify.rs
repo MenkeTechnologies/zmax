@@ -56,6 +56,8 @@ pub struct Startify {
     selected: usize,
     /// Top file extensions in the project, by count — for the language BarChart.
     lang_stats: Vec<(String, u64)>,
+    /// Screen row → entry index, recorded each render for mouse hit-testing.
+    row_hits: Vec<(u16, usize)>,
 }
 
 impl Default for Startify {
@@ -141,6 +143,7 @@ impl Startify {
             entries,
             selected: 0,
             lang_stats,
+            row_hits: Vec::new(),
         }
     }
 
@@ -268,7 +271,33 @@ impl Component for Startify {
     fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
         let key = match event {
             Event::Key(key) => *key,
-            Event::Mouse(_) => return EventResult::Consumed(None),
+            Event::Mouse(ev) => {
+                use zemacs_view::input::{MouseButton, MouseEventKind};
+                let len = self.entries.len();
+                match ev.kind {
+                    // Left-click activates the entry on that row (and selects it).
+                    MouseEventKind::Down(MouseButton::Left) => {
+                        if let Some(&(_, idx)) =
+                            self.row_hits.iter().find(|&&(ry, _)| ry == ev.row)
+                        {
+                            self.selected = idx;
+                            return EventResult::Consumed(Some(self.activate(idx)));
+                        }
+                    }
+                    MouseEventKind::ScrollDown => {
+                        if len > 0 {
+                            self.selected = (self.selected + 1) % len;
+                        }
+                    }
+                    MouseEventKind::ScrollUp => {
+                        if len > 0 {
+                            self.selected = (self.selected + len - 1) % len;
+                        }
+                    }
+                    _ => {}
+                }
+                return EventResult::Consumed(None);
+            }
             _ => return EventResult::Ignored(None),
         };
 
@@ -324,6 +353,7 @@ impl Component for Startify {
         let sel = theme.get("ui.selection");
 
         surface.clear_with(area, bg);
+        self.row_hits.clear();
 
         let x0 = area.x + 1;
         let bottom = area.y + area.height;
@@ -352,6 +382,7 @@ impl Component for Startify {
                 break;
             }
 
+            self.row_hits.push((y, i));
             if i == self.selected {
                 surface.set_style(Rect::new(x0, y, area.width.saturating_sub(2), 1), sel);
             }

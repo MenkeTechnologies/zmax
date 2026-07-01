@@ -1617,13 +1617,14 @@ impl Ide {
                     return IdeAction::None;
                 }
                 if in_rect(&self.project_rect, col, row) && row > self.project_rect.y {
+                    // Clicking the tree focuses it and keeps focus here (so `/`
+                    // speed-search, j/k, etc. route to the tree) — opening a file
+                    // does NOT jump focus to the editor. Click the editor body (or
+                    // press Enter/Esc) to move focus there.
                     self.focus = Focus::Project;
                     let lr = (row - self.project_rect.y - 1) as usize;
                     return match self.project.click_row(lr) {
-                        TreeAction::Open(p) => {
-                            self.focus = Focus::Editor;
-                            IdeAction::OpenFile(p)
-                        }
+                        TreeAction::Open(p) => IdeAction::OpenFile(p),
                         _ => IdeAction::None,
                     };
                 }
