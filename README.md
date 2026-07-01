@@ -13,11 +13,11 @@
 [![docs](https://img.shields.io/badge/docs-online-9b5de5?style=flat-square)](https://menketechnologies.github.io/zemacs/)
 ![status](https://img.shields.io/badge/status-stable-39ff14?style=flat-square)
 
-### `[A MODAL IDE ON THE HELIX ENGINE // VIM KEYS · EMACS · SPACEMACS]`
+### `[THE MOST POWERFUL CLI IDE  // VIM · EMACS · SPACEMACS SUPERSET]`
 
 # zemacs
 
-A modal IDE in Rust, forked from [Helix](https://github.com/helix-editor/helix).
+A modal IDE in Rust
 
 **Design goal: a maximally powerful CLI IDE with zero user configuration.**
 Install the binary, open a project, and get the full power of a graphical IDE
@@ -29,9 +29,7 @@ scripting languages — all in one static binary, working on first launch with n
 same thing here. See [`docs/vision.md`](docs/vision.md) for the full design goal
 and an honest, source-derived account of how far it's met.
 
-zemacs runs on the Zemacs engine — tree-sitter syntax, LSP, multiple
-selections — but targets **vim/emacs semantics**, not Zemacs's selection-first
-model. There are four keymap presets — **spacemacs** (default), **vim**,
+zemacs targets **vim/emacs semantics**.  There are four keymap presets — **spacemacs** (default), **vim**,
 **helix**, and **emacs** — selectable with `keymap = "..."` in `config.toml` or
 `:keymap <name>` at runtime. The default spacemacs keymap is vim keys (the keys
 you press are the keys vim binds, including operator-pending edits `dd`, `dw`,

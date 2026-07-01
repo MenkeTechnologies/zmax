@@ -1673,9 +1673,17 @@ impl EditorView {
                 }
                 KeymapResult::Cancelled(pending) => {
                     for ev in pending {
+                        // A modifier chord (e.g. `C-x`, `A-x`) is NOT self-inserting
+                        // text — its `char()` is the base letter, so inserting it
+                        // would turn a cancelled `C-x` prefix into a literal `x`.
+                        // Only plain / shifted keys self-insert; chords are re-run
+                        // as commands (and a still-pending prefix simply drops).
+                        let is_chord = ev.modifiers.intersects(
+                            KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SUPER,
+                        );
                         match ev.char() {
-                            Some(ch) => commands::insert::insert_char(cx, ch),
-                            None => {
+                            Some(ch) if !is_chord => commands::insert::insert_char(cx, ch),
+                            _ => {
                                 if let KeymapResult::Matched(command) =
                                     self.keymaps.get(Mode::Insert, ev)
                                 {
