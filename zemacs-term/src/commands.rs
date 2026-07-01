@@ -1173,6 +1173,12 @@ impl MappableCommand {
         repl, "Open the embedded-language REPL (elisp/viml/stryke/awk/zsh)",
         goto_word, "Jump to a two-character label",
         extend_to_word, "Extend to a two-character label",
+        goto_char, "Label every visible occurrence of a char and jump (vim-easymotion s)",
+        extend_to_char, "Label every visible occurrence of a char and extend to it",
+        find_char_forward_label, "easymotion f: label forward occurrences of a char and jump",
+        find_char_backward_label, "easymotion F: label backward occurrences of a char and jump",
+        till_char_forward_label, "easymotion t: label forward, jump till before a char",
+        till_char_backward_label, "easymotion T: label backward, jump till after a char",
         goto_next_tabstop, "Goto next snippet placeholder",
         goto_prev_tabstop, "Goto next snippet placeholder",
         emmet_expand, "Expand emmet/zen HTML abbreviation (or Tab)",
@@ -20667,6 +20673,88 @@ fn goto_word(cx: &mut Context) {
 
 fn extend_to_word(cx: &mut Context) {
     jump_to_word(cx, Movement::Extend)
+}
+
+// Bidirectional (vim-easymotion `s`): label every visible occurrence, land on it.
+fn goto_char(cx: &mut Context) {
+    jump_to_char_label(cx, Movement::Move, None, true)
+}
+fn extend_to_char(cx: &mut Context) {
+    jump_to_char_label(cx, Movement::Extend, None, true)
+}
+// Directional variants with easymotion labels, replacing native f/F/t/T:
+fn find_char_forward_label(cx: &mut Context) {
+    jump_to_char_label(cx, Movement::Move, Some(Direction::Forward), true)
+}
+fn find_char_backward_label(cx: &mut Context) {
+    jump_to_char_label(cx, Movement::Move, Some(Direction::Backward), true)
+}
+fn till_char_forward_label(cx: &mut Context) {
+    jump_to_char_label(cx, Movement::Move, Some(Direction::Forward), false)
+}
+fn till_char_backward_label(cx: &mut Context) {
+    jump_to_char_label(cx, Movement::Move, Some(Direction::Backward), false)
+}
+
+/// vim-easymotion `f`/`F`/`t`/`T`/`s`: prompt for a character, label EVERY visible
+/// occurrence in `dir` (None = both directions, smartcase — a lowercase target
+/// matches both cases), then jump to the two-char label the user types. `t`/`T`
+/// (exclusive) land one grapheme short of the match. Reuses the jump-label engine.
+fn jump_to_char_label(
+    cx: &mut Context,
+    behaviour: Movement,
+    dir: Option<Direction>,
+    inclusive: bool,
+) {
+    cx.on_next_key(move |cx, event| {
+        let Some(ch) = event.char() else { return };
+        let alphabet = &cx.editor.config().jump_label_alphabet;
+        if alphabet.is_empty() {
+            return;
+        }
+        let limit = alphabet.len() * alphabet.len();
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        // Visible char range (same estimate jump_to_word uses).
+        let start = text.line_to_char(text.char_to_line(doc.view_offset(view.id).anchor));
+        let end = text.line_to_char(view.estimate_last_doc_line(doc) + 1);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let ci = ch.is_lowercase();
+        let mut targets = Vec::new();
+        for (offset, c) in text.chars_at(start).enumerate() {
+            let pos = start + offset;
+            if pos >= end {
+                break;
+            }
+            // Directional filter.
+            match dir {
+                Some(Direction::Forward) if pos <= cursor => continue,
+                Some(Direction::Backward) if pos >= cursor => continue,
+                _ if pos == cursor => continue,
+                _ => {}
+            }
+            let hit = if ci {
+                c.eq_ignore_ascii_case(&ch)
+            } else {
+                c == ch
+            };
+            if !hit {
+                continue;
+            }
+            // Exclusive (t/T) lands one grapheme short of the match.
+            let landing = match (inclusive, dir) {
+                (true, _) => pos,
+                (false, Some(Direction::Forward)) => graphemes::prev_grapheme_boundary(text, pos),
+                (false, Some(Direction::Backward)) => next_grapheme_boundary(text, pos),
+                (false, None) => pos,
+            };
+            targets.push(Range::point(landing));
+            if targets.len() == limit {
+                break;
+            }
+        }
+        jump_to_label(cx, targets, behaviour);
+    });
 }
 
 fn jump_to_label(cx: &mut Context, labels: Vec<Range>, behaviour: Movement) {

@@ -314,10 +314,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         ")" => move_sentence_forward,    // ) forward to next sentence
 
         // --- find char ------------------------------------------------------
-        "f" => find_next_char,
-        "F" => find_prev_char,
-        "t" => find_till_char,
-        "T" => till_prev_char,
+        // easymotion: f/t/F/T label every visible target and jump by label.
+        "f" => find_char_forward_label,
+        "F" => find_char_backward_label,
+        "t" => till_char_forward_label,
+        "T" => till_char_backward_label,
         ";" => repeat_last_motion,
 
         // --- search ---------------------------------------------------------
@@ -1374,6 +1375,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "u" => goto_file,                  // SPC j u : jump to URL/file under cursor
                 "w" => goto_word,                  // SPC j w : avy jump to word
                 "l" => goto_word,                  // SPC j l : avy jump to line
+                "e" => goto_char,                  // SPC j e : easymotion — label & jump to a char
+                "a" => goto_char,                  // SPC j a : avy-goto-char (alias)
                 "f" => goto_definition,            // SPC j f : jump to elisp function def
                 "v" => goto_definition,            // SPC j v : jump to elisp variable def
                 "I" => workspace_symbol_picker,    // SPC j I : jump to def in any buffer (imenu)
