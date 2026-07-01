@@ -5581,6 +5581,7 @@ fn rectangle_bounds(a: (usize, usize), b: (usize, usize)) -> (usize, usize, usiz
 /// per spanned row, each covering the same visual column range — IntelliJ-style
 /// column / block selection. Rows too short to reach the left column are skipped
 /// (matching IntelliJ, where the block only lands where a line is wide enough).
+#[allow(deprecated)] // visual_coords_at_pos/pos_at_visual_coords: fine for column-select (no softwrap)
 fn column_selection(cx: &mut Context) {
     use zemacs_core::{pos_at_visual_coords, visual_coords_at_pos};
 
@@ -5632,6 +5633,7 @@ fn column_selection(cx: &mut Context) {
 
 /// Rebuild the rectangular block selection from the stored anchor corner to the
 /// current primary cursor. No-op unless visual-block mode is active.
+#[allow(deprecated)] // visual_coords_at_pos/pos_at_visual_coords: fine for block-select (no softwrap)
 fn block_reproject(cx: &mut Context) {
     use zemacs_core::{
         line_ending::line_end_char_index, pos_at_visual_coords, visual_coords_at_pos,
@@ -5694,6 +5696,7 @@ fn block_reproject(cx: &mut Context) {
 /// Enter (or, when already active, leave) vim visual-block mode (CTRL-V). The
 /// anchor corner is the current selection's anchor; the active corner tracks the
 /// cursor, so growing the selection projects a rectangle.
+#[allow(deprecated)] // visual_coords_at_pos: fine for block-mode entry (no softwrap)
 fn visual_block_mode(cx: &mut Context) {
     use zemacs_core::visual_coords_at_pos;
 
@@ -5760,6 +5763,7 @@ fn block_o_columns(
 /// Apply a corner transform (`block_o_corners` / `block_o_columns`): recompute
 /// the anchor + move the cursor, then re-project. Falls back to `flip` when not
 /// in block mode.
+#[allow(deprecated, clippy::type_complexity)]
 fn block_swap_with(
     cx: &mut Context,
     keep_eol: bool,
@@ -6872,6 +6876,7 @@ fn sentence_pair(ch: &[char], cursor: usize) -> Option<((usize, usize), (usize, 
     Some((trim(ps, pe), trim(cs, ce)))
 }
 
+#[allow(clippy::type_complexity)]
 fn transpose_units(
     cx: &mut Context,
     finder: fn(&[char], usize) -> Option<((usize, usize), (usize, usize))>,
@@ -7058,9 +7063,8 @@ fn ediff_windows(cx: &mut Context) {
 }
 
 fn align_region_lit(cx: &mut Context, delim: &str, right: bool) {
-    match regex::Regex::new(&regex::escape(delim)) {
-        Ok(re) => align_region(cx.editor, re, right),
-        Err(_) => {}
+    if let Ok(re) = regex::Regex::new(&regex::escape(delim)) {
+        align_region(cx.editor, re, right);
     }
 }
 
@@ -7169,7 +7173,7 @@ fn goto_window_n(cx: &mut Context, n: usize) {
 }
 
 /// SPC g f m : a magit-style "file dispatch" transient — press a key to run a git operation on the
-/// current file: [s]tage, [u]nstage, [d]iff vs HEAD, [l]og, [b]lame, [g] status. Spacemacs
+/// current file: `s`tage, `u`nstage, `d`iff vs HEAD, `l`og, `b`lame, `g` status. Spacemacs
 /// `magit-file-dispatch`.
 fn git_file_dispatch(cx: &mut Context) {
     cx.editor.set_status(
@@ -8430,7 +8434,7 @@ fn man_page_search(cx: &mut Context) {
     fn parse(line: &str) -> Option<ManPage> {
         let open = line.find('(')?;
         let close = line[open..].find(')')? + open;
-        let name = line[..open].trim().split_whitespace().next()?.to_string();
+        let name = line[..open].split_whitespace().next()?.to_string();
         let section = line[open + 1..close].to_string();
         if name.is_empty() {
             return None;
@@ -8859,9 +8863,10 @@ fn describe_language_package(cx: &mut Context) {
     cx.editor.set_status("describe language package");
 }
 
-/// SPC h . : "search dotfile variables" — a picker over every editor config variable (dotted path
-/// + current value). Selecting one copies its path to the clipboard for pasting into config.toml.
-/// zemacs' config is the analogue of the Spacemacs dotfile. Spacemacs `helm-spacemacs-help-dotspacemacs`.
+/// SPC h . : "search dotfile variables" — a picker over every editor config variable (dotted
+/// path and current value). Selecting one copies its path to the clipboard for pasting into
+/// config.toml. zemacs' config is the analogue of the Spacemacs dotfile. Spacemacs
+/// `helm-spacemacs-help-dotspacemacs`.
 fn config_variable_search(cx: &mut Context) {
     struct ConfigVar {
         path: String,
@@ -9945,7 +9950,7 @@ fn ai_inline_edit(cx: &mut Context) {
 
 /// SPC a TAB : on-demand AI code completion at the cursor — Cursor's tab autocomplete, manually
 /// triggered rather than rendered as real-time ghost text. Sends the code surrounding the cursor
-/// (with a <CURSOR> marker for fill-in-the-middle) and inserts the model's continuation in place.
+/// (with a `<CURSOR>` marker for fill-in-the-middle) and inserts the model's continuation in place.
 fn ai_complete(cx: &mut Context) {
     let (pos, before, after, lang) = {
         let (view, doc) = current!(cx.editor);
@@ -10422,7 +10427,7 @@ fn view_file_at_rev(cx: &mut Context) {
                 Ok(o) if o.status.success() => {
                     let content = String::from_utf8_lossy(&o.stdout).into_owned();
                     show_text_in_scratch(cx.editor, &content);
-                    cx.editor.set_status(format!("{spec}"));
+                    cx.editor.set_status(spec.to_string());
                 }
                 Ok(o) => cx
                     .editor
@@ -10832,7 +10837,7 @@ fn regex_convert_form(cx: &mut Context) {
             .set_status("select a regex to convert (PCRE ⇔ Emacs)");
         return;
     }
-    let converted = swap_regex_grouping(&range.fragment(text).to_string());
+    let converted = swap_regex_grouping(range.fragment(text).as_ref());
     let transaction = Transaction::change(
         doc.text(),
         std::iter::once((range.from(), range.to(), Some(converted.into()))),
@@ -19058,7 +19063,7 @@ fn fold_comments(cx: &mut Context) {
     let tokens: Vec<String> = doc
         .language_config_at(&loader, 0)
         .and_then(|c| c.comment_tokens.as_deref())
-        .map(|t| t.iter().cloned().collect())
+        .map(<[String]>::to_vec)
         .unwrap_or_default();
     if tokens.is_empty() {
         cx.editor.set_status("no comment syntax for this buffer");
