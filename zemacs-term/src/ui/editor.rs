@@ -249,6 +249,13 @@ impl EditorView {
         }
     }
 
+    /// Stop the active run (Run-console context menu / toolbar Stop).
+    pub fn stop_active_run(&mut self) {
+        if let Some(ide) = self.ide.as_mut() {
+            ide.stop_run();
+        }
+    }
+
     /// Clear the Run console output (no-op with a status hint when nothing ran).
     pub fn clear_run_output(&mut self, cx: &mut crate::compositor::Context) {
         let cleared = self.ide.as_mut().is_some_and(Ide::clear_run);
@@ -653,6 +660,12 @@ impl EditorView {
                     compositor.push(Box::new(super::ide::file_context_menu(
                         path, is_dir, row, col,
                     )));
+                },
+            )),
+            IdeAction::ShowMenu(menu) => Some(Box::new(
+                move |compositor: &mut crate::compositor::Compositor,
+                      _cx: &mut crate::compositor::Context| {
+                    compositor.push(Box::new(menu));
                 },
             )),
         }
@@ -2362,6 +2375,67 @@ impl Component for EditorView {
                     }
                 }
                 return EventResult::Consumed(None);
+            }
+            // Right-click a bufferline tab → context menu (close / split / reveal).
+            if me.row == self.bufferline_y
+                && matches!(me.kind, MouseEventKind::Down(MouseButton::Right))
+            {
+                if let Some(&(_, _, _, doc_id)) = self
+                    .bufferline_tabs
+                    .iter()
+                    .find(|(a, b, _, _)| me.column >= *a && me.column < *b)
+                {
+                    use crate::ui::context_menu::{ContextMenu, Entry};
+                    use zemacs_view::editor::Action;
+                    let path = context
+                        .editor
+                        .document(doc_id)
+                        .and_then(|d| d.path().map(|p| p.to_path_buf()));
+                    let all: Vec<zemacs_view::DocumentId> =
+                        context.editor.documents().map(|d| d.id()).collect();
+                    let (col, row) = (me.column, me.row);
+                    let cb: crate::compositor::Callback = Box::new(move |compositor, _cx| {
+                        let mut e = Vec::new();
+                        e.push(Entry::item_key("Close", "⌘W", move |_c, cx| {
+                            if cx.editor.close_document(doc_id, false).is_err() {
+                                cx.editor.set_error("unsaved changes (use :bc!)".to_string());
+                            }
+                        }));
+                        let others: Vec<_> = all.iter().copied().filter(|d| *d != doc_id).collect();
+                        e.push(Entry::item("Close Others", move |_c, cx| {
+                            for d in &others {
+                                let _ = cx.editor.close_document(*d, false);
+                            }
+                        }));
+                        let every = all.clone();
+                        e.push(Entry::item("Close All", move |_c, cx| {
+                            for d in &every {
+                                let _ = cx.editor.close_document(*d, false);
+                            }
+                        }));
+                        if let Some(path) = path.clone() {
+                            e.push(Entry::sep());
+                            let p = path.clone();
+                            e.push(Entry::item_key("Split Right", "⇧↵", move |_c, cx| {
+                                let _ = cx.editor.open(&p, Action::VerticalSplit);
+                            }));
+                            let p = path.clone();
+                            e.push(Entry::item("Reveal in Tree", move |compositor, _cx| {
+                                if let Some(view) = compositor.find::<EditorView>() {
+                                    view.reveal_in_tree(&p);
+                                }
+                            }));
+                            let p = path.clone();
+                            e.push(Entry::item("Copy Path", move |_c, cx| {
+                                let s = p.to_string_lossy().to_string();
+                                let _ = cx.editor.registers.push('"', s.clone());
+                                cx.editor.set_status(format!("yanked {s}"));
+                            }));
+                        }
+                        compositor.push(Box::new(ContextMenu::new(row, col, e)));
+                    });
+                    return EventResult::Consumed(Some(cb));
+                }
             }
             // Left-click a bufferline tab switches to it; middle-click closes it
             // (the modern-IDE convention). The bufferline is its own row, so this
