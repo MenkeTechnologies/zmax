@@ -1169,6 +1169,7 @@ impl MappableCommand {
         record_macro, "Record macro",
         replay_macro, "Replay macro",
         command_palette, "Open command palette",
+        search_everywhere, "Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains)",
         repl, "Open the embedded-language REPL (elisp/viml/stryke/awk/zsh)",
         goto_word, "Jump to a two-character label",
         extend_to_word, "Extend to a two-character label",
@@ -13106,6 +13107,53 @@ fn changed_file_picker(cx: &mut Context) {
             }
         });
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Search Everywhere": one entry point that chooses among the
+/// pickers — Files, Symbols, Text (find in path), Actions, Open Buffers. Opens a
+/// small chooser; each choice launches the matching picker (reusing the existing
+/// commands, whose deferred `push_layer` callbacks are dispatched here).
+fn search_everywhere(cx: &mut Context) {
+    use crate::ui::context_menu::{ContextMenu, Entry};
+
+    // Run a picker command from a menu-entry callback: build a Context, execute
+    // the command, then dispatch the layer-push callbacks it queued.
+    fn run(
+        compositor: &mut Compositor,
+        cx: &mut compositor::Context,
+        cmd: fn(&mut Context),
+    ) {
+        let cbs = {
+            let mut c = Context {
+                editor: cx.editor,
+                register: None,
+                count: None,
+                callback: Vec::new(),
+                on_next_key_callback: None,
+                jobs: cx.jobs,
+            };
+            cmd(&mut c);
+            std::mem::take(&mut c.callback)
+        };
+        for cb in cbs {
+            cb(compositor, cx);
+        }
+    }
+
+    let entries = vec![
+        Entry::item("Files", |co, cx| run(co, cx, file_picker)),
+        Entry::item("Symbols", |co, cx| run(co, cx, workspace_symbol_picker)),
+        Entry::item("Text in Path", |co, cx| run(co, cx, global_search)),
+        Entry::item("Actions", |co, cx| run(co, cx, command_palette)),
+        Entry::item("Open Buffers", |co, cx| run(co, cx, buffer_picker)),
+    ];
+    cx.callback.push(Box::new(
+        move |compositor: &mut Compositor, _cx: &mut compositor::Context| {
+            let size = compositor.size();
+            let col = size.width.saturating_sub(24) / 2;
+            compositor.push(Box::new(ContextMenu::new(2, col, entries)));
+        },
+    ));
 }
 
 pub fn command_palette(cx: &mut Context) {
