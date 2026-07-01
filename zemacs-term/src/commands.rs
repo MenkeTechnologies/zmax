@@ -1170,6 +1170,7 @@ impl MappableCommand {
         replay_macro, "Replay macro",
         command_palette, "Open command palette",
         search_everywhere, "Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains)",
+        recent_files_switcher, "Recent Files switcher: tool windows + recent files (JetBrains Cmd-E)",
         repl, "Open the embedded-language REPL (elisp/viml/stryke/awk/zsh)",
         goto_word, "Jump to a two-character label",
         extend_to_word, "Extend to a two-character label",
@@ -13158,6 +13159,25 @@ fn search_everywhere(cx: &mut Context) {
             let size = compositor.size();
             let col = size.width.saturating_sub(24) / 2;
             compositor.push(Box::new(ContextMenu::new(2, col, entries)));
+        },
+    ));
+}
+
+/// JetBrains "Recent Files" switcher (⌘E): a two-pane popup with tool-window
+/// shortcuts on the left and the recent-files list on the right.
+fn recent_files_switcher(cx: &mut Context) {
+    let all = crate::recent_files::load();
+    let open: Vec<std::path::PathBuf> = cx
+        .editor
+        .documents()
+        .filter_map(|d| d.path().map(|p| p.to_path_buf()))
+        .collect();
+    let root = zemacs_loader::find_workspace().0;
+    cx.callback.push(Box::new(
+        move |compositor: &mut Compositor, _cx: &mut compositor::Context| {
+            compositor.push(Box::new(crate::ui::switcher::RecentFilesSwitcher::new(
+                all, open, root,
+            )));
         },
     ));
 }

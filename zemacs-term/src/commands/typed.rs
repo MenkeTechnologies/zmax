@@ -11223,6 +11223,47 @@ fn fzf_jumps(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     Ok(())
 }
 
+/// `:RecentLocations` — JetBrains Recent Locations (⌘⇧E): the jump ring shown
+/// most-recent-first, deduped by file:line, with each line's text as context;
+/// pick one to jump back there.
+fn fzf_recent_locations(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let entries: Vec<(zemacs_view::DocumentId, usize)> = {
+        let (view, _) = current_ref!(cx.editor);
+        view.jumps
+            .iter()
+            .map(|(id, sel)| (*id, sel.primary().head))
+            .collect()
+    };
+    let mut seen = std::collections::HashSet::new();
+    let mut cands = Vec::new();
+    // Reverse: the jump ring is oldest-first, Recent Locations is newest-first.
+    for (id, pos) in entries.into_iter().rev() {
+        let Some(doc) = cx.editor.document(id) else {
+            continue;
+        };
+        let Some(path) = doc.path().map(|p| p.to_string_lossy().into_owned()) else {
+            continue;
+        };
+        let text = doc.text();
+        let p = pos.min(text.len_chars());
+        let line = text.char_to_line(p) + 1;
+        if !seen.insert((path.clone(), line)) {
+            continue;
+        }
+        let ltext = text.line(line - 1).to_string();
+        cands.push(format!("{path}:{line}:1: {}", ltext.trim_end()));
+    }
+    queue_fzf(cx, "RecentLocations", "fzf-goto {}", cands, vec!["--no-sort".into()], false);
+    Ok(())
+}
+
 /// fzf.vim `:Windows` — fuzzy-pick an open window and focus it.
 fn fzf_windows(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -18817,6 +18858,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Fuzzy-pick a jumplist entry with fzf and open it (fzf.vim :Jumps).",
         fun: fzf_jumps,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "RecentLocations",
+        aliases: &["recent-locations"],
+        doc: "Recent Locations (JetBrains): jump ring newest-first, deduped, with context.",
+        fun: fzf_recent_locations,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },

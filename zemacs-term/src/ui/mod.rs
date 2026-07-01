@@ -1,6 +1,7 @@
 mod completion;
 pub mod context_menu;
 pub mod dashboard;
+pub mod switcher;
 mod document;
 pub(crate) mod editor;
 mod file_tree;

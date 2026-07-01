@@ -62,6 +62,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space r n", "Bookmarks", "bookmark_next"),     // SPC r n : next bookmark
     ("space r N", "Bookmarks", "bookmark_prev"),     // SPC r N : previous bookmark
     ("space r j", "Bookmarks", "bookmark_jump"),     // SPC r j : jump to a bookmark (picker)
+    ("space b r", "Buffers", "recent_files_switcher"), // SPC b r : Recent Files switcher (JetBrains Cmd-E)
+    ("space j R", "Jump", ":RecentLocations"),       // SPC j R : Recent Locations (JetBrains Shift-Cmd-E)
     ("space f s", "Files",   ":write"),            // SPC f s : save
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all
     ("space a c", "Applications", ":calc"),        // SPC a c : calc-dispatch
