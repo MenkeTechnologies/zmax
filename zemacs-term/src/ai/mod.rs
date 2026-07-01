@@ -221,11 +221,11 @@ fn provider_and_model() -> (String, Option<String>) {
         .ok()
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "anthropic".to_string());
-    let model = MODEL_OVERRIDE
-        .lock()
-        .unwrap()
-        .clone()
-        .or_else(|| std::env::var("ZEMACS_AI_MODEL").ok().filter(|s| !s.is_empty()));
+    let model = MODEL_OVERRIDE.lock().unwrap().clone().or_else(|| {
+        std::env::var("ZEMACS_AI_MODEL")
+            .ok()
+            .filter(|s| !s.is_empty())
+    });
     (provider, model)
 }
 
@@ -234,7 +234,9 @@ fn provider_and_model() -> (String, Option<String>) {
 pub fn provider() -> Result<Box<dyn Provider>, String> {
     let (provider, model) = provider_and_model();
     match provider.as_str() {
-        "anthropic" => anthropic::Anthropic::from_env(model).map(|p| Box::new(p) as Box<dyn Provider>),
+        "anthropic" => {
+            anthropic::Anthropic::from_env(model).map(|p| Box::new(p) as Box<dyn Provider>)
+        }
         "openai" => openai::OpenAi::from_env(model).map(|p| Box::new(p) as Box<dyn Provider>),
         other => Err(format!(
             "unknown ZEMACS_AI_PROVIDER '{other}' (use 'anthropic' or 'openai')"
@@ -284,7 +286,10 @@ pub fn project_rules() -> Option<String> {
 /// feature so chat / edit / agent all respect the project's rules.
 pub fn system_with_rules(base: &str) -> String {
     match project_rules() {
-        Some(rules) => format!("{base}\n\nProject rules (.cursorrules) — follow these:\n{}", rules.trim()),
+        Some(rules) => format!(
+            "{base}\n\nProject rules (.cursorrules) — follow these:\n{}",
+            rules.trim()
+        ),
         None => base.to_string(),
     }
 }

@@ -1094,16 +1094,22 @@ mod test {
 
         // Rebuild into a fresh tree; new ViewIds, same structure.
         let mut rebuilt = Tree::new(area);
-        let new_ids = rebuilt.build_from_shape(&shape, &mut |doc| {
-            View::new(doc, GutterConfig::default())
-        });
+        let new_ids =
+            rebuilt.build_from_shape(&shape, &mut |doc| View::new(doc, GutterConfig::default()));
 
         assert_eq!(new_ids.len(), 3, "three leaves rebuilt");
-        let after_docs: Vec<DocumentId> =
-            rebuilt.leaf_ids().iter().map(|&id| rebuilt.get(id).doc).collect();
+        let after_docs: Vec<DocumentId> = rebuilt
+            .leaf_ids()
+            .iter()
+            .map(|&id| rebuilt.get(id).doc)
+            .collect();
         assert_eq!(
             after_docs,
-            vec![DocumentId::new(10), DocumentId::new(20), DocumentId::new(30)],
+            vec![
+                DocumentId::new(10),
+                DocumentId::new(20),
+                DocumentId::new(30)
+            ],
             "rebuilt windows keep document order"
         );
         // Focus lands on the leaf that was marked focused (the middle one).

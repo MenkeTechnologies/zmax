@@ -303,7 +303,10 @@ mod tests {
     #[test]
     fn tildify_collapses_home() {
         let home = Path::new("/Users/me");
-        assert_eq!(tildify(Path::new("/Users/me/.zshrc"), Some(home)), "~/.zshrc");
+        assert_eq!(
+            tildify(Path::new("/Users/me/.zshrc"), Some(home)),
+            "~/.zshrc"
+        );
         assert_eq!(tildify(Path::new("/Users/me"), Some(home)), "~");
         assert_eq!(tildify(Path::new("/etc/hosts"), Some(home)), "/etc/hosts");
         assert_eq!(tildify(Path::new("/etc/hosts"), None), "/etc/hosts");

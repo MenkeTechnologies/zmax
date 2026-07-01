@@ -790,46 +790,50 @@ fn code_action_filtered(
 
     let selection_range = doc.selection(view.id).primary();
 
-    let mut futures: FuturesUnordered<_> =
-        code_actions_for_range(doc, selection_range, only.clone(), CodeActionTriggerKind::INVOKED)
-            .into_iter()
-            .map(|(request, ls_id)| {
-                let only = only.clone();
-                async move {
-                    let Some(mut actions) = request.await? else {
-                        return anyhow::Ok(Vec::new());
-                    };
+    let mut futures: FuturesUnordered<_> = code_actions_for_range(
+        doc,
+        selection_range,
+        only.clone(),
+        CodeActionTriggerKind::INVOKED,
+    )
+    .into_iter()
+    .map(|(request, ls_id)| {
+        let only = only.clone();
+        async move {
+            let Some(mut actions) = request.await? else {
+                return anyhow::Ok(Vec::new());
+            };
 
-                    actions.retain(|action| {
-                        // remove disabled code actions
-                        let enabled = matches!(
-                            action,
-                            CodeActionOrCommand::Command(_)
-                                | CodeActionOrCommand::CodeAction(CodeAction { disabled: None, .. })
-                        );
-                        if !enabled {
-                            return false;
-                        }
-                        // when a kind filter is requested, keep only matching
-                        // CodeActions (bare Commands carry no kind, so drop them).
-                        match &only {
-                            None => true,
-                            Some(kinds) => match action {
-                                CodeActionOrCommand::CodeAction(ca) => {
-                                    kinds.iter().any(|k| code_action_kind_matches(ca, k))
-                                }
-                                CodeActionOrCommand::Command(_) => false,
-                            },
-                        }
-                    });
-
-                    Ok(actions
-                        .into_iter()
-                        .map(|lsp_item| CodeActionItem::lsp(ls_id, lsp_item))
-                        .collect())
+            actions.retain(|action| {
+                // remove disabled code actions
+                let enabled = matches!(
+                    action,
+                    CodeActionOrCommand::Command(_)
+                        | CodeActionOrCommand::CodeAction(CodeAction { disabled: None, .. })
+                );
+                if !enabled {
+                    return false;
                 }
-            })
-            .collect();
+                // when a kind filter is requested, keep only matching
+                // CodeActions (bare Commands carry no kind, so drop them).
+                match &only {
+                    None => true,
+                    Some(kinds) => match action {
+                        CodeActionOrCommand::CodeAction(ca) => {
+                            kinds.iter().any(|k| code_action_kind_matches(ca, k))
+                        }
+                        CodeActionOrCommand::Command(_) => false,
+                    },
+                }
+            });
+
+            Ok(actions
+                .into_iter()
+                .map(|lsp_item| CodeActionItem::lsp(ls_id, lsp_item))
+                .collect())
+        }
+    })
+    .collect();
 
     if futures.is_empty() {
         cx.editor

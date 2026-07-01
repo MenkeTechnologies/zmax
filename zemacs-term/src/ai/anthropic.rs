@@ -1,8 +1,6 @@
 //! Anthropic Claude backend (Messages API).
 
-use super::{
-    read_response, AssistantReply, Content, Message, Provider, Role, Tool, ToolUse, Turn,
-};
+use super::{read_response, AssistantReply, Content, Message, Provider, Role, Tool, ToolUse, Turn};
 
 const DEFAULT_MODEL: &str = "claude-3-5-sonnet-latest";
 const API_URL: &str = "https://api.anthropic.com/v1/messages";
@@ -27,7 +25,11 @@ impl Anthropic {
     }
 
     /// Build the JSON request body (separated out for testing without a network call).
-    pub(crate) fn body(model: &str, system: Option<&str>, messages: &[Message]) -> serde_json::Value {
+    pub(crate) fn body(
+        model: &str,
+        system: Option<&str>,
+        messages: &[Message],
+    ) -> serde_json::Value {
         let msgs: Vec<serde_json::Value> = messages
             .iter()
             // Anthropic's `messages` only takes user/assistant; the system prompt is top-level.
@@ -266,7 +268,8 @@ mod tests {
 
     #[test]
     fn sse_delta_extracts_text_delta_only() {
-        let d = r#"{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hi"}}"#;
+        let d =
+            r#"{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hi"}}"#;
         assert_eq!(Anthropic::sse_delta(d).as_deref(), Some("hi"));
         // non-text events yield nothing
         assert_eq!(Anthropic::sse_delta(r#"{"type":"message_start"}"#), None);

@@ -150,9 +150,9 @@ fn exec_tool(
     match name {
         "read_file" => {
             let p = input["path"].as_str().unwrap_or("");
-            match safe_path(root, p).and_then(|pb| {
-                std::fs::read_to_string(&pb).map_err(|e| format!("read '{p}': {e}"))
-            }) {
+            match safe_path(root, p)
+                .and_then(|pb| std::fs::read_to_string(&pb).map_err(|e| format!("read '{p}': {e}")))
+            {
                 Ok(c) => (truncate(c), false),
                 Err(e) => (e, true),
             }
@@ -188,7 +188,11 @@ fn exec_tool(
                 Ok(pb) => {
                     if dry_run() {
                         return (
-                            format!("[review] would write {} ({} bytes) — not applied", p, content.len()),
+                            format!(
+                                "[review] would write {} ({} bytes) — not applied",
+                                p,
+                                content.len()
+                            ),
                             false,
                         );
                     }
@@ -209,7 +213,8 @@ fn exec_tool(
         "run_command" => {
             if std::env::var("ZEMACS_AI_AGENT_ALLOW_EXEC").ok().as_deref() != Some("1") {
                 return (
-                    "command execution is disabled (set ZEMACS_AI_AGENT_ALLOW_EXEC=1 to enable)".into(),
+                    "command execution is disabled (set ZEMACS_AI_AGENT_ALLOW_EXEC=1 to enable)"
+                        .into(),
                     true,
                 );
             }
@@ -372,7 +377,12 @@ mod tests {
         );
         assert!(!err, "{msg}");
         assert_eq!(changed.len(), 1);
-        let (out, err) = exec_tool(&dir, "read_file", &serde_json::json!({"path":"a.txt"}), &mut changed);
+        let (out, err) = exec_tool(
+            &dir,
+            "read_file",
+            &serde_json::json!({"path":"a.txt"}),
+            &mut changed,
+        );
         assert!(!err);
         assert_eq!(out, "hello");
         std::fs::remove_dir_all(&dir).ok();
@@ -395,7 +405,10 @@ mod tests {
         assert!(!err, "{msg}");
         assert!(msg.contains("review"), "{msg}");
         assert!(changed.is_empty(), "dry-run must not record changes");
-        assert!(!dir.join("dry.txt").exists(), "dry-run must not write the file");
+        assert!(
+            !dir.join("dry.txt").exists(),
+            "dry-run must not write the file"
+        );
         assert!(!toggle_dry_run()); // reset to off so other tests are unaffected
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -404,7 +417,12 @@ mod tests {
     fn run_command_gated_off_by_default() {
         std::env::remove_var("ZEMACS_AI_AGENT_ALLOW_EXEC");
         let root = std::env::temp_dir();
-        let (msg, err) = exec_tool(&root, "run_command", &serde_json::json!({"command":"echo hi"}), &mut BTreeSet::new());
+        let (msg, err) = exec_tool(
+            &root,
+            "run_command",
+            &serde_json::json!({"command":"echo hi"}),
+            &mut BTreeSet::new(),
+        );
         assert!(err);
         assert!(msg.contains("disabled"));
     }

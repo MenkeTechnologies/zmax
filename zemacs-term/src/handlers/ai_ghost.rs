@@ -12,7 +12,9 @@
 use std::time::Duration;
 
 use tokio::time::Instant;
-use zemacs_event::{cancelable_future, register_hook, send_blocking, AsyncHook, TaskController, TaskHandle};
+use zemacs_event::{
+    cancelable_future, register_hook, send_blocking, AsyncHook, TaskController, TaskHandle,
+};
 use zemacs_view::document::Mode;
 use zemacs_view::handlers::ai_ghost::GhostEvent;
 use zemacs_view::{DocumentId, Editor, ViewId};
@@ -56,12 +58,20 @@ impl GhostHandler {
 impl AsyncHook for GhostHandler {
     type Event = GhostEvent;
 
-    fn handle_event(&mut self, event: Self::Event, _old_timeout: Option<Instant>) -> Option<Instant> {
+    fn handle_event(
+        &mut self,
+        event: Self::Event,
+        _old_timeout: Option<Instant>,
+    ) -> Option<Instant> {
         match event {
             GhostEvent::Trigger { cursor, doc, view } => {
                 // Each keystroke cancels the previous in-flight request and restarts the timer.
                 self.task_controller.cancel();
-                self.trigger = Some(GhostTrigger { pos: cursor, doc, view });
+                self.trigger = Some(GhostTrigger {
+                    pos: cursor,
+                    doc,
+                    view,
+                });
                 Some(Instant::now() + Duration::from_millis(GHOST_DEBOUNCE_MS))
             }
             GhostEvent::Cancel => {
@@ -134,7 +144,10 @@ fn request_ghost(trigger: GhostTrigger, handle: TaskHandle, editor: &mut Editor)
                 if doc.id() != doc_id || view.id != view_id {
                     return;
                 }
-                let cur = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+                let cur = doc
+                    .selection(view.id)
+                    .primary()
+                    .cursor(doc.text().slice(..));
                 if cur != pos {
                     return; // user typed/moved since the request went out
                 }
@@ -159,7 +172,10 @@ fn clean_suggestion(raw: &str) -> String {
 /// Post a trigger for the current cursor (called after a char is typed).
 fn trigger_ghost(editor: &Editor) {
     let (view, doc) = current_ref!(editor);
-    let cursor = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let cursor = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
     send_blocking(
         &editor.handlers.ai_ghost,
         GhostEvent::Trigger {

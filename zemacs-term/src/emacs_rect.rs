@@ -123,10 +123,7 @@ mod tests {
 
     #[test]
     fn delete_removes_the_block() {
-        assert_eq!(
-            delete(&grid(), 0, 2, 1, 4),
-            vec!["aef", "gkl", "mqr"]
-        );
+        assert_eq!(delete(&grid(), 0, 2, 1, 4), vec!["aef", "gkl", "mqr"]);
     }
 
     #[test]
