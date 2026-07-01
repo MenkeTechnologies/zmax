@@ -12262,10 +12262,7 @@ pub(crate) fn qf_entry_from_line(line: &str) -> Option<QfEntry> {
         // message; fall back to the whole trimmed line.
         let text = line
             .split_once(raw)
-            .map(|(_, rest)| {
-                rest.trim_start_matches(|c| matches!(c, ':' | ' '))
-                    .to_string()
-            })
+            .map(|(_, rest)| rest.trim_start_matches([':', ' ']).to_string())
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| line.trim().to_string());
         return Some(QfEntry {
