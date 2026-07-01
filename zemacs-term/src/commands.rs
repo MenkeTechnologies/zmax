@@ -956,6 +956,9 @@ impl MappableCommand {
         symbol_upper_camel, "Change symbol style to UpperCamelCase (SPC x i C)",
         symbol_up_case, "Change symbol style to UP_CASE (SPC x i U)",
         symbol_under_score, "Change symbol style to under_score (SPC x i _)",
+        symbol_lower_camel, "Change symbol style to camelCase (vim-abolish crc)",
+        symbol_kebab, "Change symbol style to kebab-case (vim-abolish cr-)",
+        symbol_dot, "Change symbol style to dot.case (vim-abolish cr.)",
         randomize_lines_in_region, "Randomize lines in the selection (SPC x l r)",
         randomize_words_in_region, "Randomize words in the selection (SPC x w r)",
         copy_char_below, "Insert the character below the cursor (i_CTRL-E)",
@@ -18646,6 +18649,48 @@ fn symbol_up_case(cx: &mut Context) {
 
 fn symbol_under_score(cx: &mut Context) {
     change_symbol_case(cx, to_under_score);
+}
+
+fn to_lower_camel(s: &str) -> String {
+    split_identifier_words(s)
+        .iter()
+        .enumerate()
+        .map(|(i, w)| {
+            if i == 0 {
+                w.to_lowercase()
+            } else {
+                capitalize(w)
+            }
+        })
+        .collect()
+}
+
+fn to_kebab(s: &str) -> String {
+    split_identifier_words(s)
+        .iter()
+        .map(|w| w.to_lowercase())
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
+fn to_dot(s: &str) -> String {
+    split_identifier_words(s)
+        .iter()
+        .map(|w| w.to_lowercase())
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
+fn symbol_lower_camel(cx: &mut Context) {
+    change_symbol_case(cx, to_lower_camel);
+}
+
+fn symbol_kebab(cx: &mut Context) {
+    change_symbol_case(cx, to_kebab);
+}
+
+fn symbol_dot(cx: &mut Context) {
+    change_symbol_case(cx, to_dot);
 }
 
 /// In-place Fisher–Yates shuffle using `fastrand`.

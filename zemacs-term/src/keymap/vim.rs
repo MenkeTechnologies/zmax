@@ -1524,6 +1524,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "C" => symbol_upper_camel,     // SPC x i C : UpperCamelCase
                     "U" => symbol_up_case,         // SPC x i U : UP_CASE
                     "_" => symbol_under_score,     // SPC x i _ : under_score
+                    "c" => symbol_lower_camel,     // SPC x i c : camelCase (vim-abolish crc)
+                    "-" => symbol_kebab,           // SPC x i - : kebab-case (vim-abolish cr-)
+                    "." => symbol_dot,             // SPC x i . : dot.case (vim-abolish cr.)
                 },
                 "l" => { "Lines"
                     "r" => randomize_lines_in_region, // SPC x l r : randomize lines
