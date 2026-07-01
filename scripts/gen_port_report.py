@@ -115,6 +115,16 @@ def parse_typable_commands():
     for am in re.finditer(r"aliases:\s*&\[([^\]]*)\]", src):
         for a in re.finditer(r'"([a-z0-9!_-]+)"', am.group(1)):
             names.add(a.group(1))
+    # macro-generated list entries: `ex_modifier_entry!("name", &["alias"], ...)`
+    # and `vim_map_command!("name", ...)` — same effect as a literal entry.
+    for mm in re.finditer(
+        r'(?:ex_modifier_entry|vim_map_command)!\(\s*"([a-z0-9!_-]+)"\s*(?:,\s*&\[([^\]]*)\])?',
+        src,
+    ):
+        names.add(mm.group(1))
+        if mm.group(2):
+            for a in re.finditer(r'"([a-z0-9!_-]+)"', mm.group(2)):
+                names.add(a.group(1))
     return names
 
 
