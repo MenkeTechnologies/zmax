@@ -23,11 +23,14 @@ const LEFT_W: u16 = 32;
 const BOTTOM_H: u16 = 8;
 const STRIPE_W: u16 = 14; // right-pane minimap width
 
-/// Display width of a string (treats emoji codepoints as 2 cells) for right-aligning the toolbar.
+/// Terminal display width of a string — the SAME model `Surface::set_stringn`
+/// advances by (unicode-width per grapheme), so toolbar layout, drawing and
+/// click hit-regions stay in lockstep. (Zero-width variation selectors like
+/// U+FE0E count as 0, so forcing text presentation on the toolbar glyphs doesn't
+/// skew the layout.)
 fn disp_width(s: &str) -> u16 {
-    s.chars()
-        .map(|c| if (c as u32) >= 0x1F000 { 2 } else { 1 })
-        .sum()
+    use zemacs_core::unicode::width::UnicodeWidthStr;
+    s.width() as u16
 }
 
 /// Split `line` into display-width-`w` chunks (char-boundary safe) for soft-wrapping run output.
@@ -2871,7 +2874,7 @@ impl Ide {
             .map(|c| if c.name.is_empty() { c.command } else { c.name })
             .or_else(|| self.run.as_ref().map(|r| r.lock().unwrap().cmd.clone()))
             .unwrap_or_else(|| "Edit Configurations…".to_string());
-        let label = format!(" ⚙ {cfg} ▾ ");
+        let label = format!(" ⚙\u{fe0e} {cfg} ▾\u{fe0e} ");
         let (lx, _) = surface.set_stringn(
             area.x,
             area.y,
@@ -2883,13 +2886,17 @@ impl Ide {
 
         // run/debug + settings/help buttons RIGHT-aligned. ⊙ Locate = JetBrains
         // "Select Opened File" (reveals the current buffer in the tree).
+        // U+FE0E (VARIATION SELECTOR-15) forces TEXT presentation so terminals
+        // render these symbols in ONE cell — matching unicode-width / the buffer
+        // model. Without it, terminals that render them as 2-cell emoji drift the
+        // buttons right of their click hit-regions (clicks land on a later button).
         let buttons: [(&str, _, ToolHit); 7] = [
-            (" ⊙ Locate ", theme.get("function"), ToolHit::Locate),
-            (" ▶ Run ", theme.get("diff.plus"), ToolHit::Run),
-            (" ◼ Stop ", theme.get("error"), ToolHit::Stop),
-            (" ⟳ Rerun ", theme.get("function"), ToolHit::Rerun),
+            (" ⊙\u{fe0e} Locate ", theme.get("function"), ToolHit::Locate),
+            (" ▶\u{fe0e} Run ", theme.get("diff.plus"), ToolHit::Run),
+            (" ◼\u{fe0e} Stop ", theme.get("error"), ToolHit::Stop),
+            (" ⟳\u{fe0e} Rerun ", theme.get("function"), ToolHit::Rerun),
             (" 🐞 Debug ", theme.get("keyword"), ToolHit::Debug),
-            (" ⚙ Settings ", theme.get("comment"), ToolHit::Settings),
+            (" ⚙\u{fe0e} Settings ", theme.get("comment"), ToolHit::Settings),
             (" ? Help ", theme.get("comment"), ToolHit::Help),
         ];
         let gap = 1u16;
