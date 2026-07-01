@@ -47,7 +47,7 @@ use macros::key;
 use serde::Deserialize;
 use std::{
     borrow::Cow,
-    collections::{BTreeSet, HashMap},
+    collections::HashMap,
     ops::{Deref, DerefMut},
     sync::Arc,
 };
@@ -89,33 +89,37 @@ impl KeyTrieNode {
     }
 
     pub fn infobox(&self) -> Info {
-        let mut body: Vec<(BTreeSet<KeyEvent>, &str)> = Vec::with_capacity(self.len());
+        // One `key : description` row per binding (Emacs `describe-bindings` /
+        // Spacemacs which-key style) — do NOT collapse keys by shared description,
+        // which used to smear a whole prefix map into one comma-joined line with an
+        // empty description. Description is the command's doc, falling back to its
+        // (dash-ized) name; a submap shows `+name`.
+        let mut body: Vec<(String, String)> = Vec::with_capacity(self.len());
         for (&key, trie) in self.iter() {
             let desc = match trie {
                 KeyTrie::MappableCommand(cmd) => {
                     if cmd.name() == "no_op" {
                         continue;
                     }
-                    cmd.doc()
+                    let doc = cmd.doc();
+                    if doc.is_empty() {
+                        cmd.name().replace('_', "-")
+                    } else {
+                        doc.to_string()
+                    }
                 }
-                KeyTrie::Node(n) => &n.name,
-                KeyTrie::Sequence(_) => "[Multiple commands]",
+                KeyTrie::Node(n) => {
+                    if n.name.is_empty() {
+                        "+prefix".to_string()
+                    } else {
+                        format!("+{}", n.name)
+                    }
+                }
+                KeyTrie::Sequence(_) => "[key macro]".to_string(),
             };
-            match body.iter().position(|(_, d)| d == &desc) {
-                Some(pos) => {
-                    body[pos].0.insert(key);
-                }
-                None => body.push((BTreeSet::from([key]), desc)),
-            }
+            body.push((key.to_string(), desc));
         }
-
-        let body: Vec<_> = body
-            .into_iter()
-            .map(|(events, desc)| {
-                let events = events.iter().map(ToString::to_string).collect::<Vec<_>>();
-                (events.join(", "), desc)
-            })
-            .collect();
+        body.sort_by(|a, b| a.0.cmp(&b.0));
         Info::new(self.name.clone(), &body)
     }
 }
