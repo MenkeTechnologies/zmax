@@ -10962,6 +10962,18 @@ fn fzf_rg(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     Ok(())
 }
 
+/// `:Todo` — JetBrains-style TODO tool window: ripgrep the tree for TODO / FIXME
+/// / HACK / XXX markers (+ Rust `todo!`/`unimplemented!`) and open the pick.
+fn fzf_todo(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        let cmd = "rg --column --line-number --no-heading --color=never -i \
+                   -e '\\b(TODO|FIXME|HACK|XXX)\\b' -e '(todo|unimplemented)!' 2>/dev/null"
+            .to_string();
+        queue_fzf_cmd(cx, "Todo", "fzf-goto {}", cmd, vec!["--no-sort".into()], false);
+    }
+    Ok(())
+}
+
 /// fzf.vim `:Locate {pattern}` — locate files and open the pick.
 fn fzf_locate(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -18711,6 +18723,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: fzf_rg,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Todo",
+        aliases: &["TODO", "Todos"],
+        doc: "TODO tool window: ripgrep TODO/FIXME/HACK/XXX across the tree, jump to the pick.",
+        fun: fzf_todo,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "Locate",
