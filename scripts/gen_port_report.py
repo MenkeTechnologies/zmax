@@ -190,6 +190,13 @@ def parse_keymap():
             r'\(\s*"([^"]+)"\s*,\s*"[^"]*"\s*,\s*"(:?[^"]+)"\s*\)', tbl.group(1)
         ):
             overlay["C-x " + k2] = cmd.lstrip(":")
+    # CXCH_FULL: (full-chord, submap-label, command) — the exhaustive C-x/C-c/C-h map.
+    tbl2 = re.search(r"CXCH_FULL[^=]*=\s*&\[(.*?)\];", sm, re.S)
+    if tbl2:
+        for chord, cmd in re.findall(
+            r'\(\s*"([^"]+)"\s*,\s*"[^"]*"\s*,\s*"([^"]+)"\s*\)', tbl2.group(1)
+        ):
+            overlay[chord] = cmd
     for mode in ("normal", "select", "insert"):
         result[mode].update(overlay)
 
