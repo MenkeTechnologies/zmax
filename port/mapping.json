@@ -23858,5 +23858,13 @@
       "typable:redrawtabline"
     ],
     "note": "vim :redrawtabline → full redraw (approximation)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_normal",
+    "status": "ported",
+    "evidence": [
+      "typable:normal"
+    ],
+    "note": "vim :normal[!] {cmds} → ex_normal: parses the arg into a key sequence and replays it through compositor.handle_event (the macro-replay path), so every motion/operator/command applies."
   }
 ]
