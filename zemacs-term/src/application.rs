@@ -156,6 +156,14 @@ impl Application {
             }
         }
 
+        // Start the filesystem watcher at boot (not just when the IDE opens) so
+        // open buffers auto-reload on external changes even in plain editing;
+        // `spawn` is idempotent, so the IDE's own call is a later no-op. The tree
+        // refresh inside the watcher no-ops until an IDE workbench exists.
+        crate::file_watcher::spawn(
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")),
+        );
+
         let mut editor_view = ui::EditorView::new(Keymaps::new(keys));
         // Make the previous session's IDE layout (drawer widths, folds, collapse /
         // hide state) available so that opening the workbench later — via `:ide`,
