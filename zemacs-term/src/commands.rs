@@ -668,6 +668,7 @@ impl MappableCommand {
         open_below, "Open new line below selection",
         open_above, "Open new line above selection",
         complete_current_statement, "Complete the current statement (close brackets, add terminator, open next line) (JetBrains)",
+        postfix_expand, "Postfix completion: expand `expr.kw` (if/for/while/match/let/return/not/…) (JetBrains)",
         normal_mode, "Enter normal mode",
         select_mode, "Enter selection extend mode",
         exit_select_mode, "Exit selection mode",
@@ -13833,6 +13834,78 @@ fn open(cx: &mut Context, open: Open, comment_continuation: CommentContinuation)
     transaction = transaction.with_selection(Selection::new(ranges, selection.primary_index()));
 
     doc.apply(&transaction, view.id);
+}
+
+/// Build the expansion for postfix template `kw` on `expr` (JetBrains/rust-analyzer
+/// postfix completion). Returns the replacement text and the char offset within it
+/// for the cursor. `semi` appends the language's statement terminator. None = unknown.
+fn postfix_template(kw: &str, expr: &str, semi: bool) -> Option<(String, usize)> {
+    let s = if semi { ";" } else { "" };
+    let block = |head: String| {
+        let inner = format!("{head} {{\n\t");
+        let full = format!("{inner}\n}}");
+        (full, inner.chars().count())
+    };
+    let end = |t: String| {
+        let n = t.chars().count();
+        (t, n)
+    };
+    Some(match kw {
+        "if" => block(format!("if {expr}")),
+        "while" => block(format!("while {expr}")),
+        "for" => block(format!("for it in {expr}")),
+        "match" => block(format!("match {expr}")),
+        "else" => block(format!("if !({expr})")),
+        "let" => end(format!("let name = {expr}{s}")),
+        "return" | "ret" => end(format!("return {expr}{s}")),
+        "not" => end(format!("!{expr}")),
+        "paren" | "par" => end(format!("({expr})")),
+        "print" | "p" => end(format!("print({expr}){s}")),
+        "dbg" => end(format!("dbg!({expr}){s}")),
+        "some" => end(format!("Some({expr})")),
+        "ok" => end(format!("Ok({expr})")),
+        "await" => end(format!("{expr}.await")),
+        _ => return None,
+    })
+}
+
+/// Postfix completion: turn `expr.kw` before the cursor into the expansion (e.g.
+/// `foo.if` → `if foo {…}`). Works in insert mode; bound under the C-c prefix.
+fn postfix_expand(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let semi = lang_uses_semicolons(doc.language_name().unwrap_or(""));
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let line = slice.char_to_line(cursor);
+    let line_start = slice.line_to_char(line);
+    let before: String = slice.slice(line_start..cursor).into();
+    let Some(dot) = before.rfind('.') else {
+        cx.editor
+            .set_error("postfix: type `expr.kw` (if/for/while/match/let/return/not/paren/print/dbg)");
+        return;
+    };
+    let kw = before[dot + 1..].trim();
+    let expr_part = &before[..dot];
+    // Expression starts after the last separator before the `.`.
+    let boundary = expr_part
+        .rfind(|c: char| c.is_whitespace() || "([{;,=&|<>".contains(c))
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    let expr = expr_part[boundary..].trim();
+    if expr.is_empty() {
+        cx.editor.set_error("postfix: no expression before `.`");
+        return;
+    }
+    let Some((repl, cur_off)) = postfix_template(kw, expr, semi) else {
+        cx.editor.set_error(format!("postfix: unknown template `.{kw}`"));
+        return;
+    };
+    let from = line_start + before[..boundary].chars().count();
+    let tx = Transaction::change(text, std::iter::once((from, cursor, Some(repl.into()))));
+    doc.apply(&tx, view.id);
+    let new_pos = (from + cur_off).min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::point(new_pos));
 }
 
 // o inserts a new line after each line with a selection
