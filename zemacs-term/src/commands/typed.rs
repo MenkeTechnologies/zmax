@@ -10942,6 +10942,25 @@ fn ex_normal(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+/// vim `:mark {x}` / `:k {x}` — set mark `{x}` at the cursor position.
+fn ex_mark(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined = args.join(" ");
+    let Some(mark) = joined.trim().chars().next() else {
+        cx.editor.set_error(":mark requires a mark name (a-z)");
+        return Ok(());
+    };
+    let (view, doc) = current!(cx.editor);
+    let pos = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
+    doc.set_mark(mark, pos);
+    Ok(())
+}
+
 /// `:redrawstatus` / `:redrawtabline` — approximated by a full redraw.
 fn ex_redraw_alias(
     cx: &mut compositor::Context,
@@ -17879,6 +17898,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_normal,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "mark",
+        aliases: &["k"],
+        doc: "Set mark {x} at the cursor position (vim :mark / :k).",
+        fun: ex_mark,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
     },
     // Vim fold ex-commands → our fold internals.
     TypableCommand {
