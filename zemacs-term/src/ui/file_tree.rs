@@ -395,32 +395,49 @@ impl FileTree {
             return;
         }
 
-        // Speed-search field occupies the top row while active.
+        // fzf-style speed-search: a bordered ratatui filter box at the top of the
+        // tree while active (`/` opens it; keystrokes fuzzy-filter the rows live).
         let mut area = area;
         if self.filtering || !self.filter.is_empty() {
-            let cursor = if self.filtering { "▏" } else { "" };
-            let line = format!(" / {}{}", self.filter, cursor);
-            let style = theme.get("ui.text.focus");
-            surface.set_style(
-                Rect::new(area.x, area.y, area.width, 1),
-                theme.get("ui.selection"),
-            );
-            surface.set_stringn(area.x, area.y, &line, area.width as usize, style);
-            if self.rows.is_empty() {
-                let none = " (no matches)";
-                surface.set_stringn(
-                    area.x,
-                    area.y + 1,
-                    none,
-                    area.width as usize,
-                    theme.get("comment"),
-                );
-            }
+            use crate::ui::rat::to_rat_style;
+            use ratatui::text::{Line, Span};
+            use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
+
+            let box_h = 3u16.min(area.height);
+            let box_area = Rect::new(area.x, area.y, area.width, box_h);
+            let focused = self.filtering;
+            let border_style = to_rat_style(theme.get(if focused {
+                "ui.text.focus"
+            } else {
+                "ui.window"
+            }));
+            let cursor = if focused { "▏" } else { "" };
+            let hint = if self.rows.is_empty() && !self.filter.is_empty() {
+                " · no matches"
+            } else {
+                ""
+            };
+            let block = Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(border_style)
+                .title(Span::styled(
+                    format!(" 🔍 filter{hint} "),
+                    to_rat_style(theme.get("keyword")),
+                ))
+                .style(to_rat_style(theme.get("ui.background")));
+            let content = Line::from(vec![Span::styled(
+                format!(" {}{cursor}", self.filter),
+                to_rat_style(theme.get("ui.text.focus")),
+            )]);
+            let para = Paragraph::new(content).block(block);
+            crate::ui::rat::render(para, box_area, surface);
+
             area = Rect::new(
                 area.x,
-                area.y + 1,
+                area.y + box_h,
                 area.width,
-                area.height.saturating_sub(1),
+                area.height.saturating_sub(box_h),
             );
             if area.height == 0 {
                 return;
