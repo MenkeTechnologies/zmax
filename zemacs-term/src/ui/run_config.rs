@@ -32,6 +32,7 @@ enum Btn {
     Copy,
     Delete,
     Edit,
+    Choose,
     Run,
     Close,
 }
@@ -86,6 +87,7 @@ impl RunConfigPanel {
             Btn::Copy => self.duplicate(),
             Btn::Delete => self.delete(),
             Btn::Edit => self.enter_edit(),
+            Btn::Choose => self.apply_selected(),
             Btn::Close => return EventResult::Consumed(Some(Self::close_cb())),
             Btn::Run => {
                 if let Some(cb) = self.run_selected() {
@@ -204,6 +206,15 @@ impl RunConfigPanel {
     }
 
     /// Build the run callback for the selected config (sets it active, closes, runs).
+    /// Make the selected config the active one (persisted) WITHOUT running it —
+    /// JetBrains "choose a run configuration". Shown in the toolbar selector.
+    fn apply_selected(&mut self) {
+        if self.selected < self.data.configs.len() {
+            self.data.active = self.selected;
+            self.persist();
+        }
+    }
+
     fn run_selected(&mut self) -> Option<Callback> {
         let c = self.data.configs.get(self.selected)?.clone();
         if c.command.trim().is_empty() {
@@ -262,6 +273,11 @@ impl RunConfigPanel {
             }
             KeyCode::Char('e') => {
                 self.enter_edit();
+                EventResult::Consumed(None)
+            }
+            // Space / 's' → choose (set active) without running.
+            KeyCode::Char(' ') | KeyCode::Char('s') => {
+                self.apply_selected();
                 EventResult::Consumed(None)
             }
             KeyCode::Char('r') => match self.run_selected() {
@@ -395,6 +411,7 @@ impl Component for RunConfigPanel {
             (Btn::Copy, "⧉ Copy"),
             (Btn::Delete, "− Delete"),
             (Btn::Edit, "✎ Edit"),
+            (Btn::Choose, "✓ Choose"),
             (Btn::Run, "▶ Run"),
             (Btn::Close, "✕ Close"),
         ];
@@ -533,7 +550,7 @@ impl Component for RunConfigPanel {
 
         // --- help line ---
         let help = match self.mode {
-            Mode::List => " click a config · buttons above · j/k move · a/c/d/e/r · Esc close",
+            Mode::List => " click a config · j/k move · Space choose · r run · a/c/d/e · Esc close",
             Mode::Edit => " click a field · Tab/↑↓ fields · type to edit · ⏎ save · Esc cancel",
         };
         render(Paragraph::new(Span::styled(help, dim)), help_row, surface);

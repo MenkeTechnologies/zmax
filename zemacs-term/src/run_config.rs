@@ -29,10 +29,41 @@ pub struct RunConfigs {
     pub configs: Vec<RunConfig>,
 }
 
+/// URL-safe base64 (no padding), dependency-free — for encoding a workspace path
+/// into a single filesystem-safe directory component.
+fn b64_url(input: &[u8]) -> String {
+    const A: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let mut out = String::with_capacity(input.len().div_ceil(3) * 4);
+    for chunk in input.chunks(3) {
+        let b1 = chunk[0] as u32;
+        let b2 = *chunk.get(1).unwrap_or(&0) as u32;
+        let b3 = *chunk.get(2).unwrap_or(&0) as u32;
+        let n = (b1 << 16) | (b2 << 8) | b3;
+        out.push(A[((n >> 18) & 63) as usize] as char);
+        out.push(A[((n >> 12) & 63) as usize] as char);
+        if chunk.len() > 1 {
+            out.push(A[((n >> 6) & 63) as usize] as char);
+        }
+        if chunk.len() > 2 {
+            out.push(A[(n & 63) as usize] as char);
+        }
+    }
+    out
+}
+
 fn store_path() -> PathBuf {
-    zemacs_loader::find_workspace()
-        .0
-        .join(".zemacs")
+    // Per-project, stored under the global config dir so the project tree isn't
+    // polluted with a `.zemacs/`. The directory is `<name>-<base64(full path)>`
+    // so it's readable AND unique (same-named projects never collide):
+    // `~/.zemacs/<project>-<b64>/run-configs.toml`.
+    let root = zemacs_loader::find_workspace().0;
+    let name = root
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "global".to_string());
+    let key = b64_url(root.to_string_lossy().as_bytes());
+    zemacs_loader::config_dir()
+        .join(format!("{name}-{key}"))
         .join("run-configs.toml")
 }
 

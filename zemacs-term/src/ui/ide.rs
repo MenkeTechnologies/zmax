@@ -591,13 +591,16 @@ impl Ide {
         self.focus = Focus::Editor;
     }
 
-    /// Attach a running command to the Run tool window and reveal it.
+    /// Attach a running command to the Run tool window and reveal it — without
+    /// stealing keyboard focus (it stays on whatever you were editing).
     pub fn set_run(&mut self, run: crate::ui::run::Run) {
+        let prev_focus = self.focus;
         self.run = Some(run);
         self.select_tab(BottomTab::Run);
         self.visible = true;
         self.fold_problems = false;
         self.run_error_idx = usize::MAX;
+        self.focus = prev_focus;
     }
 
     /// Jump to the next / previous `file:line` reference in the run output
@@ -669,11 +672,13 @@ impl Ide {
         let Some(r) = self.run.clone() else {
             return false;
         };
+        let prev_focus = self.focus;
         self.run = Some(crate::ui::run::rerun(&r));
         self.select_tab(BottomTab::Run);
         self.visible = true;
         self.fold_problems = false;
         self.run_error_idx = usize::MAX;
+        self.focus = prev_focus;
         true
     }
 
