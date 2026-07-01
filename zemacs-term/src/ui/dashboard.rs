@@ -60,6 +60,9 @@ pub struct DashboardPanel {
     view: View,
     proc_scroll: usize,
     pid: u32,
+    /// Screen row of the tab strip + per-tab (x0, x1, view) hit ranges, for clicks.
+    tab_row: u16,
+    tab_hits: Vec<(u16, u16, View)>,
 }
 
 impl Default for DashboardPanel {
@@ -84,6 +87,8 @@ impl DashboardPanel {
             view: View::Overview,
             proc_scroll: 0,
             pid: std::process::id(),
+            tab_row: 0,
+            tab_hits: Vec::new(),
         }
     }
 
@@ -149,7 +154,23 @@ impl Component for DashboardPanel {
         let key = match event {
             Event::Key(k) => *k,
             Event::Mouse(ev) => {
+                use zemacs_view::input::MouseButton;
                 match ev.kind {
+                    MouseEventKind::Down(MouseButton::Left) => {
+                        // Click a tab in the strip to switch views.
+                        if ev.row == self.tab_row {
+                            if let Some(&(_, _, view)) = self
+                                .tab_hits
+                                .iter()
+                                .find(|&&(x0, x1, _)| ev.column >= x0 && ev.column < x1)
+                            {
+                                if self.view != view {
+                                    self.view = view;
+                                    self.proc_scroll = 0;
+                                }
+                            }
+                        }
+                    }
                     MouseEventKind::ScrollDown => self.proc_scroll += 3,
                     MouseEventKind::ScrollUp => {
                         self.proc_scroll = self.proc_scroll.saturating_sub(3)
@@ -236,6 +257,14 @@ impl Component for DashboardPanel {
             .highlight_style(accent.add_modifier(RMod::REVERSED))
             .divider(Span::styled("│", dim));
         render(tabs, Rect::new(area.x + 1, area.y, 26, 1), surface);
+        // Record click hit-regions matching the rendered layout: "Overview │ Processes"
+        // starting at area.x + 1 (Tabs uses a 1-space divider padding each side).
+        self.tab_row = area.y;
+        let ov0 = area.x + 1;
+        let ov1 = ov0 + "Overview".len() as u16;
+        let pr0 = ov1 + 3; // " │ "
+        let pr1 = pr0 + "Processes".len() as u16;
+        self.tab_hits = vec![(ov0, ov1, View::Overview), (pr0, pr1, View::Processes)];
         let right = format!(
             " {} · up {} ",
             System::host_name().unwrap_or_else(|| "host".into()),
@@ -790,23 +819,55 @@ fn gauge_color(pct: f64, theme: &zemacs_view::Theme) -> ratatui::style::Style {
     to_rat_style(theme.get(scope))
 }
 
-/// Render a `Monthly` calendar for the current (UTC) month with today marked.
+/// Render a month calendar for the current (local) month with today marked.
+/// Hand-rolled (7×N grid) rather than ratatui's `Monthly`, whose day cells don't
+/// render reliably here — the headers showed but the day numbers were blank.
 fn render_calendar(surface: &mut Surface, theme: &zemacs_view::Theme, area: Rect) {
-    use ratatui::style::Modifier as RMod;
-    use ratatui::widgets::calendar::{CalendarEventStore, Monthly};
+    use zemacs_view::graphics::Modifier;
 
-    let dim = to_rat_style(theme.get("comment"));
-    let text = to_rat_style(theme.get("ui.text"));
-    let accent = to_rat_style(theme.get("function")).add_modifier(RMod::BOLD);
+    if area.width < 20 || area.height < 3 {
+        return;
+    }
+    let dim = theme.get("comment");
+    let text = theme.get("ui.text");
+    let accent = theme.get("function").add_modifier(Modifier::BOLD);
+    let today_style = theme.get("function").add_modifier(Modifier::REVERSED);
 
-    let today = time::OffsetDateTime::now_utc().date();
-    let mut events = CalendarEventStore::default();
-    events.add(today, accent.add_modifier(RMod::REVERSED));
-    let cal = Monthly::new(today, events)
-        .show_month_header(accent)
-        .show_weekdays_header(dim)
-        .default_style(text);
-    render(cal, area, surface);
+    let now = time::OffsetDateTime::now_local()
+        .unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+    let today = now.date();
+    let (year, month, today_day) = (today.year(), today.month(), today.day());
+
+    // Centered "Month Year" header.
+    let title = format!("{month} {year}");
+    let tx = area.x + (area.width.saturating_sub(title.chars().count() as u16)) / 2;
+    surface.set_stringn(tx, area.y, &title, area.width as usize, accent);
+
+    // Weekday header (Sunday-first), 3 cells wide each to match the day grid.
+    surface.set_stringn(area.x, area.y + 1, "Su Mo Tu We Th Fr Sa", area.width as usize, dim);
+
+    let first = match time::Date::from_calendar_date(year, month, 1) {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+    let start_col = first.weekday().number_days_from_sunday() as u16; // 0 = Sunday
+    let days = month.length(year);
+
+    let mut col = start_col;
+    let mut row = area.y + 2;
+    for day in 1..=days {
+        if row >= area.y + area.height {
+            break;
+        }
+        let x = area.x + col * 3;
+        let style = if day == today_day { today_style } else { text };
+        surface.set_stringn(x, row, &format!("{day:>2}"), 2, style);
+        col += 1;
+        if col == 7 {
+            col = 0;
+            row += 1;
+        }
+    }
 }
 
 /// Human-readable byte size (binary units).

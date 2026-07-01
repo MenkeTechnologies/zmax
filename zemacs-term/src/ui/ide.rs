@@ -4467,64 +4467,225 @@ fn refresh_tree_async() {
     });
 }
 
-/// Build the right-click context menu for a file-tree entry at (row, col):
-/// JetBrains-style Run (files) + CRUD, as a ratatui `ContextMenu`.
+/// File clipboard for the context-menu Cut/Copy/Paste: (source path, is_cut).
+static FILE_CLIP: std::sync::Mutex<Option<(PathBuf, bool)>> = std::sync::Mutex::new(None);
+
+/// Spawn a detached command (Open In Finder/Terminal/GitHub, gist), ignoring output.
+fn spawn_detached(program: &str, args: &[&str], cwd: Option<&std::path::Path>) {
+    let mut cmd = std::process::Command::new(program);
+    cmd.args(args)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    if let Some(dir) = cwd {
+        cmd.current_dir(dir);
+    }
+    let _ = cmd.spawn();
+}
+
+/// Build the right-click context menu for a file-tree entry at (row, col).
 pub fn file_context_menu(
     path: PathBuf,
     is_dir: bool,
     row: u16,
     col: u16,
 ) -> crate::ui::context_menu::ContextMenu {
-    use crate::ui::context_menu::{ContextItem, ContextMenu};
+    crate::ui::context_menu::ContextMenu::new(row, col, file_menu_entries(path, is_dir))
+}
 
-    let mut items = Vec::new();
-    if is_dir {
-        let p = path.clone();
-        items.push(ContextItem::new("New File", move |compositor, _cx| {
-            compositor.push(Box::new(name_prompt(FileActionKind::NewFile, p.clone(), true)));
-        }));
-        let p = path.clone();
-        items.push(ContextItem::new("New Folder", move |compositor, _cx| {
-            compositor.push(Box::new(name_prompt(
-                FileActionKind::NewFolder,
-                p.clone(),
-                true,
-            )));
-        }));
+/// The JetBrains project-view context menu, as a tree of `Entry`s. Shared by the
+/// file-tree right-click and the editor-pane right-click. Each action maps to a
+/// real zemacs operation; unsupported IDE-only items are omitted.
+pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::context_menu::Entry> {
+    use crate::ui::context_menu::Entry;
+    use zemacs_view::editor::Action;
+
+    // Directory that New/Paste act in: the entry itself if a dir, else its parent.
+    let dir = if is_dir {
+        path.clone()
     } else {
-        // JetBrains-style "Run" — materializes + runs a run configuration.
+        path.parent().map(|p| p.to_path_buf()).unwrap_or_else(|| PathBuf::from("."))
+    };
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+
+    let mut e = Vec::new();
+
+    // New ›
+    {
+        let d1 = dir.clone();
+        let d2 = dir.clone();
+        e.push(Entry::sub(
+            "New",
+            vec![
+                Entry::item("File", move |compositor, _cx| {
+                    compositor.push(Box::new(name_prompt(FileActionKind::NewFile, d1.clone(), true)));
+                }),
+                Entry::item("Directory", move |compositor, _cx| {
+                    compositor.push(Box::new(name_prompt(FileActionKind::NewFolder, d2.clone(), true)));
+                }),
+            ],
+        ));
+    }
+    e.push(Entry::sep());
+
+    // Cut / Copy / Copy Path/Reference › / Paste
+    {
         let p = path.clone();
-        items.push(ContextItem::new("Run", move |compositor, cx| {
+        e.push(Entry::item_key("Cut", "⌘X", move |_c, cx| {
+            *FILE_CLIP.lock().unwrap() = Some((p.clone(), true));
+            cx.editor.set_status(format!("cut {}", p.display()));
+        }));
+        let p = path.clone();
+        e.push(Entry::item_key("Copy", "⌘C", move |_c, cx| {
+            *FILE_CLIP.lock().unwrap() = Some((p.clone(), false));
+            cx.editor.set_status(format!("copied {}", p.display()));
+        }));
+        let abs = path.clone();
+        let nm = name.clone();
+        let root = zemacs_loader::find_workspace().0;
+        let rel = path.strip_prefix(&root).map(|p| p.to_path_buf()).unwrap_or_else(|_| path.clone());
+        e.push(Entry::sub(
+            "Copy Path/Reference…",
+            vec![
+                Entry::item("Absolute Path", move |_c, cx| {
+                    let s = abs.to_string_lossy().to_string();
+                    let _ = cx.editor.registers.push('"', s.clone());
+                    cx.editor.set_status(format!("yanked {s}"));
+                }),
+                Entry::item("Path From Repository Root", move |_c, cx| {
+                    let s = rel.to_string_lossy().to_string();
+                    let _ = cx.editor.registers.push('"', s.clone());
+                    cx.editor.set_status(format!("yanked {s}"));
+                }),
+                Entry::item("File Name", move |_c, cx| {
+                    let _ = cx.editor.registers.push('"', nm.clone());
+                    cx.editor.set_status(format!("yanked {nm}"));
+                }),
+            ],
+        ));
+        let dst = dir.clone();
+        e.push(Entry::item_key("Paste", "⌘V", move |_c, cx| {
+            let clip = FILE_CLIP.lock().unwrap().clone();
+            let Some((src, is_cut)) = clip else {
+                cx.editor.set_error("nothing to paste");
+                return;
+            };
+            let Some(fname) = src.file_name() else { return };
+            let target = dst.join(fname);
+            let prog = if is_cut { "mv" } else { "cp" };
+            let args: Vec<&str> = if is_cut {
+                vec![src.to_str().unwrap_or(""), target.to_str().unwrap_or("")]
+            } else {
+                vec!["-R", src.to_str().unwrap_or(""), target.to_str().unwrap_or("")]
+            };
+            match std::process::Command::new(prog).args(&args).status() {
+                Ok(s) if s.success() => {
+                    cx.editor.set_status(format!("pasted → {}", target.display()));
+                    if is_cut {
+                        *FILE_CLIP.lock().unwrap() = None;
+                    }
+                    refresh_tree_async();
+                }
+                Ok(_) | Err(_) => cx.editor.set_error("paste failed"),
+            }
+        }));
+    }
+    e.push(Entry::sep());
+
+    // Refactor: Rename / Delete
+    {
+        let p = path.clone();
+        e.push(Entry::item("Rename…", move |compositor, _cx| {
+            compositor.push(Box::new(name_prompt(FileActionKind::Rename, p.clone(), is_dir)));
+        }));
+        let p = path.clone();
+        e.push(Entry::item_key("Delete…", "⌫", move |_c, cx| {
+            let res = if is_dir {
+                std::fs::remove_dir_all(&p)
+            } else {
+                std::fs::remove_file(&p)
+            };
+            match res {
+                Ok(()) => cx.editor.set_status(format!("deleted {}", p.display())),
+                Err(err) => cx.editor.set_error(format!("delete failed: {err}")),
+            }
+            refresh_tree_async();
+        }));
+    }
+    e.push(Entry::sep());
+
+    if !is_dir {
+        // Run — materialize + activate a JetBrains run configuration, then run it.
+        let p = path.clone();
+        e.push(Entry::item("Run", move |compositor, cx| {
             if let Some(view) = compositor.find::<crate::ui::EditorView>() {
                 view.run_path(cx.editor, &p);
             }
         }));
+        // Open in Right Split
+        let p = path.clone();
+        e.push(Entry::item_key("Open in Right Split", "⇧↵", move |_c, cx| {
+            if let Err(zemacs_view::DocumentOpenError::BinaryFile) =
+                cx.editor.open(&p, Action::VerticalSplit)
+            {
+                cx.editor.set_error("binary file — use :hex");
+            }
+        }));
     }
-    let p = path.clone();
-    items.push(ContextItem::new("Rename", move |compositor, _cx| {
-        compositor.push(Box::new(name_prompt(FileActionKind::Rename, p.clone(), is_dir)));
-    }));
-    let p = path.clone();
-    items.push(ContextItem::new("Delete", move |_compositor, cx| {
-        let res = if is_dir {
-            std::fs::remove_dir_all(&p)
-        } else {
-            std::fs::remove_file(&p)
-        };
-        match res {
-            Ok(()) => cx.editor.set_status(format!("deleted {}", p.display())),
-            Err(e) => cx.editor.set_error(format!("delete failed: {e}")),
-        }
-        refresh_tree_async();
-    }));
-    let p = path.clone();
-    items.push(ContextItem::new("Copy Path", move |_compositor, cx| {
-        let s = p.to_string_lossy().to_string();
-        let _ = cx.editor.registers.push('"', s.clone());
-        cx.editor.set_status(format!("yanked path: {s}"));
-    }));
 
-    ContextMenu::new(row, col, items)
+    // Open In ›
+    {
+        let p = path.clone();
+        let d = dir.clone();
+        let root = zemacs_loader::find_workspace().0;
+        let rel = path.strip_prefix(&root).map(|p| p.to_string_lossy().into_owned()).ok();
+        e.push(Entry::sub(
+            "Open In",
+            vec![
+                Entry::item("Finder", move |_c, _cx| {
+                    spawn_detached("open", &["-R", p.to_str().unwrap_or("")], None);
+                }),
+                Entry::item("Terminal", move |_c, _cx| {
+                    spawn_detached("open", &["-a", "Terminal", d.to_str().unwrap_or("")], None);
+                }),
+                Entry::item("GitHub", move |_c, cx| {
+                    match &rel {
+                        Some(r) => spawn_detached("gh", &["browse", "--", r], None),
+                        None => cx.editor.set_error("not in a repo"),
+                    }
+                }),
+            ],
+        ));
+    }
+    e.push(Entry::sep());
+
+    if !is_dir {
+        // Reload from Disk — re-read the file into its buffer.
+        let p = path.clone();
+        e.push(Entry::item("Reload from Disk", move |_c, cx| {
+            let _ = cx.editor.open(&p, Action::Replace);
+            cx.editor.set_status("reloaded from disk");
+        }));
+        // Compare With HEAD — git diff into the Run console.
+        let p = path.clone();
+        e.push(Entry::item_key("Compare With HEAD", "⌘D", move |compositor, cx| {
+            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                let cwd = p.parent().map(|d| d.to_path_buf()).unwrap_or_else(|| PathBuf::from("."));
+                let quoted = p.to_string_lossy().replace('\'', "'\\''");
+                view.start_run(cx, format!("git --no-pager diff -- '{quoted}'"), cwd);
+            }
+        }));
+        // Create Gist
+        let p = path.clone();
+        e.push(Entry::item("Create Gist…", move |_c, _cx| {
+            spawn_detached("gh", &["gist", "create", "--web", p.to_str().unwrap_or("")], None);
+        }));
+    }
+
+    e
 }
 
 /// Prompt for a name, then create/rename the target and refresh the tree.

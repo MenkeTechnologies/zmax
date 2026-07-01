@@ -2120,8 +2120,17 @@ impl EditorView {
                 let mut selection = doc.selection(view.id).clone();
                 let primary = selection.primary_mut();
                 *primary = primary.put_cursor(doc.text().slice(..), pos, true);
+                let non_empty = primary.anchor != primary.head;
                 doc.set_selection(view.id, selection);
                 let view_id = view.id;
+                // vim `mouse=a`: dragging a selection enters Visual (Select) mode so
+                // operators — U, u, gu/gU, d, y, >, … — act on the dragged range;
+                // collapsing back to a caret returns to Normal.
+                if non_empty && cxt.editor.mode != Mode::Select {
+                    cxt.editor.mode = Mode::Select;
+                } else if !non_empty && cxt.editor.mode == Mode::Select {
+                    cxt.editor.mode = Mode::Normal;
+                }
                 cxt.editor.ensure_cursor_in_view(view_id);
                 EventResult::Consumed(None)
             }
@@ -2194,31 +2203,27 @@ impl EditorView {
                 let path = doc!(cxt.editor).path().map(|p| p.to_path_buf());
                 let cb: crate::compositor::Callback =
                     Box::new(move |compositor: &mut crate::compositor::Compositor, _cx| {
-                        use crate::ui::context_menu::{ContextItem, ContextMenu};
-                        let mut items = Vec::new();
-                        if let Some(path) = path.clone() {
-                            let p = path.clone();
-                            items.push(ContextItem::new("Run", move |compositor, cx| {
-                                if let Some(view) = compositor.find::<EditorView>() {
-                                    view.run_path(cx.editor, &p);
-                                }
-                            }));
-                            let p = path.clone();
-                            items.push(ContextItem::new("Reveal in Tree", move |compositor, _cx| {
-                                if let Some(view) = compositor.find::<EditorView>() {
-                                    view.reveal_in_tree(&p);
-                                }
-                            }));
-                            let p = path.clone();
-                            items.push(ContextItem::new("Copy Path", move |_compositor, cx| {
-                                let s = p.to_string_lossy().to_string();
-                                let _ = cx.editor.registers.push('"', s.clone());
-                                cx.editor.set_status(format!("yanked path: {s}"));
-                            }));
+                        use crate::ui::context_menu::{ContextMenu, Entry};
+                        let mut entries = match path.clone() {
+                            // Same JetBrains menu as the file tree, plus Reveal in Tree.
+                            Some(path) => {
+                                let mut e = crate::ui::ide::file_menu_entries(path.clone(), false);
+                                e.push(Entry::sep());
+                                e.push(Entry::item("Reveal in Tree", move |compositor, _cx| {
+                                    if let Some(view) = compositor.find::<EditorView>() {
+                                        view.reveal_in_tree(&path);
+                                    }
+                                }));
+                                e
+                            }
+                            // Scratch buffer with no path: offer clipboard paste only.
+                            None => vec![Entry::item("(no file)", |_c, _cx| {})],
+                        };
+                        // Drop a trailing separator if any.
+                        if matches!(entries.last(), Some(Entry::Sep)) {
+                            entries.pop();
                         }
-                        if !items.is_empty() {
-                            compositor.push(Box::new(ContextMenu::new(row, column, items)));
-                        }
+                        compositor.push(Box::new(ContextMenu::new(row, column, entries)));
                     });
                 EventResult::Consumed(Some(cb))
             }
