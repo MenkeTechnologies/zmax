@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d3031289.js";
+            window.path_to_searchindex_js = "searchindex-98f3949f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1617,6 +1617,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-upload</code>, <code>:platformio-upload</code></td><td>Build and upload the PlatformIO project (<code>pio run -t upload</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-monitor</code>, <code>:platformio-monitor</code></td><td>Open the PlatformIO serial monitor (<code>pio device monitor</code>).</td></tr>
 <tr><td><code>:pio-devices</code>, <code>:pio-device-list</code></td><td>Pick a serial port from <code>pio device list</code> and set it for this project.</td></tr>
+<tr><td><code>:pio-device-logical</code>, <code>:platformio-device-logical</code></td><td>List logical (disk) devices (<code>pio device list --logical</code>).</td></tr>
+<tr><td><code>:pio-device-mdns</code>, <code>:platformio-device-mdns</code></td><td>List multicast-DNS / network (OTA) devices (<code>pio device list --mdns</code>).</td></tr>
+<tr><td><code>:pio-home</code>, <code>:platformio-home</code></td><td>Launch the PlatformIO Home GUI (<code>pio home</code>), live in a terminal panel; extra args tune the server.</td></tr>
 <tr><td><code>:pio-init</code>, <code>:platformio-init</code></td><td>Scaffold a PlatformIO project for a board (<code>pio project init --board &lt;id&gt;</code>).</td></tr>
 <tr><td><code>:embedded-baud</code>, <code>:serial-baud</code></td><td>Set the serial monitor baud rate for this project (e.g. 9600, 115200).</td></tr>
 <tr><td><code>:arduino-plotter</code>, <code>:serial-plotter</code></td><td>Live-graph the numbers streaming from the serial port (Arduino IDE Serial Plotter).</td></tr>
@@ -1673,6 +1676,10 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-pkg-unpublish</code>, <code>:platformio-pkg-unpublish</code></td><td>Remove a previously published package (<code>pio pkg unpublish &lt;pkg&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-system-info</code>, <code>:platformio-system-info</code></td><td>Show system-wide PlatformIO information (<code>pio system info</code>).</td></tr>
 <tr><td><code>:pio-system-prune</code>, <code>:platformio-system-prune</code></td><td>Remove unused PlatformIO caches/packages (<code>pio system prune -f</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-prune-cache</code>, <code>:platformio-prune-cache</code></td><td>Prune only cached PlatformIO data (<code>pio system prune -f --cache</code>).</td></tr>
+<tr><td><code>:pio-prune-core</code>, <code>:platformio-prune-core</code></td><td>Prune only unnecessary core packages (<code>pio system prune -f --core-packages</code>).</td></tr>
+<tr><td><code>:pio-prune-platform</code>, <code>:platformio-prune-platform</code></td><td>Prune only unnecessary development-platform packages (<code>pio system prune -f --platform-packages</code>).</td></tr>
+<tr><td><code>:pio-prune-dry-run</code>, <code>:platformio-prune-dry-run</code></td><td>Show what <code>pio system prune</code> would remove without deleting (<code>pio system prune --dry-run</code>).</td></tr>
 <tr><td><code>:pio-settings-get</code>, <code>:platformio-settings-get</code></td><td>Print PlatformIO Core settings, all or one key (<code>pio settings get [name]</code>).</td></tr>
 <tr><td><code>:pio-settings-set</code>, <code>:platformio-settings-set</code></td><td>Change a PlatformIO Core setting (<code>pio settings set &lt;name&gt; &lt;value&gt;</code>).</td></tr>
 <tr><td><code>:pio-remote-agent-list</code>, <code>:pio-remote-agents</code>, <code>:platformio-remote-agent-list</code></td><td>List active PlatformIO Remote agents (<code>pio remote agent list</code>).</td></tr>
