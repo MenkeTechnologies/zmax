@@ -13,6 +13,7 @@ pub mod compilation;
 pub mod completion;
 pub mod config;
 pub mod diagnostic;
+pub mod diary;
 pub mod diff;
 pub mod doc_formatter;
 pub mod editor_config;

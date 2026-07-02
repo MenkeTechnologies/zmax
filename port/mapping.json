@@ -28171,5 +28171,61 @@
    "static:ispell_kill_ispell"
   ],
   "note": "ispell-kill-ispell: each check spawns a fresh speller (no persistent process), so this reports there is nothing to kill"
+ },
+ {
+  "spec_id": "emacs.command.diary",
+  "status": "ported",
+  "evidence": [
+   "static:diary"
+  ],
+  "note": "diary: display today's diary entries (reads ~/diary via zemacs_core::diary)"
+ },
+ {
+  "spec_id": "emacs.command.diary_view_entries",
+  "status": "ported",
+  "evidence": [
+   "static:diary_view_entries"
+  ],
+  "note": "diary-view-entries: show the current date's entries (calendar `d` shows the date at point)"
+ },
+ {
+  "spec_id": "emacs.command.diary_show_all_entries",
+  "status": "ported",
+  "evidence": [
+   "static:diary_show_all_entries"
+  ],
+  "note": "diary-show-all-entries: open the ~/diary file"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_entry"
+  ],
+  "note": "diary-insert-entry: append a dated header for today to ~/diary and open it to type"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_weekly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_weekly_entry"
+  ],
+  "note": "diary-insert-weekly-entry: append a weekly (weekday) header for today"
+ },
+ {
+  "spec_id": "emacs.command.diary_mark_entries",
+  "status": "ported",
+  "evidence": [
+   "static:diary_mark_entries"
+  ],
+  "note": "diary-mark-entries: the Calendar marks dates carrying entries; the command reports the marked-date count for the month"
+ },
+ {
+  "spec_id": "emacs.keybinding.d_lparencalendar_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:d"
+  ],
+  "note": "d (Calendar mode) = diary-view-entries: show the diary entries for the date at point"
  }
 ]
