@@ -2947,6 +2947,11 @@ fn current_buffer_text(cx: &compositor::Context) -> String {
     doc!(cx.editor).text().to_string()
 }
 
+/// Optional leading `[count]` for the cursor-relative motions; defaults to 1.
+fn qf_dir_count(args: &Args) -> usize {
+    args.first().and_then(|s| s.parse::<usize>().ok()).unwrap_or(1)
+}
+
 macro_rules! qf_nav_cmd {
     ($name:ident, $kind:expr, $body:expr) => {
         fn $name(
@@ -3002,6 +3007,24 @@ qf_nav_cmd!(quickfix_nfile_cmd, QfKind::Quickfix, |cx, _a| {
 });
 qf_nav_cmd!(quickfix_pfile_cmd, QfKind::Quickfix, |cx, _a| {
     crate::commands::qf_step_file(cx.editor, QfKind::Quickfix, false);
+    Ok(())
+});
+// Cursor-relative motions (`:cabove`/`:cbelow`/`:cafter`/`:cbefore`): the
+// count argument selects the count-th stop in that direction (default 1).
+qf_nav_cmd!(quickfix_above_cmd, QfKind::Quickfix, |cx, a| {
+    crate::commands::qf_move_dir(cx.editor, QfKind::Quickfix, crate::commands::QfDir::Above, qf_dir_count(a));
+    Ok(())
+});
+qf_nav_cmd!(quickfix_below_cmd, QfKind::Quickfix, |cx, a| {
+    crate::commands::qf_move_dir(cx.editor, QfKind::Quickfix, crate::commands::QfDir::Below, qf_dir_count(a));
+    Ok(())
+});
+qf_nav_cmd!(quickfix_after_cmd, QfKind::Quickfix, |cx, a| {
+    crate::commands::qf_move_dir(cx.editor, QfKind::Quickfix, crate::commands::QfDir::After, qf_dir_count(a));
+    Ok(())
+});
+qf_nav_cmd!(quickfix_before_cmd, QfKind::Quickfix, |cx, a| {
+    crate::commands::qf_move_dir(cx.editor, QfKind::Quickfix, crate::commands::QfDir::Before, qf_dir_count(a));
     Ok(())
 });
 qf_nav_cmd!(quickfix_buffer_cmd, QfKind::Quickfix, |cx, _a| {
@@ -3073,6 +3096,22 @@ qf_nav_cmd!(loclist_last_cmd, QfKind::Location, |cx, _a| {
 qf_nav_cmd!(loclist_ll_cmd, QfKind::Location, |cx, a| {
     let nr = a.first().and_then(|s| s.parse::<usize>().ok());
     crate::commands::qf_jump_nth(cx.editor, QfKind::Location, nr);
+    Ok(())
+});
+qf_nav_cmd!(loclist_above_cmd, QfKind::Location, |cx, a| {
+    crate::commands::qf_move_dir(cx.editor, QfKind::Location, crate::commands::QfDir::Above, qf_dir_count(a));
+    Ok(())
+});
+qf_nav_cmd!(loclist_below_cmd, QfKind::Location, |cx, a| {
+    crate::commands::qf_move_dir(cx.editor, QfKind::Location, crate::commands::QfDir::Below, qf_dir_count(a));
+    Ok(())
+});
+qf_nav_cmd!(loclist_after_cmd, QfKind::Location, |cx, a| {
+    crate::commands::qf_move_dir(cx.editor, QfKind::Location, crate::commands::QfDir::After, qf_dir_count(a));
+    Ok(())
+});
+qf_nav_cmd!(loclist_before_cmd, QfKind::Location, |cx, a| {
+    crate::commands::qf_move_dir(cx.editor, QfKind::Location, crate::commands::QfDir::Before, qf_dir_count(a));
     Ok(())
 });
 qf_nav_cmd!(loclist_buffer_cmd, QfKind::Location, |cx, _a| {
@@ -17661,6 +17700,38 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "cabove",
+        aliases: &["cabo"],
+        doc: "Jump to the [count]th quickfix entry above the cursor line.",
+        fun: quickfix_above_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cbelow",
+        aliases: &["cbel"],
+        doc: "Jump to the [count]th quickfix entry below the cursor line.",
+        fun: quickfix_below_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cbefore",
+        aliases: &["cbe"],
+        doc: "Jump to the [count]th quickfix entry before the cursor position.",
+        fun: quickfix_before_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "cafter",
+        aliases: &["caf"],
+        doc: "Jump to the [count]th quickfix entry after the cursor position.",
+        fun: quickfix_after_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "cbuffer",
         aliases: &["cb"],
         doc: "Read the current buffer as error lines into the quickfix list.",
@@ -17778,6 +17849,38 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Jump to the [count]th location list entry (or the current one).",
         fun: loclist_ll_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "labove",
+        aliases: &["lab"],
+        doc: "Jump to the [count]th location list entry above the cursor line.",
+        fun: loclist_above_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lbelow",
+        aliases: &["lbel"],
+        doc: "Jump to the [count]th location list entry below the cursor line.",
+        fun: loclist_below_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lbefore",
+        aliases: &["lbe"],
+        doc: "Jump to the [count]th location list entry before the cursor position.",
+        fun: loclist_before_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lafter",
+        aliases: &["laf"],
+        doc: "Jump to the [count]th location list entry after the cursor position.",
+        fun: loclist_after_cmd,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },

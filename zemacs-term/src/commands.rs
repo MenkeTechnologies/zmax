@@ -13028,6 +13028,84 @@ pub(crate) fn qf_jump_nth(editor: &mut Editor, kind: QfKind, nr: Option<usize>) 
     qf_jump_to(editor, kind, idx, Action::Replace);
 }
 
+/// The four cursor-relative quickfix motions (`:cabove`/`:cbelow`/`:cafter`/
+/// `:cbefore` and their location-list twins).
+#[derive(Clone, Copy)]
+pub(crate) enum QfDir {
+    Above,
+    Below,
+    After,
+    Before,
+}
+
+/// True when a quickfix entry's stored path refers to the current buffer.
+/// Entries may be relative (grep output) or absolute; match on the canonical
+/// path when both resolve, else fall back to the raw path and the relative
+/// path.
+fn qf_entry_is_current(entry_path: &std::path::Path, doc_abs: Option<&std::path::Path>) -> bool {
+    let Some(doc_abs) = doc_abs else {
+        return false;
+    };
+    if entry_path == doc_abs {
+        return true;
+    }
+    let entry_abs = if entry_path.is_absolute() {
+        entry_path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .unwrap_or_default()
+            .join(entry_path)
+    };
+    match (
+        std::fs::canonicalize(&entry_abs),
+        std::fs::canonicalize(doc_abs),
+    ) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => entry_abs == doc_abs,
+    }
+}
+
+/// `:cabove`/`:cbelow`/`:cafter`/`:cbefore` (and `:l…` twins): jump to the
+/// entry relative to the current cursor position within the current buffer.
+/// `count` selects the count-th stop in that direction (default 1). Delegates
+/// the ordering rules to `zemacs_core::quickfix`.
+pub(crate) fn qf_move_dir(editor: &mut Editor, kind: QfKind, dir: QfDir, count: usize) {
+    use zemacs_core::quickfix::{self, Loc};
+
+    // Read the current cursor position and buffer path.
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text();
+    let cursor_char = doc.selection(view.id).primary().cursor(text.slice(..));
+    let cline = text.char_to_line(cursor_char);
+    let ccol = cursor_char - text.line_to_char(cline);
+    let doc_abs = doc.path().map(|p| p.to_path_buf());
+
+    // Filter the active list to entries in the current buffer, preserving list
+    // order, and remember each survivor's global index.
+    let entries = qf_entries(editor, kind);
+    let mut global: Vec<usize> = Vec::new();
+    let mut locs: Vec<Loc> = Vec::new();
+    for (i, e) in entries.iter().enumerate() {
+        if qf_entry_is_current(&e.path, doc_abs.as_deref()) {
+            global.push(i);
+            locs.push(Loc::new(e.line, e.col));
+        }
+    }
+
+    let cursor = Loc::new(cline, ccol);
+    let hit = match dir {
+        QfDir::Above => quickfix::above(&locs, cline, count),
+        QfDir::Below => quickfix::below(&locs, cline, count),
+        QfDir::After => quickfix::after(&locs, cursor, count),
+        QfDir::Before => quickfix::before(&locs, cursor, count),
+    };
+
+    match hit {
+        Some(local) => qf_jump_to(editor, kind, global[local], Action::Replace),
+        None => editor.set_error("no more items"),
+    }
+}
+
 /// Build the quickfix/location-list picker (the `:copen`/`:lopen` window).
 pub(crate) fn build_qf_picker(editor: &mut Editor, kind: QfKind) -> Box<dyn Component> {
     let entries = qf_entries(editor, kind);
