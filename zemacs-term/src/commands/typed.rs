@@ -184,6 +184,213 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Vim argument list (`:args`, `:next`, `:argadd`, …). One process-global list,
+// held in a thread-local (commands run on the main thread, like the vimlrs
+// bridge's hooks). The pure state machine is `zemacs_core::arglist::ArgList`;
+// these commands drive it and open `current_file()` whenever the index moves.
+// ---------------------------------------------------------------------------
+
+thread_local! {
+    static ARGLIST: std::cell::RefCell<zemacs_core::arglist::ArgList> =
+        std::cell::RefCell::new(zemacs_core::arglist::ArgList::new());
+}
+
+/// Run `f` against the global argument list.
+fn with_arglist<R>(f: impl FnOnce(&mut zemacs_core::arglist::ArgList) -> R) -> R {
+    ARGLIST.with(|a| f(&mut a.borrow_mut()))
+}
+
+/// Open a file named in the argument list (expanding a leading `~`).
+fn edit_arg_file(cx: &mut compositor::Context, file: &str) -> anyhow::Result<()> {
+    let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(file));
+    cx.editor.open(&path, Action::Replace)?;
+    Ok(())
+}
+
+/// Optional leading count argument (`:next 2`); defaults to 1.
+fn arg_count(args: &Args) -> usize {
+    args.first().and_then(|s| s.parse::<usize>().ok()).unwrap_or(1)
+}
+
+/// `:args` — with no argument, echo the list; with file arguments, replace the
+/// list and edit the first file.
+fn args_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        let shown = with_arglist(|a| {
+            if a.is_empty() {
+                "argument list is empty".to_string()
+            } else {
+                a.display()
+            }
+        });
+        cx.editor.set_status(shown);
+        return Ok(());
+    }
+    let files: Vec<String> = args.iter().map(|s| s.to_string()).collect();
+    with_arglist(|a| a.set(files));
+    let first = with_arglist(|a| a.current_file().map(str::to_string));
+    if let Some(f) = first {
+        edit_arg_file(cx, &f)?;
+    }
+    Ok(())
+}
+
+/// `:argadd {files}` — insert files after the current entry.
+fn argadd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("argadd: needs at least one file");
+    }
+    let files: Vec<String> = args.iter().map(|s| s.to_string()).collect();
+    with_arglist(|a| a.add(files));
+    cx.editor
+        .set_status(with_arglist(|a| format!("{} files in the arg list", a.len())));
+    Ok(())
+}
+
+/// `:argedit {file}` — add the file after the current entry and edit it.
+fn argedit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(file) = args.first().map(|s| s.to_string()) else {
+        bail!("argedit: needs a file");
+    };
+    let f = with_arglist(|a| a.edit(file));
+    edit_arg_file(cx, &f)
+}
+
+/// `:argdelete {patterns}` — remove entries matching the glob patterns.
+fn argdelete(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("argdelete: needs a pattern");
+    }
+    let pats: Vec<&str> = args.iter().map(|s| s.as_ref()).collect();
+    let n = with_arglist(|a| a.delete_matching(&pats));
+    cx.editor.set_status(format!("removed {n} from the arg list"));
+    Ok(())
+}
+
+/// `:argdedupe` — remove duplicate entries.
+fn argdedupe(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    with_arglist(|a| a.dedupe());
+    cx.editor
+        .set_status(with_arglist(|a| format!("{} files in the arg list", a.len())));
+    Ok(())
+}
+
+/// `:next` — edit the next argument (E165 at the end).
+fn arg_next(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let count = arg_count(&args);
+    let file = with_arglist(|a| a.next(count).map(str::to_string));
+    match file {
+        Some(f) => edit_arg_file(cx, &f),
+        None => bail!("Cannot go beyond last file"),
+    }
+}
+
+/// `:previous` / `:Next` — edit the previous argument (E164 at the start).
+fn arg_prev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let count = arg_count(&args);
+    let file = with_arglist(|a| a.prev(count).map(str::to_string));
+    match file {
+        Some(f) => edit_arg_file(cx, &f),
+        None => bail!("Cannot go before first file"),
+    }
+}
+
+/// `:first` / `:rewind` — edit the first argument.
+fn arg_first(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = with_arglist(|a| a.first().map(str::to_string));
+    match file {
+        Some(f) => edit_arg_file(cx, &f),
+        None => bail!("argument list is empty"),
+    }
+}
+
+/// `:last` — edit the last argument.
+fn arg_last(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = with_arglist(|a| a.last().map(str::to_string));
+    match file {
+        Some(f) => edit_arg_file(cx, &f),
+        None => bail!("argument list is empty"),
+    }
+}
+
+/// `:argument N` — edit the Nth argument.
+fn argument(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(n) = args.first().and_then(|s| s.parse::<usize>().ok()) else {
+        bail!("argument: needs a number");
+    };
+    let file = with_arglist(|a| a.goto(n).map(str::to_string));
+    match file {
+        Some(f) => edit_arg_file(cx, &f),
+        None => bail!("no argument {n}"),
+    }
+}
+
+/// `:argdo {cmd}` — run an Ex command on each file in the argument list.
+fn argdo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cmd = args.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" ");
+    if cmd.is_empty() {
+        bail!("argdo: needs a command");
+    }
+    let files = with_arglist(|a| a.files().to_vec());
+    for f in files {
+        edit_arg_file(cx, &f)?;
+        run_command_line(cx, &cmd);
+    }
+    Ok(())
+}
+
+/// `:all` — open a window for each file in the argument list.
+fn arg_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let files = with_arglist(|a| a.files().to_vec());
+    if files.is_empty() {
+        bail!("argument list is empty");
+    }
+    for (i, f) in files.iter().enumerate() {
+        if i > 0 {
+            run_command_line(cx, "hsplit-new");
+        }
+        edit_arg_file(cx, f)?;
+    }
+    Ok(())
+}
+
 fn buffer_close_by_ids_impl(
     cx: &mut compositor::Context,
     doc_ids: &[DocumentId],
@@ -16334,6 +16541,138 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "args",
+        aliases: &["ar"],
+        doc: "Show the argument list, or set it to the given files and edit the first (vim :args).",
+        fun: args_cmd,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "argadd",
+        aliases: &["arga"],
+        doc: "Add files to the argument list after the current entry (vim :argadd).",
+        fun: argadd,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "argedit",
+        aliases: &["arge"],
+        doc: "Add a file to the argument list and edit it (vim :argedit).",
+        fun: argedit,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "argdelete",
+        aliases: &["argd"],
+        doc: "Delete argument-list entries matching the given glob patterns (vim :argdelete).",
+        fun: argdelete,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "argdedupe",
+        aliases: &[],
+        doc: "Remove duplicate entries from the argument list (vim :argdedupe).",
+        fun: argdedupe,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "next",
+        aliases: &["argnext"],
+        doc: "Edit the next file in the argument list (vim :next).",
+        fun: arg_next,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "previous",
+        aliases: &["Next", "prev", "argprev"],
+        doc: "Edit the previous file in the argument list (vim :previous / :Next).",
+        fun: arg_prev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "first",
+        aliases: &["rewind", "rew"],
+        doc: "Edit the first file in the argument list (vim :first / :rewind).",
+        fun: arg_first,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "last",
+        aliases: &["la"],
+        doc: "Edit the last file in the argument list (vim :last).",
+        fun: arg_last,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "argument",
+        aliases: &["argu"],
+        doc: "Edit the Nth file in the argument list (vim :argument).",
+        fun: argument,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "argdo",
+        aliases: &[],
+        doc: "Run an Ex command on each file in the argument list (vim :argdo).",
+        fun: argdo,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "all",
+        aliases: &["sall"],
+        doc: "Open a window for each file in the argument list (vim :all / :sall).",
+        fun: arg_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

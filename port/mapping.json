@@ -27595,5 +27595,117 @@
    "key:rmail:w"
   ],
   "note": "Rmail w"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_args",
+  "status": "ported",
+  "evidence": [
+   "typable:args"
+  ],
+  "note": ":args -> zemacs :args (vim argument list; show or set + edit first)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_argadd",
+  "status": "ported",
+  "evidence": [
+   "typable:argadd"
+  ],
+  "note": ":argadd -> zemacs :argadd (insert files after current arg)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_argedit",
+  "status": "ported",
+  "evidence": [
+   "typable:argedit"
+  ],
+  "note": ":argedit -> zemacs :argedit (add + edit)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_argdelete",
+  "status": "ported",
+  "evidence": [
+   "typable:argdelete"
+  ],
+  "note": ":argdelete -> zemacs :argdelete (glob-pattern removal)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_argdedupe",
+  "status": "ported",
+  "evidence": [
+   "typable:argdedupe"
+  ],
+  "note": ":argdedupe -> zemacs :argdedupe (drop duplicates)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_argument",
+  "status": "ported",
+  "evidence": [
+   "typable:argument"
+  ],
+  "note": ":argument -> zemacs :argument N (edit Nth arg)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_argdo",
+  "status": "ported",
+  "evidence": [
+   "typable:argdo"
+  ],
+  "note": ":argdo -> zemacs :argdo (run Ex cmd on each arg file)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_next_1",
+  "status": "ported",
+  "evidence": [
+   "typable:next"
+  ],
+  "note": ":n[ext] -> zemacs :next (edit next arg; E165 at end)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_next",
+  "status": "ported",
+  "evidence": [
+   "typable:previous"
+  ],
+  "note": ":N[ext] -> zemacs :previous (edit previous arg)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_previous",
+  "status": "ported",
+  "evidence": [
+   "typable:previous"
+  ],
+  "note": ":prev[ious] -> zemacs :previous"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_first",
+  "status": "ported",
+  "evidence": [
+   "typable:first"
+  ],
+  "note": ":fir[st] -> zemacs :first"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_rewind",
+  "status": "ported",
+  "evidence": [
+   "typable:first"
+  ],
+  "note": ":rew[ind] -> zemacs :first / :rewind"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_last",
+  "status": "ported",
+  "evidence": [
+   "typable:last"
+  ],
+  "note": ":la[st] -> zemacs :last"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_all",
+  "status": "ported",
+  "evidence": [
+   "typable:all"
+  ],
+  "note": ":al[l] -> zemacs :all (open a window per arg file)"
  }
 ]
