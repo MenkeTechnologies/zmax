@@ -28227,5 +28227,93 @@
    "key:calendar:d"
   ],
   "note": "d (Calendar mode) = diary-view-entries: show the diary entries for the date at point"
+ },
+ {
+  "spec_id": "emacs.command.outline_next_visible_heading",
+  "status": "ported",
+  "evidence": [
+   "static:outline_next_visible_heading"
+  ],
+  "note": "outline-mode: next heading (outline-next-visible-heading, C-c C-n); heading structure from zemacs_core::outline, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.outline_previous_visible_heading",
+  "status": "ported",
+  "evidence": [
+   "static:outline_previous_visible_heading"
+  ],
+  "note": "outline-mode: previous heading (outline-previous-visible-heading, C-c C-p); heading structure from zemacs_core::outline, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.outline_up_heading",
+  "status": "ported",
+  "evidence": [
+   "static:outline_up_heading"
+  ],
+  "note": "outline-mode: parent heading (outline-up-heading, C-c C-u); heading structure from zemacs_core::outline, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.outline_forward_same_level",
+  "status": "ported",
+  "evidence": [
+   "static:outline_forward_same_level"
+  ],
+  "note": "outline-mode: next same-level heading (outline-forward-same-level, C-c C-f); heading structure from zemacs_core::outline, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.outline_backward_same_level",
+  "status": "ported",
+  "evidence": [
+   "static:outline_backward_same_level"
+  ],
+  "note": "outline-mode: previous same-level heading (outline-backward-same-level, C-c C-b); heading structure from zemacs_core::outline, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.outline_hide_subtree",
+  "status": "ported",
+  "evidence": [
+   "static:outline_hide_subtree"
+  ],
+  "note": "outline-mode: fold the subtree body (outline-hide-subtree); heading structure from zemacs_core::outline, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.outline_show_subtree",
+  "status": "ported",
+  "evidence": [
+   "static:outline_show_subtree"
+  ],
+  "note": "outline-mode: reveal the subtree (outline-show-subtree); heading structure from zemacs_core::outline, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.outline_hide_entry",
+  "status": "ported",
+  "evidence": [
+   "static:outline_hide_entry"
+  ],
+  "note": "outline-mode: fold this heading's body (outline-hide-entry); heading structure from zemacs_core::outline, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.outline_show_entry",
+  "status": "ported",
+  "evidence": [
+   "static:outline_show_entry"
+  ],
+  "note": "outline-mode: reveal this heading's body (outline-show-entry); heading structure from zemacs_core::outline, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.outline_hide_body",
+  "status": "ported",
+  "evidence": [
+   "static:outline_hide_body"
+  ],
+  "note": "outline-mode: fold all bodies, show only headings (outline-hide-body); heading structure from zemacs_core::outline, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.outline_show_all",
+  "status": "ported",
+  "evidence": [
+   "static:outline_show_all"
+  ],
+  "note": "outline-mode: reveal all body text (outline-show-all); heading structure from zemacs_core::outline, folding via the document fold state"
  }
 ]
