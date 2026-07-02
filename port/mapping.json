@@ -26947,5 +26947,109 @@
   ],
   "note": "emacs Calendar q -> zemacs Calendar mode",
   "spec_id": "emacs.keybinding.q_lparencalendar_mode_rparen"
+ },
+ {
+  "spec_id": "emacs.command.compose_mail",
+  "status": "ported",
+  "evidence": [
+   "typable:compose-mail"
+  ],
+  "note": "emacs compose-mail (C-x m) -> zemacs :compose-mail opens a message-mode draft buffer (To/Subject headers + separator)"
+ },
+ {
+  "spec_id": "emacs.command.compose_mail_other_window",
+  "status": "ported",
+  "evidence": [
+   "typable:compose-mail-other-window"
+  ],
+  "note": "emacs compose-mail-other-window -> zemacs :compose-mail-other-window (hsplit then compose)"
+ },
+ {
+  "spec_id": "emacs.command.compose_mail_other_frame",
+  "status": "partial",
+  "evidence": [
+   "typable:compose-mail-other-window"
+  ],
+  "note": "emacs compose-mail-other-frame -> zemacs has no frames; :compose-mail-other-window opens the draft in a split instead"
+ },
+ {
+  "spec_id": "emacs.command.message_send",
+  "status": "partial",
+  "evidence": [
+   "typable:message-send"
+  ],
+  "note": "emacs message-send (C-c C-s) -> zemacs :message-send assembles+validates the RFC 5322 message and queues it to ~/.zemacs/mail/outbox; SMTP transmission deferred (no transport substrate yet)"
+ },
+ {
+  "spec_id": "emacs.command.message_send_and_exit",
+  "status": "partial",
+  "evidence": [
+   "typable:message-send-and-exit"
+  ],
+  "note": "emacs message-send-and-exit (C-c C-c) -> zemacs :message-send-and-exit queues the draft to the local outbox and kills the buffer; SMTP transmission deferred"
+ },
+ {
+  "spec_id": "emacs.command.message_goto_to",
+  "status": "ported",
+  "evidence": [
+   "typable:message-goto-to"
+  ],
+  "note": "emacs message-goto-to (C-c C-f C-t) -> zemacs :message-goto-to moves point to the To: header"
+ },
+ {
+  "spec_id": "emacs.command.message_goto_subject",
+  "status": "ported",
+  "evidence": [
+   "typable:message-goto-subject"
+  ],
+  "note": "emacs message-goto-subject (C-c C-f C-s) -> zemacs :message-goto-subject"
+ },
+ {
+  "spec_id": "emacs.command.message_goto_cc",
+  "status": "ported",
+  "evidence": [
+   "typable:message-goto-cc"
+  ],
+  "note": "emacs message-goto-cc (C-c C-f C-c) -> zemacs :message-goto-cc"
+ },
+ {
+  "spec_id": "emacs.command.message_goto_bcc",
+  "status": "ported",
+  "evidence": [
+   "typable:message-goto-bcc"
+  ],
+  "note": "emacs message-goto-bcc (C-c C-f C-b) -> zemacs :message-goto-bcc"
+ },
+ {
+  "spec_id": "emacs.command.mail_text",
+  "status": "ported",
+  "evidence": [
+   "typable:message-goto-body"
+  ],
+  "note": "emacs mail-text (go to body) -> zemacs :message-goto-body / :mail-text moves point past the header separator"
+ },
+ {
+  "spec_id": "emacs.command.message_insert_signature",
+  "status": "ported",
+  "evidence": [
+   "typable:message-insert-signature"
+  ],
+  "note": "emacs message-insert-signature (C-c C-w) -> zemacs :message-insert-signature inserts the -- signature block (uses ~/.signature)"
+ },
+ {
+  "spec_id": "emacs.command.mml_attach_file",
+  "status": "ported",
+  "evidence": [
+   "typable:mml-attach-file"
+  ],
+  "note": "emacs mml-attach-file (C-c C-a) -> zemacs :mml-attach-file inserts an <#part> MML attachment tag"
+ },
+ {
+  "spec_id": "emacs.command.mail_add_attachment",
+  "status": "ported",
+  "evidence": [
+   "typable:mml-attach-file"
+  ],
+  "note": "emacs mail-add-attachment -> zemacs :mail-add-attachment (alias of :mml-attach-file) inserts an MML attachment tag"
  }
 ]

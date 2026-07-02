@@ -73,6 +73,13 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all
     ("space a c", "Applications", "calc_dispatch"), // SPC a c : calc-dispatch (open the RPN calculator)
     ("space a =", "Applications", ":calc"),         // SPC a = : quick infix eval of the region/args
+    ("space a m", "Applications", ":compose-mail"), // SPC a m : compose-mail (message-mode draft)
+    ("space m c", "Mail", ":message-send-and-exit"),   // SPC m c : send and kill (C-c C-c)
+    ("space m s", "Mail", ":message-send"),            // SPC m s : queue draft (C-c C-s)
+    ("space m k", "Mail", ":message-kill-buffer"),     // SPC m k : kill draft (C-c C-k)
+    ("space m w", "Mail", ":message-insert-signature"),// SPC m w : insert signature (C-c C-w)
+    ("space m t", "Mail", ":message-goto-to"),         // SPC m t : goto To:
+    ("space m b", "Mail", ":message-goto-body"),       // SPC m b : goto body (mail-text)
     ("space f R", "Files",   ":move"),             // SPC f R : rename file
     ("space f D", "Files",   ":delete-file"),      // SPC f D : delete file + buffer
     ("space b d", "Buffers", ":buffer-close"),     // SPC b d : kill buffer

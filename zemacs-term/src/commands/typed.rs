@@ -14334,6 +14334,273 @@ fn calc(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Emacs message-mode — email composition. The draft is an ordinary buffer:
+// headers above the `--text follows this line--` separator, body below. The RFC
+// 5322 parse/assemble/validate logic is the pure `zemacs_core::email` engine;
+// these commands drive it against the current buffer. There is no SMTP substrate
+// yet, so `message-send` assembles the message and queues it to a local outbox
+// directory rather than transmitting — reported honestly, never faked.
+// ---------------------------------------------------------------------------
+
+/// Character offset of the end of the first `Name:` header line (before its
+/// newline), matched case-insensitively.
+fn header_line_end(text: &zemacs_core::Rope, name: &str) -> Option<usize> {
+    for i in 0..text.len_lines() {
+        let ls: String = text.line(i).chars().collect();
+        let trimmed = ls.trim_end_matches(['\n', '\r']);
+        if let Some((k, _)) = trimmed.split_once(':') {
+            if k.trim().eq_ignore_ascii_case(name) {
+                return Some(text.line_to_char(i) + trimmed.chars().count());
+            }
+        }
+    }
+    None
+}
+
+/// Character offset where the body begins (start of the line after the
+/// message-mode header separator), or end-of-buffer if there is no body yet.
+fn body_start(text: &zemacs_core::Rope) -> Option<usize> {
+    for i in 0..text.len_lines() {
+        let ls: String = text.line(i).chars().collect();
+        if ls.trim_end_matches(['\n', '\r']) == zemacs_core::email::HEADER_SEPARATOR {
+            return Some(if i + 1 < text.len_lines() {
+                text.line_to_char(i + 1)
+            } else {
+                text.len_chars()
+            });
+        }
+    }
+    None
+}
+
+/// Move point (and scroll) to a char offset in the current buffer.
+fn goto_char(cx: &mut compositor::Context, pos: usize) {
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    let pos = pos.min(doc.text().len_chars());
+    doc.set_selection(view.id, zemacs_core::Selection::point(pos));
+    view.ensure_cursor_in_view(doc, scrolloff);
+}
+
+/// Emacs `compose-mail` (C-x m): open a new buffer with the message-mode
+/// template (`:compose-mail [to] [subject...]`) and put point on the To: line.
+fn compose_mail(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let to = args.first().map(|s| s.to_string()).unwrap_or_default();
+    let subject = args
+        .iter()
+        .skip(1)
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    cx.editor.new_file(Action::Replace);
+    let template = zemacs_core::email::compose_template(&to, &subject);
+    {
+        let (view, doc) = current!(cx.editor);
+        let insert = Transaction::insert(
+            doc.text(),
+            &zemacs_core::Selection::point(0),
+            template.as_str().into(),
+        );
+        doc.apply(&insert, view.id);
+        doc.append_changes_to_history(view);
+    }
+    let pos = header_line_end(doc!(cx.editor).text(), "To");
+    if let Some(pos) = pos {
+        goto_char(cx, pos);
+    }
+    cx.editor
+        .set_status("compose-mail: SPC m c send · SPC m s queue · SPC m a attach");
+    Ok(())
+}
+
+/// Emacs `compose-mail-other-window`: split first, then compose in the new view.
+fn compose_mail_other_window(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    run_command_line(cx, "hsplit-new");
+    compose_mail(cx, args, event)
+}
+
+/// The local mail queue directory (`~/.zemacs/mail/outbox`), created on demand.
+/// Stands in for SMTP: assembled messages are written here until a transport
+/// substrate exists.
+fn outbox_dir() -> anyhow::Result<std::path::PathBuf> {
+    let dir = home_dir()?.join(".zemacs").join("mail").join("outbox");
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+/// Assemble the current draft, validate its recipients, and queue it to the
+/// outbox. Returns the path written. Shared by `message-send` and
+/// `message-send-and-exit`.
+fn queue_current_draft(cx: &mut compositor::Context) -> anyhow::Result<std::path::PathBuf> {
+    let raw = doc!(cx.editor).text().to_string();
+    let msg = zemacs_core::email::parse_buffer(&raw);
+    msg.validate().map_err(|e| anyhow::anyhow!("message: {e}"))?;
+    let wire = msg.assemble();
+    let dir = outbox_dir()?;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let path = dir.join(format!("{stamp}-{}.eml", std::process::id()));
+    std::fs::write(&path, wire)?;
+    Ok(path)
+}
+
+/// Emacs `message-send` (C-c C-s): assemble + queue the draft, keeping the buffer.
+fn message_send(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = queue_current_draft(cx)?;
+    cx.editor.set_status(format!(
+        "message queued to {} (no SMTP configured)",
+        path.display()
+    ));
+    Ok(())
+}
+
+/// Emacs `message-send-and-exit` (C-c C-c): queue the draft, then kill its buffer.
+fn message_send_and_exit(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = queue_current_draft(cx)?;
+    run_command_line(cx, "buffer-close!");
+    cx.editor
+        .set_status(format!("message queued to {} — buffer killed", path.display()));
+    Ok(())
+}
+
+/// Emacs `message-kill-buffer` (C-c C-k): kill the compose buffer.
+fn message_kill_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    run_command_line(cx, "buffer-close!");
+    Ok(())
+}
+
+/// Jump to a header field or the body (Emacs `message-goto-to`/`-subject`/
+/// `-cc`/`-bcc`/`-body`, and `mail-text`). `field` is a header name, or "" for
+/// the body.
+fn message_goto(cx: &mut compositor::Context, field: &str) -> anyhow::Result<()> {
+    let target = if field.is_empty() {
+        body_start(doc!(cx.editor).text())
+    } else {
+        header_line_end(doc!(cx.editor).text(), field)
+    };
+    match target {
+        Some(pos) => goto_char(cx, pos),
+        None => cx.editor.set_status(format!(
+            "message: no {} here — is this a compose buffer?",
+            if field.is_empty() { "body" } else { field }
+        )),
+    }
+    Ok(())
+}
+
+fn message_goto_to(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
+    message_goto(cx, "To")
+}
+
+fn message_goto_subject(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
+    message_goto(cx, "Subject")
+}
+
+fn message_goto_cc(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
+    message_goto(cx, "Cc")
+}
+
+fn message_goto_bcc(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
+    message_goto(cx, "Bcc")
+}
+
+fn message_goto_body(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
+    message_goto(cx, "")
+}
+
+/// Emacs `message-insert-signature` (C-c C-w): append the signature block at
+/// point, using `~/.signature` if present.
+fn message_insert_signature(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let sig = home_dir()
+        .ok()
+        .and_then(|h| std::fs::read_to_string(h.join(".signature")).ok())
+        .unwrap_or_else(|| "Sent with zemacs".to_string());
+    let block = zemacs_core::email::signature_block(&sig);
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id).clone();
+    let insert = Transaction::insert(doc.text(), &sel, block.as_str().into());
+    doc.apply(&insert, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Emacs `mml-attach-file` / `mail-add-attachment` (C-c C-a): insert an MML
+/// attachment tag for `path` at point (`:mml-attach-file <path>`).
+fn mml_attach_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.first().map(|s| s.to_string()).unwrap_or_default();
+    if path.is_empty() {
+        bail!("mml-attach-file: needs a file path");
+    }
+    let mime = zemacs_core::email::guess_mime_type(&path);
+    let tag = zemacs_core::email::mml_attach_tag(&path, mime);
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id).clone();
+    let insert = Transaction::insert(doc.text(), &sel, tag.as_str().into());
+    doc.apply(&insert, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!("attached {path} ({mime})"));
+    Ok(())
+}
+
 /// Extract every numeric literal from `s` (integers, decimals, scientific, with
 /// optional leading sign). A `+`/`-` counts as a sign only at a token boundary
 /// (start, whitespace, or one of `([{,;:=`), so `1-2` reads as `[1, 2]` while a
@@ -16324,6 +16591,138 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "compose-mail",
+        aliases: &["mail", "compose"],
+        doc: "Open a message-mode mail draft (emacs compose-mail, C-x m). :compose-mail [to] [subject...]",
+        fun: compose_mail,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "compose-mail-other-window",
+        aliases: &[],
+        doc: "Open a mail draft in a split (emacs compose-mail-other-window).",
+        fun: compose_mail_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "message-send",
+        aliases: &[],
+        doc: "Assemble and queue the current mail draft (emacs message-send, C-c C-s).",
+        fun: message_send,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "message-send-and-exit",
+        aliases: &[],
+        doc: "Queue the draft and kill its buffer (emacs message-send-and-exit, C-c C-c).",
+        fun: message_send_and_exit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "message-kill-buffer",
+        aliases: &[],
+        doc: "Kill the mail compose buffer (emacs message-kill-buffer, C-c C-k).",
+        fun: message_kill_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "message-goto-to",
+        aliases: &[],
+        doc: "Move point to the To: header (emacs message-goto-to, C-c C-f C-t).",
+        fun: message_goto_to,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "message-goto-subject",
+        aliases: &[],
+        doc: "Move point to the Subject: header (emacs message-goto-subject, C-c C-f C-s).",
+        fun: message_goto_subject,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "message-goto-cc",
+        aliases: &[],
+        doc: "Move point to the Cc: header (emacs message-goto-cc, C-c C-f C-c).",
+        fun: message_goto_cc,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "message-goto-bcc",
+        aliases: &[],
+        doc: "Move point to the Bcc: header (emacs message-goto-bcc, C-c C-f C-b).",
+        fun: message_goto_bcc,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "message-goto-body",
+        aliases: &["mail-text"],
+        doc: "Move point to the message body (emacs message-goto-body / mail-text, C-c C-b).",
+        fun: message_goto_body,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "message-insert-signature",
+        aliases: &[],
+        doc: "Insert the signature block at point (emacs message-insert-signature, C-c C-w).",
+        fun: message_insert_signature,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "mml-attach-file",
+        aliases: &["mail-add-attachment"],
+        doc: "Attach a file as a MIME part (emacs mml-attach-file, C-c C-a). :mml-attach-file <path>",
+        fun: mml_attach_file,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },

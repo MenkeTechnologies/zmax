@@ -18,6 +18,7 @@ pub mod history;
 pub mod calc;
 pub mod calendar;
 pub mod dired;
+pub mod email;
 pub mod increment;
 pub mod indent;
 pub mod line_ending;
