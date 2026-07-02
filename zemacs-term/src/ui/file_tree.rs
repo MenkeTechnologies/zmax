@@ -4,7 +4,7 @@
 //! expansion, keyboard navigation, and opening files directly via the in-process
 //! editor — no PTY round-trip, since this runs inside zemacs itself.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use tui::buffer::Buffer as Surface;
@@ -43,6 +43,11 @@ pub struct FileTree {
     /// Whether dotfiles are shown (from `editor.file-explorer.hidden`, inverted).
     /// Defaults to showing them; the owning view syncs this from config.
     show_hidden: bool,
+    /// Cache of `read_dir` listings per directory, so rebuilding the visible tree
+    /// (on every expand/collapse and every speed-search keystroke) doesn't re-hit
+    /// the disk for directories already read. Cleared by `refresh` (the file
+    /// watcher) and whenever `show_hidden` changes.
+    dir_cache: HashMap<PathBuf, Vec<(PathBuf, String, bool)>>,
 }
 
 impl FileTree {
@@ -57,6 +62,7 @@ impl FileTree {
             filtering: false,
             list_offset: 0,
             show_hidden: true,
+            dir_cache: HashMap::new(),
         };
         tree.expanded.insert(root);
         tree.rebuild();
@@ -69,8 +75,24 @@ impl FileTree {
     pub fn set_show_hidden(&mut self, show: bool) {
         if self.show_hidden != show {
             self.show_hidden = show;
+            self.dir_cache.clear();
             self.rebuild();
         }
+    }
+
+    /// Directory children, memoized. Reads and caches `dir` on a miss; on a hit
+    /// returns the cached listing (cheap clone) so a rebuild walks RAM, not disk.
+    fn cached_children(
+        cache: &mut HashMap<PathBuf, Vec<(PathBuf, String, bool)>>,
+        dir: &Path,
+        show_hidden: bool,
+    ) -> Vec<(PathBuf, String, bool)> {
+        if let Some(v) = cache.get(dir) {
+            return v.clone();
+        }
+        let v = Self::read_dir_sorted(dir, show_hidden);
+        cache.insert(dir.to_path_buf(), v.clone());
+        v
     }
 
     /// The workspace root the tree is rooted at (for root-level New actions).
@@ -115,21 +137,24 @@ impl FileTree {
     }
 
     /// Re-read the directory tree from disk (preserving expand/selection state).
-    /// Called by the filesystem watcher when files change on disk.
+    /// Called by the filesystem watcher when files change on disk, so the cache
+    /// is dropped to pick up the on-disk changes.
     pub fn refresh(&mut self) {
+        self.dir_cache.clear();
         self.rebuild();
     }
 
     fn rebuild(&mut self) {
         let show_hidden = self.show_hidden;
         fn walk(
+            cache: &mut HashMap<PathBuf, Vec<(PathBuf, String, bool)>>,
             dir: &Path,
             depth: usize,
             expanded: &HashSet<PathBuf>,
             out: &mut Vec<Row>,
             show_hidden: bool,
         ) {
-            for (path, name, is_dir) in FileTree::read_dir_sorted(dir, show_hidden) {
+            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden) {
                 let exp = is_dir && expanded.contains(&path);
                 out.push(Row {
                     path: path.clone(),
@@ -139,7 +164,7 @@ impl FileTree {
                     expanded: exp,
                 });
                 if exp {
-                    walk(&path, depth + 1, expanded, out, show_hidden);
+                    walk(cache, &path, depth + 1, expanded, out, show_hidden);
                 }
             }
         }
@@ -165,6 +190,7 @@ impl FileTree {
             qc.peek().is_none()
         }
         fn walk_filtered(
+            cache: &mut HashMap<PathBuf, Vec<(PathBuf, String, bool)>>,
             dir: &Path,
             depth: usize,
             q: &str,
@@ -175,11 +201,12 @@ impl FileTree {
                 return false;
             }
             let mut any = false;
-            for (path, name, is_dir) in FileTree::read_dir_sorted(dir, show_hidden) {
+            for (path, name, is_dir) in FileTree::cached_children(cache, dir, show_hidden) {
                 if is_dir {
                     let name_match = fuzzy(&name, q);
                     let mut kids = Vec::new();
-                    let child_match = walk_filtered(&path, depth + 1, q, &mut kids, show_hidden);
+                    let child_match =
+                        walk_filtered(cache, &path, depth + 1, q, &mut kids, show_hidden);
                     if name_match || child_match {
                         out.push(Row {
                             path,
@@ -207,11 +234,21 @@ impl FileTree {
 
         let mut rows = Vec::new();
         let q = self.filter.to_lowercase();
+        let root = self.root.clone();
+        let expanded = std::mem::take(&mut self.expanded);
         if q.is_empty() {
-            walk(&self.root, 0, &self.expanded, &mut rows, show_hidden);
+            walk(
+                &mut self.dir_cache,
+                &root,
+                0,
+                &expanded,
+                &mut rows,
+                show_hidden,
+            );
         } else {
-            walk_filtered(&self.root, 0, &q, &mut rows, show_hidden);
+            walk_filtered(&mut self.dir_cache, &root, 0, &q, &mut rows, show_hidden);
         }
+        self.expanded = expanded;
         self.rows = rows;
         if self.selected >= self.rows.len() {
             self.selected = self.rows.len().saturating_sub(1);
@@ -279,11 +316,13 @@ impl FileTree {
         self.rebuild();
     }
 
-    /// Expand every (non-hidden, non-noise) directory under the root — the
-    /// JetBrains "Expand All" toolbar button. Bounded so a huge tree can't stall.
+    /// Expand every code directory under the root — the JetBrains "Expand All"
+    /// toolbar button. Bounded so a huge tree can't stall. Dotfile directories
+    /// (`.git`, `.github`, …) and heavy build/dependency dirs are NEVER descended
+    /// into here — recursively walking `.git/objects` would freeze the UI — even
+    /// though dotfiles are still listed in the tree and can be expanded by hand.
     pub fn expand_all(&mut self) {
-        let show_hidden = self.show_hidden;
-        fn collect(dir: &Path, out: &mut HashSet<PathBuf>, budget: &mut usize, show_hidden: bool) {
+        fn collect(dir: &Path, out: &mut HashSet<PathBuf>, budget: &mut usize) {
             if *budget == 0 {
                 return;
             }
@@ -297,24 +336,19 @@ impl FileTree {
                 }
                 let name = entry.file_name();
                 let name = name.to_string_lossy();
-                // Always skip heavy build/dependency dirs; skip dotfile dirs only
-                // when hidden files are hidden.
-                if (!show_hidden && name.starts_with('.'))
-                    || matches!(
-                        name.as_ref(),
-                        "target" | "node_modules" | "dist" | "build" | ".cache"
-                    )
+                if name.starts_with('.')
+                    || matches!(name.as_ref(), "target" | "node_modules" | "dist" | "build")
                 {
                     continue;
                 }
                 out.insert(p.clone());
                 *budget -= 1;
-                collect(&p, out, budget, show_hidden);
+                collect(&p, out, budget);
             }
         }
         let mut budget = 5000usize;
         let root = self.root.clone();
-        collect(&root, &mut self.expanded, &mut budget, show_hidden);
+        collect(&root, &mut self.expanded, &mut budget);
         self.expanded.insert(root);
         self.rebuild();
     }
