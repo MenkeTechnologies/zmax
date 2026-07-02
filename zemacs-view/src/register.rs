@@ -52,18 +52,22 @@ impl Registers {
         match name {
             '_' => Some(RegisterValues::new(iter::empty())),
             '#' => {
-                let (view, doc) = current_ref!(editor);
-                let selections = doc.selection(view.id).len();
-                // ExactSizeIterator is implemented for Range<usize> but
-                // not RangeInclusive<usize>.
-                Some(RegisterValues::new(
-                    (0..selections).map(|i| (i + 1).to_string().into()),
-                ))
+                // vim alternate-file register: the name of the previously
+                // accessed buffer (the one `` C-^ `` / `:b#` returns to).
+                let (view, _) = current_ref!(editor);
+                let name = view
+                    .docs_access_history
+                    .last()
+                    .and_then(|&id| editor.document(id))
+                    .map(|doc| doc.display_name().into_owned())
+                    .unwrap_or_default();
+                Some(RegisterValues::new(iter::once(Cow::Owned(name))))
             }
             '.' => {
-                let (view, doc) = current_ref!(editor);
-                let text = doc.text().slice(..);
-                Some(RegisterValues::new(doc.selection(view.id).fragments(text)))
+                // vim last-inserted-text register.
+                Some(RegisterValues::new(iter::once(Cow::Owned(
+                    editor.last_inserted_text.clone(),
+                ))))
             }
             '%' => {
                 let path = doc!(editor).display_name();
@@ -108,6 +112,84 @@ impl Registers {
                 Ok(())
             }
         }
+    }
+
+    /// Store yanked text with vim's register semantics. `register` is the
+    /// explicitly-selected register (`None` for the unnamed default):
+    ///   * unnamed default → sets `"` **and** the yank register `0`;
+    ///   * a named register `a`-`z` → sets it and mirrors `"` (leaves `0`);
+    ///   * `A`-`Z` → appends to the lowercase register and mirrors `"`;
+    ///   * `_`/`*`/`+`/read-only registers → written plainly (no mirroring).
+    pub fn write_yanked(&mut self, register: Option<char>, values: Vec<String>) -> Result<()> {
+        let name = register.unwrap_or('"');
+        if !is_vim_distributed(name) {
+            return self.write(name, values);
+        }
+        if name.is_ascii_uppercase() {
+            self.append_values(name.to_ascii_lowercase(), &values);
+        } else if name != '"' {
+            self.write(name, values.clone())?;
+        }
+        // The unnamed register always mirrors the most recent yank.
+        self.write('"', values.clone())?;
+        // The yank register `0` is set only when no named register was given.
+        if register.is_none() || name == '"' {
+            self.write('0', values)?;
+        }
+        Ok(())
+    }
+
+    /// Store deleted/changed text with vim's register semantics. `small` is true
+    /// for a delete of less than one line (no newline), which vim routes to the
+    /// small-delete register `-` instead of rotating the numbered ring:
+    ///   * explicit register → sets it (append for `A`-`Z`) and mirrors `"`;
+    ///   * unnamed + small → `-` and `"`;
+    ///   * unnamed + linewise/multiline → shifts `1`→`9`, new text into `1`, `"`.
+    pub fn write_deleted(
+        &mut self,
+        register: Option<char>,
+        values: Vec<String>,
+        small: bool,
+    ) -> Result<()> {
+        let name = register.unwrap_or('"');
+        if !is_vim_distributed(name) {
+            return self.write(name, values);
+        }
+        if let Some(reg) = register.filter(|&r| r != '"') {
+            if reg.is_ascii_uppercase() {
+                self.append_values(reg.to_ascii_lowercase(), &values);
+            } else {
+                self.write(reg, values.clone())?;
+            }
+            return self.write('"', values);
+        }
+        self.write('"', values.clone())?;
+        if small {
+            self.write('-', values)?;
+        } else {
+            // Rotate the numbered delete ring: 8→9, 7→8, …, 1→2, then new→1.
+            for i in (1..9).rev() {
+                let from = char::from_digit(i, 10).unwrap();
+                let to = char::from_digit(i + 1, 10).unwrap();
+                if let Some(vals) = self.inner.get(&from).cloned() {
+                    self.inner.insert(to, vals);
+                }
+            }
+            self.write('1', values)?;
+        }
+        Ok(())
+    }
+
+    /// Append `values` to a lowercase register (vim `A`-`Z`), preserving logical
+    /// order across the reversed internal storage.
+    fn append_values(&mut self, name: char, values: &[String]) {
+        let mut logical: Vec<String> = self
+            .inner
+            .get(&name)
+            .map(|stored| stored.iter().rev().cloned().collect())
+            .unwrap_or_default();
+        logical.extend_from_slice(values);
+        let _ = self.write(name, logical);
     }
 
     pub fn push(&mut self, name: char, mut value: String) -> Result<()> {
@@ -172,8 +254,8 @@ impl Registers {
             .chain(
                 [
                     ('_', "<empty>"),
-                    ('#', "<selection indices>"),
-                    ('.', "<selection contents>"),
+                    ('#', "<alternate file>"),
+                    ('.', "<last inserted text>"),
                     ('%', "<document path>"),
                     ('+', "<system clipboard>"),
                     ('*', "<primary clipboard>"),
@@ -225,6 +307,14 @@ impl Registers {
     pub fn clipboard_provider_name(&self) -> String {
         self.clipboard_provider.load().name().into_owned()
     }
+}
+
+/// Whether a register participates in vim's yank/delete auto-distribution
+/// (unnamed `"`, small-delete `-`, numbered `0`-`9`, named `a`-`z`/`A`-`Z`).
+/// The clipboard (`*`/`+`), black hole (`_`), and read-only special registers
+/// (`.`/`#`/`%`/`=`/`:`/`/`) are written plainly with no mirroring.
+fn is_vim_distributed(name: char) -> bool {
+    name == '"' || name == '-' || name.is_ascii_alphanumeric()
 }
 
 fn read_from_clipboard<'a>(
@@ -341,3 +431,92 @@ impl ExactSizeIterator for RegisterValues<'_> {
 trait DoubleEndedExactSizeIterator: DoubleEndedIterator + ExactSizeIterator {}
 
 impl<I: DoubleEndedIterator + ExactSizeIterator> DoubleEndedExactSizeIterator for I {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use arc_swap::access::Constant;
+
+    fn registers() -> Registers {
+        Registers::new(Box::new(Constant(ClipboardProvider::None)))
+    }
+
+    /// Logical (un-reversed) contents of a plain stored register.
+    fn logical(regs: &Registers, name: char) -> Vec<String> {
+        regs.inner
+            .get(&name)
+            .map(|v| v.iter().rev().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    fn v(s: &str) -> Vec<String> {
+        vec![s.to_string()]
+    }
+
+    #[test]
+    fn yank_to_default_fills_unnamed_and_yank_register() {
+        let mut r = registers();
+        r.write_yanked(None, v("hello")).unwrap();
+        assert_eq!(logical(&r, '"'), v("hello"));
+        assert_eq!(logical(&r, '0'), v("hello"));
+    }
+
+    #[test]
+    fn yank_to_named_register_mirrors_unnamed_but_not_zero() {
+        let mut r = registers();
+        r.write_yanked(None, v("first")).unwrap(); // sets 0
+        r.write_yanked(Some('a'), v("second")).unwrap();
+        assert_eq!(logical(&r, 'a'), v("second"));
+        assert_eq!(logical(&r, '"'), v("second"));
+        // `0` is untouched by a named yank.
+        assert_eq!(logical(&r, '0'), v("first"));
+    }
+
+    #[test]
+    fn uppercase_register_appends_to_lowercase() {
+        let mut r = registers();
+        r.write_yanked(Some('a'), v("foo")).unwrap();
+        r.write_yanked(Some('A'), v("bar")).unwrap();
+        assert_eq!(logical(&r, 'a'), vec!["foo".to_string(), "bar".to_string()]);
+    }
+
+    #[test]
+    fn linewise_delete_rotates_numbered_ring() {
+        let mut r = registers();
+        r.write_deleted(None, v("one\n"), false).unwrap();
+        assert_eq!(logical(&r, '1'), v("one\n"));
+        r.write_deleted(None, v("two\n"), false).unwrap();
+        assert_eq!(logical(&r, '1'), v("two\n"));
+        assert_eq!(logical(&r, '2'), v("one\n")); // shifted down
+        assert_eq!(logical(&r, '"'), v("two\n")); // unnamed mirrors latest
+    }
+
+    #[test]
+    fn small_delete_uses_dash_register_not_ring() {
+        let mut r = registers();
+        r.write_deleted(None, v("word"), true).unwrap();
+        assert_eq!(logical(&r, '-'), v("word"));
+        assert!(logical(&r, '1').is_empty()); // ring untouched by a small delete
+        assert_eq!(logical(&r, '"'), v("word"));
+    }
+
+    #[test]
+    fn delete_to_named_register_mirrors_unnamed_and_skips_ring() {
+        let mut r = registers();
+        r.write_deleted(Some('z'), v("text\n"), false).unwrap();
+        assert_eq!(logical(&r, 'z'), v("text\n"));
+        assert_eq!(logical(&r, '"'), v("text\n"));
+        assert!(logical(&r, '1').is_empty());
+    }
+
+    #[test]
+    fn ring_rotation_drops_off_the_end_at_nine() {
+        let mut r = registers();
+        for i in 0..10 {
+            r.write_deleted(None, v(&format!("d{i}\n")), false).unwrap();
+        }
+        // Newest in 1, oldest surviving (d1) in 9; d0 fell off.
+        assert_eq!(logical(&r, '1'), v("d9\n"));
+        assert_eq!(logical(&r, '9'), v("d1\n"));
+    }
+}

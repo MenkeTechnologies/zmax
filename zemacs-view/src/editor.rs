@@ -1591,6 +1591,11 @@ pub struct Editor {
     /// user-settable (vim ignores `m0`-`m9`).
     pub global_marks: HashMap<char, GlobalMark>,
 
+    /// Text inserted during the most recently completed insert session. Backs
+    /// the vim `.` register (and `i_CTRL-A` / `i_CTRL-R .`). Updated on leaving
+    /// insert mode.
+    pub last_inserted_text: String,
+
     /// The global vim quickfix list and the index of the current entry. Filled
     /// by `:cgetexpr`/`:cbuffer`/`:Diagnostics`/`:make`, navigated with
     /// `:cnext`/`:cprev`/`:cc`, displayed by `:copen`.
@@ -1843,6 +1848,7 @@ impl Editor {
             diff_providers: DiffProviderRegistry::default(),
             debug_adapters: dap::registry::Registry::new(),
             global_marks: HashMap::new(),
+            last_inserted_text: String::new(),
             breakpoints: HashMap::new(),
             quickfix: Vec::new(),
             quickfix_idx: None,
