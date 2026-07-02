@@ -441,6 +441,8 @@ impl MappableCommand {
         transpose_paragraph, "Swap the current paragraph with the previous one (SPC x t p)",
         move_element_right, "Swap the syntax node under the cursor with its next sibling (JetBrains Move Element Right)",
         move_element_left, "Swap the syntax node under the cursor with its previous sibling (JetBrains Move Element Left)",
+        convert_indent_to_spaces, "Convert leading indentation to spaces (JetBrains Convert Indents to Spaces)",
+        convert_indent_to_tabs, "Convert leading indentation to tabs (JetBrains Convert Indents to Tabs)",
         transpose_sexp, "Swap the current s-expression with the previous one (SPC x t e)",
         transpose_sentence, "Swap the current sentence with the previous one (SPC x t s)",
         make_3_windows, "Lay out three vertical windows (SPC w 3)",
@@ -7123,6 +7125,71 @@ fn move_element_right(cx: &mut Context) {
 
 fn move_element_left(cx: &mut Context) {
     move_element_impl(cx, false)
+}
+
+/// Expand a leading-whitespace string to all spaces, honoring tab stops.
+fn indent_tabs_to_spaces(indent: &str, tab_width: usize) -> String {
+    let mut col = 0;
+    let mut out = String::new();
+    for c in indent.chars() {
+        if c == '\t' {
+            let n = tab_width - (col % tab_width);
+            out.extend(std::iter::repeat(' ').take(n));
+            col += n;
+        } else {
+            out.push(c);
+            col += 1;
+        }
+    }
+    out
+}
+
+/// Regroup a leading-whitespace string into tabs + trailing spaces.
+fn indent_spaces_to_tabs(indent: &str, tab_width: usize) -> String {
+    let n = indent_tabs_to_spaces(indent, tab_width).len();
+    let mut out = String::with_capacity(n / tab_width + n % tab_width);
+    out.extend(std::iter::repeat('\t').take(n / tab_width));
+    out.extend(std::iter::repeat(' ').take(n % tab_width));
+    out
+}
+
+fn convert_indent_impl(cx: &mut Context, to_tabs: bool) {
+    let (view, doc) = current!(cx.editor);
+    let tab_width = doc.tab_width();
+    let text = doc.text();
+    let src = text.to_string();
+    let mut out = String::with_capacity(src.len());
+    for line in src.split_inclusive('\n') {
+        let indent_end = line.len() - line.trim_start_matches([' ', '\t']).len();
+        let (indent, rest) = line.split_at(indent_end);
+        out.push_str(&if to_tabs {
+            indent_spaces_to_tabs(indent, tab_width)
+        } else {
+            indent_tabs_to_spaces(indent, tab_width)
+        });
+        out.push_str(rest);
+    }
+    if out == src {
+        cx.editor.set_status("indentation unchanged");
+        return;
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((0, text.len_chars(), Some(out.into()))),
+    );
+    doc.apply(&transaction, view.id);
+}
+
+/// JetBrains "Convert Indents to Spaces": replace each line's leading tabs with
+/// `tab_width` spaces.
+fn convert_indent_to_spaces(cx: &mut Context) {
+    convert_indent_impl(cx, false)
+}
+
+/// JetBrains "Convert Indents to Tabs": replace each line's leading run of
+/// `tab_width` spaces with tabs.
+fn convert_indent_to_tabs(cx: &mut Context) {
+    convert_indent_impl(cx, true)
 }
 
 /// SPC x t s: swap the current sentence with the previous one.
