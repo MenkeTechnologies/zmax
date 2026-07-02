@@ -19001,8 +19001,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "filter",
-        aliases: &["keep-lines"],
-        doc: "Keep only the selected lines matching a regex (in-buffer grep).",
+        aliases: &["keep-lines", "delete-non-matching-lines"],
+        doc: "Keep only the selected lines matching a regex (Emacs keep-lines; in-buffer grep).",
         fun: filter_cmd,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -19012,8 +19012,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "reject",
-        aliases: &["remove-lines"],
-        doc: "Drop the selected lines matching a regex (in-buffer grep -v).",
+        aliases: &["remove-lines", "flush-lines", "delete-matching-lines"],
+        doc: "Drop the selected lines matching a regex (Emacs flush-lines; in-buffer grep -v).",
         fun: reject_cmd,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -19023,8 +19023,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "count-matches",
-        aliases: &["count-regex"],
-        doc: "Report how many regex matches (and matching lines) are in the selection.",
+        aliases: &["count-regex", "how-many"],
+        doc: "Report how many regex matches (and matching lines) are in the selection (Emacs how-many).",
         fun: count_matches_cmd,
         completer: CommandCompleter::none(),
         signature: Signature {
