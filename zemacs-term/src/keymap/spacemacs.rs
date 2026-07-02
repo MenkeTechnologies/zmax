@@ -129,7 +129,7 @@ fn cc_prefix() -> KeyTrie {
             "C-c" => run_active_config,          // C-c C-c: execute / compile (major-mode action)
             "C-r" => rerun_last_run,             // C-c C-r: re-run
             "C-d" => dap_launch,                 // C-c C-d: debug (DAP session for the chosen config)
-            ";" => complete_current_statement,   // C-c ;: complete current statement (JetBrains Cmd-Shift-Enter); works in insert mode
+            ";" => complete_current_statement,   // C-c ;: complete current statement (JetBrains Complete Current Statement); works in insert mode
             "." => postfix_expand,               // C-c .: postfix completion (expr.if/.for/... ; works in insert mode)
         },
     })

@@ -529,8 +529,8 @@ fn del_marks(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
-/// `:project-replace {pattern} {replacement}` / `:replace-in-files` — JetBrains "Replace in Files"
-/// (Cmd Shift R): regex-replace across every workspace file that matches `pattern` (ripgrep finds the
+/// `:project-replace {pattern} {replacement}` / `:replace-in-files` — JetBrains "Replace in Files":
+/// regex-replace across every workspace file that matches `pattern` (ripgrep finds the
 /// files; `$1`-style capture refs work in the replacement), writing changed files and reloading any
 /// open buffers. Destructive across the working tree — recoverable via git.
 fn project_replace(
@@ -846,7 +846,7 @@ fn new_file(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
-/// `:Scratch [lang]` — JetBrains scratch file (⇧⌘N): open a new unnamed buffer,
+/// `:Scratch [lang]` — JetBrains scratch file (SPC b S): open a new unnamed buffer,
 /// optionally setting its language for syntax highlighting.
 fn scratch(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -1849,6 +1849,58 @@ pub(crate) fn open_diff(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
         },
     ));
     jobs.callback(async move { Ok(call) });
+}
+
+/// `:compare-ref {ref}` — JetBrains "Compare with Branch": diff the focused file
+/// against its version at a git ref (branch / tag / commit), side by side and
+/// read-only.
+fn compare_ref(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(reff) = args.first().map(|r| r.to_string()) else {
+        cx.editor
+            .set_error("usage: :compare-ref <branch|tag|sha>");
+        return Ok(());
+    };
+    let (doc_id, name, path, current) = {
+        let doc = doc!(cx.editor);
+        (
+            doc.id(),
+            doc.display_name().into_owned(),
+            doc.path().map(|p| p.to_path_buf()),
+            doc.text().to_string(),
+        )
+    };
+    let Some(path) = path else {
+        cx.editor.set_error("no file path for this buffer");
+        return Ok(());
+    };
+    let root = zemacs_loader::find_workspace_in(path.parent().unwrap_or(&path)).0;
+    let rel = path.strip_prefix(&root).unwrap_or(&path);
+    let spec = format!("{reff}:{}", rel.display());
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&root)
+        .args(["show", &spec])
+        .output();
+    let ref_text = match out {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).into_owned(),
+        _ => {
+            cx.editor.set_error(format!("git show {spec} failed"));
+            return Ok(());
+        }
+    };
+    let view =
+        crate::ui::merge::DiffView::new(format!("{name} ⇔ {reff}"), doc_id, &ref_text, &current)
+            .read_only();
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(view));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
 }
 
 /// `:merge` / `:resolve` — open the 3-pane merge-conflict resolver over the
@@ -11322,7 +11374,7 @@ fn local_history_open(
     Ok(())
 }
 
-/// `:RecentLocations` — JetBrains Recent Locations (⌘⇧E): the jump ring shown
+/// `:RecentLocations` — JetBrains Recent Locations (SPC j R): the jump ring shown
 /// most-recent-first, deduped by file:line, with each line's text as context;
 /// pick one to jump back there.
 fn fzf_recent_locations(
@@ -15846,6 +15898,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "compare-ref",
+        aliases: &["compare-branch"],
+        doc: "Diff the buffer against its version at a git ref (JetBrains Compare with Branch).",
+        fun: compare_ref,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "merge",
         aliases: &["resolve"],
         doc: "Resolve the buffer's git merge conflicts in a 3-pane (ours/result/theirs) view.",
@@ -16387,7 +16450,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "Scratch",
         aliases: &["scratch"],
-        doc: "Open a new scratch buffer, optionally with a language (JetBrains ⇧⌘N).",
+        doc: "Open a new scratch buffer, optionally with a language (SPC b S).",
         fun: scratch,
         completer: CommandCompleter::positional(&[completers::language]),
         signature: Signature {

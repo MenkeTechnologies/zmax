@@ -414,7 +414,8 @@ impl MappableCommand {
         search_prev, "Select previous search match",
         extend_search_next, "Add next search match to selection",
         extend_search_prev, "Add previous search match to selection",
-        add_selection_to_next_match, "Add the next occurrence of the selection as a new cursor (JetBrains Ctrl-G / VSCode Cmd-D)",
+        add_selection_to_next_match, "Add the next occurrence of the selection as a new cursor",
+        select_all_occurrences, "Select every occurrence of the selection as a cursor (JetBrains Select All Occurrences)",
         search_selection, "Use current selection as search pattern",
         search_selection_detect_word_boundaries, "Use current selection as the search pattern, automatically wrapping with `\\b` on word boundaries",
         make_search_word_bounded, "Modify current search to make it word bounded",
@@ -436,7 +437,10 @@ impl MappableCommand {
         goto_prev_open_paren, "Go backward to previous opening paren (SPC k k)",
         ediff_windows, "Diff the two front windows side by side (SPC D w w)",
         ediff_buffer, "Diff the current buffer against a picked buffer (SPC D b b)",
+        compare_with_clipboard, "Diff the current buffer against the clipboard (JetBrains Compare with Clipboard)",
         transpose_paragraph, "Swap the current paragraph with the previous one (SPC x t p)",
+        move_element_right, "Swap the syntax node under the cursor with its next sibling (JetBrains Move Element Right)",
+        move_element_left, "Swap the syntax node under the cursor with its previous sibling (JetBrains Move Element Left)",
         transpose_sexp, "Swap the current s-expression with the previous one (SPC x t e)",
         transpose_sentence, "Swap the current sentence with the previous one (SPC x t s)",
         make_3_windows, "Lay out three vertical windows (SPC w 3)",
@@ -537,7 +541,7 @@ impl MappableCommand {
         ai_codebase_context, "Add codebase-search results as @context (SPC a b)",
         ai_symbol_context, "Add the symbol-under-cursor's definitions as @context (SPC a s)",
         ai_terminal_command, "Generate a shell command from natural language (SPC a k)",
-        ai_inline_edit, "AI inline edit/generate on the selection (Cmd+K style, SPC a e)",
+        ai_inline_edit, "AI inline edit/generate on the selection (SPC a e)",
         ai_inline_edit_preview, "AI inline edit with a diff preview (SPC a E)",
         ai_accept_edit, "Accept the pending AI inline-edit preview (SPC a .)",
         ai_explain, "Explain the selected code with AI (SPC a x)",
@@ -621,8 +625,8 @@ impl MappableCommand {
         organize_imports, "Organize/optimize imports via LSP source action (IntelliJ Ctrl-Alt-O)",
         implement_methods, "Implement missing interface/trait members via LSP (IntelliJ Ctrl-I)",
         override_methods, "Override inherited members via LSP (IntelliJ Ctrl-O)",
-        generate_code, "Generate code (getters/constructors/impls) via LSP (IntelliJ Cmd N)",
-        change_signature, "Change signature refactor via LSP (IntelliJ Cmd F6)",
+        generate_code, "Generate code (getters/constructors/impls) via LSP (SPC l g)",
+        change_signature, "Change signature refactor via LSP",
         pull_members_up, "Pull members up refactor via LSP (IntelliJ)",
         push_members_down, "Push members down refactor via LSP (IntelliJ)",
         buffer_picker, "Open buffer picker",
@@ -673,6 +677,7 @@ impl MappableCommand {
         select_mode, "Enter selection extend mode",
         exit_select_mode, "Exit selection mode",
         goto_definition, "Goto definition",
+        peek_definition, "Peek the definition in a popup without navigating (JetBrains Quick Definition)",
         goto_declaration, "Goto declaration",
         add_newline_above, "Add newline above",
         add_newline_below, "Add newline below",
@@ -716,7 +721,7 @@ impl MappableCommand {
         git_push, "Push the current branch to its remote (SPC g P)",
         git_pull, "Fast-forward pull from upstream (SPC g u)",
         git_fetch, "Fetch all remotes (SPC g F)",
-        cut_to_clipboard, "Cut the selection to the system clipboard (JetBrains Cmd X)",
+        cut_to_clipboard, "Cut the selection to the system clipboard",
         org_cycle, "Org: toggle subtree fold",
         org_todo, "Org: cycle TODO keyword",
         org_priority, "Org: cycle priority cookie",
@@ -967,6 +972,7 @@ impl MappableCommand {
         document_stats, "Show document line/word/char counts (g CTRL-G)",
         git_blame_line, "Show git blame for the current line (g b)",
         toggle_inline_blame, "Toggle GitLens-style inline blame on the current line",
+        toggle_blame_annotate, "Toggle the git-blame annotate gutter column (SPC g B)",
         git_branch_picker, "Pick a git branch and check it out",
         preferences, "Open the unified Preferences window",
         help, "Open the inline Help browser",
@@ -1177,7 +1183,7 @@ impl MappableCommand {
         replay_macro, "Replay macro",
         command_palette, "Open command palette",
         search_everywhere, "Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains)",
-        recent_files_switcher, "Recent Files switcher: tool windows + recent files (JetBrains Cmd-E)",
+        recent_files_switcher, "Recent Files switcher: tool windows + recent files (SPC b r)",
         repl, "Open the embedded-language REPL (elisp/viml/stryke/awk/zsh)",
         goto_word, "Jump to a two-character label",
         extend_to_word, "Extend to a two-character label",
@@ -6132,7 +6138,7 @@ fn select_all_instances(cx: &mut Context) {
         .set_status(format!("{} matches selected", ranges.len()));
 }
 
-/// JetBrains "Add Selection for Next Occurrence" (Ctrl-G) / VSCode Cmd-D: find the next occurrence
+/// JetBrains "Add Selection for Next Occurrence": find the next occurrence
 /// of the primary selection's text and add it as a new cursor, keeping the existing selections.
 /// Wraps around when there is no occurrence after the primary, and skips already-selected ones.
 fn add_selection_to_next_match(cx: &mut Context) {
@@ -6163,6 +6169,39 @@ fn add_selection_to_next_match(cx: &mut Context) {
         }
         None => cx.editor.set_status("no more occurrences"),
     }
+}
+
+/// JetBrains "Select All Occurrences" (Cmd+Ctrl+G): replace the selection with a
+/// cursor on every occurrence of the primary selection's text.
+fn select_all_occurrences(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let selection = doc.selection(view.id);
+    let primary = selection.primary();
+    let needle: String = slice.slice(primary.from()..primary.to()).chunks().collect();
+    if needle.is_empty() {
+        cx.editor
+            .set_error("select text first (Select All Occurrences)");
+        return;
+    }
+    let haystack: String = slice.chunks().collect();
+    let found = find_all_ranges(&haystack, &needle);
+    if found.is_empty() {
+        cx.editor.set_status("no occurrences");
+        return;
+    }
+    let mut ranges: SmallVec<[Range; 1]> = SmallVec::new();
+    let mut primary_index = 0;
+    for (i, &(s, e)) in found.iter().enumerate() {
+        if s == primary.from() {
+            primary_index = i;
+        }
+        ranges.push(Range::new(s, e));
+    }
+    let count = ranges.len();
+    doc.set_selection(view.id, Selection::new(ranges, primary_index));
+    cx.editor
+        .set_status(format!("{count} occurrences selected"));
 }
 
 fn select_regex(cx: &mut Context) {
@@ -7040,6 +7079,52 @@ fn transpose_sexp(cx: &mut Context) {
     transpose_units(cx, sexp_pair)
 }
 
+/// JetBrains "Move Element Left/Right" (Cmd+Alt+Shift+←/→): swap the syntax node
+/// under the cursor with its previous/next named sibling (e.g. reorder function
+/// arguments or array elements). Requires a tree-sitter grammar for the language.
+fn move_element_impl(cx: &mut Context, forward: bool) {
+    let (view, doc) = current!(cx.editor);
+    if doc.syntax().is_none() {
+        cx.editor.set_status("no syntax tree for this language");
+        return;
+    }
+    let sel = doc.selection(view.id).clone();
+    let cur = sel.primary();
+    let sibling_sel = {
+        let syntax = doc.syntax().unwrap();
+        let text = doc.text().slice(..);
+        if forward {
+            object::select_next_sibling(syntax, text, sel.clone())
+        } else {
+            object::select_prev_sibling(syntax, text, sel.clone())
+        }
+    };
+    let sib = sibling_sel.primary();
+    // swap_ranges_text needs the two ranges ordered and non-overlapping.
+    let a = (cur.from(), cur.to());
+    let b = (sib.from(), sib.to());
+    let (prev, next) = if a.0 <= b.0 { (a, b) } else { (b, a) };
+    if prev == next || prev.1 > next.0 {
+        cx.editor.set_status("no sibling to move");
+        return;
+    }
+    let whole: String = doc.text().to_string();
+    let swapped = swap_ranges_text(&whole, prev, next);
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((prev.0, next.1, Some(swapped.into()))),
+    );
+    doc.apply(&transaction, view.id);
+}
+
+fn move_element_right(cx: &mut Context) {
+    move_element_impl(cx, true)
+}
+
+fn move_element_left(cx: &mut Context) {
+    move_element_impl(cx, false)
+}
+
 /// SPC x t s: swap the current sentence with the previous one.
 fn transpose_sentence(cx: &mut Context) {
     transpose_units(cx, sentence_pair)
@@ -7172,6 +7257,33 @@ fn ediff_buffer(cx: &mut Context) {
         }
     });
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains "Compare with Clipboard": diff the current buffer against the system
+/// clipboard side by side, read-only.
+fn compare_with_clipboard(cx: &mut Context) {
+    let clip: String = cx
+        .editor
+        .registers
+        .read('+', cx.editor)
+        .map(|vals| vals.map(|v| v.to_string()).collect::<Vec<_>>().concat())
+        .unwrap_or_default();
+    if clip.is_empty() {
+        cx.editor.set_status("clipboard is empty");
+        return;
+    }
+    let doc = doc!(cx.editor);
+    let name = doc.display_name().into_owned();
+    let cur = doc.text().to_string();
+    let doc_id = doc.id();
+    let view = crate::ui::merge::DiffView::new(format!("{name} ⇔ clipboard"), doc_id, &cur, &clip)
+        .read_only();
+    let call = crate::job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
+            compositor.push(Box::new(view));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
 }
 
 /// Compare the two front windows' buffers side by side (Spacemacs `SPC D w w/l`).
@@ -9963,7 +10075,7 @@ fn split_first_token(s: &str) -> (String, String) {
     (token, rest)
 }
 
-/// SPC a k : describe a task in natural language and get a shell command (Cursor terminal Cmd+K),
+/// SPC a k : describe a task in natural language and get a shell command,
 /// copied to the clipboard and shown in the status line.
 fn ai_terminal_command(cx: &mut Context) {
     let prompt = crate::ui::prompt::Prompt::new(
@@ -10011,7 +10123,7 @@ pub(crate) fn strip_code_fences(s: &str) -> String {
     t.to_string()
 }
 
-/// SPC a e : Cursor-style inline edit (Cmd+K). Prompts for an instruction, sends the current
+/// SPC a e : Cursor-style inline edit. Prompts for an instruction, sends the current
 /// selection (empty = generate at the cursor) to the AI, and replaces it with the rewritten code.
 /// Applied as a single transaction, so `u` undoes it.
 fn ai_inline_edit(cx: &mut Context) {
@@ -10148,7 +10260,7 @@ fn ai_agent_review(cx: &mut Context) {
 static AI_PENDING_EDIT: std::sync::Mutex<Option<(DocumentId, usize, usize, String)>> =
     std::sync::Mutex::new(None);
 
-/// SPC a E : Cursor Cmd+K with a diff preview. Like ai_inline_edit but shows the proposed rewrite
+/// SPC a E : inline edit with a diff preview. Like ai_inline_edit but shows the proposed rewrite
 /// as a read-only side-by-side diff (original ⇔ proposed) and stores it; SPC a . accepts (applies),
 /// Esc/close rejects.
 fn ai_inline_edit_preview(cx: &mut Context) {
@@ -13261,7 +13373,7 @@ fn search_everywhere(cx: &mut Context) {
     ));
 }
 
-/// JetBrains "Recent Files" switcher (⌘E): a two-pane popup with tool-window
+/// JetBrains "Recent Files" switcher (SPC b r): a two-pane popup with tool-window
 /// shortcuts on the left and the recent-files list on the right.
 fn recent_files_switcher(cx: &mut Context) {
     let all = crate::recent_files::load();
@@ -14070,7 +14182,7 @@ fn statement_completion_suffix(line: &str, uses_semicolon: bool) -> String {
     suffix
 }
 
-/// JetBrains "Complete Current Statement" (Cmd Shift Enter): finish the
+/// JetBrains "Complete Current Statement" (C-c ;): finish the
 /// statement the caret is on — close any brackets/parens left open on the line
 /// and append the language's terminator (`;`) — then open a fresh indented line
 /// below in insert mode, ready to continue. Operates on the primary selection.
@@ -15751,7 +15863,7 @@ pub(crate) fn build_marks_picker(editor: &mut Editor) -> Option<Box<dyn Componen
     Some(Box::new(overlaid(picker)))
 }
 
-/// JetBrains "View Breakpoints" (Cmd Shift F8): a picker over every set breakpoint across all files
+/// JetBrains "View Breakpoints" (SPC d B): a picker over every set breakpoint across all files
 /// (file:line + verified/condition/log flags); selecting one jumps to it.
 fn dap_breakpoints_picker(cx: &mut Context) {
     struct BpMeta {
@@ -17912,7 +18024,7 @@ fn focus_ci_panel(cx: &mut Context) {
     crate::ci::spawn_fetch(cx.jobs);
 }
 
-/// Focus the Bookmarks tool window (pinned files; JetBrains Bookmarks, Cmd 2).
+/// Focus the Bookmarks tool window (pinned files; JetBrains Bookmarks).
 fn focus_bookmarks(cx: &mut Context) {
     focus_ide_panel(cx, "bookmarks");
 }
@@ -18073,12 +18185,12 @@ fn git_async(cx: &mut Context, busy: &'static str, args: Vec<String>, label: &'s
     });
 }
 
-/// SPC g P (JetBrains Cmd+Shift+K): push the current branch to its upstream remote.
+/// SPC g P: push the current branch to its upstream remote.
 fn git_push(cx: &mut Context) {
     git_async(cx, "pushing…", vec!["push".into()], "pushed");
 }
 
-/// SPC g u (JetBrains Cmd+T, "Update Project"): fast-forward pull from upstream.
+/// SPC g u ("Update Project"): fast-forward pull from upstream.
 fn git_pull(cx: &mut Context) {
     git_async(
         cx,
@@ -18098,7 +18210,7 @@ fn git_fetch(cx: &mut Context) {
     );
 }
 
-/// JetBrains Cut (Cmd X): copy the selection to the system clipboard, then delete it.
+/// Cut: copy the selection to the system clipboard, then delete it.
 fn cut_to_clipboard(cx: &mut Context) {
     yank_to_clipboard(cx);
     delete_selection(cx);
@@ -18228,6 +18340,23 @@ fn toggle_inline_blame(cx: &mut Context) {
         "inline blame: on"
     } else {
         "inline blame: off"
+    });
+}
+
+/// Toggle the JetBrains-style blame annotate gutter: a left-column author +
+/// relative-time annotation per line, rendered in the gutter (not the Run
+/// console). Computes the focused file's blame on enable so it shows at once.
+fn toggle_blame_annotate(cx: &mut Context) {
+    let on = crate::blame::toggle_annotate();
+    if on {
+        if let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) {
+            crate::blame::ensure_annotate(&path);
+        }
+    }
+    cx.editor.set_status(if on {
+        "blame annotate: on"
+    } else {
+        "blame annotate: off"
     });
 }
 

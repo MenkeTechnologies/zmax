@@ -1,5 +1,5 @@
-//! JetBrains "Recent Files" switcher (⌘E): a two-pane popup — tool-window
-//! shortcuts on the left, recent files on the right, a "Show edited only" toggle
+//! JetBrains "Recent Files" switcher (SPC b r): a two-pane popup — tool-window
+//! tool windows on the left, recent files on the right, a "Show edited only" toggle
 //! at the top, and a workspace path at the bottom.
 //!
 //! Keys: j/k or ↑/↓ move the recent-files list · Tab or ←/→ switch to the left
@@ -34,14 +34,14 @@ enum ToolAction {
 }
 
 const TOOLS: &[Tool] = &[
-    Tool { label: "Project", shortcut: "⌘1", action: ToolAction::Panel("project") },
-    Tool { label: "Bookmarks", shortcut: "⌘2", action: ToolAction::Panel("bookmarks") },
-    Tool { label: "Problems", shortcut: "⌘6", action: ToolAction::Panel("problems") },
-    Tool { label: "Structure", shortcut: "⌘7", action: ToolAction::Panel("structure") },
-    Tool { label: "Git", shortcut: "⌘9", action: ToolAction::Panel("git") },
+    Tool { label: "Project", shortcut: "", action: ToolAction::Panel("project") },
+    Tool { label: "Bookmarks", shortcut: "", action: ToolAction::Panel("bookmarks") },
+    Tool { label: "Problems", shortcut: "", action: ToolAction::Panel("problems") },
+    Tool { label: "Structure", shortcut: "", action: ToolAction::Panel("structure") },
+    Tool { label: "Git", shortcut: "", action: ToolAction::Panel("git") },
     Tool { label: "Run", shortcut: "", action: ToolAction::Panel("run") },
     Tool { label: "TODO", shortcut: "", action: ToolAction::Todo },
-    Tool { label: "Recent Locations", shortcut: "⇧⌘E", action: ToolAction::RecentLocations },
+    Tool { label: "Recent Locations", shortcut: "", action: ToolAction::RecentLocations },
 ];
 
 pub struct RecentFilesSwitcher {
@@ -59,6 +59,10 @@ pub struct RecentFilesSwitcher {
     tool_rows: Vec<(u16, usize)>, // (screen row, tool index)
     toggle_row: u16,
     toggle_x: (u16, u16),
+    /// Column of the left-rail / right-pane divider, recorded at render. A click
+    /// left of this hits the tool rail; at-or-right hits the file list. Both
+    /// panes share the same screen rows, so row alone can't disambiguate them.
+    split_x: u16,
 }
 
 impl RecentFilesSwitcher {
@@ -75,6 +79,7 @@ impl RecentFilesSwitcher {
             tool_rows: Vec::new(),
             toggle_row: 0,
             toggle_x: (0, 0),
+            split_x: 0,
         }
     }
 
@@ -194,14 +199,20 @@ impl Component for RecentFilesSwitcher {
                         self.sel = 0;
                         return EventResult::Consumed(None);
                     }
-                    if let Some(&(_, i)) = self.file_rows.iter().find(|&&(r, _)| r == ev.row) {
+                    // The tool rail and file list share screen rows, so the
+                    // column decides which pane was clicked: left of the divider
+                    // is the rail, at-or-right is the file list.
+                    if ev.column < self.split_x {
+                        if let Some(&(_, i)) = self.tool_rows.iter().find(|&&(r, _)| r == ev.row) {
+                            self.on_left = true;
+                            self.left_sel = i;
+                            return self.activate();
+                        }
+                    } else if let Some(&(_, i)) =
+                        self.file_rows.iter().find(|&&(r, _)| r == ev.row)
+                    {
                         self.on_left = false;
                         self.sel = i;
-                        return self.activate();
-                    }
-                    if let Some(&(_, i)) = self.tool_rows.iter().find(|&&(r, _)| r == ev.row) {
-                        self.on_left = true;
-                        self.left_sel = i;
                         return self.activate();
                     }
                     // Click outside → dismiss (consumed so it doesn't leak).
@@ -257,7 +268,7 @@ impl Component for RecentFilesSwitcher {
         // Header row: title + right-aligned "Show edited only" toggle.
         surface.set_stringn(inner.x + 1, inner.y, " Recent Files", inner.width as usize, accent);
         let check = if self.edited_only { "☑" } else { "☐" };
-        let toggle = format!("{check} Show edited only  ⌘E ");
+        let toggle = format!("{check} Show edited only  e ");
         let tw = toggle.chars().count() as u16;
         let tx = inner.x + inner.width.saturating_sub(tw);
         surface.set_stringn(tx, inner.y, &toggle, tw as usize, dim);
@@ -268,6 +279,7 @@ impl Component for RecentFilesSwitcher {
         let body_h = inner.height.saturating_sub(3);
         let left_w = 22u16.min(inner.width / 3);
         let split_x = inner.x + left_w;
+        self.split_x = split_x;
 
         // Left rail: tool windows.
         self.tool_rows.clear();

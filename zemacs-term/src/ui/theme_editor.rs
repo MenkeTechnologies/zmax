@@ -276,13 +276,7 @@ impl ThemeEditor {
         }
     }
 
-    fn handle_mouse(
-        &mut self,
-        col: u16,
-        row: u16,
-        kind: MouseEventKind,
-        cx: &mut Context,
-    ) -> EventResult {
+    fn handle_mouse(&mut self, col: u16, row: u16, kind: MouseEventKind) -> EventResult {
         match kind {
             MouseEventKind::ScrollDown => {
                 if self.pane == 0 && !self.themes.is_empty() {
@@ -320,10 +314,11 @@ impl ThemeEditor {
             .iter()
             .find(|&&(r, x0, x1, _)| row == r && col >= x0 && col < x1)
         {
+            // Click only selects the theme (like j/k); apply is explicit via
+            // Enter — see the "Themes (⏎ apply)" header — so a click never
+            // silently changes and persists the colorscheme.
             self.pane = 0;
             self.theme_sel = idx;
-            let name = self.themes[idx].clone();
-            self.apply_theme(cx, &name);
             return EventResult::Consumed(None);
         }
         if let Some(&(_, _, _, idx)) = self
@@ -354,7 +349,7 @@ impl Component for ThemeEditor {
             Event::Key(k) => *k,
             Event::Mouse(ev) => {
                 let saved = self.saved_msg;
-                let r = self.handle_mouse(ev.column, ev.row, ev.kind, cx);
+                let r = self.handle_mouse(ev.column, ev.row, ev.kind);
                 if self.saved_msg && !saved {
                     reload(cx);
                 }

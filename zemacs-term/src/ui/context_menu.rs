@@ -12,7 +12,7 @@
 use tui::buffer::Buffer as Surface;
 use zemacs_core::Position;
 use zemacs_view::{
-    graphics::Rect,
+    graphics::{Modifier, Rect},
     input::{MouseButton, MouseEventKind},
     keyboard::KeyCode,
 };
@@ -309,6 +309,11 @@ impl Component for ContextMenu {
         let sel_style = theme.get("ui.menu.selected");
         let dim_style = theme.get("ui.text.inactive");
         let border_style = theme.get("ui.window");
+        // Accent for the `›` submenu marker so items that open a submenu read
+        // differently from leaf items even when unselected.
+        let arrow_accent = theme
+            .try_get("ui.menu.arrow")
+            .unwrap_or_else(|| theme.get("keyword"));
 
         self.panels.clear();
 
@@ -349,32 +354,48 @@ impl Component for ContextMenu {
                     break;
                 }
                 let is_sel = depth == self.open.len() && i == self.sel;
+                // A submenu parent whose panel is open sits on the active trail
+                // (its own panel isn't the deepest, so `is_sel` is false). Give it
+                // a dimmed highlight so the path stays visible — distinct from the
+                // bright cursor on the deepest selected row.
+                let is_open_parent = depth < self.open.len() && self.open[depth] == i;
+                let row_style = if is_sel {
+                    sel_style
+                } else if is_open_parent {
+                    sel_style.add_modifier(Modifier::DIM)
+                } else {
+                    menu_style
+                };
+                let highlighted = is_sel || is_open_parent;
                 match entry {
                     Entry::Sep => {
                         let line = "─".repeat(inner_w);
                         surface.set_stringn(area.x + 1, ry, &line, inner_w, border_style);
                     }
                     Entry::Item { label, shortcut, .. } => {
-                        let style = if is_sel { sel_style } else { menu_style };
-                        if is_sel {
-                            surface.set_style(Rect::new(area.x + 1, ry, area.width - 2, 1), style);
+                        if highlighted {
+                            surface
+                                .set_style(Rect::new(area.x + 1, ry, area.width - 2, 1), row_style);
                         }
-                        surface.set_stringn(area.x + 1, ry, &format!(" {label}"), inner_w, style);
+                        surface.set_stringn(area.x + 1, ry, &format!(" {label}"), inner_w, row_style);
                         if !shortcut.is_empty() {
                             let sc = format!("{shortcut} ");
                             let scw = sc.chars().count() as u16;
                             let sx = area.x + area.width - 1 - scw;
-                            let sc_style = if is_sel { style } else { dim_style };
+                            let sc_style = if highlighted { row_style } else { dim_style };
                             surface.set_stringn(sx, ry, &sc, scw as usize, sc_style);
                         }
                     }
                     Entry::Sub { label, .. } => {
-                        let style = if is_sel { sel_style } else { menu_style };
-                        if is_sel {
-                            surface.set_style(Rect::new(area.x + 1, ry, area.width - 2, 1), style);
+                        if highlighted {
+                            surface
+                                .set_style(Rect::new(area.x + 1, ry, area.width - 2, 1), row_style);
                         }
-                        surface.set_stringn(area.x + 1, ry, &format!(" {label}"), inner_w, style);
-                        surface.set_stringn(area.x + area.width - 2, ry, "›", 1, style);
+                        surface.set_stringn(area.x + 1, ry, &format!(" {label}"), inner_w, row_style);
+                        // Accent the arrow on unselected rows; on a highlighted row
+                        // keep it in the row style so it stays legible.
+                        let arrow_style = if highlighted { row_style } else { arrow_accent };
+                        surface.set_stringn(area.x + area.width - 2, ry, "›", 1, arrow_style);
                     }
                 }
             }

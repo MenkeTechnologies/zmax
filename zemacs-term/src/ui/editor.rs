@@ -562,12 +562,13 @@ impl EditorView {
                 None
             }
             IdeAction::GitBlame(path) => {
-                let cwd = path
-                    .parent()
-                    .map(|p| p.to_path_buf())
-                    .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-                let cmd = format!("git blame '{}'", path.display());
-                self.start_run(context, cmd, cwd);
+                // Enable the annotate gutter for this file rather than dumping
+                // `git blame` into the Run console.
+                if !crate::blame::annotate_enabled() {
+                    crate::blame::toggle_annotate();
+                }
+                crate::blame::ensure_annotate(&path);
+                context.editor.set_status("blame annotate: on");
                 None
             }
             IdeAction::ResolveConflict(path) => {
@@ -1957,6 +1958,19 @@ impl EditorView {
             }
         }
 
+        // Blame annotate gutter: the gutter renderer lives in zemacs_view and
+        // can't shell out to git, so compute+push the focused file's blame here
+        // the first time it's shown (cheap no-op once cached).
+        if crate::blame::annotate_enabled() {
+            let path = {
+                let (_, doc) = zemacs_view::current_ref!(cx.editor);
+                doc.path().map(|p| p.to_path_buf())
+            };
+            if let Some(path) = path {
+                crate::blame::ensure_annotate(&path);
+            }
+        }
+
         EventResult::Ignored(None)
     }
 }
@@ -2011,7 +2025,7 @@ fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::conte
             })
         }),
         Entry::sep(),
-        Entry::item_key("Paste", "⌘V", |co, cx| {
+        Entry::item_key("Paste", "p", |co, cx| {
             run_editor_command(co, cx, |c| {
                 MC::paste_clipboard_after.execute(c);
             })
@@ -2107,7 +2121,7 @@ fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::conte
                 }),
             ],
         ),
-        Entry::item_key("Generate…", "⌘N", |_co, cx| {
+        Entry::item_key("Generate…", "SPC F s", |_co, cx| {
             crate::commands::typed::run_command_line(cx, "Snippets");
         }),
     ];
@@ -2138,6 +2152,10 @@ fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::conte
         e.push(Entry::sep());
         {
             let (pf, dt, pg) = (path.clone(), dir.clone(), path.clone());
+            // `gh browse` wants a repo-relative path; an absolute path yields a
+            // malformed `…/tree/<branch>//Users/…` URL. Strip the workspace root.
+            let root = zemacs_loader::find_workspace().0;
+            let rel = pg.strip_prefix(&root).map(|p| p.to_string_lossy().into_owned()).ok();
             e.push(Entry::sub(
                 "Open In",
                 vec![
@@ -2147,8 +2165,11 @@ fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::conte
                     Entry::item("Terminal", move |_co, _cx| {
                         ctx_spawn("open", &["-a", "Terminal", dt.to_str().unwrap_or("")]);
                     }),
-                    Entry::item("GitHub", move |_co, _cx| {
-                        ctx_spawn("gh", &["browse", "--", pg.to_str().unwrap_or("")]);
+                    Entry::item("GitHub", move |_co, cx| {
+                        match &rel {
+                            Some(r) => ctx_spawn("gh", &["browse", "--", r]),
+                            None => cx.editor.set_error("not in a repo"),
+                        }
                     }),
                 ],
             ));
@@ -2172,7 +2193,22 @@ fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::conte
         e.push(Entry::sub(
             "Git",
             vec![
-                mkgit("Blame", "git --no-pager blame '{}'", path.clone(), dir.clone()),
+                // Blame toggles the annotate gutter (JetBrains "Annotate"), not a
+                // Run-console dump.
+                {
+                    let p = path.clone();
+                    Entry::item("Blame", move |_co, cx| {
+                        let on = crate::blame::toggle_annotate();
+                        if on {
+                            crate::blame::ensure_annotate(&p);
+                        }
+                        cx.editor.set_status(if on {
+                            "blame annotate: on"
+                        } else {
+                            "blame annotate: off"
+                        });
+                    })
+                },
                 mkgit("Diff", "git --no-pager diff '{}'", path.clone(), dir.clone()),
                 mkgit("Log", "git --no-pager log --oneline -- '{}'", path.clone(), dir.clone()),
             ],
@@ -2595,7 +2631,7 @@ impl Component for EditorView {
                 self.ide_or_create().toggle();
                 return EventResult::Consumed(None);
             }
-            // Run the current file (Cmd+R → F5) / Debug (Cmd+D → F6), regardless of panel focus.
+            // Run the current file (F5) / Debug (F6), regardless of panel focus.
             if key.code == KeyCode::F(5) && key.modifiers.is_empty() {
                 let cb = self.apply_ide_action(IdeAction::RunStart, context);
                 return EventResult::Consumed(cb);
@@ -2655,7 +2691,7 @@ impl Component for EditorView {
                     let (col, row) = (me.column, me.row);
                     let cb: crate::compositor::Callback = Box::new(move |compositor, _cx| {
                         let mut e = Vec::new();
-                        e.push(Entry::item_key("Close", "⌘W", move |_c, cx| {
+                        e.push(Entry::item_key("Close", "SPC b d", move |_c, cx| {
                             if cx.editor.close_document(doc_id, false).is_err() {
                                 cx.editor.set_error("unsaved changes (use :bc!)".to_string());
                             }

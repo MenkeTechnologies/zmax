@@ -395,9 +395,14 @@ To customize the behavior of gutters, the `[editor.gutters]` section must
 be used. This section contains top level settings, as well as settings for
 specific gutter components as subsections.
 
-| Key      | Description                    | Default                                                       |
-| ---      | ---                            | ---                                                           |
-| `layout` | A vector of gutters to display | `["diagnostics", "spacer", "line-numbers", "spacer", "diff"]` |
+| Key      | Description                    | Default                                                                   |
+| ---      | ---                            | ---                                                                       |
+| `layout` | A vector of gutters to display | `["blame", "diagnostics", "marks", "spacer", "line-numbers", "spacer", "diff"]` |
+
+Available gutter types: `diagnostics`, `line-numbers`, `spacer`, `diff`,
+`code-action-hint`, `marks`, and `blame`. The `blame` gutter is a JetBrains-style
+"Annotate" column (author + relative time per line); it takes no space until
+toggled on with `SPC g B` (`toggle_blame_annotate`).
 
 Example:
 

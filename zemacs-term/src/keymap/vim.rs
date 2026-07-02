@@ -62,12 +62,13 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space r n", "Bookmarks", "bookmark_next"),     // SPC r n : next bookmark
     ("space r N", "Bookmarks", "bookmark_prev"),     // SPC r N : previous bookmark
     ("space r j", "Bookmarks", "bookmark_jump"),     // SPC r j : jump to a bookmark (picker)
-    ("space b r", "Buffers", "recent_files_switcher"), // SPC b r : Recent Files switcher (JetBrains Cmd-E)
+    ("space b r", "Buffers", "recent_files_switcher"), // SPC b r : Recent Files switcher (JetBrains Recent Files)
     ("space g I", "Git", "toggle_inline_blame"),     // SPC g I : toggle GitLens-style inline blame
+    ("space g B", "Git", "toggle_blame_annotate"),   // SPC g B : toggle blame annotate gutter (JetBrains Annotate)
     ("space f H", "Files", ":LocalHistory"),         // SPC f H : Local History snapshots for this file
     ("space f E", "Files", ":RevealInFinder"),       // SPC f E : reveal current file in Finder
-    ("space b S", "Buffers", ":Scratch"),            // SPC b S : new scratch buffer (JetBrains ⇧⌘N)
-    ("space j R", "Jump", ":RecentLocations"),       // SPC j R : Recent Locations (JetBrains Shift-Cmd-E)
+    ("space b S", "Buffers", ":Scratch"),            // SPC b S : new scratch buffer (JetBrains Scratch File)
+    ("space j R", "Jump", ":RecentLocations"),       // SPC j R : Recent Locations (JetBrains Recent Locations)
     ("space f s", "Files",   ":write"),            // SPC f s : save
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all
     ("space a c", "Applications", ":calc"),        // SPC a c : calc-dispatch
@@ -100,6 +101,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t F",   "Toggles", "toggle_auto_fill"),                      // SPC t F : auto-fill mode
     ("space x d w", "Text",    ":delete-trailing-whitespace"),           // SPC x d w
     ("space x l d", "Text",    ":duplicate-line"),                       // SPC x l d
+    ("space x o",   "Text",    "select_all_occurrences"),               // SPC x o : select all occurrences of selection (JetBrains Select All Occurrences)
+    ("space x >",   "Text",    "move_element_right"),                   // SPC x > : swap syntax node with next sibling (JetBrains Move Element Right)
+    ("space x <",   "Text",    "move_element_left"),                    // SPC x < : swap syntax node with prev sibling (JetBrains Move Element Left)
     ("space x J",   "Text",    ":move-line-down"),                       // SPC x J : drag down
     ("space x K",   "Text",    ":move-line-up"),                         // SPC x K : drag up
     ("space x t c", "Text",    ":transpose-chars"),                      // SPC x t c
@@ -150,8 +154,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space g f d", "Git",     "git_diff"),                             // SPC g f d : diff current file vs HEAD
     ("space g f m", "Git",     "git_file_dispatch"),                    // SPC g f m : magit file-operations dispatch
     ("space g f f", "Git",     "view_file_at_rev"),                     // SPC g f f : view current file at a branch/commit
-    ("space g P",   "Git",     "git_push"),                             // SPC g P : push current branch (JetBrains Cmd+Shift+K)
-    ("space g u",   "Git",     "git_pull"),                             // SPC g u : fast-forward pull (JetBrains Cmd+T)
+    ("space g P",   "Git",     "git_push"),                             // SPC g P : push current branch (JetBrains Push)
+    ("space g u",   "Git",     "git_pull"),                             // SPC g u : fast-forward pull (JetBrains Update Project)
     ("space g F",   "Git",     "git_fetch"),                            // SPC g F : fetch all remotes
     ("space f e d", "Files",   ":config-open"),                          // SPC f e d : open dotfile/config
     ("space q f",   "Quit",    ":quit"),                                 // SPC q f : kill frame
@@ -181,6 +185,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space D m f f", "Diff",  "ediff_merge_file"),                   // SPC D m f f : merge a file into current buffer
     ("space D b 3", "Diff",    "ediff_3_buffers"),                     // SPC D b 3 : 3-way diff of three buffers (read-only)
     ("space D b b", "Diff",    "ediff_buffer"),                        // SPC D b b : ediff two buffers (current vs picked)
+    ("space D c",   "Diff",    "compare_with_clipboard"),              // SPC D c : diff current buffer vs clipboard (JetBrains Compare with Clipboard)
     ("space D w w", "Diff",    "ediff_windows"),                       // SPC D w w : compare the two windows (wordwise)
     ("space D w l", "Diff",    "ediff_windows"),                       // SPC D w l : compare the two windows (linewise)
     ("space t V",   "Toggles", ":toggle line-number absolute relative"), // SPC t V : visual line numbers
@@ -955,7 +960,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "z" => ai_revert_agent,            // SPC a z : revert to the agent's pre-run checkpoint
                 "i" => ai_chat,                    // SPC a i : ask the AI provider (Cursor-style assistant)
                 "p" => ai_chat_panel,              // SPC a p : streaming AI chat drawer (on-the-fly generation)
-                "e" => ai_inline_edit,             // SPC a e : AI inline edit/generate (Cursor Cmd+K)
+                "e" => ai_inline_edit,             // SPC a e : AI inline edit/generate
                 "E" => ai_inline_edit_preview,     // SPC a E : AI inline edit with diff preview
                 "." => ai_accept_edit,             // SPC a . : accept the pending AI edit preview
                 "x" => ai_explain,                 // SPC a x : AI explain selection
@@ -969,7 +974,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "D" => ai_docs_context,            // SPC a D : @docs keyword search over docs/ dir
                 "w" => ai_web_context,             // SPC a w : @web live web-search context
                 "g" => toggle_ai_autocomplete,     // SPC a g : toggle real-time ghost-text autocomplete
-                "k" => ai_terminal_command,        // SPC a k : generate a shell command (terminal Cmd+K)
+                "k" => ai_terminal_command,        // SPC a k : generate a shell command
                 "u" => ai_generate_tests,          // SPC a u : AI generate unit tests
                 "c" => ai_commit_message,          // SPC a c : AI git commit message
                 "r" => repl,                       // SPC a r : embedded-language REPL (elisp/viml/stryke/awk/zsh)
@@ -1320,7 +1325,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "q" => hide_active_tool_window,    // SPC W q : hide active tool window (JetBrains Shift-Esc)
                 "tab" => jump_to_last_tool_window, // SPC W TAB : jump to last tool window (JetBrains F12)
                 "z" => toggle_ide,                 // SPC W z : hide all tool windows (Zen)
-                "b" => focus_bookmarks,            // SPC W b : Bookmarks tool window (JetBrains Cmd 2)
+                "b" => focus_bookmarks,            // SPC W b : Bookmarks tool window
                 "k" => focus_marks_panel,          // SPC W k : Marks tool window
                 "R" => focus_registers_panel,      // SPC W R : Registers tool window
                 "j" => focus_jumplist_panel,       // SPC W j : Jumplist tool window
@@ -1460,8 +1465,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "O" => organize_imports,           // SPC l O : optimize/organize imports (JetBrains Ctrl-Alt-O)
                 "i" => implement_methods,          // SPC l i : implement interface/trait members (JetBrains Ctrl-I)
                 "v" => override_methods,           // SPC l v : override inherited members (JetBrains Ctrl-O)
-                "g" => generate_code,              // SPC l g : generate code — getters/constructors/impls (JetBrains Cmd N)
+                "g" => generate_code,              // SPC l g : generate code — getters/constructors/impls (JetBrains Generate)
                 "k" => hover,                      // SPC l k : hover
+                "d" => peek_definition,            // SPC l d : peek definition in a popup (JetBrains Quick Definition)
                 "s" => signature_help,             // SPC l s : signature help
                 "f" => format_selections,          // SPC l f : format
                 // --- layouts (named window configurations) ---

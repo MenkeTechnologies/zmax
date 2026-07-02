@@ -99,6 +99,7 @@ impl Default for GutterConfig {
     fn default() -> Self {
         Self {
             layout: vec![
+                GutterType::Blame,
                 GutterType::Diagnostics,
                 GutterType::Marks,
                 GutterType::Spacer,
@@ -995,6 +996,8 @@ pub enum GutterType {
     CodeActionHint,
     /// Show vim marks (markology) in the gutter
     Marks,
+    /// Git-blame annotate column (JetBrains "Annotate"); zero-width until enabled
+    Blame,
 }
 
 impl std::str::FromStr for GutterType {
@@ -1008,6 +1011,7 @@ impl std::str::FromStr for GutterType {
             "diff" => Ok(Self::Diff),
             "code-action-hint" => Ok(Self::CodeActionHint),
             "marks" => Ok(Self::Marks),
+            "blame" => Ok(Self::Blame),
             _ => anyhow::bail!(
                 "Gutter type can only be `diagnostics`, `spacer`, `line-numbers` or `diff`."
             ),

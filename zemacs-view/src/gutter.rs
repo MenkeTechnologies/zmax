@@ -1,4 +1,8 @@
+use std::collections::HashMap;
 use std::fmt::Write;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 
 use zemacs_core::syntax::config::LanguageServerFeature;
 
@@ -10,6 +14,107 @@ use crate::{
 
 fn count_digits(n: usize) -> usize {
     (usize::checked_ilog10(n).unwrap_or(0) + 1) as usize
+}
+
+// ── Git-blame annotate gutter (JetBrains "Annotate") ────────────────────────
+//
+// The gutter renders here, but the blame itself is computed by the term layer
+// (which shells out to `git blame`); it can't be run from this crate. So the
+// term layer pushes the formatted per-line strings into these statics and flips
+// the enable flag, and the gutter just reads them back.
+
+/// Column width of the blame annotate gutter.
+pub const BLAME_GUTTER_WIDTH: usize = 18;
+
+/// Whether the blame annotate gutter is shown (toggled from the term layer).
+static BLAME_ENABLED: AtomicBool = AtomicBool::new(false);
+/// path -> compact per-line annotate strings (index 0 = line 1).
+static BLAME_ANNOTATE: Mutex<Option<HashMap<PathBuf, Vec<String>>>> = Mutex::new(None);
+
+/// Whether the blame annotate gutter is enabled.
+pub fn blame_gutter_enabled() -> bool {
+    BLAME_ENABLED.load(Ordering::Relaxed)
+}
+
+/// Enable or disable the blame annotate gutter.
+pub fn set_blame_gutter(on: bool) {
+    BLAME_ENABLED.store(on, Ordering::Relaxed);
+}
+
+/// Store the term layer's computed annotate lines for `path`.
+pub fn set_blame_annotate(path: PathBuf, lines: Vec<String>) {
+    if let Ok(mut g) = BLAME_ANNOTATE.lock() {
+        g.get_or_insert_with(HashMap::new).insert(path, lines);
+    }
+}
+
+/// True when annotate lines are already cached for `path`.
+pub fn has_blame_annotate(path: &Path) -> bool {
+    BLAME_ANNOTATE
+        .lock()
+        .ok()
+        .and_then(|g| g.as_ref().map(|m| m.contains_key(path)))
+        .unwrap_or(false)
+}
+
+/// Drop the cached annotate lines for `path` (after it's edited/saved).
+pub fn invalidate_blame_annotate(path: &Path) {
+    if let Ok(mut g) = BLAME_ANNOTATE.lock() {
+        if let Some(m) = g.as_mut() {
+            m.remove(path);
+        }
+    }
+}
+
+fn blame_annotate_lines(path: &Path) -> Option<Vec<String>> {
+    BLAME_ANNOTATE.lock().ok()?.as_ref()?.get(path).cloned()
+}
+
+/// Per-line git-blame annotate column: author + relative time, left-aligned and
+/// padded to [`BLAME_GUTTER_WIDTH`]. Renders nothing (and takes no width) until
+/// the term layer enables it and pushes data via [`set_blame_annotate`].
+pub fn blame<'doc>(
+    _editor: &'doc Editor,
+    doc: &'doc Document,
+    _view: &View,
+    theme: &Theme,
+    _is_focused: bool,
+) -> GutterFn<'doc> {
+    if !blame_gutter_enabled() {
+        return Box::new(|_, _, _, _| None);
+    }
+    let style = theme
+        .try_get("ui.gutter.blame")
+        .unwrap_or_else(|| theme.get("comment"));
+    let lines = doc.path().and_then(|p| blame_annotate_lines(p));
+    Box::new(
+        move |line: usize, _selected: bool, first_visual_line: bool, out: &mut String| {
+            let s = if first_visual_line {
+                lines
+                    .as_ref()
+                    .and_then(|v| v.get(line))
+                    .map(String::as_str)
+                    .unwrap_or("")
+            } else {
+                ""
+            };
+            // Write exactly BLAME_GUTTER_WIDTH cells so the following gutters
+            // stay aligned: at most WIDTH-1 content chars, then pad with spaces
+            // (guaranteeing a trailing separator column).
+            let mut n = 0;
+            for c in s.chars() {
+                if n + 1 >= BLAME_GUTTER_WIDTH {
+                    break;
+                }
+                out.push(c);
+                n += 1;
+            }
+            for _ in n..BLAME_GUTTER_WIDTH {
+                out.push(' ');
+            }
+            Some(style)
+        },
+    )
 }
 
 pub type GutterFn<'doc> = Box<dyn FnMut(usize, bool, bool, &mut String) -> Option<Style> + 'doc>;
@@ -34,6 +139,7 @@ impl GutterType {
             GutterType::Diff => diff(editor, doc, view, theme, is_focused),
             GutterType::CodeActionHint => code_action_hint(editor, doc, view, theme, is_focused),
             GutterType::Marks => marks(editor, doc, view, theme, is_focused),
+            GutterType::Blame => blame(editor, doc, view, theme, is_focused),
         }
     }
 
@@ -45,6 +151,14 @@ impl GutterType {
             GutterType::Diff => 1,
             GutterType::CodeActionHint => 1,
             GutterType::Marks => 1,
+            // Zero width (and so invisible) until the term layer enables it.
+            GutterType::Blame => {
+                if blame_gutter_enabled() {
+                    BLAME_GUTTER_WIDTH
+                } else {
+                    0
+                }
+            }
         }
     }
 }
@@ -447,14 +561,15 @@ mod tests {
             Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
         );
 
-        // default layout: diagnostics, marks, spacer, line-numbers, spacer, diff
-        assert_eq!(view.gutters.layout.len(), 6);
-        assert_eq!(view.gutters.layout[0].width(&view, &doc), 1); // diagnostics
-        assert_eq!(view.gutters.layout[1].width(&view, &doc), 1); // marks
-        assert_eq!(view.gutters.layout[2].width(&view, &doc), 1); // spacer
-        assert_eq!(view.gutters.layout[3].width(&view, &doc), 3); // line numbers
-        assert_eq!(view.gutters.layout[4].width(&view, &doc), 1); // spacer
-        assert_eq!(view.gutters.layout[5].width(&view, &doc), 1); // diff
+        // default layout: blame, diagnostics, marks, spacer, line-numbers, spacer, diff
+        assert_eq!(view.gutters.layout.len(), 7);
+        assert_eq!(view.gutters.layout[0].width(&view, &doc), 0); // blame (disabled → 0 width)
+        assert_eq!(view.gutters.layout[1].width(&view, &doc), 1); // diagnostics
+        assert_eq!(view.gutters.layout[2].width(&view, &doc), 1); // marks
+        assert_eq!(view.gutters.layout[3].width(&view, &doc), 1); // spacer
+        assert_eq!(view.gutters.layout[4].width(&view, &doc), 3); // line numbers
+        assert_eq!(view.gutters.layout[5].width(&view, &doc), 1); // spacer
+        assert_eq!(view.gutters.layout[6].width(&view, &doc), 1); // diff
     }
 
     #[test]

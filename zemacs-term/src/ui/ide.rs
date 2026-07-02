@@ -1444,7 +1444,8 @@ impl Ide {
             }
             return IdeAction::None;
         }
-        // Simple list tabs (Todo/Marks/Jumps/Recent): j/k select, Enter activates.
+        // Simple list tabs (Todo/Marks/Jumps/Recent/Harpoon/CI): j/k select, Enter
+        // activates (CI opens the run in the browser via activate_aux).
         if !structure
             && matches!(
                 self.bottom_tab,
@@ -1453,6 +1454,7 @@ impl Ide {
                     | BottomTab::Jumplist
                     | BottomTab::Recent
                     | BottomTab::Harpoon
+                    | BottomTab::Ci
             )
         {
             let len = self.aux_len();
@@ -1841,6 +1843,18 @@ impl Ide {
                             self.focus = Focus::Editor;
                             return IdeAction::OpenFile(path.clone());
                         }
+                    }
+                    return IdeAction::None;
+                }
+                if in_rect(&self.problems_rect, col, row)
+                    && row > self.problems_rect.y
+                    && self.bottom_tab == BottomTab::Ci
+                {
+                    let idx = (row - self.problems_rect.y - 1) as usize;
+                    let runs = crate::ci::snapshot();
+                    if let Some(r) = runs.get(idx) {
+                        self.aux_sel = idx;
+                        return IdeAction::OpenUrl(r.url.clone());
                     }
                     return IdeAction::None;
                 }
@@ -4704,12 +4718,12 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
     // Cut / Copy / Copy Path/Reference › / Paste
     {
         let p = path.clone();
-        e.push(Entry::item_key("Cut", "⌘X", move |_c, cx| {
+        e.push(Entry::item("Cut", move |_c, cx| {
             *FILE_CLIP.lock().unwrap() = Some((p.clone(), true));
             cx.editor.set_status(format!("cut {}", p.display()));
         }));
         let p = path.clone();
-        e.push(Entry::item_key("Copy", "⌘C", move |_c, cx| {
+        e.push(Entry::item("Copy", move |_c, cx| {
             *FILE_CLIP.lock().unwrap() = Some((p.clone(), false));
             cx.editor.set_status(format!("copied {}", p.display()));
         }));
@@ -4737,7 +4751,7 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
             ],
         ));
         let dst = dir.clone();
-        e.push(Entry::item_key("Paste", "⌘V", move |_c, cx| {
+        e.push(Entry::item("Paste", move |_c, cx| {
             let clip = FILE_CLIP.lock().unwrap().clone();
             let Some((src, is_cut)) = clip else {
                 cx.editor.set_error("nothing to paste");
@@ -4841,7 +4855,7 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
         }));
         // Compare With HEAD — git diff into the Run console.
         let p = path.clone();
-        e.push(Entry::item_key("Compare With HEAD", "⌘D", move |compositor, cx| {
+        e.push(Entry::item_key("Compare With HEAD", "SPC g =", move |compositor, cx| {
             if let Some(view) = compositor.find::<crate::ui::EditorView>() {
                 let cwd = p.parent().map(|d| d.to_path_buf()).unwrap_or_else(|| PathBuf::from("."));
                 let quoted = p.to_string_lossy().replace('\'', "'\\''");

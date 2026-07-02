@@ -733,7 +733,7 @@ pub fn override_methods(cx: &mut Context) {
     );
 }
 
-/// IntelliJ "Generate" (Cmd N): the server's "Generate …" code actions (getters/setters,
+/// IntelliJ "Generate" (SPC l g): the server's "Generate …" code actions (getters/setters,
 /// constructors, `impl` blocks, derives …) as a focused menu (a single match auto-applies).
 pub fn generate_code(cx: &mut Context) {
     code_action_filtered(
@@ -744,7 +744,7 @@ pub fn generate_code(cx: &mut Context) {
     );
 }
 
-/// IntelliJ "Change Signature" (Cmd F6): the server's change-signature refactor, pinned by title.
+/// IntelliJ "Change Signature": the server's change-signature refactor, pinned by title.
 pub fn change_signature(cx: &mut Context) {
     code_action_filtered(
         cx,
@@ -1247,6 +1247,88 @@ pub fn goto_definition(cx: &mut Context) {
         LanguageServerFeature::GotoDefinition,
         |ls, pos, doc_id| ls.goto_definition(doc_id, pos, None),
     );
+}
+
+/// JetBrains "Quick Definition" (Cmd+Shift+I): peek the definition of the symbol
+/// under the cursor — the target file's lines around the definition — in a popup,
+/// without navigating away from the current buffer.
+pub fn peek_definition(cx: &mut Context) {
+    use crate::ui::lsp::hover::Hover;
+
+    let (view, doc) = current_ref!(cx.editor);
+    let mut futures: FuturesUnordered<_> = doc
+        .language_servers_with_feature(LanguageServerFeature::GotoDefinition)
+        .map(|language_server| {
+            let offset_encoding = language_server.offset_encoding();
+            let pos = doc.position(view.id, offset_encoding);
+            let future = language_server
+                .goto_definition(doc.identifier(), pos, None)
+                .unwrap();
+            async move { anyhow::Ok((future.await?, offset_encoding)) }
+        })
+        .collect();
+
+    cx.jobs.callback(async move {
+        let mut locations = Vec::new();
+        while let Some(response) = futures.next().await {
+            match response {
+                Ok((Some(resp), offset_encoding)) => match resp {
+                    lsp::GotoDefinitionResponse::Scalar(l) => {
+                        locations.extend(lsp_location_to_location(l, offset_encoding));
+                    }
+                    lsp::GotoDefinitionResponse::Array(ls) => locations.extend(
+                        ls.into_iter()
+                            .flat_map(|l| lsp_location_to_location(l, offset_encoding)),
+                    ),
+                    lsp::GotoDefinitionResponse::Link(ls) => locations.extend(
+                        ls.into_iter()
+                            .map(|ll| lsp::Location::new(ll.target_uri, ll.target_range))
+                            .flat_map(|l| lsp_location_to_location(l, offset_encoding)),
+                    ),
+                },
+                Ok((None, _)) => {}
+                Err(err) => log::error!("Error requesting definition: {err}"),
+            }
+        }
+        let call = move |editor: &mut Editor, compositor: &mut Compositor| {
+            let Some(location) = locations.into_iter().next() else {
+                editor.set_status("No definition found.");
+                return;
+            };
+            let Some(path) = location.uri.as_path() else {
+                editor.set_error("definition has no file path");
+                return;
+            };
+            let content = match std::fs::read_to_string(path) {
+                Ok(c) => c,
+                Err(e) => {
+                    editor.set_error(format!("cannot read {}: {e}", path.display()));
+                    return;
+                }
+            };
+            let lines: Vec<&str> = content.lines().collect();
+            let start = (location.range.start.line as usize).min(lines.len());
+            let end = (start + 16).min(lines.len());
+            let snippet = lines[start..end].join("\n");
+            let lang = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+            let hover = lsp::Hover {
+                contents: lsp::HoverContents::Markup(lsp::MarkupContent {
+                    kind: lsp::MarkupKind::Markdown,
+                    value: format!("```{lang}\n{snippet}\n```"),
+                }),
+                range: None,
+            };
+            let title = format!(
+                "{}:{}",
+                path.file_name().and_then(|n| n.to_str()).unwrap_or(""),
+                start + 1
+            );
+            let contents = Hover::new(vec![(title, hover)], editor.syn_loader.clone());
+            let popup = Popup::new(Hover::ID, contents).auto_close(true);
+            compositor.replace_or_push(Hover::ID, popup);
+        };
+        Ok(Callback::EditorCompositor(Box::new(call)))
+    });
 }
 
 pub fn goto_type_definition(cx: &mut Context) {
