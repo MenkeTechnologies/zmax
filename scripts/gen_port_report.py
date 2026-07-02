@@ -237,6 +237,7 @@ def parse_keymap():
     result["calc"] = _parse_component_keymap("calc.rs", "calc")
     result["rmail"] = _parse_component_keymap("rmail.rs", "rmail")
     result["bufmenu"] = _parse_component_keymap("bufmenu.rs", "bufmenu")
+    result["occur"] = _parse_component_keymap("occur.rs", "occur")
     return result
 
 
