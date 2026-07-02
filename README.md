@@ -136,15 +136,22 @@ leaving the editor:
 
 zemacs ports the Arduino IDE and PlatformIO IDE workflows by driving the same
 command-line backends the official IDEs use — `arduino-cli` and `pio` — so no
-GUI is needed. Per-project board settings (FQBN, serial port, baud, sketch dir)
-persist to `<project-dir>/embedded.toml`; the leader menu is `SPC a v`.
+GUI is needed. Per-project board settings (FQBN, serial port, baud, sketch dir,
+PlatformIO environment, monitor filters) persist to
+`<project-dir>/embedded.toml`; the leader menu is `SPC a v`.
 
+- **PlatformIO environment** — `:pio-env` selects the `[env:…]` from
+  `platformio.ini` (no arg fuzzy-picks; `-` clears). Every project-scoped `pio`
+  action (build, upload, clean, test, check, debug, monitor, run targets) then
+  targets that one environment via `-e`.
 - **Build / flash** — `:arduino-compile` (Verify), `:arduino-upload`
   (compile + flash), `:arduino-compile-export` (Export Compiled Binary),
   `:arduino-burn-bootloader`; `:pio-build`, `:pio-upload`, `:pio-clean`,
-  `:pio-cleanall`, `:pio-test`, `:pio-check`, `:pio-size`. Compiler diagnostics
-  land in the `*compilation*` list so `:next-error` walks avr-gcc/arm-gcc errors;
-  uploads run live in a PTY panel.
+  `:pio-cleanall`, `:pio-test`, `:pio-check`, `:pio-size`, `:pio-list-targets`.
+  Compiler diagnostics land in the `*compilation*` list so `:next-error` walks
+  avr-gcc/arm-gcc errors; uploads run live in a PTY panel.
+- **Test / analysis** — `:pio-list-tests`, `:pio-test-filter <pattern>` (run one
+  suite), `:pio-check-severity <low|medium|high>`.
 - **PlatformIO build targets** — the full `pio run -t` surface: `:pio-compiledb`
   (generate `compile_commands.json` for the C/C++ LSP), `:pio-buildfs` /
   `:pio-uploadfs` (SPIFFS/LittleFS filesystem image), `:pio-uploadeep`,
@@ -152,10 +159,13 @@ persist to `<project-dir>/embedded.toml`; the leader menu is `SPC a v`.
   rebuilding), `:pio-envdump`.
 - **Serial** — `:arduino-monitor` / `:pio-monitor` (live PTY serial monitor) and
   `:arduino-plotter` / `:pio-plotter`, which graph the numbers streaming from the
-  board (Arduino IDE Serial Plotter). `:embedded-baud <rate>` sets the rate.
+  board (Arduino IDE Serial Plotter). `:embedded-baud <rate>` sets the rate;
+  `:pio-monitor-filter <name>` (e.g. `time`, `log2file`, `hexlify`,
+  `send_on_enter`), `:pio-monitor-filters-clear`, `:pio-monitor-eol <CR|LF|CRLF>`
+  and `:pio-monitor-parity <N|E|O|S|M>` tune the PlatformIO monitor.
 - **Boards & ports** — `:arduino-boards` (pick FQBN), `:arduino-ports` /
   `:pio-devices` (pick serial port), `:arduino-board-info`, `:pio-boards`
-  (Board Explorer).
+  (Board Explorer), `:pio-boards-installed` (installed platforms only).
 - **Boards Manager** — `:arduino-core-search`, `:arduino-core-install`,
   `:arduino-core-list`, `:arduino-core-uninstall`, `:arduino-core-update-index`,
   `:arduino-core-upgrade`.
@@ -170,15 +180,22 @@ persist to `<project-dir>/embedded.toml`; the leader menu is `SPC a v`.
   refresh and upgrade cores + libraries together; `:arduino-config` dumps the
   active configuration; `:pio-upgrade` upgrades PlatformIO Core itself;
   `:pio-system-info`, `:pio-system-prune` (drop unused caches/packages),
-  `:pio-settings-get` / `:pio-settings-set`.
+  `:pio-system-completion <shell>`, `:pio-settings-get` / `:pio-settings-set` /
+  `:pio-settings-reset`, `:pio-ci <src> -b <board>` (standalone CI build).
 - **Platforms & packages** — `:pio-platform-install <spec>` installs a
-  development platform globally; `:pio-pkg-exec <argv>` runs a tool from an
+  development platform globally, `:pio-tool-install <spec>` a tool package
+  (compilers, uploaders, debuggers); `:pio-pkg-exec <argv>` runs a tool from an
   installed package (e.g. `esptool.py`, `openocd`); registry authoring via
   `:pio-pkg-pack`, `:pio-pkg-publish`, `:pio-pkg-unpublish`.
 - **PlatformIO Remote** — drive a remote agent: `:pio-remote-agent-start` /
-  `:pio-remote-agent-list`, `:pio-remote-devices`, `:pio-remote-run`,
-  `:pio-remote-test`, `:pio-remote-update`. Account: `:pio-account-login`,
-  `:pio-account-logout`, `:pio-account-show`, `:pio-account-token`.
+  `:pio-remote-agent-list`, `:pio-remote-devices`, `:pio-remote-monitor`,
+  `:pio-remote-run`, `:pio-remote-test`, `:pio-remote-update`.
+- **PlatformIO account & org** — `:pio-account-login` / `-logout` / `-show` /
+  `-token` / `-register` / `-password` / `-update` / `-forgot` / `-destroy`;
+  organizations `:pio-org-list` / `-create` / `-add` / `-remove` / `-update` /
+  `-destroy`; teams `:pio-team-list` / `-create` / `-add` / `-remove` /
+  `-update` / `-destroy`; registry access `:pio-access-list` / `-grant` /
+  `-revoke` / `-public` / `-private`.
 - **Sketches / projects** — `:arduino-new-sketch`, `:arduino-sketch-archive`,
   `:pio-init <board>`, `:pio-project-config` (computed config),
   `:pio-project-metadata` (IDE/LSP metadata dump).

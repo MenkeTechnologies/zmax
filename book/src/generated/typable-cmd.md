@@ -124,6 +124,43 @@
 | `:pio-account-logout`, `:platformio-account-logout` | Sign out of the PlatformIO account (`pio account logout`). |
 | `:pio-account-show`, `:platformio-account-show` | Show the current PlatformIO account information (`pio account show`). |
 | `:pio-account-token`, `:platformio-account-token` | Print (or regenerate) the account auth token (`pio account token`), live in a terminal panel. |
+| `:pio-env`, `:pio-environment`, `:platformio-env` | Select the PlatformIO build environment (`[env:…]`); no arg picks from platformio.ini, `-` clears. |
+| `:pio-list-targets`, `:platformio-list-targets` | Enumerate the project's build targets (`pio run --list-targets`). |
+| `:pio-list-tests`, `:platformio-list-tests` | List the project's test suites (`pio test --list-tests`). |
+| `:pio-test-filter`, `:platformio-test-filter` | Run only the tests matching a pattern (`pio test -f <pattern>`). |
+| `:pio-check-severity`, `:platformio-check-severity` | Static analysis filtered by minimum defect severity (`pio check --severity <low|medium|high>`). |
+| `:pio-tool-install`, `:platformio-tool-install` | Install a tool package globally (`pio pkg install -g -t <spec>`), live in a terminal panel. |
+| `:pio-boards-installed`, `:platformio-boards-installed` | List boards from installed platforms only (`pio boards --installed`). |
+| `:pio-monitor-filter`, `:platformio-monitor-filter` | Add a serial monitor filter for this project (e.g. time, log2file, hexlify, send_on_enter). |
+| `:pio-monitor-filters-clear`, `:platformio-monitor-filters-clear` | Remove all configured serial monitor filters. |
+| `:pio-monitor-eol`, `:platformio-monitor-eol` | Set the serial monitor end-of-line mode (`CR`, `LF`, or `CRLF`). |
+| `:pio-monitor-parity`, `:platformio-monitor-parity` | Set the serial monitor parity (`N`, `E`, `O`, `S`, or `M`). |
+| `:pio-remote-monitor`, `:platformio-remote-monitor` | Serial monitor over a Remote agent (`pio remote device monitor`), live in a terminal panel. |
+| `:pio-settings-reset`, `:platformio-settings-reset` | Restore PlatformIO Core settings to their defaults (`pio settings reset`). |
+| `:pio-system-completion`, `:platformio-system-completion` | Emit a shell completion script (`pio system completion <bash|zsh|fish|powershell>`). |
+| `:pio-ci`, `:platformio-ci` | Build a standalone source tree in an isolated project (`pio ci <src> -b <board>`), live in a terminal panel. |
+| `:pio-account-register`, `:platformio-account-register` | Create a new PlatformIO account (`pio account register`), live in a terminal panel. |
+| `:pio-account-password`, `:platformio-account-password` | Change the PlatformIO account password (`pio account password`), live in a terminal panel. |
+| `:pio-account-update`, `:platformio-account-update` | Update PlatformIO profile information (`pio account update`), live in a terminal panel. |
+| `:pio-account-forgot`, `:platformio-account-forgot` | Begin PlatformIO account password recovery (`pio account forgot`), live in a terminal panel. |
+| `:pio-account-destroy`, `:platformio-account-destroy` | Permanently destroy the PlatformIO account (`pio account destroy`), live in a terminal panel. |
+| `:pio-org-list`, `:platformio-org-list` | List PlatformIO organizations and their members (`pio org list`). |
+| `:pio-org-create`, `:platformio-org-create` | Create a new PlatformIO organization (`pio org create <orgname>`), live in a terminal panel. |
+| `:pio-org-add`, `:platformio-org-add` | Add an owner to a PlatformIO organization (`pio org add <orgname> <username>`), live in a terminal panel. |
+| `:pio-org-remove`, `:platformio-org-remove` | Remove an owner from a PlatformIO organization (`pio org remove <orgname> <username>`), live in a terminal panel. |
+| `:pio-org-update`, `:platformio-org-update` | Update a PlatformIO organization (`pio org update <orgname>`), live in a terminal panel. |
+| `:pio-org-destroy`, `:platformio-org-destroy` | Destroy a PlatformIO organization (`pio org destroy <orgname>`), live in a terminal panel. |
+| `:pio-team-list`, `:platformio-team-list` | List teams in a PlatformIO organization (`pio team list <orgname>`). |
+| `:pio-team-create`, `:platformio-team-create` | Create a team in a PlatformIO organization (`pio team create <orgname:team>`), live in a terminal panel. |
+| `:pio-team-add`, `:platformio-team-add` | Add a member to a PlatformIO team (`pio team add <orgname:team> <username>`), live in a terminal panel. |
+| `:pio-team-remove`, `:platformio-team-remove` | Remove a member from a PlatformIO team (`pio team remove <orgname:team> <username>`), live in a terminal panel. |
+| `:pio-team-update`, `:platformio-team-update` | Update a PlatformIO team (`pio team update <orgname:team>`), live in a terminal panel. |
+| `:pio-team-destroy`, `:platformio-team-destroy` | Destroy a PlatformIO team (`pio team destroy <orgname:team>`), live in a terminal panel. |
+| `:pio-access-list`, `:platformio-access-list` | List published resources and their access levels (`pio access list`). |
+| `:pio-access-grant`, `:platformio-access-grant` | Grant access to a resource (`pio access grant <level> <resource> <team>`), live in a terminal panel. |
+| `:pio-access-revoke`, `:platformio-access-revoke` | Revoke access to a resource (`pio access revoke <resource> <team>`), live in a terminal panel. |
+| `:pio-access-public`, `:platformio-access-public` | Make a published resource public (`pio access public <resource>`), live in a terminal panel. |
+| `:pio-access-private`, `:platformio-access-private` | Make a published resource private (`pio access private <resource>`), live in a terminal panel. |
 | `:next-error`, `:cnext-error` | Visit the next compilation error's location (emacs next-error / M-g n). |
 | `:previous-error`, `:cprevious-error` | Visit the previous compilation error's location (emacs previous-error / M-g p). |
 | `:first-error` | Visit the first compilation error's location (emacs first-error). |

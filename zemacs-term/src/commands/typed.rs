@@ -3599,8 +3599,9 @@ fn pio_build(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         return Ok(());
     }
     require_tool(embedded::PIO)?;
-    let dir = embedded::load().sketch_dir();
-    let cmd = format!("cd {} && {}", embedded::shell_join(&[dir.to_string_lossy().into_owned()]), embedded::shell_join(&embedded::pio_build()));
+    let settings = embedded::load();
+    let dir = settings.sketch_dir();
+    let cmd = format!("cd {} && {}", embedded::shell_join(&[dir.to_string_lossy().into_owned()]), embedded::shell_join(&embedded::pio_build(&settings)));
     run_compile(cx, &cmd)
 }
 
@@ -3610,8 +3611,9 @@ fn pio_upload(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
         return Ok(());
     }
     require_tool(embedded::PIO)?;
-    let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_upload(), dir);
+    let settings = embedded::load();
+    let dir = settings.sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_upload(&settings), dir);
     Ok(())
 }
 
@@ -3966,11 +3968,12 @@ fn pio_clean(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         return Ok(());
     }
     require_tool(embedded::PIO)?;
-    let dir = embedded::load().sketch_dir();
+    let settings = embedded::load();
+    let dir = settings.sketch_dir();
     let cmd = format!(
         "cd {} && {}",
         embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
-        embedded::shell_join(&embedded::pio_clean())
+        embedded::shell_join(&embedded::pio_clean(&settings))
     );
     run_compile(cx, &cmd)
 }
@@ -3982,11 +3985,12 @@ fn pio_test(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
         return Ok(());
     }
     require_tool(embedded::PIO)?;
-    let dir = embedded::load().sketch_dir();
+    let settings = embedded::load();
+    let dir = settings.sketch_dir();
     let cmd = format!(
         "cd {} && {}",
         embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
-        embedded::shell_join(&embedded::pio_test())
+        embedded::shell_join(&embedded::pio_test(&settings))
     );
     run_compile(cx, &cmd)
 }
@@ -3998,11 +4002,12 @@ fn pio_check(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         return Ok(());
     }
     require_tool(embedded::PIO)?;
-    let dir = embedded::load().sketch_dir();
+    let settings = embedded::load();
+    let dir = settings.sketch_dir();
     let cmd = format!(
         "cd {} && {}",
         embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
-        embedded::shell_join(&embedded::pio_check())
+        embedded::shell_join(&embedded::pio_check(&settings))
     );
     run_compile(cx, &cmd)
 }
@@ -4189,8 +4194,9 @@ fn pio_debug(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         return Ok(());
     }
     require_tool(embedded::PIO)?;
-    let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_debug(), dir);
+    let settings = embedded::load();
+    let dir = settings.sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_debug(&settings), dir);
     Ok(())
 }
 
@@ -4210,11 +4216,12 @@ fn pio_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
 /// lives so `:next-error` walks any build failures.
 fn pio_compile_target(cx: &mut compositor::Context, target: &str) -> anyhow::Result<()> {
     require_tool(embedded::PIO)?;
-    let dir = embedded::load().sketch_dir();
+    let settings = embedded::load();
+    let dir = settings.sketch_dir();
     let cmd = format!(
         "cd {} && {}",
         embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
-        embedded::shell_join(&embedded::pio_run_target(target))
+        embedded::shell_join(&embedded::pio_run_target(&settings, target))
     );
     run_compile(cx, &cmd)
 }
@@ -4224,8 +4231,9 @@ fn pio_compile_target(cx: &mut compositor::Context, target: &str) -> anyhow::Res
 /// and prompts render.
 fn pio_terminal_target(cx: &mut compositor::Context, target: &'static str) -> anyhow::Result<()> {
     require_tool(embedded::PIO)?;
-    let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_run_target(target), dir);
+    let settings = embedded::load();
+    let dir = settings.sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_run_target(&settings, target), dir);
     Ok(())
 }
 
@@ -4556,6 +4564,457 @@ fn pio_account_token(cx: &mut compositor::Context, _args: Args, event: PromptEve
     let root = zemacs_loader::find_workspace().0;
     embedded_spawn_terminal(cx, embedded::pio_account_token(), root);
     Ok(())
+}
+
+/// `:pio-env [name]` — select the PlatformIO build environment for this project.
+/// With no argument, fuzzy-pick from the `[env:…]` sections in `platformio.ini`;
+/// `:pio-env -` (or `all`) clears the selection so `pio` targets every env.
+fn pio_env(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if !name.is_empty() {
+        if name == "-" || name.eq_ignore_ascii_case("all") {
+            embedded::update(|s| s.env.clear());
+            cx.editor.set_status("PlatformIO environment cleared (targets all envs)");
+        } else {
+            let env = name.to_string();
+            embedded::update(|s| s.env = env.clone());
+            cx.editor.set_status(format!("PlatformIO environment set to `{env}`"));
+        }
+        return Ok(());
+    }
+    let dir = embedded::load().sketch_dir();
+    let ini = std::fs::read_to_string(dir.join("platformio.ini")).map_err(|_| {
+        anyhow!(
+            "no platformio.ini in {} — run :pio-init or pass an env name",
+            dir.display()
+        )
+    })?;
+    let envs = embedded::parse_pio_envs(&ini);
+    if envs.is_empty() {
+        bail!("no [env:...] sections in platformio.ini");
+    }
+    let callback = async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                let columns = [ui::PickerColumn::new(
+                    "environment",
+                    |e: &String, _: &()| e.as_str().into(),
+                )];
+                let picker = ui::Picker::new(columns, 0, envs, (), move |cx, env: &String, _action| {
+                    let env = env.clone();
+                    embedded::update(|s| s.env = env.clone());
+                    cx.editor.set_status(format!("PlatformIO environment set to `{env}`"));
+                });
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
+/// `:pio-list-targets` — enumerate the project's build targets (`pio run --list-targets`).
+fn pio_list_targets(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_list_targets(&embedded::load()), true);
+    Ok(())
+}
+
+/// `:pio-list-tests` — list the project's test suites (`pio test --list-tests`).
+fn pio_list_tests(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_list_tests(&embedded::load()), true);
+    Ok(())
+}
+
+/// `:pio-test-filter <pattern>` — run only the tests matching `pattern`
+/// (`pio test -f`), through the compilation list.
+fn pio_test_filter(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    if pattern.trim().is_empty() {
+        bail!("usage: :pio-test-filter <pattern>  (e.g. test_sensors)");
+    }
+    require_tool(embedded::PIO)?;
+    let settings = embedded::load();
+    let cmd = format!(
+        "cd {} && {}",
+        embedded::shell_join(&[settings.sketch_dir().to_string_lossy().into_owned()]),
+        embedded::shell_join(&embedded::pio_test_filter(&settings, pattern.trim()))
+    );
+    run_compile(cx, &cmd)
+}
+
+/// `:pio-check-severity <low|medium|high>` — static analysis filtered by minimum
+/// defect severity (`pio check --severity`).
+fn pio_check_severity(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let sev = args.join(" ");
+    let sev = sev.trim().to_ascii_lowercase();
+    if !matches!(sev.as_str(), "low" | "medium" | "high") {
+        bail!("usage: :pio-check-severity <low|medium|high>");
+    }
+    require_tool(embedded::PIO)?;
+    let settings = embedded::load();
+    let cmd = format!(
+        "cd {} && {}",
+        embedded::shell_join(&[settings.sketch_dir().to_string_lossy().into_owned()]),
+        embedded::shell_join(&embedded::pio_check_severity(&settings, &sev))
+    );
+    run_compile(cx, &cmd)
+}
+
+/// `:pio-tool-install <spec>` — install a tool package globally (`pio pkg install
+/// -g -t`), e.g. `tool-openocd`, live in a terminal panel.
+fn pio_tool_install(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let spec = args.join(" ");
+    if spec.trim().is_empty() {
+        bail!("usage: :pio-tool-install <spec>  (e.g. tool-openocd)");
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_tool_install(spec.trim()), root);
+    Ok(())
+}
+
+/// `:pio-boards-installed [query]` — boards from installed platforms only.
+fn pio_boards_installed(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_boards_installed(&args.join(" ")), false);
+    Ok(())
+}
+
+/// `:pio-monitor-filter <name>` — append a `pio device monitor` filter for this
+/// project (e.g. `time`, `log2file`, `hexlify`, `send_on_enter`).
+fn pio_monitor_filter(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let filter = args.join(" ");
+    let filter = filter.trim().to_string();
+    if filter.is_empty() {
+        bail!("usage: :pio-monitor-filter <name>  (e.g. time, log2file, hexlify)");
+    }
+    embedded::update(|s| {
+        if !s.filters.contains(&filter) {
+            s.filters.push(filter.clone());
+        }
+    });
+    cx.editor.set_status(format!("Added serial monitor filter `{filter}`"));
+    Ok(())
+}
+
+/// `:pio-monitor-filters-clear` — remove all configured serial monitor filters.
+fn pio_monitor_filters_clear(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    embedded::update(|s| s.filters.clear());
+    cx.editor.set_status("Cleared serial monitor filters");
+    Ok(())
+}
+
+/// `:pio-monitor-eol <CR|LF|CRLF>` — set the serial monitor end-of-line mode.
+fn pio_monitor_eol(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let eol = args.join(" ");
+    let eol = eol.trim().to_ascii_uppercase();
+    if !matches!(eol.as_str(), "CR" | "LF" | "CRLF") {
+        bail!("usage: :pio-monitor-eol <CR|LF|CRLF>");
+    }
+    embedded::update(|s| s.eol = eol.clone());
+    cx.editor.set_status(format!("Serial monitor EOL set to {eol}"));
+    Ok(())
+}
+
+/// `:pio-monitor-parity <N|E|O|S|M>` — set the serial monitor parity.
+fn pio_monitor_parity(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let parity = args.join(" ");
+    let parity = parity.trim().to_ascii_uppercase();
+    if !matches!(parity.as_str(), "N" | "E" | "O" | "S" | "M") {
+        bail!("usage: :pio-monitor-parity <N|E|O|S|M>");
+    }
+    embedded::update(|s| s.parity = parity.clone());
+    cx.editor.set_status(format!("Serial monitor parity set to {parity}"));
+    Ok(())
+}
+
+/// `:pio-remote-monitor` — serial monitor over a Remote agent (`pio remote device
+/// monitor`), live in a terminal panel.
+fn pio_remote_monitor(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_remote_device_monitor(), dir);
+    Ok(())
+}
+
+/// `:pio-settings-reset` — restore PlatformIO Core settings to defaults.
+fn pio_settings_reset(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_capture(&embedded::pio_settings_reset())?;
+    cx.editor.set_status("PlatformIO settings reset to defaults");
+    Ok(())
+}
+
+/// `:pio-system-completion <shell>` — emit a shell completion script.
+fn pio_system_completion(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let shell = args.join(" ");
+    if shell.trim().is_empty() {
+        bail!("usage: :pio-system-completion <shell>  (bash|zsh|fish|powershell)");
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_system_completion(shell.trim()), false);
+    Ok(())
+}
+
+/// `:pio-ci <argv…>` — build a standalone source tree in an isolated project
+/// (`pio ci`), live in a terminal panel. Needs at least `-b <board>` and a
+/// source path in the arguments.
+fn pio_ci(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.is_empty() {
+        bail!("usage: :pio-ci <src> -b <board>  (e.g. src/main.cpp -b uno)");
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_ci(&tokens), root);
+    Ok(())
+}
+
+/// Run a cloud-account `pio <group> <sub> [args…]` (interactive or mutating) in a
+/// terminal panel from the workspace root.
+fn pio_admin_terminal(
+    cx: &mut compositor::Context,
+    group: &str,
+    sub: &str,
+    args: &Args,
+) -> anyhow::Result<()> {
+    require_tool(embedded::PIO)?;
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_sub(group, sub, &tokens), root);
+    Ok(())
+}
+
+/// Stream a read-only cloud-account `pio <group> list` into the Run console.
+fn pio_admin_browse(cx: &mut compositor::Context, group: &str, sub: &str) -> anyhow::Result<()> {
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_sub(group, sub, &[]), false);
+    Ok(())
+}
+
+/// `:pio-account-register` — create a new PlatformIO account (interactive).
+fn pio_account_register(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "account", "register", &args)
+}
+
+/// `:pio-account-password` — change the PlatformIO account password (interactive).
+fn pio_account_password(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "account", "password", &args)
+}
+
+/// `:pio-account-update` — update PlatformIO profile information (interactive).
+fn pio_account_update(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "account", "update", &args)
+}
+
+/// `:pio-account-forgot` — begin PlatformIO account password recovery.
+fn pio_account_forgot(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "account", "forgot", &args)
+}
+
+/// `:pio-account-destroy` — permanently destroy the PlatformIO account.
+fn pio_account_destroy(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "account", "destroy", &args)
+}
+
+/// `:pio-org-list` — organizations and their members.
+fn pio_org_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_browse(cx, "org", "list")
+}
+
+/// `:pio-org-create <orgname>` — create a new organization.
+fn pio_org_create(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "org", "create", &args)
+}
+
+/// `:pio-org-add <orgname> <username>` — add an owner to an organization.
+fn pio_org_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "org", "add", &args)
+}
+
+/// `:pio-org-remove <orgname> <username>` — remove an owner from an organization.
+fn pio_org_remove(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "org", "remove", &args)
+}
+
+/// `:pio-org-update <orgname>` — update organization information.
+fn pio_org_update(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "org", "update", &args)
+}
+
+/// `:pio-org-destroy <orgname>` — destroy an organization.
+fn pio_org_destroy(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "org", "destroy", &args)
+}
+
+/// `:pio-team-list <orgname>` — teams in an organization and their members.
+fn pio_team_list(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "team", "list", &args)
+}
+
+/// `:pio-team-create <orgname:team>` — create a team in an organization.
+fn pio_team_create(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "team", "create", &args)
+}
+
+/// `:pio-team-add <orgname:team> <username>` — add a member to a team.
+fn pio_team_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "team", "add", &args)
+}
+
+/// `:pio-team-remove <orgname:team> <username>` — remove a member from a team.
+fn pio_team_remove(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "team", "remove", &args)
+}
+
+/// `:pio-team-update <orgname:team>` — update team information.
+fn pio_team_update(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "team", "update", &args)
+}
+
+/// `:pio-team-destroy <orgname:team>` — destroy a team.
+fn pio_team_destroy(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "team", "destroy", &args)
+}
+
+/// `:pio-access-list` — published resources and their access levels.
+fn pio_access_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_browse(cx, "access", "list")
+}
+
+/// `:pio-access-grant <level> <resource> <team>` — grant access to a resource.
+fn pio_access_grant(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "access", "grant", &args)
+}
+
+/// `:pio-access-revoke <resource> <team>` — revoke access to a resource.
+fn pio_access_revoke(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "access", "revoke", &args)
+}
+
+/// `:pio-access-public <resource>` — make a published resource public.
+fn pio_access_public(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "access", "public", &args)
+}
+
+/// `:pio-access-private <resource>` — make a published resource private.
+fn pio_access_private(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_admin_terminal(cx, "access", "private", &args)
 }
 
 /// Wrap `s` in single quotes for safe inclusion in a `/bin/sh -c` command line,
@@ -20080,6 +20539,413 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-env",
+        aliases: &["pio-environment", "platformio-env"],
+        doc: "Select the PlatformIO build environment (`[env:…]`); no arg picks from platformio.ini, `-` clears.",
+        fun: pio_env,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-list-targets",
+        aliases: &["platformio-list-targets"],
+        doc: "Enumerate the project's build targets (`pio run --list-targets`).",
+        fun: pio_list_targets,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-list-tests",
+        aliases: &["platformio-list-tests"],
+        doc: "List the project's test suites (`pio test --list-tests`).",
+        fun: pio_list_tests,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-filter",
+        aliases: &["platformio-test-filter"],
+        doc: "Run only the tests matching a pattern (`pio test -f <pattern>`).",
+        fun: pio_test_filter,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-check-severity",
+        aliases: &["platformio-check-severity"],
+        doc: "Static analysis filtered by minimum defect severity (`pio check --severity <low|medium|high>`).",
+        fun: pio_check_severity,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-tool-install",
+        aliases: &["platformio-tool-install"],
+        doc: "Install a tool package globally (`pio pkg install -g -t <spec>`), live in a terminal panel.",
+        fun: pio_tool_install,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-boards-installed",
+        aliases: &["platformio-boards-installed"],
+        doc: "List boards from installed platforms only (`pio boards --installed`).",
+        fun: pio_boards_installed,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-filter",
+        aliases: &["platformio-monitor-filter"],
+        doc: "Add a serial monitor filter for this project (e.g. time, log2file, hexlify, send_on_enter).",
+        fun: pio_monitor_filter,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-filters-clear",
+        aliases: &["platformio-monitor-filters-clear"],
+        doc: "Remove all configured serial monitor filters.",
+        fun: pio_monitor_filters_clear,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-eol",
+        aliases: &["platformio-monitor-eol"],
+        doc: "Set the serial monitor end-of-line mode (`CR`, `LF`, or `CRLF`).",
+        fun: pio_monitor_eol,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-parity",
+        aliases: &["platformio-monitor-parity"],
+        doc: "Set the serial monitor parity (`N`, `E`, `O`, `S`, or `M`).",
+        fun: pio_monitor_parity,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-remote-monitor",
+        aliases: &["platformio-remote-monitor"],
+        doc: "Serial monitor over a Remote agent (`pio remote device monitor`), live in a terminal panel.",
+        fun: pio_remote_monitor,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-settings-reset",
+        aliases: &["platformio-settings-reset"],
+        doc: "Restore PlatformIO Core settings to their defaults (`pio settings reset`).",
+        fun: pio_settings_reset,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-system-completion",
+        aliases: &["platformio-system-completion"],
+        doc: "Emit a shell completion script (`pio system completion <bash|zsh|fish|powershell>`).",
+        fun: pio_system_completion,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-ci",
+        aliases: &["platformio-ci"],
+        doc: "Build a standalone source tree in an isolated project (`pio ci <src> -b <board>`), live in a terminal panel.",
+        fun: pio_ci,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-account-register",
+        aliases: &["platformio-account-register"],
+        doc: "Create a new PlatformIO account (`pio account register`), live in a terminal panel.",
+        fun: pio_account_register,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-account-password",
+        aliases: &["platformio-account-password"],
+        doc: "Change the PlatformIO account password (`pio account password`), live in a terminal panel.",
+        fun: pio_account_password,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-account-update",
+        aliases: &["platformio-account-update"],
+        doc: "Update PlatformIO profile information (`pio account update`), live in a terminal panel.",
+        fun: pio_account_update,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-account-forgot",
+        aliases: &["platformio-account-forgot"],
+        doc: "Begin PlatformIO account password recovery (`pio account forgot`), live in a terminal panel.",
+        fun: pio_account_forgot,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-account-destroy",
+        aliases: &["platformio-account-destroy"],
+        doc: "Permanently destroy the PlatformIO account (`pio account destroy`), live in a terminal panel.",
+        fun: pio_account_destroy,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-org-list",
+        aliases: &["platformio-org-list"],
+        doc: "List PlatformIO organizations and their members (`pio org list`).",
+        fun: pio_org_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-org-create",
+        aliases: &["platformio-org-create"],
+        doc: "Create a new PlatformIO organization (`pio org create <orgname>`), live in a terminal panel.",
+        fun: pio_org_create,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-org-add",
+        aliases: &["platformio-org-add"],
+        doc: "Add an owner to a PlatformIO organization (`pio org add <orgname> <username>`), live in a terminal panel.",
+        fun: pio_org_add,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-org-remove",
+        aliases: &["platformio-org-remove"],
+        doc: "Remove an owner from a PlatformIO organization (`pio org remove <orgname> <username>`), live in a terminal panel.",
+        fun: pio_org_remove,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-org-update",
+        aliases: &["platformio-org-update"],
+        doc: "Update a PlatformIO organization (`pio org update <orgname>`), live in a terminal panel.",
+        fun: pio_org_update,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-org-destroy",
+        aliases: &["platformio-org-destroy"],
+        doc: "Destroy a PlatformIO organization (`pio org destroy <orgname>`), live in a terminal panel.",
+        fun: pio_org_destroy,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-team-list",
+        aliases: &["platformio-team-list"],
+        doc: "List teams in a PlatformIO organization (`pio team list <orgname>`).",
+        fun: pio_team_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-team-create",
+        aliases: &["platformio-team-create"],
+        doc: "Create a team in a PlatformIO organization (`pio team create <orgname:team>`), live in a terminal panel.",
+        fun: pio_team_create,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-team-add",
+        aliases: &["platformio-team-add"],
+        doc: "Add a member to a PlatformIO team (`pio team add <orgname:team> <username>`), live in a terminal panel.",
+        fun: pio_team_add,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-team-remove",
+        aliases: &["platformio-team-remove"],
+        doc: "Remove a member from a PlatformIO team (`pio team remove <orgname:team> <username>`), live in a terminal panel.",
+        fun: pio_team_remove,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-team-update",
+        aliases: &["platformio-team-update"],
+        doc: "Update a PlatformIO team (`pio team update <orgname:team>`), live in a terminal panel.",
+        fun: pio_team_update,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-team-destroy",
+        aliases: &["platformio-team-destroy"],
+        doc: "Destroy a PlatformIO team (`pio team destroy <orgname:team>`), live in a terminal panel.",
+        fun: pio_team_destroy,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-access-list",
+        aliases: &["platformio-access-list"],
+        doc: "List published resources and their access levels (`pio access list`).",
+        fun: pio_access_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-access-grant",
+        aliases: &["platformio-access-grant"],
+        doc: "Grant access to a resource (`pio access grant <level> <resource> <team>`), live in a terminal panel.",
+        fun: pio_access_grant,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-access-revoke",
+        aliases: &["platformio-access-revoke"],
+        doc: "Revoke access to a resource (`pio access revoke <resource> <team>`), live in a terminal panel.",
+        fun: pio_access_revoke,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-access-public",
+        aliases: &["platformio-access-public"],
+        doc: "Make a published resource public (`pio access public <resource>`), live in a terminal panel.",
+        fun: pio_access_public,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-access-private",
+        aliases: &["platformio-access-private"],
+        doc: "Make a published resource private (`pio access private <resource>`), live in a terminal panel.",
+        fun: pio_access_private,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },
