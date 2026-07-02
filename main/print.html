@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-0ea0c7f0.js";
+            window.path_to_searchindex_js = "searchindex-817ba554.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1654,6 +1654,37 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-lib-show</code>, <code>:pio-pkg-show</code></td><td>Show PlatformIO registry details for a package (<code>pio pkg show &lt;pkg&gt;</code>).</td></tr>
 <tr><td><code>:pio-debug</code>, <code>:platformio-debug</code></td><td>Launch the PlatformIO Unified Debugger for the project, live in a terminal panel.</td></tr>
 <tr><td><code>:pio-upgrade</code>, <code>:platformio-upgrade</code></td><td>Upgrade PlatformIO Core itself (<code>pio upgrade</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-size</code>, <code>:platformio-size</code></td><td>Show the program size report (<code>pio run -t size</code>).</td></tr>
+<tr><td><code>:pio-compiledb</code>, <code>:platformio-compiledb</code></td><td>Generate compile_commands.json for the C/C++ LSP (<code>pio run -t compiledb</code>).</td></tr>
+<tr><td><code>:pio-buildfs</code>, <code>:platformio-buildfs</code></td><td>Build the SPIFFS/LittleFS filesystem image (<code>pio run -t buildfs</code>).</td></tr>
+<tr><td><code>:pio-uploadfs</code>, <code>:platformio-uploadfs</code></td><td>Flash the filesystem image to the board (<code>pio run -t uploadfs</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-uploadeep</code>, <code>:platformio-uploadeep</code></td><td>Flash the EEPROM (<code>pio run -t uploadeep</code>, AVR boards), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-bootloader</code>, <code>:platformio-bootloader</code></td><td>Burn the bootloader (<code>pio run -t bootloader</code>, AVR boards), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-fuses</code>, <code>:platformio-fuses</code></td><td>Set the microcontroller fuses (<code>pio run -t fuses</code>, AVR boards), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-nobuild</code>, <code>:platformio-nobuild</code></td><td>Flash the existing firmware without rebuilding (<code>pio run -t nobuild</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-envdump</code>, <code>:platformio-envdump</code></td><td>Dump the resolved build environment (<code>pio run -t envdump</code>).</td></tr>
+<tr><td><code>:pio-cleanall</code>, <code>:platformio-cleanall</code></td><td>Remove all build artifacts including dependencies (<code>pio run -t cleanall</code>).</td></tr>
+<tr><td><code>:pio-project-config</code>, <code>:platformio-project-config</code></td><td>Show the computed PlatformIO project configuration (<code>pio project config</code>).</td></tr>
+<tr><td><code>:pio-project-metadata</code>, <code>:platformio-project-metadata</code></td><td>Dump the IDE/LSP metadata for the project (<code>pio project metadata</code>).</td></tr>
+<tr><td><code>:pio-pkg-exec</code>, <code>:platformio-pkg-exec</code></td><td>Run a tool from an installed package (<code>pio pkg exec -- &lt;argv&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-platform-install</code>, <code>:pio-core-install</code>, <code>:platformio-platform-install</code></td><td>Install a development platform globally (<code>pio pkg install -g -p &lt;spec&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-pkg-pack</code>, <code>:platformio-pkg-pack</code></td><td>Build a tarball of the current package (<code>pio pkg pack</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-pkg-publish</code>, <code>:platformio-pkg-publish</code></td><td>Publish the current package to the PlatformIO registry (<code>pio pkg publish</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-pkg-unpublish</code>, <code>:platformio-pkg-unpublish</code></td><td>Remove a previously published package (<code>pio pkg unpublish &lt;pkg&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-system-info</code>, <code>:platformio-system-info</code></td><td>Show system-wide PlatformIO information (<code>pio system info</code>).</td></tr>
+<tr><td><code>:pio-system-prune</code>, <code>:platformio-system-prune</code></td><td>Remove unused PlatformIO caches/packages (<code>pio system prune -f</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-settings-get</code>, <code>:platformio-settings-get</code></td><td>Print PlatformIO Core settings, all or one key (<code>pio settings get [name]</code>).</td></tr>
+<tr><td><code>:pio-settings-set</code>, <code>:platformio-settings-set</code></td><td>Change a PlatformIO Core setting (<code>pio settings set &lt;name&gt; &lt;value&gt;</code>).</td></tr>
+<tr><td><code>:pio-remote-agent-list</code>, <code>:pio-remote-agents</code>, <code>:platformio-remote-agent-list</code></td><td>List active PlatformIO Remote agents (<code>pio remote agent list</code>).</td></tr>
+<tr><td><code>:pio-remote-agent-start</code>, <code>:platformio-remote-agent-start</code></td><td>Start a PlatformIO Remote agent on this machine (<code>pio remote agent start</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-remote-devices</code>, <code>:pio-remote-device-list</code>, <code>:platformio-remote-devices</code></td><td>List serial devices attached to remote agents (<code>pio remote device list</code>).</td></tr>
+<tr><td><code>:pio-remote-run</code>, <code>:platformio-remote-run</code></td><td>Build/upload the project via a remote agent (<code>pio remote run</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-remote-test</code>, <code>:platformio-remote-test</code></td><td>Run unit tests via a remote agent (<code>pio remote test</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-remote-update</code>, <code>:platformio-remote-update</code></td><td>Update platforms/packages/libraries on remote agents (<code>pio remote update</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-login</code>, <code>:platformio-account-login</code></td><td>Sign in to a PlatformIO account (<code>pio account login</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-logout</code>, <code>:platformio-account-logout</code></td><td>Sign out of the PlatformIO account (<code>pio account logout</code>).</td></tr>
+<tr><td><code>:pio-account-show</code>, <code>:platformio-account-show</code></td><td>Show the current PlatformIO account information (<code>pio account show</code>).</td></tr>
+<tr><td><code>:pio-account-token</code>, <code>:platformio-account-token</code></td><td>Print (or regenerate) the account auth token (<code>pio account token</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:next-error</code>, <code>:cnext-error</code></td><td>Visit the next compilation error’s location (emacs next-error / M-g n).</td></tr>
 <tr><td><code>:previous-error</code>, <code>:cprevious-error</code></td><td>Visit the previous compilation error’s location (emacs previous-error / M-g p).</td></tr>
 <tr><td><code>:first-error</code></td><td>Visit the first compilation error’s location (emacs first-error).</td></tr>
