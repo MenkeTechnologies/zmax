@@ -467,6 +467,130 @@ pub fn pio_upgrade() -> Vec<String> {
     vec![s(PIO), s("upgrade")]
 }
 
+/// `pio run -t <target>` — a built-in PlatformIO build target. Covers the
+/// report targets (`size`, `envdump`, `compiledb`, `buildfs`, `cleanall`) and
+/// the flashing targets (`uploadfs`, `uploadeep`, `bootloader`, `fuses`,
+/// `nobuild`). Verified against `pio run --list-targets` on PlatformIO 6.1.19.
+pub fn pio_run_target(target: &str) -> Vec<String> {
+    vec![s(PIO), s("run"), s("-t"), s(target)]
+}
+
+/// `pio project config` — the project's computed configuration (all envs).
+pub fn pio_project_config() -> Vec<String> {
+    vec![s(PIO), s("project"), s("config")]
+}
+
+/// `pio project metadata` — dump the IDE/LSP metadata (include paths, defines,
+/// compiler flags) PlatformIO exposes to editor extensions.
+pub fn pio_project_metadata() -> Vec<String> {
+    vec![s(PIO), s("project"), s("metadata")]
+}
+
+/// `pio pkg exec -- <argv…>` — run an executable from an installed package/tool
+/// (e.g. `esptool.py`, `openocd`) inside the project's tool environment.
+pub fn pio_pkg_exec(args: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("pkg"), s("exec"), s("--")];
+    v.extend(args.iter().cloned());
+    v
+}
+
+/// `pio pkg install -g -p <spec>` — install a development platform globally
+/// (the PlatformIO equivalent of `arduino-cli core install`).
+pub fn pio_platform_install(spec: &str) -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("install"), s("-g"), s("-p"), s(spec)]
+}
+
+/// `pio pkg pack` — build a tarball of the current package (registry authoring).
+pub fn pio_pkg_pack() -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("pack")]
+}
+
+/// `pio pkg publish` — publish the current package to the PlatformIO registry.
+pub fn pio_pkg_publish() -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("publish")]
+}
+
+/// `pio pkg unpublish <pkg>` — remove a previously published package.
+pub fn pio_pkg_unpublish(pkg: &str) -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("unpublish"), s(pkg)]
+}
+
+/// `pio system info` — system-wide PlatformIO information (core version, paths,
+/// Python, platforms).
+pub fn pio_system_info() -> Vec<String> {
+    vec![s(PIO), s("system"), s("info")]
+}
+
+/// `pio system prune -f` — remove unused caches/packages without prompting
+/// (per project convention: no confirmation on maintenance ops).
+pub fn pio_system_prune() -> Vec<String> {
+    vec![s(PIO), s("system"), s("prune"), s("-f")]
+}
+
+/// `pio settings get [name]` — print PlatformIO Core settings (all, or one key).
+pub fn pio_settings_get(name: &str) -> Vec<String> {
+    let mut v = vec![s(PIO), s("settings"), s("get")];
+    if !name.trim().is_empty() {
+        v.push(s(name.trim()));
+    }
+    v
+}
+
+/// `pio settings set <name> <value>` — change a PlatformIO Core setting.
+pub fn pio_settings_set(name: &str, value: &str) -> Vec<String> {
+    vec![s(PIO), s("settings"), s("set"), s(name), s(value)]
+}
+
+/// `pio remote agent list` — active PlatformIO Remote agents.
+pub fn pio_remote_agent_list() -> Vec<String> {
+    vec![s(PIO), s("remote"), s("agent"), s("list")]
+}
+
+/// `pio remote agent start` — start a Remote agent on this machine.
+pub fn pio_remote_agent_start() -> Vec<String> {
+    vec![s(PIO), s("remote"), s("agent"), s("start")]
+}
+
+/// `pio remote device list` — serial devices attached to remote agents.
+pub fn pio_remote_device_list() -> Vec<String> {
+    vec![s(PIO), s("remote"), s("device"), s("list")]
+}
+
+/// `pio remote run` — build/upload the project via a remote agent.
+pub fn pio_remote_run() -> Vec<String> {
+    vec![s(PIO), s("remote"), s("run")]
+}
+
+/// `pio remote test` — run unit tests via a remote agent.
+pub fn pio_remote_test() -> Vec<String> {
+    vec![s(PIO), s("remote"), s("test")]
+}
+
+/// `pio remote update` — update platforms/packages/libraries on remote agents.
+pub fn pio_remote_update() -> Vec<String> {
+    vec![s(PIO), s("remote"), s("update")]
+}
+
+/// `pio account login` — sign in to a PlatformIO account (interactive).
+pub fn pio_account_login() -> Vec<String> {
+    vec![s(PIO), s("account"), s("login")]
+}
+
+/// `pio account logout` — sign out of the PlatformIO account.
+pub fn pio_account_logout() -> Vec<String> {
+    vec![s(PIO), s("account"), s("logout")]
+}
+
+/// `pio account show` — the current PlatformIO account information.
+pub fn pio_account_show() -> Vec<String> {
+    vec![s(PIO), s("account"), s("show")]
+}
+
+/// `pio account token` — print (or regenerate) the account auth token.
+pub fn pio_account_token() -> Vec<String> {
+    vec![s(PIO), s("account"), s("token")]
+}
+
 /// POSIX-quote an argv into a single shell command line, so paths with spaces
 /// survive the `sh -c` round-trip the compilation buffer uses.
 pub fn shell_join(argv: &[String]) -> String {
@@ -770,6 +894,56 @@ mod tests {
         assert_eq!(pio_pkg_show("Servo"), ["pio", "pkg", "show", "Servo"]);
         assert_eq!(pio_debug(), ["pio", "debug"]);
         assert_eq!(pio_upgrade(), ["pio", "upgrade"]);
+    }
+
+    #[test]
+    fn pio_run_targets_build_argv() {
+        assert_eq!(pio_run_target("size"), ["pio", "run", "-t", "size"]);
+        assert_eq!(pio_run_target("compiledb"), ["pio", "run", "-t", "compiledb"]);
+        assert_eq!(pio_run_target("uploadfs"), ["pio", "run", "-t", "uploadfs"]);
+        assert_eq!(pio_run_target("nobuild"), ["pio", "run", "-t", "nobuild"]);
+    }
+
+    #[test]
+    fn pio_project_and_system_subcommands() {
+        assert_eq!(pio_project_config(), ["pio", "project", "config"]);
+        assert_eq!(pio_project_metadata(), ["pio", "project", "metadata"]);
+        assert_eq!(pio_system_info(), ["pio", "system", "info"]);
+        assert_eq!(pio_system_prune(), ["pio", "system", "prune", "-f"]);
+    }
+
+    #[test]
+    fn pio_pkg_authoring_subcommands() {
+        let exec = pio_pkg_exec(&["esptool.py".to_string(), "--help".to_string()]);
+        assert_eq!(exec, ["pio", "pkg", "exec", "--", "esptool.py", "--help"]);
+        assert_eq!(pio_pkg_pack(), ["pio", "pkg", "pack"]);
+        assert_eq!(pio_pkg_publish(), ["pio", "pkg", "publish"]);
+        assert_eq!(pio_pkg_unpublish("Foo@1.0.0"), ["pio", "pkg", "unpublish", "Foo@1.0.0"]);
+        assert_eq!(pio_platform_install("atmelavr"), ["pio", "pkg", "install", "-g", "-p", "atmelavr"]);
+    }
+
+    #[test]
+    fn pio_settings_get_omits_empty_name() {
+        assert_eq!(pio_settings_get(""), ["pio", "settings", "get"]);
+        assert_eq!(pio_settings_get("enable_telemetry"), ["pio", "settings", "get", "enable_telemetry"]);
+        assert_eq!(
+            pio_settings_set("enable_telemetry", "false"),
+            ["pio", "settings", "set", "enable_telemetry", "false"]
+        );
+    }
+
+    #[test]
+    fn pio_remote_and_account_subcommands() {
+        assert_eq!(pio_remote_agent_list(), ["pio", "remote", "agent", "list"]);
+        assert_eq!(pio_remote_agent_start(), ["pio", "remote", "agent", "start"]);
+        assert_eq!(pio_remote_device_list(), ["pio", "remote", "device", "list"]);
+        assert_eq!(pio_remote_run(), ["pio", "remote", "run"]);
+        assert_eq!(pio_remote_test(), ["pio", "remote", "test"]);
+        assert_eq!(pio_remote_update(), ["pio", "remote", "update"]);
+        assert_eq!(pio_account_login(), ["pio", "account", "login"]);
+        assert_eq!(pio_account_logout(), ["pio", "account", "logout"]);
+        assert_eq!(pio_account_show(), ["pio", "account", "show"]);
+        assert_eq!(pio_account_token(), ["pio", "account", "token"]);
     }
 
     #[test]

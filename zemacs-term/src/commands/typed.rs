@@ -4205,6 +4205,359 @@ fn pio_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
     Ok(())
 }
 
+/// Route a `pio run -t <target>` build action (`size`, `buildfs`, `compiledb`,
+/// `cleanall`…) through the `*compilation*` list, run where `platformio.ini`
+/// lives so `:next-error` walks any build failures.
+fn pio_compile_target(cx: &mut compositor::Context, target: &str) -> anyhow::Result<()> {
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    let cmd = format!(
+        "cd {} && {}",
+        embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
+        embedded::shell_join(&embedded::pio_run_target(target))
+    );
+    run_compile(cx, &cmd)
+}
+
+/// Spawn a `pio run -t <target>` flashing action (`uploadfs`, `uploadeep`,
+/// `bootloader`, `fuses`, `nobuild`) live in a terminal panel so progress bars
+/// and prompts render.
+fn pio_terminal_target(cx: &mut compositor::Context, target: &'static str) -> anyhow::Result<()> {
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_run_target(target), dir);
+    Ok(())
+}
+
+/// `:pio-size` — Program Size report (`pio run -t size`).
+fn pio_size(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_compile_target(cx, "size")
+}
+
+/// `:pio-compiledb` — generate `compile_commands.json` (`pio run -t compiledb`)
+/// so the C/C++ LSP resolves the project's include paths and defines.
+fn pio_compiledb(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_compile_target(cx, "compiledb")
+}
+
+/// `:pio-buildfs` — build the SPIFFS/LittleFS filesystem image (`pio run -t buildfs`).
+fn pio_buildfs(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_compile_target(cx, "buildfs")
+}
+
+/// `:pio-envdump` — dump the resolved build environment (`pio run -t envdump`).
+fn pio_envdump(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_compile_target(cx, "envdump")
+}
+
+/// `:pio-cleanall` — remove all build artifacts including deps (`pio run -t cleanall`).
+fn pio_cleanall(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_compile_target(cx, "cleanall")
+}
+
+/// `:pio-uploadfs` — flash the filesystem image to the board (`pio run -t uploadfs`).
+fn pio_uploadfs(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_terminal_target(cx, "uploadfs")
+}
+
+/// `:pio-uploadeep` — flash the EEPROM (`pio run -t uploadeep`, AVR boards).
+fn pio_uploadeep(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_terminal_target(cx, "uploadeep")
+}
+
+/// `:pio-bootloader` — burn the bootloader (`pio run -t bootloader`, AVR boards).
+fn pio_bootloader(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_terminal_target(cx, "bootloader")
+}
+
+/// `:pio-fuses` — set the microcontroller fuses (`pio run -t fuses`, AVR boards).
+fn pio_fuses(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_terminal_target(cx, "fuses")
+}
+
+/// `:pio-nobuild` — flash the existing firmware without rebuilding (`pio run -t nobuild`).
+fn pio_nobuild(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    pio_terminal_target(cx, "nobuild")
+}
+
+/// `:pio-project-config` — show the computed project configuration.
+fn pio_project_config(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_project_config(), true);
+    Ok(())
+}
+
+/// `:pio-project-metadata` — dump the IDE/LSP metadata for the project.
+fn pio_project_metadata(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_project_metadata(), true);
+    Ok(())
+}
+
+/// `:pio-pkg-exec <argv…>` — run a tool from an installed package
+/// (`pio pkg exec -- <argv>`), live in a terminal panel.
+fn pio_pkg_exec(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.is_empty() {
+        bail!("usage: :pio-pkg-exec <program> [args…]  (e.g. esptool.py --help)");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_pkg_exec(&tokens), dir);
+    Ok(())
+}
+
+/// `:pio-platform-install <spec>` — install a development platform globally
+/// (`pio pkg install -g -p <spec>`), live in a terminal panel.
+fn pio_platform_install(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let spec = args.join(" ");
+    if spec.trim().is_empty() {
+        bail!("usage: :pio-platform-install <spec>  (e.g. atmelavr, espressif32)");
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_platform_install(spec.trim()), root);
+    Ok(())
+}
+
+/// `:pio-pkg-pack` — build a tarball of the current package (registry authoring).
+fn pio_pkg_pack(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_pkg_pack(), dir);
+    Ok(())
+}
+
+/// `:pio-pkg-publish` — publish the current package to the PlatformIO registry.
+fn pio_pkg_publish(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_pkg_publish(), dir);
+    Ok(())
+}
+
+/// `:pio-pkg-unpublish <pkg>` — remove a previously published package.
+fn pio_pkg_unpublish(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pkg = args.join(" ");
+    if pkg.trim().is_empty() {
+        bail!("usage: :pio-pkg-unpublish <pkg>  (e.g. Foo@1.0.0)");
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_pkg_unpublish(pkg.trim()), root);
+    Ok(())
+}
+
+/// `:pio-system-info` — system-wide PlatformIO information.
+fn pio_system_info(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_system_info(), false);
+    Ok(())
+}
+
+/// `:pio-system-prune` — remove unused caches/packages (`pio system prune -f`).
+fn pio_system_prune(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_system_prune(), root);
+    Ok(())
+}
+
+/// `:pio-settings-get [name]` — print PlatformIO Core settings (all, or one key).
+fn pio_settings_get(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_settings_get(&args.join(" ")), false);
+    Ok(())
+}
+
+/// `:pio-settings-set <name> <value>` — change a PlatformIO Core setting.
+fn pio_settings_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let (name, value) = match tokens.split_first() {
+        Some((name, rest)) if !name.trim().is_empty() && !rest.is_empty() => {
+            (name.trim().to_string(), rest.join(" "))
+        }
+        _ => bail!("usage: :pio-settings-set <name> <value>"),
+    };
+    require_tool(embedded::PIO)?;
+    embedded_capture(&embedded::pio_settings_set(&name, value.trim()))?;
+    cx.editor.set_status(format!("PlatformIO setting `{name}` set to `{}`", value.trim()));
+    Ok(())
+}
+
+/// `:pio-remote-agent-list` — active PlatformIO Remote agents.
+fn pio_remote_agent_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_remote_agent_list(), false);
+    Ok(())
+}
+
+/// `:pio-remote-agent-start` — start a Remote agent on this machine, live in a
+/// terminal panel (long-running foreground process).
+fn pio_remote_agent_start(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_remote_agent_start(), root);
+    Ok(())
+}
+
+/// `:pio-remote-devices` — serial devices attached to remote agents.
+fn pio_remote_device_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_remote_device_list(), false);
+    Ok(())
+}
+
+/// `:pio-remote-run` — build/upload the project through a remote agent.
+fn pio_remote_run(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_remote_run(), dir);
+    Ok(())
+}
+
+/// `:pio-remote-test` — run unit tests through a remote agent.
+fn pio_remote_test(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_remote_test(), dir);
+    Ok(())
+}
+
+/// `:pio-remote-update` — update platforms/packages/libraries on remote agents.
+fn pio_remote_update(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_remote_update(), root);
+    Ok(())
+}
+
+/// `:pio-account-login` — sign in to a PlatformIO account (interactive prompts),
+/// live in a terminal panel.
+fn pio_account_login(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_account_login(), root);
+    Ok(())
+}
+
+/// `:pio-account-logout` — sign out of the PlatformIO account.
+fn pio_account_logout(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_capture(&embedded::pio_account_logout())?;
+    cx.editor.set_status("Logged out of PlatformIO account");
+    Ok(())
+}
+
+/// `:pio-account-show` — the current PlatformIO account information.
+fn pio_account_show(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_account_show(), false);
+    Ok(())
+}
+
+/// `:pio-account-token` — print (or regenerate) the account auth token, live in
+/// a terminal panel (may prompt for the account password).
+fn pio_account_token(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_account_token(), root);
+    Ok(())
+}
+
 /// Wrap `s` in single quotes for safe inclusion in a `/bin/sh -c` command line,
 /// escaping any embedded single quotes. Pure — unit tested.
 fn shell_single_quote(s: &str) -> String {
@@ -19383,6 +19736,347 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["platformio-upgrade"],
         doc: "Upgrade PlatformIO Core itself (`pio upgrade`), live in a terminal panel.",
         fun: pio_upgrade,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-size",
+        aliases: &["platformio-size"],
+        doc: "Show the program size report (`pio run -t size`).",
+        fun: pio_size,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-compiledb",
+        aliases: &["platformio-compiledb"],
+        doc: "Generate compile_commands.json for the C/C++ LSP (`pio run -t compiledb`).",
+        fun: pio_compiledb,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-buildfs",
+        aliases: &["platformio-buildfs"],
+        doc: "Build the SPIFFS/LittleFS filesystem image (`pio run -t buildfs`).",
+        fun: pio_buildfs,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-uploadfs",
+        aliases: &["platformio-uploadfs"],
+        doc: "Flash the filesystem image to the board (`pio run -t uploadfs`), live in a terminal panel.",
+        fun: pio_uploadfs,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-uploadeep",
+        aliases: &["platformio-uploadeep"],
+        doc: "Flash the EEPROM (`pio run -t uploadeep`, AVR boards), live in a terminal panel.",
+        fun: pio_uploadeep,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-bootloader",
+        aliases: &["platformio-bootloader"],
+        doc: "Burn the bootloader (`pio run -t bootloader`, AVR boards), live in a terminal panel.",
+        fun: pio_bootloader,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-fuses",
+        aliases: &["platformio-fuses"],
+        doc: "Set the microcontroller fuses (`pio run -t fuses`, AVR boards), live in a terminal panel.",
+        fun: pio_fuses,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-nobuild",
+        aliases: &["platformio-nobuild"],
+        doc: "Flash the existing firmware without rebuilding (`pio run -t nobuild`), live in a terminal panel.",
+        fun: pio_nobuild,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-envdump",
+        aliases: &["platformio-envdump"],
+        doc: "Dump the resolved build environment (`pio run -t envdump`).",
+        fun: pio_envdump,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-cleanall",
+        aliases: &["platformio-cleanall"],
+        doc: "Remove all build artifacts including dependencies (`pio run -t cleanall`).",
+        fun: pio_cleanall,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-project-config",
+        aliases: &["platformio-project-config"],
+        doc: "Show the computed PlatformIO project configuration (`pio project config`).",
+        fun: pio_project_config,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-project-metadata",
+        aliases: &["platformio-project-metadata"],
+        doc: "Dump the IDE/LSP metadata for the project (`pio project metadata`).",
+        fun: pio_project_metadata,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-exec",
+        aliases: &["platformio-pkg-exec"],
+        doc: "Run a tool from an installed package (`pio pkg exec -- <argv>`), live in a terminal panel.",
+        fun: pio_pkg_exec,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-platform-install",
+        aliases: &["pio-core-install", "platformio-platform-install"],
+        doc: "Install a development platform globally (`pio pkg install -g -p <spec>`), live in a terminal panel.",
+        fun: pio_platform_install,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-pack",
+        aliases: &["platformio-pkg-pack"],
+        doc: "Build a tarball of the current package (`pio pkg pack`), live in a terminal panel.",
+        fun: pio_pkg_pack,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-publish",
+        aliases: &["platformio-pkg-publish"],
+        doc: "Publish the current package to the PlatformIO registry (`pio pkg publish`), live in a terminal panel.",
+        fun: pio_pkg_publish,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-unpublish",
+        aliases: &["platformio-pkg-unpublish"],
+        doc: "Remove a previously published package (`pio pkg unpublish <pkg>`), live in a terminal panel.",
+        fun: pio_pkg_unpublish,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-system-info",
+        aliases: &["platformio-system-info"],
+        doc: "Show system-wide PlatformIO information (`pio system info`).",
+        fun: pio_system_info,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-system-prune",
+        aliases: &["platformio-system-prune"],
+        doc: "Remove unused PlatformIO caches/packages (`pio system prune -f`), live in a terminal panel.",
+        fun: pio_system_prune,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-settings-get",
+        aliases: &["platformio-settings-get"],
+        doc: "Print PlatformIO Core settings, all or one key (`pio settings get [name]`).",
+        fun: pio_settings_get,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-settings-set",
+        aliases: &["platformio-settings-set"],
+        doc: "Change a PlatformIO Core setting (`pio settings set <name> <value>`).",
+        fun: pio_settings_set,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-remote-agent-list",
+        aliases: &["pio-remote-agents", "platformio-remote-agent-list"],
+        doc: "List active PlatformIO Remote agents (`pio remote agent list`).",
+        fun: pio_remote_agent_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-remote-agent-start",
+        aliases: &["platformio-remote-agent-start"],
+        doc: "Start a PlatformIO Remote agent on this machine (`pio remote agent start`), live in a terminal panel.",
+        fun: pio_remote_agent_start,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-remote-devices",
+        aliases: &["pio-remote-device-list", "platformio-remote-devices"],
+        doc: "List serial devices attached to remote agents (`pio remote device list`).",
+        fun: pio_remote_device_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-remote-run",
+        aliases: &["platformio-remote-run"],
+        doc: "Build/upload the project via a remote agent (`pio remote run`), live in a terminal panel.",
+        fun: pio_remote_run,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-remote-test",
+        aliases: &["platformio-remote-test"],
+        doc: "Run unit tests via a remote agent (`pio remote test`), live in a terminal panel.",
+        fun: pio_remote_test,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-remote-update",
+        aliases: &["platformio-remote-update"],
+        doc: "Update platforms/packages/libraries on remote agents (`pio remote update`), live in a terminal panel.",
+        fun: pio_remote_update,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-account-login",
+        aliases: &["platformio-account-login"],
+        doc: "Sign in to a PlatformIO account (`pio account login`), live in a terminal panel.",
+        fun: pio_account_login,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-account-logout",
+        aliases: &["platformio-account-logout"],
+        doc: "Sign out of the PlatformIO account (`pio account logout`).",
+        fun: pio_account_logout,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-account-show",
+        aliases: &["platformio-account-show"],
+        doc: "Show the current PlatformIO account information (`pio account show`).",
+        fun: pio_account_show,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-account-token",
+        aliases: &["platformio-account-token"],
+        doc: "Print (or regenerate) the account auth token (`pio account token`), live in a terminal panel.",
+        fun: pio_account_token,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

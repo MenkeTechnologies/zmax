@@ -93,6 +93,37 @@
 | `:pio-lib-show`, `:pio-pkg-show` | Show PlatformIO registry details for a package (`pio pkg show <pkg>`). |
 | `:pio-debug`, `:platformio-debug` | Launch the PlatformIO Unified Debugger for the project, live in a terminal panel. |
 | `:pio-upgrade`, `:platformio-upgrade` | Upgrade PlatformIO Core itself (`pio upgrade`), live in a terminal panel. |
+| `:pio-size`, `:platformio-size` | Show the program size report (`pio run -t size`). |
+| `:pio-compiledb`, `:platformio-compiledb` | Generate compile_commands.json for the C/C++ LSP (`pio run -t compiledb`). |
+| `:pio-buildfs`, `:platformio-buildfs` | Build the SPIFFS/LittleFS filesystem image (`pio run -t buildfs`). |
+| `:pio-uploadfs`, `:platformio-uploadfs` | Flash the filesystem image to the board (`pio run -t uploadfs`), live in a terminal panel. |
+| `:pio-uploadeep`, `:platformio-uploadeep` | Flash the EEPROM (`pio run -t uploadeep`, AVR boards), live in a terminal panel. |
+| `:pio-bootloader`, `:platformio-bootloader` | Burn the bootloader (`pio run -t bootloader`, AVR boards), live in a terminal panel. |
+| `:pio-fuses`, `:platformio-fuses` | Set the microcontroller fuses (`pio run -t fuses`, AVR boards), live in a terminal panel. |
+| `:pio-nobuild`, `:platformio-nobuild` | Flash the existing firmware without rebuilding (`pio run -t nobuild`), live in a terminal panel. |
+| `:pio-envdump`, `:platformio-envdump` | Dump the resolved build environment (`pio run -t envdump`). |
+| `:pio-cleanall`, `:platformio-cleanall` | Remove all build artifacts including dependencies (`pio run -t cleanall`). |
+| `:pio-project-config`, `:platformio-project-config` | Show the computed PlatformIO project configuration (`pio project config`). |
+| `:pio-project-metadata`, `:platformio-project-metadata` | Dump the IDE/LSP metadata for the project (`pio project metadata`). |
+| `:pio-pkg-exec`, `:platformio-pkg-exec` | Run a tool from an installed package (`pio pkg exec -- <argv>`), live in a terminal panel. |
+| `:pio-platform-install`, `:pio-core-install`, `:platformio-platform-install` | Install a development platform globally (`pio pkg install -g -p <spec>`), live in a terminal panel. |
+| `:pio-pkg-pack`, `:platformio-pkg-pack` | Build a tarball of the current package (`pio pkg pack`), live in a terminal panel. |
+| `:pio-pkg-publish`, `:platformio-pkg-publish` | Publish the current package to the PlatformIO registry (`pio pkg publish`), live in a terminal panel. |
+| `:pio-pkg-unpublish`, `:platformio-pkg-unpublish` | Remove a previously published package (`pio pkg unpublish <pkg>`), live in a terminal panel. |
+| `:pio-system-info`, `:platformio-system-info` | Show system-wide PlatformIO information (`pio system info`). |
+| `:pio-system-prune`, `:platformio-system-prune` | Remove unused PlatformIO caches/packages (`pio system prune -f`), live in a terminal panel. |
+| `:pio-settings-get`, `:platformio-settings-get` | Print PlatformIO Core settings, all or one key (`pio settings get [name]`). |
+| `:pio-settings-set`, `:platformio-settings-set` | Change a PlatformIO Core setting (`pio settings set <name> <value>`). |
+| `:pio-remote-agent-list`, `:pio-remote-agents`, `:platformio-remote-agent-list` | List active PlatformIO Remote agents (`pio remote agent list`). |
+| `:pio-remote-agent-start`, `:platformio-remote-agent-start` | Start a PlatformIO Remote agent on this machine (`pio remote agent start`), live in a terminal panel. |
+| `:pio-remote-devices`, `:pio-remote-device-list`, `:platformio-remote-devices` | List serial devices attached to remote agents (`pio remote device list`). |
+| `:pio-remote-run`, `:platformio-remote-run` | Build/upload the project via a remote agent (`pio remote run`), live in a terminal panel. |
+| `:pio-remote-test`, `:platformio-remote-test` | Run unit tests via a remote agent (`pio remote test`), live in a terminal panel. |
+| `:pio-remote-update`, `:platformio-remote-update` | Update platforms/packages/libraries on remote agents (`pio remote update`), live in a terminal panel. |
+| `:pio-account-login`, `:platformio-account-login` | Sign in to a PlatformIO account (`pio account login`), live in a terminal panel. |
+| `:pio-account-logout`, `:platformio-account-logout` | Sign out of the PlatformIO account (`pio account logout`). |
+| `:pio-account-show`, `:platformio-account-show` | Show the current PlatformIO account information (`pio account show`). |
+| `:pio-account-token`, `:platformio-account-token` | Print (or regenerate) the account auth token (`pio account token`), live in a terminal panel. |
 | `:next-error`, `:cnext-error` | Visit the next compilation error's location (emacs next-error / M-g n). |
 | `:previous-error`, `:cprevious-error` | Visit the previous compilation error's location (emacs previous-error / M-g p). |
 | `:first-error` | Visit the first compilation error's location (emacs first-error). |

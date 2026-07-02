@@ -142,9 +142,14 @@ persist to `<project-dir>/embedded.toml`; the leader menu is `SPC a v`.
 - **Build / flash** — `:arduino-compile` (Verify), `:arduino-upload`
   (compile + flash), `:arduino-compile-export` (Export Compiled Binary),
   `:arduino-burn-bootloader`; `:pio-build`, `:pio-upload`, `:pio-clean`,
-  `:pio-test`, `:pio-check`. Compiler diagnostics land in the `*compilation*`
-  list so `:next-error` walks avr-gcc/arm-gcc errors; uploads run live in a PTY
-  panel.
+  `:pio-cleanall`, `:pio-test`, `:pio-check`, `:pio-size`. Compiler diagnostics
+  land in the `*compilation*` list so `:next-error` walks avr-gcc/arm-gcc errors;
+  uploads run live in a PTY panel.
+- **PlatformIO build targets** — the full `pio run -t` surface: `:pio-compiledb`
+  (generate `compile_commands.json` for the C/C++ LSP), `:pio-buildfs` /
+  `:pio-uploadfs` (SPIFFS/LittleFS filesystem image), `:pio-uploadeep`,
+  `:pio-bootloader`, `:pio-fuses` (AVR), `:pio-nobuild` (flash without
+  rebuilding), `:pio-envdump`.
 - **Serial** — `:arduino-monitor` / `:pio-monitor` (live PTY serial monitor) and
   `:arduino-plotter` / `:pio-plotter`, which graph the numbers streaming from the
   board (Arduino IDE Serial Plotter). `:embedded-baud <rate>` sets the rate.
@@ -163,9 +168,20 @@ persist to `<project-dir>/embedded.toml`; the leader menu is `SPC a v`.
   a terminal panel.
 - **Maintenance** — `:arduino-update` / `:arduino-upgrade` / `:arduino-outdated`
   refresh and upgrade cores + libraries together; `:arduino-config` dumps the
-  active configuration; `:pio-upgrade` upgrades PlatformIO Core itself.
+  active configuration; `:pio-upgrade` upgrades PlatformIO Core itself;
+  `:pio-system-info`, `:pio-system-prune` (drop unused caches/packages),
+  `:pio-settings-get` / `:pio-settings-set`.
+- **Platforms & packages** — `:pio-platform-install <spec>` installs a
+  development platform globally; `:pio-pkg-exec <argv>` runs a tool from an
+  installed package (e.g. `esptool.py`, `openocd`); registry authoring via
+  `:pio-pkg-pack`, `:pio-pkg-publish`, `:pio-pkg-unpublish`.
+- **PlatformIO Remote** — drive a remote agent: `:pio-remote-agent-start` /
+  `:pio-remote-agent-list`, `:pio-remote-devices`, `:pio-remote-run`,
+  `:pio-remote-test`, `:pio-remote-update`. Account: `:pio-account-login`,
+  `:pio-account-logout`, `:pio-account-show`, `:pio-account-token`.
 - **Sketches / projects** — `:arduino-new-sketch`, `:arduino-sketch-archive`,
-  `:pio-init <board>`.
+  `:pio-init <board>`, `:pio-project-config` (computed config),
+  `:pio-project-metadata` (IDE/LSP metadata dump).
 
 ## Build
 
