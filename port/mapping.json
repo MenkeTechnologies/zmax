@@ -28315,5 +28315,77 @@
    "static:outline_show_all"
   ],
   "note": "outline-mode: reveal all body text (outline-show-all); heading structure from zemacs_core::outline, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.calendar_forward_year",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:]"
+  ],
+  "note": "calendar-forward-year: `]` moves the point date forward a year (emacs C-x ])"
+ },
+ {
+  "spec_id": "emacs.command.calendar_backward_year",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:["
+  ],
+  "note": "calendar-backward-year: `[` moves the point date back a year (emacs C-x [)"
+ },
+ {
+  "spec_id": "emacs.command.calendar_beginning_of_month",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:{"
+  ],
+  "note": "calendar-beginning-of-month: `{` moves to the first of the month"
+ },
+ {
+  "spec_id": "emacs.command.calendar_end_of_month",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:}"
+  ],
+  "note": "calendar-end-of-month: `}` moves to the last day of the month"
+ },
+ {
+  "spec_id": "emacs.command.calendar_beginning_of_year",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:("
+  ],
+  "note": "calendar-beginning-of-year: `(` moves to January 1"
+ },
+ {
+  "spec_id": "emacs.command.calendar_end_of_year",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:)"
+  ],
+  "note": "calendar-end-of-year: `)` moves to December 31"
+ },
+ {
+  "spec_id": "emacs.command.calendar_iso_print_date",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:i"
+  ],
+  "note": "calendar-iso-print-date: `i` shows the ISO 8601 week date via zemacs_core::calendar::iso_week"
+ },
+ {
+  "spec_id": "emacs.command.calendar_julian_print_date",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:J"
+  ],
+  "note": "calendar-julian-print-date: `J` shows the Julian day number via zemacs_core::calendar::julian_day"
+ },
+ {
+  "spec_id": "emacs.command.calendar_print_day_of_year",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:p"
+  ],
+  "note": "calendar-print-day-of-year: `p` shows the day-of-year (emacs `p d`)"
  }
 ]

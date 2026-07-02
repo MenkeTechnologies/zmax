@@ -211,7 +211,7 @@ pub fn diagnostic<'doc>(
 /// document; the cursor-relative marks (`(`/`)` sentence, `{`/`}` paragraph) and `'` (last jump)
 /// are computed live here, matching vim's `:help marks`.
 pub fn marks<'doc>(
-    _editor: &'doc Editor,
+    editor: &'doc Editor,
     doc: &'doc Document,
     view: &View,
     theme: &Theme,
@@ -259,6 +259,19 @@ pub fn marks<'doc>(
     // Stored marks (named + ^ < > . [ ]) — highest priority.
     for (ch, pos) in doc.marks_iter() {
         put(text.char_to_line(pos.min(len)), ch);
+    }
+
+    // Global marks (`A`-`Z`) and numbered marks (`0`-`9`) live on the editor, not
+    // the document, and store a path + line. Render the ones that point at this
+    // file — vim shows uppercase/numbered marks in the gutter of whichever buffer
+    // they currently target.
+    if let Some(path) = doc.path() {
+        let last_line = text.len_lines().saturating_sub(1);
+        for (&ch, mark) in &editor.global_marks {
+            if mark.path == *path {
+                put(mark.line.min(last_line), ch);
+            }
+        }
     }
 
     Box::new(

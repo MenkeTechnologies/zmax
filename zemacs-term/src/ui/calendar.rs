@@ -18,8 +18,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use tui::buffer::Buffer as Surface;
 use zemacs_core::calendar::{
-    add_days, add_months, beginning_of_week, day_of_year, end_of_week, from_serial, weekday, Date,
-    MONTH_NAMES, WEEKDAY_ABBR,
+    add_days, add_months, add_years, beginning_of_month, beginning_of_week, beginning_of_year,
+    day_of_year, end_of_month, end_of_week, end_of_year, from_serial, iso_week, julian_day, weekday,
+    Date, MONTH_NAMES, WEEKDAY_ABBR,
 };
 use zemacs_view::graphics::Rect;
 
@@ -84,6 +85,29 @@ impl Component for Calendar {
             }
             return EventResult::Consumed(None);
         }
+        // Print commands: report a conversion of the point date and stop (so the
+        // day-of-year status below does not overwrite it).
+        let p = self.point;
+        match key {
+            key!('i') => {
+                let (y, w, dow) = iso_week(p);
+                cx.editor.set_status(format!("ISO date: {y}-W{w:02}-{dow}"));
+                return EventResult::Consumed(None);
+            }
+            key!('J') => {
+                cx.editor.set_status(format!("Julian day number: {}", julian_day(p)));
+                return EventResult::Consumed(None);
+            }
+            key!('p') => {
+                cx.editor.set_status(format!(
+                    "Day {} of {}",
+                    day_of_year(p),
+                    p.year
+                ));
+                return EventResult::Consumed(None);
+            }
+            _ => {}
+        }
         match key {
             key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
             ctrl!('f') | key!(Right) | key!('l') => self.point = add_days(self.point, 1),
@@ -94,6 +118,12 @@ impl Component for Calendar {
             ctrl!('e') => self.point = end_of_week(self.point),
             alt!('}') | key!('>') | key!(PageDown) => self.point = add_months(self.point, 1),
             alt!('{') | key!('<') | key!(PageUp) => self.point = add_months(self.point, -1),
+            key!(']') => self.point = add_years(self.point, 1),
+            key!('[') => self.point = add_years(self.point, -1),
+            key!('{') => self.point = beginning_of_month(self.point),
+            key!('}') => self.point = end_of_month(self.point),
+            key!('(') => self.point = beginning_of_year(self.point),
+            key!(')') => self.point = end_of_year(self.point),
             key!('.') => self.point = self.today,
             _ => {}
         }
@@ -127,7 +157,7 @@ impl Component for Calendar {
         let p = self.point;
         let title = format!(" {} {}", MONTH_NAMES[(p.month - 1) as usize], p.year);
         surface.set_stringn(area.x, area.y, &title, area.width as usize, header_style);
-        let hint = "C-f/b day  C-n/p week  M-{/} month  . today  d diary  q quit";
+        let hint = "day C-f/b · week C-n/p · month M-{/} · year [/] · i/J/p print · d diary · q";
         if title.len() + hint.len() + 3 < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,

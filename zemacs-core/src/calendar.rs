@@ -111,6 +111,46 @@ pub fn count_days(a: Date, b: Date) -> i64 {
     (to_serial(b) - to_serial(a)).abs() + 1
 }
 
+/// First day of `d`'s month (Emacs `calendar-beginning-of-month`).
+pub fn beginning_of_month(d: Date) -> Date {
+    Date::new(d.year, d.month, 1)
+}
+
+/// Last day of `d`'s month (Emacs `calendar-end-of-month`).
+pub fn end_of_month(d: Date) -> Date {
+    Date::new(d.year, d.month, days_in_month(d.year, d.month))
+}
+
+/// January 1 of `d`'s year (Emacs `calendar-beginning-of-year`).
+pub fn beginning_of_year(d: Date) -> Date {
+    Date::new(d.year, 1, 1)
+}
+
+/// December 31 of `d`'s year (Emacs `calendar-end-of-year`).
+pub fn end_of_year(d: Date) -> Date {
+    Date::new(d.year, 12, 31)
+}
+
+/// The Julian Day Number of `d` (Emacs `calendar-julian-print-date` uses the
+/// astronomical day count). JDN of 1970-01-01 is 2440588.
+pub fn julian_day(d: Date) -> i64 {
+    to_serial(d) + 2440588
+}
+
+/// The ISO 8601 week date of `d`: `(iso_year, week 1..=53, weekday 1=Mon..=7=Sun)`
+/// (Emacs `calendar-iso-print-date`). The ISO year can differ from the calendar
+/// year for days in the first/last week.
+pub fn iso_week(d: Date) -> (i32, u32, u32) {
+    // ISO weekday: Monday = 1 .. Sunday = 7 (our weekday is 0 = Sunday).
+    let iso_dow = ((weekday(d) + 6) % 7) + 1;
+    // The Thursday of this week determines the ISO year and week number.
+    let thursday = add_days(d, 4 - iso_dow as i64);
+    let iso_year = thursday.year;
+    let jan1 = Date::new(iso_year, 1, 1);
+    let week = ((to_serial(thursday) - to_serial(jan1)) / 7 + 1) as u32;
+    (iso_year, week, iso_dow)
+}
+
 pub const MONTH_NAMES: [&str; 12] = [
     "January", "February", "March", "April", "May", "June", "July", "August",
     "September", "October", "November", "December",
@@ -175,5 +215,33 @@ mod tests {
         assert_eq!(day_of_year(Date::new(2026, 1, 1)), 1);
         assert_eq!(day_of_year(Date::new(2024, 12, 31)), 366); // leap
         assert_eq!(day_of_year(Date::new(2023, 12, 31)), 365);
+    }
+
+    #[test]
+    fn month_and_year_bounds() {
+        assert_eq!(beginning_of_month(Date::new(2024, 2, 15)), Date::new(2024, 2, 1));
+        assert_eq!(end_of_month(Date::new(2024, 2, 15)), Date::new(2024, 2, 29)); // leap Feb
+        assert_eq!(end_of_month(Date::new(2023, 2, 15)), Date::new(2023, 2, 28));
+        assert_eq!(beginning_of_year(Date::new(2026, 7, 2)), Date::new(2026, 1, 1));
+        assert_eq!(end_of_year(Date::new(2026, 7, 2)), Date::new(2026, 12, 31));
+    }
+
+    #[test]
+    fn julian_day_number() {
+        assert_eq!(julian_day(Date::new(1970, 1, 1)), 2440588);
+        assert_eq!(julian_day(Date::new(2000, 1, 1)), 2451545);
+    }
+
+    #[test]
+    fn iso_week_date() {
+        // 2026-07-02 is a Thursday -> ISO weekday 4.
+        assert_eq!(iso_week(Date::new(2026, 7, 2)).2, 4);
+        // Well-known ISO boundary cases:
+        // 2021-01-01 (Friday) belongs to ISO week 53 of 2020.
+        assert_eq!(iso_week(Date::new(2021, 1, 1)), (2020, 53, 5));
+        // 2024-12-30 (Monday) belongs to ISO week 1 of 2025.
+        assert_eq!(iso_week(Date::new(2024, 12, 30)), (2025, 1, 1));
+        // A mid-year date: 2023-01-02 is ISO 2023-W01-1 (Monday).
+        assert_eq!(iso_week(Date::new(2023, 1, 2)), (2023, 1, 1));
     }
 }
