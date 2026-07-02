@@ -3357,6 +3357,427 @@ fn terminal(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+// ── Embedded development (Arduino / PlatformIO) ──────────────────────────────
+//
+// The zemacs port of the Arduino IDE and PlatformIO IDE workflows, driving the
+// same `arduino-cli` / `pio` backends the IDEs use. Compile goes through the
+// Emacs `*compilation*` error list (jump-to-error on avr-gcc/arm-gcc
+// diagnostics); upload and the serial monitor run live in a PTY terminal panel.
+// Board / port / library selection use the fuzzy picker. Board settings persist
+// per-project in `<project-dir>/embedded.toml` (see `crate::embedded`).
+
+use crate::embedded;
+
+/// Bail with a friendly hint if the backend binary isn't installed.
+fn require_tool(binary: &str) -> anyhow::Result<()> {
+    if !embedded::tool_available(binary) {
+        bail!(
+            "`{binary}` not found on PATH. Install it (e.g. `brew install {}`) to use this command.",
+            if binary == embedded::ARDUINO_CLI { "arduino-cli" } else { "platformio" }
+        );
+    }
+    Ok(())
+}
+
+/// Run a backend command and capture stdout (blocking). Used for the JSON
+/// queries that feed the board / port / library pickers.
+fn embedded_capture(argv: &[String]) -> anyhow::Result<String> {
+    require_tool(&argv[0])?;
+    let output = std::process::Command::new(&argv[0])
+        .args(&argv[1..])
+        .output()
+        .map_err(|e| anyhow!("failed to run `{}`: {e}", argv[0]))?;
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        bail!("`{}` failed: {}", argv.join(" "), err.trim());
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+/// Spawn `argv` in a live PTY terminal panel (for upload / serial monitor),
+/// created on the main thread since the PTY handle isn't `Send`.
+fn embedded_spawn_terminal(cx: &mut compositor::Context, argv: Vec<String>, cwd: std::path::PathBuf) {
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            match crate::ui::terminal::TerminalPanel::with_command(&argv[0], &argv[1..], Some(&cwd)) {
+                Ok(panel) => compositor.push(Box::new(panel)),
+                Err(e) => editor.set_error(format!("{}: {e}", argv[0])),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// `:arduino-compile` (alias `:averify`) — the Arduino IDE "Verify" button. Runs
+/// `arduino-cli compile --fqbn <board> <sketch>` and collects avr-gcc/arm-gcc
+/// diagnostics into the `*compilation*` list so `:next-error` walks them.
+fn arduino_compile(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_compile(&settings).map_err(|e| anyhow!(e))?;
+    run_compile(cx, &embedded::shell_join(&argv))
+}
+
+/// `:arduino-upload` (alias `:aupload`) — build + flash to the connected board.
+/// Runs live in a terminal panel so the avrdude/bossac progress bar renders.
+fn arduino_upload(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_upload(&settings).map_err(|e| anyhow!(e))?;
+    embedded_spawn_terminal(cx, argv, settings.sketch_dir());
+    Ok(())
+}
+
+/// `:arduino-monitor` (alias `:amonitor`) — open the serial monitor for the
+/// selected port/baud in a live PTY panel (`arduino-cli monitor`).
+fn arduino_monitor(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_monitor(&settings).map_err(|e| anyhow!(e))?;
+    embedded_spawn_terminal(cx, argv, settings.sketch_dir());
+    Ok(())
+}
+
+/// `:arduino-boards` — the Arduino IDE "Board" selector. Fuzzy-pick from every
+/// board across the installed platforms; the choice becomes the project FQBN.
+fn arduino_boards(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let json = embedded_capture(&embedded::arduino_board_listall())?;
+    let mut boards = embedded::parse_board_listall(&json);
+    boards.retain(|b| b.fqbn.is_some());
+    if boards.is_empty() {
+        bail!("no boards found — install a core first with :arduino-core-install (e.g. arduino:avr)");
+    }
+    let callback = async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                let columns = [
+                    ui::PickerColumn::new("board", |b: &embedded::BoardEntry, _: &()| {
+                        b.name.as_str().into()
+                    }),
+                    ui::PickerColumn::new("fqbn", |b: &embedded::BoardEntry, _: &()| {
+                        b.fqbn.as_deref().unwrap_or("").into()
+                    }),
+                ];
+                let picker = ui::Picker::new(
+                    columns,
+                    0,
+                    boards,
+                    (),
+                    move |cx, board: &embedded::BoardEntry, _action| {
+                        if let Some(fqbn) = board.fqbn.clone() {
+                            embedded::update(|s| s.fqbn = fqbn.clone());
+                            cx.editor.set_status(format!("Board set to {} ({fqbn})", board.name));
+                        }
+                    },
+                );
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
+/// `:arduino-ports` — pick the serial port from the connected devices
+/// (`arduino-cli board list`); the choice becomes the project's upload/monitor port.
+fn arduino_ports(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let json = embedded_capture(&embedded::arduino_board_list())?;
+    let ports = embedded::parse_port_list(&json);
+    if ports.is_empty() {
+        bail!("no serial ports detected — is a board plugged in?");
+    }
+    let callback = async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                let columns = [ui::PickerColumn::new(
+                    "port",
+                    |p: &embedded::PortEntry, _: &()| p.label.as_str().into(),
+                )];
+                let picker = ui::Picker::new(
+                    columns,
+                    0,
+                    ports,
+                    (),
+                    move |cx, port: &embedded::PortEntry, _action| {
+                        let addr = port.address.clone();
+                        embedded::update(|s| s.port = addr.clone());
+                        cx.editor.set_status(format!("Serial port set to {addr}"));
+                    },
+                );
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
+/// `:arduino-lib-search <query>` — the Arduino IDE Library Manager. Fuzzy-pick a
+/// matching library; selecting it runs `arduino-cli lib install`.
+fn arduino_lib_search(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let query = args.join(" ");
+    if query.trim().is_empty() {
+        bail!("usage: :arduino-lib-search <query>");
+    }
+    let json = embedded_capture(&embedded::arduino_lib_search(&query))?;
+    // `lib search` JSON: { "libraries": [ { "name": "..." }, ... ] }.
+    let root: serde_json::Value = serde_json::from_str(&json).unwrap_or(serde_json::Value::Null);
+    let names: Vec<String> = root
+        .get("libraries")
+        .and_then(|l| l.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|l| l.get("name").and_then(|n| n.as_str()).map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+    let mut names = names;
+    names.dedup();
+    if names.is_empty() {
+        bail!("no libraries matched `{query}`");
+    }
+    let callback = async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                let columns =
+                    [ui::PickerColumn::new("library", |n: &String, _: &()| n.as_str().into())];
+                let picker = ui::Picker::new(columns, 0, names, (), move |cx, name: &String, _action| {
+                    match embedded_capture(&embedded::arduino_lib_install(name)) {
+                        Ok(_) => cx.editor.set_status(format!("Installed library `{name}`")),
+                        Err(e) => cx.editor.set_error(format!("lib install: {e}")),
+                    }
+                });
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
+/// `:arduino-core-install <package>` — install a board-support core, e.g.
+/// `:arduino-core-install arduino:avr` (Arduino IDE Boards Manager).
+fn arduino_core_install(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pkg = args.join(" ");
+    if pkg.trim().is_empty() {
+        bail!("usage: :arduino-core-install <package>  (e.g. arduino:avr)");
+    }
+    cx.editor.set_status(format!("Installing core `{pkg}`…"));
+    embedded_capture(&embedded::arduino_core_install(&pkg))?;
+    cx.editor.set_status(format!("Installed core `{pkg}`"));
+    Ok(())
+}
+
+/// `:pio-build` — PlatformIO `pio run`, routed through `*compilation*` for
+/// jump-to-error. Runs in the project directory (dir with `platformio.ini`).
+fn pio_build(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    let cmd = format!("cd {} && {}", embedded::shell_join(&[dir.to_string_lossy().into_owned()]), embedded::shell_join(&embedded::pio_build()));
+    run_compile(cx, &cmd)
+}
+
+/// `:pio-upload` — PlatformIO `pio run -t upload`, live in a terminal panel.
+fn pio_upload(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_upload(), dir);
+    Ok(())
+}
+
+/// `:pio-monitor` — PlatformIO serial monitor (`pio device monitor`), live panel.
+fn pio_monitor(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let settings = embedded::load();
+    let dir = settings.sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_monitor(&settings), dir);
+    Ok(())
+}
+
+/// `:pio-devices` — pick a serial port from `pio device list`, set it as the port.
+fn pio_devices(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let json = embedded_capture(&embedded::pio_device_list())?;
+    let root: serde_json::Value = serde_json::from_str(&json).unwrap_or(serde_json::Value::Null);
+    let ports: Vec<embedded::PortEntry> = root
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|d| {
+                    let addr = d.get("port").and_then(|p| p.as_str())?.to_string();
+                    let desc = d.get("description").and_then(|p| p.as_str()).unwrap_or("serial");
+                    Some(embedded::PortEntry {
+                        label: format!("{addr} — {desc}"),
+                        address: addr,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    if ports.is_empty() {
+        bail!("no serial devices found (pio device list)");
+    }
+    let callback = async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                let columns = [ui::PickerColumn::new(
+                    "device",
+                    |p: &embedded::PortEntry, _: &()| p.label.as_str().into(),
+                )];
+                let picker = ui::Picker::new(columns, 0, ports, (), move |cx, port: &embedded::PortEntry, _action| {
+                    let addr = port.address.clone();
+                    embedded::update(|s| s.port = addr.clone());
+                    cx.editor.set_status(format!("Serial port set to {addr}"));
+                });
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
+/// `:pio-init <board>` — scaffold a PlatformIO project for `<board>` in the
+/// sketch directory (`pio project init --board <id>`).
+fn pio_init(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let board = args.join(" ");
+    if board.trim().is_empty() {
+        bail!("usage: :pio-init <board-id>  (e.g. uno, esp32dev)");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    let mut argv = embedded::pio_init(&board);
+    // `pio project init` operates on the current directory; run it there.
+    let output = std::process::Command::new(&argv[0])
+        .args(argv.split_off(1))
+        .current_dir(&dir)
+        .output()
+        .map_err(|e| anyhow!("pio init: {e}"))?;
+    if !output.status.success() {
+        bail!("pio init failed: {}", String::from_utf8_lossy(&output.stderr).trim());
+    }
+    cx.editor.set_status(format!("PlatformIO project initialised for `{board}` in {}", dir.display()));
+    Ok(())
+}
+
+/// `:embedded-baud <rate>` — set the serial monitor baud rate for this project.
+fn embedded_baud(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let rate: u32 = args
+        .first()
+        .and_then(|a| a.parse().ok())
+        .ok_or_else(|| anyhow!("usage: :embedded-baud <rate>  (e.g. 9600, 115200)"))?;
+    embedded::update(|s| s.baud = rate);
+    cx.editor.set_status(format!("Serial baud rate set to {rate}"));
+    Ok(())
+}
+
+/// Open the live serial plotter over `argv` (a monitor command) in a modal panel.
+fn open_serial_plotter(cx: &mut compositor::Context, argv: Vec<String>, title: &'static str) {
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            match crate::ui::serial_plotter::SerialPlotter::spawn(&argv, title) {
+                Ok(panel) => compositor.push(Box::new(panel)),
+                Err(e) => editor.set_error(format!("serial plotter: {e}")),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// `:arduino-plotter` (alias `:serial-plotter`) — the Arduino IDE Serial Plotter:
+/// graph the numbers streaming from the board's serial port live.
+fn arduino_plotter(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_monitor(&settings).map_err(|e| anyhow!(e))?;
+    open_serial_plotter(cx, argv, "Arduino Serial Plotter");
+    Ok(())
+}
+
+/// `:pio-plotter` — PlatformIO serial plotter (`pio device monitor` piped into a
+/// live chart).
+fn pio_plotter(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let settings = embedded::load();
+    open_serial_plotter(cx, embedded::pio_monitor(&settings), "PlatformIO Serial Plotter");
+    Ok(())
+}
+
+/// `:arduino-new-sketch <name>` — scaffold a new sketch (`arduino-cli sketch new`)
+/// in the workspace and open its `.ino` (Arduino IDE File → New Sketch).
+fn arduino_new_sketch(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :arduino-new-sketch <name>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let root = zemacs_loader::find_workspace().0;
+    let output = std::process::Command::new(embedded::ARDUINO_CLI)
+        .args(["sketch", "new", name])
+        .current_dir(&root)
+        .output()
+        .map_err(|e| anyhow!("sketch new: {e}"))?;
+    if !output.status.success() {
+        bail!("sketch new failed: {}", String::from_utf8_lossy(&output.stderr).trim());
+    }
+    let ino = root.join(name).join(format!("{name}.ino"));
+    cx.editor.open(&ino, Action::Replace)?;
+    cx.editor.set_status(format!("Created sketch `{name}` → {}", ino.display()));
+    Ok(())
+}
+
 /// Wrap `s` in single quotes for safe inclusion in a `/bin/sh -c` command line,
 /// escaping any embedded single quotes. Pure — unit tested.
 fn shell_single_quote(s: &str) -> String {
@@ -18010,6 +18431,182 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile",
+        aliases: &["averify", "arduino-verify"],
+        doc: "Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify).",
+        fun: arduino_compile,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-upload",
+        aliases: &["aupload"],
+        doc: "Build and flash the sketch to the connected board (arduino-cli upload), live in a terminal panel.",
+        fun: arduino_upload,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-monitor",
+        aliases: &["amonitor", "serial-monitor"],
+        doc: "Open the serial monitor for the selected port/baud (arduino-cli monitor).",
+        fun: arduino_monitor,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-boards",
+        aliases: &["arduino-board"],
+        doc: "Pick the target board (FQBN) from installed platforms (Arduino IDE board selector).",
+        fun: arduino_boards,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-ports",
+        aliases: &["arduino-port"],
+        doc: "Pick the serial port from connected devices (arduino-cli board list).",
+        fun: arduino_ports,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-search",
+        aliases: &["arduino-lib"],
+        doc: "Search the Arduino library index and install the pick (Arduino IDE Library Manager).",
+        fun: arduino_lib_search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-core-install",
+        aliases: &["arduino-core"],
+        doc: "Install a board-support core, e.g. `arduino:avr` (Arduino IDE Boards Manager).",
+        fun: arduino_core_install,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-build",
+        aliases: &["pio-run", "platformio-build"],
+        doc: "Build the PlatformIO project (`pio run`); errors go to the compilation list.",
+        fun: pio_build,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-upload",
+        aliases: &["platformio-upload"],
+        doc: "Build and upload the PlatformIO project (`pio run -t upload`), live in a terminal panel.",
+        fun: pio_upload,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor",
+        aliases: &["platformio-monitor"],
+        doc: "Open the PlatformIO serial monitor (`pio device monitor`).",
+        fun: pio_monitor,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-devices",
+        aliases: &["pio-device-list"],
+        doc: "Pick a serial port from `pio device list` and set it for this project.",
+        fun: pio_devices,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-init",
+        aliases: &["platformio-init"],
+        doc: "Scaffold a PlatformIO project for a board (`pio project init --board <id>`).",
+        fun: pio_init,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "embedded-baud",
+        aliases: &["serial-baud"],
+        doc: "Set the serial monitor baud rate for this project (e.g. 9600, 115200).",
+        fun: embedded_baud,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-plotter",
+        aliases: &["serial-plotter"],
+        doc: "Live-graph the numbers streaming from the serial port (Arduino IDE Serial Plotter).",
+        fun: arduino_plotter,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-plotter",
+        aliases: &["platformio-plotter"],
+        doc: "Live-graph the PlatformIO serial monitor output (serial plotter).",
+        fun: pio_plotter,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-new-sketch",
+        aliases: &["arduino-sketch-new"],
+        doc: "Scaffold a new sketch (`arduino-cli sketch new`) and open its .ino (Arduino IDE New Sketch).",
+        fun: arduino_new_sketch,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },
