@@ -17713,6 +17713,31 @@ fn winner_redo(cx: &mut Context) {
     }
 }
 
+/// vim `=` expression register: prompt on the command line for an expression,
+/// evaluate it with the embedded viml interpreter, and hand the result string to
+/// `on_result`. Backs both `` "= `` (normal-mode register select) and
+/// `i_CTRL-R =` (insert-mode register paste).
+fn eval_expression_register(
+    cx: &mut Context,
+    on_result: impl Fn(&mut crate::compositor::Context, String) + 'static,
+) {
+    ui::prompt(
+        cx,
+        "=".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate || input.is_empty() {
+                return;
+            }
+            match crate::commands::scripting::eval_viml(cx, input) {
+                Ok(result) => on_result(cx, result),
+                Err(e) => cx.editor.set_error(e),
+            }
+        },
+    );
+}
+
 fn select_register(cx: &mut Context) {
     cx.editor.autoinfo = Some(Info::from_registers(
         "Select register",
@@ -17721,6 +17746,15 @@ fn select_register(cx: &mut Context) {
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
+            if ch == '=' {
+                // Evaluate now and stash the result in `=` so the pending
+                // operator (e.g. `p`) reads it, matching vim.
+                eval_expression_register(cx, |cx, result| {
+                    let _ = cx.editor.registers.write('=', vec![result]);
+                    cx.editor.selected_register = Some('=');
+                });
+                return;
+            }
             cx.editor.selected_register = Some(ch);
         }
     })
@@ -17737,6 +17771,15 @@ fn insert_register(cx: &mut Context) {
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
+            if ch == '=' {
+                // vim `i_CTRL-R =`: prompt, evaluate, insert the result at the cursor.
+                eval_expression_register(cx, move |cx, result| {
+                    let mode = cx.editor.mode;
+                    let (view, doc) = current!(cx.editor);
+                    paste_impl(&[result], doc, view, Paste::Cursor, count, mode);
+                });
+                return;
+            }
             cx.register = Some(ch);
             paste(
                 cx.editor,
