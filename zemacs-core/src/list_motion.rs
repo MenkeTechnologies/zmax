@@ -67,11 +67,11 @@ pub fn backward_list(text: &str, cursor: usize) -> Option<usize> {
 /// delimiter.
 pub fn down_list(text: &str, cursor: usize) -> Option<usize> {
     let chars: Vec<char> = text.chars().collect();
-    for i in cursor..chars.len() {
-        if is_close(chars[i]) {
+    for (i, &c) in chars.iter().enumerate().skip(cursor) {
+        if is_close(c) {
             return None; // hit a closing delimiter first — nothing to descend into
         }
-        if is_open(chars[i]) {
+        if is_open(c) {
             return Some(i + 1);
         }
     }
@@ -83,10 +83,10 @@ pub fn down_list(text: &str, cursor: usize) -> Option<usize> {
 pub fn up_list(text: &str, cursor: usize) -> Option<usize> {
     let chars: Vec<char> = text.chars().collect();
     let mut depth = 0i32;
-    for i in cursor..chars.len() {
-        if is_open(chars[i]) {
+    for (i, &c) in chars.iter().enumerate().skip(cursor) {
+        if is_open(c) {
             depth += 1;
-        } else if is_close(chars[i]) {
+        } else if is_close(c) {
             if depth == 0 {
                 return Some(i + 1);
             }
