@@ -591,6 +591,9 @@
 | `insert_last_inserted_text` | Insert the previously inserted text (vim i_CTRL-A) | insert: `` <C-a> `` |
 | `insert_last_inserted_and_stop` | Insert previously inserted text and stop insert (vim i_CTRL-@) | insert: `` <C-@> `` |
 | `copy_between_registers` | Copy between two registers |  |
+| `copy_to_register` | Copy the region into a register (emacs copy-to-register, C-x r s) |  |
+| `append_to_register` | Append the region to a register (emacs append-to-register, C-x r a) |  |
+| `prepend_to_register` | Prepend the region to a register (emacs prepend-to-register, C-x r p) |  |
 | `align_view_middle` | Align view middle |  |
 | `align_view_top` | Align view top | normal: `` zt `` |
 | `align_view_center` | Align view center | normal: `` zz ``, `` <C-l> ``, `` <C-w>.z ``, `` <space>b.z ``, `` <space>w.z ``, select: `` <space>b.z ``, `` <space>w.z `` |
