@@ -27435,5 +27435,53 @@
    "key:rmail:P"
   ],
   "note": "C-c C-p (previous same subject) -> Rmail P alias"
+ },
+ {
+  "spec_id": "emacs.command.rmail_summary",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:h"
+  ],
+  "note": "rmail-summary -> Rmail h lists every message in a summary pane"
+ },
+ {
+  "spec_id": "emacs.command.rmail_summary_quit",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:q"
+  ],
+  "note": "rmail-summary-quit -> q leaves the summary pane"
+ },
+ {
+  "spec_id": "emacs.command.rmail_summary_wipe",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:Q"
+  ],
+  "note": "rmail-summary-wipe -> Q leaves the summary pane"
+ },
+ {
+  "spec_id": "emacs.keybinding.h_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:h"
+  ],
+  "note": "Rmail h (make summary)"
+ },
+ {
+  "spec_id": "emacs.keybinding.q_lparenrmail_summary_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:Q"
+  ],
+  "note": "Rmail summary Q (wipe)"
+ },
+ {
+  "spec_id": "emacs.keybinding.q_lparenrmail_summary_rparen_1",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:q"
+  ],
+  "note": "Rmail summary q (quit)"
  }
 ]

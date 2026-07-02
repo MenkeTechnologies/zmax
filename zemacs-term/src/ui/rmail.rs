@@ -28,6 +28,15 @@ use crate::{
     ctrl, key,
 };
 
+/// Which pane the reader is showing.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum View {
+    /// A single message (the default `rmail-mode` view).
+    Message,
+    /// The `rmail-summary` list of all messages, with a movable cursor.
+    Summary,
+}
+
 /// The interactive Rmail reader overlay.
 pub struct Rmail {
     mailbox: Mailbox,
@@ -39,6 +48,10 @@ pub struct Rmail {
     /// Accumulated numeric prefix for `j` (`123 j`).
     count: String,
     status: String,
+    /// Message vs summary pane.
+    view: View,
+    /// Cursor row within the summary (an index into `mailbox.msgs`).
+    sum_cursor: usize,
 }
 
 /// Headers Rmail shows by default when `full_headers` is off.
@@ -53,7 +66,55 @@ impl Rmail {
             full_headers: false,
             count: String::new(),
             status: String::new(),
+            view: View::Message,
+            sum_cursor: 0,
         }
+    }
+
+    /// One `rmail-summary` row: number, Deleted flag, sender, subject.
+    fn summary_line(&self, idx: usize) -> String {
+        let m = &self.mailbox.msgs[idx];
+        let flag = if m.deleted { 'D' } else { ' ' };
+        let from = m.from();
+        let from: String = from.chars().take(20).collect();
+        format!("{:>4} {} {:<20}  {}", idx + 1, flag, from, m.subject())
+    }
+
+    /// Handle a key while the summary pane is showing. Returns the same
+    /// [`EventResult`] contract as [`Component::handle_event`].
+    fn summary_key(&mut self, key: zemacs_view::input::KeyEvent) -> EventResult {
+        let last = self.mailbox.len().saturating_sub(1);
+        match key {
+            // q/Q leave the summary (rmail-summary-quit / rmail-summary-wipe).
+            key!('q') | key!('Q') | key!(Esc) => self.view = View::Message,
+            key!('n') | key!('j') => self.sum_cursor = (self.sum_cursor + 1).min(last),
+            key!('p') | key!('k') => self.sum_cursor = self.sum_cursor.saturating_sub(1),
+            key!('<') => self.sum_cursor = 0,
+            key!('>') => self.sum_cursor = last,
+            // RET / SPC select the message and return to the message view.
+            key!(Enter) | key!(' ') => {
+                self.mailbox.show(self.sum_cursor + 1);
+                self.scroll = 0;
+                self.view = View::Message;
+            }
+            key!('d') => {
+                if let Some(m) = self.mailbox.msgs.get_mut(self.sum_cursor) {
+                    m.deleted = true;
+                }
+                self.sum_cursor = (self.sum_cursor + 1).min(last);
+            }
+            key!('u') => {
+                if let Some(m) = self.mailbox.msgs.get_mut(self.sum_cursor) {
+                    m.deleted = false;
+                }
+            }
+            key!('x') => {
+                self.mailbox.expunge();
+                self.sum_cursor = self.sum_cursor.min(self.mailbox.len().saturating_sub(1));
+            }
+            _ => {}
+        }
+        EventResult::Consumed(None)
     }
 
     /// Rendered content lines for the current message (headers, blank, body).
@@ -122,6 +183,11 @@ impl Component for Rmail {
         let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
             compositor.pop();
         });
+
+        // The summary pane has its own key handling.
+        if self.view == View::Summary {
+            return self.summary_key(key);
+        }
 
         // Accumulate a numeric prefix for `j`.
         if let key!(c @ '0'..='9') = key {
@@ -204,6 +270,11 @@ impl Component for Rmail {
 
             // Display.
             key!('t') => self.full_headers = !self.full_headers,
+            key!('h') => {
+                // rmail-summary: list every message, cursor on the current one.
+                self.sum_cursor = self.mailbox.current;
+                self.view = View::Summary;
+            }
 
             // Reply / forward / new mail — open a message-mode draft.
             key!('r') => {
@@ -245,6 +316,37 @@ impl Component for Rmail {
 
         surface.clear_with(area, bg);
         if area.width < 16 || area.height < 4 {
+            return;
+        }
+
+        if self.view == View::Summary {
+            let total = self.mailbox.len();
+            let title = format!(" RMAIL-summary  {total} messages");
+            surface.set_stringn(area.x, area.y, &title, area.width as usize, header_style);
+            let hint = "n/p move  RET select  d del  u undel  x expunge  q back";
+            if title.len() + hint.len() + 3 < area.width as usize {
+                surface.set_stringn(
+                    area.x + area.width - hint.len() as u16 - 1,
+                    area.y,
+                    hint,
+                    hint.len(),
+                    info_style,
+                );
+            }
+            let rows = area.height.saturating_sub(2) as usize;
+            let top = self.sum_cursor.saturating_sub(rows / 2).min(total.saturating_sub(rows));
+            for (row, idx) in (top..total).take(rows).enumerate() {
+                let y = area.y + 2 + row as u16;
+                let deleted = self.mailbox.msgs[idx].deleted;
+                let style = if idx == self.sum_cursor {
+                    field_style
+                } else if deleted {
+                    del_style
+                } else {
+                    text_style
+                };
+                surface.set_stringn(area.x, y, &self.summary_line(idx), area.width as usize, style);
+            }
             return;
         }
 
