@@ -129,6 +129,23 @@ pub fn remove_user(word: &str) {
     }
 }
 
+/// The user-added good words, sorted (vim `:spelldump` fills a buffer with the
+/// known-correct words; this returns the user wordlist added via `zg`/`:spellgood`).
+pub fn good_words() -> Vec<String> {
+    let g = user_good().read().unwrap();
+    let mut words: Vec<String> = g.iter().cloned().collect();
+    words.sort();
+    words
+}
+
+/// The user-added bad words, sorted.
+pub fn bad_words() -> Vec<String> {
+    let b = user_bad().read().unwrap();
+    let mut words: Vec<String> = b.iter().cloned().collect();
+    words.sort();
+    words
+}
+
 /// `z=`: suggestions for `word` — dictionary words within edit distance 1,
 /// preserving the original capitalization style.
 pub fn suggest(word: &str) -> Vec<String> {
