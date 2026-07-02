@@ -41,6 +41,7 @@ pub mod region_ops;
 pub mod search;
 pub mod selection;
 pub mod snippets;
+pub mod sort;
 pub mod surround;
 pub mod syntax;
 pub mod test;

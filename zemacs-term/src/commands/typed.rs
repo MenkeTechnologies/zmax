@@ -14629,6 +14629,152 @@ fn sort_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     Ok(())
 }
 
+/// The char range of the primary selection's line span, or the whole buffer when
+/// the selection is confined to a single line — the region the Emacs `sort-*`
+/// line commands operate on (Emacs sorts the active region, else the accessible
+/// buffer). Returns `None` for an empty buffer or an empty range.
+fn selection_or_buffer_line_region(
+    doc: &zemacs_view::Document,
+    view: zemacs_view::ViewId,
+) -> Option<(usize, usize)> {
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    if total == 0 {
+        return None;
+    }
+    let range = doc.selection(view).primary();
+    let start_line = slice.char_to_line(range.from());
+    let last_char = range.to().saturating_sub(1).max(range.from());
+    let end_line = slice.char_to_line(last_char);
+    let (first, last) = if end_line > start_line {
+        (start_line, end_line)
+    } else {
+        (0, total - 1)
+    };
+    let region_start = slice.line_to_char(first);
+    let region_end = if last + 1 < total {
+        slice.line_to_char(last + 1)
+    } else {
+        slice.len_chars()
+    };
+    (region_start < region_end).then_some((region_start, region_end))
+}
+
+/// `:sort-numeric-fields [N]` — Emacs `sort-numeric-fields`: sort the selected
+/// lines (or the whole buffer) by the *numeric value* of their Nth
+/// whitespace-separated field (1-based, default 1; a negative N counts from the
+/// right). `--reverse` sorts descending. Numbers may be hex (`0x…`), octal
+/// (`0…`) or decimal.
+fn sort_numeric_fields_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let field: i64 = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(1);
+
+    let (view, doc) = current!(cx.editor);
+    let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
+        return Ok(());
+    };
+    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<String> = block.split('\n').map(str::to_string).collect();
+    if had_trailing {
+        lines.pop();
+    }
+    let sorted = zemacs_core::sort::sort_numeric_fields(&lines, field, args.has_flag("reverse"));
+    let mut out = sorted.join("\n");
+    if had_trailing {
+        out.push('\n');
+    }
+    if out == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(out.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// `:sort-columns <beg> <end>` — Emacs `sort-columns`: sort the selected lines
+/// (or the whole buffer) alphabetically by the text in the character-column
+/// range `[beg, end)` (0-based columns). `--reverse` sorts descending.
+fn sort_columns_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let beg: usize = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(0);
+    let end: usize = args
+        .get(1)
+        .and_then(|a| a.trim().parse().ok())
+        .unwrap_or(usize::MAX);
+
+    let (view, doc) = current!(cx.editor);
+    let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
+        return Ok(());
+    };
+    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let had_trailing = block.ends_with('\n');
+    let mut lines: Vec<String> = block.split('\n').map(str::to_string).collect();
+    if had_trailing {
+        lines.pop();
+    }
+    let sorted = zemacs_core::sort::sort_columns(&lines, beg, end, args.has_flag("reverse"));
+    let mut out = sorted.join("\n");
+    if had_trailing {
+        out.push('\n');
+    }
+    if out == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(out.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// `:sort-paragraphs` — Emacs `sort-paragraphs`: sort the paragraphs (blank-line
+/// separated blocks) of the selected region (or the whole buffer) alphabetically.
+/// `--reverse` sorts descending.
+fn sort_paragraphs_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
+        return Ok(());
+    };
+    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let out = zemacs_core::sort::sort_paragraphs(&block, args.has_flag("reverse"));
+    if out == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(out.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 /// Join the lines of `block` with `sep` into a single line, preserving a trailing
 /// newline if the block had one. Pure — unit tested.
 fn join_lines_with(block: &str, sep: &str) -> String {
@@ -21642,6 +21788,57 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sort-numeric-fields",
+        aliases: &["sortnf"],
+        doc: "Sort the selected lines by the numeric value of their Nth whitespace field (default 1).",
+        fun: sort_numeric_fields_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            flags: &[Flag {
+                name: "reverse",
+                alias: Some('r'),
+                doc: "sort in reverse (descending) order",
+                ..Flag::DEFAULT
+            }],
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sort-columns",
+        aliases: &["sortc"],
+        doc: "Sort the selected lines alphabetically by the character-column range [beg, end).",
+        fun: sort_columns_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(2)),
+            flags: &[Flag {
+                name: "reverse",
+                alias: Some('r'),
+                doc: "sort in reverse (descending) order",
+                ..Flag::DEFAULT
+            }],
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sort-paragraphs",
+        aliases: &["sortp"],
+        doc: "Sort the paragraphs (blank-line separated blocks) of the selection alphabetically.",
+        fun: sort_paragraphs_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            flags: &[Flag {
+                name: "reverse",
+                alias: Some('r'),
+                doc: "sort in reverse (descending) order",
+                ..Flag::DEFAULT
+            }],
             ..Signature::DEFAULT
         },
     },
