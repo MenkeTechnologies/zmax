@@ -2982,7 +2982,27 @@ fn find_char_then(
 fn set_mark(cx: &mut Context) {
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
-        if let Some(ch) = event.char() {
+        let Some(ch) = event.char() else { return };
+        if ch.is_ascii_uppercase() {
+            // vim global mark: stores file + position on the editor so it jumps
+            // across buffers and survives buffer close (persisted in .zemacsinfo).
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text().slice(..);
+            let pos = doc.selection(view.id).primary().cursor(text);
+            let mark = doc.path().map(|path| {
+                let coords = zemacs_core::coords_at_pos(text, pos);
+                zemacs_view::GlobalMark {
+                    path: path.to_path_buf(),
+                    line: coords.row,
+                    col: coords.col,
+                }
+            });
+            if let Some(mark) = mark {
+                cx.editor.global_marks.insert(ch, mark);
+            }
+        } else if ch.is_ascii_digit() {
+            // vim ignores `m0`-`m9`; the numbered marks come from file history.
+        } else {
             let (view, doc) = current!(cx.editor);
             let pos = doc
                 .selection(view.id)
@@ -2991,13 +3011,52 @@ fn set_mark(cx: &mut Context) {
             doc.set_mark(ch, pos);
         }
     });
-    cx.editor.autoinfo = Some(Info::new("Set mark", &[("a-z", "mark name")]));
+    cx.editor.autoinfo = Some(Info::new(
+        "Set mark",
+        &[("a-z", "buffer mark"), ("A-Z", "global mark")],
+    ));
 }
 
 fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
+            // vim global (`A`-`Z`) and numbered file (`0`-`9`) marks may point at
+            // another file: record the jump, switch/open the target, then move to
+            // the stored line/col.
+            if ch.is_ascii_uppercase() || ch.is_ascii_digit() {
+                let Some(mark) = cx.editor.global_marks.get(&ch).cloned() else {
+                    cx.editor.set_error(format!("Mark '{ch}' not set"));
+                    return;
+                };
+                {
+                    let (view, doc) = current!(cx.editor);
+                    push_jump(view, doc);
+                }
+                if let Some(id) = cx.editor.document_by_path(&mark.path).map(|d| d.id()) {
+                    cx.editor.switch(id, Action::Replace);
+                } else if let Err(e) = cx.editor.open(&mark.path, Action::Replace) {
+                    cx.editor
+                        .set_error(format!("Can't open '{}': {e}", mark.path.display()));
+                    return;
+                }
+                let (view, doc) = current!(cx.editor);
+                let text = doc.text().slice(..);
+                let line = mark.line.min(text.len_lines().saturating_sub(1));
+                let pos = if to_line_start {
+                    text.line(line)
+                        .first_non_whitespace_char()
+                        .map(|p| p + text.line_to_char(line))
+                        .unwrap_or_else(|| text.line_to_char(line))
+                } else {
+                    zemacs_core::pos_at_coords(text, Position::new(line, mark.col), true)
+                };
+                doc.set_selection(view.id, Selection::point(pos));
+                if Action::Replace.align_view(view, doc.id()) {
+                    align_view(doc, view, Align::Center);
+                }
+                return;
+            }
             let (view, doc) = current!(cx.editor);
             // Most marks are looked up directly; vim's structural marks that aren't
             // stored (paragraph `{`/`}`, sentence `(`/`)` — approximated by paragraph)
@@ -3034,7 +3093,15 @@ fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
             doc.set_selection(view.id, Selection::point(pos));
         }
     });
-    cx.editor.autoinfo = Some(Info::new("Goto mark", &[("a-z", "mark name")]));
+    cx.editor.autoinfo = Some(Info::new(
+        "Goto mark",
+        &[
+            ("a-z", "buffer mark"),
+            ("A-Z", "global mark"),
+            ("0-9", "recent file"),
+            ("` '", "before last jump"),
+        ],
+    ));
 }
 
 // vim `gi`: re-enter insert mode at the position where insert mode was last
@@ -14451,6 +14518,12 @@ fn insert_last_inserted_and_stop(cx: &mut Context) {
 // Store a jump on the jumplist.
 fn push_jump(view: &mut View, doc: &mut Document) {
     doc.append_changes_to_history(view);
+    // vim `` ` ``/`'` "previous context" mark: remember where the cursor was
+    // before the jump so `` `` `` (exact) and `''` (line) return to it. Both
+    // marks share the position; the two keys differ only in how goto resolves.
+    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    doc.set_mark('`', pos);
+    doc.set_mark('\'', pos);
     let jump = (doc.id(), doc.selection(view.id).clone());
     view.push_jump(doc, jump);
 }

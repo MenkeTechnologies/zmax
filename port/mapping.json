@@ -27483,5 +27483,117 @@
    "key:rmail:q"
   ],
   "note": "Rmail summary q (quit)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_add_label",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:a"
+  ],
+  "note": "rmail-add-label -> Rmail a (inline prompt, comma-separated labels)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_kill_label",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:k"
+  ],
+  "note": "rmail-kill-label -> Rmail k (inline prompt)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_summary_by_labels",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:l"
+  ],
+  "note": "rmail-summary-by-labels -> Rmail l (prompt, filtered summary pane)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_search",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-s"
+  ],
+  "note": "rmail-search -> Rmail M-s (inline prompt, forward substring search)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_input",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:i"
+  ],
+  "note": "rmail-input -> Rmail i (prompt, load another mbox file)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_output",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:o"
+  ],
+  "note": "rmail-output -> Rmail o (prompt, append current message to an mbox file)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_output_body_to_file",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:w"
+  ],
+  "note": "rmail-output-body-to-file -> Rmail w (prompt, write body to a file)"
+ },
+ {
+  "spec_id": "emacs.keybinding.a_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:a"
+  ],
+  "note": "Rmail a"
+ },
+ {
+  "spec_id": "emacs.keybinding.k_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:k"
+  ],
+  "note": "Rmail k"
+ },
+ {
+  "spec_id": "emacs.keybinding.l_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:l"
+  ],
+  "note": "Rmail l"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_s_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-s"
+  ],
+  "note": "Rmail M-s (rmail-search)"
+ },
+ {
+  "spec_id": "emacs.keybinding.i_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:i"
+  ],
+  "note": "Rmail i"
+ },
+ {
+  "spec_id": "emacs.keybinding.o_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:o"
+  ],
+  "note": "Rmail o"
+ },
+ {
+  "spec_id": "emacs.keybinding.w_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:w"
+  ],
+  "note": "Rmail w"
  }
 ]

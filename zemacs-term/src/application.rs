@@ -133,6 +133,11 @@ impl Application {
         );
         Self::load_configured_theme(&mut editor, &config.load(), &mut terminal, theme_mode);
 
+        // Restore vim global marks (`A`-`Z`) and numbered file marks (`0`-`9`)
+        // from the previous session's `.zemacsinfo`, so `` `A ``/`` `3 `` jump
+        // across restarts. Buffer-local `a`-`z` marks stay per-document.
+        editor.global_marks = crate::zemacsinfo::load();
+
         let keys = Box::new(Map::new(Arc::clone(&config), |config: &Config| {
             &config.keys
         }));

@@ -1524,6 +1524,19 @@ impl Default for FzfConfig {
     }
 }
 
+/// A vim global mark (`A`-`Z`) or numbered file mark (`0`-`9`): a file path plus
+/// a `(line, col)` position (both 0-based). Unlike the buffer-local `a`-`z` marks
+/// (stored per-`Document`), these live on the `Editor` so they survive buffer
+/// close and cross-file jumps, and round-trip through `.zemacsinfo`. Position is
+/// stored as line/col (not a char offset) so it stays meaningful after the file
+/// changes between sessions.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GlobalMark {
+    pub path: PathBuf,
+    pub line: usize,
+    pub col: usize,
+}
+
 pub struct Editor {
     /// Current editing mode.
     pub mode: Mode,
@@ -1570,6 +1583,13 @@ pub struct Editor {
 
     pub debug_adapters: dap::registry::Registry,
     pub breakpoints: HashMap<PathBuf, Vec<Breakpoint>>,
+
+    /// vim global marks (`A`-`Z`) and numbered file marks (`0`-`9`), keyed by
+    /// mark char. Unlike buffer-local `a`-`z` marks these persist across buffer
+    /// close, jump across files, and round-trip through `.zemacsinfo`. Numbered
+    /// marks are populated on startup from the recent-files history and are not
+    /// user-settable (vim ignores `m0`-`m9`).
+    pub global_marks: HashMap<char, GlobalMark>,
 
     /// The global vim quickfix list and the index of the current entry. Filled
     /// by `:cgetexpr`/`:cbuffer`/`:Diagnostics`/`:make`, navigated with
@@ -1822,6 +1842,7 @@ impl Editor {
             diagnostics: Diagnostics::new(),
             diff_providers: DiffProviderRegistry::default(),
             debug_adapters: dap::registry::Registry::new(),
+            global_marks: HashMap::new(),
             breakpoints: HashMap::new(),
             quickfix: Vec::new(),
             quickfix_idx: None,
