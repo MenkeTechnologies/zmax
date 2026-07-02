@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-1027e525.js";
+            window.path_to_searchindex_js = "searchindex-80a4476f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -198,6 +198,7 @@
 <tr><td><code>:terminal</code>, <code>:term</code></td><td>Open an integrated terminal (PTY shell) running $SHELL.</td></tr>
 <tr><td><code>:ide</code>, <code>:workbench</code></td><td>Enter IDE mode (file-tree sidebar + panels, like <code>--ide</code> / F2).</td></tr>
 <tr><td><code>:diff</code>, <code>:gdiff</code></td><td>Open a read-only side-by-side diff of the buffer vs. its git HEAD version.</td></tr>
+<tr><td><code>:reveal</code>, <code>:browse</code>, <code>:open-repo</code></td><td>Open this repository’s homepage (GitHub/GitLab/Bitbucket/…) in the browser.</td></tr>
 <tr><td><code>:compare-ref</code>, <code>:compare-branch</code></td><td>Diff the buffer against its version at a git ref (JetBrains Compare with Branch).</td></tr>
 <tr><td><code>:merge</code>, <code>:resolve</code></td><td>Resolve the buffer’s git merge conflicts in a 3-pane (ours/result/theirs) view.</td></tr>
 <tr><td><code>:magit</code>, <code>:git</code>, <code>:gst</code></td><td>Open the Magit-style git status (stage/unstage/discard/commit changes by section).</td></tr>
@@ -289,7 +290,7 @@
 <tr><td><code>:write-buffer-close!</code>, <code>:wbc!</code></td><td>Force write changes to disk creating necessary subdirectories and closes the buffer. Accepts an optional path (:write-buffer-close! some/path.txt)</td></tr>
 <tr><td><code>:new</code>, <code>:n</code></td><td>Create a new scratch buffer.</td></tr>
 <tr><td><code>:Scratch</code>, <code>:scratch</code></td><td>Open a new scratch buffer, optionally with a language (SPC b S).</td></tr>
-<tr><td><code>:RevealInFinder</code>, <code>:reveal</code></td><td>Reveal the current file in the OS file manager (JetBrains Reveal in Finder).</td></tr>
+<tr><td><code>:RevealInFinder</code>, <code>:reveal-in-finder</code></td><td>Reveal the current file in the OS file manager (JetBrains Reveal in Finder).</td></tr>
 <tr><td><code>:compose-mail</code>, <code>:mail</code>, <code>:compose</code></td><td>Open a message-mode mail draft (emacs compose-mail, C-x m). :compose-mail [to] [subject…]</td></tr>
 <tr><td><code>:compose-mail-other-window</code></td><td>Open a mail draft in a split (emacs compose-mail-other-window).</td></tr>
 <tr><td><code>:message-send</code></td><td>Assemble and queue the current mail draft (emacs message-send, C-c C-s).</td></tr>
