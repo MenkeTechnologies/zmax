@@ -12,6 +12,7 @@ _zemacs() {
 		"-V[Prints version information]" \
 		"--version[Prints version information]" \
 		"--tutor[Loads the tutorial]" \
+		"--ide[Boot with the IDE workbench open (file-tree sidebar, etc.)]" \
 		"--health[Checks for errors in editor setup]:language:->health" \
 		"-g[Fetches or builds tree-sitter grammars]:action:->grammar" \
 		"--grammar[Fetches or builds tree-sitter grammars]:action:->grammar" \
@@ -26,7 +27,7 @@ _zemacs() {
 
 	case "$state" in
 	health)
-		local languages=($(hx --health all-languages | tail -n '+2' | awk '{print $1}' | sed 's/\x1b\[[0-9;]*m//g;s/[✘✓]//g'))
+		local languages=($(zemacs --health all-languages | tail -n '+2' | awk '{print $1}' | sed 's/\x1b\[[0-9;]*m//g;s/[✘✓]//g'))
 		_values 'language' $languages
 		;;
 	grammar)
