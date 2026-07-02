@@ -28483,5 +28483,29 @@
    "static:kmacro_set_format"
   ],
   "note": "kmacro-set-format: set the printf format the counter is inserted with (%d, %03d, 0x%x)"
+ },
+ {
+  "spec_id": "emacs.command.flyspell_auto_correct_word",
+  "status": "ported",
+  "evidence": [
+   "static:flyspell_auto_correct_word"
+  ],
+  "note": "flyspell-auto-correct-word: replace the misspelled word at point with the top zemacs_spell suggestion"
+ },
+ {
+  "spec_id": "emacs.command.view_file",
+  "status": "ported",
+  "evidence": [
+   "static:view_file"
+  ],
+  "note": "view-file (C-x C-r): open a file read-only for viewing (sets the buffer read-only)"
+ },
+ {
+  "spec_id": "emacs.command.view_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:view_buffer"
+  ],
+  "note": "view-buffer: make the current buffer read-only for viewing"
  }
 ]

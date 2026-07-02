@@ -1046,6 +1046,9 @@ impl MappableCommand {
         spell_undo, "Undo a zg/zw for the word under cursor (zug)",
         spell_suggest, "Show spelling suggestions for the word under cursor (z=)",
         ispell_word, "Spell-check the word at point with aspell/hunspell (emacs ispell-word, M-$)",
+        flyspell_auto_correct_word, "Correct the word at point with the top suggestion (emacs flyspell-auto-correct-word)",
+        view_file, "Open a file read-only for viewing (emacs view-file, C-x C-r)",
+        view_buffer, "Make the current buffer read-only for viewing (emacs view-buffer)",
         ispell_region, "Spell-check the selection with an external speller (emacs ispell-region)",
         ispell_buffer, "Spell-check the whole buffer with an external speller (emacs ispell-buffer)",
         ispell, "Spell-check the region or buffer with an external speller (emacs ispell)",
@@ -18808,6 +18811,62 @@ fn spell_suggest(cx: &mut Context) {
         );
         doc.apply(&tx, view.id);
     });
+}
+
+/// Emacs `flyspell-auto-correct-word` (C-.): replace the misspelled word at
+/// point with the top spelling suggestion, without prompting.
+fn flyspell_auto_correct_word(cx: &mut Context) {
+    let Some((start, end, word)) = spell_word_under_cursor(cx) else {
+        cx.editor.set_status("No word at point");
+        return;
+    };
+    if !crate::spell::is_misspelled(&word) {
+        cx.editor.set_status(format!("\"{word}\" is correct"));
+        return;
+    }
+    let Some(repl) = crate::spell::suggest(&word).into_iter().next() else {
+        cx.editor.set_status(format!("No suggestions for '{word}'"));
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(
+        doc.text(),
+        [(start, end, Some(repl.as_str().into()))].into_iter(),
+    );
+    doc.apply(&tx, view.id);
+    cx.editor.set_status(format!("corrected to \"{repl}\""));
+}
+
+/// Emacs `view-buffer`: make the current buffer read-only for viewing.
+fn view_buffer(cx: &mut Context) {
+    let (_, doc) = current!(cx.editor);
+    doc.readonly = true;
+    cx.editor.set_status("View mode: buffer is read-only");
+}
+
+/// Emacs `view-file` (C-x C-r): open a file read-only for viewing. Prompts for
+/// the path.
+fn view_file(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "View file: ".into(),
+        None,
+        |_editor, _input| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(input.trim()));
+            match cx.editor.open(&path, Action::Replace) {
+                Ok(_) => {
+                    let (_, doc) = current!(cx.editor);
+                    doc.readonly = true;
+                    cx.editor.set_status("View mode: read-only");
+                }
+                Err(e) => cx.editor.set_error(format!("view-file: {e}")),
+            }
+        },
+    );
 }
 
 // ---------------------------------------------------------------------------

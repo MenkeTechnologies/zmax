@@ -734,6 +734,9 @@
 | `spell_undo` | Undo a zg/zw for the word under cursor (zug) | normal: `` zuG ``, `` zuW ``, `` zug ``, `` zuw `` |
 | `spell_suggest` | Show spelling suggestions for the word under cursor (z=) | normal: `` z= `` |
 | `ispell_word` | Spell-check the word at point with aspell/hunspell (emacs ispell-word, M-$) |  |
+| `flyspell_auto_correct_word` | Correct the word at point with the top suggestion (emacs flyspell-auto-correct-word) |  |
+| `view_file` | Open a file read-only for viewing (emacs view-file, C-x C-r) |  |
+| `view_buffer` | Make the current buffer read-only for viewing (emacs view-buffer) |  |
 | `ispell_region` | Spell-check the selection with an external speller (emacs ispell-region) |  |
 | `ispell_buffer` | Spell-check the whole buffer with an external speller (emacs ispell-buffer) |  |
 | `ispell` | Spell-check the region or buffer with an external speller (emacs ispell) |  |
