@@ -52,6 +52,7 @@ pub mod text_engine;
 pub mod textobject;
 mod transaction;
 pub mod uri;
+pub mod whitespace;
 pub mod wrap;
 
 pub mod unicode {
