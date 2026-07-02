@@ -3,6 +3,7 @@ pub mod context_menu;
 pub mod dashboard;
 pub mod switcher;
 mod document;
+pub mod dired;
 pub(crate) mod editor;
 mod file_tree;
 pub mod help;

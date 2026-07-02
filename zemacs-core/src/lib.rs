@@ -15,6 +15,7 @@ pub mod fold;
 pub mod fuzzy;
 pub mod graphemes;
 pub mod history;
+pub mod dired;
 pub mod increment;
 pub mod indent;
 pub mod line_ending;

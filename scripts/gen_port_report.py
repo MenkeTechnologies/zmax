@@ -230,6 +230,8 @@ def parse_keymap():
     # ui/prompt.rs handles them with a hardcoded `match event { ... }`. Parse
     # that handler so the cmdline-editing surface is measured from real code.
     result["command"] = parse_prompt_keymap()
+    # Dired is a modal Component; expose its keys as a `dired` mode.
+    result["dired"] = parse_dired_keymap()
     return result
 
 
@@ -274,6 +276,38 @@ def parse_prompt_keymap():
         key = _NAMED_KEYS.get(arg, arg)  # named key -> canonical, else literal char
         prefix = {"ctrl": "C-", "alt": "A-", "shift": "S-", "key": ""}[macro]
         out[f"{prefix}{key}"] = "prompt"
+    return out
+
+
+def parse_dired_keymap():
+    """Extract the keys the Dired mode handles into {chord: "dired"}.
+
+    Parses the `match key { ... }` arms in ui/dired.rs (ctrl!/alt!/key! macros,
+    both `'c'` char literals and named keys). Dired is a modal Component whose
+    keys live in its `handle_event`, not the keymap macro, so — like the `:`
+    prompt (parse_prompt_keymap) — they are read straight from source, exposing a
+    `dired` mode so `key:dired:m` etc. resolve for the Emacs Dired keybindings.
+    """
+    path = os.path.join(ZEMACS_TERM, "ui", "dired.rs")
+    try:
+        src = open(path, encoding="utf-8").read()
+    except OSError:
+        return {}
+    body = ""
+    for m in re.finditer(r"\bmatch\s+key\s*\{", src):
+        i = _match_delim(src, m.end(), "{", "}")
+        candidate = src[m.end() : i - 1]
+        if "key!(" in candidate or "ctrl!(" in candidate:
+            body = candidate
+            break
+    if not body:
+        return {}
+    out = {}
+    for mm in re.finditer(r"\b(ctrl|alt|shift|key)!\(\s*(?:'(.)'|(\w+))\s*\)", body):
+        macro, ch, named = mm.group(1), mm.group(2), mm.group(3)
+        key = ch if ch is not None else _NAMED_KEYS.get(named, named)
+        prefix = {"ctrl": "C-", "alt": "A-", "shift": "S-", "key": ""}[macro]
+        out[f"{prefix}{key}"] = "dired"
     return out
 
 

@@ -26403,5 +26403,269 @@
    "static:expand_abbrev"
   ],
   "note": "emacs C-x ' (expand-abbrev \u2014 expand the abbrev before point) -> expand_abbrev"
+ },
+ {
+  "spec_id": "emacs.command.dired",
+  "status": "ported",
+  "evidence": [
+   "static:dired"
+  ],
+  "note": "emacs dired -> zemacs dired opens Dired"
+ },
+ {
+  "spec_id": "emacs.command.dired_copy_filename_as_kill",
+  "status": "ported",
+  "evidence": [
+   "key:dired:w"
+  ],
+  "note": "emacs dired-copy-filename-as-kill -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_delete",
+  "status": "ported",
+  "evidence": [
+   "key:dired:D"
+  ],
+  "note": "emacs dired-do-delete -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_flagged_delete",
+  "status": "ported",
+  "evidence": [
+   "key:dired:x"
+  ],
+  "note": "emacs dired-do-flagged-delete -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_find_file",
+  "status": "ported",
+  "evidence": [
+   "key:dired:ret"
+  ],
+  "note": "emacs dired-find-file -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_flag_file_deletion",
+  "status": "ported",
+  "evidence": [
+   "key:dired:d"
+  ],
+  "note": "emacs dired-flag-file-deletion -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_jump",
+  "status": "ported",
+  "evidence": [
+   "static:dired_jump"
+  ],
+  "note": "emacs dired-jump -> zemacs dired_jump opens Dired"
+ },
+ {
+  "spec_id": "emacs.command.dired_mark",
+  "status": "ported",
+  "evidence": [
+   "key:dired:m"
+  ],
+  "note": "emacs dired-mark -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_next_line",
+  "status": "ported",
+  "evidence": [
+   "key:dired:C-n"
+  ],
+  "note": "emacs dired-next-line -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_previous_line",
+  "status": "ported",
+  "evidence": [
+   "key:dired:C-p"
+  ],
+  "note": "emacs dired-previous-line -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_sort_toggle_or_edit",
+  "status": "ported",
+  "evidence": [
+   "key:dired:s"
+  ],
+  "note": "emacs dired-sort-toggle-or-edit -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_toggle_marks",
+  "status": "ported",
+  "evidence": [
+   "key:dired:t"
+  ],
+  "note": "emacs dired-toggle-marks -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_unmark",
+  "status": "ported",
+  "evidence": [
+   "key:dired:u"
+  ],
+  "note": "emacs dired-unmark -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_unmark_all_files",
+  "status": "ported",
+  "evidence": [
+   "key:dired:U"
+  ],
+  "note": "emacs dired-unmark-all-files -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_unmark_all_marks",
+  "status": "ported",
+  "evidence": [
+   "key:dired:U"
+  ],
+  "note": "emacs dired-unmark-all-marks -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_unmark_backward",
+  "status": "ported",
+  "evidence": [
+   "key:dired:backspace"
+  ],
+  "note": "emacs dired-unmark-backward -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.command.dired_up_directory",
+  "status": "ported",
+  "evidence": [
+   "key:dired:^"
+  ],
+  "note": "emacs dired-up-directory -> zemacs Dired mode key"
+ },
+ {
+  "spec_id": "emacs.keybinding.caret_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:^"
+  ],
+  "note": "emacs Dired ^ -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.c_n_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:C-n"
+  ],
+  "note": "emacs Dired C-n -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.c_p_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:C-p"
+  ],
+  "note": "emacs Dired C-p -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.d_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:d"
+  ],
+  "note": "emacs Dired d -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.d_lparendired_rparen_1",
+  "status": "ported",
+  "evidence": [
+   "key:dired:D"
+  ],
+  "note": "emacs Dired D -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.del_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:backspace"
+  ],
+  "note": "emacs Dired DEL -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.f_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:f"
+  ],
+  "note": "emacs Dired f -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:m"
+  ],
+  "note": "emacs Dired m -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.q_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:q"
+  ],
+  "note": "emacs Dired q -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.ret_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:ret"
+  ],
+  "note": "emacs Dired RET -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.s_lparendired_rparen_1",
+  "status": "ported",
+  "evidence": [
+   "key:dired:s"
+  ],
+  "note": "emacs Dired s -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.t_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:t"
+  ],
+  "note": "emacs Dired t -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.u_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:u"
+  ],
+  "note": "emacs Dired u -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.u_lparendired_rparen_1",
+  "status": "ported",
+  "evidence": [
+   "key:dired:U"
+  ],
+  "note": "emacs Dired U -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.w_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:w"
+  ],
+  "note": "emacs Dired w -> zemacs Dired mode"
+ },
+ {
+  "spec_id": "emacs.keybinding.x_lparendired_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:dired:x"
+  ],
+  "note": "emacs Dired x -> zemacs Dired mode"
  }
 ]

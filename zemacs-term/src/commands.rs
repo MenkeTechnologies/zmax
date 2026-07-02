@@ -614,6 +614,8 @@ impl MappableCommand {
         file_explorer, "Open file explorer in workspace root",
         file_explorer_in_current_buffer_directory, "Open file explorer at current buffer's directory",
         file_explorer_in_current_directory, "Open file explorer at current working directory",
+        dired, "Open the Dired directory editor (emacs C-x d)",
+        dired_jump, "Open Dired on the current buffer's directory (emacs C-x C-j)",
         code_action, "Perform code action",
         extract_refactor, "Extract refactoring (method/variable/constant) via LSP (IntelliJ Extract)",
         extract_function, "Extract Method/Function via LSP (IntelliJ Extract Method)",
@@ -12276,6 +12278,28 @@ fn file_explorer(cx: &mut Context) {
 
     if let Ok(picker) = ui::file_explorer(root, cx.editor) {
         cx.push_layer(Box::new(overlaid(picker)));
+    }
+}
+
+/// Emacs `dired` (C-x d): open the Dired directory editor on the workspace root.
+fn dired(cx: &mut Context) {
+    let root = find_workspace().0;
+    match crate::ui::dired::Dired::new(root) {
+        Ok(d) => cx.push_layer(Box::new(d)),
+        Err(e) => cx.editor.set_error(format!("dired: {e}")),
+    }
+}
+
+/// Emacs `dired-jump` (C-x C-j): open Dired on the current buffer's directory,
+/// falling back to the working directory.
+fn dired_jump(cx: &mut Context) {
+    let dir = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(zemacs_stdx::env::current_working_dir);
+    match crate::ui::dired::Dired::new(dir) {
+        Ok(d) => cx.push_layer(Box::new(d)),
+        Err(e) => cx.editor.set_error(format!("dired: {e}")),
     }
 }
 
