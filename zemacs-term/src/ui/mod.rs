@@ -6,6 +6,7 @@ pub mod bufmenu;
 pub mod calc;
 pub mod calendar;
 pub mod rmail;
+pub mod occur;
 mod document;
 pub mod dired;
 pub(crate) mod editor;
