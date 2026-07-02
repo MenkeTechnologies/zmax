@@ -3,6 +3,7 @@
 | `:terminal`, `:term` | Open an integrated terminal (PTY shell) running $SHELL. |
 | `:ide`, `:workbench` | Enter IDE mode (file-tree sidebar + panels, like `--ide` / F2). |
 | `:diff`, `:gdiff` | Open a read-only side-by-side diff of the buffer vs. its git HEAD version. |
+| `:compare-ref`, `:compare-branch` | Diff the buffer against its version at a git ref (JetBrains Compare with Branch). |
 | `:merge`, `:resolve` | Resolve the buffer's git merge conflicts in a 3-pane (ours/result/theirs) view. |
 | `:magit`, `:git`, `:gst` | Open the Magit-style git status (stage/unstage/discard/commit changes by section). |
 | `:hex`, `:hexview`, `:hexedit` | Open a read-only xxd-style hex viewer of a file's raw bytes (optional path; defaults to the buffer's file). |
@@ -29,6 +30,43 @@
 | `:emmet`, `:zencode` | Expand the emmet/zen HTML abbreviation before the cursor. |
 | `:quit!`, `:q!` | Force close the current view, ignoring unsaved changes. |
 | `:open`, `:o`, `:edit`, `:e` | Open a file from disk into the current view. |
+| `:args`, `:ar` | Show the argument list, or set it to the given files and edit the first (vim :args). |
+| `:argadd`, `:arga` | Add files to the argument list after the current entry (vim :argadd). |
+| `:argedit`, `:arge` | Add a file to the argument list and edit it (vim :argedit). |
+| `:argdelete`, `:argd` | Delete argument-list entries matching the given glob patterns (vim :argdelete). |
+| `:argdedupe` | Remove duplicate entries from the argument list (vim :argdedupe). |
+| `:next`, `:argnext` | Edit the next file in the argument list (vim :next). |
+| `:previous`, `:Next`, `:prev`, `:argprev` | Edit the previous file in the argument list (vim :previous / :Next). |
+| `:first`, `:rewind`, `:rew` | Edit the first file in the argument list (vim :first / :rewind). |
+| `:last`, `:la` | Edit the last file in the argument list (vim :last). |
+| `:argument`, `:argu` | Edit the Nth file in the argument list (vim :argument). |
+| `:argdo` | Run an Ex command on each file in the argument list (vim :argdo). |
+| `:all`, `:sall` | Open a window for each file in the argument list (vim :all / :sall). |
+| `:compile` | Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile). |
+| `:recompile` | Re-run the last compile command (emacs recompile). |
+| `:next-error`, `:cnext-error` | Visit the next compilation error's location (emacs next-error / M-g n). |
+| `:previous-error`, `:cprevious-error` | Visit the previous compilation error's location (emacs previous-error / M-g p). |
+| `:first-error` | Visit the first compilation error's location (emacs first-error). |
+| `:abbreviate`, `:ab` | List or define an abbreviation for Insert and Command-line mode (vim :abbreviate). |
+| `:iabbrev`, `:ia` | List or define an Insert-mode abbreviation (vim :iabbrev). |
+| `:cabbrev`, `:ca` | List or define a Command-line-mode abbreviation (vim :cabbrev). |
+| `:unabbreviate`, `:una` | Remove an abbreviation for both modes (vim :unabbreviate). |
+| `:iunabbreviate`, `:iuna` | Remove an Insert-mode abbreviation (vim :iunabbreviate). |
+| `:cunabbreviate`, `:cuna` | Remove a Command-line-mode abbreviation (vim :cunabbreviate). |
+| `:abclear`, `:abc` | Remove all abbreviations for both modes (vim :abclear). |
+| `:iabclear`, `:iabc` | Remove all Insert-mode abbreviations (vim :iabclear). |
+| `:cabclear`, `:cabc` | Remove all Command-line-mode abbreviations (vim :cabclear). |
+| `:bfirst`, `:brewind`, `:brew` | Go to the first buffer in the buffer list (vim :bfirst / :brewind). |
+| `:blast`, `:bl` | Go to the last buffer in the buffer list (vim :blast). |
+| `:bmodified`, `:bm` | Go to the next modified buffer (vim :bmodified). |
+| `:ball`, `:sball` | Open a window for each buffer in the buffer list (vim :ball). |
+| `:badd` | Add a file to the buffer list without editing it (vim :badd). |
+| `:bufdo` | Run an Ex command in each listed buffer (vim :bufdo). |
+| `:spellwrong`, `:spellw` | Mark words as misspelled (vim :spellwrong). |
+| `:spellrare`, `:spellra` | Flag words as rare (vim :spellrare). |
+| `:spellundo`, `:spellu` | Remove words from the good/bad spell lists (vim :spellundo). |
+| `:spelldump`, `:spelld` | Open a buffer listing the user's known-good words (vim :spelldump). |
+| `:spellinfo`, `:spelli` | Show the spell wordlist location and sizes (vim :spellinfo). |
 | `:buffer-close`, `:bc`, `:bclose` | Close the current buffer. |
 | `:buffer-close!`, `:bc!`, `:bclose!` | Close the current buffer forcefully, ignoring unsaved changes. |
 | `:buffer-close-others`, `:bco`, `:bcloseother` | Close all buffers but the currently focused one. |
@@ -37,11 +75,35 @@
 | `:buffer-close-all!`, `:bca!`, `:bcloseall!` | Force close all buffers ignoring unsaved changes without quitting. |
 | `:buffer-next`, `:bn`, `:bnext` | Goto next buffer. |
 | `:buffer-previous`, `:bp`, `:bprev` | Goto previous buffer. |
+| `:nohlsearch`, `:noh`, `:nohl` | Clear the persistent search highlight (vim :nohlsearch). |
+| `:clearjumps` | Clear the current view's jump list (vim :clearjumps). |
+| `:project-replace`, `:replace-in-files` | Regex-replace across all matching workspace files (JetBrains Replace in Files). |
+| `:buffers`, `:ls`, `:files` | List open buffers in the buffer picker (vim :buffers/:ls/:files). |
+| `:jumps` | List the jump list in a picker (vim :jumps). |
+| `:oldfiles` | Pick from recently edited files (vim :oldfiles). |
+| `:marks` | List the buffer's marks in a picker (vim :marks). |
+| `:history` | Pick from the command-line history (vim :history). |
+| `:delmarks`, `:delm` | Delete the listed named marks (vim :delmarks abc). |
+| `:delmarks!`, `:delm!` | Delete all letter marks (vim :delmarks!). |
 | `:write`, `:w` | Write changes to disk. Accepts an optional path (:write some/path.txt) |
 | `:write!`, `:w!` | Force write changes to disk creating necessary subdirectories. Accepts an optional path (:write! some/path.txt) |
 | `:write-buffer-close`, `:wbc` | Write changes to disk and closes the buffer. Accepts an optional path (:write-buffer-close some/path.txt) |
 | `:write-buffer-close!`, `:wbc!` | Force write changes to disk creating necessary subdirectories and closes the buffer. Accepts an optional path (:write-buffer-close! some/path.txt) |
 | `:new`, `:n` | Create a new scratch buffer. |
+| `:Scratch`, `:scratch` | Open a new scratch buffer, optionally with a language (SPC b S). |
+| `:RevealInFinder`, `:reveal` | Reveal the current file in the OS file manager (JetBrains Reveal in Finder). |
+| `:compose-mail`, `:mail`, `:compose` | Open a message-mode mail draft (emacs compose-mail, C-x m). :compose-mail [to] [subject...] |
+| `:compose-mail-other-window` | Open a mail draft in a split (emacs compose-mail-other-window). |
+| `:message-send` | Assemble and queue the current mail draft (emacs message-send, C-c C-s). |
+| `:message-send-and-exit` | Queue the draft and kill its buffer (emacs message-send-and-exit, C-c C-c). |
+| `:message-kill-buffer` | Kill the mail compose buffer (emacs message-kill-buffer, C-c C-k). |
+| `:message-goto-to` | Move point to the To: header (emacs message-goto-to, C-c C-f C-t). |
+| `:message-goto-subject` | Move point to the Subject: header (emacs message-goto-subject, C-c C-f C-s). |
+| `:message-goto-cc` | Move point to the Cc: header (emacs message-goto-cc, C-c C-f C-c). |
+| `:message-goto-bcc` | Move point to the Bcc: header (emacs message-goto-bcc, C-c C-f C-b). |
+| `:message-goto-body`, `:mail-text` | Move point to the message body (emacs message-goto-body / mail-text, C-c C-b). |
+| `:message-insert-signature` | Insert the signature block at point (emacs message-insert-signature, C-c C-w). |
+| `:mml-attach-file`, `:mail-add-attachment` | Attach a file as a MIME part (emacs mml-attach-file, C-c C-a). :mml-attach-file <path> |
 | `:format`, `:fmt` | Format the file using an external formatter or language server. |
 | `:indent-style` | Set the indentation style for editing. ('t' for tabs or 1-16 for number of spaces.) |
 | `:line-ending` | Set the document's default line ending. Options: crlf, lf. |
@@ -71,6 +133,68 @@
 | `:theme-prev` | Switch to the previous theme (alphabetical). |
 | `:run`, `:r!` | Run a command in the IDE Run tool window (defaults to `cargo run`). |
 | `:grep`, `:rg`, `:search-project` | Search the project (ripgrep) and show jumpable results in the Run console. |
+| `:copen`, `:cwindow`, `:cw` | Open the quickfix list window. |
+| `:cclose`, `:ccl` | Close the quickfix list window. |
+| `:cnext`, `:cn` | Jump to the next quickfix entry. |
+| `:cprevious`, `:cprev`, `:cp`, `:cN` | Jump to the previous quickfix entry. |
+| `:cfirst`, `:crewind`, `:cr` | Jump to the first quickfix entry. |
+| `:clast`, `:cla` | Jump to the last quickfix entry. |
+| `:cc` | Jump to the [count]th quickfix entry (or the current one). |
+| `:cnfile`, `:cnf` | Jump to the first quickfix entry in the next file. |
+| `:cpfile`, `:cpf` | Jump to the last quickfix entry in the previous file. |
+| `:cabove`, `:cabo` | Jump to the [count]th quickfix entry above the cursor line. |
+| `:cbelow`, `:cbel` | Jump to the [count]th quickfix entry below the cursor line. |
+| `:cbefore`, `:cbe` | Jump to the [count]th quickfix entry before the cursor position. |
+| `:cafter`, `:caf` | Jump to the [count]th quickfix entry after the cursor position. |
+| `:cbuffer`, `:cb` | Read the current buffer as error lines into the quickfix list. |
+| `:cgetbuffer` | Read the current buffer into the quickfix list without jumping. |
+| `:caddbuffer` | Append the current buffer's error lines to the quickfix list. |
+| `:cexpr`, `:cex` | Parse the argument text into the quickfix list and jump to the first entry. |
+| `:cgetexpr` | Parse the argument text into the quickfix list without jumping. |
+| `:caddexpr` | Append the argument text's entries to the quickfix list. |
+| `:cfile`, `:cf` | Read a file of error lines into the quickfix list and jump to the first entry. |
+| `:cgetfile` | Read a file of error lines into the quickfix list without jumping. |
+| `:lopen`, `:lwindow`, `:lw` | Open the location list window for the current window. |
+| `:lclose`, `:lcl` | Close the location list window. |
+| `:lnext`, `:lne`, `:ln` | Jump to the next location list entry. |
+| `:lprevious`, `:lprev`, `:lp`, `:lN` | Jump to the previous location list entry. |
+| `:lfirst`, `:lrewind`, `:lr` | Jump to the first location list entry. |
+| `:llast`, `:lla` | Jump to the last location list entry. |
+| `:ll` | Jump to the [count]th location list entry (or the current one). |
+| `:labove`, `:lab` | Jump to the [count]th location list entry above the cursor line. |
+| `:lbelow`, `:lbel` | Jump to the [count]th location list entry below the cursor line. |
+| `:lbefore`, `:lbe` | Jump to the [count]th location list entry before the cursor position. |
+| `:lafter`, `:laf` | Jump to the [count]th location list entry after the cursor position. |
+| `:lbuffer`, `:lb` | Read the current buffer as error lines into the location list. |
+| `:lgetbuffer` | Read the current buffer into the location list without jumping. |
+| `:lexpr`, `:lex` | Parse the argument text into the location list and jump to the first entry. |
+| `:lgetexpr` | Parse the argument text into the location list without jumping. |
+| `:lfile`, `:lf` | Read a file of error lines into the location list and jump to the first entry. |
+| `:lgetfile` | Read a file of error lines into the location list without jumping. |
+| `:tabnew`, `:tabe`, `:tabedit` | Open a new tabpage (optionally editing a file). |
+| `:tabnext`, `:tabn` | Go to the next tabpage (or tab [count]). |
+| `:tabprevious`, `:tabp`, `:tabNext`, `:tabN` | Go to the previous tabpage. |
+| `:tabclose`, `:tabc` | Close the current tabpage. |
+| `:tabonly`, `:tabo` | Close all tabpages except the current one. |
+| `:tabfirst`, `:tabrewind`, `:tabr` | Go to the first tabpage. |
+| `:tablast` | Go to the last tabpage. |
+| `:tabmove`, `:tabm` | Move the current tabpage to position [N] (default: last). |
+| `:tabdo` | Run an ex-command in every tabpage. |
+| `:tabs` | List the tabpages and switch to the selected one. |
+| `:cdo` | Run an ex-command on each quickfix entry. |
+| `:cfdo` | Run an ex-command on the first quickfix entry of each file. |
+| `:ldo` | Run an ex-command on each location list entry. |
+| `:lfdo` | Run an ex-command on the first location entry of each file. |
+| `:clist`, `:cl` | Show the quickfix list. |
+| `:llist`, `:lli` | Show the location list. |
+| `:colder`, `:col` | Go to an older quickfix list. |
+| `:cnewer`, `:cnew` | Go to a newer quickfix list. |
+| `:chistory`, `:chi` | Show the quickfix list history position. |
+| `:caddfile` | Append a file of error lines to the quickfix list. |
+| `:laddbuffer` | Append the current buffer's error lines to the location list. |
+| `:laddexpr` | Append the argument text's entries to the location list. |
+| `:laddfile` | Append a file of error lines to the location list. |
+| `:lpfile`, `:lpf` | Jump to the last location entry in the previous file. |
 | `:shell-quote`, `:sh-quote` | Wrap the selection in safe shell single-quotes. |
 | `:wrap-tag`, `:tag` | Wrap each selection in <tag>…</tag>. |
 | `:csv-column`, `:csv-col` | Replace the selected CSV/TSV with just its Nth column (1-based). |
@@ -88,9 +212,9 @@
 | `:json-unique`, `:json-uniq` | Remove duplicate elements from the selected JSON array (optionally by a field). |
 | `:json-group-by`, `:json-group` | Group the selected JSON array of objects by a field (e.g. :json-group-by city). |
 | `:extract`, `:matches` | Replace the selection with every regex match, one per line (group 1 if present). |
-| `:filter`, `:keep-lines` | Keep only the selected lines matching a regex (in-buffer grep). |
-| `:reject`, `:remove-lines` | Drop the selected lines matching a regex (in-buffer grep -v). |
-| `:count-matches`, `:count-regex` | Report how many regex matches (and matching lines) are in the selection. |
+| `:filter`, `:keep-lines`, `:delete-non-matching-lines` | Keep only the selected lines matching a regex (Emacs keep-lines; in-buffer grep). |
+| `:reject`, `:remove-lines`, `:flush-lines`, `:delete-matching-lines` | Drop the selected lines matching a regex (Emacs flush-lines; in-buffer grep -v). |
+| `:count-matches`, `:count-regex`, `:how-many` | Report how many regex matches (and matching lines) are in the selection (Emacs how-many). |
 | `:uniq-count`, `:frequency` | Collapse the selected lines to `count line`, sorted by frequency (uniq -c | sort -rn). |
 | `:stats`, `:describe` | Show count/sum/mean/min/max of the numbers in the selection (non-destructive). |
 | `:seq`, `:sequence` | Insert an integer sequence, one per line: :seq <start> <end> [step]. |
@@ -240,7 +364,96 @@
 | `:update`, `:u` | Write changes only if the file has been modified. |
 | `:lsp-workspace-command` | Open workspace command picker |
 | `:lsp-restart` | Restarts the given language servers, or all language servers that are used by the current file if no arguments are supplied |
-| `:set`, `:se` | Set options with vim syntax (:set nu, :set nowrap, :set tw=80, :set cursorline) or native :set key value. |
+| `:set`, `:se` | Set options with vim syntax (:set nu, :set nowrap, :set tw=80); no args lists all options. |
+| `:map` | Map {lhs} to {rhs} in normal+select modes (Vim :map). |
+| `:noremap` | Non-recursive :map in normal+select modes. |
+| `:nmap` | Map {lhs} to {rhs} in normal mode (Vim :nmap). |
+| `:nnoremap` | Non-recursive normal-mode map (Vim :nnoremap). |
+| `:imap` | Map {lhs} to {rhs} in insert mode (Vim :imap). |
+| `:inoremap` | Non-recursive insert-mode map (Vim :inoremap). |
+| `:vmap` | Map {lhs} to {rhs} in select/visual mode (Vim :vmap). |
+| `:vnoremap` | Non-recursive select/visual-mode map (Vim :vnoremap). |
+| `:xmap` | Map {lhs} to {rhs} in visual mode (Vim :xmap). |
+| `:xnoremap` | Non-recursive visual-mode map (Vim :xnoremap). |
+| `:smap` | Map {lhs} to {rhs} in select mode (Vim :smap). |
+| `:snoremap` | Non-recursive select-mode map (Vim :snoremap). |
+| `:omap` | Map {lhs} to {rhs} in operator-pending mode (Vim :omap). |
+| `:onoremap` | Non-recursive operator-pending map (Vim :onoremap). |
+| `:unmap` | Remove a runtime {lhs} mapping (normal+select). |
+| `:nunmap` | Remove a runtime normal-mode {lhs} mapping. |
+| `:iunmap` | Remove a runtime insert-mode {lhs} mapping. |
+| `:vunmap` | Remove a runtime select/visual-mode {lhs} mapping. |
+| `:xunmap` | Remove a runtime visual-mode {lhs} mapping. |
+| `:mapclear` | Clear runtime normal+select-mode mappings. |
+| `:nmapclear` | Clear runtime normal-mode mappings. |
+| `:imapclear` | Clear runtime insert-mode mappings. |
+| `:vmapclear` | Clear runtime select/visual-mode mappings. |
+| `:normal`, `:norm` | Execute {commands} as normal-mode keystrokes (vim :normal[!]). |
+| `:mark`, `:k` | Set mark {x} at the cursor position (vim :mark / :k). |
+| `:buffer`, `:buf` | Switch to the open buffer whose path contains {name} (vim :buffer / :b). |
+| `:resize`, `:res` | Adjust the current window height (vim :resize [+/-]{N}). |
+| `:let` | Set a vimscript variable via the embedded interpreter (:let x = 42). |
+| `:Files` | Fuzzy-find files with fzf and open the selection (fzf.vim :Files). |
+| `:GFiles`, `:GitFiles` | Fuzzy-find git-tracked files with fzf and open the pick (fzf.vim :GFiles). |
+| `:Rg`, `:Ag`, `:RG` | Ripgrep the tree with fzf; open the pick at its line (fzf.vim :Rg/:Ag). |
+| `:Todo`, `:TODO`, `:Todos` | TODO tool window: ripgrep TODO/FIXME/HACK/XXX across the tree, jump to the pick. |
+| `:Locate` | locate(1) files with fzf and open the pick (fzf.vim :Locate). |
+| `:BLines` | Fuzzy-search the current buffer's lines with fzf, jump to the pick (fzf.vim :BLines). |
+| `:Lines` | Fuzzy-search lines across all open buffers with fzf, open the pick (fzf.vim :Lines). |
+| `:History` | Fuzzy-pick a recently opened file with fzf and open it (fzf.vim :History). |
+| `:History:` | Fuzzy-pick a past `:` command with fzf and run it (fzf.vim :History:). |
+| `:History/` | Fuzzy-pick a past search with fzf and re-run it (fzf.vim :History/). |
+| `:Filetypes` | Fuzzy-pick a language with fzf and set the buffer's filetype (fzf.vim :Filetypes). |
+| `:Commits` | Fuzzy-pick a repo commit with fzf and show it (fzf.vim :Commits). |
+| `:BCommits` | Fuzzy-pick a commit touching the current file with fzf and show it (fzf.vim :BCommits). |
+| `:fzf-git-show` | (internal) show a `<sha> subject` fzf pick via git show. |
+| `:Jumps` | Fuzzy-pick a jumplist entry with fzf and open it (fzf.vim :Jumps). |
+| `:RecentLocations`, `:recent-locations` | Recent Locations (JetBrains): jump ring newest-first, deduped, with context. |
+| `:LocalHistory`, `:local-history` | Local History (JetBrains): pick a saved snapshot of this file and open it. |
+| `:local-history-open` | (internal) open a `:LocalHistory` snapshot pick. |
+| `:Windows` | Fuzzy-pick an open window with fzf and focus it (fzf.vim :Windows). |
+| `:Marks` | Fuzzy-pick a mark in the current buffer with fzf and jump to it (fzf.vim :Marks). |
+| `:Tags` | Fuzzy-pick a ctags tag across the tree with fzf and jump to it (fzf.vim :Tags). |
+| `:BTags` | Fuzzy-pick a ctags tag in the current file with fzf and jump to it (fzf.vim :BTags). |
+| `:Snippets` | Fuzzy-pick a snippet with fzf and insert its body (fzf.vim :Snippets). |
+| `:Maps` | Fuzzy-browse the current keymaps with fzf (fzf.vim :Maps). |
+| `:Helptags` | Fuzzy-pick a help tag with fzf and open the Help browser at it (fzf.vim :Helptags). |
+| `:fzf-window` | (internal) focus the Nth window of a `:Windows` fzf pick. |
+| `:fzf-snippet` | (internal) insert the body of a `:Snippets` fzf pick. |
+| `:fzf-map` | (internal) echo a `:Maps` fzf pick. |
+| `:fzf-helptag` | (internal) open the Help browser at a `:Helptags` fzf pick. |
+| `:fzf-goto` | (internal) open a `file:line:col:text` fzf pick at the line. |
+| `:fzf-line` | (internal) jump to the line of an `N: text` fzf pick. |
+| `:Colors` | Fuzzy-pick a colorscheme with fzf (fzf.vim :Colors). |
+| `:Buffers` | Fuzzy-pick an open buffer with fzf and switch to it (fzf.vim :Buffers). |
+| `:Commands` | Fuzzy-pick a `:` command with fzf and run it (fzf.vim :Commands). |
+| `:fold`, `:fo` | Create a fold over the selected/current lines (vim :fold). |
+| `:foldopen`, `:foldo` | Open the fold under the cursor (vim :foldopen). |
+| `:foldclose`, `:foldc` | Close the fold under the cursor (vim :foldclose). |
+| `:redrawstatus` | Redraw the status line (vim :redrawstatus; approximated by a full redraw). |
+| `:redrawtabline` | Redraw the tab line (vim :redrawtabline; approximated by a full redraw). |
+| `:silent`, `:sil` | Run {cmd} silently (vim :silent[!]); message suppression is best-effort. |
+| `:unsilent` | Run {cmd} with messages shown (vim :unsilent). |
+| `:verbose`, `:verb` | Run {cmd} verbosely, optional leading count (vim :verbose). |
+| `:noautocmd`, `:noa` | Run {cmd} without triggering autocommands (vim :noautocmd). |
+| `:keepalt`, `:keepa` | Run {cmd} keeping the alternate file (vim :keepalt). |
+| `:keepjumps`, `:keepj` | Run {cmd} without changing the jumplist (vim :keepjumps). |
+| `:keepmarks`, `:kee` | Run {cmd} keeping marks (vim :keepmarks). |
+| `:keeppatterns`, `:keepp` | Run {cmd} keeping the search pattern (vim :keeppatterns). |
+| `:lockmarks`, `:loc` | Run {cmd} without adjusting marks (vim :lockmarks). |
+| `:sandbox`, `:san` | Run {cmd} in the sandbox (vim :sandbox; best-effort). |
+| `:confirm`, `:conf` | Run {cmd} confirming risky actions (vim :confirm; best-effort). |
+| `:browse`, `:bro` | Run {cmd} (vim :browse; file dialog not applicable in a TUI). |
+| `:noswapfile`, `:noswap` | Run {cmd} without a swapfile (vim :noswapfile). |
+| `:hide`, `:hid` | Run {cmd} keeping the current buffer hidden (vim :hide). |
+| `:vertical`, `:vert` | Run {cmd} with vertical split placement (vim :vertical; best-effort). |
+| `:horizontal`, `:hor` | Run {cmd} with horizontal split placement (vim :horizontal). |
+| `:aboveleft`, `:abo` | Run {cmd} placing a new split above/left (vim :aboveleft; best-effort). |
+| `:belowright`, `:bel` | Run {cmd} placing a new split below/right (vim :belowright; best-effort). |
+| `:leftabove`, `:lefta` | Run {cmd} placing a new split left/above (vim :leftabove; best-effort). |
+| `:rightbelow`, `:rightb` | Run {cmd} placing a new split right/below (vim :rightbelow; best-effort). |
+| `:topleft`, `:to` | Run {cmd} placing a new split at the top/left (vim :topleft; best-effort). |
+| `:botright`, `:bo` | Run {cmd} placing a new split at the bottom/right (vim :botright; best-effort). |
 | `:lsp-stop` | Stops the given language servers, or all language servers that are used by the current file if no arguments are supplied |
 | `:tree-sitter-scopes` | Display tree sitter scopes, primarily for theming and development. |
 | `:tree-sitter-highlight-name` | Display name of tree-sitter highlight scope under the cursor. |
@@ -281,8 +494,14 @@
 | `:global` | Run a command on matching lines: :g/pattern/d (delete). Also :g!/pat/d. |
 | `:vglobal` | Run a command on non-matching lines: :v/pattern/d (delete). |
 | `:substitute`, `:s` | Substitute: :s/pattern/replacement/[flags]. Also :%s/.../.../g for the whole file. |
+| `:Subvert`, `:S` | vim-abolish case-preserving substitute: :S/foo/bar/g rewrites foo/Foo/FOO → bar/Bar/BAR. |
+| `:Thesaurus`, `:thesaurus` | Look up synonyms for the word under the cursor (or :Thesaurus word) and replace it. |
 | `:split-line` | Split the current line at the cursor, keeping the cursor in place. |
 | `:just-one-space` | Collapse spaces and tabs around the cursor to a single space. |
+| `:delete-horizontal-space` | Delete all spaces and tabs around the cursor (emacs M-\). |
+| `:cycle-spacing` | Cycle the whitespace around the cursor: one space, then none, then restore. |
+| `:tabify` | Convert runs of spaces in the region to tabs at tab stops (emacs tabify). |
+| `:untabify` | Expand tabs in the region to spaces at the buffer tab width (emacs untabify). |
 | `:delete-blank-lines` | Collapse consecutive blank lines down to a single blank line. |
 | `:uniquify-lines`, `:uniq` | Delete duplicate lines, keeping the first occurrence. |
 | `:reverse`, `:reverse-lines`, `:tac` | Reverse the order of the selected lines (or the whole buffer). |
@@ -302,8 +521,13 @@
 | `:squeeze-blank-lines`, `:squeeze` | Collapse consecutive blank lines in the selection to one (cat -s). |
 | `:dedup-adjacent`, `:uniq-adjacent` | Collapse consecutive duplicate lines in the selection (Unix uniq). |
 | `:number-lines`, `:nl` | Prepend line numbers to the selected lines (optional start, default 1). |
+| `:string-rectangle`, `:string-replace-rectangle` | Replace the selected rectangle's column span with a string on every line (emacs C-x r t). |
+| `:string-insert-rectangle` | Insert a string at the rectangle's left column on every selected line, shifting text right (emacs string-insert-rectangle). |
 | `:align`, `:tabularize` | Align the selected lines on a delimiter (default `=`) so it shares a column. |
 | `:sort-by-field`, `:sortf` | Sort the selected lines by their Nth whitespace field (default 1). |
+| `:sort-numeric-fields`, `:sortnf` | Sort the selected lines by the numeric value of their Nth whitespace field (default 1). |
+| `:sort-columns`, `:sortc` | Sort the selected lines alphabetically by the character-column range [beg, end). |
+| `:sort-paragraphs`, `:sortp` | Sort the paragraphs (blank-line separated blocks) of the selection alphabetically. |
 | `:sort-lines`, `:sortl` | Sort the selected lines (or the whole buffer) — vim-style line sort. |
 | `:transpose-words` | Transpose the word before the cursor with the word after it. |
 | `:transpose-chars` | Transpose the two characters around the cursor. |
@@ -313,7 +537,7 @@
 | `:reflow` | Hard-wrap the current selection of lines to a given width. |
 | `:tree-sitter-subtree`, `:ts-subtree` | Display the smallest tree-sitter subtree that spans the primary selection, primarily for debugging queries. |
 | `:config-reload` | Refresh user config. |
-| `:keymap` | Switch the active keymap preset: vim, helix, or emacs. |
+| `:keymap` | Switch the active keymap preset: spacemacs, vim, helix, or emacs. |
 | `:config-open` | Open the user config.toml file. |
 | `:config-open-workspace` | Open the workspace config.toml file. |
 | `:log-open` | Open the zemacs log file. |
