@@ -30,45 +30,62 @@ async fn main_impl() -> Result<i32> {
     zemacs_loader::initialize_log_file(args.log_file.clone());
 
     // Help has a higher priority and should be handled separately.
+    // Cyberpunk help chrome, matching the rest of the toolchain (`tp --help`,
+    // `ztmux --help`, `zt --help`). Banner is `figlet -f "ANSI Shadow" ZEMACS`,
+    // gradient cyan→magenta→red; `\x1b[0m` resets keep the terminal clean.
     if args.display_help {
         print!(
             "\
-zemacs {}
+\x1b[36m ███████╗███████╗███╗   ███╗ █████╗  ██████╗███████╗\x1b[0m
+\x1b[36m ╚══███╔╝██╔════╝████╗ ████║██╔══██╗██╔════╝██╔════╝\x1b[0m
+\x1b[35m   ███╔╝ █████╗  ██╔████╔██║███████║██║     ███████╗\x1b[0m
+\x1b[35m  ███╔╝  ██╔══╝  ██║╚██╔╝██║██╔══██║██║     ╚════██║\x1b[0m
+\x1b[31m ███████╗███████╗██║ ╚═╝ ██║██║  ██║╚██████╗███████║\x1b[0m
+\x1b[31m ╚══════╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝\x1b[0m
+\x1b[36m ┌──────────────────────────────────────────────────────┐\x1b[0m
+\x1b[36m │ STATUS: ONLINE  // SIGNAL: ████████░░ // v{}\x1b[36m   │\x1b[0m
+\x1b[36m └──────────────────────────────────────────────────────┘\x1b[0m
+\x1b[35m  >> MODAL EDITOR // TREE-SITTER + LSP <<\x1b[0m
+
 {}
-{}
 
-USAGE:
-    zemacs [FLAGS] [files]...
+\x1b[33m  USAGE:\x1b[0m zemacs [FLAGS] [files]...
 
-ARGS:
-    <files>...    Set the input file to use, position can also be specified via file[:row[:col]]
+\x1b[36m  ── FILES ──────────────────────────────────────────────\x1b[0m
+    <files>...                   \x1b[32m//\x1b[0m Input file(s); position as file[:row[:col]]
+\x1b[36m  ── MODE ───────────────────────────────────────────────\x1b[0m
+    --strict                     \x1b[32m//\x1b[0m Bail on error for commands that can fail
+    --tutor                      \x1b[32m//\x1b[0m Load the tutorial
+    --ide                        \x1b[32m//\x1b[0m Boot the IDE workbench (sidebar; toggle F2)
+    --health [CATEGORY]          \x1b[32m//\x1b[0m Check editor setup. CATEGORY = a language or
+                                 \x1b[32m//\x1b[0m 'clipboard','languages','all-languages','all'.
+                                 \x1b[32m//\x1b[0m 'languages' respects user config; 'all-*' don't.
+                                 \x1b[32m//\x1b[0m Default: 'all' with languages filtering.
+\x1b[36m  ── GRAMMARS ───────────────────────────────────────────\x1b[0m
+    -g, --grammar {{fetch|build}}  \x1b[32m//\x1b[0m Fetch/build tree-sitter grammars (languages.toml)
+\x1b[36m  ── CONFIG ─────────────────────────────────────────────\x1b[0m
+    -c, --config <file>          \x1b[32m//\x1b[0m Use <file> for configuration
+    -w, --working-dir <path>     \x1b[32m//\x1b[0m Specify an initial working directory
+    --log <file>                 \x1b[32m//\x1b[0m Use <file> for logging
+                                 \x1b[32m//\x1b[0m (default: {})
+\x1b[36m  ── LAYOUT ─────────────────────────────────────────────\x1b[0m
+    --vsplit                     \x1b[32m//\x1b[0m Split given files vertically into windows
+    --hsplit                     \x1b[32m//\x1b[0m Split given files horizontally into windows
+    +[N]                         \x1b[32m//\x1b[0m Open first file at line N (or last line)
+\x1b[36m  ── SYSTEM ─────────────────────────────────────────────\x1b[0m
+    -v                           \x1b[32m//\x1b[0m Increase logging verbosity (up to 3 times)
+    -V, --version                \x1b[32m//\x1b[0m Print version information
+    -h, --help                   \x1b[32m//\x1b[0m Print this help and exit
 
-FLAGS:
-    -h, --help                     Print help information
-    --strict                       Bail on error for commands that can fail.
-    --tutor                        Load the tutorial
-    --ide                          Boot the IDE workbench (file-tree sidebar; toggle with F2)
-    --health [CATEGORY]            Check for potential errors in editor setup
-                                   CATEGORY can be a language or one of 'clipboard', 'languages',
-                                   'all-languages' or 'all'. 'languages' is filtered according to
-                                   user config, 'all-languages' and 'all' are not. If not specified,
-                                   the default is the same as 'all', but with languages filtering.
-    -g, --grammar {{fetch|build}}    Fetch or builds tree-sitter grammars listed in languages.toml.
-    -c, --config <file>            Specify a file to use for configuration
-    -v                             Increase logging verbosity each use for up to 3 times
-    --log <file>                   Specify a file to use for logging
-                                   (default file: {})
-    -V, --version                  Print version information
-    --vsplit                       Split all given files vertically into different windows
-    --hsplit                       Split all given files horizontally into different windows
-    -w, --working-dir <path>       Specify an initial working directory
-    +[N]                           Open the first given file at line number N, or the last line, if
-                                   N is not specified.
+\x1b[35m  zemacs {} \x1b[0m// \x1b[33m{}\x1b[0m
+\x1b[33m  >>> JACK IN. MODES ENGAGED. OWN YOUR BUFFERS. <<<\x1b[0m
+\x1b[36m ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░\x1b[0m
 ",
             VERSION_AND_GIT_HASH,
-            env!("CARGO_PKG_AUTHORS"),
             env!("CARGO_PKG_DESCRIPTION"),
             zemacs_loader::default_log_file().display(),
+            VERSION_AND_GIT_HASH,
+            env!("CARGO_PKG_AUTHORS"),
         );
         std::process::exit(0);
     }
