@@ -28387,5 +28387,45 @@
    "key:calendar:p"
   ],
   "note": "calendar-print-day-of-year: `p` shows the day-of-year (emacs `p d`)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_spellwrong",
+  "status": "ported",
+  "evidence": [
+   "typable:spellwrong"
+  ],
+  "note": ":spellwrong -> zemacs :spellwrong marks words bad via crate::spell::add_bad (like zw)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_spellundo",
+  "status": "ported",
+  "evidence": [
+   "typable:spellundo"
+  ],
+  "note": ":spellundo -> zemacs :spellundo removes words from the good/bad lists (zug/zuw)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_spelldump",
+  "status": "ported",
+  "evidence": [
+   "typable:spelldump"
+  ],
+  "note": ":spelldump -> zemacs :spelldump opens a buffer of the user's known-good words"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_spellinfo",
+  "status": "ported",
+  "evidence": [
+   "typable:spellinfo"
+  ],
+  "note": ":spellinfo -> zemacs :spellinfo reports the wordlist location and sizes"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_spellrare",
+  "status": "partial",
+  "evidence": [
+   "typable:spellrare"
+  ],
+  "note": ":spellrare -> zemacs :spellrare flags words like bad words (no separate rare list)"
  }
 ]

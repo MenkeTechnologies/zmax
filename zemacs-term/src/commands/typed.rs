@@ -798,6 +798,96 @@ fn buffer_do(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Vim `:spell*` ex-commands over zemacs's spell wordlists (crate::spell).
+// ---------------------------------------------------------------------------
+
+/// `:spellwrong {word}...` — add words to the bad (misspelled) list (vim `zw`).
+fn spell_wrong(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("spellwrong: needs a word");
+    }
+    for w in args.iter() {
+        crate::spell::add_bad(w.as_ref());
+    }
+    cx.editor.set_status(format!("marked {} word(s) as misspelled", args.len()));
+    Ok(())
+}
+
+/// `:spellrare {word}...` — add words as rare. zemacs has no separate "rare"
+/// list, so a rare word is flagged like a bad word (partial fidelity).
+fn spell_rare(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("spellrare: needs a word");
+    }
+    for w in args.iter() {
+        crate::spell::add_bad(w.as_ref());
+    }
+    cx.editor.set_status(format!("flagged {} rare word(s)", args.len()));
+    Ok(())
+}
+
+/// `:spellundo {word}...` — remove words from the good/bad lists (vim `zug`/`zuw`).
+fn spell_undo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("spellundo: needs a word");
+    }
+    for w in args.iter() {
+        crate::spell::remove_user(w.as_ref());
+    }
+    cx.editor.set_status(format!("removed {} word(s) from the spell lists", args.len()));
+    Ok(())
+}
+
+/// `:spelldump` — open a buffer listing the user's known-good words (vim
+/// `:spelldump` fills a window with the wordlist).
+fn spell_dump(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let words = crate::spell::good_words();
+    cx.editor.new_file(Action::Replace);
+    let text = if words.is_empty() {
+        "# no user spellgood words\n".to_string()
+    } else {
+        let mut t = words.join("\n");
+        t.push('\n');
+        t
+    };
+    let (view, doc) = current!(cx.editor);
+    let insert = Transaction::insert(
+        doc.text(),
+        &zemacs_core::Selection::point(0),
+        text.as_str().into(),
+    );
+    doc.apply(&insert, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// `:spellinfo` — show where the spell wordlists live and their sizes.
+fn spell_info(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.editor.set_status(format!(
+        "spell: {} good, {} bad words · {}",
+        crate::spell::good_words().len(),
+        crate::spell::bad_words().len(),
+        zemacs_loader::config_dir().display()
+    ));
+    Ok(())
+}
+
 fn buffer_close_by_ids_impl(
     cx: &mut compositor::Context,
     doc_ids: &[DocumentId],
@@ -17739,6 +17829,61 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spellwrong",
+        aliases: &["spellw"],
+        doc: "Mark words as misspelled (vim :spellwrong).",
+        fun: spell_wrong,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spellrare",
+        aliases: &["spellra"],
+        doc: "Flag words as rare (vim :spellrare).",
+        fun: spell_rare,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spellundo",
+        aliases: &["spellu"],
+        doc: "Remove words from the good/bad spell lists (vim :spellundo).",
+        fun: spell_undo,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spelldump",
+        aliases: &["spelld"],
+        doc: "Open a buffer listing the user's known-good words (vim :spelldump).",
+        fun: spell_dump,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spellinfo",
+        aliases: &["spelli"],
+        doc: "Show the spell wordlist location and sizes (vim :spellinfo).",
+        fun: spell_info,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
