@@ -579,6 +579,12 @@
 | `goto_last_tabpage` | Go to the last tabpage (:tablast) |  |
 | `tab_select` | Go to the [count]-th tab (emacs tab-select) |  |
 | `tab_recent` | Switch to the most recently visited tab (emacs tab-recent) |  |
+| `forward_list` | Move forward over a balanced () group (emacs forward-list, C-M-n) |  |
+| `backward_list` | Move backward over a balanced () group (emacs backward-list, C-M-p) |  |
+| `down_list` | Descend into the next list (emacs down-list, C-M-d) |  |
+| `up_list` | Move forward out of the enclosing list (emacs up-list) |  |
+| `backward_up_list` | Move backward out of the enclosing list (emacs backward-up-list, C-M-u) |  |
+| `kill_sexp` | Kill the s-expression after point (emacs kill-sexp, C-M-k) |  |
 | `move_to_opposite_group` | Move the current editor to the opposite split group (JetBrains) |  |
 | `rotate_view` | Goto next window | normal: `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-x>o ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, select: `` <C-x>o ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, insert: `` <C-x>o `` |
 | `rotate_view_reverse` | Goto previous window | normal: `` <C-w>R ``, `` <C-w>W ``, `` <C-w>.R ``, `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, select: `` <space>wR ``, `` <space>wW ``, `` <space>w.R `` |

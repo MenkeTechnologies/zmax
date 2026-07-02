@@ -135,7 +135,8 @@ pub fn forward_sexp(text: &str, cursor: usize) -> Option<usize> {
         return None; // pointing at a stray close
     }
     let start = i;
-    while i < chars.len() && !chars[i].is_whitespace() && !is_open(chars[i]) && !is_close(chars[i]) {
+    while i < chars.len() && !chars[i].is_whitespace() && !is_open(chars[i]) && !is_close(chars[i])
+    {
         i += 1;
     }
     (i > start).then_some(i)

@@ -14081,19 +14081,19 @@
  },
  {
   "spec_id": "emacs.command.backward_up_list",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_prev_open_paren"
+   "static:backward_up_list"
   ],
-  "note": ""
+  "note": "backward-up-list (C-M-u): move backward out of the enclosing list to its open (zemacs_core::list_motion)"
  },
  {
   "spec_id": "emacs.command.up_list",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_next_close_paren"
+   "static:up_list"
   ],
-  "note": ""
+  "note": "up-list: move forward out of the enclosing list to just past its close (zemacs_core::list_motion)"
  },
  {
   "spec_id": "emacs.command.move_beginning_of_line",
@@ -28547,5 +28547,37 @@
    "static:tab_recent"
   ],
   "note": "tab-recent: switch to the most recently visited tab (tracked across the tab-navigation commands)"
+ },
+ {
+  "spec_id": "emacs.command.forward_list",
+  "status": "ported",
+  "evidence": [
+   "static:forward_list"
+  ],
+  "note": "forward-list (C-M-n): move forward over a balanced () group"
+ },
+ {
+  "spec_id": "emacs.command.backward_list",
+  "status": "ported",
+  "evidence": [
+   "static:backward_list"
+  ],
+  "note": "backward-list (C-M-p): move backward over a balanced () group"
+ },
+ {
+  "spec_id": "emacs.command.down_list",
+  "status": "ported",
+  "evidence": [
+   "static:down_list"
+  ],
+  "note": "down-list (C-M-d): descend into the next list past its open"
+ },
+ {
+  "spec_id": "emacs.command.kill_sexp",
+  "status": "ported",
+  "evidence": [
+   "static:kill_sexp"
+  ],
+  "note": "kill-sexp (C-M-k): kill the s-expression after point (list or atom)"
  }
 ]

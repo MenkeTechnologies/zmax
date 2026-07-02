@@ -891,6 +891,12 @@ impl MappableCommand {
         goto_last_tabpage, "Go to the last tabpage (:tablast)",
         tab_select, "Go to the [count]-th tab (emacs tab-select)",
         tab_recent, "Switch to the most recently visited tab (emacs tab-recent)",
+        forward_list, "Move forward over a balanced () group (emacs forward-list, C-M-n)",
+        backward_list, "Move backward over a balanced () group (emacs backward-list, C-M-p)",
+        down_list, "Descend into the next list (emacs down-list, C-M-d)",
+        up_list, "Move forward out of the enclosing list (emacs up-list)",
+        backward_up_list, "Move backward out of the enclosing list (emacs backward-up-list, C-M-u)",
+        kill_sexp, "Kill the s-expression after point (emacs kill-sexp, C-M-k)",
         move_to_opposite_group, "Move the current editor to the opposite split group (JetBrains)",
         rotate_view, "Goto next window",
         rotate_view_reverse, "Goto previous window",
@@ -21302,6 +21308,73 @@ fn paredit_insert_sexp_after(cx: &mut Context) {
 fn paredit_insert_sexp_before(cx: &mut Context) {
     apply_paredit(cx, pe_insert_sexp_before);
     enter_insert_mode(cx);
+}
+
+// --- Emacs list / s-expression motion (C-M-n/p/d/u, kill-sexp) --------------
+// Balanced-paren movement over the pure zemacs_core::list_motion.
+
+/// Move point to the target of a pure list-motion function (or report a scan
+/// error and stay put).
+fn list_motion(cx: &mut Context, f: fn(&str, usize) -> Option<usize>) {
+    let (text, cursor) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        (
+            doc.text().to_string(),
+            doc.selection(view.id).primary().cursor(slice),
+        )
+    };
+    match f(&text, cursor) {
+        Some(pos) => {
+            let scrolloff = cx.editor.config().scrolloff;
+            let (view, doc) = current!(cx.editor);
+            push_jump(view, doc);
+            let pos = pos.min(doc.text().len_chars());
+            doc.set_selection(view.id, Selection::point(pos));
+            view.ensure_cursor_in_view(doc, scrolloff);
+        }
+        None => cx.editor.set_status("scan error: unbalanced or no list"),
+    }
+}
+
+fn forward_list(cx: &mut Context) {
+    list_motion(cx, zemacs_core::list_motion::forward_list);
+}
+fn backward_list(cx: &mut Context) {
+    list_motion(cx, zemacs_core::list_motion::backward_list);
+}
+fn down_list(cx: &mut Context) {
+    list_motion(cx, zemacs_core::list_motion::down_list);
+}
+fn up_list(cx: &mut Context) {
+    list_motion(cx, zemacs_core::list_motion::up_list);
+}
+fn backward_up_list(cx: &mut Context) {
+    list_motion(cx, zemacs_core::list_motion::backward_up_list);
+}
+
+/// Emacs `kill-sexp` (C-M-k): kill the s-expression after point.
+fn kill_sexp(cx: &mut Context) {
+    let (text, cursor) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        (
+            doc.text().to_string(),
+            doc.selection(view.id).primary().cursor(slice),
+        )
+    };
+    let Some(end) = zemacs_core::list_motion::forward_sexp(&text, cursor) else {
+        cx.editor.set_status("no s-expression after point");
+        return;
+    };
+    let (from, to) = (cursor.min(end), cursor.max(end));
+    if from == to {
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(doc.text(), [(from, to, None)].into_iter());
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
 }
 
 /// SPC b w: toggle the current buffer's read-only (writable) state.
