@@ -84,6 +84,16 @@ pub(super) fn ensure_builtins() {
         h.defsubr("use-region-p", 0, Some(0), b_region_active_p);
         h.defsubr("deactivate-mark", 0, Some(1), b_deactivate_mark);
         h.defsubr("mark-whole-buffer", 0, Some(0), b_mark_whole_buffer);
+        // Kill ring & yank. Text is cut/pasted on the mirror; the ring lives in
+        // `super` and each kill also lands in the editor's yank/clipboard registers.
+        h.defsubr("kill-new", 1, Some(2), b_kill_new);
+        h.defsubr("kill-region", 2, Some(3), b_kill_region);
+        h.defsubr("copy-region-as-kill", 2, Some(2), b_copy_region_as_kill);
+        h.defsubr("kill-ring-save", 2, Some(3), b_copy_region_as_kill);
+        h.defsubr("yank", 0, Some(1), b_yank);
+        h.defsubr("current-kill", 1, Some(2), b_current_kill);
+        h.defsubr("kill-line", 0, Some(1), b_kill_line);
+        h.defsubr("kill-whole-line", 0, Some(1), b_kill_whole_line);
     });
 }
 
@@ -240,5 +250,106 @@ fn b_mark_whole_buffer(h: &mut ElispHost, _args: &[Value]) -> Result<Value, Stri
     let len = h.cur_buf().text.len();
     super::mark_set(0);
     h.cur_buf().point = len + 1;
+    Ok(nil())
+}
+
+// ── kill ring & yank ──
+//
+// Text lives in the mirrored `EditBuffer` (`h.cur_buf().text`, a `Vec<char>`, and
+// a 1-based `point`); the kill ring itself lives in `super`. A 1-based [beg,end)
+// point pair is clamped to the buffer and returned as a 0-based char range.
+fn clamp_range(h: &mut ElispHost, a: i64, b: i64) -> (usize, usize) {
+    let n = h.cur_buf().text.len();
+    let lo = (a.min(b).max(1) as usize - 1).min(n);
+    let hi = (a.max(b).max(1) as usize - 1).min(n);
+    (lo, hi)
+}
+
+fn b_kill_new(h: &mut ElispHost, args: &[Value]) -> Result<Value, String> {
+    let s = as_string(h, &args[0]);
+    super::kill_push(s.clone());
+    Ok(Value::str(s))
+}
+
+fn b_kill_region(h: &mut ElispHost, args: &[Value]) -> Result<Value, String> {
+    let (lo, hi) = clamp_range(h, args[0].to_int(), args[1].to_int());
+    let buf = h.cur_buf();
+    let text: String = buf.text[lo..hi].iter().collect();
+    buf.text.drain(lo..hi);
+    buf.point = lo + 1;
+    super::kill_push(text);
+    super::mark_deactivate();
+    Ok(nil())
+}
+
+fn b_copy_region_as_kill(h: &mut ElispHost, args: &[Value]) -> Result<Value, String> {
+    let (lo, hi) = clamp_range(h, args[0].to_int(), args[1].to_int());
+    let text: String = h.cur_buf().text[lo..hi].iter().collect();
+    super::kill_push(text);
+    super::mark_deactivate();
+    Ok(nil())
+}
+
+fn b_yank(h: &mut ElispHost, _args: &[Value]) -> Result<Value, String> {
+    let s = super::kill_current(0).unwrap_or_default();
+    let chars: Vec<char> = s.chars().collect();
+    let len = chars.len();
+    let buf = h.cur_buf();
+    let at = buf.point.saturating_sub(1).min(buf.text.len());
+    buf.text.splice(at..at, chars);
+    buf.point = at + len + 1;
+    // Emacs leaves point after the insertion and the mark (inactive) at its start.
+    super::mark_set(at);
+    super::mark_deactivate();
+    Ok(nil())
+}
+
+fn b_current_kill(_h: &mut ElispHost, args: &[Value]) -> Result<Value, String> {
+    match super::kill_current(args[0].to_int()) {
+        Some(s) => Ok(Value::str(s)),
+        None => Ok(nil()),
+    }
+}
+
+/// End (0-based) of the line containing 0-based `p`: the next '\n', or buffer end.
+fn line_end(text: &[char], p: usize) -> usize {
+    let mut e = p;
+    while e < text.len() && text[e] != '\n' {
+        e += 1;
+    }
+    e
+}
+
+fn b_kill_line(h: &mut ElispHost, _args: &[Value]) -> Result<Value, String> {
+    let buf = h.cur_buf();
+    let p = buf.point.saturating_sub(1).min(buf.text.len());
+    let eol = line_end(&buf.text, p);
+    // At end-of-line, kill the newline itself; otherwise kill to end-of-line.
+    let end = if eol == p && eol < buf.text.len() {
+        eol + 1
+    } else {
+        eol
+    };
+    let text: String = buf.text[p..end].iter().collect();
+    buf.text.drain(p..end);
+    buf.point = p + 1;
+    super::kill_push(text);
+    Ok(nil())
+}
+
+fn b_kill_whole_line(h: &mut ElispHost, _args: &[Value]) -> Result<Value, String> {
+    let buf = h.cur_buf();
+    let p = buf.point.saturating_sub(1).min(buf.text.len());
+    // Start of the current line: just past the previous newline.
+    let mut bol = p;
+    while bol > 0 && buf.text[bol - 1] != '\n' {
+        bol -= 1;
+    }
+    let eol = line_end(&buf.text, p);
+    let end = (eol + 1).min(buf.text.len()); // include the trailing newline
+    let text: String = buf.text[bol..end].iter().collect();
+    buf.text.drain(bol..end);
+    buf.point = bol + 1;
+    super::kill_push(text);
     Ok(nil())
 }

@@ -15,7 +15,7 @@
 //! Nested evals (a future feature) restore the previous pointer via the guard
 //! stack, but two live `&mut` borrows of the same context would alias.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::ptr;
 
 use elisprs::host::ElispHost;
@@ -244,6 +244,48 @@ pub(super) fn mark_is_active() -> bool {
 /// Deactivate the region without forgetting the mark position.
 pub(super) fn mark_deactivate() {
     MARK_ACTIVE.with(|a| a.set(false));
+}
+
+// The kill ring, front = most recent kill. Emacs semantics: new kills prepend,
+// `yank` inserts the front, `current-kill` indexes into it. Held here rather than
+// on the elisprs host so it survives host resets and is testable without a
+// context; each push is also mirrored into the editor's yank + clipboard
+// registers so the editor's own paste yanks elisp-killed text.
+thread_local! {
+    static KILL_RING: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Cap on retained kills — matches Emacs's default `kill-ring-max`.
+const KILL_RING_MAX: usize = 120;
+
+/// Prepend `s` to the kill ring and mirror it to the editor registers.
+pub(super) fn kill_push(s: String) {
+    KILL_RING.with(|r| {
+        let mut v = r.borrow_mut();
+        v.insert(0, s.clone());
+        v.truncate(KILL_RING_MAX);
+    });
+    // Best-effort: land the kill in the default yank register (so the editor's
+    // paste yanks it) and the system clipboard. A null context or a failing
+    // clipboard provider is ignored — the ring is the source of truth.
+    let _ = with_cx(|cx| {
+        let _ = cx.editor.registers.write('"', vec![s.clone()]);
+        let _ = cx.editor.registers.write('+', vec![s]);
+    });
+}
+
+/// The `n`th kill (0 = most recent), indexing the ring modulo its length as
+/// Emacs's `current-kill` does. `None` only if the ring is empty.
+pub(super) fn kill_current(n: i64) -> Option<String> {
+    KILL_RING.with(|r| {
+        let v = r.borrow();
+        if v.is_empty() {
+            return None;
+        }
+        let len = v.len() as i64;
+        let idx = ((n % len) + len) % len;
+        Some(v[idx as usize].clone())
+    })
 }
 
 /// Copy the live current buffer's text and primary-cursor point (1-based) into
@@ -612,6 +654,25 @@ mod tests {
         assert_eq!(
             e("(progn (mark-whole-buffer) (list (region-beginning) (region-end)))"),
             "(1 12)"
+        );
+    }
+
+    /// Kill ring & yank cut and paste on the mirror; the ring is the source of
+    /// truth (register bridging silently no-ops without a live context).
+    #[test]
+    fn kill_ring_and_yank() {
+        super::elisp::ensure_builtins();
+        let e = |s: &str| elisprs::print(&elisprs::eval_str(s).unwrap(), true);
+        // kill-region removes the text and pushes it; current-kill sees it.
+        assert_eq!(
+            e("(progn (erase-buffer) (insert \"hello world\") (kill-region 1 6) (buffer-string))"),
+            "\" world\""
+        );
+        assert_eq!(e("(current-kill 0)"), "\"hello\"");
+        // yank reinserts the most recent kill at point.
+        assert_eq!(
+            e("(progn (goto-char 1) (yank) (buffer-string))"),
+            "\"hello world\""
         );
     }
 
