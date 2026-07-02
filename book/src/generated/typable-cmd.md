@@ -142,6 +142,44 @@
 | `:pio-monitor-filters-clear`, `:platformio-monitor-filters-clear` | Remove all configured serial monitor filters. |
 | `:pio-monitor-eol`, `:platformio-monitor-eol` | Set the serial monitor end-of-line mode (`CR`, `LF`, or `CRLF`). |
 | `:pio-monitor-parity`, `:platformio-monitor-parity` | Set the serial monitor parity (`N`, `E`, `O`, `S`, or `M`). |
+| `:pio-monitor-rts`, `:platformio-monitor-rts` | Set the initial RTS line state for the serial monitor (`0` or `1`). |
+| `:pio-monitor-dtr`, `:platformio-monitor-dtr` | Set the initial DTR line state for the serial monitor (`0` or `1`). |
+| `:pio-monitor-echo`, `:platformio-monitor-echo` | Toggle local echo in the serial monitor (`--echo`). |
+| `:pio-monitor-raw`, `:platformio-monitor-raw` | Toggle raw serial monitor mode, disabling output transforms (`--raw`). |
+| `:pio-monitor-encoding`, `:platformio-monitor-encoding` | Set the serial monitor encoding (e.g. `UTF-8`, `Latin-1`, `hexlify`); empty resets. |
+| `:pio-monitor-flow`, `:platformio-monitor-flow` | Select serial monitor flow control (`none`, `rtscts`, or `xonxoff`). |
+| `:pio-monitor-reconnect`, `:platformio-monitor-reconnect` | Toggle serial monitor auto-reconnect (`on` or `off`; `off` = `--no-reconnect`). |
+| `:pio-build-verbose`, `:platformio-build-verbose` | Verbose PlatformIO build (`pio run -v`), routed through `*compilation*`. |
+| `:pio-build-silent`, `:platformio-build-silent` | Quiet PlatformIO build showing warnings/errors only (`pio run -s`). |
+| `:pio-run-jobs`, `:platformio-run-jobs` | Build with N parallel jobs (`pio run -j <n>`). |
+| `:pio-build-no-auto-clean`, `:platformio-build-no-auto-clean` | Build without the pre-build clean (`pio run --disable-auto-clean`). |
+| `:pio-target`, `:platformio-target` | Run an arbitrary PlatformIO build target (`pio run -t <name>`), live in a terminal panel. |
+| `:pio-upload-to`, `:platformio-upload-to` | Build + flash to a specific port (`pio run -t upload --upload-port <port>`). |
+| `:pio-test-verbose`, `:platformio-test-verbose` | Verbose PlatformIO unit tests (`pio test -v`). |
+| `:pio-test-ignore`, `:platformio-test-ignore` | Run tests except those matching a pattern (`pio test -i <pattern>`). |
+| `:pio-test-without-building`, `:platformio-test-without-building` | Test the last build without rebuilding (`pio test --without-building`). |
+| `:pio-test-without-uploading`, `:platformio-test-without-uploading` | Run tests without flashing first (`pio test --without-uploading`). |
+| `:pio-test-without-testing`, `:platformio-test-without-testing` | Build + upload but skip running the tests (`pio test --without-testing`). |
+| `:pio-test-no-reset`, `:platformio-test-no-reset` | Do not reset the board between tests (`pio test --no-reset`). |
+| `:pio-check-verbose`, `:platformio-check-verbose` | Verbose static code analysis (`pio check -v`). |
+| `:pio-check-json`, `:platformio-check-json` | Static analysis as JSON (`pio check --json-output`), shown in a scratch buffer. |
+| `:pio-check-flags`, `:platformio-check-flags` | Static analysis with extra tool flags (`pio check --flags <flags>`). |
+| `:pio-check-fail-on`, `:platformio-check-fail-on` | Fail on defects at or above a severity (`pio check --fail-on-defect <low|medium|high>`). |
+| `:pio-check-skip-packages`, `:platformio-check-skip-packages` | Analyse only project sources, skipping libraries (`pio check --skip-packages`). |
+| `:pio-check-src-filters`, `:platformio-check-src-filters` | Restrict analysis to matching sources (`pio check --src-filters <pattern>`). |
+| `:pio-debug-verbose`, `:platformio-debug-verbose` | Verbose PlatformIO debugger session (`pio debug -v`). |
+| `:pio-debug-interface`, `:platformio-debug-interface` | Debug with a specific interface (`pio debug --interface <name>`). |
+| `:pio-debug-load-mode`, `:platformio-debug-load-mode` | Control firmware reloading on debug start (`pio debug --load-mode <always|modified|manual>`). |
+| `:pio-init-ide`, `:platformio-init-ide` | Generate IDE integration files (`pio project init --ide <ide>`). |
+| `:pio-init-sample`, `:platformio-init-sample` | Scaffold a project with example code (`pio project init --board <board> --sample-code`). |
+| `:pio-init-option`, `:platformio-init-option` | Set a `platformio.ini` option while initialising (`pio project init -O <name=value>`). |
+| `:pio-pkg-install-force`, `:platformio-pkg-install-force` | Reinstall a package even if present (`pio pkg install -f <spec>`). |
+| `:pio-pkg-install-global`, `:platformio-pkg-install-global` | Install a package globally (`pio pkg install -g <spec>`). |
+| `:pio-lib-install-nosave`, `:platformio-lib-install-nosave` | Install a library without writing it to `platformio.ini` (`pio pkg install -l <name> --no-save`). |
+| `:pio-pkg-search-sort`, `:platformio-pkg-search-sort` | Registry search with a sort order (`pio pkg search <query> --sort <relevance|popularity|trending|added|updated>`). |
+| `:pio-upgrade-dev`, `:platformio-upgrade-dev` | Upgrade PlatformIO Core to the development branch (`pio upgrade --dev`). |
+| `:pio-remote-run-force`, `:platformio-remote-run-force` | Force the build to run on the remote agent (`pio remote run -r`). |
+| `:pio-remote-agent-start-named`, `:platformio-remote-agent-start-named` | Start a named Remote agent (`pio remote agent start --name <name>`). |
 | `:pio-remote-monitor`, `:platformio-remote-monitor` | Serial monitor over a Remote agent (`pio remote device monitor`), live in a terminal panel. |
 | `:pio-settings-reset`, `:platformio-settings-reset` | Restore PlatformIO Core settings to their defaults (`pio settings reset`). |
 | `:pio-system-completion`, `:platformio-system-completion` | Emit a shell completion script (`pio system completion <bash|zsh|fish|powershell>`). |

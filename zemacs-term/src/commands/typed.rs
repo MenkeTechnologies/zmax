@@ -4847,6 +4847,560 @@ fn pio_monitor_parity(cx: &mut compositor::Context, args: Args, event: PromptEve
     Ok(())
 }
 
+/// `:pio-monitor-rts <0|1>` — set the initial RTS line state for the monitor.
+fn pio_monitor_rts(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let v = args.join(" ").trim().to_string();
+    if !matches!(v.as_str(), "0" | "1") {
+        bail!("usage: :pio-monitor-rts <0|1>");
+    }
+    embedded::update(|s| s.rts = v.clone());
+    cx.editor.set_status(format!("Serial monitor RTS set to {v}"));
+    Ok(())
+}
+
+/// `:pio-monitor-dtr <0|1>` — set the initial DTR line state for the monitor.
+fn pio_monitor_dtr(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let v = args.join(" ").trim().to_string();
+    if !matches!(v.as_str(), "0" | "1") {
+        bail!("usage: :pio-monitor-dtr <0|1>");
+    }
+    embedded::update(|s| s.dtr = v.clone());
+    cx.editor.set_status(format!("Serial monitor DTR set to {v}"));
+    Ok(())
+}
+
+/// `:pio-monitor-echo` — toggle local echo in the serial monitor (`--echo`).
+fn pio_monitor_echo(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let now = embedded::update(|s| s.echo = !s.echo).echo;
+    cx.editor.set_status(format!("Serial monitor echo {}", if now { "on" } else { "off" }));
+    Ok(())
+}
+
+/// `:pio-monitor-raw` — toggle raw mode (`--raw`), disabling output transforms.
+fn pio_monitor_raw(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let now = embedded::update(|s| s.raw = !s.raw).raw;
+    cx.editor.set_status(format!("Serial monitor raw mode {}", if now { "on" } else { "off" }));
+    Ok(())
+}
+
+/// `:pio-monitor-encoding <enc>` — set the monitor encoding (e.g. `UTF-8`,
+/// `Latin-1`, `hexlify`); empty clears it back to the default.
+fn pio_monitor_encoding(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let enc = args.join(" ").trim().to_string();
+    embedded::update(|s| s.encoding = enc.clone());
+    if enc.is_empty() {
+        cx.editor.set_status("Serial monitor encoding cleared");
+    } else {
+        cx.editor.set_status(format!("Serial monitor encoding set to {enc}"));
+    }
+    Ok(())
+}
+
+/// `:pio-monitor-flow <none|rtscts|xonxoff>` — select serial flow control.
+fn pio_monitor_flow(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mode = args.join(" ").trim().to_ascii_lowercase();
+    let (rtscts, xonxoff) = match mode.as_str() {
+        "none" => (false, false),
+        "rtscts" => (true, false),
+        "xonxoff" => (false, true),
+        _ => bail!("usage: :pio-monitor-flow <none|rtscts|xonxoff>"),
+    };
+    embedded::update(|s| {
+        s.rtscts = rtscts;
+        s.xonxoff = xonxoff;
+    });
+    cx.editor.set_status(format!("Serial monitor flow control: {mode}"));
+    Ok(())
+}
+
+/// `:pio-monitor-reconnect <on|off>` — toggle automatic reconnection
+/// (`off` sets `--no-reconnect`).
+fn pio_monitor_reconnect(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mode = args.join(" ").trim().to_ascii_lowercase();
+    let no_reconnect = match mode.as_str() {
+        "on" => false,
+        "off" => true,
+        _ => bail!("usage: :pio-monitor-reconnect <on|off>"),
+    };
+    embedded::update(|s| s.no_reconnect = no_reconnect);
+    cx.editor.set_status(format!("Serial monitor auto-reconnect {mode}"));
+    Ok(())
+}
+
+/// Route a project-scoped `pio` argv through the `*compilation*` buffer from the
+/// project directory — shared by the build/test/check flag variants.
+fn pio_run_compile(cx: &mut compositor::Context, argv: Vec<String>) -> anyhow::Result<()> {
+    let dir = embedded::load().sketch_dir();
+    let cmd = format!(
+        "cd {} && {}",
+        embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
+        embedded::shell_join(&argv)
+    );
+    run_compile(cx, &cmd)
+}
+
+/// `:pio-build-verbose` — verbose build (`pio run -v`).
+fn pio_build_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_run_with(&st, &["-v".to_string()]))
+}
+
+/// `:pio-build-silent` — quiet build, warnings/errors only (`pio run -s`).
+fn pio_build_silent(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_run_with(&st, &["-s".to_string()]))
+}
+
+/// `:pio-run-jobs <n>` — build with N parallel jobs (`pio run -j <n>`).
+fn pio_run_jobs(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = args.join(" ").trim().to_string();
+    if n.is_empty() || n.parse::<u32>().is_err() {
+        bail!("usage: :pio-run-jobs <n>  (e.g. 4)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_run_with(&st, &["-j".to_string(), n]))
+}
+
+/// `:pio-build-no-auto-clean` — build without the pre-build clean
+/// (`pio run --disable-auto-clean`).
+fn pio_build_no_auto_clean(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_run_with(&st, &["--disable-auto-clean".to_string()]))
+}
+
+/// `:pio-target <name>` — run an arbitrary build target (`pio run -t <name>`),
+/// live in a terminal panel.
+fn pio_target(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let target = args.join(" ").trim().to_string();
+    if target.is_empty() {
+        bail!("usage: :pio-target <name>  (e.g. size, upload, uploadfs)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    let dir = st.sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_run_target(&st, &target), dir);
+    Ok(())
+}
+
+/// `:pio-upload-to <port>` — build + flash to a specific port
+/// (`pio run -t upload --upload-port <port>`), live in a terminal panel.
+fn pio_upload_to(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let port = args.join(" ").trim().to_string();
+    if port.is_empty() {
+        bail!("usage: :pio-upload-to <port>  (e.g. /dev/cu.usbmodem1401)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    let dir = st.sketch_dir();
+    let argv = embedded::pio_run_with(
+        &st,
+        &["-t".to_string(), "upload".to_string(), "--upload-port".to_string(), port],
+    );
+    embedded_spawn_terminal(cx, argv, dir);
+    Ok(())
+}
+
+/// `:pio-test-verbose` — verbose unit tests (`pio test -v`).
+fn pio_test_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["-v".to_string()]))
+}
+
+/// `:pio-test-ignore <pattern>` — run tests except those matching `pattern`
+/// (`pio test -i <pattern>`).
+fn pio_test_ignore(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pat = args.join(" ").trim().to_string();
+    if pat.is_empty() {
+        bail!("usage: :pio-test-ignore <pattern>");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["-i".to_string(), pat]))
+}
+
+/// `:pio-test-without-building` — test the last build without rebuilding
+/// (`pio test --without-building`).
+fn pio_test_without_building(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["--without-building".to_string()]))
+}
+
+/// `:pio-test-without-uploading` — test without flashing first
+/// (`pio test --without-uploading`).
+fn pio_test_without_uploading(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["--without-uploading".to_string()]))
+}
+
+/// `:pio-test-without-testing` — build + upload but skip running the tests
+/// (`pio test --without-testing`).
+fn pio_test_without_testing(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["--without-testing".to_string()]))
+}
+
+/// `:pio-test-no-reset` — do not reset the board between tests
+/// (`pio test --no-reset`).
+fn pio_test_no_reset(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["--no-reset".to_string()]))
+}
+
+/// `:pio-check-verbose` — verbose static analysis (`pio check -v`).
+fn pio_check_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_check_with(&st, &["-v".to_string()]))
+}
+
+/// `:pio-check-json` — static analysis as JSON (`pio check --json-output`),
+/// shown in a scratch buffer.
+fn pio_check_json(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    embedded_browse(cx, embedded::pio_check_with(&st, &["--json-output".to_string()]), true);
+    Ok(())
+}
+
+/// `:pio-check-flags <flags>` — analysis with extra tool flags
+/// (`pio check --flags <flags>`).
+fn pio_check_flags(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let flags = args.join(" ").trim().to_string();
+    if flags.is_empty() {
+        bail!("usage: :pio-check-flags <flags>  (e.g. --enable=all)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_check_with(&st, &["--flags".to_string(), flags]))
+}
+
+/// `:pio-check-fail-on <low|medium|high>` — exit non-zero on defects at or above
+/// the given severity (`pio check --fail-on-defect <sev>`).
+fn pio_check_fail_on(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let sev = args.join(" ").trim().to_ascii_lowercase();
+    if !matches!(sev.as_str(), "low" | "medium" | "high") {
+        bail!("usage: :pio-check-fail-on <low|medium|high>");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_check_with(&st, &["--fail-on-defect".to_string(), sev]))
+}
+
+/// `:pio-check-skip-packages` — analyse only project sources, skipping libraries
+/// (`pio check --skip-packages`).
+fn pio_check_skip_packages(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_check_with(&st, &["--skip-packages".to_string()]))
+}
+
+/// `:pio-check-src-filters <pattern>` — restrict analysis to matching sources
+/// (`pio check --src-filters <pattern>`).
+fn pio_check_src_filters(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pat = args.join(" ").trim().to_string();
+    if pat.is_empty() {
+        bail!("usage: :pio-check-src-filters <pattern>  (e.g. +<src/> -<test/>)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_check_with(&st, &["--src-filters".to_string(), pat]))
+}
+
+/// `:pio-debug-verbose` — verbose debugger session (`pio debug -v`).
+fn pio_debug_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    let dir = st.sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_debug_with(&st, &["-v".to_string()]), dir);
+    Ok(())
+}
+
+/// `:pio-debug-interface <name>` — debug with a specific interface
+/// (`pio debug --interface <name>`).
+fn pio_debug_interface(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let iface = args.join(" ").trim().to_string();
+    if iface.is_empty() {
+        bail!("usage: :pio-debug-interface <name>  (e.g. gdb)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    let dir = st.sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_debug_with(&st, &["--interface".to_string(), iface]), dir);
+    Ok(())
+}
+
+/// `:pio-debug-load-mode <always|modified|manual>` — control firmware (re)loading
+/// on debug start (`pio debug --load-mode <mode>`).
+fn pio_debug_load_mode(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mode = args.join(" ").trim().to_ascii_lowercase();
+    if !matches!(mode.as_str(), "always" | "modified" | "manual") {
+        bail!("usage: :pio-debug-load-mode <always|modified|manual>");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    let dir = st.sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_debug_with(&st, &["--load-mode".to_string(), mode]), dir);
+    Ok(())
+}
+
+/// `:pio-init-ide <ide>` — (re)generate IDE integration files for the project
+/// (`pio project init --ide <ide>`).
+fn pio_init_ide(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let ide = args.join(" ").trim().to_ascii_lowercase();
+    const IDES: &[&str] = &[
+        "clion", "codeblocks", "eclipse", "emacs", "netbeans", "qtcreator", "sublimetext", "vim",
+        "visualstudio", "vscode",
+    ];
+    if !IDES.contains(&ide.as_str()) {
+        bail!("usage: :pio-init-ide <{}>", IDES.join("|"));
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_project_init_with(&["--ide".to_string(), ide]), dir);
+    Ok(())
+}
+
+/// `:pio-init-sample <board>` — scaffold a project with example code
+/// (`pio project init --board <board> --sample-code`).
+fn pio_init_sample(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let board = args.join(" ").trim().to_string();
+    if board.is_empty() {
+        bail!("usage: :pio-init-sample <board>  (e.g. uno, esp32dev)");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    let argv = embedded::pio_project_init_with(&[
+        "--board".to_string(),
+        board,
+        "--sample-code".to_string(),
+    ]);
+    embedded_spawn_terminal(cx, argv, dir);
+    Ok(())
+}
+
+/// `:pio-init-option <name=value>` — set a `platformio.ini` option while
+/// initialising (`pio project init -O <name=value>`).
+fn pio_init_option(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let opt = args.join(" ").trim().to_string();
+    if !opt.contains('=') {
+        bail!("usage: :pio-init-option <name=value>  (e.g. board_build.f_cpu=16000000L)");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_project_init_with(&["-O".to_string(), opt]), dir);
+    Ok(())
+}
+
+/// `:pio-pkg-install-force <spec>` — reinstall a package even if present
+/// (`pio pkg install -f <spec>`).
+fn pio_pkg_install_force(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let spec = args.join(" ").trim().to_string();
+    if spec.is_empty() {
+        bail!("usage: :pio-pkg-install-force <spec>");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_pkg_install_with(&["-f".to_string(), spec]), dir);
+    Ok(())
+}
+
+/// `:pio-pkg-install-global <spec>` — install a package globally
+/// (`pio pkg install -g <spec>`).
+fn pio_pkg_install_global(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let spec = args.join(" ").trim().to_string();
+    if spec.is_empty() {
+        bail!("usage: :pio-pkg-install-global <spec>");
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_pkg_install_with(&["-g".to_string(), spec]), root);
+    Ok(())
+}
+
+/// `:pio-lib-install-nosave <name>` — install a library without writing it to
+/// `platformio.ini` (`pio pkg install -l <name> --no-save`).
+fn pio_lib_install_nosave(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ").trim().to_string();
+    if name.is_empty() {
+        bail!("usage: :pio-lib-install-nosave <name>");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    let argv = embedded::pio_pkg_install_with(&["-l".to_string(), name, "--no-save".to_string()]);
+    embedded_spawn_terminal(cx, argv, dir);
+    Ok(())
+}
+
+/// `:pio-pkg-search-sort <query> <relevance|popularity|trending|added|updated>` —
+/// registry search with an explicit sort order.
+fn pio_pkg_search_sort(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let sort = tokens.last().map(|s| s.to_ascii_lowercase()).unwrap_or_default();
+    let sorts = ["relevance", "popularity", "trending", "added", "updated"];
+    if tokens.len() < 2 || !sorts.contains(&sort.as_str()) {
+        bail!("usage: :pio-pkg-search-sort <query> <{}>", sorts.join("|"));
+    }
+    let query = tokens[..tokens.len() - 1].join(" ");
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_pkg_search_sort(query.trim(), &sort), false);
+    Ok(())
+}
+
+/// `:pio-upgrade-dev` — upgrade PlatformIO Core to the development branch
+/// (`pio upgrade --dev`).
+fn pio_upgrade_dev(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_upgrade_with(&["--dev".to_string()]), root);
+    Ok(())
+}
+
+/// `:pio-remote-run-force` — force the build to run on the remote agent even when
+/// it could run locally (`pio remote run -r`).
+fn pio_remote_run_force(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    let dir = st.sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_remote_run_with(&st, &["-r".to_string()]), dir);
+    Ok(())
+}
+
+/// `:pio-remote-agent-start-named <name>` — start a named Remote agent
+/// (`pio remote agent start --name <name>`).
+fn pio_remote_agent_start_named(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ").trim().to_string();
+    if name.is_empty() {
+        bail!("usage: :pio-remote-agent-start-named <name>");
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_remote_agent_start_with(&["--name".to_string(), name]), root);
+    Ok(())
+}
+
 /// `:pio-remote-monitor` — serial monitor over a Remote agent (`pio remote device
 /// monitor`), live in a terminal panel.
 fn pio_remote_monitor(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -21058,6 +21612,424 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["platformio-monitor-parity"],
         doc: "Set the serial monitor parity (`N`, `E`, `O`, `S`, or `M`).",
         fun: pio_monitor_parity,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-rts",
+        aliases: &["platformio-monitor-rts"],
+        doc: "Set the initial RTS line state for the serial monitor (`0` or `1`).",
+        fun: pio_monitor_rts,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-dtr",
+        aliases: &["platformio-monitor-dtr"],
+        doc: "Set the initial DTR line state for the serial monitor (`0` or `1`).",
+        fun: pio_monitor_dtr,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-echo",
+        aliases: &["platformio-monitor-echo"],
+        doc: "Toggle local echo in the serial monitor (`--echo`).",
+        fun: pio_monitor_echo,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-raw",
+        aliases: &["platformio-monitor-raw"],
+        doc: "Toggle raw serial monitor mode, disabling output transforms (`--raw`).",
+        fun: pio_monitor_raw,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-encoding",
+        aliases: &["platformio-monitor-encoding"],
+        doc: "Set the serial monitor encoding (e.g. `UTF-8`, `Latin-1`, `hexlify`); empty resets.",
+        fun: pio_monitor_encoding,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-flow",
+        aliases: &["platformio-monitor-flow"],
+        doc: "Select serial monitor flow control (`none`, `rtscts`, or `xonxoff`).",
+        fun: pio_monitor_flow,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-reconnect",
+        aliases: &["platformio-monitor-reconnect"],
+        doc: "Toggle serial monitor auto-reconnect (`on` or `off`; `off` = `--no-reconnect`).",
+        fun: pio_monitor_reconnect,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-build-verbose",
+        aliases: &["platformio-build-verbose"],
+        doc: "Verbose PlatformIO build (`pio run -v`), routed through `*compilation*`.",
+        fun: pio_build_verbose,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-build-silent",
+        aliases: &["platformio-build-silent"],
+        doc: "Quiet PlatformIO build showing warnings/errors only (`pio run -s`).",
+        fun: pio_build_silent,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-run-jobs",
+        aliases: &["platformio-run-jobs"],
+        doc: "Build with N parallel jobs (`pio run -j <n>`).",
+        fun: pio_run_jobs,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-build-no-auto-clean",
+        aliases: &["platformio-build-no-auto-clean"],
+        doc: "Build without the pre-build clean (`pio run --disable-auto-clean`).",
+        fun: pio_build_no_auto_clean,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-target",
+        aliases: &["platformio-target"],
+        doc: "Run an arbitrary PlatformIO build target (`pio run -t <name>`), live in a terminal panel.",
+        fun: pio_target,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-upload-to",
+        aliases: &["platformio-upload-to"],
+        doc: "Build + flash to a specific port (`pio run -t upload --upload-port <port>`).",
+        fun: pio_upload_to,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-verbose",
+        aliases: &["platformio-test-verbose"],
+        doc: "Verbose PlatformIO unit tests (`pio test -v`).",
+        fun: pio_test_verbose,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-ignore",
+        aliases: &["platformio-test-ignore"],
+        doc: "Run tests except those matching a pattern (`pio test -i <pattern>`).",
+        fun: pio_test_ignore,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-without-building",
+        aliases: &["platformio-test-without-building"],
+        doc: "Test the last build without rebuilding (`pio test --without-building`).",
+        fun: pio_test_without_building,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-without-uploading",
+        aliases: &["platformio-test-without-uploading"],
+        doc: "Run tests without flashing first (`pio test --without-uploading`).",
+        fun: pio_test_without_uploading,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-without-testing",
+        aliases: &["platformio-test-without-testing"],
+        doc: "Build + upload but skip running the tests (`pio test --without-testing`).",
+        fun: pio_test_without_testing,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-no-reset",
+        aliases: &["platformio-test-no-reset"],
+        doc: "Do not reset the board between tests (`pio test --no-reset`).",
+        fun: pio_test_no_reset,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-check-verbose",
+        aliases: &["platformio-check-verbose"],
+        doc: "Verbose static code analysis (`pio check -v`).",
+        fun: pio_check_verbose,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-check-json",
+        aliases: &["platformio-check-json"],
+        doc: "Static analysis as JSON (`pio check --json-output`), shown in a scratch buffer.",
+        fun: pio_check_json,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-check-flags",
+        aliases: &["platformio-check-flags"],
+        doc: "Static analysis with extra tool flags (`pio check --flags <flags>`).",
+        fun: pio_check_flags,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-check-fail-on",
+        aliases: &["platformio-check-fail-on"],
+        doc: "Fail on defects at or above a severity (`pio check --fail-on-defect <low|medium|high>`).",
+        fun: pio_check_fail_on,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-check-skip-packages",
+        aliases: &["platformio-check-skip-packages"],
+        doc: "Analyse only project sources, skipping libraries (`pio check --skip-packages`).",
+        fun: pio_check_skip_packages,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-check-src-filters",
+        aliases: &["platformio-check-src-filters"],
+        doc: "Restrict analysis to matching sources (`pio check --src-filters <pattern>`).",
+        fun: pio_check_src_filters,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-debug-verbose",
+        aliases: &["platformio-debug-verbose"],
+        doc: "Verbose PlatformIO debugger session (`pio debug -v`).",
+        fun: pio_debug_verbose,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-debug-interface",
+        aliases: &["platformio-debug-interface"],
+        doc: "Debug with a specific interface (`pio debug --interface <name>`).",
+        fun: pio_debug_interface,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-debug-load-mode",
+        aliases: &["platformio-debug-load-mode"],
+        doc: "Control firmware reloading on debug start (`pio debug --load-mode <always|modified|manual>`).",
+        fun: pio_debug_load_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-init-ide",
+        aliases: &["platformio-init-ide"],
+        doc: "Generate IDE integration files (`pio project init --ide <ide>`).",
+        fun: pio_init_ide,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-init-sample",
+        aliases: &["platformio-init-sample"],
+        doc: "Scaffold a project with example code (`pio project init --board <board> --sample-code`).",
+        fun: pio_init_sample,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-init-option",
+        aliases: &["platformio-init-option"],
+        doc: "Set a `platformio.ini` option while initialising (`pio project init -O <name=value>`).",
+        fun: pio_init_option,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-install-force",
+        aliases: &["platformio-pkg-install-force"],
+        doc: "Reinstall a package even if present (`pio pkg install -f <spec>`).",
+        fun: pio_pkg_install_force,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-install-global",
+        aliases: &["platformio-pkg-install-global"],
+        doc: "Install a package globally (`pio pkg install -g <spec>`).",
+        fun: pio_pkg_install_global,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-lib-install-nosave",
+        aliases: &["platformio-lib-install-nosave"],
+        doc: "Install a library without writing it to `platformio.ini` (`pio pkg install -l <name> --no-save`).",
+        fun: pio_lib_install_nosave,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-search-sort",
+        aliases: &["platformio-pkg-search-sort"],
+        doc: "Registry search with a sort order (`pio pkg search <query> --sort <relevance|popularity|trending|added|updated>`).",
+        fun: pio_pkg_search_sort,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-upgrade-dev",
+        aliases: &["platformio-upgrade-dev"],
+        doc: "Upgrade PlatformIO Core to the development branch (`pio upgrade --dev`).",
+        fun: pio_upgrade_dev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-remote-run-force",
+        aliases: &["platformio-remote-run-force"],
+        doc: "Force the build to run on the remote agent (`pio remote run -r`).",
+        fun: pio_remote_run_force,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-remote-agent-start-named",
+        aliases: &["platformio-remote-agent-start-named"],
+        doc: "Start a named Remote agent (`pio remote agent start --name <name>`).",
+        fun: pio_remote_agent_start_named,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, Some(1)),
