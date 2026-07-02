@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-80a4476f.js";
+            window.path_to_searchindex_js = "searchindex-4d08c8a7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -240,6 +240,43 @@
 <tr><td><code>:all</code>, <code>:sall</code></td><td>Open a window for each file in the argument list (vim :all / :sall).</td></tr>
 <tr><td><code>:compile</code></td><td>Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile).</td></tr>
 <tr><td><code>:recompile</code></td><td>Re-run the last compile command (emacs recompile).</td></tr>
+<tr><td><code>:arduino-compile</code>, <code>:averify</code>, <code>:arduino-verify</code></td><td>Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify).</td></tr>
+<tr><td><code>:arduino-upload</code>, <code>:aupload</code></td><td>Compile and flash the sketch to the connected board (arduino-cli compile –upload), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-monitor</code>, <code>:amonitor</code>, <code>:serial-monitor</code></td><td>Open the serial monitor for the selected port/baud (arduino-cli monitor).</td></tr>
+<tr><td><code>:arduino-boards</code>, <code>:arduino-board</code></td><td>Pick the target board (FQBN) from installed platforms (Arduino IDE board selector).</td></tr>
+<tr><td><code>:arduino-ports</code>, <code>:arduino-port</code></td><td>Pick the serial port from connected devices (arduino-cli board list).</td></tr>
+<tr><td><code>:arduino-lib-search</code>, <code>:arduino-lib</code></td><td>Search the Arduino library index and install the pick (Arduino IDE Library Manager).</td></tr>
+<tr><td><code>:arduino-core-install</code>, <code>:arduino-core</code></td><td>Install a board-support core, e.g. <code>arduino:avr</code> (Arduino IDE Boards Manager).</td></tr>
+<tr><td><code>:pio-build</code>, <code>:pio-run</code>, <code>:platformio-build</code></td><td>Build the PlatformIO project (<code>pio run</code>); errors go to the compilation list.</td></tr>
+<tr><td><code>:pio-upload</code>, <code>:platformio-upload</code></td><td>Build and upload the PlatformIO project (<code>pio run -t upload</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-monitor</code>, <code>:platformio-monitor</code></td><td>Open the PlatformIO serial monitor (<code>pio device monitor</code>).</td></tr>
+<tr><td><code>:pio-devices</code>, <code>:pio-device-list</code></td><td>Pick a serial port from <code>pio device list</code> and set it for this project.</td></tr>
+<tr><td><code>:pio-init</code>, <code>:platformio-init</code></td><td>Scaffold a PlatformIO project for a board (<code>pio project init --board &lt;id&gt;</code>).</td></tr>
+<tr><td><code>:embedded-baud</code>, <code>:serial-baud</code></td><td>Set the serial monitor baud rate for this project (e.g. 9600, 115200).</td></tr>
+<tr><td><code>:arduino-plotter</code>, <code>:serial-plotter</code></td><td>Live-graph the numbers streaming from the serial port (Arduino IDE Serial Plotter).</td></tr>
+<tr><td><code>:pio-plotter</code>, <code>:platformio-plotter</code></td><td>Live-graph the PlatformIO serial monitor output (serial plotter).</td></tr>
+<tr><td><code>:arduino-new-sketch</code>, <code>:arduino-sketch-new</code></td><td>Scaffold a new sketch (<code>arduino-cli sketch new</code>) and open its .ino (Arduino IDE New Sketch).</td></tr>
+<tr><td><code>:arduino-compile-export</code>, <code>:aexport</code>, <code>:arduino-export</code></td><td>Compile and export the built binaries to the sketch folder (Arduino IDE Export Compiled Binary).</td></tr>
+<tr><td><code>:arduino-burn-bootloader</code>, <code>:arduino-bootloader</code></td><td>Flash the bootloader to the selected board (Arduino IDE Burn Bootloader), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-board-info</code>, <code>:arduino-board-details</code></td><td>Print the selected board’s specs and menu options (Arduino IDE Get Board Info).</td></tr>
+<tr><td><code>:arduino-core-search</code>, <code>:arduino-boards-manager</code></td><td>Search the Boards Manager index for a core (Arduino IDE Boards Manager).</td></tr>
+<tr><td><code>:arduino-core-list</code>, <code>:arduino-cores</code></td><td>List installed board-support cores (Boards Manager, installed tab).</td></tr>
+<tr><td><code>:arduino-core-uninstall</code></td><td>Uninstall a board-support core, e.g. <code>arduino:avr</code>.</td></tr>
+<tr><td><code>:arduino-core-update-index</code>, <code>:arduino-update-index</code></td><td>Refresh the Boards Manager package index (arduino-cli core update-index).</td></tr>
+<tr><td><code>:arduino-core-upgrade</code></td><td>Upgrade all installed board-support cores (arduino-cli core upgrade), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-lib-list</code>, <code>:arduino-libs</code></td><td>List installed Arduino libraries (Library Manager, installed tab).</td></tr>
+<tr><td><code>:arduino-lib-uninstall</code></td><td>Uninstall an Arduino library by name (arduino-cli lib uninstall).</td></tr>
+<tr><td><code>:arduino-lib-upgrade</code></td><td>Upgrade all installed Arduino libraries (arduino-cli lib upgrade), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-lib-examples</code></td><td>List a library’s example sketches (arduino-cli lib examples <name>).</name></td></tr>
+<tr><td><code>:arduino-sketch-archive</code>, <code>:arduino-archive</code></td><td>Zip the whole sketch (Arduino IDE Sketch → Archive Sketch).</td></tr>
+<tr><td><code>:pio-clean</code>, <code>:platformio-clean</code></td><td>Remove PlatformIO build artifacts (<code>pio run -t clean</code>); output goes to the compilation list.</td></tr>
+<tr><td><code>:pio-test</code>, <code>:platformio-test</code></td><td>Run the PlatformIO project’s unit tests (<code>pio test</code>); failures go to the compilation list.</td></tr>
+<tr><td><code>:pio-check</code>, <code>:platformio-check</code></td><td>PlatformIO static code analysis (<code>pio check</code>); findings go to the compilation list.</td></tr>
+<tr><td><code>:pio-boards</code>, <code>:platformio-boards</code></td><td>The PlatformIO Board Explorer (<code>pio boards [query]</code>); output in the Run console.</td></tr>
+<tr><td><code>:pio-lib-install</code>, <code>:pio-pkg-install</code>, <code>:platformio-lib-install</code></td><td>Add a library to the PlatformIO project (<code>pio pkg install -l &lt;name&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-lib-list</code>, <code>:pio-pkg-list</code>, <code>:pio-libs</code></td><td>List installed PlatformIO project packages (<code>pio pkg list</code>).</td></tr>
+<tr><td><code>:pio-lib-uninstall</code>, <code>:pio-pkg-uninstall</code></td><td>Remove a PlatformIO project library (<code>pio pkg uninstall -l &lt;name&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-lib-update</code>, <code>:pio-pkg-update</code></td><td>Update installed PlatformIO project packages (<code>pio pkg update</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:next-error</code>, <code>:cnext-error</code></td><td>Visit the next compilation error’s location (emacs next-error / M-g n).</td></tr>
 <tr><td><code>:previous-error</code>, <code>:cprevious-error</code></td><td>Visit the previous compilation error’s location (emacs previous-error / M-g p).</td></tr>
 <tr><td><code>:first-error</code></td><td>Visit the first compilation error’s location (emacs first-error).</td></tr>
