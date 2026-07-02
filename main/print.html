@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-98f3949f.js";
+            window.path_to_searchindex_js = "searchindex-6a5e3713.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1703,6 +1703,44 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-monitor-filters-clear</code>, <code>:platformio-monitor-filters-clear</code></td><td>Remove all configured serial monitor filters.</td></tr>
 <tr><td><code>:pio-monitor-eol</code>, <code>:platformio-monitor-eol</code></td><td>Set the serial monitor end-of-line mode (<code>CR</code>, <code>LF</code>, or <code>CRLF</code>).</td></tr>
 <tr><td><code>:pio-monitor-parity</code>, <code>:platformio-monitor-parity</code></td><td>Set the serial monitor parity (<code>N</code>, <code>E</code>, <code>O</code>, <code>S</code>, or <code>M</code>).</td></tr>
+<tr><td><code>:pio-monitor-rts</code>, <code>:platformio-monitor-rts</code></td><td>Set the initial RTS line state for the serial monitor (<code>0</code> or <code>1</code>).</td></tr>
+<tr><td><code>:pio-monitor-dtr</code>, <code>:platformio-monitor-dtr</code></td><td>Set the initial DTR line state for the serial monitor (<code>0</code> or <code>1</code>).</td></tr>
+<tr><td><code>:pio-monitor-echo</code>, <code>:platformio-monitor-echo</code></td><td>Toggle local echo in the serial monitor (<code>--echo</code>).</td></tr>
+<tr><td><code>:pio-monitor-raw</code>, <code>:platformio-monitor-raw</code></td><td>Toggle raw serial monitor mode, disabling output transforms (<code>--raw</code>).</td></tr>
+<tr><td><code>:pio-monitor-encoding</code>, <code>:platformio-monitor-encoding</code></td><td>Set the serial monitor encoding (e.g. <code>UTF-8</code>, <code>Latin-1</code>, <code>hexlify</code>); empty resets.</td></tr>
+<tr><td><code>:pio-monitor-flow</code>, <code>:platformio-monitor-flow</code></td><td>Select serial monitor flow control (<code>none</code>, <code>rtscts</code>, or <code>xonxoff</code>).</td></tr>
+<tr><td><code>:pio-monitor-reconnect</code>, <code>:platformio-monitor-reconnect</code></td><td>Toggle serial monitor auto-reconnect (<code>on</code> or <code>off</code>; <code>off</code> = <code>--no-reconnect</code>).</td></tr>
+<tr><td><code>:pio-build-verbose</code>, <code>:platformio-build-verbose</code></td><td>Verbose PlatformIO build (<code>pio run -v</code>), routed through <code>*compilation*</code>.</td></tr>
+<tr><td><code>:pio-build-silent</code>, <code>:platformio-build-silent</code></td><td>Quiet PlatformIO build showing warnings/errors only (<code>pio run -s</code>).</td></tr>
+<tr><td><code>:pio-run-jobs</code>, <code>:platformio-run-jobs</code></td><td>Build with N parallel jobs (<code>pio run -j &lt;n&gt;</code>).</td></tr>
+<tr><td><code>:pio-build-no-auto-clean</code>, <code>:platformio-build-no-auto-clean</code></td><td>Build without the pre-build clean (<code>pio run --disable-auto-clean</code>).</td></tr>
+<tr><td><code>:pio-target</code>, <code>:platformio-target</code></td><td>Run an arbitrary PlatformIO build target (<code>pio run -t &lt;name&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-upload-to</code>, <code>:platformio-upload-to</code></td><td>Build + flash to a specific port (<code>pio run -t upload --upload-port &lt;port&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-verbose</code>, <code>:platformio-test-verbose</code></td><td>Verbose PlatformIO unit tests (<code>pio test -v</code>).</td></tr>
+<tr><td><code>:pio-test-ignore</code>, <code>:platformio-test-ignore</code></td><td>Run tests except those matching a pattern (<code>pio test -i &lt;pattern&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-without-building</code>, <code>:platformio-test-without-building</code></td><td>Test the last build without rebuilding (<code>pio test --without-building</code>).</td></tr>
+<tr><td><code>:pio-test-without-uploading</code>, <code>:platformio-test-without-uploading</code></td><td>Run tests without flashing first (<code>pio test --without-uploading</code>).</td></tr>
+<tr><td><code>:pio-test-without-testing</code>, <code>:platformio-test-without-testing</code></td><td>Build + upload but skip running the tests (<code>pio test --without-testing</code>).</td></tr>
+<tr><td><code>:pio-test-no-reset</code>, <code>:platformio-test-no-reset</code></td><td>Do not reset the board between tests (<code>pio test --no-reset</code>).</td></tr>
+<tr><td><code>:pio-check-verbose</code>, <code>:platformio-check-verbose</code></td><td>Verbose static code analysis (<code>pio check -v</code>).</td></tr>
+<tr><td><code>:pio-check-json</code>, <code>:platformio-check-json</code></td><td>Static analysis as JSON (<code>pio check --json-output</code>), shown in a scratch buffer.</td></tr>
+<tr><td><code>:pio-check-flags</code>, <code>:platformio-check-flags</code></td><td>Static analysis with extra tool flags (<code>pio check --flags &lt;flags&gt;</code>).</td></tr>
+<tr><td><code>:pio-check-fail-on</code>, <code>:platformio-check-fail-on</code></td><td>Fail on defects at or above a severity (`pio check –fail-on-defect &lt;low</td></tr>
+<tr><td><code>:pio-check-skip-packages</code>, <code>:platformio-check-skip-packages</code></td><td>Analyse only project sources, skipping libraries (<code>pio check --skip-packages</code>).</td></tr>
+<tr><td><code>:pio-check-src-filters</code>, <code>:platformio-check-src-filters</code></td><td>Restrict analysis to matching sources (<code>pio check --src-filters &lt;pattern&gt;</code>).</td></tr>
+<tr><td><code>:pio-debug-verbose</code>, <code>:platformio-debug-verbose</code></td><td>Verbose PlatformIO debugger session (<code>pio debug -v</code>).</td></tr>
+<tr><td><code>:pio-debug-interface</code>, <code>:platformio-debug-interface</code></td><td>Debug with a specific interface (<code>pio debug --interface &lt;name&gt;</code>).</td></tr>
+<tr><td><code>:pio-debug-load-mode</code>, <code>:platformio-debug-load-mode</code></td><td>Control firmware reloading on debug start (`pio debug –load-mode &lt;always</td></tr>
+<tr><td><code>:pio-init-ide</code>, <code>:platformio-init-ide</code></td><td>Generate IDE integration files (<code>pio project init --ide &lt;ide&gt;</code>).</td></tr>
+<tr><td><code>:pio-init-sample</code>, <code>:platformio-init-sample</code></td><td>Scaffold a project with example code (<code>pio project init --board &lt;board&gt; --sample-code</code>).</td></tr>
+<tr><td><code>:pio-init-option</code>, <code>:platformio-init-option</code></td><td>Set a <code>platformio.ini</code> option while initialising (<code>pio project init -O &lt;name=value&gt;</code>).</td></tr>
+<tr><td><code>:pio-pkg-install-force</code>, <code>:platformio-pkg-install-force</code></td><td>Reinstall a package even if present (<code>pio pkg install -f &lt;spec&gt;</code>).</td></tr>
+<tr><td><code>:pio-pkg-install-global</code>, <code>:platformio-pkg-install-global</code></td><td>Install a package globally (<code>pio pkg install -g &lt;spec&gt;</code>).</td></tr>
+<tr><td><code>:pio-lib-install-nosave</code>, <code>:platformio-lib-install-nosave</code></td><td>Install a library without writing it to <code>platformio.ini</code> (<code>pio pkg install -l &lt;name&gt; --no-save</code>).</td></tr>
+<tr><td><code>:pio-pkg-search-sort</code>, <code>:platformio-pkg-search-sort</code></td><td>Registry search with a sort order (`pio pkg search <query> –sort &lt;relevance</query></td></tr>
+<tr><td><code>:pio-upgrade-dev</code>, <code>:platformio-upgrade-dev</code></td><td>Upgrade PlatformIO Core to the development branch (<code>pio upgrade --dev</code>).</td></tr>
+<tr><td><code>:pio-remote-run-force</code>, <code>:platformio-remote-run-force</code></td><td>Force the build to run on the remote agent (<code>pio remote run -r</code>).</td></tr>
+<tr><td><code>:pio-remote-agent-start-named</code>, <code>:platformio-remote-agent-start-named</code></td><td>Start a named Remote agent (<code>pio remote agent start --name &lt;name&gt;</code>).</td></tr>
 <tr><td><code>:pio-remote-monitor</code>, <code>:platformio-remote-monitor</code></td><td>Serial monitor over a Remote agent (<code>pio remote device monitor</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-settings-reset</code>, <code>:platformio-settings-reset</code></td><td>Restore PlatformIO Core settings to their defaults (<code>pio settings reset</code>).</td></tr>
 <tr><td><code>:pio-system-completion</code>, <code>:platformio-system-completion</code></td><td>Emit a shell completion script (`pio system completion &lt;bash</td></tr>
