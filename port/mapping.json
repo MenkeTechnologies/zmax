@@ -24525,5 +24525,45 @@
    "static:check_parens"
   ],
   "note": "emacs check-parens -> check_parens: scans buffer, moves to the first unbalanced (/[/{ and reports line:col, or 'All brackets balanced'"
+ },
+ {
+  "spec_id": "neovim.function.diff_hlid",
+  "status": "ported",
+  "evidence": [
+   "builtin:viml:diff_hlID"
+  ],
+  "note": "implemented by embedded vimlrs (pub fn f_diff_hlID)"
+ },
+ {
+  "spec_id": "neovim.function.hlid",
+  "status": "ported",
+  "evidence": [
+   "builtin:viml:hlID"
+  ],
+  "note": "implemented by embedded vimlrs (pub fn f_hlID)"
+ },
+ {
+  "spec_id": "neovim.function.synid",
+  "status": "ported",
+  "evidence": [
+   "builtin:viml:synID"
+  ],
+  "note": "implemented by embedded vimlrs (pub fn f_synID)"
+ },
+ {
+  "spec_id": "neovim.function.synidattr",
+  "status": "ported",
+  "evidence": [
+   "builtin:viml:synIDattr"
+  ],
+  "note": "implemented by embedded vimlrs (pub fn f_synIDattr)"
+ },
+ {
+  "spec_id": "neovim.function.synidtrans",
+  "status": "ported",
+  "evidence": [
+   "builtin:viml:synIDtrans"
+  ],
+  "note": "implemented by embedded vimlrs (pub fn f_synIDtrans)"
  }
 ]

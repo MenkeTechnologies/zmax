@@ -368,7 +368,7 @@ def parse_builtins():
                 if fn.endswith(".rs"):
                     try: t=open(_os.path.join(dp,fn),encoding="utf-8").read()
                     except OSError: continue
-                    for m in _re.finditer(r"\bpub fn f_([a-z0-9_]+)",t): builtins.add("viml:"+m.group(1))
+                    for m in _re.finditer(r"\bpub fn f_([A-Za-z0-9_]+)",t): builtins.add("viml:"+m.group(1))
     # vimlrs ex-statements (`:let`,`:if`,`:for`,`:try`,`:echon` …) it parses/runs,
     # callable via `:vim`; catalogued as viml:ex:<name>.
     _ast=_os.path.join(ROOT,"vendor","vimlrs","src","viml_ast.rs")
