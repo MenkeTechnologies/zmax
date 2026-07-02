@@ -28507,5 +28507,29 @@
    "static:view_buffer"
   ],
   "note": "view-buffer: make the current buffer read-only for viewing"
+ },
+ {
+  "spec_id": "emacs.command.list_abbrevs",
+  "status": "ported",
+  "evidence": [
+   "typable:list-abbrevs"
+  ],
+  "note": "list-abbrevs: show all defined abbreviations in a buffer"
+ },
+ {
+  "spec_id": "emacs.command.define_global_abbrev",
+  "status": "ported",
+  "evidence": [
+   "typable:define-global-abbrev"
+  ],
+  "note": "define-global-abbrev NAME EXPANSION: add a global abbreviation to the table"
+ },
+ {
+  "spec_id": "emacs.command.kill_all_abbrevs",
+  "status": "ported",
+  "evidence": [
+   "typable:kill-all-abbrevs"
+  ],
+  "note": "kill-all-abbrevs: remove every defined abbreviation"
  }
 ]

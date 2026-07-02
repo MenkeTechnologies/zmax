@@ -48,6 +48,9 @@
 | `:previous-error`, `:cprevious-error` | Visit the previous compilation error's location (emacs previous-error / M-g p). |
 | `:first-error` | Visit the first compilation error's location (emacs first-error). |
 | `:abbreviate`, `:ab` | List or define an abbreviation for Insert and Command-line mode (vim :abbreviate). |
+| `:list-abbrevs` | Show all defined abbreviations in a buffer (emacs list-abbrevs). |
+| `:define-global-abbrev` | Define a global abbreviation: :define-global-abbrev NAME EXPANSION (emacs define-global-abbrev). |
+| `:kill-all-abbrevs` | Remove all defined abbreviations (emacs kill-all-abbrevs). |
 | `:iabbrev`, `:ia` | List or define an Insert-mode abbreviation (vim :iabbrev). |
 | `:cabbrev`, `:ca` | List or define a Command-line-mode abbreviation (vim :cabbrev). |
 | `:unabbreviate`, `:una` | Remove an abbreviation for both modes (vim :unabbreviate). |

@@ -646,6 +646,73 @@ fn abbreviate(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     abbrev_define(cx, AbbrevMode::Both, &args)
 }
 
+/// Emacs `list-abbrevs`: show every defined abbreviation in a scratch buffer.
+fn list_abbrevs(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let text = abbrev_list(AbbrevMode::Both, None);
+    cx.editor.new_file(Action::Replace);
+    let (view, doc) = current!(cx.editor);
+    let body = format!("{text}\n");
+    let insert = Transaction::insert(
+        doc.text(),
+        &zemacs_core::Selection::point(0),
+        body.as_str().into(),
+    );
+    doc.apply(&insert, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Emacs `define-global-abbrev`: define an abbrev in the global (both-modes)
+/// table (`:define-global-abbrev NAME EXPANSION`).
+fn define_global_abbrev(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.first().map(|s| s.to_string()).unwrap_or_default();
+    let expansion = args
+        .iter()
+        .skip(1)
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    if name.is_empty() || expansion.is_empty() {
+        bail!("define-global-abbrev: needs NAME EXPANSION");
+    }
+    with_abbrevs(|t| t.add(AbbrevMode::Both, &name, &expansion));
+    cx.editor
+        .set_status(format!("(global) \"{name}\" -> \"{expansion}\""));
+    Ok(())
+}
+
+/// Emacs `kill-all-abbrevs`: remove every defined abbreviation.
+fn kill_all_abbrevs(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    with_abbrevs(|t| {
+        t.clear(AbbrevMode::Insert);
+        t.clear(AbbrevMode::Command);
+        t.clear(AbbrevMode::Both);
+    });
+    cx.editor.set_status("all abbreviations killed");
+    Ok(())
+}
+
 /// `:iabbrev` — like `:abbreviate` but Insert mode only.
 fn iabbrev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -17952,6 +18019,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "list-abbrevs",
+        aliases: &[],
+        doc: "Show all defined abbreviations in a buffer (emacs list-abbrevs).",
+        fun: list_abbrevs,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "define-global-abbrev",
+        aliases: &[],
+        doc: "Define a global abbreviation: :define-global-abbrev NAME EXPANSION (emacs define-global-abbrev).",
+        fun: define_global_abbrev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "kill-all-abbrevs",
+        aliases: &[],
+        doc: "Remove all defined abbreviations (emacs kill-all-abbrevs).",
+        fun: kill_all_abbrevs,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
