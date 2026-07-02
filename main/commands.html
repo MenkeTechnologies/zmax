@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-1eba273b.js";
+            window.path_to_searchindex_js = "searchindex-d3031289.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -356,6 +356,23 @@
 <tr><td><code>:pio-access-revoke</code>, <code>:platformio-access-revoke</code></td><td>Revoke access to a resource (<code>pio access revoke &lt;resource&gt; &lt;team&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-access-public</code>, <code>:platformio-access-public</code></td><td>Make a published resource public (<code>pio access public &lt;resource&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-access-private</code>, <code>:platformio-access-private</code></td><td>Make a published resource private (<code>pio access private &lt;resource&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio</code>, <code>:platformio</code></td><td>Run an arbitrary <code>pio</code> command in a terminal panel (any subcommand/flag, including <code>pio home</code>).</td></tr>
+<tr><td><code>:arduino-cli</code>, <code>:acli</code>, <code>:arduino</code></td><td>Run an arbitrary <code>arduino-cli</code> command in a terminal panel (any subcommand/flag).</td></tr>
+<tr><td><code>:arduino-core-download</code>, <code>:arduino-download-core</code></td><td>Fetch a core without installing it (<code>arduino-cli core download &lt;package&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-lib-download</code>, <code>:arduino-download-lib</code></td><td>Fetch a library without installing it (<code>arduino-cli lib download &lt;name&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-lib-update-index</code>, <code>:arduino-lib-index</code></td><td>Refresh the arduino-cli library index (<code>arduino-cli lib update-index</code>).</td></tr>
+<tr><td><code>:arduino-board-search</code>, <code>:arduino-boards-search</code></td><td>Search the Boards Manager for a board (<code>arduino-cli board search [query]</code>).</td></tr>
+<tr><td><code>:arduino-cache-clean</code>, <code>:arduino-clean-cache</code></td><td>Delete the Boards/Library Manager download cache (<code>arduino-cli cache clean</code>).</td></tr>
+<tr><td><code>:arduino-completion</code>, <code>:arduino-cli-completion</code></td><td>Emit a shell completion script (`arduino-cli completion &lt;bash</td></tr>
+<tr><td><code>:arduino-config-get</code>, <code>:arduino-cfg-get</code></td><td>Read one arduino-cli configuration key (<code>arduino-cli config get &lt;key&gt;</code>).</td></tr>
+<tr><td><code>:arduino-config-set</code>, <code>:arduino-cfg-set</code></td><td>Set an arduino-cli configuration value (<code>arduino-cli config set &lt;key&gt; &lt;value…&gt;</code>).</td></tr>
+<tr><td><code>:arduino-config-add</code>, <code>:arduino-cfg-add</code></td><td>Append value(s) to an arduino-cli list setting (<code>arduino-cli config add &lt;key&gt; &lt;value…&gt;</code>).</td></tr>
+<tr><td><code>:arduino-config-remove</code>, <code>:arduino-cfg-remove</code></td><td>Remove value(s) from an arduino-cli list setting (<code>arduino-cli config remove &lt;key&gt; &lt;value…&gt;</code>).</td></tr>
+<tr><td><code>:arduino-config-delete</code>, <code>:arduino-cfg-delete</code></td><td>Delete an arduino-cli settings key and its sub-keys (<code>arduino-cli config delete &lt;key&gt;</code>).</td></tr>
+<tr><td><code>:arduino-config-init</code>, <code>:arduino-cfg-init</code></td><td>Write the current configuration to a config file (<code>arduino-cli config init</code>).</td></tr>
+<tr><td><code>:arduino-board-attach</code>, <code>:arduino-attach</code></td><td>Attach a sketch to a board (<code>arduino-cli board attach -p &lt;port&gt; -b &lt;fqbn&gt; [sketch]</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-profile-create</code>, <code>:arduino-profile-new</code></td><td>Create/update a build profile in the sketch project file (<code>arduino-cli profile create</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-profile-set-default</code>, <code>:arduino-profile-default</code></td><td>Set the default build profile (<code>arduino-cli profile set-default &lt;name&gt;</code>).</td></tr>
 <tr><td><code>:next-error</code>, <code>:cnext-error</code></td><td>Visit the next compilation error’s location (emacs next-error / M-g n).</td></tr>
 <tr><td><code>:previous-error</code>, <code>:cprevious-error</code></td><td>Visit the previous compilation error’s location (emacs previous-error / M-g p).</td></tr>
 <tr><td><code>:first-error</code></td><td>Visit the first compilation error’s location (emacs first-error).</td></tr>
