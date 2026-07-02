@@ -26717,227 +26717,227 @@
   "note": "emacs tex-validate-region -> check {}/$/begin-end balance, jump to error"
  },
  {
-  "id": "emacs.command.calendar",
   "status": "ported",
   "evidence": [
    "static:calendar"
   ],
-  "note": "emacs calendar -> zemacs calendar opens the month grid"
+  "note": "emacs calendar -> zemacs calendar opens the month grid",
+  "spec_id": "emacs.command.calendar"
  },
  {
-  "id": "emacs.command.calendar_backward_day",
   "status": "ported",
   "evidence": [
    "key:calendar:C-b"
   ],
-  "note": "emacs calendar-backward-day -> zemacs Calendar mode key"
+  "note": "emacs calendar-backward-day -> zemacs Calendar mode key",
+  "spec_id": "emacs.command.calendar_backward_day"
  },
  {
-  "id": "emacs.command.calendar_backward_month",
   "status": "ported",
   "evidence": [
    "key:calendar:A-{"
   ],
-  "note": "emacs calendar-backward-month -> zemacs Calendar mode key"
+  "note": "emacs calendar-backward-month -> zemacs Calendar mode key",
+  "spec_id": "emacs.command.calendar_backward_month"
  },
  {
-  "id": "emacs.command.calendar_backward_week",
   "status": "ported",
   "evidence": [
    "key:calendar:C-p"
   ],
-  "note": "emacs calendar-backward-week -> zemacs Calendar mode key"
+  "note": "emacs calendar-backward-week -> zemacs Calendar mode key",
+  "spec_id": "emacs.command.calendar_backward_week"
  },
  {
-  "id": "emacs.command.calendar_beginning_of_week",
   "status": "ported",
   "evidence": [
    "key:calendar:C-a"
   ],
-  "note": "emacs calendar-beginning-of-week -> zemacs Calendar mode key"
+  "note": "emacs calendar-beginning-of-week -> zemacs Calendar mode key",
+  "spec_id": "emacs.command.calendar_beginning_of_week"
  },
  {
-  "id": "emacs.command.calendar_end_of_week",
   "status": "ported",
   "evidence": [
    "key:calendar:C-e"
   ],
-  "note": "emacs calendar-end-of-week -> zemacs Calendar mode key"
+  "note": "emacs calendar-end-of-week -> zemacs Calendar mode key",
+  "spec_id": "emacs.command.calendar_end_of_week"
  },
  {
-  "id": "emacs.command.calendar_forward_day",
   "status": "ported",
   "evidence": [
    "key:calendar:C-f"
   ],
-  "note": "emacs calendar-forward-day -> zemacs Calendar mode key"
+  "note": "emacs calendar-forward-day -> zemacs Calendar mode key",
+  "spec_id": "emacs.command.calendar_forward_day"
  },
  {
-  "id": "emacs.command.calendar_forward_month",
   "status": "ported",
   "evidence": [
    "key:calendar:A-}"
   ],
-  "note": "emacs calendar-forward-month -> zemacs Calendar mode key"
+  "note": "emacs calendar-forward-month -> zemacs Calendar mode key",
+  "spec_id": "emacs.command.calendar_forward_month"
  },
  {
-  "id": "emacs.command.calendar_forward_week",
   "status": "ported",
   "evidence": [
    "key:calendar:C-n"
   ],
-  "note": "emacs calendar-forward-week -> zemacs Calendar mode key"
+  "note": "emacs calendar-forward-week -> zemacs Calendar mode key",
+  "spec_id": "emacs.command.calendar_forward_week"
  },
  {
-  "id": "emacs.command.calendar_goto_today",
   "status": "ported",
   "evidence": [
    "key:calendar:."
   ],
-  "note": "emacs calendar-goto-today -> zemacs Calendar mode key"
+  "note": "emacs calendar-goto-today -> zemacs Calendar mode key",
+  "spec_id": "emacs.command.calendar_goto_today"
  },
  {
-  "id": "emacs.command.calendar_scroll_left",
   "status": "partial",
   "evidence": [
    "key:calendar:>"
   ],
-  "note": "emacs calendar-scroll-left -> zemacs Calendar mode key"
+  "note": "emacs calendar-scroll-left -> zemacs Calendar mode key",
+  "spec_id": "emacs.command.calendar_scroll_left"
  },
  {
-  "id": "emacs.command.calendar_scroll_right",
   "status": "partial",
   "evidence": [
    "key:calendar:<"
   ],
-  "note": "emacs calendar-scroll-right -> zemacs Calendar mode key"
+  "note": "emacs calendar-scroll-right -> zemacs Calendar mode key",
+  "spec_id": "emacs.command.calendar_scroll_right"
  },
  {
-  "id": "emacs.keybinding.dot_lparencalendar_mode_rparen",
   "status": "ported",
   "evidence": [
    "key:calendar:."
   ],
-  "note": "emacs Calendar . -> zemacs Calendar mode"
+  "note": "emacs Calendar . -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.dot_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.lt_lparencalendar_mode_rparen",
   "status": "partial",
   "evidence": [
    "key:calendar:<"
   ],
-  "note": "emacs Calendar < -> zemacs Calendar mode"
+  "note": "emacs Calendar < -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.lt_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.gt_lparencalendar_mode_rparen",
   "status": "partial",
   "evidence": [
    "key:calendar:>"
   ],
-  "note": "emacs Calendar > -> zemacs Calendar mode"
+  "note": "emacs Calendar > -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.gt_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.c_a_lparencalendar_mode_rparen",
   "status": "ported",
   "evidence": [
    "key:calendar:C-a"
   ],
-  "note": "emacs Calendar C-a -> zemacs Calendar mode"
+  "note": "emacs Calendar C-a -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.c_a_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.c_b_lparencalendar_mode_rparen",
   "status": "ported",
   "evidence": [
    "key:calendar:C-b"
   ],
-  "note": "emacs Calendar C-b -> zemacs Calendar mode"
+  "note": "emacs Calendar C-b -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.c_b_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.c_e_lparencalendar_mode_rparen",
   "status": "ported",
   "evidence": [
    "key:calendar:C-e"
   ],
-  "note": "emacs Calendar C-e -> zemacs Calendar mode"
+  "note": "emacs Calendar C-e -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.c_e_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.c_f_lparencalendar_mode_rparen",
   "status": "ported",
   "evidence": [
    "key:calendar:C-f"
   ],
-  "note": "emacs Calendar C-f -> zemacs Calendar mode"
+  "note": "emacs Calendar C-f -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.c_f_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.c_n_lparencalendar_mode_rparen",
   "status": "ported",
   "evidence": [
    "key:calendar:C-n"
   ],
-  "note": "emacs Calendar C-n -> zemacs Calendar mode"
+  "note": "emacs Calendar C-n -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.c_n_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.c_p_lparencalendar_mode_rparen",
   "status": "ported",
   "evidence": [
    "key:calendar:C-p"
   ],
-  "note": "emacs Calendar C-p -> zemacs Calendar mode"
+  "note": "emacs Calendar C-p -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.c_p_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.m_lbrace_lparencalendar_mode_rparen",
   "status": "ported",
   "evidence": [
    "key:calendar:A-{"
   ],
-  "note": "emacs Calendar M-{ -> zemacs Calendar mode"
+  "note": "emacs Calendar M-{ -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.m_lbrace_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.m_rbrace_lparencalendar_mode_rparen",
   "status": "ported",
   "evidence": [
    "key:calendar:A-}"
   ],
-  "note": "emacs Calendar M-} -> zemacs Calendar mode"
+  "note": "emacs Calendar M-} -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.m_rbrace_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.next_lparencalendar_mode_rparen",
   "status": "partial",
   "evidence": [
    "key:calendar:pagedown"
   ],
-  "note": "emacs Calendar next -> zemacs Calendar mode"
+  "note": "emacs Calendar next -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.next_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.pagedown_lparencalendar_mode_rparen",
   "status": "partial",
   "evidence": [
    "key:calendar:pagedown"
   ],
-  "note": "emacs Calendar PageDown -> zemacs Calendar mode"
+  "note": "emacs Calendar PageDown -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.pagedown_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.pageup_lparencalendar_mode_rparen",
   "status": "partial",
   "evidence": [
    "key:calendar:pageup"
   ],
-  "note": "emacs Calendar PageUp -> zemacs Calendar mode"
+  "note": "emacs Calendar PageUp -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.pageup_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.prior_lparencalendar_mode_rparen",
   "status": "partial",
   "evidence": [
    "key:calendar:pageup"
   ],
-  "note": "emacs Calendar prior -> zemacs Calendar mode"
+  "note": "emacs Calendar prior -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.prior_lparencalendar_mode_rparen"
  },
  {
-  "id": "emacs.keybinding.q_lparencalendar_mode_rparen",
   "status": "ported",
   "evidence": [
    "key:calendar:q"
   ],
-  "note": "emacs Calendar q -> zemacs Calendar mode"
+  "note": "emacs Calendar q -> zemacs Calendar mode",
+  "spec_id": "emacs.keybinding.q_lparencalendar_mode_rparen"
  }
 ]
