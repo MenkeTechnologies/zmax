@@ -33,8 +33,29 @@ use crate::{
 enum View {
     /// A single message (the default `rmail-mode` view).
     Message,
-    /// The `rmail-summary` list of all messages, with a movable cursor.
+    /// The `rmail-summary` list, with a movable cursor over `sum`.
     Summary,
+}
+
+/// The command an active minibuffer prompt will run once the user hits RET.
+/// Rmail reads these arguments in the echo area; the reader reads them inline.
+#[derive(Clone, Copy)]
+enum PromptAction {
+    Search,
+    AddLabel,
+    KillLabel,
+    SummaryByLabel,
+    Input,
+    Output,
+    OutputBody,
+}
+
+/// An inline minibuffer: a labelled single-line text field the Component owns,
+/// so it can mutate its own state on submit (a layer pushed on top could not).
+struct Prompt {
+    label: String,
+    input: String,
+    action: PromptAction,
 }
 
 /// The interactive Rmail reader overlay.
@@ -50,8 +71,12 @@ pub struct Rmail {
     status: String,
     /// Message vs summary pane.
     view: View,
-    /// Cursor row within the summary (an index into `mailbox.msgs`).
+    /// Message indices shown in the summary (all, or a label-filtered subset).
+    sum: Vec<usize>,
+    /// Cursor position within `sum`.
     sum_cursor: usize,
+    /// Active inline prompt, if any.
+    prompt: Option<Prompt>,
 }
 
 /// Headers Rmail shows by default when `full_headers` is off.
@@ -67,7 +92,9 @@ impl Rmail {
             count: String::new(),
             status: String::new(),
             view: View::Message,
+            sum: Vec::new(),
             sum_cursor: 0,
+            prompt: None,
         }
     }
 
@@ -80,10 +107,25 @@ impl Rmail {
         format!("{:>4} {} {:<20}  {}", idx + 1, flag, from, m.subject())
     }
 
-    /// Handle a key while the summary pane is showing. Returns the same
-    /// [`EventResult`] contract as [`Component::handle_event`].
+    /// The message index the summary cursor points at.
+    fn sum_target(&self) -> Option<usize> {
+        self.sum.get(self.sum_cursor).copied()
+    }
+
+    /// Open the summary over `indices` (all messages for `h`, a filtered subset
+    /// for `l`), positioning the cursor on the current message if present.
+    fn open_summary(&mut self, indices: Vec<usize>) {
+        self.sum_cursor = indices
+            .iter()
+            .position(|&i| i == self.mailbox.current)
+            .unwrap_or(0);
+        self.sum = indices;
+        self.view = View::Summary;
+    }
+
+    /// Handle a key while the summary pane is showing.
     fn summary_key(&mut self, key: zemacs_view::input::KeyEvent) -> EventResult {
-        let last = self.mailbox.len().saturating_sub(1);
+        let last = self.sum.len().saturating_sub(1);
         match key {
             // q/Q leave the summary (rmail-summary-quit / rmail-summary-wipe).
             key!('q') | key!('Q') | key!(Esc) => self.view = View::Message,
@@ -93,28 +135,129 @@ impl Rmail {
             key!('>') => self.sum_cursor = last,
             // RET / SPC select the message and return to the message view.
             key!(Enter) | key!(' ') => {
-                self.mailbox.show(self.sum_cursor + 1);
-                self.scroll = 0;
+                if let Some(idx) = self.sum_target() {
+                    self.mailbox.show(idx + 1);
+                    self.scroll = 0;
+                }
                 self.view = View::Message;
             }
             key!('d') => {
-                if let Some(m) = self.mailbox.msgs.get_mut(self.sum_cursor) {
-                    m.deleted = true;
+                if let Some(idx) = self.sum_target() {
+                    self.mailbox.msgs[idx].deleted = true;
                 }
                 self.sum_cursor = (self.sum_cursor + 1).min(last);
             }
             key!('u') => {
-                if let Some(m) = self.mailbox.msgs.get_mut(self.sum_cursor) {
-                    m.deleted = false;
+                if let Some(idx) = self.sum_target() {
+                    self.mailbox.msgs[idx].deleted = false;
                 }
-            }
-            key!('x') => {
-                self.mailbox.expunge();
-                self.sum_cursor = self.sum_cursor.min(self.mailbox.len().saturating_sub(1));
             }
             _ => {}
         }
         EventResult::Consumed(None)
+    }
+
+    /// Feed a key into the active inline prompt. Returns true if the prompt
+    /// consumed the key (so the caller stops processing it).
+    fn prompt_key(&mut self, key: zemacs_view::input::KeyEvent) -> bool {
+        let Some(prompt) = self.prompt.as_mut() else {
+            return false;
+        };
+        match key {
+            key!(Esc) => self.prompt = None,
+            key!(Enter) => {
+                let p = self.prompt.take().unwrap();
+                self.run_prompt(p.action, p.input.trim().to_string());
+            }
+            key!(Backspace) => {
+                prompt.input.pop();
+            }
+            zemacs_view::input::KeyEvent {
+                code: zemacs_view::keyboard::KeyCode::Char(c),
+                ..
+            } => prompt.input.push(c),
+            _ => {}
+        }
+        true
+    }
+
+    /// Apply the result of a completed prompt.
+    fn run_prompt(&mut self, action: PromptAction, arg: String) {
+        if arg.is_empty() && !matches!(action, PromptAction::Search) {
+            return;
+        }
+        match action {
+            PromptAction::Search => {
+                if self.mailbox.search(&arg) {
+                    self.scroll = 0;
+                    self.status = format!("found: {arg}");
+                } else {
+                    self.status = format!("not found: {arg}");
+                }
+            }
+            PromptAction::AddLabel => {
+                for label in arg.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+                    self.mailbox.add_label(label);
+                }
+            }
+            PromptAction::KillLabel => self.mailbox.kill_label(&arg),
+            PromptAction::SummaryByLabel => {
+                let hits: Vec<usize> = self
+                    .mailbox
+                    .msgs
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, m)| m.labels.iter().any(|l| l == &arg))
+                    .map(|(i, _)| i)
+                    .collect();
+                if hits.is_empty() {
+                    self.status = format!("no messages labeled {arg}");
+                } else {
+                    self.open_summary(hits);
+                }
+            }
+            PromptAction::Input => {
+                let path = expand_tilde(&arg);
+                match std::fs::read_to_string(&path) {
+                    Ok(text) => {
+                        self.mailbox = Mailbox::from_mbox(&text);
+                        self.path = path;
+                        self.scroll = 0;
+                        self.status = format!("{} messages", self.mailbox.len());
+                    }
+                    Err(e) => self.status = format!("cannot read {arg}: {e}"),
+                }
+            }
+            PromptAction::Output => {
+                let Some(msg) = self.mailbox.current() else {
+                    return;
+                };
+                let entry = one_message_mbox(msg);
+                match append_file(&expand_tilde(&arg), &entry) {
+                    Ok(()) => self.status = format!("output to {arg}"),
+                    Err(e) => self.status = format!("cannot write {arg}: {e}"),
+                }
+            }
+            PromptAction::OutputBody => {
+                let Some(msg) = self.mailbox.current() else {
+                    return;
+                };
+                let body = msg.body.clone();
+                match std::fs::write(expand_tilde(&arg), body) {
+                    Ok(()) => self.status = format!("body written to {arg}"),
+                    Err(e) => self.status = format!("cannot write {arg}: {e}"),
+                }
+            }
+        }
+    }
+
+    /// Start an inline prompt.
+    fn ask(&mut self, label: &str, action: PromptAction) {
+        self.prompt = Some(Prompt {
+            label: label.to_string(),
+            input: String::new(),
+            action,
+        });
     }
 
     /// Rendered content lines for the current message (headers, blank, body).
@@ -183,6 +326,12 @@ impl Component for Rmail {
         let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
             compositor.pop();
         });
+
+        // An active inline prompt swallows keys until RET/Esc.
+        if self.prompt.is_some() {
+            self.prompt_key(key);
+            return EventResult::Consumed(None);
+        }
 
         // The summary pane has its own key handling.
         if self.view == View::Summary {
@@ -270,11 +419,16 @@ impl Component for Rmail {
 
             // Display.
             key!('t') => self.full_headers = !self.full_headers,
-            key!('h') => {
-                // rmail-summary: list every message, cursor on the current one.
-                self.sum_cursor = self.mailbox.current;
-                self.view = View::Summary;
-            }
+            key!('h') => self.open_summary((0..self.mailbox.len()).collect()),
+
+            // Labels, search, file output/input — all read an argument inline.
+            key!('a') => self.ask("Add label: ", PromptAction::AddLabel),
+            key!('k') => self.ask("Kill label: ", PromptAction::KillLabel),
+            key!('l') => self.ask("Labels to summarize by: ", PromptAction::SummaryByLabel),
+            alt!('s') => self.ask("Search: ", PromptAction::Search),
+            key!('i') => self.ask("Run rmail on file: ", PromptAction::Input),
+            key!('o') => self.ask("Output message to file: ", PromptAction::Output),
+            key!('w') => self.ask("Output body to file: ", PromptAction::OutputBody),
 
             // Reply / forward / new mail — open a message-mode draft.
             key!('r') => {
@@ -320,10 +474,10 @@ impl Component for Rmail {
         }
 
         if self.view == View::Summary {
-            let total = self.mailbox.len();
-            let title = format!(" RMAIL-summary  {total} messages");
+            let shown = self.sum.len();
+            let title = format!(" RMAIL-summary  {shown} messages");
             surface.set_stringn(area.x, area.y, &title, area.width as usize, header_style);
-            let hint = "n/p move  RET select  d del  u undel  x expunge  q back";
+            let hint = "n/p move  RET select  d del  u undel  q back";
             if title.len() + hint.len() + 3 < area.width as usize {
                 surface.set_stringn(
                     area.x + area.width - hint.len() as u16 - 1,
@@ -334,19 +488,20 @@ impl Component for Rmail {
                 );
             }
             let rows = area.height.saturating_sub(2) as usize;
-            let top = self.sum_cursor.saturating_sub(rows / 2).min(total.saturating_sub(rows));
-            for (row, idx) in (top..total).take(rows).enumerate() {
+            let top = self.sum_cursor.saturating_sub(rows / 2).min(shown.saturating_sub(rows));
+            for (row, pos) in (top..shown).take(rows).enumerate() {
+                let idx = self.sum[pos];
                 let y = area.y + 2 + row as u16;
-                let deleted = self.mailbox.msgs[idx].deleted;
-                let style = if idx == self.sum_cursor {
+                let style = if pos == self.sum_cursor {
                     field_style
-                } else if deleted {
+                } else if self.mailbox.msgs[idx].deleted {
                     del_style
                 } else {
                     text_style
                 };
                 surface.set_stringn(area.x, y, &self.summary_line(idx), area.width as usize, style);
             }
+            self.render_prompt(area, surface, info_style);
             return;
         }
 
@@ -397,8 +552,8 @@ impl Component for Rmail {
             surface.set_stringn(area.x, y, line, area.width as usize, style);
         }
 
-        // Status line (errors, save/reload notices).
-        if !self.status.is_empty() {
+        // Status line (errors, save/reload notices) or the active prompt.
+        if !self.render_prompt(area, surface, info_style) && !self.status.is_empty() {
             surface.set_stringn(
                 area.x,
                 area.y + area.height - 1,
@@ -407,5 +562,88 @@ impl Component for Rmail {
                 info_style,
             );
         }
+    }
+}
+
+impl Rmail {
+    /// Draw the inline prompt on the bottom row if one is active. Returns whether
+    /// it drew (so the caller can skip the status line).
+    fn render_prompt(
+        &self,
+        area: Rect,
+        surface: &mut Surface,
+        style: zemacs_view::graphics::Style,
+    ) -> bool {
+        let Some(prompt) = self.prompt.as_ref() else {
+            return false;
+        };
+        let line = format!("{}{}", prompt.label, prompt.input);
+        surface.set_stringn(area.x, area.y + area.height - 1, &line, area.width as usize, style);
+        true
+    }
+}
+
+/// Expand a leading `~/` to the home directory.
+fn expand_tilde(path: &str) -> PathBuf {
+    if let Some(rest) = path.strip_prefix("~/") {
+        if let Ok(home) = zemacs_stdx::path::home_dir() {
+            return home.join(rest);
+        }
+    }
+    PathBuf::from(path)
+}
+
+/// Serialise one message as a single mbox entry (`o`, rmail-output).
+fn one_message_mbox(msg: &zemacs_core::rmail::Msg) -> String {
+    let mut out = String::from("From ");
+    out.push_str(&msg.envelope);
+    out.push('\n');
+    for (k, v) in &msg.headers {
+        out.push_str(k);
+        out.push_str(": ");
+        out.push_str(v);
+        out.push('\n');
+    }
+    out.push('\n');
+    for line in msg.body.split('\n') {
+        if line.starts_with("From ") {
+            out.push('>');
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out.push('\n');
+    out
+}
+
+/// Append text to a file, creating it if needed.
+fn append_file(path: &std::path::Path, text: &str) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut f = std::fs::OpenOptions::new().create(true).append(true).open(path)?;
+    f.write_all(text.as_bytes())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn output_entry_reparses_as_one_message() {
+        // `o` (rmail-output) must emit a valid single-message mbox entry.
+        let mb = Mailbox::from_mbox(
+            "From a@b.com Mon Jan 1 00:00:00 2026\nFrom: a@b.com\nSubject: Hi\n\nBody line.\n",
+        );
+        let entry = one_message_mbox(mb.current().unwrap());
+        let round = Mailbox::from_mbox(&entry);
+        assert_eq!(round.len(), 1);
+        assert_eq!(round.current().unwrap().subject(), "Hi");
+        assert!(round.current().unwrap().body.contains("Body line."));
+    }
+
+    #[test]
+    fn tilde_expands_to_home() {
+        let p = expand_tilde("~/mail/inbox");
+        assert!(p.is_absolute() || p.to_string_lossy().contains("mail/inbox"));
+        assert_eq!(expand_tilde("/etc/passwd"), PathBuf::from("/etc/passwd"));
     }
 }

@@ -190,26 +190,30 @@ fn render(editor: &Editor, ts: u64, home: Option<&Path>) -> String {
         }
     }
 
-    // Letter/auto marks of every open buffer, keyed by canonical path, sorted by
-    // mark name — folded into each file's `> path` block below.
-    #[allow(clippy::type_complexity)]
-    let mut open_marks: HashMap<PathBuf, Vec<(char, (usize, usize))>> = HashMap::new();
+    // Per-file marks folded into each `> path` block below, keyed by canonical
+    // path. Open buffers contribute their live letter/auto marks; the editor's
+    // global marks (`A`-`Z`) contribute too — sourced here (not just from open
+    // docs) so a global mark survives its file being closed.
+    let mut file_marks: HashMap<PathBuf, std::collections::BTreeMap<char, (usize, usize)>> =
+        HashMap::new();
     for doc in editor.documents() {
         let Some(path) = doc.path() else { continue };
         let text = doc.text().slice(..);
-        let mut marks: Vec<(char, (usize, usize))> = doc
-            .marks_iter()
-            .map(|(m, pos)| {
-                let coords = coords_at_pos(text, pos);
-                (m, (coords.row + 1, coords.col))
-            })
-            .collect();
-        if marks.is_empty() {
-            continue;
+        let entry = file_marks.entry(canon(path)).or_default();
+        for (m, pos) in doc.marks_iter() {
+            let coords = coords_at_pos(text, pos);
+            entry.insert(m, (coords.row + 1, coords.col));
         }
-        marks.sort_by_key(|(m, _)| *m);
-        open_marks.insert(canon(path), marks);
     }
+    for (&m, gm) in &editor.global_marks {
+        if m.is_ascii_uppercase() {
+            file_marks
+                .entry(canon(&gm.path))
+                .or_default()
+                .insert(m, (gm.line + 1, gm.col));
+        }
+    }
+    file_marks.retain(|_, m| !m.is_empty());
 
     // The recent-files MRU list (newest first) drives both the numbered file
     // marks and the per-file `> path` blocks, mirroring how Vim records every
@@ -266,17 +270,24 @@ fn render(editor: &Editor, ts: u64, home: Option<&Path>) -> String {
     // carries the `*` last-used timestamp and the `"` last-cursor mark, plus any
     // letter/auto marks when the file is currently open.
     out.push_str("# History of marks within files (newest to oldest):\n");
-    for path in &recent {
-        let cpath = canon(path);
-        let (line, col) = open_cursor.get(&cpath).copied().unwrap_or((1, 0));
-        let disp = tildify(path, home);
+    // Recent files first (newest to oldest), then any file that only carries a
+    // global mark (so closed-file globals still get a block).
+    let mut block_paths: Vec<PathBuf> = recent.iter().map(|p| canon(p)).collect();
+    for cpath in file_marks.keys() {
+        if !block_paths.contains(cpath) {
+            block_paths.push(cpath.clone());
+        }
+    }
+    for cpath in &block_paths {
+        let (line, col) = open_cursor.get(cpath).copied().unwrap_or((1, 0));
+        let disp = tildify(cpath, home);
         // The blank line before each block doubles as the blank after the header.
         let _ = writeln!(out, "\n> {}", disp);
         // The `*` mark is the file's last-used timestamp, not a position.
         let _ = writeln!(out, "\t*\t{}\t0", ts);
         // The `"` mark is the cursor position when last in this file.
         let _ = writeln!(out, "\t\"\t{}\t{}", line, col);
-        if let Some(marks) = open_marks.get(&cpath) {
+        if let Some(marks) = file_marks.get(cpath) {
             for (mark, (l, c)) in marks {
                 if *mark == '"' {
                     continue;
@@ -287,6 +298,119 @@ fn render(editor: &Editor, ts: u64, home: Option<&Path>) -> String {
     }
 
     out
+}
+
+/// Read `.zemacsinfo` back into the vim global (`A`-`Z`) and numbered file
+/// (`0`-`9`) marks, so they survive a restart. Numbered marks come from the
+/// machine-readable `|4,<code>,…` File-marks bar lines (`'0'`..`'9'`, char codes
+/// 48-57); global marks come from the uppercase entries of each `> path` block.
+/// Returns an empty map when the file is absent or unreadable.
+pub fn load() -> HashMap<char, zemacs_view::GlobalMark> {
+    let Ok(contents) = std::fs::read_to_string(store_path()) else {
+        return HashMap::new();
+    };
+    parse(&contents, home_dir().as_deref())
+}
+
+/// Reverse of [`tildify`]: expand a leading `~` back to the home directory.
+fn untildify(s: &str, home: Option<&Path>) -> PathBuf {
+    match (s, home) {
+        ("~", Some(home)) => home.to_path_buf(),
+        (s, Some(home)) if s.starts_with("~/") => home.join(&s[2..]),
+        _ => PathBuf::from(s),
+    }
+}
+
+/// Reverse of [`bar_quote`]: strip the wrapping quotes and unescape.
+fn bar_unquote(s: &str) -> String {
+    let inner = s
+        .strip_prefix('"')
+        .and_then(|s| s.strip_suffix('"'))
+        .unwrap_or(s);
+    let mut out = String::with_capacity(inner.len());
+    let mut chars = inner.chars();
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            match chars.next() {
+                Some('n') => out.push('\n'),
+                Some('r') => out.push('\r'),
+                Some(other) => out.push(other),
+                None => {}
+            }
+        } else {
+            out.push(ch);
+        }
+    }
+    out
+}
+
+fn parse(contents: &str, home: Option<&Path>) -> HashMap<char, zemacs_view::GlobalMark> {
+    use zemacs_view::GlobalMark;
+
+    let mut marks: HashMap<char, GlobalMark> = HashMap::new();
+    let mut cur_path: Option<PathBuf> = None;
+
+    for line in contents.lines() {
+        // `> path` opens a per-file mark block.
+        if let Some(rest) = line.strip_prefix("> ") {
+            cur_path = Some(untildify(rest.trim(), home));
+            continue;
+        }
+
+        // File-marks bar line: `|4,<code>,<line>,<col>,<ts>,"<file>"`.
+        if let Some(rest) = line.strip_prefix("|4,") {
+            // 5 comma-separated fields: code, line, col, ts, "file". `splitn(5)`
+            // keeps any commas in the (quoted) filename intact in the last field.
+            let fields: Vec<&str> = rest.splitn(5, ',').collect();
+            if fields.len() == 5 {
+                if let (Ok(code), Ok(l), Ok(c)) = (
+                    fields[0].parse::<u32>(),
+                    fields[1].parse::<usize>(),
+                    fields[2].parse::<usize>(),
+                ) {
+                    // Numbered file marks '0'-'9' (codes 48-57); code 39 is the
+                    // jumplist and any other code is not a persisted mark.
+                    if (48..=57).contains(&code) {
+                        if let Some(mark) = char::from_u32(code) {
+                            marks.insert(
+                                mark,
+                                GlobalMark {
+                                    path: untildify(&bar_unquote(fields[4]), home),
+                                    line: l.saturating_sub(1),
+                                    col: c,
+                                },
+                            );
+                        }
+                    }
+                }
+            }
+            continue;
+        }
+
+        // Uppercase marks inside a `> path` block: `\t<mark>\t<line>\t<col>`.
+        if let (Some(path), Some(rest)) = (&cur_path, line.strip_prefix('\t')) {
+            let parts: Vec<&str> = rest.split('\t').collect();
+            if parts.len() == 3 && parts[0].chars().count() == 1 {
+                let mark = parts[0].chars().next().unwrap();
+                if mark.is_ascii_uppercase() {
+                    if let (Ok(l), Ok(c)) =
+                        (parts[1].parse::<usize>(), parts[2].parse::<usize>())
+                    {
+                        marks.insert(
+                            mark,
+                            GlobalMark {
+                                path: path.clone(),
+                                line: l.saturating_sub(1),
+                                col: c,
+                            },
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    marks
 }
 
 #[cfg(test)]
@@ -311,5 +435,56 @@ mod tests {
         assert_eq!(tildify(Path::new("/Users/me"), Some(home)), "~");
         assert_eq!(tildify(Path::new("/etc/hosts"), Some(home)), "/etc/hosts");
         assert_eq!(tildify(Path::new("/etc/hosts"), None), "/etc/hosts");
+    }
+
+    #[test]
+    fn untildify_reverses_tildify() {
+        let home = Path::new("/Users/me");
+        assert_eq!(untildify("~/.zshrc", Some(home)), Path::new("/Users/me/.zshrc"));
+        assert_eq!(untildify("~", Some(home)), Path::new("/Users/me"));
+        assert_eq!(untildify("/etc/hosts", Some(home)), Path::new("/etc/hosts"));
+        // No home: a leading `~` is left untouched.
+        assert_eq!(untildify("~/x", None), Path::new("~/x"));
+    }
+
+    #[test]
+    fn bar_unquote_reverses_bar_quote() {
+        for s in ["q", "a\"b", "a\\b", "a\nb", "a\rb", "with,comma"] {
+            assert_eq!(bar_unquote(&bar_quote(s)), s, "round-trip failed for {s:?}");
+        }
+    }
+
+    #[test]
+    fn parse_extracts_numbered_and_global_marks() {
+        let home = Path::new("/Users/me");
+        // Mirrors the writer's output: a File-marks bar line for `'0`, plus a
+        // `> path` block carrying an uppercase global mark `A` and a lowercase
+        // `a` mark (which must be ignored — lowercase marks stay buffer-local).
+        let info = "\
+# File marks:
+'0  12  4  ~/src/main.rs
+|4,48,12,4,1700000000,\"~/src/main.rs\"
+
+# History of marks within files (newest to oldest):
+
+> ~/src/lib.rs
+\t*\t1700000000\t0
+\t\"\t7\t2
+\tA\t7\t2
+\ta\t9\t0
+";
+        let marks = parse(info, Some(home));
+
+        let numbered = marks.get(&'0').expect("numbered mark '0' restored");
+        assert_eq!(numbered.path, Path::new("/Users/me/src/main.rs"));
+        assert_eq!((numbered.line, numbered.col), (11, 4)); // 1-based line 12 -> 0-based 11
+
+        let global = marks.get(&'A').expect("global mark 'A' restored");
+        assert_eq!(global.path, Path::new("/Users/me/src/lib.rs"));
+        assert_eq!((global.line, global.col), (6, 2)); // 1-based line 7 -> 0-based 6
+
+        // Lowercase and the auto `"` mark are not global marks.
+        assert!(!marks.contains_key(&'a'));
+        assert!(!marks.contains_key(&'"'));
     }
 }
