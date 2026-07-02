@@ -45,6 +45,54 @@
 | `:all`, `:sall` | Open a window for each file in the argument list (vim :all / :sall). |
 | `:compile` | Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile). |
 | `:recompile` | Re-run the last compile command (emacs recompile). |
+| `:arduino-compile`, `:averify`, `:arduino-verify` | Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify). |
+| `:arduino-upload`, `:aupload` | Compile and flash the sketch to the connected board (arduino-cli compile --upload), live in a terminal panel. |
+| `:arduino-monitor`, `:amonitor`, `:serial-monitor` | Open the serial monitor for the selected port/baud (arduino-cli monitor). |
+| `:arduino-boards`, `:arduino-board` | Pick the target board (FQBN) from installed platforms (Arduino IDE board selector). |
+| `:arduino-ports`, `:arduino-port` | Pick the serial port from connected devices (arduino-cli board list). |
+| `:arduino-lib-search`, `:arduino-lib` | Search the Arduino library index and install the pick (Arduino IDE Library Manager). |
+| `:arduino-core-install`, `:arduino-core` | Install a board-support core, e.g. `arduino:avr` (Arduino IDE Boards Manager). |
+| `:pio-build`, `:pio-run`, `:platformio-build` | Build the PlatformIO project (`pio run`); errors go to the compilation list. |
+| `:pio-upload`, `:platformio-upload` | Build and upload the PlatformIO project (`pio run -t upload`), live in a terminal panel. |
+| `:pio-monitor`, `:platformio-monitor` | Open the PlatformIO serial monitor (`pio device monitor`). |
+| `:pio-devices`, `:pio-device-list` | Pick a serial port from `pio device list` and set it for this project. |
+| `:pio-init`, `:platformio-init` | Scaffold a PlatformIO project for a board (`pio project init --board <id>`). |
+| `:embedded-baud`, `:serial-baud` | Set the serial monitor baud rate for this project (e.g. 9600, 115200). |
+| `:arduino-plotter`, `:serial-plotter` | Live-graph the numbers streaming from the serial port (Arduino IDE Serial Plotter). |
+| `:pio-plotter`, `:platformio-plotter` | Live-graph the PlatformIO serial monitor output (serial plotter). |
+| `:arduino-new-sketch`, `:arduino-sketch-new` | Scaffold a new sketch (`arduino-cli sketch new`) and open its .ino (Arduino IDE New Sketch). |
+| `:arduino-compile-export`, `:aexport`, `:arduino-export` | Compile and export the built binaries to the sketch folder (Arduino IDE Export Compiled Binary). |
+| `:arduino-burn-bootloader`, `:arduino-bootloader` | Flash the bootloader to the selected board (Arduino IDE Burn Bootloader), live in a terminal panel. |
+| `:arduino-board-info`, `:arduino-board-details` | Print the selected board's specs and menu options (Arduino IDE Get Board Info). |
+| `:arduino-core-search`, `:arduino-boards-manager` | Search the Boards Manager index for a core (Arduino IDE Boards Manager). |
+| `:arduino-core-list`, `:arduino-cores` | List installed board-support cores (Boards Manager, installed tab). |
+| `:arduino-core-uninstall` | Uninstall a board-support core, e.g. `arduino:avr`. |
+| `:arduino-core-update-index`, `:arduino-update-index` | Refresh the Boards Manager package index (arduino-cli core update-index). |
+| `:arduino-core-upgrade` | Upgrade all installed board-support cores (arduino-cli core upgrade), live in a terminal panel. |
+| `:arduino-lib-list`, `:arduino-libs` | List installed Arduino libraries (Library Manager, installed tab). |
+| `:arduino-lib-uninstall` | Uninstall an Arduino library by name (arduino-cli lib uninstall). |
+| `:arduino-lib-upgrade` | Upgrade all installed Arduino libraries (arduino-cli lib upgrade), live in a terminal panel. |
+| `:arduino-lib-examples` | List a library's example sketches (arduino-cli lib examples <name>). |
+| `:arduino-sketch-archive`, `:arduino-archive` | Zip the whole sketch (Arduino IDE Sketch → Archive Sketch). |
+| `:pio-clean`, `:platformio-clean` | Remove PlatformIO build artifacts (`pio run -t clean`); output goes to the compilation list. |
+| `:pio-test`, `:platformio-test` | Run the PlatformIO project's unit tests (`pio test`); failures go to the compilation list. |
+| `:pio-check`, `:platformio-check` | PlatformIO static code analysis (`pio check`); findings go to the compilation list. |
+| `:pio-boards`, `:platformio-boards` | The PlatformIO Board Explorer (`pio boards [query]`); output in the Run console. |
+| `:pio-lib-install`, `:pio-pkg-install`, `:platformio-lib-install` | Add a library to the PlatformIO project (`pio pkg install -l <name>`), live in a terminal panel. |
+| `:pio-lib-list`, `:pio-pkg-list`, `:pio-libs` | List installed PlatformIO project packages (`pio pkg list`). |
+| `:pio-lib-uninstall`, `:pio-pkg-uninstall` | Remove a PlatformIO project library (`pio pkg uninstall -l <name>`), live in a terminal panel. |
+| `:pio-lib-update`, `:pio-pkg-update` | Update installed PlatformIO project packages (`pio pkg update`), live in a terminal panel. |
+| `:arduino-update` | Refresh the core and library indexes together (arduino-cli update). |
+| `:arduino-upgrade` | Upgrade all installed cores and libraries (arduino-cli upgrade), live in a terminal panel. |
+| `:arduino-outdated` | List cores and libraries with newer versions available (arduino-cli outdated). |
+| `:arduino-lib-deps` | Show dependency status for a library (arduino-cli lib deps <name>). |
+| `:arduino-config`, `:arduino-config-dump` | Print the active arduino-cli configuration (arduino-cli config dump). |
+| `:arduino-debug` | Launch the arduino-cli debugger for the selected board, live in a terminal panel. |
+| `:pio-lib-search`, `:pio-pkg-search`, `:platformio-lib-search` | Search the PlatformIO registry for a library (`pio pkg search <query>`). |
+| `:pio-lib-outdated`, `:pio-pkg-outdated` | List installed project packages with newer versions available (`pio pkg outdated`). |
+| `:pio-lib-show`, `:pio-pkg-show` | Show PlatformIO registry details for a package (`pio pkg show <pkg>`). |
+| `:pio-debug`, `:platformio-debug` | Launch the PlatformIO Unified Debugger for the project, live in a terminal panel. |
+| `:pio-upgrade`, `:platformio-upgrade` | Upgrade PlatformIO Core itself (`pio upgrade`), live in a terminal panel. |
 | `:next-error`, `:cnext-error` | Visit the next compilation error's location (emacs next-error / M-g n). |
 | `:previous-error`, `:cprevious-error` | Visit the previous compilation error's location (emacs previous-error / M-g p). |
 | `:first-error` | Visit the first compilation error's location (emacs first-error). |

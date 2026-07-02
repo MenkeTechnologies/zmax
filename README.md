@@ -132,6 +132,41 @@ leaving the editor:
 - **Wildfire** — press `<ret>` in normal mode to select the closest text
   object and again to grow to the next enclosing one; `<backspace>` shrinks.
 
+## Embedded development (Arduino / PlatformIO)
+
+zemacs ports the Arduino IDE and PlatformIO IDE workflows by driving the same
+command-line backends the official IDEs use — `arduino-cli` and `pio` — so no
+GUI is needed. Per-project board settings (FQBN, serial port, baud, sketch dir)
+persist to `<project-dir>/embedded.toml`; the leader menu is `SPC a v`.
+
+- **Build / flash** — `:arduino-compile` (Verify), `:arduino-upload`
+  (compile + flash), `:arduino-compile-export` (Export Compiled Binary),
+  `:arduino-burn-bootloader`; `:pio-build`, `:pio-upload`, `:pio-clean`,
+  `:pio-test`, `:pio-check`. Compiler diagnostics land in the `*compilation*`
+  list so `:next-error` walks avr-gcc/arm-gcc errors; uploads run live in a PTY
+  panel.
+- **Serial** — `:arduino-monitor` / `:pio-monitor` (live PTY serial monitor) and
+  `:arduino-plotter` / `:pio-plotter`, which graph the numbers streaming from the
+  board (Arduino IDE Serial Plotter). `:embedded-baud <rate>` sets the rate.
+- **Boards & ports** — `:arduino-boards` (pick FQBN), `:arduino-ports` /
+  `:pio-devices` (pick serial port), `:arduino-board-info`, `:pio-boards`
+  (Board Explorer).
+- **Boards Manager** — `:arduino-core-search`, `:arduino-core-install`,
+  `:arduino-core-list`, `:arduino-core-uninstall`, `:arduino-core-update-index`,
+  `:arduino-core-upgrade`.
+- **Library Manager** — `:arduino-lib-search` (search + install),
+  `:arduino-lib-list`, `:arduino-lib-uninstall`, `:arduino-lib-upgrade`,
+  `:arduino-lib-examples`, `:arduino-lib-deps`; PlatformIO packages via
+  `:pio-lib-search`, `:pio-lib-install`, `:pio-lib-list`, `:pio-lib-show`,
+  `:pio-lib-uninstall`, `:pio-lib-update`, `:pio-lib-outdated`.
+- **Debug** — `:arduino-debug` / `:pio-debug` launch the respective debuggers in
+  a terminal panel.
+- **Maintenance** — `:arduino-update` / `:arduino-upgrade` / `:arduino-outdated`
+  refresh and upgrade cores + libraries together; `:arduino-config` dumps the
+  active configuration; `:pio-upgrade` upgrades PlatformIO Core itself.
+- **Sketches / projects** — `:arduino-new-sketch`, `:arduino-sketch-archive`,
+  `:pio-init <board>`.
+
 ## Build
 
 ```sh
