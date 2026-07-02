@@ -1,13 +1,15 @@
 //! Emacs bookmarks (`C-x r m` / `C-x r b` / `C-x r l`).
 //!
 //! Named, persistent positions — the string-named, cross-session cousin of the
-//! char-keyed point registers (`emacs_register`). Persisted at
-//! `<config-dir>/bookmarks` as `name\tfile\tcharpos` lines (mirroring the
-//! harpoon store), so bookmarks survive restarts. `commands.rs` prompts for the
-//! name on set and offers a picker on jump.
+//! char-keyed point registers (`emacs_register`). The store logic lives in the
+//! dependency-free engine `zemacs_core::bookmark::BookmarkStore`; this module is
+//! the thin IO wrapper that loads/saves it at `<config-dir>/bookmarks` (one
+//! `name\tfile\tline[\tcolumn]` record per line — the engine's text format).
+//! `commands.rs` prompts for the name on set and offers a picker on jump.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
+use zemacs_core::bookmark::{Bookmark, BookmarkStore};
 use zemacs_loader::config_dir;
 
 const FILE_NAME: &str = "bookmarks";
@@ -16,75 +18,71 @@ fn store_path() -> PathBuf {
     config_dir().join(FILE_NAME)
 }
 
-/// Parse one `name\tfile\tpos` row. Pure; tab-in-name is not supported (names
-/// are single tokens), matching the simple store format.
-fn parse_line(line: &str) -> Option<(String, PathBuf, usize)> {
-    let mut parts = line.splitn(3, '\t');
-    let name = parts.next()?.to_string();
-    let path = parts.next()?;
-    let pos = parts.next()?.parse::<usize>().ok()?;
-    if name.is_empty() {
-        return None;
-    }
-    Some((name, PathBuf::from(path), pos))
-}
-
-fn format_line(name: &str, file: &Path, pos: usize) -> String {
-    format!("{}\t{}\t{}", name, file.to_string_lossy(), pos)
-}
-
-fn load() -> Vec<(String, PathBuf, usize)> {
+/// Read the persisted store (empty if the file is missing or unreadable).
+pub fn load() -> BookmarkStore {
     match std::fs::read_to_string(store_path()) {
-        Ok(s) => s.lines().filter_map(parse_line).collect(),
-        Err(_) => Vec::new(),
+        Ok(s) => BookmarkStore::deserialize(&s),
+        Err(_) => BookmarkStore::new(),
     }
 }
 
-fn save(rows: &[(String, PathBuf, usize)]) {
-    let body: String = rows
-        .iter()
-        .map(|(n, p, o)| format_line(n, p, *o))
-        .collect::<Vec<_>>()
-        .join("\n");
+/// Persist the store, creating the config directory if needed.
+fn save(store: &BookmarkStore) {
     let path = store_path();
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    let _ = std::fs::write(path, body);
+    let _ = std::fs::write(path, store.serialize());
 }
 
-/// Set (or replace) a named bookmark.
-pub fn set(name: &str, file: &Path, pos: usize) {
-    let mut rows = load();
-    rows.retain(|(n, _, _)| n != name);
-    rows.push((name.to_string(), file.to_path_buf(), pos));
-    save(&rows);
+/// `bookmark-set` (C-x r m): create or overwrite `name` at `file`:`line`:`col`.
+pub fn set(name: &str, file: &str, line: usize, column: Option<usize>) {
+    let mut store = load();
+    store.set(name, Bookmark::new(file, line, column));
+    save(&store);
 }
 
-/// All bookmarks, in insertion order.
-pub fn list() -> Vec<(String, PathBuf, usize)> {
+/// `bookmark-set-no-overwrite` (C-x r M): create `name` only if unused. Returns
+/// `true` when a new bookmark was inserted.
+pub fn set_no_overwrite(name: &str, file: &str, line: usize, column: Option<usize>) -> bool {
+    let mut store = load();
+    let inserted = store.set_no_overwrite(name, Bookmark::new(file, line, column));
+    if inserted {
+        save(&store);
+    }
+    inserted
+}
+
+/// `bookmark-delete`: remove `name`. Returns `true` if it existed.
+pub fn delete(name: &str) -> bool {
+    let mut store = load();
+    let removed = store.delete(name).is_some();
+    if removed {
+        save(&store);
+    }
+    removed
+}
+
+/// `bookmark-rename`: rename `from` to `to`. Returns `true` on success.
+pub fn rename(from: &str, to: &str) -> bool {
+    let mut store = load();
+    let ok = store.rename(from, to);
+    if ok {
+        save(&store);
+    }
+    ok
+}
+
+/// All bookmarks as `(name, file, line, column)`, most recently set first.
+pub fn list() -> Vec<(String, PathBuf, usize, Option<usize>)> {
     load()
+        .list()
+        .iter()
+        .map(|(name, b)| (name.clone(), PathBuf::from(&b.file), b.line, b.column))
+        .collect()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn round_trips_a_row() {
-        let line = format_line("todo", Path::new("/src/lib.rs"), 1234);
-        assert_eq!(line, "todo\t/src/lib.rs\t1234");
-        let (name, path, pos) = parse_line(&line).unwrap();
-        assert_eq!(name, "todo");
-        assert_eq!(path, PathBuf::from("/src/lib.rs"));
-        assert_eq!(pos, 1234);
-    }
-
-    #[test]
-    fn rejects_malformed_rows() {
-        assert!(parse_line("no-tabs-here").is_none());
-        assert!(parse_line("name\t/only/two/fields").is_none());
-        assert!(parse_line("name\t/path\tnotanumber").is_none());
-        assert!(parse_line("\t/path\t5").is_none()); // empty name
-    }
+/// The bookmark names, for prompt completion.
+pub fn names() -> Vec<String> {
+    load().names().map(str::to_string).collect()
 }

@@ -110,7 +110,7 @@ fn cx_prefix() -> KeyTrie {
                 "A-w" => copy_rectangle_as_kill, // C-x r M-w: copy-rectangle-as-kill
                 "m" => bookmark_set,             // C-x r m: bookmark-set
                 "b" => bookmark_jump,            // C-x r b: bookmark-jump
-                "l" => bookmark_jump,            // C-x r l: list-bookmarks
+                "l" => list_bookmarks,           // C-x r l: list-bookmarks
             },
             "'" => expand_abbrev,           // C-x ': expand-abbrev
             "a" => { "Abbrev"
@@ -291,7 +291,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x m", "C-x m", "command_palette"),
     ("C-x q", "C-x q", "command_palette"),
     ("C-x r f", "Registers", "layout_create"),
-    ("C-x r M", "Registers", "bookmark_set"),
+    ("C-x r M", "Registers", "bookmark_set_no_overwrite"),
     ("C-x r A-w", "Registers", "copy_rectangle_as_kill"),
     ("C-x r N", "Registers", "command_palette"),
     ("C-x r o", "Registers", "clear_rectangle"),

@@ -810,7 +810,11 @@ impl MappableCommand {
         open_rectangle, "Insert blank space to shift the rectangle right (emacs C-x r o)",
         delete_whitespace_rectangle, "Delete whitespace after the rectangle's left column on each line (emacs delete-whitespace-rectangle)",
         bookmark_set, "Set a named persistent bookmark at point (emacs C-x r m)",
-        bookmark_jump, "Jump to a bookmark via a picker (emacs C-x r b / C-x r l)",
+        bookmark_set_no_overwrite, "Set a bookmark, refusing to overwrite an existing name (emacs C-x r M)",
+        bookmark_jump, "Jump to a bookmark via a picker (emacs C-x r b)",
+        list_bookmarks, "List bookmarks in a picker; select to jump (emacs C-x r l / list-bookmarks)",
+        bookmark_delete, "Delete a bookmark via a picker (emacs bookmark-delete)",
+        bookmark_rename, "Rename a bookmark via a picker (emacs bookmark-rename)",
         define_abbrev, "Define a global abbrev: <name> <expansion> (emacs C-x a g)",
         expand_abbrev, "Expand the abbrev before point (emacs C-x ')",
         paste_clipboard_after, "Paste clipboard after selections",
@@ -12088,18 +12092,22 @@ fn delete_whitespace_rectangle(cx: &mut Context) {
     rectangle_op(cx, RectOp::DeleteWhitespace);
 }
 
+/// The current buffer's file plus the cursor's 0-based `(line, column)`.
+fn bookmark_location(cx: &mut Context) -> Option<(String, usize, usize)> {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let pos = doc.selection(view.id).primary().cursor(slice);
+    let line = text.char_to_line(pos);
+    let column = pos - text.line_to_char(line);
+    doc.path()
+        .map(|p| (p.to_string_lossy().into_owned(), line, column))
+}
+
 /// Emacs `bookmark-set` (C-x r m): prompt for a name and store the current
 /// file + point as a persistent bookmark.
 fn bookmark_set(cx: &mut Context) {
-    let (file, pos) = {
-        let (view, doc) = current!(cx.editor);
-        let pos = doc
-            .selection(view.id)
-            .primary()
-            .cursor(doc.text().slice(..));
-        (doc.path().map(|p| p.to_path_buf()), pos)
-    };
-    let Some(file) = file else {
+    let Some((file, line, column)) = bookmark_location(cx) else {
         cx.editor.set_error("Buffer has no file to bookmark");
         return;
     };
@@ -12112,14 +12120,78 @@ fn bookmark_set(cx: &mut Context) {
             if event != PromptEvent::Validate || input.is_empty() {
                 return;
             }
-            crate::emacs_bookmark::set(input, &file, pos);
+            crate::emacs_bookmark::set(input, &file, line, Some(column));
             cx.editor.set_status(format!("Bookmark '{input}' set"));
         },
     );
 }
 
-/// Emacs `bookmark-jump`/`list-bookmarks` (C-x r b / C-x r l): pick a bookmark
-/// and jump to its file and position.
+/// Emacs `bookmark-set-no-overwrite` (C-x r M): like `bookmark-set` but refuse
+/// to overwrite an existing bookmark of the same name.
+fn bookmark_set_no_overwrite(cx: &mut Context) {
+    let Some((file, line, column)) = bookmark_location(cx) else {
+        cx.editor.set_error("Buffer has no file to bookmark");
+        return;
+    };
+    ui::prompt(
+        cx,
+        "new bookmark name: ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate || input.is_empty() {
+                return;
+            }
+            if crate::emacs_bookmark::set_no_overwrite(input, &file, line, Some(column)) {
+                cx.editor.set_status(format!("Bookmark '{input}' set"));
+            } else {
+                cx.editor
+                    .set_error(format!("Bookmark '{input}' already exists"));
+            }
+        },
+    );
+}
+
+/// Item type shared by the bookmark pickers: `(name, file, line, column)`.
+type BookmarkItem = (String, PathBuf, usize, Option<usize>);
+
+/// Open a bookmark's file and move point to its stored `(line, column)`. Runs in
+/// the picker's compositor context.
+fn bookmark_goto(cx: &mut crate::compositor::Context, item: &BookmarkItem) {
+    if let Err(e) = cx.editor.open(&item.1, Action::Replace) {
+        cx.editor
+            .set_error(format!("unable to open \"{}\": {e}", item.1.display()));
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let line = item.2.min(text.len_lines().saturating_sub(1));
+    let line_start = text.line_to_char(line);
+    // Clamp the column inside the line (excluding its trailing newline).
+    let line_len = text.line(line).len_chars().saturating_sub(1);
+    let col = item.3.unwrap_or(0).min(line_len);
+    let pos = (line_start + col).min(text.len_chars());
+    doc.set_selection(view.id, Selection::point(pos));
+}
+
+/// A picker over the bookmarks with name + file columns. `on_select` runs in the
+/// compositor context the picker hands back on confirm.
+fn bookmark_picker(
+    marks: Vec<BookmarkItem>,
+    on_select: impl Fn(&mut crate::compositor::Context, &BookmarkItem) + 'static,
+) -> Picker<BookmarkItem, ()> {
+    let columns = [
+        PickerColumn::new("name", |item: &BookmarkItem, _: &()| item.0.clone().into()),
+        PickerColumn::new("file", |item: &BookmarkItem, _: &()| {
+            item.1.display().to_string().into()
+        }),
+    ];
+    Picker::new(columns, 0, marks, (), move |cx, item, _action| {
+        on_select(cx, item)
+    })
+}
+
+/// Emacs `bookmark-jump` (C-x r b): pick a bookmark and jump to it.
 fn bookmark_jump(cx: &mut Context) {
     let marks = crate::emacs_bookmark::list();
     if marks.is_empty() {
@@ -12127,30 +12199,67 @@ fn bookmark_jump(cx: &mut Context) {
             .set_status("No bookmarks yet — set one with C-x r m");
         return;
     }
-    let columns = [
-        PickerColumn::new("name", |item: &(String, PathBuf, usize), _: &()| {
-            item.0.clone().into()
-        }),
-        PickerColumn::new("file", |item: &(String, PathBuf, usize), _: &()| {
-            item.1.display().to_string().into()
-        }),
-    ];
-    let picker = Picker::new(
-        columns,
-        0,
-        marks,
-        (),
-        |cx, item: &(String, PathBuf, usize), action| {
-            if let Err(e) = cx.editor.open(&item.1, action) {
-                cx.editor
-                    .set_error(format!("unable to open \"{}\": {e}", item.1.display()));
-                return;
-            }
-            let (view, doc) = current!(cx.editor);
-            let pos = item.2.min(doc.text().len_chars());
-            doc.set_selection(view.id, Selection::point(pos));
-        },
-    );
+    let picker = bookmark_picker(marks, bookmark_goto);
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Emacs `list-bookmarks` / `bookmark-bmenu-list` (C-x r l): list bookmarks in a
+/// picker; selecting one jumps to it (same jump behaviour as `bookmark-jump`).
+fn list_bookmarks(cx: &mut Context) {
+    bookmark_jump(cx);
+}
+
+/// Emacs `bookmark-delete`: pick a bookmark and delete it from the store.
+fn bookmark_delete(cx: &mut Context) {
+    let marks = crate::emacs_bookmark::list();
+    if marks.is_empty() {
+        cx.editor.set_status("No bookmarks to delete");
+        return;
+    }
+    let picker = bookmark_picker(marks, |cx, item| {
+        if crate::emacs_bookmark::delete(&item.0) {
+            cx.editor
+                .set_status(format!("Bookmark '{}' deleted", item.0));
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Emacs `bookmark-rename`: pick a bookmark, then prompt for its new name. The
+/// second-stage prompt is pushed via a compositor callback (pickers run in the
+/// compositor context, which cannot open a `ui::prompt` directly).
+fn bookmark_rename(cx: &mut Context) {
+    let marks = crate::emacs_bookmark::list();
+    if marks.is_empty() {
+        cx.editor.set_status("No bookmarks to rename");
+        return;
+    }
+    let picker = bookmark_picker(marks, |cx, item| {
+        let from = item.0.clone();
+        cx.jobs.callback(async move {
+            let call = Callback::EditorCompositor(Box::new(move |_editor, compositor| {
+                let prompt = Prompt::new(
+                    format!("rename '{from}' to: ").into(),
+                    None,
+                    |_, _| Vec::new(),
+                    move |cx, input, event| {
+                        if event != PromptEvent::Validate || input.is_empty() {
+                            return;
+                        }
+                        if crate::emacs_bookmark::rename(&from, input) {
+                            cx.editor
+                                .set_status(format!("Bookmark renamed to '{input}'"));
+                        } else {
+                            cx.editor
+                                .set_error(format!("Cannot rename to '{input}'"));
+                        }
+                    },
+                );
+                compositor.push(Box::new(prompt));
+            }));
+            Ok(call)
+        });
+    });
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
