@@ -5017,6 +5017,248 @@ fn pio_access_private(cx: &mut compositor::Context, args: Args, event: PromptEve
     pio_admin_terminal(cx, "access", "private", &args)
 }
 
+/// `:pio <argv…>` — run an arbitrary `pio` command in a terminal panel from the
+/// project directory, so any subcommand/flag not bound to a named command
+/// (including `pio home`) is still reachable.
+fn pio_raw(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.is_empty() {
+        bail!("usage: :pio <args…>  (e.g. run -e uno -t upload)");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_passthrough(&tokens), dir);
+    Ok(())
+}
+
+/// `:arduino-cli <argv…>` — run an arbitrary `arduino-cli` command in a terminal
+/// panel from the workspace root, for anything not bound to a named command.
+fn arduino_raw(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.is_empty() {
+        bail!("usage: :arduino-cli <args…>  (e.g. board list)");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::arduino_passthrough(&tokens), root);
+    Ok(())
+}
+
+/// `:arduino-core-download <package>` — fetch a core without installing it.
+fn arduino_core_download(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pkg = args.join(" ");
+    if pkg.trim().is_empty() {
+        bail!("usage: :arduino-core-download <package>  (e.g. arduino:avr)");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::arduino_core_download(pkg.trim()), root);
+    Ok(())
+}
+
+/// `:arduino-lib-download <name>` — fetch a library without installing it.
+fn arduino_lib_download(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    if name.trim().is_empty() {
+        bail!("usage: :arduino-lib-download <name>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::arduino_lib_download(name.trim()), root);
+    Ok(())
+}
+
+/// `:arduino-lib-update-index` — refresh the library index.
+fn arduino_lib_update_index(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_capture(&embedded::arduino_lib_update_index())?;
+    cx.editor.set_status("Library index updated");
+    Ok(())
+}
+
+/// `:arduino-board-search [query]` — search the Boards Manager for a board.
+fn arduino_board_search(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_board_search(&args.join(" ")), false);
+    Ok(())
+}
+
+/// `:arduino-cache-clean` — delete the Boards/Library Manager download cache.
+fn arduino_cache_clean(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_capture(&embedded::arduino_cache_clean())?;
+    cx.editor.set_status("Cleared arduino-cli download cache");
+    Ok(())
+}
+
+/// `:arduino-completion <shell>` — emit a shell completion script.
+fn arduino_completion(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let shell = args.join(" ");
+    if shell.trim().is_empty() {
+        bail!("usage: :arduino-completion <shell>  (bash|zsh|fish|powershell)");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_completion(shell.trim()), false);
+    Ok(())
+}
+
+/// `:arduino-config-get <key>` — read one arduino-cli configuration key.
+fn arduino_config_get(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let key = args.join(" ");
+    if key.trim().is_empty() {
+        bail!("usage: :arduino-config-get <key>  (e.g. board_manager.additional_urls)");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_config("get", &[key.trim().to_string()]), false);
+    Ok(())
+}
+
+/// `:arduino-config-set <key> <value…>` — set an arduino-cli configuration value.
+fn arduino_config_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.len() < 2 {
+        bail!("usage: :arduino-config-set <key> <value…>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_capture(&embedded::arduino_config("set", &tokens))?;
+    cx.editor.set_status(format!("arduino-cli config `{}` set", tokens[0]));
+    Ok(())
+}
+
+/// `:arduino-config-add <key> <value…>` — append value(s) to an arduino-cli
+/// list setting (e.g. additional board-manager URLs).
+fn arduino_config_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.len() < 2 {
+        bail!("usage: :arduino-config-add <key> <value…>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_capture(&embedded::arduino_config("add", &tokens))?;
+    cx.editor.set_status(format!("arduino-cli config `{}` appended", tokens[0]));
+    Ok(())
+}
+
+/// `:arduino-config-remove <key> <value…>` — remove value(s) from a list setting.
+fn arduino_config_remove(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.len() < 2 {
+        bail!("usage: :arduino-config-remove <key> <value…>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_capture(&embedded::arduino_config("remove", &tokens))?;
+    cx.editor.set_status(format!("arduino-cli config `{}` updated", tokens[0]));
+    Ok(())
+}
+
+/// `:arduino-config-delete <key>` — delete a settings key and its sub-keys.
+fn arduino_config_delete(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let key = args.join(" ");
+    if key.trim().is_empty() {
+        bail!("usage: :arduino-config-delete <key>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_capture(&embedded::arduino_config("delete", &[key.trim().to_string()]))?;
+    cx.editor.set_status(format!("arduino-cli config `{}` deleted", key.trim()));
+    Ok(())
+}
+
+/// `:arduino-config-init` — write the current configuration to a config file.
+fn arduino_config_init(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let out = embedded_capture(&embedded::arduino_config("init", &[]))?;
+    cx.editor.set_status(format!("arduino-cli config initialised: {}", out.trim()));
+    Ok(())
+}
+
+/// `:arduino-board-attach <argv…>` — attach a sketch to a board
+/// (`arduino-cli board attach`, e.g. `-p <port> -b <fqbn> [sketch]`).
+fn arduino_board_attach(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.is_empty() {
+        bail!("usage: :arduino-board-attach -p <port> -b <fqbn> [sketch]");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::arduino_sub("board", "attach", &tokens), dir);
+    Ok(())
+}
+
+/// `:arduino-profile-create <argv…>` — create/update a build profile in the
+/// sketch project file (`arduino-cli profile create`).
+fn arduino_profile_create(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.is_empty() {
+        bail!("usage: :arduino-profile-create <name> -b <fqbn>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::arduino_sub("profile", "create", &tokens), dir);
+    Ok(())
+}
+
+/// `:arduino-profile-set-default <name>` — set the default build profile.
+fn arduino_profile_set_default(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    if name.trim().is_empty() {
+        bail!("usage: :arduino-profile-set-default <name>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_capture(&embedded::arduino_sub("profile", "set-default", &[name.trim().to_string()]))?;
+    cx.editor.set_status(format!("Default build profile set to `{}`", name.trim()));
+    Ok(())
+}
+
 /// Wrap `s` in single quotes for safe inclusion in a `/bin/sh -c` command line,
 /// escaping any embedded single quotes. Pure — unit tested.
 fn shell_single_quote(s: &str) -> String {
@@ -20943,6 +21185,193 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["platformio-access-private"],
         doc: "Make a published resource private (`pio access private <resource>`), live in a terminal panel.",
         fun: pio_access_private,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio",
+        aliases: &["platformio"],
+        doc: "Run an arbitrary `pio` command in a terminal panel (any subcommand/flag, including `pio home`).",
+        fun: pio_raw,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-cli",
+        aliases: &["acli", "arduino"],
+        doc: "Run an arbitrary `arduino-cli` command in a terminal panel (any subcommand/flag).",
+        fun: arduino_raw,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-core-download",
+        aliases: &["arduino-download-core"],
+        doc: "Fetch a core without installing it (`arduino-cli core download <package>`), live in a terminal panel.",
+        fun: arduino_core_download,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-download",
+        aliases: &["arduino-download-lib"],
+        doc: "Fetch a library without installing it (`arduino-cli lib download <name>`), live in a terminal panel.",
+        fun: arduino_lib_download,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-update-index",
+        aliases: &["arduino-lib-index"],
+        doc: "Refresh the arduino-cli library index (`arduino-cli lib update-index`).",
+        fun: arduino_lib_update_index,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-board-search",
+        aliases: &["arduino-boards-search"],
+        doc: "Search the Boards Manager for a board (`arduino-cli board search [query]`).",
+        fun: arduino_board_search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-cache-clean",
+        aliases: &["arduino-clean-cache"],
+        doc: "Delete the Boards/Library Manager download cache (`arduino-cli cache clean`).",
+        fun: arduino_cache_clean,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-completion",
+        aliases: &["arduino-cli-completion"],
+        doc: "Emit a shell completion script (`arduino-cli completion <bash|zsh|fish|powershell>`).",
+        fun: arduino_completion,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-config-get",
+        aliases: &["arduino-cfg-get"],
+        doc: "Read one arduino-cli configuration key (`arduino-cli config get <key>`).",
+        fun: arduino_config_get,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-config-set",
+        aliases: &["arduino-cfg-set"],
+        doc: "Set an arduino-cli configuration value (`arduino-cli config set <key> <value…>`).",
+        fun: arduino_config_set,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-config-add",
+        aliases: &["arduino-cfg-add"],
+        doc: "Append value(s) to an arduino-cli list setting (`arduino-cli config add <key> <value…>`).",
+        fun: arduino_config_add,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-config-remove",
+        aliases: &["arduino-cfg-remove"],
+        doc: "Remove value(s) from an arduino-cli list setting (`arduino-cli config remove <key> <value…>`).",
+        fun: arduino_config_remove,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-config-delete",
+        aliases: &["arduino-cfg-delete"],
+        doc: "Delete an arduino-cli settings key and its sub-keys (`arduino-cli config delete <key>`).",
+        fun: arduino_config_delete,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-config-init",
+        aliases: &["arduino-cfg-init"],
+        doc: "Write the current configuration to a config file (`arduino-cli config init`).",
+        fun: arduino_config_init,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-board-attach",
+        aliases: &["arduino-attach"],
+        doc: "Attach a sketch to a board (`arduino-cli board attach -p <port> -b <fqbn> [sketch]`), live in a terminal panel.",
+        fun: arduino_board_attach,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-profile-create",
+        aliases: &["arduino-profile-new"],
+        doc: "Create/update a build profile in the sketch project file (`arduino-cli profile create`), live in a terminal panel.",
+        fun: arduino_profile_create,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-profile-set-default",
+        aliases: &["arduino-profile-default"],
+        doc: "Set the default build profile (`arduino-cli profile set-default <name>`).",
+        fun: arduino_profile_set_default,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),

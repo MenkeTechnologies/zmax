@@ -166,14 +166,20 @@ PlatformIO environment, monitor filters) persist to
 - **Boards & ports** — `:arduino-boards` (pick FQBN), `:arduino-ports` /
   `:pio-devices` (pick serial port), `:arduino-board-info`, `:pio-boards`
   (Board Explorer), `:pio-boards-installed` (installed platforms only).
-- **Boards Manager** — `:arduino-core-search`, `:arduino-core-install`,
+- **Boards Manager** — `:arduino-core-search`, `:arduino-board-search`,
+  `:arduino-core-install`, `:arduino-core-download` (fetch without installing),
   `:arduino-core-list`, `:arduino-core-uninstall`, `:arduino-core-update-index`,
   `:arduino-core-upgrade`.
 - **Library Manager** — `:arduino-lib-search` (search + install),
-  `:arduino-lib-list`, `:arduino-lib-uninstall`, `:arduino-lib-upgrade`,
-  `:arduino-lib-examples`, `:arduino-lib-deps`; PlatformIO packages via
-  `:pio-lib-search`, `:pio-lib-install`, `:pio-lib-list`, `:pio-lib-show`,
-  `:pio-lib-uninstall`, `:pio-lib-update`, `:pio-lib-outdated`.
+  `:arduino-lib-list`, `:arduino-lib-download`, `:arduino-lib-uninstall`,
+  `:arduino-lib-upgrade`, `:arduino-lib-update-index`, `:arduino-lib-examples`,
+  `:arduino-lib-deps`; PlatformIO packages via `:pio-lib-search`,
+  `:pio-lib-install`, `:pio-lib-list`, `:pio-lib-show`, `:pio-lib-uninstall`,
+  `:pio-lib-update`, `:pio-lib-outdated`.
+- **arduino-cli config & cache** — `:arduino-config` (dump), `:arduino-config-get`
+  / `-set` / `-add` / `-remove` / `-delete` / `-init`, `:arduino-cache-clean`,
+  `:arduino-completion <shell>`. Build profiles: `:arduino-board-attach`,
+  `:arduino-profile-create`, `:arduino-profile-set-default`.
 - **Debug** — `:arduino-debug` / `:pio-debug` launch the respective debuggers in
   a terminal panel.
 - **Maintenance** — `:arduino-update` / `:arduino-upgrade` / `:arduino-outdated`
@@ -199,6 +205,9 @@ PlatformIO environment, monitor filters) persist to
 - **Sketches / projects** — `:arduino-new-sketch`, `:arduino-sketch-archive`,
   `:pio-init <board>`, `:pio-project-config` (computed config),
   `:pio-project-metadata` (IDE/LSP metadata dump).
+- **Raw passthrough** — `:pio <args…>` and `:arduino-cli <args…>` (alias `:acli`)
+  run any backend command in a terminal panel, so every subcommand, flag, and
+  future capability of both CLIs is reachable even when it has no named command.
 
 ## Build
 
