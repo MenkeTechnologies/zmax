@@ -1760,9 +1760,15 @@ impl Application {
             })
             .collect();
         // Window split layout (arrangement + files + focus). Cursors for the
-        // focused view are already captured in `data.cursor` above.
-        let shape = self.editor.tree.shape();
-        data.splits = Some(shape_to_split(&self.editor, &shape));
+        // focused view are already captured in `data.cursor` above. Split
+        // persistence (`shape_to_split`) is compiled out under `integration`
+        // (the test harness has no session to restore), so gate the capture to
+        // match — otherwise the reference fails to resolve in that build.
+        #[cfg(not(feature = "integration"))]
+        {
+            let shape = self.editor.tree.shape();
+            data.splits = Some(shape_to_split(&self.editor, &shape));
+        }
         crate::appdata::save(&data);
     }
 
