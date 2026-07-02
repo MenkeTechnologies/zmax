@@ -32,7 +32,7 @@ pub fn snapshots(path: &Path) -> Vec<(u64, PathBuf)> {
             Some((ts, p))
         })
         .collect();
-    v.sort_by(|a, b| b.0.cmp(&a.0));
+    v.sort_by_key(|b| std::cmp::Reverse(b.0));
     v
 }
 

@@ -154,7 +154,7 @@ pub fn parse_file(contents: &str) -> Vec<Entry> {
 }
 
 /// The entries that apply on `date` (Emacs `diary-list-entries`).
-pub fn entries_for<'a>(entries: &'a [Entry], date: Date) -> Vec<&'a Entry> {
+pub fn entries_for(entries: &[Entry], date: Date) -> Vec<&Entry> {
     entries.iter().filter(|e| e.spec.matches(date)).collect()
 }
 

@@ -288,10 +288,8 @@ impl Component for Startify {
                             self.selected = (self.selected + 1) % len;
                         }
                     }
-                    MouseEventKind::ScrollUp => {
-                        if len > 0 {
-                            self.selected = (self.selected + len - 1) % len;
-                        }
+                    MouseEventKind::ScrollUp if len > 0 => {
+                        self.selected = (self.selected + len - 1) % len;
                     }
                     _ => {}
                 }

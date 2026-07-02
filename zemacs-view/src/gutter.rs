@@ -86,7 +86,7 @@ pub fn blame<'doc>(
     let style = theme
         .try_get("ui.gutter.blame")
         .unwrap_or_else(|| theme.get("comment"));
-    let lines = doc.path().and_then(|p| blame_annotate_lines(p));
+    let lines = doc.path().and_then(blame_annotate_lines);
     Box::new(
         move |line: usize, _selected: bool, first_visual_line: bool, out: &mut String| {
             let s = if first_visual_line {

@@ -192,9 +192,9 @@ pub fn eval_elisp(cx: &mut compositor::Context, src: &str) -> Result<String, Str
     Ok(elisprs::print(&value, true))
 }
 
-/// Evaluate a VimL source string against the live editor. Returns captured
-/// `:echo` output plus the trailing expression value. Globals/functions persist
-/// across calls (vimlrs thread-local state). Runs synchronously.
+// Tracks whether the vimlrs -> editor host hooks have been installed on this
+// thread (see install_viml_hooks). thread_local because vimlrs state is
+// thread-local and the hooks bridge into it.
 thread_local! {
     static VIML_HOOKS_INSTALLED: Cell<bool> = const { Cell::new(false) };
 }

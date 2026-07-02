@@ -151,7 +151,7 @@ pub fn entry_body(hs: &[Heading], line: usize, total_lines: usize) -> Option<(us
         .get(i + 1)
         .map(|n| n.line.saturating_sub(1))
         .unwrap_or(total_lines.saturating_sub(1));
-    if end >= h.line + 1 {
+    if end > h.line {
         Some((h.line + 1, end))
     } else {
         None
@@ -170,7 +170,7 @@ pub fn all_bodies(hs: &[Heading], total_lines: usize) -> Vec<(usize, usize)> {
             .get(idx + 1)
             .map(|n| n.line.saturating_sub(1))
             .unwrap_or(total_lines.saturating_sub(1));
-        if end >= h.line + 1 {
+        if end > h.line {
             out.push((h.line + 1, end));
         }
     }

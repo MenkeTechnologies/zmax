@@ -34,7 +34,7 @@ fn grid(
     }
     let widest = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
     let budget = max_width.saturating_sub(6); // borders + margin
-    let cols_fit = (budget / (widest.min(COL_CAP).max(8) + SEP)).max(1);
+    let cols_fit = (budget / (widest.clamp(8, COL_CAP) + SEP)).max(1);
     // Use as many columns as fit the full width (Spacemacs' which-key fills the
     // window — up to MAX_COLS), so the grid is wide and short; only overflow
     // scrolls.
@@ -86,7 +86,7 @@ impl Component for Info {
         // Cap body height at ~the frame minus chrome, and never taller than
         // MAX_ROWS (Spacemacs-style short grid); overflow scrolls.
         let avail = (viewport.height as usize).saturating_sub(6);
-        let cap = avail.min(MAX_ROWS).max(1);
+        let cap = avail.clamp(1, MAX_ROWS);
 
         let lines: Vec<&str> = self.text.lines().collect();
         let (text, body_w, body_h, rows_total, _cols) =
@@ -99,11 +99,9 @@ impl Component for Info {
 
         // Title carries a scroll indicator when there's more below/above.
         let title = if scrollable {
-            let pct = if max_scroll == 0 {
-                0
-            } else {
-                (self.scroll as usize * 100) / max_scroll
-            };
+            let pct = (self.scroll as usize * 100)
+                .checked_div(max_scroll)
+                .unwrap_or(0);
             format!("{}  [{pct}%  PgDn/PgUp]", self.title)
         } else {
             self.title.to_string()

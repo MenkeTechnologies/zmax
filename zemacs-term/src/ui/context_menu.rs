@@ -126,7 +126,7 @@ impl ContextMenu {
     /// Take (remove) the action of the item at `path`/`idx`, if it is an Item.
     /// Returns an owned callback so no `&mut` into the tree escapes (which the
     /// borrow checker rejects for the descend-then-return pattern).
-    fn take_action(entries: &mut Vec<Entry>, path: &[usize], idx: usize) -> Option<Callback> {
+    fn take_action(entries: &mut [Entry], path: &[usize], idx: usize) -> Option<Callback> {
         match path.split_first() {
             None => match entries.get_mut(idx) {
                 Some(Entry::Item { action, .. }) => action.take(),

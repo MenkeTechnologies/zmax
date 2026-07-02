@@ -102,6 +102,7 @@ impl CompilationList {
     /// fresh state (nothing visited) this lands on the first entry. Returns `None`
     /// without moving when already on the last entry (Emacs' "Moved past last
     /// error").
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<&CompileEntry> {
         let n = match self.current {
             None => 0,
@@ -220,9 +221,8 @@ fn classify(text: &str) -> ErrorKind {
         ErrorKind::Error
     } else if lower.contains("warning") {
         ErrorKind::Warning
-    } else if lower.contains("note") || lower.contains("info") {
-        ErrorKind::Info
     } else {
+        // `note:`/`info:` and any unrecognised text (e.g. a grep match) are info.
         ErrorKind::Info
     }
 }

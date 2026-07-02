@@ -605,7 +605,7 @@ fn abbrev_define(
     args: &Args,
 ) -> anyhow::Result<()> {
     if args.len() < 2 {
-        let prefix = args.first().map(|s| s.as_ref());
+        let prefix = args.first();
         cx.editor.set_status(abbrev_list(mode, prefix));
         return Ok(());
     }
@@ -792,7 +792,7 @@ fn buffer_modified(
             .editor
             .documents()
             .find(|d| d.id() == id)
-            .map_or(false, |d| d.is_modified());
+            .is_some_and(|d| d.is_modified());
         if modified {
             cx.editor.switch(id, Action::Replace);
             return Ok(());
@@ -12884,7 +12884,7 @@ fn ex_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
         .documents()
         .filter(|d| {
             d.path()
-                .map_or(false, |p| p.to_string_lossy().contains(needle))
+                .is_some_and(|p| p.to_string_lossy().contains(needle))
         })
         .map(|d| d.id())
         .collect();
@@ -13531,12 +13531,10 @@ pub(crate) fn do_subvert(
             continue;
         }
         let text: std::borrow::Cow<str> = slice.slice(lstart..lend).into();
-        let mut count = 0usize;
-        for m in re.find_iter(&text) {
+        for (count, m) in re.find_iter(&text).enumerate() {
             if !global && count >= 1 {
                 break;
             }
-            count += 1;
             let matched = m.as_str();
             let out = if matched == upper.0 {
                 upper.1.clone()

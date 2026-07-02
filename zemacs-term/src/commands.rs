@@ -6079,7 +6079,7 @@ fn shift_lines(cx: &mut Context, down: bool) {
         // Region = line above + block; swap them (block ends up first, at `p`).
         let p = slice.line_to_char(first - 1);
         let a = slice.line_to_char(first);
-        let c = if last + 1 <= n_lines {
+        let c = if last < n_lines {
             slice.line_to_char(last + 1)
         } else {
             len
@@ -7274,7 +7274,7 @@ fn indent_tabs_to_spaces(indent: &str, tab_width: usize) -> String {
     for c in indent.chars() {
         if c == '\t' {
             let n = tab_width - (col % tab_width);
-            out.extend(std::iter::repeat(' ').take(n));
+            out.extend(std::iter::repeat_n(' ', n));
             col += n;
         } else {
             out.push(c);
@@ -7288,8 +7288,8 @@ fn indent_tabs_to_spaces(indent: &str, tab_width: usize) -> String {
 fn indent_spaces_to_tabs(indent: &str, tab_width: usize) -> String {
     let n = indent_tabs_to_spaces(indent, tab_width).len();
     let mut out = String::with_capacity(n / tab_width + n % tab_width);
-    out.extend(std::iter::repeat('\t').take(n / tab_width));
-    out.extend(std::iter::repeat(' ').take(n % tab_width));
+    out.extend(std::iter::repeat_n('\t', n / tab_width));
+    out.extend(std::iter::repeat_n(' ', n % tab_width));
     out
 }
 
@@ -14767,10 +14767,8 @@ fn bracket_analysis(line: &str) -> (String, bool, String) {
                     stack.pop();
                 }
             }
-            '}' => {
-                if stack.last() == Some(&'{') {
-                    stack.pop();
-                }
+            '}' if stack.last() == Some(&'{') => {
+                stack.pop();
             }
             _ => {}
         }
@@ -18711,7 +18709,7 @@ fn ispell_word(cx: &mut Context) {
         cx.editor.set_status("No word at point");
         return;
     };
-    let Some(per_line) = ispell_check(&[word.clone()]) else {
+    let Some(per_line) = ispell_check(std::slice::from_ref(&word)) else {
         cx.editor
             .set_error("no speller found (install aspell, hunspell, or ispell)");
         return;
