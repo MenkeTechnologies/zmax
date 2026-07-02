@@ -29,6 +29,7 @@ pub mod increment;
 pub mod indent;
 pub mod ispell;
 pub mod line_ending;
+pub mod list_motion;
 pub mod line_filter;
 pub mod macros;
 pub mod match_brackets;
