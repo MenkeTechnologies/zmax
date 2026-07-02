@@ -315,6 +315,10 @@ pub struct Config {
     pub cursorline: bool,
     /// Highlight the columns cursors are currently on. Defaults to false.
     pub cursorcolumn: bool,
+    /// Highlight every occurrence of the word under the primary cursor in the
+    /// visible viewport (like vim-illuminate / JetBrains identifier-under-caret).
+    /// Defaults to true.
+    pub highlight_word_under_cursor: bool,
     #[serde(deserialize_with = "deserialize_gutter_seq_or_struct")]
     pub gutters: GutterConfig,
     /// Middle click paste support. Defaults to true.
@@ -1299,6 +1303,7 @@ impl Default for Config {
             line_number: LineNumber::Absolute,
             cursorline: false,
             cursorcolumn: false,
+            highlight_word_under_cursor: true,
             gutters: GutterConfig::default(),
             middle_click_paste: true,
             auto_pairs: AutoPairConfig::default(),

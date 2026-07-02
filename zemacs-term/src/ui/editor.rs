@@ -766,6 +766,11 @@ impl EditorView {
                     overlays.push(overlay);
                 }
             }
+            if config.highlight_word_under_cursor {
+                if let Some(overlay) = Self::doc_word_occurrence_highlights(doc, view, theme) {
+                    overlays.push(overlay);
+                }
+            }
             if let Some(tabstops) = Self::tabstop_highlights(doc, theme) {
                 overlays.push(tabstops);
             }
@@ -1180,6 +1185,78 @@ impl EditorView {
             highlight,
             ranges: ranges.to_vec(),
         })
+    }
+
+    /// Highlight every whole-word occurrence of the word under the primary
+    /// cursor within the visible viewport (vim-illuminate / JetBrains
+    /// identifier-under-caret behaviour). Bounded to the visible line range so
+    /// the per-frame scan stays cheap regardless of file size.
+    pub fn doc_word_occurrence_highlights(
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+    ) -> Option<OverlayHighlights> {
+        use zemacs_core::chars::char_is_word;
+
+        let text = doc.text().slice(..);
+        let len = text.len_chars();
+        if len == 0 {
+            return None;
+        }
+
+        // Expand around the primary cursor to the word boundaries.
+        let pos = doc.selection(view.id).primary().cursor(text);
+        if pos >= len || !char_is_word(text.char(pos)) {
+            return None;
+        }
+        let mut start = pos;
+        while start > 0 && char_is_word(text.char(start - 1)) {
+            start -= 1;
+        }
+        let mut end = pos;
+        while end < len && char_is_word(text.char(end)) {
+            end += 1;
+        }
+        let word: String = text.slice(start..end).chars().collect();
+
+        let highlight = theme
+            .find_highlight_exact("ui.highlight.word")
+            .or_else(|| theme.find_highlight_exact("ui.highlight"))
+            .or_else(|| theme.find_highlight_exact("ui.cursor.match"))?;
+
+        // Restrict the scan to the visible line range.
+        let view_offset = doc.view_offset(view.id);
+        let height = view.inner_area(doc).height as usize;
+        let first_line = text.char_to_line(view_offset.anchor);
+        let last_line = (first_line + height + 1).min(text.len_lines());
+        let scan_start = text.line_to_char(first_line);
+        let scan_end = text.line_to_char(last_line);
+        let haystack: String = text.slice(scan_start..scan_end).chars().collect();
+
+        let mut ranges: Vec<ops::Range<usize>> = Vec::new();
+        for (byte_idx, _) in haystack.match_indices(&word) {
+            // Whole-word check: neighbours must not be word characters.
+            let before_ok = haystack[..byte_idx]
+                .chars()
+                .next_back()
+                .is_none_or(|c| !char_is_word(c));
+            let after_ok = haystack[byte_idx + word.len()..]
+                .chars()
+                .next()
+                .is_none_or(|c| !char_is_word(c));
+            if !before_ok || !after_ok {
+                continue;
+            }
+            let match_start = scan_start + haystack[..byte_idx].chars().count();
+            let match_end = match_start + word.chars().count();
+            ranges.push(match_start..match_end);
+        }
+
+        if ranges.is_empty() {
+            return None;
+        }
+
+        Some(OverlayHighlights::Homogeneous { highlight, ranges })
     }
 
     pub fn doc_document_link_highlights(

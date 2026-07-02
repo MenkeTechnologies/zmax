@@ -39,6 +39,7 @@
 | `line-number` | Line number display: `absolute` simply shows each line's number, while `relative` shows the distance from the current line. When unfocused or in insert mode, `relative` will still show absolute line numbers | `"absolute"` |
 | `cursorline` | Highlight all lines with a cursor | `false` |
 | `cursorcolumn` | Highlight all columns with a cursor | `false` |
+| `highlight-word-under-cursor` | Highlight every whole-word occurrence of the word under the primary cursor within the visible viewport (styled with the `ui.highlight.word` theme scope) | `true` |
 | `continue-comments` | if zemacs should automatically add a line comment token if you create a new line inside a comment. | `true` |
 | `gutters` | Gutters to display: Available are `diagnostics` and `diff` and `line-numbers` and `spacer` and `code-action-hint`, note that `diagnostics` also includes other features like breakpoints, 1-width padding will be inserted if gutters is non-empty | `["diagnostics", "spacer", "line-numbers", "spacer", "diff"]` |
 | `auto-completion` | Enable automatic pop up of auto-completion | `true` |

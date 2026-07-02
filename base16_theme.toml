@@ -18,6 +18,7 @@
 "attributes" = "yellow"
 "type" = "yellow"
 "ui.cursor.match" = { fg = "yellow", modifiers = ["underlined"] }
+"ui.highlight.word" = { modifiers = ["underlined"] }
 "string"  = "green"
 "variable.other.member" = "green"
 "constant.character.escape" = "cyan"
