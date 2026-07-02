@@ -76,7 +76,7 @@ tui = { path = "../zemacs-tui", package = "zemacs-tui", default-features = false
 # ratatui widgets (List/Table/Scrollbar/Block/Gauge/Chart/Canvas/Calendar) rendered offscreen and
 # blitted onto the tui Surface via ui::rat — backend-less, so it doesn't pull a second terminal
 # backend. `widget-calendar` enables the Calendar widget (used by the stats Dashboard).
-ratatui = { version = "0.29", default-features = false, features = ["widget-calendar"] }
+ratatui = { version = "0.30", default-features = false, features = ["widget-calendar"] }
 termina = { workspace = true, features = ["event-stream"] }
 signal-hook = "0.4"
 tokio-stream = "0.1"
