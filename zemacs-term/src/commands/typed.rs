@@ -4371,13 +4371,14 @@ fn pio_platform_install(cx: &mut compositor::Context, args: Args, event: PromptE
 }
 
 /// `:pio-pkg-pack` — build a tarball of the current package (registry authoring).
-fn pio_pkg_pack(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_pack(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_pkg_pack(), dir);
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    embedded_spawn_terminal(cx, embedded::pio_pkg_pack_with(&tokens), dir);
     Ok(())
 }
 
@@ -4550,13 +4551,14 @@ fn pio_remote_agent_list(cx: &mut compositor::Context, _args: Args, event: Promp
 
 /// `:pio-remote-agent-start` — start a Remote agent on this machine, live in a
 /// terminal panel (long-running foreground process).
-fn pio_remote_agent_start(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_agent_start(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let root = zemacs_loader::find_workspace().0;
-    embedded_spawn_terminal(cx, embedded::pio_remote_agent_start(), root);
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    embedded_spawn_terminal(cx, embedded::pio_remote_agent_start_with(&tokens), root);
     Ok(())
 }
 
@@ -4593,13 +4595,14 @@ fn pio_remote_test(cx: &mut compositor::Context, _args: Args, event: PromptEvent
 }
 
 /// `:pio-remote-update` — update platforms/packages/libraries on remote agents.
-fn pio_remote_update(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_update(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let root = zemacs_loader::find_workspace().0;
-    embedded_spawn_terminal(cx, embedded::pio_remote_update(), root);
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    embedded_spawn_terminal(cx, embedded::pio_remote_update_with(&tokens), root);
     Ok(())
 }
 
@@ -4638,13 +4641,14 @@ fn pio_account_show(cx: &mut compositor::Context, _args: Args, event: PromptEven
 
 /// `:pio-account-token` — print (or regenerate) the account auth token, live in
 /// a terminal panel (may prompt for the account password).
-fn pio_account_token(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_account_token(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let root = zemacs_loader::find_workspace().0;
-    embedded_spawn_terminal(cx, embedded::pio_account_token(), root);
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    embedded_spawn_terminal(cx, embedded::pio_account_token_with(&tokens), root);
     Ok(())
 }
 
@@ -4945,6 +4949,88 @@ fn pio_monitor_reconnect(cx: &mut compositor::Context, args: Args, event: Prompt
     };
     embedded::update(|s| s.no_reconnect = no_reconnect);
     cx.editor.set_status(format!("Serial monitor auto-reconnect {mode}"));
+    Ok(())
+}
+
+/// `:pio-monitor-quiet` — toggle suppression of non-error monitor diagnostics
+/// (`--quiet`).
+fn pio_monitor_quiet(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let now = embedded::update(|s| s.quiet = !s.quiet).quiet;
+    cx.editor.set_status(format!("Serial monitor quiet mode {}", if now { "on" } else { "off" }));
+    Ok(())
+}
+
+/// `:pio-monitor-exit-char <n>` — set the ASCII code of the monitor exit
+/// character (`--exit-char`; default `3` = Ctrl+C). Empty clears the override.
+fn pio_monitor_exit_char(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = args.join(" ").trim().to_string();
+    if !n.is_empty() && n.parse::<u8>().is_err() {
+        bail!("usage: :pio-monitor-exit-char <ascii-code>  (e.g. 3)");
+    }
+    embedded::update(|s| s.exit_char = n.clone());
+    if n.is_empty() {
+        cx.editor.set_status("Serial monitor exit-char cleared");
+    } else {
+        cx.editor.set_status(format!("Serial monitor exit-char set to {n}"));
+    }
+    Ok(())
+}
+
+/// `:pio-monitor-menu-char <n>` — set the ASCII code of the monitor menu
+/// character (`--menu-char`; default `20` = Ctrl+T). Empty clears the override.
+fn pio_monitor_menu_char(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = args.join(" ").trim().to_string();
+    if !n.is_empty() && n.parse::<u8>().is_err() {
+        bail!("usage: :pio-monitor-menu-char <ascii-code>  (e.g. 20)");
+    }
+    embedded::update(|s| s.menu_char = n.clone());
+    if n.is_empty() {
+        cx.editor.set_status("Serial monitor menu-char cleared");
+    } else {
+        cx.editor.set_status(format!("Serial monitor menu-char set to {n}"));
+    }
+    Ok(())
+}
+
+/// `:pio-pkg-show-type <pkg> <library|platform|tool>` — registry details scoped
+/// to a package type (`pio pkg show --type <type> <pkg>`).
+fn pio_pkg_show_type(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let pkg_type = tokens.last().map(|s| s.to_ascii_lowercase()).unwrap_or_default();
+    if tokens.len() < 2 || !matches!(pkg_type.as_str(), "library" | "platform" | "tool") {
+        bail!("usage: :pio-pkg-show-type <pkg> <library|platform|tool>");
+    }
+    let pkg = tokens[..tokens.len() - 1].join(" ");
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_pkg_show_type(pkg.trim(), &pkg_type), false);
+    Ok(())
+}
+
+/// `:pio-pkg-exec-call <argv…>` — run a package tool via the `-c/--call` form
+/// (`pio pkg exec -c <argv…>`), live in a terminal panel.
+fn pio_pkg_exec_call(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.is_empty() {
+        bail!("usage: :pio-pkg-exec-call <program> [args…]  (e.g. esptool.py --version)");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_pkg_exec_call(&tokens), dir);
     Ok(())
 }
 
@@ -21269,11 +21355,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "pio-pkg-pack",
         aliases: &["platformio-pkg-pack"],
-        doc: "Build a tarball of the current package (`pio pkg pack`), live in a terminal panel.",
+        doc: "Build a tarball of the current package (`pio pkg pack [-o <path>]`), live in a terminal panel.",
         fun: pio_pkg_pack,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (0, Some(0)),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -21401,11 +21487,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "pio-remote-agent-start",
         aliases: &["platformio-remote-agent-start"],
-        doc: "Start a PlatformIO Remote agent on this machine (`pio remote agent start`), live in a terminal panel.",
+        doc: "Start a PlatformIO Remote agent (`pio remote agent start [--name <n>] [--share <email>] [--working-dir <dir>]`).",
         fun: pio_remote_agent_start,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (0, Some(0)),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -21445,11 +21531,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "pio-remote-update",
         aliases: &["platformio-remote-update"],
-        doc: "Update platforms/packages/libraries on remote agents (`pio remote update`), live in a terminal panel.",
+        doc: "Update platforms/packages/libraries on remote agents (`pio remote update [--dry-run]`).",
         fun: pio_remote_update,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (0, Some(0)),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -21489,11 +21575,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "pio-account-token",
         aliases: &["platformio-account-token"],
-        doc: "Print (or regenerate) the account auth token (`pio account token`), live in a terminal panel.",
+        doc: "Print the account auth token (`pio account token [--regenerate] [--json-output] [-p <password>]`).",
         fun: pio_account_token,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (0, Some(0)),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -21692,6 +21778,61 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-quiet",
+        aliases: &["platformio-monitor-quiet"],
+        doc: "Toggle suppression of non-error serial monitor diagnostics (`--quiet`).",
+        fun: pio_monitor_quiet,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-exit-char",
+        aliases: &["platformio-monitor-exit-char"],
+        doc: "Set the serial monitor exit-char ASCII code (`--exit-char`; default 3 = Ctrl+C); empty resets.",
+        fun: pio_monitor_exit_char,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-monitor-menu-char",
+        aliases: &["platformio-monitor-menu-char"],
+        doc: "Set the serial monitor menu-char ASCII code (`--menu-char`; default 20 = Ctrl+T); empty resets.",
+        fun: pio_monitor_menu_char,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-show-type",
+        aliases: &["platformio-pkg-show-type"],
+        doc: "Registry details scoped to a package type (`pio pkg show --type <library|platform|tool> <pkg>`).",
+        fun: pio_pkg_show_type,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-exec-call",
+        aliases: &["platformio-pkg-exec-call"],
+        doc: "Run a package tool via the call form (`pio pkg exec -c <argv…>`), live in a terminal panel.",
+        fun: pio_pkg_exec_call,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },
