@@ -27763,5 +27763,325 @@
    "typable:bufdo"
   ],
   "note": ":bufd[o] -> zemacs :bufdo (run Ex cmd in each buffer)"
+ },
+ {
+  "spec_id": "emacs.command.bookmark_set_no_overwrite",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_set_no_overwrite"
+  ],
+  "note": "C-x r M: set a bookmark only if the name is unused (BookmarkStore::set_no_overwrite); errors on collision. New static command; verified it resolves."
+ },
+ {
+  "spec_id": "emacs.command.bookmark_delete",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_delete"
+  ],
+  "note": "Picker over bookmarks; selecting removes it from the store and re-persists. New static command; verified it resolves."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_cabove",
+  "status": "ported",
+  "evidence": [
+   "typable:cabove"
+  ],
+  "note": "Jump to the [count]th quickfix error on a line above the cursor line in the current buffer; multi-error lines count as one stop, landing on the last entry of the target line (Vim :cabove). Engine: zemacs_core::quickfix::above; wired via qf_move_dir."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_cbelow",
+  "status": "ported",
+  "evidence": [
+   "typable:cbelow"
+  ],
+  "note": "Jump to the [count]th quickfix error on a line below the cursor line; multi-error lines count as one stop, landing on the first entry of the target line (Vim :cbelow). Engine: zemacs_core::quickfix::below."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_cbefore",
+  "status": "ported",
+  "evidence": [
+   "typable:cbefore"
+  ],
+  "note": "Jump to the [count]th quickfix error strictly before the cursor position, comparing line then column; every entry is its own stop (Vim :cbefore). Engine: zemacs_core::quickfix::before."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_cafter",
+  "status": "ported",
+  "evidence": [
+   "typable:cafter"
+  ],
+  "note": "Jump to the [count]th quickfix error strictly after the cursor position, comparing line then column (Vim :cafter). Engine: zemacs_core::quickfix::after."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_labove",
+  "status": "ported",
+  "evidence": [
+   "typable:labove"
+  ],
+  "note": "Location-list twin of :cabove, operating on the current window's loclist via qf_move_dir(QfKind::Location, Above)."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_lbelow",
+  "status": "ported",
+  "evidence": [
+   "typable:lbelow"
+  ],
+  "note": "Location-list twin of :cbelow via qf_move_dir(QfKind::Location, Below)."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_lbefore",
+  "status": "ported",
+  "evidence": [
+   "typable:lbefore"
+  ],
+  "note": "Location-list twin of :cbefore via qf_move_dir(QfKind::Location, Before)."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_lafter",
+  "status": "ported",
+  "evidence": [
+   "typable:lafter"
+  ],
+  "note": "Location-list twin of :cafter via qf_move_dir(QfKind::Location, After)."
+ },
+ {
+  "spec_id": "emacs.command.string_insert_rectangle",
+  "status": "ported",
+  "evidence": [
+   "typable:string-insert-rectangle"
+  ],
+  "note": "New :string-insert-rectangle typable inserts text at the rectangle's left column on each selected line without overwriting (shifts text right), via new pure zemacs_core::text_engine::string_insert_rectangle. Verified name resolves in gen_port_report.parse_typable_commands()."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_abbreviate",
+  "status": "partial",
+  "evidence": [
+   "typable:abbreviate"
+  ],
+  "note": ":abbreviate defines (Insert+Command) and lists the abbreviation table faithfully; runtime expansion on a trigger char is deferred (see blockers)."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_iabbrev",
+  "status": "partial",
+  "evidence": [
+   "typable:iabbrev"
+  ],
+  "note": ":iabbrev defines/lists Insert-mode abbreviations; runtime expansion deferred."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_cabbrev",
+  "status": "partial",
+  "evidence": [
+   "typable:cabbrev"
+  ],
+  "note": ":cabbrev defines/lists Command-line-mode abbreviations; runtime expansion deferred."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_unabbreviate",
+  "status": "ported",
+  "evidence": [
+   "typable:unabbreviate"
+  ],
+  "note": ":unabbreviate removes an abbreviation for both modes; errors E24 when absent."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_iunabbrev",
+  "status": "ported",
+  "evidence": [
+   "typable:iunabbreviate"
+  ],
+  "note": ":iunabbreviate removes an Insert-mode abbreviation (also drops a both-mode entry active in insert)."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_cunabbrev",
+  "status": "ported",
+  "evidence": [
+   "typable:cunabbreviate"
+  ],
+  "note": ":cunabbreviate removes a Command-line-mode abbreviation."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_abclear",
+  "status": "ported",
+  "evidence": [
+   "typable:abclear"
+  ],
+  "note": ":abclear clears all abbreviations for both modes."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_iabclear",
+  "status": "ported",
+  "evidence": [
+   "typable:iabclear"
+  ],
+  "note": ":iabclear clears all Insert-mode abbreviations (insert map + shared both map)."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_cabclear",
+  "status": "ported",
+  "evidence": [
+   "typable:cabclear"
+  ],
+  "note": ":cabclear clears all Command-line-mode abbreviations."
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu",
+  "status": "ported",
+  "evidence": [
+   "static:buffer_menu"
+  ],
+  "note": "buffer-menu: static command pushes the Buffer Menu Component"
+ },
+ {
+  "spec_id": "emacs.keybinding.ret_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:ret"
+  ],
+  "note": "RET = Buffer-menu-this-window: select buffer at point (Editor::switch Replace)"
+ },
+ {
+  "spec_id": "emacs.keybinding.f_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:f"
+  ],
+  "note": "f = Buffer-menu-this-window: select buffer at point"
+ },
+ {
+  "spec_id": "emacs.keybinding.o_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:o"
+  ],
+  "note": "o = Buffer-menu-other-window: select in a split window"
+ },
+ {
+  "spec_id": "emacs.keybinding.1_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:1"
+  ],
+  "note": "1 = Buffer-menu-1-window: select buffer filling the frame (Replace)"
+ },
+ {
+  "spec_id": "emacs.keybinding.2_lparenbuffer_menu_rparen",
+  "status": "partial",
+  "evidence": [
+   "key:bufmenu:2"
+  ],
+  "note": "2 = Buffer-menu-2-window: approximated as a horizontal split select"
+ },
+ {
+  "spec_id": "emacs.keybinding.v_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:v"
+  ],
+  "note": "v = Buffer-menu-select: select buffer at point plus all >-marked buffers"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:m"
+  ],
+  "note": "m = Buffer-menu-mark: mark > for selection and advance"
+ },
+ {
+  "spec_id": "emacs.keybinding.d_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:d"
+  ],
+  "note": "d = Buffer-menu-delete: flag D for deletion and advance"
+ },
+ {
+  "spec_id": "emacs.keybinding.c_d_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:C-d"
+  ],
+  "note": "C-d = Buffer-menu-delete-backwards: flag D and move up"
+ },
+ {
+  "spec_id": "emacs.keybinding.s_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:s"
+  ],
+  "note": "s = Buffer-menu-save: flag S to be saved and advance"
+ },
+ {
+  "spec_id": "emacs.keybinding.x_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:x"
+  ],
+  "note": "x = Buffer-menu-execute: save S buffers, then kill D buffers, then refresh"
+ },
+ {
+  "spec_id": "emacs.keybinding.u_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:u"
+  ],
+  "note": "u = Buffer-menu-unmark: clear mark at point and advance"
+ },
+ {
+  "spec_id": "emacs.keybinding.del_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:backspace"
+  ],
+  "note": "DEL (Backspace) = Buffer-menu-backup-unmark: move up and clear mark"
+ },
+ {
+  "spec_id": "emacs.keybinding.u_lparenbuffer_menu_rparen_1",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:U"
+  ],
+  "note": "U = Buffer-menu-unmark-all-buffers: remove every mark"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_del_lparenbuffer_menu_rparen",
+  "status": "partial",
+  "evidence": [
+   "key:bufmenu:A-backspace"
+  ],
+  "note": "M-DEL = Buffer-menu-unmark-all: removes all marks (does not prompt for a specific mark char)"
+ },
+ {
+  "spec_id": "emacs.keybinding.tilde_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:~"
+  ],
+  "note": "~ = Buffer-menu-not-modified: clear the modified flag (reset_modified)"
+ },
+ {
+  "spec_id": "emacs.keybinding.pct_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:%"
+  ],
+  "note": "% = Buffer-menu-toggle-read-only: toggle the buffer's read-only flag"
+ },
+ {
+  "spec_id": "emacs.keybinding.t_lparenbuffer_menu_rparen_1",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:T"
+  ],
+  "note": "T = Buffer-menu-toggle-files-only: list only file-visiting buffers"
+ },
+ {
+  "spec_id": "emacs.keybinding.q_lparenbuffer_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:q"
+  ],
+  "note": "q = quit-window: close the Buffer Menu overlay"
  }
 ]
