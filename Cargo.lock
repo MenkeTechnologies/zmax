@@ -3766,6 +3766,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "inotify"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "533e68a5842e734946fe159fb03fc9bbbb254f590dd0d8ad321ae5ff7beca2c1"
+dependencies = [
+ "bitflags 2.13.0",
+ "inotify-sys",
+ "libc",
+]
+
+[[package]]
 name = "inotify-sys"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4660,13 +4671,31 @@ dependencies = [
  "crossbeam-channel",
  "filetime",
  "fsevent-sys",
- "inotify",
+ "inotify 0.9.6",
  "kqueue",
  "libc",
  "log",
  "mio 0.8.11",
  "walkdir",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "notify"
+version = "8.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d3d07927151ff8575b7087f245456e549fea62edf0ec4e565a5ee50c8402bc3"
+dependencies = [
+ "bitflags 2.13.0",
+ "fsevent-sys",
+ "inotify 0.11.2",
+ "kqueue",
+ "libc",
+ "log",
+ "mio 1.0.2",
+ "notify-types",
+ "walkdir",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4677,7 +4706,16 @@ checksum = "5d40b221972a1fc5ef4d858a2f671fb34c75983eb385463dff3780eeff6a9d43"
 dependencies = [
  "crossbeam-channel",
  "log",
- "notify",
+ "notify 6.1.1",
+]
+
+[[package]]
+name = "notify-types"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42b8cfee0e339a0337359f3c88165702ac6e600dc01c0cc9579a92d62b08477a"
+dependencies = [
+ "bitflags 2.13.0",
 ]
 
 [[package]]
@@ -7049,7 +7087,7 @@ dependencies = [
  "mp3lame-encoder",
  "murmur3",
  "nix 0.31.3",
- "notify",
+ "notify 6.1.1",
  "nu-ansi-term",
  "num-bigint",
  "num-integer",
@@ -8643,6 +8681,15 @@ dependencies = [
 
 [[package]]
 name = "windows-sys"
+version = "0.60.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2f500e4d28234f72040990ec9d39e3a6b950f9f22d3dba18416c35882612bcb"
+dependencies = [
+ "windows-targets 0.53.2",
+]
+
+[[package]]
+name = "windows-sys"
 version = "0.61.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
@@ -9251,7 +9298,7 @@ dependencies = [
  "indoc",
  "libc",
  "log",
- "notify",
+ "notify 8.2.0",
  "nucleo",
  "once_cell",
  "open",
@@ -9557,7 +9604,7 @@ dependencies = [
  "libm",
  "memmap2",
  "nix 0.29.0",
- "notify",
+ "notify 6.1.1",
  "notify-debouncer-mini",
  "once_cell",
  "os_pipe",
@@ -9607,7 +9654,7 @@ dependencies = [
  "libm",
  "memmap2",
  "nix 0.29.0",
- "notify",
+ "notify 6.1.1",
  "notify-debouncer-mini",
  "once_cell",
  "os_pipe",
@@ -9652,7 +9699,7 @@ dependencies = [
  "libc",
  "memmap2",
  "nix 0.29.0",
- "notify",
+ "notify 6.1.1",
  "notify-debouncer-mini",
  "parking_lot",
  "printpdf",
@@ -9689,7 +9736,7 @@ dependencies = [
  "libc",
  "memmap2",
  "nix 0.29.0",
- "notify",
+ "notify 6.1.1",
  "notify-debouncer-mini",
  "parking_lot",
  "printpdf",
