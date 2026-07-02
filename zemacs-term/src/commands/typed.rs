@@ -2636,6 +2636,30 @@ fn diff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow
     Ok(())
 }
 
+/// `:reveal` — open the current repository's homepage on its git hosting website
+/// in the OS default browser. Cross-platform (`open` on macOS, `explorer` on
+/// Windows, `xdg-open` elsewhere) and host-agnostic: the web URL is derived as
+/// `https://<host>/<owner>/<repo>` from the `origin` remote, so GitHub, GitLab,
+/// Bitbucket, Gitea, sourcehut, self-hosted, etc. all work.
+fn reveal(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    // Prefer the focused buffer's directory (so a submodule resolves to its own
+    // remote); fall back to the editor's working directory for scratch buffers.
+    let dir = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(zemacs_stdx::env::current_working_dir);
+    let remote = super::git_out(&dir, &["remote", "get-url", "origin"])
+        .ok_or_else(|| anyhow::anyhow!("no git remote 'origin' for this repository"))?;
+    let url = super::git_remote_to_web_base(&remote)
+        .ok_or_else(|| anyhow::anyhow!("unsupported remote URL: {remote}"))?;
+    super::open_in_browser(&url).map_err(|e| anyhow::anyhow!("failed to open browser: {e}"))?;
+    cx.editor.set_status(format!("Opening {url}"));
+    Ok(())
+}
+
 /// Shared implementation behind `:diff` and the `git_diff` static command:
 /// open a read-only side-by-side diff of the focused buffer vs. its git HEAD.
 pub(crate) fn open_diff(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
@@ -17526,6 +17550,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "reveal",
+        aliases: &["browse", "open-repo"],
+        doc: "Open this repository's homepage (GitHub/GitLab/Bitbucket/…) in the browser.",
+        fun: reveal,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "compare-ref",
         aliases: &["compare-branch"],
         doc: "Diff the buffer against its version at a git ref (JetBrains Compare with Branch).",
@@ -18528,7 +18563,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "RevealInFinder",
-        aliases: &["reveal"],
+        aliases: &["reveal-in-finder"],
         doc: "Reveal the current file in the OS file manager (JetBrains Reveal in Finder).",
         fun: reveal_in_finder,
         completer: CommandCompleter::none(),

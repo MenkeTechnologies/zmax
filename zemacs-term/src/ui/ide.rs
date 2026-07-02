@@ -708,6 +708,7 @@ impl Ide {
         let Some(run) = &self.run else { return false };
         if let Ok(mut s) = run.lock() {
             s.lines.clear();
+            s.line_widths.clear();
             s.scroll = 0;
             s.follow = true;
         }
@@ -4222,15 +4223,22 @@ impl Ide {
         let height = out.height as usize;
 
         // Soft-wrap: every output line occupies ceil(width/w) visual rows (≥1).
-        let line_vis = |line: &str| -> usize {
-            let dw = disp_width(line) as usize;
+        // Line widths are precomputed on the streaming task (`RunState::line_widths`),
+        // so this is a cheap integer sum rather than a per-frame Unicode scan of the
+        // whole console.
+        let vis_of = |dw: usize| -> usize {
             if dw == 0 {
                 1
             } else {
                 dw.div_ceil(w)
             }
         };
-        let total_vis: usize = s.lines.iter().map(|l| line_vis(l)).sum::<usize>().max(1);
+        let total_vis: usize = s
+            .line_widths
+            .iter()
+            .map(|&dw| vis_of(dw as usize))
+            .sum::<usize>()
+            .max(1);
         self.run_total_vis = total_vis;
         let max_top = total_vis.saturating_sub(height);
         // tail-follow unless the user scrolled up

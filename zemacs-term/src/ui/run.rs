@@ -14,6 +14,12 @@ pub struct RunState {
     pub shell: Vec<String>,
     pub cwd: PathBuf,
     pub lines: Vec<String>,
+    /// Display (terminal-cell) width of each entry in `lines`, kept in lockstep.
+    /// Computed once on the streaming background task so the render loop never
+    /// has to Unicode-width-scan the whole console every frame (that scan, run
+    /// on the UI thread over up to `MAX_LINES` lines, is what made a big run
+    /// output feel laggy while scrolling / tail-following).
+    pub line_widths: Vec<u16>,
     pub running: bool,
     pub exit_code: Option<i32>,
     pub scroll: usize,
@@ -21,9 +27,31 @@ pub struct RunState {
     abort: Option<tokio::task::AbortHandle>,
 }
 
+impl RunState {
+    /// Append one already-ANSI-stripped output line, keeping `line_widths` in
+    /// lockstep and enforcing the `MAX_LINES` ring cap. Centralizing this is what
+    /// guarantees the render loop can trust `line_widths[i]` to describe `lines[i]`.
+    fn push_line(&mut self, clean: String) {
+        self.line_widths.push(line_width(&clean));
+        self.lines.push(clean);
+        if self.lines.len() > MAX_LINES {
+            let drop = self.lines.len() - MAX_LINES;
+            self.lines.drain(0..drop);
+            self.line_widths.drain(0..drop);
+        }
+    }
+}
+
 pub type Run = Arc<Mutex<RunState>>;
 
 const MAX_LINES: usize = 5000;
+
+/// Terminal-cell width of a console line — the expensive Unicode scan we hoist
+/// off the render thread onto the streaming task. Mirrors `ide::disp_width`.
+fn line_width(s: &str) -> u16 {
+    use zemacs_core::unicode::width::UnicodeWidthStr;
+    s.width() as u16
+}
 
 /// Strip ANSI escape sequences (CSI/OSC) and collapse `\r` overwrites from a
 /// captured output line, so colour codes and progress-bar redraws render as
@@ -126,6 +154,7 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
         shell: shell.clone(),
         cwd: cwd.clone(),
         lines: Vec::new(),
+        line_widths: Vec::new(),
         running: true,
         exit_code: None,
         scroll: 0,
@@ -150,7 +179,7 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
             Ok(child) => child,
             Err(err) => {
                 let mut s = st.lock().unwrap();
-                s.lines.push(format!("failed to start: {err}"));
+                s.push_line(format!("failed to start: {err}"));
                 s.running = false;
                 return;
             }
@@ -178,12 +207,8 @@ pub fn spawn(cmd: String, shell: Vec<String>, cwd: PathBuf) -> Run {
         drop(tx);
 
         let push = |st: &Run, line: String| {
-            let mut s = st.lock().unwrap();
-            s.lines.push(strip_ansi(&line));
-            if s.lines.len() > MAX_LINES {
-                let drop = s.lines.len() - MAX_LINES;
-                s.lines.drain(0..drop);
-            }
+            let clean = strip_ansi(&line);
+            st.lock().unwrap().push_line(clean);
         };
 
         loop {
@@ -247,5 +272,51 @@ mod ansi_tests {
         assert_eq!(strip_ansi("\u{1b}]0;title\u{7}done"), "done");
         // plain text untouched
         assert_eq!(strip_ansi("just text"), "just text");
+    }
+}
+
+#[cfg(test)]
+mod push_tests {
+    use super::*;
+
+    fn blank_state() -> RunState {
+        RunState {
+            cmd: String::new(),
+            shell: Vec::new(),
+            cwd: PathBuf::from("."),
+            lines: Vec::new(),
+            line_widths: Vec::new(),
+            running: true,
+            exit_code: None,
+            scroll: 0,
+            follow: true,
+            abort: None,
+        }
+    }
+
+    #[test]
+    fn widths_stay_in_lockstep_and_ring_caps() {
+        let mut s = blank_state();
+        for i in 0..(MAX_LINES + 50) {
+            s.push_line(format!("line {i}"));
+        }
+        // ring cap holds and the two vecs never desync
+        assert_eq!(s.lines.len(), MAX_LINES);
+        assert_eq!(s.line_widths.len(), s.lines.len());
+        // every cached width still describes its line
+        for (l, w) in s.lines.iter().zip(&s.line_widths) {
+            assert_eq!(*w, line_width(l));
+        }
+        // oldest lines were dropped from the front, in lockstep
+        assert_eq!(s.lines[0], "line 50");
+    }
+
+    #[test]
+    fn measures_wide_glyphs() {
+        let mut s = blank_state();
+        s.push_line("abc".to_string());
+        s.push_line("你好".to_string()); // CJK: 2 cells each
+        assert_eq!(s.line_widths[0], 3);
+        assert_eq!(s.line_widths[1], 4);
     }
 }

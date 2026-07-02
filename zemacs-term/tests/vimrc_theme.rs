@@ -24,22 +24,26 @@ use zemacs_view::theme::Color;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn vimrc_colorscheme_repaints_live_editor() -> anyhow::Result<()> {
-    // An isolated HOME with a real vim config tree: a `.vimrc` selecting a
-    // colour scheme that lives in `~/.vim/colors/acme.vim`, plus a trailing
-    // `:highlight` override after the `:colorscheme` line.
+    // An isolated HOME with a real vim config tree, exercising the real-world
+    // path: the colour scheme lives in a *pathogen bundle*
+    // (`~/.vim/bundle/*/colors/acme.vim`), the `.vimrc` selects it with a
+    // `silent!` command modifier, and — crucially — an earlier line is an
+    // unparseable construct. A real vimrc aborts on that line unless sourcing is
+    // error-tolerant; the options/colours after it must still take effect.
     let home = std::env::temp_dir().join(format!("zemacs-vimrc-e2e-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&home);
-    std::fs::create_dir_all(home.join(".vim/colors"))?;
+    std::fs::create_dir_all(home.join(".vim/bundle/Colors/colors"))?;
     std::fs::create_dir_all(home.join(".zemacs"))?;
     std::fs::write(
-        home.join(".vim/colors/acme.vim"),
+        home.join(".vim/bundle/Colors/colors/acme.vim"),
         "highlight Normal guifg=#c0ffee guibg=#0a0a0a\n\
          hi Comment guifg=#00ff00 gui=italic\n",
     )?;
     std::fs::write(
         home.join(".vimrc"),
         "set number\n\
-         colorscheme acme\n\
+         let broken = \"an unterminated string that fails to parse\n\
+         silent! colorscheme acme\n\
          highlight Comment guifg=#00cc00\n",
     )?;
 
