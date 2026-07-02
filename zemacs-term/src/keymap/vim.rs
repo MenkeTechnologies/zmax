@@ -71,7 +71,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space j R", "Jump", ":RecentLocations"),       // SPC j R : Recent Locations (JetBrains Recent Locations)
     ("space f s", "Files",   ":write"),            // SPC f s : save
     ("space f S", "Files",   ":write-all"),        // SPC f S : save all
-    ("space a c", "Applications", ":calc"),        // SPC a c : calc-dispatch
+    ("space a c", "Applications", "calc_dispatch"), // SPC a c : calc-dispatch (open the RPN calculator)
+    ("space a =", "Applications", ":calc"),         // SPC a = : quick infix eval of the region/args
     ("space f R", "Files",   ":move"),             // SPC f R : rename file
     ("space f D", "Files",   ":delete-file"),      // SPC f D : delete file + buffer
     ("space b d", "Buffers", ":buffer-close"),     // SPC b d : kill buffer
