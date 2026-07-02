@@ -281,7 +281,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x C-p", "C-x C-p", "select_all"),
     ("C-x C-space", "C-x C-space", "pop_to_mark"),
     ("C-x C-t", "C-x C-t", "drag_line_down"),
-    ("C-x C-z", "C-x C-z", "command_palette"),
+    ("C-x C-z", "C-x C-z", "suspend"),
     ("C-x backspace", "C-x backspace", "delete_word_backward"),
     ("C-x e", "C-x e", "command_palette"),
     ("C-x esc esc", "C-x esc", "command_history_picker"),
