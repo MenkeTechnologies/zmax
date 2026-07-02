@@ -23,6 +23,7 @@ pub mod emacs_kill;
 pub mod emacs_mark;
 pub mod emacs_rect;
 pub mod emacs_register;
+pub mod embedded;
 pub mod emmet;
 pub mod events;
 pub mod file_watcher;

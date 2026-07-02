@@ -50,6 +50,22 @@ pub struct TerminalPanel {
 
 impl TerminalPanel {
     pub fn new() -> std::io::Result<Self> {
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+        let cwd = std::env::current_dir().ok();
+        Self::with_command(&shell, &[] as &[&str], cwd.as_deref())
+    }
+
+    /// Spawn an arbitrary `program` (with `args`) in a PTY panel — the same live,
+    /// interactive, vt100-parsed terminal as [`Self::new`], but running a chosen
+    /// command instead of `$SHELL`. Used to host a serial monitor
+    /// (`arduino-cli monitor` / `pio device monitor`) or a firmware upload so its
+    /// progress bar renders live. When the command exits the panel shows a dead
+    /// terminal (dismiss with the close key) rather than dropping to a shell.
+    pub fn with_command(
+        program: &str,
+        args: &[impl AsRef<std::ffi::OsStr>],
+        cwd: Option<&std::path::Path>,
+    ) -> std::io::Result<Self> {
         let (rows, cols) = (24u16, 80u16);
         let pty = native_pty_system();
         let pair = pty
@@ -61,9 +77,11 @@ impl TerminalPanel {
             })
             .map_err(|e| std::io::Error::other(e.to_string()))?;
 
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
-        let mut cmd = CommandBuilder::new(shell);
-        if let Ok(cwd) = std::env::current_dir() {
+        let mut cmd = CommandBuilder::new(program);
+        for a in args {
+            cmd.arg(a);
+        }
+        if let Some(cwd) = cwd {
             cmd.cwd(cwd);
         }
         cmd.env("TERM", "xterm-256color");

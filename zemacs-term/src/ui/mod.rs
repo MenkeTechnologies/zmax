@@ -33,6 +33,7 @@ pub mod run;
 pub mod run_config;
 pub mod search;
 mod select;
+pub mod serial_plotter;
 pub mod settings;
 pub mod snippets;
 mod spinner;

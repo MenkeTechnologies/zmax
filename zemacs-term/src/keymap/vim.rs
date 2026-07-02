@@ -81,6 +81,20 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space m w", "Mail", ":message-insert-signature"),// SPC m w : insert signature (C-c C-w)
     ("space m t", "Mail", ":message-goto-to"),         // SPC m t : goto To:
     ("space m b", "Mail", ":message-goto-body"),       // SPC m b : goto body (mail-text)
+    // Embedded / single-board (Arduino IDE + PlatformIO): SPC a v ("Verify").
+    ("space a v v", "Embedded", ":arduino-compile"),   // SPC a v v : Arduino compile/Verify
+    ("space a v u", "Embedded", ":arduino-upload"),    // SPC a v u : Arduino upload
+    ("space a v m", "Embedded", ":arduino-monitor"),   // SPC a v m : serial monitor
+    ("space a v b", "Embedded", ":arduino-boards"),    // SPC a v b : pick board (FQBN)
+    ("space a v p", "Embedded", ":arduino-ports"),     // SPC a v p : pick serial port
+    ("space a v l", "Embedded", ":arduino-lib-search"),// SPC a v l : library manager
+    ("space a v c", "Embedded", ":arduino-core-install"), // SPC a v c : install a board core
+    ("space a v g", "Embedded", ":arduino-plotter"),   // SPC a v g : serial plotter (graph)
+    ("space a v n", "Embedded", ":arduino-new-sketch"),// SPC a v n : new sketch
+    ("space a v B", "Embedded", ":pio-build"),         // SPC a v B : PlatformIO build
+    ("space a v U", "Embedded", ":pio-upload"),        // SPC a v U : PlatformIO upload
+    ("space a v M", "Embedded", ":pio-monitor"),       // SPC a v M : PlatformIO serial monitor
+    ("space a v d", "Embedded", ":pio-devices"),       // SPC a v d : PlatformIO device list
     ("space f R", "Files",   ":move"),             // SPC f R : rename file
     ("space f D", "Files",   ":delete-file"),      // SPC f D : delete file + buffer
     ("space b M", "Buffers", "buffer_menu"),       // SPC b M : Buffer Menu (emacs buffer-menu)
