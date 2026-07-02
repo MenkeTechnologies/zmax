@@ -12500,28 +12500,54 @@ fn file_explorer(cx: &mut Context) {
 }
 
 /// Emacs `dired` (C-x d): open the Dired directory editor on the workspace root.
+/// Push a full-screen Component overlay through the job queue. Unlike
+/// `cx.push_layer`, this survives the command palette (`SPC SPC <name>`): the
+/// palette runs commands with a throwaway Context that drops queued compositor
+/// callbacks but carries jobs through, so these overlays open both from a
+/// keybinding and from the palette. `make` builds the layer (given the editor,
+/// for config/buffer access) or returns an error message to show.
+fn open_overlay(
+    cx: &mut Context,
+    make: impl FnOnce(&mut Editor) -> Result<Box<dyn Component>, String> + Send + 'static,
+) {
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| match make(editor) {
+            Ok(layer) => compositor.push(layer),
+            Err(e) => editor.set_error(e),
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
 fn dired(cx: &mut Context) {
     let root = find_workspace().0;
-    match crate::ui::dired::Dired::new(root) {
-        Ok(d) => cx.push_layer(Box::new(d)),
-        Err(e) => cx.editor.set_error(format!("dired: {e}")),
-    }
+    open_overlay(cx, move |_editor| {
+        crate::ui::dired::Dired::new(root)
+            .map(|d| Box::new(d) as Box<dyn Component>)
+            .map_err(|e| format!("dired: {e}"))
+    });
 }
 
 /// Emacs `buffer-menu` (`C-x C-b`): open the full-screen Buffer Menu listing the
 /// open buffers, with `Buffer-menu-mode` keys (select, mark, delete, save).
 fn buffer_menu(cx: &mut Context) {
-    cx.push_layer(Box::new(crate::ui::bufmenu::BufferMenu::new(cx.editor)));
+    open_overlay(cx, |editor| {
+        Ok(Box::new(crate::ui::bufmenu::BufferMenu::new(editor)) as Box<dyn Component>)
+    });
 }
 
 /// Emacs `list-buffers`: the same Buffer Menu as [`buffer_menu`].
 fn list_buffers(cx: &mut Context) {
-    cx.push_layer(Box::new(crate::ui::bufmenu::BufferMenu::new(cx.editor)));
+    open_overlay(cx, |editor| {
+        Ok(Box::new(crate::ui::bufmenu::BufferMenu::new(editor)) as Box<dyn Component>)
+    });
 }
 
 /// Emacs `calendar`: open the Calendar month grid at today's date.
 fn calendar(cx: &mut Context) {
-    cx.push_layer(Box::new(crate::ui::calendar::Calendar::new()));
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::calendar::Calendar::new()) as Box<dyn Component>)
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -12709,18 +12735,21 @@ fn rmail(cx: &mut Context) {
     let path = zemacs_stdx::path::home_dir()
         .map(|h| h.join("RMAIL"))
         .unwrap_or_else(|_| std::path::PathBuf::from("RMAIL"));
-    let text = std::fs::read_to_string(&path).unwrap_or_default();
-    let mailbox = zemacs_core::rmail::Mailbox::from_mbox(&text);
-    if mailbox.is_empty() {
-        cx.editor
-            .set_status(format!("rmail: no messages in {}", path.display()));
-    }
-    cx.push_layer(Box::new(crate::ui::rmail::Rmail::new(mailbox, path)));
+    open_overlay(cx, move |editor| {
+        let text = std::fs::read_to_string(&path).unwrap_or_default();
+        let mailbox = zemacs_core::rmail::Mailbox::from_mbox(&text);
+        if mailbox.is_empty() {
+            editor.set_status(format!("rmail: no messages in {}", path.display()));
+        }
+        Ok(Box::new(crate::ui::rmail::Rmail::new(mailbox, path)) as Box<dyn Component>)
+    });
 }
 
 /// Emacs `calc` / `C-x *` (calc-dispatch): open the RPN stack calculator.
 fn calc_dispatch(cx: &mut Context) {
-    cx.push_layer(Box::new(crate::ui::calc::Calc::new()));
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::calc::Calc::new()) as Box<dyn Component>)
+    });
 }
 
 /// Emacs `dired-jump` (C-x C-j): open Dired on the current buffer's directory,
@@ -12730,10 +12759,11 @@ fn dired_jump(cx: &mut Context) {
         .path()
         .and_then(|p| p.parent().map(|p| p.to_path_buf()))
         .unwrap_or_else(zemacs_stdx::env::current_working_dir);
-    match crate::ui::dired::Dired::new(dir) {
-        Ok(d) => cx.push_layer(Box::new(d)),
-        Err(e) => cx.editor.set_error(format!("dired: {e}")),
-    }
+    open_overlay(cx, move |_editor| {
+        crate::ui::dired::Dired::new(dir)
+            .map(|d| Box::new(d) as Box<dyn Component>)
+            .map_err(|e| format!("dired: {e}"))
+    });
 }
 
 fn file_explorer_in_current_buffer_directory(cx: &mut Context) {
