@@ -21559,8 +21559,26 @@ fn select_textobject_then(
                             count,
                         ),
                         // vim `it`/`at`: change/select inside/around the enclosing
-                        // (X)HTML/XML tag. `C` keeps the type/class object.
-                        't' => textobject_treesitter("xml-element", range),
+                        // (X)HTML/XML tag. Real Vim semantics via the pure
+                        // `match_tag` (works from the tag body, any buffer, and
+                        // re-resolves on `.` dot-repeat) — not tree-sitter, which
+                        // needs a parsed syntax tree and kept the old range. `x`
+                        // below is the tree-sitter xml-element object for those
+                        // who want the syntax-aware version.
+                        't' => {
+                            let full = text.to_string();
+                            let cur = range.cursor(text);
+                            match zemacs_core::text_engine::match_tag(&full, cur) {
+                                Some(((os, oe), (cs, ce))) => {
+                                    let (from, to) = match objtype {
+                                        textobject::TextObject::Around => (os, ce),
+                                        _ => (oe, cs), // Inside
+                                    };
+                                    Range::new(from, to).with_direction(range.direction())
+                                }
+                                None => range,
+                            }
+                        }
                         'C' => textobject_treesitter("class", range),
                         'f' => textobject_treesitter("function", range),
                         'a' => textobject_treesitter("parameter", range),

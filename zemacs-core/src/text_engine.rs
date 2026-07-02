@@ -413,48 +413,32 @@ fn scan_tags(chars: &[char]) -> Vec<Tag> {
 pub fn match_tag(text: &str, cursor: usize) -> Option<((usize, usize), (usize, usize))> {
     let chars = chars_of(text);
     let tags = scan_tags(&chars);
-    let idx = tags
-        .iter()
-        .position(|t| cursor >= t.start && cursor < t.end)?;
-    let here = &tags[idx];
-    if here.self_closing {
-        return None;
-    }
-    if !here.closing {
-        // walk forward for the matching close of the same name
-        let mut depth = 0i32;
-        for t in &tags[idx + 1..] {
-            if t.self_closing || t.name != here.name {
-                continue;
-            }
-            if t.closing {
-                if depth == 0 {
-                    return Some(((here.start, here.end), (t.start, t.end)));
-                }
-                depth -= 1;
-            } else {
-                depth += 1;
-            }
+    // Bracket-match the tags into (open, close) index pairs by name, so a cursor
+    // anywhere inside an element — on the open tag, the close tag, OR the content
+    // between them (real Vim `it`/`at`) — resolves to its innermost pair.
+    let mut stack: Vec<usize> = Vec::new();
+    let mut pairs: Vec<(usize, usize)> = Vec::new();
+    for (i, t) in tags.iter().enumerate() {
+        if t.self_closing {
+            continue;
         }
-        None
-    } else {
-        // walk backward for the matching open of the same name
-        let mut depth = 0i32;
-        for t in tags[..idx].iter().rev() {
-            if t.self_closing || t.name != here.name {
-                continue;
+        if t.closing {
+            // Pop to the nearest matching open of the same name (discarding any
+            // unclosed inner tags, so malformed markup can't wedge the stack).
+            if let Some(pos) = stack.iter().rposition(|&oi| tags[oi].name == t.name) {
+                pairs.push((stack[pos], i));
+                stack.truncate(pos);
             }
-            if !t.closing {
-                if depth == 0 {
-                    return Some(((t.start, t.end), (here.start, here.end)));
-                }
-                depth -= 1;
-            } else {
-                depth += 1;
-            }
+        } else {
+            stack.push(i);
         }
-        None
     }
+    pairs
+        .into_iter()
+        .map(|(o, c)| (&tags[o], &tags[c]))
+        .filter(|(o, c)| cursor >= o.start && cursor < c.end)
+        .min_by_key(|(o, c)| c.end - o.start)
+        .map(|(o, c)| ((o.start, o.end), (c.start, c.end)))
 }
 
 // ---------------------------------------------------------------------------
@@ -1023,6 +1007,15 @@ mod tests {
         // from the closing side
         assert_eq!(match_tag(s, 12), Some(((0, 3), (11, 15))));
         assert_eq!(match_tag("<br/>", 1), None); // self-closing
+                                                 // cursor ON the content (index 6 = "x") resolves to the innermost pair —
+                                                 // real Vim `cit`/`dit` works from inside the tag body, not just on a tag.
+        assert_eq!(match_tag(s, 6), Some(((3, 6), (7, 11))));
+        // content of the outer element, between the inner element and </a>.
+        let t = "<a>hi <b>x</b> bye</a>";
+        assert_eq!(match_tag(t, 4), Some(((0, 3), (18, 22)))); // in "hi " -> outer <a>
+        assert_eq!(match_tag(t, 9), Some(((6, 9), (10, 14)))); // in <b> "x" -> inner <b>
+                                                               // no enclosing tag -> None.
+        assert_eq!(match_tag("plain text", 3), None);
     }
 
     #[test]
