@@ -118,7 +118,7 @@ ureq = { version = "2", features = ["json"] }
 dashmap = "6.2"
 
 # System stats for the Preferences → Dashboard tab (CPU/memory/process/disks/net).
-sysinfo = "0.38"
+sysinfo = "0.39"
 # `time::Date` for the Dashboard's Calendar widget.
 time = "0.3"
 # Small, self-seeding PRNG for the insert generators (UUIDs, passwords).
