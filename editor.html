@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-bcb2c5a6.js";
+            window.path_to_searchindex_js = "searchindex-209278b8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-c0d3b1d1.js"></script>
@@ -229,6 +229,7 @@
 <tr><td><code>line-number</code></td><td>Line number display: <code>absolute</code> simply shows each line’s number, while <code>relative</code> shows the distance from the current line. When unfocused or in insert mode, <code>relative</code> will still show absolute line numbers</td><td><code>"absolute"</code></td></tr>
 <tr><td><code>cursorline</code></td><td>Highlight all lines with a cursor</td><td><code>false</code></td></tr>
 <tr><td><code>cursorcolumn</code></td><td>Highlight all columns with a cursor</td><td><code>false</code></td></tr>
+<tr><td><code>highlight-word-under-cursor</code></td><td>Highlight every whole-word occurrence of the word under the primary cursor within the visible viewport (styled with the <code>ui.highlight.word</code> theme scope)</td><td><code>true</code></td></tr>
 <tr><td><code>continue-comments</code></td><td>if zemacs should automatically add a line comment token if you create a new line inside a comment.</td><td><code>true</code></td></tr>
 <tr><td><code>gutters</code></td><td>Gutters to display: Available are <code>diagnostics</code> and <code>diff</code> and <code>line-numbers</code> and <code>spacer</code> and <code>code-action-hint</code>, note that <code>diagnostics</code> also includes other features like breakpoints, 1-width padding will be inserted if gutters is non-empty</td><td><code>["diagnostics", "spacer", "line-numbers", "spacer", "diff"]</code></td></tr>
 <tr><td><code>auto-completion</code></td><td>Enable automatic pop up of auto-completion</td><td><code>true</code></td></tr>
@@ -585,10 +586,14 @@ specific gutter components as subsections.</p>
 <tr><th>Key</th><th>Description</th><th>Default</th></tr>
 </thead>
 <tbody>
-<tr><td><code>layout</code></td><td>A vector of gutters to display</td><td><code>["diagnostics", "spacer", "line-numbers", "spacer", "diff"]</code></td></tr>
+<tr><td><code>layout</code></td><td>A vector of gutters to display</td><td><code>["blame", "diagnostics", "marks", "spacer", "line-numbers", "spacer", "diff"]</code></td></tr>
 </tbody>
 </table>
 </div>
+<p>Available gutter types: <code>diagnostics</code>, <code>line-numbers</code>, <code>spacer</code>, <code>diff</code>,
+<code>code-action-hint</code>, <code>marks</code>, and <code>blame</code>. The <code>blame</code> gutter is a JetBrains-style
+“Annotate” column (author + relative time per line); it takes no space until
+toggled on with <code>SPC g B</code> (<code>toggle_blame_annotate</code>).</p>
 <p>Example:</p>
 <pre><code class="language-toml">[editor.gutters]
 layout = ["diff", "diagnostics", "line-numbers", "spacer"]
