@@ -67,8 +67,12 @@ jobs:
         run: cargo integration-test
 
     strategy:
+      # The embedded CLI stack (vendored zshrs / strykelang) is unix-only — it
+      # uses libc mmap/mprotect directly and does not target Windows (macOS +
+      # Linux + Linux-arm, per zshrs's platform list). Windows runners are
+      # excluded because those crates cannot compile there.
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest, ubuntu-24.04-arm, windows-11-arm]
+        os: [ubuntu-latest, macos-latest, ubuntu-24.04-arm]
 
   lints:
     name: Lints
