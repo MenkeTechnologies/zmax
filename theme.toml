@@ -74,6 +74,7 @@ tabstop = { modifiers = ["italic"], bg = "bossanova" }
 "ui.cursor" = { modifiers = ["reversed"] }
 "ui.cursorline.primary" = { bg = "bossanova" }
 "ui.highlight" = { bg = "bossanova" }
+"ui.highlight.word" = { bg = "#3a3060", modifiers = ["underlined"] }
 "ui.highlight.frameline" = { bg = "#634450" }
 "ui.debug" = { fg = "#634450" }
 "ui.debug.breakpoint" = { fg = "apricot" }
