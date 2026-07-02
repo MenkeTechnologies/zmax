@@ -997,7 +997,11 @@ def write_keybinding_report(rows):
     text = "\n".join(L)
     open(KB_MD, "w", encoding="utf-8").write(text)
     os.makedirs(os.path.dirname(KB_BOOK), exist_ok=True)
-    open(KB_BOOK, "w", encoding="utf-8").write(text)
+    # The book copy sits next to `port-report.md` (hyphen), not the docs/ copy's
+    # `port_report.md` (underscore), so retarget the sibling link for mdBook.
+    open(KB_BOOK, "w", encoding="utf-8").write(
+        text.replace("(port_report.md)", "(port-report.md)")
+    )
 
     # --- html ---
     def bar(n, d):
