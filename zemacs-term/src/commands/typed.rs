@@ -14792,6 +14792,97 @@ fn number_lines_cmd(
     Ok(())
 }
 
+/// Split the document into lines without their trailing line ending, mirroring
+/// the emacs rectangle driver in `commands.rs` so the string-rectangle typables
+/// share its column geometry.
+fn rect_doc_lines(text: &zemacs_core::Rope) -> Vec<String> {
+    (0..text.len_lines())
+        .map(|i| {
+            let mut s: String = text.line(i).chars().collect();
+            while s.ends_with('\n') || s.ends_with('\r') {
+                s.pop();
+            }
+            s
+        })
+        .collect()
+}
+
+/// Shared driver for `:string-rectangle` and `:string-insert-rectangle`. Derives
+/// the rectangle's line range and column span from the primary selection's two
+/// corners (exactly like the `C-x r` rectangle commands), rewrites only those
+/// lines with the chosen `zemacs_core::text_engine` transform, and applies the
+/// result as one undoable transaction. With `insert` the string is inserted at
+/// the rectangle's left column (shifting text right); otherwise the `[c0, c1)`
+/// span is overwritten.
+fn rectangle_string_op(cx: &mut compositor::Context, s: &str, insert: bool) -> anyhow::Result<()> {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().clone();
+    let sel = doc.selection(view.id).primary();
+    let (p0, p1) = (sel.from(), sel.to());
+    let l0 = text.char_to_line(p0);
+    let l1 = text.char_to_line(p1.max(p0).saturating_sub(1).max(p0));
+    let col_of = |pos: usize| pos - text.line_to_char(text.char_to_line(pos));
+    let (c0, c1) = (col_of(p0), col_of(p1));
+
+    let mut lines = rect_doc_lines(&text);
+    if lines.is_empty() {
+        return Ok(());
+    }
+    let l1 = l1.min(lines.len() - 1);
+    let block = &lines[l0..=l1];
+    let new_block = if insert {
+        zemacs_core::text_engine::string_insert_rectangle(block, c0.min(c1), s)
+    } else {
+        zemacs_core::text_engine::string_rectangle(block, c0, c1, s)
+    };
+    for (i, nl) in new_block.into_iter().enumerate() {
+        lines[l0 + i] = nl;
+    }
+
+    let le = doc.line_ending.as_str();
+    let new_text = lines.join(le);
+    let old_len = text.len_chars();
+    let transaction = Transaction::change(
+        &text,
+        std::iter::once((0, old_len, Some(new_text.as_str().into()))),
+    );
+    doc.apply(&transaction, view.id);
+    let caret = p0.min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::point(caret));
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// `:string-rectangle <text>` — Emacs `string-rectangle` (`C-x r t`): replace the
+/// selected rectangle's column span with `<text>` on every line, padding short
+/// lines out to the left column and shifting any text after the rectangle.
+fn string_rectangle_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let s = args.first().unwrap_or("").to_string();
+    rectangle_string_op(cx, &s, false)
+}
+
+/// `:string-insert-rectangle <text>` — Emacs `string-insert-rectangle`: insert
+/// `<text>` at the rectangle's left column on every selected line *without*
+/// overwriting, shifting the remainder rightward.
+fn string_insert_rectangle_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let s = args.first().unwrap_or("").to_string();
+    rectangle_string_op(cx, &s, true)
+}
+
 /// `:calc` uses the shared infix evaluator in `zemacs_core::calc`, which also
 /// backs the full-screen RPN Calc Component. Thin wrappers keep the original
 /// names local to this module.
@@ -21309,6 +21400,30 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "string-rectangle",
+        aliases: &["string-replace-rectangle"],
+        doc: "Replace the selected rectangle's column span with a string on every line (emacs C-x r t).",
+        fun: string_rectangle_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "string-insert-rectangle",
+        aliases: &[],
+        doc: "Insert a string at the rectangle's left column on every selected line, shifting text right (emacs string-insert-rectangle).",
+        fun: string_insert_rectangle_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            raw_after: Some(0),
             ..Signature::DEFAULT
         },
     },

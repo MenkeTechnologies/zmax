@@ -270,6 +270,15 @@ pub fn open_rectangle(lines: &[String], c1: usize, c2: usize) -> Vec<String> {
     string_rectangle(lines, lo, lo, &" ".repeat(hi - lo))
 }
 
+/// Emacs `string-insert-rectangle`: insert `s` at column `col` on every line
+/// *without* replacing anything, shifting the remainder rightward. Short lines
+/// are padded with spaces out to `col` first. Unlike [`string_rectangle`], which
+/// overwrites the `[c1, c2)` span, this inserts into the zero-width span
+/// `[col, col)`.
+pub fn string_insert_rectangle(lines: &[String], col: usize, s: &str) -> Vec<String> {
+    string_rectangle(lines, col, col, s)
+}
+
 // ---------------------------------------------------------------------------
 // Multiple-cursor / selection algebra — VS Code & Sublime multi-cursor edits,
 // Helix selection manipulation. Ranges are half-open `[start, end)` char offsets.
@@ -971,6 +980,21 @@ mod tests {
         assert_eq!(
             open_rectangle(&lines, 2, 4),
             v(&["ab  cdef", "AB  CDEF", "xy  "])
+        );
+    }
+
+    #[test]
+    fn string_insert_rectangle_shifts_without_overwriting() {
+        let lines = v(&["abcdef", "ABCDEF", "x"]);
+        // insert ">>" at column 2 on each line; the short "x" is padded to col 2
+        assert_eq!(
+            string_insert_rectangle(&lines, 2, ">>"),
+            v(&["ab>>cdef", "AB>>CDEF", "x >>"])
+        );
+        // inserting the empty string is a no-op that still pads short lines out
+        assert_eq!(
+            string_insert_rectangle(&lines, 0, ""),
+            v(&["abcdef", "ABCDEF", "x"])
         );
     }
 
