@@ -1034,6 +1034,12 @@ impl MappableCommand {
         spell_add_bad, "Mark word under cursor as misspelled (zw)",
         spell_undo, "Undo a zg/zw for the word under cursor (zug)",
         spell_suggest, "Show spelling suggestions for the word under cursor (z=)",
+        ispell_word, "Spell-check the word at point with aspell/hunspell (emacs ispell-word, M-$)",
+        ispell_region, "Spell-check the selection with an external speller (emacs ispell-region)",
+        ispell_buffer, "Spell-check the whole buffer with an external speller (emacs ispell-buffer)",
+        ispell, "Spell-check the region or buffer with an external speller (emacs ispell)",
+        ispell_change_dictionary, "Set the ispell dictionary/language (emacs ispell-change-dictionary)",
+        ispell_kill_ispell, "Stop the ispell process (emacs ispell-kill-ispell)",
         fold_create, "Create a fold over the selection (zf)",
         fold_toggle, "Toggle fold under cursor (za)",
         fold_open, "Open fold under cursor (zo)",
@@ -18422,6 +18428,227 @@ fn spell_suggest(cx: &mut Context) {
         );
         doc.apply(&tx, view.id);
     });
+}
+
+// ---------------------------------------------------------------------------
+// Emacs `ispell`: drive an external speller (aspell / hunspell / ispell) in
+// `-a` pipe mode. The `-a` output protocol is parsed by the pure, tested
+// zemacs_core::ispell; these commands spawn the program and apply corrections.
+// ---------------------------------------------------------------------------
+
+/// The dictionary set by `ispell-change-dictionary` (e.g. "en_GB"), or None.
+fn ispell_dictionary() -> &'static std::sync::RwLock<Option<String>> {
+    static D: std::sync::OnceLock<std::sync::RwLock<Option<String>>> = std::sync::OnceLock::new();
+    D.get_or_init(|| std::sync::RwLock::new(None))
+}
+
+/// Run `<prog> -a` over `lines`, returning the misspellings per input line, or
+/// None if no speller program is installed. Mirrors `ispell-program-name`'s
+/// search order: aspell, then hunspell, then ispell.
+fn ispell_check(lines: &[String]) -> Option<Vec<Vec<zemacs_core::ispell::Misspelling>>> {
+    use std::io::Write;
+    let dict = ispell_dictionary().read().ok().and_then(|d| d.clone());
+    let args = zemacs_core::ispell::pipe_args(dict.as_deref());
+    let mut input = String::new();
+    for l in lines {
+        input.push_str(&zemacs_core::ispell::escape_line(l));
+        input.push('\n');
+    }
+    for prog in ["aspell", "hunspell", "ispell"] {
+        let child = std::process::Command::new(prog)
+            .args(&args)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+        let mut child = match child {
+            Ok(c) => c,
+            Err(_) => continue, // program not found — try the next
+        };
+        if let Some(stdin) = child.stdin.take() {
+            let mut stdin = stdin;
+            let _ = stdin.write_all(input.as_bytes());
+            // dropping stdin closes it, signalling EOF
+        }
+        let out = match child.wait_with_output() {
+            Ok(o) => o,
+            Err(_) => return None,
+        };
+        let text = String::from_utf8_lossy(&out.stdout);
+        // Drop the version banner, then split into per-input-line blocks by the
+        // blank line the program prints after each checked line.
+        let body: Vec<&str> = text.lines().skip_while(|l| l.starts_with("@(#)")).collect();
+        let mut per_line = Vec::with_capacity(lines.len());
+        let mut cur: Vec<zemacs_core::ispell::Misspelling> = Vec::new();
+        for l in body {
+            if l.trim().is_empty() {
+                per_line.push(std::mem::take(&mut cur));
+            } else if let Some(zemacs_core::ispell::WordCheck::Misspelled { word, offset, suggestions }) =
+                zemacs_core::ispell::parse_line(l)
+            {
+                cur.push(zemacs_core::ispell::Misspelling { word, offset, suggestions });
+            }
+        }
+        if !cur.is_empty() {
+            per_line.push(cur);
+        }
+        // Pad to one entry per input line so callers can index by line.
+        while per_line.len() < lines.len() {
+            per_line.push(Vec::new());
+        }
+        return Some(per_line);
+    }
+    None
+}
+
+/// Emacs `ispell-word` (M-$): check the word at point with the external speller
+/// and, if misspelled, offer its suggestions for replacement.
+fn ispell_word(cx: &mut Context) {
+    let Some((start, end, word)) = spell_word_under_cursor(cx) else {
+        cx.editor.set_status("No word at point");
+        return;
+    };
+    let Some(per_line) = ispell_check(&[word.clone()]) else {
+        cx.editor.set_error("no speller found (install aspell, hunspell, or ispell)");
+        return;
+    };
+    let miss = per_line.into_iter().next().unwrap_or_default();
+    let Some(m) = miss.into_iter().next() else {
+        cx.editor.set_status(format!("\"{word}\" is correct"));
+        return;
+    };
+    if m.suggestions.is_empty() {
+        cx.editor.set_status(format!("\"{word}\" is misspelled (no suggestions)"));
+        return;
+    }
+    let suggestions: Vec<String> = m.suggestions.into_iter().take(9).collect();
+    let rows: Vec<(String, String)> = suggestions
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (format!("{}", i + 1), s.clone()))
+        .collect();
+    cx.editor.autoinfo = Some(Info::new(format!("Change \"{word}\" to"), &rows));
+    cx.on_next_key(move |cx, ev| {
+        cx.editor.autoinfo = None;
+        let Some(d) = ev.char().and_then(|c| c.to_digit(10)) else {
+            return;
+        };
+        let idx = d as usize;
+        if idx == 0 || idx > suggestions.len() {
+            return;
+        }
+        let repl = suggestions[idx - 1].clone();
+        let (view, doc) = current!(cx.editor);
+        let tx = Transaction::change(doc.text(), [(start, end, Some(repl.as_str().into()))].into_iter());
+        doc.apply(&tx, view.id);
+    });
+}
+
+/// Check a char range of the current buffer, move point to the first
+/// misspelling, and report the count. Shared by `ispell-region`/`-buffer`.
+fn ispell_range(cx: &mut Context, from: usize, to: usize, label: &str) {
+    let text = doc!(cx.editor).text().clone();
+    let slice = text.slice(from..to);
+    // Feed line by line so offsets map back per line.
+    let lines: Vec<String> = slice.to_string().split('\n').map(str::to_string).collect();
+    let Some(per_line) = ispell_check(&lines) else {
+        cx.editor.set_error("no speller found (install aspell, hunspell, or ispell)");
+        return;
+    };
+    // Map (line index, in-line offset) back to a buffer char position.
+    let mut first: Option<usize> = None;
+    let mut count = 0usize;
+    let mut line_start = from;
+    for (i, line) in lines.iter().enumerate() {
+        if let Some(miss) = per_line.get(i) {
+            for m in miss {
+                count += 1;
+                if first.is_none() {
+                    first = Some(line_start + m.offset.min(line.chars().count()));
+                }
+            }
+        }
+        line_start += line.chars().count() + 1; // +1 for the split '\n'
+    }
+    if count == 0 {
+        cx.editor.set_status(format!("{label}: no misspellings"));
+        return;
+    }
+    if let Some(pos) = first {
+        let (view, doc) = current!(cx.editor);
+        push_jump(view, doc);
+        let pos = pos.min(doc.text().len_chars());
+        doc.set_selection(view.id, Selection::point(pos));
+    }
+    cx.editor.set_status(format!(
+        "{label}: {count} misspelling{} — M-$ to correct the word at point",
+        if count == 1 { "" } else { "s" }
+    ));
+}
+
+/// Emacs `ispell-region`: spell-check the selection.
+fn ispell_region(cx: &mut Context) {
+    let (from, to) = {
+        let (view, doc) = current!(cx.editor);
+        let r = doc.selection(view.id).primary();
+        (r.from(), r.to())
+    };
+    if from == to {
+        cx.editor.set_status("ispell-region: no region selected");
+        return;
+    }
+    ispell_range(cx, from, to, "ispell-region");
+}
+
+/// Emacs `ispell-buffer`: spell-check the whole buffer.
+fn ispell_buffer(cx: &mut Context) {
+    let len = doc!(cx.editor).text().len_chars();
+    ispell_range(cx, 0, len, "ispell-buffer");
+}
+
+/// Emacs `ispell` (M-x ispell): check the region if one is selected, else the
+/// whole buffer.
+fn ispell(cx: &mut Context) {
+    let has_region = {
+        let (view, doc) = current!(cx.editor);
+        let r = doc.selection(view.id).primary();
+        r.from() != r.to()
+    };
+    if has_region {
+        ispell_region(cx);
+    } else {
+        ispell_buffer(cx);
+    }
+}
+
+/// Emacs `ispell-kill-ispell`: there is no persistent speller process (each
+/// check spawns a fresh one), so this just reports that.
+fn ispell_kill_ispell(cx: &mut Context) {
+    cx.editor.set_status("ispell: no persistent process to kill");
+}
+
+/// Emacs `ispell-change-dictionary`: prompt for the dictionary passed to the
+/// speller as `-d` (e.g. "en_GB", "de_DE"); empty restores the default.
+fn ispell_change_dictionary(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Change dictionary to: ".into(),
+        None,
+        |_editor, _input| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let dict = input.trim().to_string();
+            if let Ok(mut slot) = ispell_dictionary().write() {
+                *slot = if dict.is_empty() { None } else { Some(dict.clone()) };
+            }
+            cx.editor.set_status(format!(
+                "ispell dictionary: {}",
+                if dict.is_empty() { "default" } else { &dict }
+            ));
+        },
+    );
 }
 
 /// Open the unified Preferences window (tabs: Settings, Keymap, Color Scheme, Run Configs).

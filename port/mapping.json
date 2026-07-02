@@ -12537,11 +12537,11 @@
  },
  {
   "spec_id": "emacs.command.ispell_word",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_next_spell_error"
+   "static:ispell_word"
   ],
-  "note": ""
+  "note": "ispell-word (M-$): checks the word at point with the external speller (aspell/hunspell/ispell) via zemacs_core::ispell and offers its suggestions"
  },
  {
   "spec_id": "emacs.command.flyspell_mode",
@@ -28131,5 +28131,45 @@
    "typable:sort-columns"
   ],
   "note": "New. Sorts selected lines alphabetically by the character-column range [beg,end) via zemacs_core::sort::sort_columns; --reverse for descending. Tabs treated as single columns (Emacs rejects tabs)."
+ },
+ {
+  "spec_id": "emacs.command.ispell",
+  "status": "ported",
+  "evidence": [
+   "static:ispell"
+  ],
+  "note": "ispell (M-x ispell): spell-check the region if selected else the whole buffer via the external speller"
+ },
+ {
+  "spec_id": "emacs.command.ispell_region",
+  "status": "ported",
+  "evidence": [
+   "static:ispell_region"
+  ],
+  "note": "ispell-region: spell-check the selection with aspell/hunspell/ispell -a; reports count and jumps to the first misspelling"
+ },
+ {
+  "spec_id": "emacs.command.ispell_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:ispell_buffer"
+  ],
+  "note": "ispell-buffer: spell-check the whole buffer with the external speller"
+ },
+ {
+  "spec_id": "emacs.command.ispell_change_dictionary",
+  "status": "ported",
+  "evidence": [
+   "static:ispell_change_dictionary"
+  ],
+  "note": "ispell-change-dictionary: prompt for the -d dictionary/language passed to the speller"
+ },
+ {
+  "spec_id": "emacs.command.ispell_kill_ispell",
+  "status": "partial",
+  "evidence": [
+   "static:ispell_kill_ispell"
+  ],
+  "note": "ispell-kill-ispell: each check spawns a fresh speller (no persistent process), so this reports there is nothing to kill"
  }
 ]

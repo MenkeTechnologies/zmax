@@ -27,6 +27,7 @@ pub mod email;
 pub mod rmail;
 pub mod increment;
 pub mod indent;
+pub mod ispell;
 pub mod line_ending;
 pub mod line_filter;
 pub mod macros;
