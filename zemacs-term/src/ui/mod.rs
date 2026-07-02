@@ -2,6 +2,7 @@ mod completion;
 pub mod context_menu;
 pub mod dashboard;
 pub mod switcher;
+pub mod calendar;
 mod document;
 pub mod dired;
 pub(crate) mod editor;

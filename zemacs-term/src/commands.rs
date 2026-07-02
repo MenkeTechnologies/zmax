@@ -614,8 +614,15 @@ impl MappableCommand {
         file_explorer, "Open file explorer in workspace root",
         file_explorer_in_current_buffer_directory, "Open file explorer at current buffer's directory",
         file_explorer_in_current_directory, "Open file explorer at current working directory",
+        calendar, "Open the Calendar month grid (emacs calendar)",
         dired, "Open the Dired directory editor (emacs C-x d)",
         dired_jump, "Open Dired on the current buffer's directory (emacs C-x C-j)",
+        tex_insert_braces, "TeX: insert a {} brace pair (emacs tex-insert-braces)",
+        tex_insert_quote, "TeX: insert `` or '' smart quotes (emacs tex-insert-quote)",
+        tex_terminate_paragraph, "TeX: end the paragraph (emacs tex-terminate-paragraph)",
+        latex_insert_block, "LaTeX: insert a \\begin{}..\\end{} block (emacs latex-insert-block)",
+        latex_close_block, "LaTeX: close the innermost open environment (emacs latex-close-block)",
+        tex_validate, "TeX: check {}/$/begin-end balance (emacs tex-validate-region)",
         code_action, "Perform code action",
         extract_refactor, "Extract refactoring (method/variable/constant) via LSP (IntelliJ Extract)",
         extract_function, "Extract Method/Function via LSP (IntelliJ Extract Method)",
@@ -12290,6 +12297,11 @@ fn dired(cx: &mut Context) {
     }
 }
 
+/// Emacs `calendar`: open the Calendar month grid at today's date.
+fn calendar(cx: &mut Context) {
+    cx.push_layer(Box::new(crate::ui::calendar::Calendar::new()));
+}
+
 /// Emacs `dired-jump` (C-x C-j): open Dired on the current buffer's directory,
 /// falling back to the working directory.
 fn dired_jump(cx: &mut Context) {
@@ -18602,6 +18614,96 @@ fn insert_generated(cx: &mut Context, text: &str) {
     });
     doc.apply(&transaction, view.id);
     exit_select_mode(cx);
+}
+
+// --------------------------------------------------------------------------
+// TeX / LaTeX editing substrate (emacs tex-mode / latex-mode). Buffer-editing
+// commands over the pure, unit-tested `zemacs_core::tex` engine.
+// --------------------------------------------------------------------------
+
+/// Emacs `tex-insert-braces`: insert a `{}` pair and leave the cursor between
+/// them (or wrap the selection when one exists — via the pair then step-left).
+fn tex_insert_braces(cx: &mut Context) {
+    insert_generated(cx, "{}");
+    move_char_left(cx);
+}
+
+/// Emacs `tex-insert-quote`: insert `` `` `` (opening) or `''` (closing) TeX
+/// quotes depending on the character before point.
+fn tex_insert_quote(cx: &mut Context) {
+    let before = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        (cursor > 0).then(|| text.char(cursor - 1))
+    };
+    insert_generated(cx, zemacs_core::tex::insert_quote(before));
+}
+
+/// Emacs `tex-terminate-paragraph`: end the current paragraph (insert a blank
+/// line). Simplified: does not auto-close a pending `$` (see `tex_validate`).
+fn tex_terminate_paragraph(cx: &mut Context) {
+    insert_generated(cx, "\n\n");
+}
+
+/// Emacs `latex-insert-block`: insert a `\begin{}…\end{}` environment skeleton
+/// (cursor left inside the opening brace to type the environment name).
+fn latex_insert_block(cx: &mut Context) {
+    insert_generated(cx, "\\begin{}\n    \n\\end{}\n");
+    // Leave the cursor inside the first `{}` so the name can be typed.
+    for _ in 0.."}\n    \n\\end{}\n".len() {
+        move_char_left(cx);
+    }
+}
+
+/// Emacs `latex-close-block` (C-c C-e): close the innermost still-open
+/// `\begin{ENV}` by inserting the matching `\end{ENV}`.
+fn latex_close_block(cx: &mut Context) {
+    let before = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        text.slice(..cursor).to_string()
+    };
+    match zemacs_core::tex::unclosed_environment(&before) {
+        Some(env) => insert_generated(cx, &format!("\\end{{{env}}}\n")),
+        None => cx.editor.set_status("latex: no open environment to close"),
+    }
+}
+
+/// Emacs `tex-validate-region`: check `{}`/`$`/`\begin`..`\end` balance across
+/// the buffer. On a problem, move the cursor there (for positional errors) and
+/// report it; otherwise report the buffer is well-formed.
+fn tex_validate(cx: &mut Context) {
+    use zemacs_core::tex::TexError;
+    let err = {
+        let doc = doc!(cx.editor);
+        zemacs_core::tex::validate(&doc.text().to_string())
+    };
+    match err {
+        None => cx.editor.set_status("TeX: buffer is well-formed"),
+        Some(e) => {
+            let pos = match &e {
+                TexError::UnmatchedClose(p)
+                | TexError::UnmatchedOpen(p)
+                | TexError::UnmatchedMath(p) => Some(*p),
+                _ => None,
+            };
+            if let Some(pos) = pos {
+                let (view, doc) = current!(cx.editor);
+                let clamped = pos.min(doc.text().len_chars().saturating_sub(1));
+                doc.set_selection(view.id, Selection::point(clamped));
+            }
+            let msg = match e {
+                TexError::UnmatchedClose(_) => "TeX: unmatched `}`".to_string(),
+                TexError::UnmatchedOpen(_) => "TeX: unmatched `{`".to_string(),
+                TexError::UnmatchedMath(_) => "TeX: unmatched `$`".to_string(),
+                TexError::UnclosedEnv(n) => format!("TeX: unclosed \\begin{{{n}}}"),
+                TexError::UnopenedEnv(n) => format!("TeX: unmatched \\end{{{n}}}"),
+            };
+            cx.editor.set_error(msg);
+        }
+    }
 }
 
 /// 16 random bytes formatted `8-4-4-4-12`, with the given version nibble and the

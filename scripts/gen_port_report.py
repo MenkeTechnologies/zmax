@@ -232,6 +232,8 @@ def parse_keymap():
     result["command"] = parse_prompt_keymap()
     # Dired is a modal Component; expose its keys as a `dired` mode.
     result["dired"] = parse_dired_keymap()
+    # Calendar is a modal Component too.
+    result["calendar"] = _parse_component_keymap("calendar.rs", "calendar")
     return result
 
 
@@ -288,26 +290,27 @@ def parse_dired_keymap():
     prompt (parse_prompt_keymap) — they are read straight from source, exposing a
     `dired` mode so `key:dired:m` etc. resolve for the Emacs Dired keybindings.
     """
-    path = os.path.join(ZEMACS_TERM, "ui", "dired.rs")
+    return _parse_component_keymap("dired.rs", "dired")
+
+
+def _parse_component_keymap(filename, mode):
+    """Parse the `match key { ... }` handler of a modal ui Component into
+    {chord: mode}, recognising ctrl!/alt!/shift!/key! with `'c'` char literals or
+    named keys. Shared by Dired, Calendar and any future major-mode overlay."""
+    path = os.path.join(ZEMACS_TERM, "ui", filename)
     try:
         src = open(path, encoding="utf-8").read()
     except OSError:
         return {}
-    body = ""
-    for m in re.finditer(r"\bmatch\s+key\s*\{", src):
-        i = _match_delim(src, m.end(), "{", "}")
-        candidate = src[m.end() : i - 1]
-        if "key!(" in candidate or "ctrl!(" in candidate:
-            body = candidate
-            break
-    if not body:
-        return {}
+    # These Component files only invoke the key macros inside `handle_event`, so
+    # scan the whole file: a brace-matcher on the `match key { .. }` block would
+    # be fooled by `alt!('}')` / `key!('{')` char literals (not delimiter-aware).
     out = {}
-    for mm in re.finditer(r"\b(ctrl|alt|shift|key)!\(\s*(?:'(.)'|(\w+))\s*\)", body):
+    for mm in re.finditer(r"\b(ctrl|alt|shift|key)!\(\s*(?:'(.)'|(\w+))\s*\)", src):
         macro, ch, named = mm.group(1), mm.group(2), mm.group(3)
         key = ch if ch is not None else _NAMED_KEYS.get(named, named)
         prefix = {"ctrl": "C-", "alt": "A-", "shift": "S-", "key": ""}[macro]
-        out[f"{prefix}{key}"] = "dired"
+        out[f"{prefix}{key}"] = mode
     return out
 
 
