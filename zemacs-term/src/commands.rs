@@ -18895,29 +18895,39 @@ fn ispell_change_dictionary(cx: &mut Context) {
 
 /// Open the unified Preferences window (tabs: Settings, Keymap, Color Scheme, Run Configs).
 fn preferences(cx: &mut Context) {
-    cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(0)));
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::preferences::PreferencesPanel::new(0)) as Box<dyn Component>)
+    });
 }
 
 /// Open the configuration page on the Help tab (searchable: commands, keybindings, topics).
 fn help(cx: &mut Context) {
-    cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(4)));
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::preferences::PreferencesPanel::new(4)) as Box<dyn Component>)
+    });
 }
 
 /// Open the embedded-language REPL panel (defaults to elisp; Tab switches).
 fn repl(cx: &mut Context) {
-    cx.push_layer(Box::new(crate::ui::repl::ReplPanel::new(
-        crate::ui::repl::ReplLang::Elisp,
-    )));
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::repl::ReplPanel::new(
+            crate::ui::repl::ReplLang::Elisp,
+        )) as Box<dyn Component>)
+    });
 }
 
 /// Open Preferences on the Run/Debug Configurations tab.
 fn run_config_manager(cx: &mut Context) {
-    cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(3)));
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::preferences::PreferencesPanel::new(3)) as Box<dyn Component>)
+    });
 }
 
 /// Open Preferences on the Dashboard tab (live system/process stats).
 fn dashboard(cx: &mut Context) {
-    cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(5)));
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::preferences::PreferencesPanel::new(5)) as Box<dyn Component>)
+    });
 }
 
 /// Open an integrated terminal running the user's `$SHELL` in a PTY.
@@ -18948,12 +18958,16 @@ fn search_in_files(cx: &mut Context) {
             String::new()
         }
     };
-    cx.push_layer(Box::new(crate::ui::search::SearchPanel::new(&seed)));
+    open_overlay(cx, move |_editor| {
+        Ok(Box::new(crate::ui::search::SearchPanel::new(&seed)) as Box<dyn Component>)
+    });
 }
 
 /// Open Preferences on the Settings tab (config.toml editor).
 fn settings_page(cx: &mut Context) {
-    cx.push_layer(Box::new(crate::ui::preferences::PreferencesPanel::new(0)));
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::preferences::PreferencesPanel::new(0)) as Box<dyn Component>)
+    });
 }
 
 /// Toggle "always select opened file" — auto-reveal the current buffer in the
