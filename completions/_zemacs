@@ -1,7 +1,7 @@
-#compdef _hx hx
+#compdef zemacs
 # Zsh completion script for zemacs
 
-_hx() {
+_zemacs() {
 	_arguments -C \
 		"-h[Prints help information]" \
 		"--help[Prints help information]" \
