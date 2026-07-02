@@ -14280,158 +14280,16 @@ fn number_lines_cmd(
     Ok(())
 }
 
-/// A tiny recursive-descent evaluator for `:calc`. Grammar (lowest→highest):
-/// expr = term (('+'|'-') term)*; term = power (('*'|'/'|'%') power)*;
-/// power = factor ('^' power)?; factor = number | '(' expr ')' | ('+'|'-') factor.
-/// Unary minus binds tighter than `^` (so `-2^2` == 4; use `-(2^2)` for -4).
-struct Calc<'a> {
-    s: &'a [u8],
-    i: usize,
-}
-
-impl<'a> Calc<'a> {
-    fn new(s: &'a str) -> Self {
-        Calc {
-            s: s.as_bytes(),
-            i: 0,
-        }
-    }
-    fn peek(&mut self) -> Option<u8> {
-        while self.i < self.s.len() && self.s[self.i].is_ascii_whitespace() {
-            self.i += 1;
-        }
-        self.s.get(self.i).copied()
-    }
-    fn eat(&mut self, c: u8) -> bool {
-        if self.peek() == Some(c) {
-            self.i += 1;
-            true
-        } else {
-            false
-        }
-    }
-    fn expr(&mut self) -> Result<f64, String> {
-        let mut v = self.term()?;
-        loop {
-            match self.peek() {
-                Some(b'+') => {
-                    self.i += 1;
-                    v += self.term()?;
-                }
-                Some(b'-') => {
-                    self.i += 1;
-                    v -= self.term()?;
-                }
-                _ => break,
-            }
-        }
-        Ok(v)
-    }
-    fn term(&mut self) -> Result<f64, String> {
-        let mut v = self.power()?;
-        loop {
-            match self.peek() {
-                Some(b'*') => {
-                    self.i += 1;
-                    v *= self.power()?;
-                }
-                Some(b'/') => {
-                    self.i += 1;
-                    let d = self.power()?;
-                    if d == 0.0 {
-                        return Err("division by zero".into());
-                    }
-                    v /= d;
-                }
-                Some(b'%') => {
-                    self.i += 1;
-                    let d = self.power()?;
-                    if d == 0.0 {
-                        return Err("modulo by zero".into());
-                    }
-                    v %= d;
-                }
-                _ => break,
-            }
-        }
-        Ok(v)
-    }
-    fn power(&mut self) -> Result<f64, String> {
-        let base = self.factor()?;
-        if self.eat(b'^') {
-            Ok(base.powf(self.power()?)) // right-associative
-        } else {
-            Ok(base)
-        }
-    }
-    fn factor(&mut self) -> Result<f64, String> {
-        match self.peek() {
-            Some(b'-') => {
-                self.i += 1;
-                Ok(-self.factor()?)
-            }
-            Some(b'+') => {
-                self.i += 1;
-                self.factor()
-            }
-            Some(b'(') => {
-                self.i += 1;
-                let v = self.expr()?;
-                if !self.eat(b')') {
-                    return Err("missing closing parenthesis".into());
-                }
-                Ok(v)
-            }
-            Some(c) if c.is_ascii_digit() || c == b'.' => self.number(),
-            Some(c) => Err(format!("unexpected character '{}'", c as char)),
-            None => Err("unexpected end of expression".into()),
-        }
-    }
-    fn number(&mut self) -> Result<f64, String> {
-        self.peek(); // skip whitespace
-        let start = self.i;
-        while self.i < self.s.len() {
-            let c = self.s[self.i];
-            if c.is_ascii_digit() || c == b'.' {
-                self.i += 1;
-            } else if (c == b'e' || c == b'E')
-                && self.i + 1 < self.s.len()
-                && (self.s[self.i + 1] == b'+' || self.s[self.i + 1] == b'-')
-            {
-                self.i += 2; // exponent with sign
-            } else if c == b'e' || c == b'E' {
-                self.i += 1;
-            } else {
-                break;
-            }
-        }
-        let tok = std::str::from_utf8(&self.s[start..self.i]).unwrap_or("");
-        tok.parse::<f64>()
-            .map_err(|_| format!("invalid number '{tok}'"))
-    }
-}
-
-/// Evaluate an arithmetic expression, erroring on trailing/garbage input.
+/// `:calc` uses the shared infix evaluator in `zemacs_core::calc`, which also
+/// backs the full-screen RPN Calc Component. Thin wrappers keep the original
+/// names local to this module.
 fn eval_arith(input: &str) -> Result<f64, String> {
-    let mut c = Calc::new(input);
-    let v = c.expr()?;
-    if c.peek().is_some() {
-        return Err("unexpected trailing input".into());
-    }
-    if !v.is_finite() {
-        return Err("result is not finite".into());
-    }
-    Ok(v)
+    zemacs_core::calc::eval_infix(input)
 }
 
 /// Render a calc result: integers without a decimal point, otherwise trimmed.
 fn format_calc(v: f64) -> String {
-    if v.fract() == 0.0 && v.abs() < 1e15 {
-        format!("{}", v as i64)
-    } else {
-        let s = format!("{v:.10}");
-        s.trim_end_matches('0').trim_end_matches('.').to_string()
-    }
+    zemacs_core::calc::format_value(v)
 }
 
 fn calc(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {

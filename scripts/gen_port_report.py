@@ -234,6 +234,7 @@ def parse_keymap():
     result["dired"] = parse_dired_keymap()
     # Calendar is a modal Component too.
     result["calendar"] = _parse_component_keymap("calendar.rs", "calendar")
+    result["calc"] = _parse_component_keymap("calc.rs", "calc")
     return result
 
 

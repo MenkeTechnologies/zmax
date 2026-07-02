@@ -23635,11 +23635,19 @@
  },
  {
   "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_asterisk",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:calc"
+   "static:calc_dispatch"
   ],
-  "note": "spacemacs C-x * (calc-dispatch) -> zemacs :calc arithmetic calculator (evaluates expression arg or each selection); simpler than full Calc"
+  "note": "spacemacs C-x * (calc-dispatch) -> zemacs calc opens the RPN stack calculator (:calc still evaluates an infix expression/selection)"
+ },
+ {
+  "spec_id": "emacs.keybinding.c_x_asterisk",
+  "status": "ported",
+  "evidence": [
+   "static:calc_dispatch"
+  ],
+  "note": "emacs C-x * (calc-dispatch) -> zemacs calc opens the RPN Calc stack calculator"
  },
  {
   "spec_id": "neovim.ex-command.colon_fold",

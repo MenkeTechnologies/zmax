@@ -615,6 +615,7 @@ impl MappableCommand {
         file_explorer_in_current_buffer_directory, "Open file explorer at current buffer's directory",
         file_explorer_in_current_directory, "Open file explorer at current working directory",
         calendar, "Open the Calendar month grid (emacs calendar)",
+        calc_dispatch, "Open the RPN Calc stack calculator (emacs calc / C-x *)",
         dired, "Open the Dired directory editor (emacs C-x d)",
         dired_jump, "Open Dired on the current buffer's directory (emacs C-x C-j)",
         tex_insert_braces, "TeX: insert a {} brace pair (emacs tex-insert-braces)",
@@ -12300,6 +12301,11 @@ fn dired(cx: &mut Context) {
 /// Emacs `calendar`: open the Calendar month grid at today's date.
 fn calendar(cx: &mut Context) {
     cx.push_layer(Box::new(crate::ui::calendar::Calendar::new()));
+}
+
+/// Emacs `calc` / `C-x *` (calc-dispatch): open the RPN stack calculator.
+fn calc_dispatch(cx: &mut Context) {
+    cx.push_layer(Box::new(crate::ui::calc::Calc::new()));
 }
 
 /// Emacs `dired-jump` (C-x C-j): open Dired on the current buffer's directory,
