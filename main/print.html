@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-6a5e3713.js";
+            window.path_to_searchindex_js = "searchindex-21e4cdfe.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1671,7 +1671,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-project-metadata</code>, <code>:platformio-project-metadata</code></td><td>Dump the IDE/LSP metadata for the project (<code>pio project metadata</code>).</td></tr>
 <tr><td><code>:pio-pkg-exec</code>, <code>:platformio-pkg-exec</code></td><td>Run a tool from an installed package (<code>pio pkg exec -- &lt;argv&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-platform-install</code>, <code>:pio-core-install</code>, <code>:platformio-platform-install</code></td><td>Install a development platform globally (<code>pio pkg install -g -p &lt;spec&gt;</code>), live in a terminal panel.</td></tr>
-<tr><td><code>:pio-pkg-pack</code>, <code>:platformio-pkg-pack</code></td><td>Build a tarball of the current package (<code>pio pkg pack</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-pkg-pack</code>, <code>:platformio-pkg-pack</code></td><td>Build a tarball of the current package (<code>pio pkg pack [-o &lt;path&gt;]</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-pkg-publish</code>, <code>:platformio-pkg-publish</code></td><td>Publish the current package to the PlatformIO registry (<code>pio pkg publish</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-pkg-unpublish</code>, <code>:platformio-pkg-unpublish</code></td><td>Remove a previously published package (<code>pio pkg unpublish &lt;pkg&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-system-info</code>, <code>:platformio-system-info</code></td><td>Show system-wide PlatformIO information (<code>pio system info</code>).</td></tr>
@@ -1683,15 +1683,15 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-settings-get</code>, <code>:platformio-settings-get</code></td><td>Print PlatformIO Core settings, all or one key (<code>pio settings get [name]</code>).</td></tr>
 <tr><td><code>:pio-settings-set</code>, <code>:platformio-settings-set</code></td><td>Change a PlatformIO Core setting (<code>pio settings set &lt;name&gt; &lt;value&gt;</code>).</td></tr>
 <tr><td><code>:pio-remote-agent-list</code>, <code>:pio-remote-agents</code>, <code>:platformio-remote-agent-list</code></td><td>List active PlatformIO Remote agents (<code>pio remote agent list</code>).</td></tr>
-<tr><td><code>:pio-remote-agent-start</code>, <code>:platformio-remote-agent-start</code></td><td>Start a PlatformIO Remote agent on this machine (<code>pio remote agent start</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-remote-agent-start</code>, <code>:platformio-remote-agent-start</code></td><td>Start a PlatformIO Remote agent (<code>pio remote agent start [--name &lt;n&gt;] [--share &lt;email&gt;] [--working-dir &lt;dir&gt;]</code>).</td></tr>
 <tr><td><code>:pio-remote-devices</code>, <code>:pio-remote-device-list</code>, <code>:platformio-remote-devices</code></td><td>List serial devices attached to remote agents (<code>pio remote device list</code>).</td></tr>
 <tr><td><code>:pio-remote-run</code>, <code>:platformio-remote-run</code></td><td>Build/upload the project via a remote agent (<code>pio remote run</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-remote-test</code>, <code>:platformio-remote-test</code></td><td>Run unit tests via a remote agent (<code>pio remote test</code>), live in a terminal panel.</td></tr>
-<tr><td><code>:pio-remote-update</code>, <code>:platformio-remote-update</code></td><td>Update platforms/packages/libraries on remote agents (<code>pio remote update</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-remote-update</code>, <code>:platformio-remote-update</code></td><td>Update platforms/packages/libraries on remote agents (<code>pio remote update [--dry-run]</code>).</td></tr>
 <tr><td><code>:pio-account-login</code>, <code>:platformio-account-login</code></td><td>Sign in to a PlatformIO account (<code>pio account login</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-account-logout</code>, <code>:platformio-account-logout</code></td><td>Sign out of the PlatformIO account (<code>pio account logout</code>).</td></tr>
 <tr><td><code>:pio-account-show</code>, <code>:platformio-account-show</code></td><td>Show the current PlatformIO account information (<code>pio account show</code>).</td></tr>
-<tr><td><code>:pio-account-token</code>, <code>:platformio-account-token</code></td><td>Print (or regenerate) the account auth token (<code>pio account token</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-token</code>, <code>:platformio-account-token</code></td><td>Print the account auth token (<code>pio account token [--regenerate] [--json-output] [-p &lt;password&gt;]</code>).</td></tr>
 <tr><td><code>:pio-env</code>, <code>:pio-environment</code>, <code>:platformio-env</code></td><td>Select the PlatformIO build environment (<code>[env:…]</code>); no arg picks from platformio.ini, <code>-</code> clears.</td></tr>
 <tr><td><code>:pio-list-targets</code>, <code>:platformio-list-targets</code></td><td>Enumerate the project’s build targets (<code>pio run --list-targets</code>).</td></tr>
 <tr><td><code>:pio-list-tests</code>, <code>:platformio-list-tests</code></td><td>List the project’s test suites (<code>pio test --list-tests</code>).</td></tr>
@@ -1710,6 +1710,11 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-monitor-encoding</code>, <code>:platformio-monitor-encoding</code></td><td>Set the serial monitor encoding (e.g. <code>UTF-8</code>, <code>Latin-1</code>, <code>hexlify</code>); empty resets.</td></tr>
 <tr><td><code>:pio-monitor-flow</code>, <code>:platformio-monitor-flow</code></td><td>Select serial monitor flow control (<code>none</code>, <code>rtscts</code>, or <code>xonxoff</code>).</td></tr>
 <tr><td><code>:pio-monitor-reconnect</code>, <code>:platformio-monitor-reconnect</code></td><td>Toggle serial monitor auto-reconnect (<code>on</code> or <code>off</code>; <code>off</code> = <code>--no-reconnect</code>).</td></tr>
+<tr><td><code>:pio-monitor-quiet</code>, <code>:platformio-monitor-quiet</code></td><td>Toggle suppression of non-error serial monitor diagnostics (<code>--quiet</code>).</td></tr>
+<tr><td><code>:pio-monitor-exit-char</code>, <code>:platformio-monitor-exit-char</code></td><td>Set the serial monitor exit-char ASCII code (<code>--exit-char</code>; default 3 = Ctrl+C); empty resets.</td></tr>
+<tr><td><code>:pio-monitor-menu-char</code>, <code>:platformio-monitor-menu-char</code></td><td>Set the serial monitor menu-char ASCII code (<code>--menu-char</code>; default 20 = Ctrl+T); empty resets.</td></tr>
+<tr><td><code>:pio-pkg-show-type</code>, <code>:platformio-pkg-show-type</code></td><td>Registry details scoped to a package type (`pio pkg show –type &lt;library</td></tr>
+<tr><td><code>:pio-pkg-exec-call</code>, <code>:platformio-pkg-exec-call</code></td><td>Run a package tool via the call form (<code>pio pkg exec -c &lt;argv…&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-build-verbose</code>, <code>:platformio-build-verbose</code></td><td>Verbose PlatformIO build (<code>pio run -v</code>), routed through <code>*compilation*</code>.</td></tr>
 <tr><td><code>:pio-build-silent</code>, <code>:platformio-build-silent</code></td><td>Quiet PlatformIO build showing warnings/errors only (<code>pio run -s</code>).</td></tr>
 <tr><td><code>:pio-run-jobs</code>, <code>:platformio-run-jobs</code></td><td>Build with N parallel jobs (<code>pio run -j &lt;n&gt;</code>).</td></tr>
