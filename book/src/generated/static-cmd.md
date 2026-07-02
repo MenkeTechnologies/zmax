@@ -777,6 +777,8 @@
 | `kmacro_to_register` | Write the last macro to a register (SPC K e r) | normal: `` <space>Ken ``, `` <space>Ker ``, `` <C-x><C-k>b ``, `` <C-x><C-k>n ``, `` <C-x><C-k>x ``, select: `` <space>Ken ``, `` <space>Ker ``, `` <C-x><C-k>b ``, `` <C-x><C-k>n ``, `` <C-x><C-k>x ``, insert: `` <C-x><C-k>b ``, `` <C-x><C-k>n ``, `` <C-x><C-k>x `` |
 | `kmacro_add_counter` | Add [count] to the keyboard-macro counter (SPC K c a) | normal: `` <space>Kca ``, `` <C-x><C-k><C-a> ``, `` <C-x><C-k><C-c> ``, `` <C-x><C-k><C-f> ``, select: `` <space>Kca ``, `` <C-x><C-k><C-a> ``, `` <C-x><C-k><C-c> ``, `` <C-x><C-k><C-f> ``, insert: `` <C-x><C-k><C-a> ``, `` <C-x><C-k><C-c> ``, `` <C-x><C-k><C-f> `` |
 | `kmacro_insert_counter` | Insert the macro counter value, then increment (SPC K c c) | normal: `` <space>Kcc ``, `` <C-x><C-k><C-i> ``, select: `` <space>Kcc ``, `` <C-x><C-k><C-i> ``, insert: `` <C-x><C-k><C-i> `` |
+| `kmacro_set_counter` | Set the keyboard-macro counter to [count] (emacs kmacro-set-counter) |  |
+| `kmacro_set_format` | Set the macro-counter insert format, e.g. %03d (emacs kmacro-set-format) |  |
 | `toggle_readonly` | Toggle the buffer's read-only (writable) state (SPC b w) | normal: `` <space>bw ``, `` <C-x><C-q> ``, select: `` <space>bw ``, `` <C-x><C-q> ``, insert: `` <C-x><C-q> `` |
 | `toggle_window_dedication` | Toggle window dedication (spacemacs SPC w t) | normal: `` <C-w>t ``, `` <space>wt ``, select: `` <space>wt `` |
 | `toggle_subword` | Toggle sub-word w/b/e motions (spacemacs SPC t c) | normal: `` <space>tc ``, select: `` <space>tc `` |

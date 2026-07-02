@@ -28467,5 +28467,21 @@
    "static:prepend_to_register"
   ],
   "note": "prepend-to-register (C-x r p): add the region before a register's existing text"
+ },
+ {
+  "spec_id": "emacs.command.kmacro_set_counter",
+  "status": "ported",
+  "evidence": [
+   "static:kmacro_set_counter"
+  ],
+  "note": "kmacro-set-counter: set the keyboard-macro counter to the numeric prefix (absolute)"
+ },
+ {
+  "spec_id": "emacs.command.kmacro_set_format",
+  "status": "ported",
+  "evidence": [
+   "static:kmacro_set_format"
+  ],
+  "note": "kmacro-set-format: set the printf format the counter is inserted with (%d, %03d, 0x%x)"
  }
 ]

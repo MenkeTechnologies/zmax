@@ -1089,6 +1089,8 @@ impl MappableCommand {
         kmacro_to_register, "Write the last macro to a register (SPC K e r)",
         kmacro_add_counter, "Add [count] to the keyboard-macro counter (SPC K c a)",
         kmacro_insert_counter, "Insert the macro counter value, then increment (SPC K c c)",
+        kmacro_set_counter, "Set the keyboard-macro counter to [count] (emacs kmacro-set-counter)",
+        kmacro_set_format, "Set the macro-counter insert format, e.g. %03d (emacs kmacro-set-format)",
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
         toggle_window_dedication, "Toggle window dedication (spacemacs SPC w t)",
         toggle_subword, "Toggle sub-word w/b/e motions (spacemacs SPC t c)",
@@ -20597,9 +20599,74 @@ fn kmacro_counter_add(n: i64) -> i64 {
     KMACRO_COUNTER.fetch_add(n, std::sync::atomic::Ordering::Relaxed) + n
 }
 
+/// Set the counter to an absolute value (Emacs `kmacro-set-counter`).
+fn kmacro_counter_set(n: i64) {
+    KMACRO_COUNTER.store(n, std::sync::atomic::Ordering::Relaxed);
+}
+
 #[cfg(test)]
 fn kmacro_counter_reset() {
     KMACRO_COUNTER.store(0, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// The printf-style format the counter is inserted with (Emacs `kmacro-set-format`).
+static KMACRO_FORMAT: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
+
+fn kmacro_format() -> String {
+    KMACRO_FORMAT
+        .lock()
+        .ok()
+        .filter(|f| !f.is_empty())
+        .map(|f| f.clone())
+        .unwrap_or_else(|| "%d".to_string())
+}
+
+/// Render `value` through a printf-style `fmt` containing one `%[0][width](d|x|X|o)`
+/// spec, keeping any literal text around it (Emacs `kmacro-set-format`, e.g.
+/// "%03d", "0x%x", "item-%d:"). Falls back to the decimal value when there is no
+/// usable spec.
+fn format_counter(value: i64, fmt: &str) -> String {
+    let bytes = fmt.as_bytes();
+    let Some(pct) = fmt.find('%') else {
+        return value.to_string();
+    };
+    let mut i = pct + 1;
+    let zero = bytes.get(i) == Some(&b'0');
+    if zero {
+        i += 1;
+    }
+    let ws = i;
+    let mut width = 0usize;
+    while i < bytes.len() && bytes[i].is_ascii_digit() {
+        width = width * 10 + (bytes[i] - b'0') as usize;
+        i += 1;
+    }
+    let has_width = i > ws;
+    let Some(&conv) = bytes.get(i) else {
+        return value.to_string();
+    };
+    let num = match conv {
+        b'd' => value.to_string(),
+        b'x' => format!("{value:x}"),
+        b'X' => format!("{value:X}"),
+        b'o' => format!("{value:o}"),
+        _ => return value.to_string(),
+    };
+    let padded = if has_width && width > num.chars().count() {
+        let pad = width - num.chars().count();
+        if zero {
+            // Zero-pad after a leading minus sign.
+            match num.strip_prefix('-') {
+                Some(rest) => format!("-{}{}", "0".repeat(pad), rest),
+                None => format!("{}{}", "0".repeat(pad), num),
+            }
+        } else {
+            format!("{}{}", " ".repeat(pad), num)
+        }
+    } else {
+        num
+    };
+    format!("{}{}{}", &fmt[..pct], padded, &fmt[i + 1..])
 }
 
 // --- keyboard-macro ring (spacemacs SPC K r / SPC K e) -----------------------
@@ -20724,8 +20791,41 @@ fn kmacro_add_counter(cx: &mut Context) {
 /// SPC K c c: insert the current counter value at the cursor, then increment it.
 fn kmacro_insert_counter(cx: &mut Context) {
     let v = kmacro_counter_value();
-    insert_generated(cx, &v.to_string());
+    insert_generated(cx, &format_counter(v, &kmacro_format()));
     kmacro_counter_add(1);
+}
+
+/// Emacs `kmacro-set-counter` (C-x C-k C-c): set the counter to the numeric
+/// prefix argument (or 0 with no prefix).
+fn kmacro_set_counter(cx: &mut Context) {
+    let n = cx.count.map_or(0, |c| c.get() as i64);
+    kmacro_counter_set(n);
+    cx.editor.set_status(format!("macro counter = {n}"));
+}
+
+/// Emacs `kmacro-set-format` (C-x C-k C-f): set the printf format used when the
+/// counter is inserted (e.g. "%03d", "0x%x"). Prompts for the format string.
+fn kmacro_set_format(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Macro counter format (%d): ".into(),
+        None,
+        |_editor, _input| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let fmt = if input.trim().is_empty() {
+                "%d".to_string()
+            } else {
+                input.to_string()
+            };
+            if let Ok(mut slot) = KMACRO_FORMAT.lock() {
+                *slot = fmt.clone();
+            }
+            cx.editor.set_status(format!("macro counter format: {fmt}"));
+        },
+    );
 }
 
 // --- paredit-style structural editing (spacemacs SPC k) ----------------------
@@ -23369,8 +23469,26 @@ mod insert_generator_tests {
         assert_eq!(kmacro_counter_add(1), 1);
         assert_eq!(kmacro_counter_add(5), 6);
         assert_eq!(kmacro_counter_value(), 6);
+        // Absolute set (kmacro-set-counter). Kept in this test — not a separate
+        // one — because all counter tests share the process-global counter and
+        // would race if run in parallel.
+        kmacro_counter_set(42);
+        assert_eq!(kmacro_counter_value(), 42);
+        assert_eq!(kmacro_counter_add(1), 43);
         kmacro_counter_reset();
         assert_eq!(kmacro_counter_value(), 0);
+    }
+
+    #[test]
+    fn kmacro_format_counter_specs() {
+        assert_eq!(format_counter(5, "%d"), "5");
+        assert_eq!(format_counter(5, "%03d"), "005");
+        assert_eq!(format_counter(255, "%x"), "ff");
+        assert_eq!(format_counter(255, "0x%X"), "0xFF");
+        assert_eq!(format_counter(7, "item-%02d:"), "item-07:");
+        assert_eq!(format_counter(-5, "%04d"), "-005"); // zero-pad after sign
+        assert_eq!(format_counter(12, "no spec"), "12"); // fallback to decimal
+        assert_eq!(format_counter(12, ""), "12");
     }
 
     #[test]
