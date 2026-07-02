@@ -68,6 +68,16 @@ pub struct EmbeddedSettings {
     /// Sketch / project directory, relative to the workspace root.
     /// Empty = workspace root itself.
     pub sketch: String,
+    /// PlatformIO build environment (`[env:<name>]` in `platformio.ini`).
+    /// Empty = let `pio` operate on every environment (its default).
+    pub env: String,
+    /// PlatformIO `device monitor` filters (`-f`), e.g. `time`, `log2file`,
+    /// `hexlify`, `send_on_enter`. Applied in order, one `-f` per entry.
+    pub filters: Vec<String>,
+    /// Serial monitor end-of-line mode: `CR`, `LF`, or `CRLF`. Empty = default.
+    pub eol: String,
+    /// Serial monitor parity: `N`, `E`, `O`, `S`, or `M`. Empty = default (`N`).
+    pub parity: String,
 }
 
 impl Default for EmbeddedSettings {
@@ -78,6 +88,10 @@ impl Default for EmbeddedSettings {
             port: String::new(),
             baud: 9600,
             sketch: String::new(),
+            env: String::new(),
+            filters: Vec::new(),
+            eol: String::new(),
+            parity: String::new(),
         }
     }
 }
@@ -121,6 +135,43 @@ impl EmbeddedSettings {
         } else {
             root.join(&self.sketch)
         }
+    }
+
+    /// `["-e", <env>]` when a build environment is selected, else empty. Appended
+    /// to every project-scoped `pio` action (`run`, `test`, `check`, `debug`,
+    /// `device monitor`) so it targets a single `[env:<name>]`.
+    pub fn pio_env_args(&self) -> Vec<String> {
+        if self.env.trim().is_empty() {
+            Vec::new()
+        } else {
+            vec![s("-e"), self.env.trim().to_string()]
+        }
+    }
+
+    /// The shared `pio device monitor` option tail: port, baud, filters, EOL,
+    /// parity, and the selected environment.
+    fn pio_monitor_opts(&self) -> Vec<String> {
+        let mut v = Vec::new();
+        if !self.port.is_empty() {
+            v.push(s("-p"));
+            v.push(self.port.clone());
+        }
+        v.push(s("-b"));
+        v.push(self.baud.to_string());
+        for f in &self.filters {
+            v.push(s("-f"));
+            v.push(f.clone());
+        }
+        if !self.eol.trim().is_empty() {
+            v.push(s("--eol"));
+            v.push(self.eol.trim().to_string());
+        }
+        if !self.parity.trim().is_empty() {
+            v.push(s("--parity"));
+            v.push(self.parity.trim().to_string());
+        }
+        v.extend(self.pio_env_args());
+        v
     }
 }
 
@@ -366,26 +417,33 @@ pub fn arduino_core_install(pkg: &str) -> Vec<String> {
     vec![s(ARDUINO_CLI), s("core"), s("install"), s(pkg)]
 }
 
-/// `pio run` — build the PlatformIO project.
-pub fn pio_build() -> Vec<String> {
-    vec![s(PIO), s("run")]
+/// `pio run [-e env]` — build the PlatformIO project.
+pub fn pio_build(settings: &EmbeddedSettings) -> Vec<String> {
+    let mut v = vec![s(PIO), s("run")];
+    v.extend(settings.pio_env_args());
+    v
 }
 
-/// `pio run -t upload`
-pub fn pio_upload() -> Vec<String> {
-    vec![s(PIO), s("run"), s("-t"), s("upload")]
+/// `pio run -t upload [-e env]`
+pub fn pio_upload(settings: &EmbeddedSettings) -> Vec<String> {
+    let mut v = vec![s(PIO), s("run"), s("-t"), s("upload")];
+    v.extend(settings.pio_env_args());
+    v
 }
 
-/// `pio device monitor [-p port] [-b baud]`
+/// `pio device monitor [-p port] -b baud [-f filter…] [--eol …] [--parity …] [-e env]`
 pub fn pio_monitor(settings: &EmbeddedSettings) -> Vec<String> {
     let mut v = vec![s(PIO), s("device"), s("monitor")];
-    if !settings.port.is_empty() {
-        v.push(s("-p"));
-        v.push(settings.port.clone());
-    }
-    v.push(s("-b"));
-    v.push(settings.baud.to_string());
+    v.extend(settings.pio_monitor_opts());
     v
+}
+
+/// `pio remote device monitor` — the serial monitor over a Remote agent. Emitted
+/// bare: the remote monitor's option set could not be verified against the local
+/// `pio` (its `--help` needs the PlatformIO cloud), so no unverified flags are
+/// passed; the agent selects the attached device.
+pub fn pio_remote_device_monitor() -> Vec<String> {
+    vec![s(PIO), s("remote"), s("device"), s("monitor")]
 }
 
 /// `pio device list --json-output`
@@ -403,24 +461,61 @@ pub fn pio_lib_install(name: &str) -> Vec<String> {
     vec![s(PIO), s("pkg"), s("install"), s("-l"), s(name)]
 }
 
-/// `pio run -t clean` — remove build artifacts (PlatformIO IDE "Clean").
-pub fn pio_clean() -> Vec<String> {
-    vec![s(PIO), s("run"), s("-t"), s("clean")]
+/// `pio run -t clean [-e env]` — remove build artifacts (PlatformIO IDE "Clean").
+pub fn pio_clean(settings: &EmbeddedSettings) -> Vec<String> {
+    let mut v = vec![s(PIO), s("run"), s("-t"), s("clean")];
+    v.extend(settings.pio_env_args());
+    v
 }
 
-/// `pio test` — run the project's unit tests (PlatformIO IDE "Test").
-pub fn pio_test() -> Vec<String> {
-    vec![s(PIO), s("test")]
+/// `pio test [-e env]` — run the project's unit tests (PlatformIO IDE "Test").
+pub fn pio_test(settings: &EmbeddedSettings) -> Vec<String> {
+    let mut v = vec![s(PIO), s("test")];
+    v.extend(settings.pio_env_args());
+    v
 }
 
-/// `pio check` — static code analysis (PlatformIO IDE "Check").
-pub fn pio_check() -> Vec<String> {
-    vec![s(PIO), s("check")]
+/// `pio test -f <pattern> [-e env]` — run only the tests matching `pattern`.
+pub fn pio_test_filter(settings: &EmbeddedSettings, pattern: &str) -> Vec<String> {
+    let mut v = vec![s(PIO), s("test"), s("-f"), s(pattern)];
+    v.extend(settings.pio_env_args());
+    v
+}
+
+/// `pio test --list-tests [-e env]` — list the project's test suites.
+pub fn pio_list_tests(settings: &EmbeddedSettings) -> Vec<String> {
+    let mut v = vec![s(PIO), s("test"), s("--list-tests")];
+    v.extend(settings.pio_env_args());
+    v
+}
+
+/// `pio check [-e env]` — static code analysis (PlatformIO IDE "Check").
+pub fn pio_check(settings: &EmbeddedSettings) -> Vec<String> {
+    let mut v = vec![s(PIO), s("check")];
+    v.extend(settings.pio_env_args());
+    v
+}
+
+/// `pio check --severity <low|medium|high> [-e env]` — analysis filtered by the
+/// minimum defect severity.
+pub fn pio_check_severity(settings: &EmbeddedSettings, severity: &str) -> Vec<String> {
+    let mut v = vec![s(PIO), s("check"), s("--severity"), s(severity)];
+    v.extend(settings.pio_env_args());
+    v
 }
 
 /// `pio boards [query]` — the PlatformIO Board Explorer. Empty query lists all.
 pub fn pio_boards(query: &str) -> Vec<String> {
     let mut v = vec![s(PIO), s("boards")];
+    if !query.trim().is_empty() {
+        v.push(s(query));
+    }
+    v
+}
+
+/// `pio boards --installed [query]` — only boards from installed platforms.
+pub fn pio_boards_installed(query: &str) -> Vec<String> {
+    let mut v = vec![s(PIO), s("boards"), s("--installed")];
     if !query.trim().is_empty() {
         v.push(s(query));
     }
@@ -457,9 +552,11 @@ pub fn pio_pkg_show(pkg: &str) -> Vec<String> {
     vec![s(PIO), s("pkg"), s("show"), s(pkg)]
 }
 
-/// `pio debug` — the PlatformIO Unified Debugger for the project.
-pub fn pio_debug() -> Vec<String> {
-    vec![s(PIO), s("debug")]
+/// `pio debug [-e env]` — the PlatformIO Unified Debugger for the project.
+pub fn pio_debug(settings: &EmbeddedSettings) -> Vec<String> {
+    let mut v = vec![s(PIO), s("debug")];
+    v.extend(settings.pio_env_args());
+    v
 }
 
 /// `pio upgrade` — upgrade PlatformIO Core itself.
@@ -467,12 +564,21 @@ pub fn pio_upgrade() -> Vec<String> {
     vec![s(PIO), s("upgrade")]
 }
 
-/// `pio run -t <target>` — a built-in PlatformIO build target. Covers the
-/// report targets (`size`, `envdump`, `compiledb`, `buildfs`, `cleanall`) and
-/// the flashing targets (`uploadfs`, `uploadeep`, `bootloader`, `fuses`,
+/// `pio run -t <target> [-e env]` — a built-in PlatformIO build target. Covers
+/// the report targets (`size`, `envdump`, `compiledb`, `buildfs`, `cleanall`)
+/// and the flashing targets (`uploadfs`, `uploadeep`, `bootloader`, `fuses`,
 /// `nobuild`). Verified against `pio run --list-targets` on PlatformIO 6.1.19.
-pub fn pio_run_target(target: &str) -> Vec<String> {
-    vec![s(PIO), s("run"), s("-t"), s(target)]
+pub fn pio_run_target(settings: &EmbeddedSettings, target: &str) -> Vec<String> {
+    let mut v = vec![s(PIO), s("run"), s("-t"), s(target)];
+    v.extend(settings.pio_env_args());
+    v
+}
+
+/// `pio run --list-targets [-e env]` — enumerate the project's build targets.
+pub fn pio_list_targets(settings: &EmbeddedSettings) -> Vec<String> {
+    let mut v = vec![s(PIO), s("run"), s("--list-targets")];
+    v.extend(settings.pio_env_args());
+    v
 }
 
 /// `pio project config` — the project's computed configuration (all envs).
@@ -498,6 +604,12 @@ pub fn pio_pkg_exec(args: &[String]) -> Vec<String> {
 /// (the PlatformIO equivalent of `arduino-cli core install`).
 pub fn pio_platform_install(spec: &str) -> Vec<String> {
     vec![s(PIO), s("pkg"), s("install"), s("-g"), s("-p"), s(spec)]
+}
+
+/// `pio pkg install -g -t <spec>` — install a tool package globally
+/// (compilers, uploaders, debuggers).
+pub fn pio_tool_install(spec: &str) -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("install"), s("-g"), s("-t"), s(spec)]
 }
 
 /// `pio pkg pack` — build a tarball of the current package (registry authoring).
@@ -589,6 +701,36 @@ pub fn pio_account_show() -> Vec<String> {
 /// `pio account token` — print (or regenerate) the account auth token.
 pub fn pio_account_token() -> Vec<String> {
     vec![s(PIO), s("account"), s("token")]
+}
+
+/// `pio settings reset` — restore PlatformIO Core settings to their defaults.
+pub fn pio_settings_reset() -> Vec<String> {
+    vec![s(PIO), s("settings"), s("reset")]
+}
+
+/// `pio system completion <shell>` — emit a shell completion script
+/// (`bash`/`zsh`/`fish`/`powershell`).
+pub fn pio_system_completion(shell: &str) -> Vec<String> {
+    vec![s(PIO), s("system"), s("completion"), s(shell)]
+}
+
+/// `pio ci <argv…>` — build a standalone source tree in an isolated project
+/// (needs at least `-b <board>` and a source path in `args`).
+pub fn pio_ci(args: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("ci")];
+    v.extend(args.iter().cloned());
+    v
+}
+
+/// Generic `pio <group> <sub> [args…]` builder for the cloud-account command
+/// families (`org`, `team`, `access`, and the `account` lifecycle) whose leaves
+/// take user-supplied positional arguments (org/team names, member e-mails,
+/// resource specs). Keeping one parameterised builder avoids inventing flag
+/// shapes for commands whose `--help` needs the PlatformIO cloud to resolve.
+pub fn pio_sub(group: &str, sub: &str, args: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s(group), s(sub)];
+    v.extend(args.iter().cloned());
+    v
 }
 
 /// POSIX-quote an argv into a single shell command line, so paths with spaces
@@ -687,6 +829,20 @@ pub fn parse_port_list(json: &str) -> Vec<PortEntry> {
         .collect()
 }
 
+/// Parse the `[env:<name>]` section headers from a `platformio.ini`, in file
+/// order — the build environments the user can select with `:pio-env`.
+pub fn parse_pio_envs(ini: &str) -> Vec<String> {
+    ini.lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            line.strip_prefix("[env:")
+                .and_then(|rest| rest.strip_suffix(']'))
+                .map(|name| name.trim().to_string())
+        })
+        .filter(|name| !name.is_empty())
+        .collect()
+}
+
 /// Heuristic: does `dir` (or an ancestor) look like a PlatformIO project?
 pub fn is_platformio_project(dir: &Path) -> bool {
     let mut cur = Some(dir);
@@ -710,6 +866,7 @@ mod tests {
             port: "/dev/cu.usbmodem1401".into(),
             baud: 115200,
             sketch: String::new(),
+            ..Default::default()
         }
     }
 
@@ -852,9 +1009,10 @@ mod tests {
 
     #[test]
     fn pio_run_targets_and_pkg() {
-        assert_eq!(pio_clean(), ["pio", "run", "-t", "clean"]);
-        assert_eq!(pio_test(), ["pio", "test"]);
-        assert_eq!(pio_check(), ["pio", "check"]);
+        let st = settings();
+        assert_eq!(pio_clean(&st), ["pio", "run", "-t", "clean"]);
+        assert_eq!(pio_test(&st), ["pio", "test"]);
+        assert_eq!(pio_check(&st), ["pio", "check"]);
         assert_eq!(pio_pkg_list(), ["pio", "pkg", "list"]);
         assert_eq!(pio_pkg_uninstall("Adafruit GFX"), ["pio", "pkg", "uninstall", "-l", "Adafruit GFX"]);
         assert_eq!(pio_pkg_update(), ["pio", "pkg", "update"]);
@@ -892,16 +1050,86 @@ mod tests {
         assert_eq!(pio_pkg_search("Adafruit"), ["pio", "pkg", "search", "Adafruit"]);
         assert_eq!(pio_pkg_outdated(), ["pio", "pkg", "outdated"]);
         assert_eq!(pio_pkg_show("Servo"), ["pio", "pkg", "show", "Servo"]);
-        assert_eq!(pio_debug(), ["pio", "debug"]);
+        assert_eq!(pio_debug(&settings()), ["pio", "debug"]);
         assert_eq!(pio_upgrade(), ["pio", "upgrade"]);
     }
 
     #[test]
     fn pio_run_targets_build_argv() {
-        assert_eq!(pio_run_target("size"), ["pio", "run", "-t", "size"]);
-        assert_eq!(pio_run_target("compiledb"), ["pio", "run", "-t", "compiledb"]);
-        assert_eq!(pio_run_target("uploadfs"), ["pio", "run", "-t", "uploadfs"]);
-        assert_eq!(pio_run_target("nobuild"), ["pio", "run", "-t", "nobuild"]);
+        let st = settings();
+        assert_eq!(pio_run_target(&st, "size"), ["pio", "run", "-t", "size"]);
+        assert_eq!(pio_run_target(&st, "compiledb"), ["pio", "run", "-t", "compiledb"]);
+        assert_eq!(pio_run_target(&st, "uploadfs"), ["pio", "run", "-t", "uploadfs"]);
+        assert_eq!(pio_run_target(&st, "nobuild"), ["pio", "run", "-t", "nobuild"]);
+    }
+
+    #[test]
+    fn pio_env_threads_into_project_actions() {
+        let mut st = settings();
+        st.env = "esp32dev".into();
+        assert_eq!(pio_build(&st), ["pio", "run", "-e", "esp32dev"]);
+        assert_eq!(pio_upload(&st), ["pio", "run", "-t", "upload", "-e", "esp32dev"]);
+        assert_eq!(pio_clean(&st), ["pio", "run", "-t", "clean", "-e", "esp32dev"]);
+        assert_eq!(pio_test(&st), ["pio", "test", "-e", "esp32dev"]);
+        assert_eq!(pio_check(&st), ["pio", "check", "-e", "esp32dev"]);
+        assert_eq!(pio_debug(&st), ["pio", "debug", "-e", "esp32dev"]);
+        assert_eq!(pio_run_target(&st, "size"), ["pio", "run", "-t", "size", "-e", "esp32dev"]);
+        // Empty env adds no flag.
+        let st = settings();
+        assert_eq!(pio_build(&st), ["pio", "run"]);
+        assert!(st.pio_env_args().is_empty());
+    }
+
+    #[test]
+    fn pio_monitor_carries_filters_eol_parity_env() {
+        let mut st = settings();
+        st.filters = vec!["time".into(), "log2file".into()];
+        st.eol = "LF".into();
+        st.parity = "E".into();
+        st.env = "uno".into();
+        let argv = pio_monitor(&st);
+        assert!(argv.windows(2).any(|w| w == ["-f", "time"]));
+        assert!(argv.windows(2).any(|w| w == ["-f", "log2file"]));
+        assert!(argv.windows(2).any(|w| w == ["--eol", "LF"]));
+        assert!(argv.windows(2).any(|w| w == ["--parity", "E"]));
+        assert!(argv.windows(2).any(|w| w == ["-e", "uno"]));
+    }
+
+    #[test]
+    fn pio_extra_build_and_maintenance_subcommands() {
+        let st = settings();
+        assert_eq!(pio_list_targets(&st), ["pio", "run", "--list-targets"]);
+        assert_eq!(pio_list_tests(&st), ["pio", "test", "--list-tests"]);
+        assert_eq!(pio_test_filter(&st, "sensor*"), ["pio", "test", "-f", "sensor*"]);
+        assert_eq!(pio_check_severity(&st, "high"), ["pio", "check", "--severity", "high"]);
+        assert_eq!(pio_boards_installed(""), ["pio", "boards", "--installed"]);
+        assert_eq!(pio_boards_installed("uno"), ["pio", "boards", "--installed", "uno"]);
+        assert_eq!(pio_tool_install("tool-openocd"), ["pio", "pkg", "install", "-g", "-t", "tool-openocd"]);
+        assert_eq!(pio_settings_reset(), ["pio", "settings", "reset"]);
+        assert_eq!(pio_system_completion("zsh"), ["pio", "system", "completion", "zsh"]);
+        assert_eq!(pio_remote_device_monitor(), ["pio", "remote", "device", "monitor"]);
+    }
+
+    #[test]
+    fn parse_pio_envs_extracts_section_names() {
+        let ini = "[platformio]\ndefault_envs = uno\n\n[env:uno]\nboard = uno\n\n[env:esp32dev]\nboard = esp32dev\n\n[common]\nx = 1\n";
+        assert_eq!(parse_pio_envs(ini), ["uno", "esp32dev"]);
+        assert!(parse_pio_envs("[platformio]\n").is_empty());
+    }
+
+    #[test]
+    fn pio_ci_and_sub_passthrough() {
+        let ci = pio_ci(&["-b".to_string(), "uno".to_string(), "src/main.cpp".to_string()]);
+        assert_eq!(ci, ["pio", "ci", "-b", "uno", "src/main.cpp"]);
+        assert_eq!(
+            pio_sub("org", "create", &["MyOrg".to_string()]),
+            ["pio", "org", "create", "MyOrg"]
+        );
+        assert_eq!(pio_sub("access", "list", &[]), ["pio", "access", "list"]);
+        assert_eq!(
+            pio_sub("team", "add", &["MyOrg:devs".to_string(), "user@x.com".to_string()]),
+            ["pio", "team", "add", "MyOrg:devs", "user@x.com"]
+        );
     }
 
     #[test]
