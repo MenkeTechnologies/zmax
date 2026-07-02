@@ -18,6 +18,7 @@
 use std::cell::Cell;
 use std::ptr;
 
+use elisprs::host::ElispHost;
 use zemacs_core::{Selection, Tendril, Transaction};
 
 use crate::compositor;
@@ -95,90 +96,6 @@ pub(super) fn api_command(name: &str, args: &[String]) -> Result<(), String> {
         crate::commands::typed::execute_command(cx, cmd, &joined, PromptEvent::Validate)
             .map_err(|e| e.to_string())
     })?
-}
-
-/// Insert text at each cursor (primary + secondaries), as one undo step.
-pub(super) fn api_insert(text: &str) -> Result<(), String> {
-    with_cx(|cx| {
-        let (view, doc) = current!(cx.editor);
-        let sel = doc.selection(view.id).clone();
-        let tendril: Tendril = text.into();
-        let tx = Transaction::change_by_selection(doc.text(), &sel, |range| {
-            (range.from(), range.from(), Some(tendril.clone()))
-        });
-        doc.apply(&tx, view.id);
-    })
-}
-
-/// Whole-buffer text.
-pub(super) fn api_buffer_string() -> Result<String, String> {
-    with_cx(|cx| {
-        let (view, doc) = current!(cx.editor);
-        let _ = view;
-        doc.text().to_string()
-    })
-}
-
-/// Emacs-style point (1-based) of the primary cursor.
-pub(super) fn api_point() -> Result<i64, String> {
-    with_cx(|cx| {
-        let (view, doc) = current!(cx.editor);
-        let cursor = doc
-            .selection(view.id)
-            .primary()
-            .cursor(doc.text().slice(..));
-        cursor as i64 + 1
-    })
-}
-
-/// Smallest valid point (always 1).
-pub(super) fn api_point_min() -> Result<i64, String> {
-    Ok(1)
-}
-
-/// One past the last character (Emacs `point-max`).
-pub(super) fn api_point_max() -> Result<i64, String> {
-    with_cx(|cx| {
-        let (view, doc) = current!(cx.editor);
-        let _ = view;
-        doc.text().len_chars() as i64 + 1
-    })
-}
-
-/// Move the primary cursor to a 1-based position.
-pub(super) fn api_goto_char(pos: i64) -> Result<(), String> {
-    with_cx(|cx| {
-        let (view, doc) = current!(cx.editor);
-        let max = doc.text().len_chars();
-        let idx = (pos.max(1) as usize - 1).min(max);
-        doc.set_selection(view.id, Selection::point(idx));
-    })
-}
-
-/// Text between two 1-based positions `[start, end)`.
-pub(super) fn api_buffer_substring(start: i64, end: i64) -> Result<String, String> {
-    with_cx(|cx| {
-        let (view, doc) = current!(cx.editor);
-        let _ = view;
-        let max = doc.text().len_chars();
-        let a = (start.max(1) as usize - 1).min(max);
-        let b = (end.max(1) as usize - 1).min(max);
-        let (a, b) = if a <= b { (a, b) } else { (b, a) };
-        doc.text().slice(a..b).to_string()
-    })
-}
-
-/// Delete the region between two 1-based positions `[start, end)`.
-pub(super) fn api_delete_region(start: i64, end: i64) -> Result<(), String> {
-    with_cx(|cx| {
-        let (view, doc) = current!(cx.editor);
-        let max = doc.text().len_chars();
-        let a = (start.max(1) as usize - 1).min(max);
-        let b = (end.max(1) as usize - 1).min(max);
-        let (a, b) = if a <= b { (a, b) } else { (b, a) };
-        let tx = Transaction::change(doc.text(), std::iter::once((a, b, None)));
-        doc.apply(&tx, view.id);
-    })
 }
 
 // ── Line-oriented editor API (Vimscript getline/setline/cursor/…) ──────────
@@ -286,14 +203,70 @@ pub(super) fn api_buf_name() -> Result<String, String> {
     })
 }
 
+// ── elisp ⇄ live-buffer sync ────────────────────────────────────────────────
+//
+// elisprs owns a full set of buffer builtins (point, insert, forward-line,
+// search-forward, re-search-forward, looking-at, skip-chars-forward,
+// forward-word, replace-match, …) that operate on its own in-memory
+// `EditBuffer` (a `Vec<char>` + 1-based point). Rather than re-implement each of
+// those against the rope — and leave the un-ported ones silently editing a
+// phantom empty buffer — we mirror the live buffer into that `EditBuffer` before
+// an eval and flush it back afterwards. Every current and future elisp buffer
+// builtin then drives the live buffer for free.
+
+/// Copy the live current buffer's text and primary-cursor point (1-based) into
+/// the elisp interpreter's current `EditBuffer`. Takes the host by `&mut` (never
+/// `with_host`) so it is safe to call from inside a subr, which already holds
+/// the host borrow. Best-effort: a null context (no active eval) is a no-op.
+pub(super) fn load_buffer_into_host(h: &mut ElispHost) {
+    let loaded = with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let t = doc.text();
+        let cursor = doc.selection(view.id).primary().cursor(t.slice(..));
+        (t.to_string(), cursor + 1)
+    });
+    if let Ok((text, point)) = loaded {
+        let buf = h.cur_buf();
+        buf.text = text.chars().collect();
+        buf.point = point.max(1);
+    }
+}
+
+/// Flush the elisp `EditBuffer` back to the live buffer: if the text changed,
+/// replace the whole buffer as one undo step; always move the primary cursor to
+/// elisp's point. Whole-buffer replacement (rather than a minimal diff) keeps
+/// this simple at the cost of collapsing an eval's edits into a single undo
+/// step — acceptable for `M-x eval` / scripted commands.
+pub(super) fn flush_host_into_buffer(h: &mut ElispHost) {
+    let new_text: String = h.cur_buf().text.iter().collect();
+    let point = h.cur_buf().point;
+    let _ = with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        if doc.text() != &new_text {
+            let len = doc.text().len_chars();
+            let tendril: Tendril = new_text.as_str().into();
+            let tx = Transaction::change(doc.text(), std::iter::once((0, len, Some(tendril))));
+            doc.apply(&tx, view.id);
+        }
+        let max = doc.text().len_chars();
+        let idx = point.saturating_sub(1).min(max);
+        doc.set_selection(view.id, Selection::point(idx));
+    });
+}
+
 // ── Public entry points ────────────────────────────────────────────────────
 
 /// Evaluate an elisp source string against the live editor. Returns the printed
-/// result on success. Runs synchronously on the editor thread.
+/// result on success. Runs synchronously on the editor thread. The live buffer
+/// is mirrored into elisprs's `EditBuffer` before the eval and flushed back
+/// after, so elisp's native buffer builtins act on the live buffer. On an eval
+/// error the buffer is left untouched (no partial flush).
 pub fn eval_elisp(cx: &mut compositor::Context, src: &str) -> Result<String, String> {
     let _guard = CxGuard::new(cx);
     elisp::ensure_builtins();
+    elisprs::with_host(load_buffer_into_host);
     let value = elisprs::eval_str(src)?;
+    elisprs::with_host(flush_host_into_buffer);
     Ok(elisprs::print(&value, true))
 }
 
@@ -465,7 +438,7 @@ mod tests {
     #[test]
     fn api_without_context_errors() {
         assert!(super::api_message("hi").is_err());
-        assert!(super::api_point().is_err());
+        assert!(super::api_error("boom").is_err());
     }
 
     /// The embedded vimlrs interpreter links, evaluates, and captures `:echo`.
