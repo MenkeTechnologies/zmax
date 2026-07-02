@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-a00debf3.js";
+            window.path_to_searchindex_js = "searchindex-bc622678.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1619,6 +1619,17 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-devices</code>, <code>:pio-device-list</code></td><td>Pick a serial port from <code>pio device list</code> and set it for this project.</td></tr>
 <tr><td><code>:pio-device-logical</code>, <code>:platformio-device-logical</code></td><td>List logical (disk) devices (<code>pio device list --logical</code>).</td></tr>
 <tr><td><code>:pio-device-mdns</code>, <code>:platformio-device-mdns</code></td><td>List multicast-DNS / network (OTA) devices (<code>pio device list --mdns</code>).</td></tr>
+<tr><td><code>:pio-device-serial</code>, <code>:platformio-device-serial</code></td><td>List serial ports only (<code>pio device list --serial</code>).</td></tr>
+<tr><td><code>:pio-pkg-list-libraries</code>, <code>:platformio-pkg-list-libraries</code>, <code>:pio-libs-only</code></td><td>List installed libraries only (<code>pio pkg list --only-libraries</code>).</td></tr>
+<tr><td><code>:pio-pkg-list-platforms</code>, <code>:platformio-pkg-list-platforms</code></td><td>List installed platforms only (<code>pio pkg list --only-platforms</code>).</td></tr>
+<tr><td><code>:pio-pkg-list-tools</code>, <code>:platformio-pkg-list-tools</code></td><td>List installed tool packages only (<code>pio pkg list --only-tools</code>).</td></tr>
+<tr><td><code>:pio-test-json</code>, <code>:platformio-test-json</code></td><td>Unit-test results as JSON (<code>pio test --json-output</code>), shown in a scratch buffer.</td></tr>
+<tr><td><code>:pio-project-config-json</code>, <code>:platformio-project-config-json</code></td><td>Computed project configuration as JSON (<code>pio project config --json-output</code>).</td></tr>
+<tr><td><code>:pio-project-metadata-json</code>, <code>:platformio-project-metadata-json</code></td><td>IDE/LSP metadata as JSON (<code>pio project metadata --json-output</code>).</td></tr>
+<tr><td><code>:pio-system-info-json</code>, <code>:platformio-system-info-json</code></td><td>System-wide PlatformIO information as JSON (<code>pio system info --json-output</code>).</td></tr>
+<tr><td><code>:pio-pkg-search-page</code>, <code>:platformio-pkg-search-page</code></td><td>A specific page of registry search results (<code>pio pkg search &lt;query&gt; --page &lt;n&gt;</code>).</td></tr>
+<tr><td><code>:pio-pkg-unpublish-undo</code>, <code>:platformio-pkg-unpublish-undo</code></td><td>Restore a previously unpublished package (<code>pio pkg unpublish &lt;pkg&gt; --undo</code>).</td></tr>
+<tr><td><code>:pio-init-no-deps</code>, <code>:platformio-init-no-deps</code></td><td>Scaffold a project without installing dependencies (<code>pio project init --board &lt;board&gt; --no-install-dependencies</code>).</td></tr>
 <tr><td><code>:pio-home</code>, <code>:platformio-home</code></td><td>Launch the PlatformIO Home GUI (<code>pio home</code>), live in a terminal panel; extra args tune the server.</td></tr>
 <tr><td><code>:pio-init</code>, <code>:platformio-init</code></td><td>Scaffold a PlatformIO project for a board (<code>pio project init --board &lt;id&gt;</code>).</td></tr>
 <tr><td><code>:embedded-baud</code>, <code>:serial-baud</code></td><td>Set the serial monitor baud rate for this project (e.g. 9600, 115200).</td></tr>
@@ -6450,7 +6461,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>555</strong> (8.1%)</li>
 <li>Absent: <strong>3318</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 951 static commands, 1400 typable <code>:</code> commands, 2636 default keybindings</li>
+<li>zemacs source surface: 951 static commands, 1423 typable <code>:</code> commands, 2636 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
