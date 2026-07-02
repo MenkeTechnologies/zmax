@@ -2171,6 +2171,10 @@ impl Ide {
             return area;
         }
         self.refresh(cx);
+        // Keep the project tree's dotfile visibility in sync with the config
+        // (`editor.file-explorer.hidden`; false = show dotfiles, the default).
+        self.project
+            .set_show_hidden(!cx.editor.config().file_explorer.hidden);
 
         let full = area;
         let mut rest = area;

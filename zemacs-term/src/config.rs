@@ -208,6 +208,11 @@ keymap = "{keymap}"
 [editor.file-picker]
 # hidden = true
 
+[editor.file-explorer]
+# Show dotfiles in the project file tree. Defaults to false (dotfiles shown);
+# set to true to hide files and directories whose name starts with a dot.
+# hidden = false
+
 [editor.statusline]
 # left = ["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator"]
 "#;

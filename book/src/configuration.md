@@ -27,6 +27,11 @@ select = "underline"
 
 [editor.file-picker]
 hidden = false
+
+# The project file tree (sidebar) shows dotfiles by default; set hidden = true
+# to hide names starting with a dot.
+[editor.file-explorer]
+hidden = false
 ```
 
 You can use a custom configuration file by specifying it with the `-c` or

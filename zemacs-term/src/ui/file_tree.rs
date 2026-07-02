@@ -40,6 +40,9 @@ pub struct FileTree {
     /// Rows the filter box occupies at the top of the tree area (0 when hidden).
     /// Recorded each render so mouse hit-testing offsets the list correctly.
     list_offset: u16,
+    /// Whether dotfiles are shown (from `editor.file-explorer.hidden`, inverted).
+    /// Defaults to showing them; the owning view syncs this from config.
+    show_hidden: bool,
 }
 
 impl FileTree {
@@ -53,10 +56,21 @@ impl FileTree {
             filter: String::new(),
             filtering: false,
             list_offset: 0,
+            show_hidden: true,
         };
         tree.expanded.insert(root);
         tree.rebuild();
         tree
+    }
+
+    /// Set whether dotfiles are shown (from `editor.file-explorer.hidden`),
+    /// rebuilding the tree if the value changed. Called by the owning view each
+    /// render so config edits take effect live.
+    pub fn set_show_hidden(&mut self, show: bool) {
+        if self.show_hidden != show {
+            self.show_hidden = show;
+            self.rebuild();
+        }
     }
 
     /// The workspace root the tree is rooted at (for root-level New actions).
@@ -78,8 +92,9 @@ impl FileTree {
         self.rebuild();
     }
 
-    /// Directory entries, dirs first, then case-insensitive by name; dotfiles skipped.
-    fn read_dir_sorted(dir: &Path) -> Vec<(PathBuf, String, bool)> {
+    /// Directory entries, dirs first, then case-insensitive by name. Dotfiles are
+    /// included unless `show_hidden` is false (`editor.file-explorer.hidden`).
+    fn read_dir_sorted(dir: &Path, show_hidden: bool) -> Vec<(PathBuf, String, bool)> {
         let mut entries: Vec<(PathBuf, String, bool)> = std::fs::read_dir(dir)
             .into_iter()
             .flatten()
@@ -90,7 +105,7 @@ impl FileTree {
                 let name = e.file_name().to_string_lossy().into_owned();
                 (path, name, is_dir)
             })
-            .filter(|(_, name, _)| !name.starts_with('.'))
+            .filter(|(_, name, _)| show_hidden || !name.starts_with('.'))
             .collect();
         entries.sort_by(|a, b| {
             b.2.cmp(&a.2)
@@ -106,8 +121,15 @@ impl FileTree {
     }
 
     fn rebuild(&mut self) {
-        fn walk(dir: &Path, depth: usize, expanded: &HashSet<PathBuf>, out: &mut Vec<Row>) {
-            for (path, name, is_dir) in FileTree::read_dir_sorted(dir) {
+        let show_hidden = self.show_hidden;
+        fn walk(
+            dir: &Path,
+            depth: usize,
+            expanded: &HashSet<PathBuf>,
+            out: &mut Vec<Row>,
+            show_hidden: bool,
+        ) {
+            for (path, name, is_dir) in FileTree::read_dir_sorted(dir, show_hidden) {
                 let exp = is_dir && expanded.contains(&path);
                 out.push(Row {
                     path: path.clone(),
@@ -117,7 +139,7 @@ impl FileTree {
                     expanded: exp,
                 });
                 if exp {
-                    walk(&path, depth + 1, expanded, out);
+                    walk(&path, depth + 1, expanded, out, show_hidden);
                 }
             }
         }
@@ -142,16 +164,22 @@ impl FileTree {
             }
             qc.peek().is_none()
         }
-        fn walk_filtered(dir: &Path, depth: usize, q: &str, out: &mut Vec<Row>) -> bool {
+        fn walk_filtered(
+            dir: &Path,
+            depth: usize,
+            q: &str,
+            out: &mut Vec<Row>,
+            show_hidden: bool,
+        ) -> bool {
             if depth > 16 {
                 return false;
             }
             let mut any = false;
-            for (path, name, is_dir) in FileTree::read_dir_sorted(dir) {
+            for (path, name, is_dir) in FileTree::read_dir_sorted(dir, show_hidden) {
                 if is_dir {
                     let name_match = fuzzy(&name, q);
                     let mut kids = Vec::new();
-                    let child_match = walk_filtered(&path, depth + 1, q, &mut kids);
+                    let child_match = walk_filtered(&path, depth + 1, q, &mut kids, show_hidden);
                     if name_match || child_match {
                         out.push(Row {
                             path,
@@ -180,9 +208,9 @@ impl FileTree {
         let mut rows = Vec::new();
         let q = self.filter.to_lowercase();
         if q.is_empty() {
-            walk(&self.root, 0, &self.expanded, &mut rows);
+            walk(&self.root, 0, &self.expanded, &mut rows, show_hidden);
         } else {
-            walk_filtered(&self.root, 0, &q, &mut rows);
+            walk_filtered(&self.root, 0, &q, &mut rows, show_hidden);
         }
         self.rows = rows;
         if self.selected >= self.rows.len() {
@@ -254,7 +282,8 @@ impl FileTree {
     /// Expand every (non-hidden, non-noise) directory under the root — the
     /// JetBrains "Expand All" toolbar button. Bounded so a huge tree can't stall.
     pub fn expand_all(&mut self) {
-        fn collect(dir: &Path, out: &mut HashSet<PathBuf>, budget: &mut usize) {
+        let show_hidden = self.show_hidden;
+        fn collect(dir: &Path, out: &mut HashSet<PathBuf>, budget: &mut usize, show_hidden: bool) {
             if *budget == 0 {
                 return;
             }
@@ -268,7 +297,9 @@ impl FileTree {
                 }
                 let name = entry.file_name();
                 let name = name.to_string_lossy();
-                if name.starts_with('.')
+                // Always skip heavy build/dependency dirs; skip dotfile dirs only
+                // when hidden files are hidden.
+                if (!show_hidden && name.starts_with('.'))
                     || matches!(
                         name.as_ref(),
                         "target" | "node_modules" | "dist" | "build" | ".cache"
@@ -278,12 +309,12 @@ impl FileTree {
                 }
                 out.insert(p.clone());
                 *budget -= 1;
-                collect(&p, out, budget);
+                collect(&p, out, budget, show_hidden);
             }
         }
         let mut budget = 5000usize;
         let root = self.root.clone();
-        collect(&root, &mut self.expanded, &mut budget);
+        collect(&root, &mut self.expanded, &mut budget, show_hidden);
         self.expanded.insert(root);
         self.rebuild();
     }
@@ -620,6 +651,38 @@ mod tests {
         assert!(!tree.is_filtering());
         let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
         assert!(names.contains(&"beta.txt"), "filter cleared: {names:?}");
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn dotfiles_shown_by_default_and_toggle_via_config() {
+        let root = std::env::temp_dir().join(format!("zemacs_dot_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join(".env"), "").unwrap();
+        std::fs::write(root.join("visible.rs"), "").unwrap();
+
+        // Default: dotfiles are shown.
+        let mut tree = FileTree::new(root.clone());
+        let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
+        assert!(
+            names.contains(&".env"),
+            "dotfile shown by default: {names:?}"
+        );
+        assert!(names.contains(&"visible.rs"), "rows: {names:?}");
+
+        // Turning on `file-explorer.hidden` (show_hidden = false) hides them.
+        tree.set_show_hidden(false);
+        let names: Vec<&str> = tree.rows.iter().map(|r| r.name.as_str()).collect();
+        assert!(
+            !names.contains(&".env"),
+            "dotfile hidden when configured: {names:?}"
+        );
+        assert!(
+            names.contains(&"visible.rs"),
+            "non-dotfile still shown: {names:?}"
+        );
 
         let _ = std::fs::remove_dir_all(&root);
     }
