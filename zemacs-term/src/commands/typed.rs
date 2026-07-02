@@ -3778,6 +3778,433 @@ fn arduino_new_sketch(cx: &mut compositor::Context, args: Args, event: PromptEve
     Ok(())
 }
 
+/// Stream a read-only embedded backend command (board/core/lib listings) into
+/// the jumpable Run console. `in_project` prefixes `cd <sketch-dir>` for
+/// project-scoped `pio` calls that must run where `platformio.ini` lives.
+fn embedded_browse(cx: &mut compositor::Context, argv: Vec<String>, in_project: bool) {
+    let cmd = if in_project {
+        let dir = embedded::load().sketch_dir();
+        format!(
+            "cd {} && {}",
+            embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
+            embedded::shell_join(&argv)
+        )
+    } else {
+        embedded::shell_join(&argv)
+    };
+    spawn_into_run_console(cx, cmd);
+}
+
+/// `:arduino-compile-export` (alias `:aexport`) — Arduino IDE "Export Compiled
+/// Binary": compile and drop the built firmware into the sketch folder.
+fn arduino_compile_export(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_compile_export(&settings).map_err(|e| anyhow!(e))?;
+    run_compile(cx, &embedded::shell_join(&argv))
+}
+
+/// `:arduino-burn-bootloader` (alias `:arduino-bootloader`) — flash the
+/// bootloader to the selected board (Tools → Burn Bootloader).
+fn arduino_burn_bootloader(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_burn_bootloader(&settings).map_err(|e| anyhow!(e))?;
+    embedded_spawn_terminal(cx, argv, settings.sketch_dir());
+    Ok(())
+}
+
+/// `:arduino-board-info` (alias `:arduino-board-details`) — print the selected
+/// board's specs and menu options (Arduino IDE "Get Board Info").
+fn arduino_board_info(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    if settings.fqbn.is_empty() {
+        bail!("no board selected — run :arduino-boards to pick an FQBN");
+    }
+    embedded_browse(cx, embedded::arduino_board_details(&settings.fqbn), false);
+    Ok(())
+}
+
+/// `:arduino-core-search <query>` — browse the Boards Manager index.
+fn arduino_core_search(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let query = args.join(" ");
+    if query.trim().is_empty() {
+        bail!("usage: :arduino-core-search <query>  (e.g. esp32)");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_core_search(&query), false);
+    Ok(())
+}
+
+/// `:arduino-core-list` (alias `:arduino-cores`) — installed platforms.
+fn arduino_core_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_core_list(), false);
+    Ok(())
+}
+
+/// `:arduino-core-uninstall <package>` — remove a board-support core.
+fn arduino_core_uninstall(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pkg = args.join(" ");
+    if pkg.trim().is_empty() {
+        bail!("usage: :arduino-core-uninstall <package>  (e.g. arduino:avr)");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_capture(&embedded::arduino_core_uninstall(pkg.trim()))?;
+    cx.editor.set_status(format!("Uninstalled core `{}`", pkg.trim()));
+    Ok(())
+}
+
+/// `:arduino-core-update-index` (alias `:arduino-update-index`) — refresh the
+/// Boards Manager index.
+fn arduino_core_update_index(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_capture(&embedded::arduino_core_update_index())?;
+    cx.editor.set_status("Boards Manager index updated");
+    Ok(())
+}
+
+/// `:arduino-core-upgrade` — upgrade all installed platforms (live in a panel).
+fn arduino_core_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::arduino_core_upgrade(), root);
+    Ok(())
+}
+
+/// `:arduino-lib-list` (alias `:arduino-libs`) — installed libraries.
+fn arduino_lib_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_lib_list(), false);
+    Ok(())
+}
+
+/// `:arduino-lib-uninstall <name>` — remove an installed library.
+fn arduino_lib_uninstall(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    if name.trim().is_empty() {
+        bail!("usage: :arduino-lib-uninstall <name>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_capture(&embedded::arduino_lib_uninstall(name.trim()))?;
+    cx.editor.set_status(format!("Uninstalled library `{}`", name.trim()));
+    Ok(())
+}
+
+/// `:arduino-lib-upgrade` — upgrade all installed libraries (live in a panel).
+fn arduino_lib_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::arduino_lib_upgrade(), root);
+    Ok(())
+}
+
+/// `:arduino-lib-examples <name>` — list a library's example sketches.
+fn arduino_lib_examples(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    if name.trim().is_empty() {
+        bail!("usage: :arduino-lib-examples <name>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_lib_examples(name.trim()), false);
+    Ok(())
+}
+
+/// `:arduino-sketch-archive` (alias `:arduino-archive`) — zip the whole sketch
+/// (Arduino IDE Sketch → Archive Sketch).
+fn arduino_sketch_archive(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_capture(&embedded::arduino_sketch_archive(&dir))?;
+    cx.editor.set_status(format!("Archived sketch {}", dir.display()));
+    Ok(())
+}
+
+/// `:pio-clean` — remove PlatformIO build artifacts (`pio run -t clean`).
+fn pio_clean(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    let cmd = format!(
+        "cd {} && {}",
+        embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
+        embedded::shell_join(&embedded::pio_clean())
+    );
+    run_compile(cx, &cmd)
+}
+
+/// `:pio-test` — run the PlatformIO project's unit tests (`pio test`); failures
+/// land in the compilation list.
+fn pio_test(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    let cmd = format!(
+        "cd {} && {}",
+        embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
+        embedded::shell_join(&embedded::pio_test())
+    );
+    run_compile(cx, &cmd)
+}
+
+/// `:pio-check` — PlatformIO static code analysis (`pio check`); findings land
+/// in the compilation list.
+fn pio_check(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    let cmd = format!(
+        "cd {} && {}",
+        embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
+        embedded::shell_join(&embedded::pio_check())
+    );
+    run_compile(cx, &cmd)
+}
+
+/// `:pio-boards [query]` — the PlatformIO Board Explorer.
+fn pio_boards(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_boards(&args.join(" ")), false);
+    Ok(())
+}
+
+/// `:pio-lib-install <name>` (alias `:pio-pkg-install`) — add a library to the
+/// PlatformIO project (`pio pkg install -l`), live in a panel.
+fn pio_lib_install(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    if name.trim().is_empty() {
+        bail!("usage: :pio-lib-install <name>");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_lib_install(name.trim()), dir);
+    Ok(())
+}
+
+/// `:pio-lib-list` (alias `:pio-pkg-list`) — installed project packages.
+fn pio_lib_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_pkg_list(), true);
+    Ok(())
+}
+
+/// `:pio-lib-uninstall <name>` (alias `:pio-pkg-uninstall`) — remove a project
+/// library (`pio pkg uninstall -l`), live in a panel.
+fn pio_lib_uninstall(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    if name.trim().is_empty() {
+        bail!("usage: :pio-lib-uninstall <name>");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_pkg_uninstall(name.trim()), dir);
+    Ok(())
+}
+
+/// `:pio-lib-update` (alias `:pio-pkg-update`) — update installed project
+/// packages (`pio pkg update`), live in a panel.
+fn pio_lib_update(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_pkg_update(), dir);
+    Ok(())
+}
+
+/// `:arduino-update` — refresh the core *and* library indexes together
+/// (arduino-cli update).
+fn arduino_update(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_capture(&embedded::arduino_update())?;
+    cx.editor.set_status("Core and library indexes updated");
+    Ok(())
+}
+
+/// `:arduino-upgrade` — upgrade all installed cores *and* libraries, live in a
+/// terminal panel (arduino-cli upgrade).
+fn arduino_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::arduino_upgrade(), root);
+    Ok(())
+}
+
+/// `:arduino-outdated` — list cores and libraries with newer versions available.
+fn arduino_outdated(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_outdated(), false);
+    Ok(())
+}
+
+/// `:arduino-lib-deps <name>` — dependency status for a library.
+fn arduino_lib_deps(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    if name.trim().is_empty() {
+        bail!("usage: :arduino-lib-deps <name>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_lib_deps(name.trim()), false);
+    Ok(())
+}
+
+/// `:arduino-config` (alias `:arduino-config-dump`) — print the active
+/// arduino-cli configuration.
+fn arduino_config(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_config_dump(), false);
+    Ok(())
+}
+
+/// `:arduino-debug` — launch the arduino-cli debugger for the selected board,
+/// live in a terminal panel (needs a debug-capable board + programmer).
+fn arduino_debug(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_debug(&settings).map_err(|e| anyhow!(e))?;
+    embedded_spawn_terminal(cx, argv, settings.sketch_dir());
+    Ok(())
+}
+
+/// `:pio-lib-search <query>` (alias `:pio-pkg-search`) — search the PlatformIO
+/// registry (Library Manager).
+fn pio_lib_search(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let query = args.join(" ");
+    if query.trim().is_empty() {
+        bail!("usage: :pio-lib-search <query>");
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_pkg_search(query.trim()), false);
+    Ok(())
+}
+
+/// `:pio-lib-outdated` (alias `:pio-pkg-outdated`) — installed project packages
+/// with newer versions available.
+fn pio_lib_outdated(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_pkg_outdated(), true);
+    Ok(())
+}
+
+/// `:pio-lib-show <pkg>` (alias `:pio-pkg-show`) — registry details for a package.
+fn pio_lib_show(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pkg = args.join(" ");
+    if pkg.trim().is_empty() {
+        bail!("usage: :pio-lib-show <pkg>");
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_pkg_show(pkg.trim()), false);
+    Ok(())
+}
+
+/// `:pio-debug` — the PlatformIO Unified Debugger, live in a terminal panel.
+fn pio_debug(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_debug(), dir);
+    Ok(())
+}
+
+/// `:pio-upgrade` — upgrade PlatformIO Core itself, live in a terminal panel.
+fn pio_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_upgrade(), root);
+    Ok(())
+}
+
 /// Wrap `s` in single quotes for safe inclusion in a `/bin/sh -c` command line,
 /// escaping any embedded single quotes. Pure — unit tested.
 fn shell_single_quote(s: &str) -> String {
@@ -18448,7 +18875,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "arduino-upload",
         aliases: &["aupload"],
-        doc: "Build and flash the sketch to the connected board (arduino-cli upload), live in a terminal panel.",
+        doc: "Compile and flash the sketch to the connected board (arduino-cli compile --upload), live in a terminal panel.",
         fun: arduino_upload,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -18607,6 +19034,358 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-export",
+        aliases: &["aexport", "arduino-export"],
+        doc: "Compile and export the built binaries to the sketch folder (Arduino IDE Export Compiled Binary).",
+        fun: arduino_compile_export,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-burn-bootloader",
+        aliases: &["arduino-bootloader"],
+        doc: "Flash the bootloader to the selected board (Arduino IDE Burn Bootloader), live in a terminal panel.",
+        fun: arduino_burn_bootloader,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-board-info",
+        aliases: &["arduino-board-details"],
+        doc: "Print the selected board's specs and menu options (Arduino IDE Get Board Info).",
+        fun: arduino_board_info,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-core-search",
+        aliases: &["arduino-boards-manager"],
+        doc: "Search the Boards Manager index for a core (Arduino IDE Boards Manager).",
+        fun: arduino_core_search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-core-list",
+        aliases: &["arduino-cores"],
+        doc: "List installed board-support cores (Boards Manager, installed tab).",
+        fun: arduino_core_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-core-uninstall",
+        aliases: &[],
+        doc: "Uninstall a board-support core, e.g. `arduino:avr`.",
+        fun: arduino_core_uninstall,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-core-update-index",
+        aliases: &["arduino-update-index"],
+        doc: "Refresh the Boards Manager package index (arduino-cli core update-index).",
+        fun: arduino_core_update_index,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-core-upgrade",
+        aliases: &[],
+        doc: "Upgrade all installed board-support cores (arduino-cli core upgrade), live in a terminal panel.",
+        fun: arduino_core_upgrade,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-list",
+        aliases: &["arduino-libs"],
+        doc: "List installed Arduino libraries (Library Manager, installed tab).",
+        fun: arduino_lib_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-uninstall",
+        aliases: &[],
+        doc: "Uninstall an Arduino library by name (arduino-cli lib uninstall).",
+        fun: arduino_lib_uninstall,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-upgrade",
+        aliases: &[],
+        doc: "Upgrade all installed Arduino libraries (arduino-cli lib upgrade), live in a terminal panel.",
+        fun: arduino_lib_upgrade,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-examples",
+        aliases: &[],
+        doc: "List a library's example sketches (arduino-cli lib examples <name>).",
+        fun: arduino_lib_examples,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-sketch-archive",
+        aliases: &["arduino-archive"],
+        doc: "Zip the whole sketch (Arduino IDE Sketch → Archive Sketch).",
+        fun: arduino_sketch_archive,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-clean",
+        aliases: &["platformio-clean"],
+        doc: "Remove PlatformIO build artifacts (`pio run -t clean`); output goes to the compilation list.",
+        fun: pio_clean,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test",
+        aliases: &["platformio-test"],
+        doc: "Run the PlatformIO project's unit tests (`pio test`); failures go to the compilation list.",
+        fun: pio_test,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-check",
+        aliases: &["platformio-check"],
+        doc: "PlatformIO static code analysis (`pio check`); findings go to the compilation list.",
+        fun: pio_check,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-boards",
+        aliases: &["platformio-boards"],
+        doc: "The PlatformIO Board Explorer (`pio boards [query]`); output in the Run console.",
+        fun: pio_boards,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-lib-install",
+        aliases: &["pio-pkg-install", "platformio-lib-install"],
+        doc: "Add a library to the PlatformIO project (`pio pkg install -l <name>`), live in a terminal panel.",
+        fun: pio_lib_install,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-lib-list",
+        aliases: &["pio-pkg-list", "pio-libs"],
+        doc: "List installed PlatformIO project packages (`pio pkg list`).",
+        fun: pio_lib_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-lib-uninstall",
+        aliases: &["pio-pkg-uninstall"],
+        doc: "Remove a PlatformIO project library (`pio pkg uninstall -l <name>`), live in a terminal panel.",
+        fun: pio_lib_uninstall,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-lib-update",
+        aliases: &["pio-pkg-update"],
+        doc: "Update installed PlatformIO project packages (`pio pkg update`), live in a terminal panel.",
+        fun: pio_lib_update,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-update",
+        aliases: &[],
+        doc: "Refresh the core and library indexes together (arduino-cli update).",
+        fun: arduino_update,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-upgrade",
+        aliases: &[],
+        doc: "Upgrade all installed cores and libraries (arduino-cli upgrade), live in a terminal panel.",
+        fun: arduino_upgrade,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-outdated",
+        aliases: &[],
+        doc: "List cores and libraries with newer versions available (arduino-cli outdated).",
+        fun: arduino_outdated,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-deps",
+        aliases: &[],
+        doc: "Show dependency status for a library (arduino-cli lib deps <name>).",
+        fun: arduino_lib_deps,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-config",
+        aliases: &["arduino-config-dump"],
+        doc: "Print the active arduino-cli configuration (arduino-cli config dump).",
+        fun: arduino_config,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-debug",
+        aliases: &[],
+        doc: "Launch the arduino-cli debugger for the selected board, live in a terminal panel.",
+        fun: arduino_debug,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-lib-search",
+        aliases: &["pio-pkg-search", "platformio-lib-search"],
+        doc: "Search the PlatformIO registry for a library (`pio pkg search <query>`).",
+        fun: pio_lib_search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-lib-outdated",
+        aliases: &["pio-pkg-outdated"],
+        doc: "List installed project packages with newer versions available (`pio pkg outdated`).",
+        fun: pio_lib_outdated,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-lib-show",
+        aliases: &["pio-pkg-show"],
+        doc: "Show PlatformIO registry details for a package (`pio pkg show <pkg>`).",
+        fun: pio_lib_show,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-debug",
+        aliases: &["platformio-debug"],
+        doc: "Launch the PlatformIO Unified Debugger for the project, live in a terminal panel.",
+        fun: pio_debug,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-upgrade",
+        aliases: &["platformio-upgrade"],
+        doc: "Upgrade PlatformIO Core itself (`pio upgrade`), live in a terminal panel.",
+        fun: pio_upgrade,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

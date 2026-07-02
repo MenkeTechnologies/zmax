@@ -95,6 +95,21 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space a v U", "Embedded", ":pio-upload"),        // SPC a v U : PlatformIO upload
     ("space a v M", "Embedded", ":pio-monitor"),       // SPC a v M : PlatformIO serial monitor
     ("space a v d", "Embedded", ":pio-devices"),       // SPC a v d : PlatformIO device list
+    ("space a v e", "Embedded", ":arduino-compile-export"), // SPC a v e : export compiled binary
+    ("space a v o", "Embedded", ":arduino-burn-bootloader"),// SPC a v o : burn bootloader
+    ("space a v i", "Embedded", ":arduino-board-info"), // SPC a v i : board info
+    ("space a v r", "Embedded", ":arduino-core-search"),// SPC a v r : Boards Manager search
+    ("space a v C", "Embedded", ":arduino-core-list"),  // SPC a v C : installed cores
+    ("space a v L", "Embedded", ":arduino-lib-list"),   // SPC a v L : installed libraries
+    ("space a v k", "Embedded", ":arduino-lib-examples"),// SPC a v k : library examples
+    ("space a v K", "Embedded", ":pio-clean"),          // SPC a v K : PlatformIO clean
+    ("space a v T", "Embedded", ":pio-test"),           // SPC a v T : PlatformIO test
+    ("space a v H", "Embedded", ":pio-check"),          // SPC a v H : PlatformIO check
+    ("space a v P", "Embedded", ":pio-lib-list"),       // SPC a v P : PlatformIO packages
+    ("space a v s", "Embedded", ":pio-lib-search"),     // SPC a v s : PlatformIO registry search
+    ("space a v O", "Embedded", ":arduino-outdated"),   // SPC a v O : outdated cores/libraries
+    ("space a v x", "Embedded", ":arduino-debug"),      // SPC a v x : Arduino debugger
+    ("space a v X", "Embedded", ":pio-debug"),          // SPC a v X : PlatformIO debugger
     ("space f R", "Files",   ":move"),             // SPC f R : rename file
     ("space f D", "Files",   ":delete-file"),      // SPC f D : delete file + buffer
     ("space b M", "Buffers", "buffer_menu"),       // SPC b M : Buffer Menu (emacs buffer-menu)

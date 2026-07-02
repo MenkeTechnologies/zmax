@@ -153,7 +153,13 @@ pub fn arduino_compile(settings: &EmbeddedSettings) -> Result<Vec<String>, Strin
     ])
 }
 
-/// `arduino-cli upload -p <port> --fqbn <fqbn> <sketch>`
+/// `arduino-cli compile --upload -p <port> --fqbn <fqbn> <sketch>`
+///
+/// The Arduino IDE "Upload" button compiles the sketch *then* flashes it; plain
+/// `arduino-cli upload` explicitly does **not** compile first ("This does NOT
+/// compile the sketch prior to upload"), so it would flash a stale/absent
+/// binary. `compile --upload` (flag `-u`) does both in one step, matching the
+/// IDE.
 pub fn arduino_upload(settings: &EmbeddedSettings) -> Result<Vec<String>, String> {
     if settings.fqbn.is_empty() {
         return Err("no board selected — run :arduino-boards to pick an FQBN".into());
@@ -163,11 +169,152 @@ pub fn arduino_upload(settings: &EmbeddedSettings) -> Result<Vec<String>, String
     }
     Ok(vec![
         s(ARDUINO_CLI),
-        s("upload"),
+        s("compile"),
+        s("--upload"),
         s("-p"),
         settings.port.clone(),
         s("--fqbn"),
         settings.fqbn.clone(),
+        settings.sketch_dir().to_string_lossy().into_owned(),
+    ])
+}
+
+/// `arduino-cli compile --fqbn <fqbn> -e <sketch>` — compile and export the
+/// built binaries to the sketch folder (Arduino IDE "Export Compiled Binary").
+pub fn arduino_compile_export(settings: &EmbeddedSettings) -> Result<Vec<String>, String> {
+    if settings.fqbn.is_empty() {
+        return Err("no board selected — run :arduino-boards to pick an FQBN".into());
+    }
+    Ok(vec![
+        s(ARDUINO_CLI),
+        s("compile"),
+        s("--fqbn"),
+        settings.fqbn.clone(),
+        s("-e"),
+        settings.sketch_dir().to_string_lossy().into_owned(),
+    ])
+}
+
+/// `arduino-cli burn-bootloader -p <port> --fqbn <fqbn>` (Arduino IDE
+/// Tools → Burn Bootloader).
+pub fn arduino_burn_bootloader(settings: &EmbeddedSettings) -> Result<Vec<String>, String> {
+    if settings.fqbn.is_empty() {
+        return Err("no board selected — run :arduino-boards to pick an FQBN".into());
+    }
+    if settings.port.is_empty() {
+        return Err("no serial port selected — run :arduino-ports".into());
+    }
+    Ok(vec![
+        s(ARDUINO_CLI),
+        s("burn-bootloader"),
+        s("-p"),
+        settings.port.clone(),
+        s("--fqbn"),
+        settings.fqbn.clone(),
+    ])
+}
+
+/// `arduino-cli board details --fqbn <fqbn>` — board specs / menu options.
+pub fn arduino_board_details(fqbn: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("board"), s("details"), s("--fqbn"), s(fqbn)]
+}
+
+/// `arduino-cli core search <query>` — Boards Manager search.
+pub fn arduino_core_search(query: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("core"), s("search"), s(query)]
+}
+
+/// `arduino-cli core list` — installed platforms (Boards Manager, installed tab).
+pub fn arduino_core_list() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("core"), s("list")]
+}
+
+/// `arduino-cli core uninstall <pkg>`
+pub fn arduino_core_uninstall(pkg: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("core"), s("uninstall"), s(pkg)]
+}
+
+/// `arduino-cli core upgrade` — upgrade all installed platforms.
+pub fn arduino_core_upgrade() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("core"), s("upgrade")]
+}
+
+/// `arduino-cli core update-index` — refresh the Boards Manager index.
+pub fn arduino_core_update_index() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("core"), s("update-index")]
+}
+
+/// `arduino-cli lib list` — installed libraries (Library Manager, installed tab).
+pub fn arduino_lib_list() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("list")]
+}
+
+/// `arduino-cli lib uninstall <name>`
+pub fn arduino_lib_uninstall(name: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("uninstall"), s(name)]
+}
+
+/// `arduino-cli lib upgrade` — upgrade all installed libraries.
+pub fn arduino_lib_upgrade() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("upgrade")]
+}
+
+/// `arduino-cli lib examples <name>` — list a library's example sketches.
+pub fn arduino_lib_examples(name: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("examples"), s(name)]
+}
+
+/// `arduino-cli sketch archive <dir>` — zip the whole sketch (Sketch → Archive).
+pub fn arduino_sketch_archive(sketch_dir: &Path) -> Vec<String> {
+    vec![
+        s(ARDUINO_CLI),
+        s("sketch"),
+        s("archive"),
+        sketch_dir.to_string_lossy().into_owned(),
+    ]
+}
+
+/// `arduino-cli update` — refresh the core *and* library indexes together.
+pub fn arduino_update() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("update")]
+}
+
+/// `arduino-cli upgrade` — upgrade all installed cores *and* libraries.
+pub fn arduino_upgrade() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("upgrade")]
+}
+
+/// `arduino-cli outdated` — list cores and libraries that can be upgraded.
+pub fn arduino_outdated() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("outdated")]
+}
+
+/// `arduino-cli lib deps <name>` — dependency status for a library.
+pub fn arduino_lib_deps(name: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("deps"), s(name)]
+}
+
+/// `arduino-cli config dump` — print the active arduino-cli configuration.
+pub fn arduino_config_dump() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("config"), s("dump")]
+}
+
+/// `arduino-cli debug --fqbn <fqbn> -p <port> <sketch>` — launch the debugger
+/// (needs a debug-capable board + programmer).
+pub fn arduino_debug(settings: &EmbeddedSettings) -> Result<Vec<String>, String> {
+    if settings.fqbn.is_empty() {
+        return Err("no board selected — run :arduino-boards to pick an FQBN".into());
+    }
+    if settings.port.is_empty() {
+        return Err("no serial port selected — run :arduino-ports".into());
+    }
+    Ok(vec![
+        s(ARDUINO_CLI),
+        s("debug"),
+        s("--fqbn"),
+        settings.fqbn.clone(),
+        s("-p"),
+        settings.port.clone(),
         settings.sketch_dir().to_string_lossy().into_owned(),
     ])
 }
@@ -251,9 +398,73 @@ pub fn pio_init(board: &str) -> Vec<String> {
     vec![s(PIO), s("project"), s("init"), s("--board"), s(board)]
 }
 
-/// `pio pkg install -l <name>`
+/// `pio pkg install -l <name>` — add a library to the project.
 pub fn pio_lib_install(name: &str) -> Vec<String> {
     vec![s(PIO), s("pkg"), s("install"), s("-l"), s(name)]
+}
+
+/// `pio run -t clean` — remove build artifacts (PlatformIO IDE "Clean").
+pub fn pio_clean() -> Vec<String> {
+    vec![s(PIO), s("run"), s("-t"), s("clean")]
+}
+
+/// `pio test` — run the project's unit tests (PlatformIO IDE "Test").
+pub fn pio_test() -> Vec<String> {
+    vec![s(PIO), s("test")]
+}
+
+/// `pio check` — static code analysis (PlatformIO IDE "Check").
+pub fn pio_check() -> Vec<String> {
+    vec![s(PIO), s("check")]
+}
+
+/// `pio boards [query]` — the PlatformIO Board Explorer. Empty query lists all.
+pub fn pio_boards(query: &str) -> Vec<String> {
+    let mut v = vec![s(PIO), s("boards")];
+    if !query.trim().is_empty() {
+        v.push(s(query));
+    }
+    v
+}
+
+/// `pio pkg list` — installed packages/libraries for the project.
+pub fn pio_pkg_list() -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("list")]
+}
+
+/// `pio pkg uninstall -l <name>` — remove a project library.
+pub fn pio_pkg_uninstall(name: &str) -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("uninstall"), s("-l"), s(name)]
+}
+
+/// `pio pkg update` — update the project's installed packages.
+pub fn pio_pkg_update() -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("update")]
+}
+
+/// `pio pkg search <query>` — search the PlatformIO registry (Library Manager).
+pub fn pio_pkg_search(query: &str) -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("search"), s(query)]
+}
+
+/// `pio pkg outdated` — list installed packages with newer versions available.
+pub fn pio_pkg_outdated() -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("outdated")]
+}
+
+/// `pio pkg show <pkg>` — registry details for a package.
+pub fn pio_pkg_show(pkg: &str) -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("show"), s(pkg)]
+}
+
+/// `pio debug` — the PlatformIO Unified Debugger for the project.
+pub fn pio_debug() -> Vec<String> {
+    vec![s(PIO), s("debug")]
+}
+
+/// `pio upgrade` — upgrade PlatformIO Core itself.
+pub fn pio_upgrade() -> Vec<String> {
+    vec![s(PIO), s("upgrade")]
 }
 
 /// POSIX-quote an argv into a single shell command line, so paths with spaces
@@ -449,6 +660,116 @@ mod tests {
         assert_eq!(ports.len(), 1);
         assert_eq!(ports[0].address, "/dev/cu.usbmodem1401");
         assert!(ports[0].label.contains("Arduino Uno"));
+    }
+
+    #[test]
+    fn upload_compiles_then_flashes() {
+        // Arduino IDE "Upload" = compile + flash; plain `arduino-cli upload`
+        // does not compile first, so we drive `compile --upload`.
+        let argv = arduino_upload(&settings()).unwrap();
+        assert_eq!(argv[1], "compile");
+        assert!(argv.contains(&"--upload".to_string()));
+        assert!(argv.windows(2).any(|w| w == ["-p", "/dev/cu.usbmodem1401"]));
+        assert!(argv.contains(&"arduino:avr:uno".to_string()));
+    }
+
+    #[test]
+    fn compile_export_sets_export_flag() {
+        let argv = arduino_compile_export(&settings()).unwrap();
+        assert_eq!(argv[1], "compile");
+        assert!(argv.contains(&"-e".to_string()));
+        assert!(argv.contains(&"--fqbn".to_string()));
+    }
+
+    #[test]
+    fn compile_export_needs_a_board() {
+        let mut st = settings();
+        st.fqbn.clear();
+        assert!(arduino_compile_export(&st).is_err());
+    }
+
+    #[test]
+    fn burn_bootloader_needs_board_and_port() {
+        let argv = arduino_burn_bootloader(&settings()).unwrap();
+        assert_eq!(argv[1], "burn-bootloader");
+        assert!(argv.windows(2).any(|w| w == ["-p", "/dev/cu.usbmodem1401"]));
+        let mut st = settings();
+        st.fqbn.clear();
+        assert!(arduino_burn_bootloader(&st).is_err());
+        let mut st = settings();
+        st.port.clear();
+        assert!(arduino_burn_bootloader(&st).is_err());
+    }
+
+    #[test]
+    fn board_details_carries_fqbn() {
+        let argv = arduino_board_details("arduino:avr:uno");
+        assert_eq!(argv, ["arduino-cli", "board", "details", "--fqbn", "arduino:avr:uno"]);
+    }
+
+    #[test]
+    fn core_and_lib_subcommands() {
+        assert_eq!(arduino_core_search("esp32"), ["arduino-cli", "core", "search", "esp32"]);
+        assert_eq!(arduino_core_list(), ["arduino-cli", "core", "list"]);
+        assert_eq!(arduino_core_uninstall("arduino:avr"), ["arduino-cli", "core", "uninstall", "arduino:avr"]);
+        assert_eq!(arduino_core_upgrade(), ["arduino-cli", "core", "upgrade"]);
+        assert_eq!(arduino_core_update_index(), ["arduino-cli", "core", "update-index"]);
+        assert_eq!(arduino_lib_list(), ["arduino-cli", "lib", "list"]);
+        assert_eq!(arduino_lib_uninstall("Servo"), ["arduino-cli", "lib", "uninstall", "Servo"]);
+        assert_eq!(arduino_lib_upgrade(), ["arduino-cli", "lib", "upgrade"]);
+        assert_eq!(arduino_lib_examples("Servo"), ["arduino-cli", "lib", "examples", "Servo"]);
+    }
+
+    #[test]
+    fn sketch_archive_takes_dir() {
+        let argv = arduino_sketch_archive(Path::new("/tmp/blink"));
+        assert_eq!(argv, ["arduino-cli", "sketch", "archive", "/tmp/blink"]);
+    }
+
+    #[test]
+    fn pio_run_targets_and_pkg() {
+        assert_eq!(pio_clean(), ["pio", "run", "-t", "clean"]);
+        assert_eq!(pio_test(), ["pio", "test"]);
+        assert_eq!(pio_check(), ["pio", "check"]);
+        assert_eq!(pio_pkg_list(), ["pio", "pkg", "list"]);
+        assert_eq!(pio_pkg_uninstall("Adafruit GFX"), ["pio", "pkg", "uninstall", "-l", "Adafruit GFX"]);
+        assert_eq!(pio_pkg_update(), ["pio", "pkg", "update"]);
+        assert_eq!(pio_lib_install("Adafruit GFX"), ["pio", "pkg", "install", "-l", "Adafruit GFX"]);
+    }
+
+    #[test]
+    fn pio_boards_omits_empty_query() {
+        assert_eq!(pio_boards(""), ["pio", "boards"]);
+        assert_eq!(pio_boards("uno"), ["pio", "boards", "uno"]);
+    }
+
+    #[test]
+    fn combined_index_and_upgrade_subcommands() {
+        assert_eq!(arduino_update(), ["arduino-cli", "update"]);
+        assert_eq!(arduino_upgrade(), ["arduino-cli", "upgrade"]);
+        assert_eq!(arduino_outdated(), ["arduino-cli", "outdated"]);
+        assert_eq!(arduino_lib_deps("Servo"), ["arduino-cli", "lib", "deps", "Servo"]);
+        assert_eq!(arduino_config_dump(), ["arduino-cli", "config", "dump"]);
+    }
+
+    #[test]
+    fn debug_needs_board_and_port() {
+        let argv = arduino_debug(&settings()).unwrap();
+        assert_eq!(argv[1], "debug");
+        assert!(argv.windows(2).any(|w| w == ["--fqbn", "arduino:avr:uno"]));
+        assert!(argv.windows(2).any(|w| w == ["-p", "/dev/cu.usbmodem1401"]));
+        let mut st = settings();
+        st.port.clear();
+        assert!(arduino_debug(&st).is_err());
+    }
+
+    #[test]
+    fn pio_pkg_and_maintenance_subcommands() {
+        assert_eq!(pio_pkg_search("Adafruit"), ["pio", "pkg", "search", "Adafruit"]);
+        assert_eq!(pio_pkg_outdated(), ["pio", "pkg", "outdated"]);
+        assert_eq!(pio_pkg_show("Servo"), ["pio", "pkg", "show", "Servo"]);
+        assert_eq!(pio_debug(), ["pio", "debug"]);
+        assert_eq!(pio_upgrade(), ["pio", "upgrade"]);
     }
 
     #[test]
