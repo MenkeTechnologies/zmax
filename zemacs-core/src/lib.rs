@@ -36,6 +36,7 @@ pub mod match_brackets;
 pub mod merge_ops;
 pub mod movement;
 pub mod object;
+pub mod outline;
 pub mod occur;
 mod position;
 pub mod power_edit;

@@ -1046,6 +1046,17 @@ impl MappableCommand {
         ispell, "Spell-check the region or buffer with an external speller (emacs ispell)",
         ispell_change_dictionary, "Set the ispell dictionary/language (emacs ispell-change-dictionary)",
         ispell_kill_ispell, "Stop the ispell process (emacs ispell-kill-ispell)",
+        outline_next_visible_heading, "Move to the next outline heading (emacs outline-next-visible-heading)",
+        outline_previous_visible_heading, "Move to the previous outline heading (emacs outline-previous-visible-heading)",
+        outline_up_heading, "Move to the parent outline heading (emacs outline-up-heading)",
+        outline_forward_same_level, "Move to the next same-level heading (emacs outline-forward-same-level)",
+        outline_backward_same_level, "Move to the previous same-level heading (emacs outline-backward-same-level)",
+        outline_hide_subtree, "Fold the subtree of the heading at point (emacs outline-hide-subtree)",
+        outline_show_subtree, "Reveal the subtree of the heading at point (emacs outline-show-subtree)",
+        outline_hide_entry, "Fold this heading's body (emacs outline-hide-entry)",
+        outline_show_entry, "Reveal this heading's body (emacs outline-show-entry)",
+        outline_hide_body, "Fold all bodies, showing only headings (emacs outline-hide-body)",
+        outline_show_all, "Reveal all outline body text (emacs outline-show-all)",
         fold_create, "Create a fold over the selection (zf)",
         fold_toggle, "Toggle fold under cursor (za)",
         fold_open, "Open fold under cursor (zo)",
@@ -19877,6 +19888,141 @@ fn fold_snap_cursor(view: &mut View, doc: &mut Document) {
     if anchor != line {
         fold_goto_line(view, doc, anchor);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Emacs outline-mode: heading navigation + subtree folding. Heading structure
+// is the pure zemacs_core::outline; folding drives the document's fold state.
+// ---------------------------------------------------------------------------
+
+/// (cursor line, whole-buffer text) for the outline engine.
+fn outline_context(cx: &Context) -> (usize, String) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    let line = text.char_to_line(doc.selection(view.id).primary().cursor(text));
+    (line, doc.text().to_string())
+}
+
+/// Move point to a heading (or report there is none).
+fn outline_goto(cx: &mut Context, target: Option<zemacs_core::outline::Heading>) {
+    let Some(h) = target else {
+        cx.editor.set_status("No more headings");
+        return;
+    };
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    push_jump(view, doc);
+    let pos = h.char_pos.min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::point(pos));
+    view.ensure_cursor_in_view(doc, scrolloff);
+}
+
+fn outline_next_visible_heading(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    outline_goto(cx, zemacs_core::outline::next_heading(&hs, line));
+}
+
+fn outline_previous_visible_heading(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    outline_goto(cx, zemacs_core::outline::prev_heading(&hs, line));
+}
+
+fn outline_up_heading(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    outline_goto(cx, zemacs_core::outline::up_heading(&hs, line));
+}
+
+fn outline_forward_same_level(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    outline_goto(cx, zemacs_core::outline::forward_same_level(&hs, line));
+}
+
+fn outline_backward_same_level(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    outline_goto(cx, zemacs_core::outline::backward_same_level(&hs, line));
+}
+
+/// Create a closed fold over `first..=last`.
+fn outline_fold_range(doc: &mut Document, first: usize, last: usize) {
+    doc.folds_mut().create(first, last);
+    doc.folds_mut().close(first);
+}
+
+/// Emacs `outline-hide-subtree`: fold the whole subtree body of the heading at
+/// point.
+fn outline_hide_subtree(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    if let Some((first, last)) = zemacs_core::outline::subtree_body(&hs, line, total) {
+        outline_fold_range(doc, first, last);
+        doc.folds_mut().clamp(total.saturating_sub(1));
+        fold_snap_cursor(view, doc);
+    }
+}
+
+/// Emacs `outline-show-subtree`: reveal the subtree of the heading at point.
+fn outline_show_subtree(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    if let Some((first, _)) = zemacs_core::outline::subtree_body(&hs, line, total) {
+        doc.folds_mut().open_recursive(first);
+        fold_snap_cursor(view, doc);
+    }
+}
+
+/// Emacs `outline-hide-entry`: fold just this heading's body (before its first
+/// subheading).
+fn outline_hide_entry(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    if let Some((first, last)) = zemacs_core::outline::entry_body(&hs, line, total) {
+        outline_fold_range(doc, first, last);
+        doc.folds_mut().clamp(total.saturating_sub(1));
+        fold_snap_cursor(view, doc);
+    }
+}
+
+/// Emacs `outline-show-entry`: reveal this heading's body.
+fn outline_show_entry(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    if let Some((first, _)) = zemacs_core::outline::entry_body(&hs, line, total) {
+        doc.folds_mut().open(first);
+        fold_snap_cursor(view, doc);
+    }
+}
+
+/// Emacs `outline-hide-body`: fold every heading's body, showing only headings.
+fn outline_hide_body(cx: &mut Context) {
+    let (_, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    for (first, last) in zemacs_core::outline::all_bodies(&hs, total) {
+        outline_fold_range(doc, first, last);
+    }
+    doc.folds_mut().clamp(total.saturating_sub(1));
+    fold_snap_cursor(view, doc);
+}
+
+/// Emacs `outline-show-all`: reveal all body text.
+fn outline_show_all(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    doc.folds_mut().open_all();
+    fold_snap_cursor(view, doc);
 }
 
 fn fold_create(cx: &mut Context) {
