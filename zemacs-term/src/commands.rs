@@ -903,6 +903,9 @@ impl MappableCommand {
         insert_last_inserted_text, "Insert the previously inserted text (vim i_CTRL-A)",
         insert_last_inserted_and_stop, "Insert previously inserted text and stop insert (vim i_CTRL-@)",
         copy_between_registers, "Copy between two registers",
+        copy_to_register, "Copy the region into a register (emacs copy-to-register, C-x r s)",
+        append_to_register, "Append the region to a register (emacs append-to-register, C-x r a)",
+        prepend_to_register, "Prepend the region to a register (emacs prepend-to-register, C-x r p)",
         align_view_middle, "Align view middle",
         align_view_top, "Align view top",
         align_view_center, "Align view center",
@@ -18334,6 +18337,95 @@ fn insert_register(cx: &mut Context) {
             );
         }
     })
+}
+
+/// The primary selection's text (empty when the selection is a caret).
+fn primary_selection_text(cx: &Context) -> String {
+    let (view, doc) = current_ref!(cx.editor);
+    let sel = doc.selection(view.id).primary();
+    doc.text().slice(sel.from()..sel.to()).to_string()
+}
+
+/// Emacs `copy-to-register` (`C-x r s r`): store the region in register `r`,
+/// replacing its contents. Prompts for the register character.
+fn copy_to_register(cx: &mut Context) {
+    let text = primary_selection_text(cx);
+    if text.is_empty() {
+        cx.editor.set_status("copy-to-register: empty region");
+        return;
+    }
+    cx.editor.autoinfo = Some(Info::from_registers(
+        "Copy to register",
+        &cx.editor.registers,
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let Some(reg) = event.char() else {
+            return;
+        };
+        if let Err(e) = cx.editor.registers.write(reg, vec![text.clone()]) {
+            cx.editor.set_error(e.to_string());
+        } else {
+            cx.editor
+                .set_status(format!("copied region to register {reg}"));
+        }
+    });
+}
+
+/// Combine the region with register `r`'s existing text (Emacs
+/// `append-to-register` / `prepend-to-register`). `append` puts the region
+/// after the current contents; otherwise before.
+fn region_to_register(cx: &mut Context, append: bool) {
+    let text = primary_selection_text(cx);
+    if text.is_empty() {
+        cx.editor.set_status("register: empty region");
+        return;
+    }
+    let label = if append {
+        "Append to register"
+    } else {
+        "Prepend to register"
+    };
+    cx.editor.autoinfo = Some(Info::from_registers(label, &cx.editor.registers));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let Some(reg) = event.char() else {
+            return;
+        };
+        let existing: String = cx
+            .editor
+            .registers
+            .read(reg, cx.editor)
+            .map(|vals| vals.collect::<Vec<_>>().join("\n"))
+            .unwrap_or_default();
+        let combined = if append {
+            format!("{existing}{text}")
+        } else {
+            format!("{text}{existing}")
+        };
+        if let Err(e) = cx.editor.registers.write(reg, vec![combined]) {
+            cx.editor.set_error(e.to_string());
+        } else {
+            cx.editor.set_status(format!(
+                "{} register {reg}",
+                if append {
+                    "appended to"
+                } else {
+                    "prepended to"
+                }
+            ));
+        }
+    });
+}
+
+/// Emacs `append-to-register` (`C-x r a r`).
+fn append_to_register(cx: &mut Context) {
+    region_to_register(cx, true);
+}
+
+/// Emacs `prepend-to-register` (`C-x r p r`).
+fn prepend_to_register(cx: &mut Context) {
+    region_to_register(cx, false);
 }
 
 fn copy_between_registers(cx: &mut Context) {

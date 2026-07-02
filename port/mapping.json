@@ -28443,5 +28443,29 @@
    "static:align_entire"
   ],
   "note": "align-entire: align the whole region as one section (zemacs_core::power_edit::align_entire)"
+ },
+ {
+  "spec_id": "emacs.command.copy_to_register",
+  "status": "ported",
+  "evidence": [
+   "static:copy_to_register"
+  ],
+  "note": "copy-to-register (C-x r s): store the region in a prompted register, replacing its contents"
+ },
+ {
+  "spec_id": "emacs.command.append_to_register",
+  "status": "ported",
+  "evidence": [
+   "static:append_to_register"
+  ],
+  "note": "append-to-register (C-x r a): add the region after a register's existing text"
+ },
+ {
+  "spec_id": "emacs.command.prepend_to_register",
+  "status": "ported",
+  "evidence": [
+   "static:prepend_to_register"
+  ],
+  "note": "prepend-to-register (C-x r p): add the region before a register's existing text"
  }
 ]
