@@ -392,6 +392,160 @@ fn arg_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
 }
 
 // ---------------------------------------------------------------------------
+// Vim abbreviations (`:abbreviate`, `:iabbrev`, `:cabbrev`, their `un…`/`…clear`
+// siblings). One process-global table in a thread-local, like ARGLIST above.
+// The pure state machine is `zemacs_core::abbrev::AbbrevTable`; these commands
+// drive it. NOTE: Insert-mode/command-line *expansion* is not yet wired into the
+// typing path (it needs an editor hook that fires on a non-keyword trigger char
+// and rewrites the word before the cursor). Until then these commands maintain
+// and list the table faithfully; `AbbrevTable::find_expansion` is the primitive
+// the future hook will call.
+// ---------------------------------------------------------------------------
+
+use zemacs_core::abbrev::{AbbrevMode, AbbrevTable};
+
+thread_local! {
+    static ABBREVS: std::cell::RefCell<AbbrevTable> = std::cell::RefCell::new(AbbrevTable::new());
+}
+
+/// Run `f` against the global abbreviation table.
+fn with_abbrevs<R>(f: impl FnOnce(&mut AbbrevTable) -> R) -> R {
+    ABBREVS.with(|a| f(&mut a.borrow_mut()))
+}
+
+/// Vim's one-column mode marker used when listing abbreviations.
+fn abbrev_mode_marker(mode: AbbrevMode) -> char {
+    match mode {
+        AbbrevMode::Insert => 'i',
+        AbbrevMode::Command => 'c',
+        AbbrevMode::Both => '!',
+    }
+}
+
+/// Render the table for `mode` as Vim's `:abbreviate` listing, optionally
+/// restricted to entries whose lhs starts with `prefix`.
+fn abbrev_list(mode: AbbrevMode, prefix: Option<&str>) -> String {
+    let entries: Vec<_> = with_abbrevs(|t| t.entries(mode))
+        .into_iter()
+        .filter(|(lhs, ..)| prefix.is_none_or(|p| lhs.starts_with(p)))
+        .collect();
+    if entries.is_empty() {
+        return "No abbreviation found".to_string();
+    }
+    entries
+        .iter()
+        .map(|(lhs, rhs, m)| format!("{}  {:<12} {}", abbrev_mode_marker(*m), lhs, rhs))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Shared body for `:abbreviate` / `:iabbrev` / `:cabbrev`: no args lists all,
+/// a lone lhs lists matching entries, and `{lhs} {rhs…}` defines a new one.
+fn abbrev_define(cx: &mut compositor::Context, mode: AbbrevMode, args: &Args) -> anyhow::Result<()> {
+    if args.len() < 2 {
+        let prefix = args.first().map(|s| s.as_ref());
+        cx.editor.set_status(abbrev_list(mode, prefix));
+        return Ok(());
+    }
+    let lhs = args[0].to_string();
+    let rhs = args.iter().skip(1).map(|s| s.to_string()).collect::<Vec<_>>().join(" ");
+    if !with_abbrevs(|t| t.add(mode, &lhs, &rhs)) {
+        bail!("E474: Not a valid abbreviation: {lhs}");
+    }
+    Ok(())
+}
+
+/// Shared body for `:unabbreviate` / `:iunabbreviate` / `:cunabbreviate`.
+fn abbrev_undefine(cx: &mut compositor::Context, mode: AbbrevMode, args: &Args) -> anyhow::Result<()> {
+    let Some(lhs) = args.first().map(|s| s.to_string()) else {
+        bail!("E474: Argument required");
+    };
+    if !with_abbrevs(|t| t.remove(mode, &lhs)) {
+        bail!("E24: No such abbreviation: {lhs}");
+    }
+    let _ = cx;
+    Ok(())
+}
+
+/// `:abbreviate` — list or define an abbreviation for Insert *and* Command-line.
+fn abbreviate(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    abbrev_define(cx, AbbrevMode::Both, &args)
+}
+
+/// `:iabbrev` — like `:abbreviate` but Insert mode only.
+fn iabbrev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    abbrev_define(cx, AbbrevMode::Insert, &args)
+}
+
+/// `:cabbrev` — like `:abbreviate` but Command-line mode only.
+fn cabbrev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    abbrev_define(cx, AbbrevMode::Command, &args)
+}
+
+/// `:unabbreviate {lhs}` — remove an abbreviation (both modes).
+fn unabbreviate(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    abbrev_undefine(cx, AbbrevMode::Both, &args)
+}
+
+/// `:iunabbreviate {lhs}` — remove an Insert-mode abbreviation.
+fn iunabbreviate(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    abbrev_undefine(cx, AbbrevMode::Insert, &args)
+}
+
+/// `:cunabbreviate {lhs}` — remove a Command-line abbreviation.
+fn cunabbreviate(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    abbrev_undefine(cx, AbbrevMode::Command, &args)
+}
+
+/// `:abclear` — remove all abbreviations (both modes).
+fn abclear(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    with_abbrevs(|t| t.clear(AbbrevMode::Both));
+    let _ = cx;
+    Ok(())
+}
+
+/// `:iabclear` — remove all Insert-mode abbreviations.
+fn iabclear(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    with_abbrevs(|t| t.clear(AbbrevMode::Insert));
+    let _ = cx;
+    Ok(())
+}
+
+/// `:cabclear` — remove all Command-line abbreviations.
+fn cabclear(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    with_abbrevs(|t| t.clear(AbbrevMode::Command));
+    let _ = cx;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // Vim buffer-list navigation ex-commands. zemacs stores documents in a
 // BTreeMap<DocumentId, _>, so `documents()` yields them in buffer-number order;
 // these reuse Editor::switch / ::open (no new state).
@@ -16821,6 +16975,105 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["sall"],
         doc: "Open a window for each file in the argument list (vim :all / :sall).",
         fun: arg_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "abbreviate",
+        aliases: &["ab"],
+        doc: "List or define an abbreviation for Insert and Command-line mode (vim :abbreviate).",
+        fun: abbreviate,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "iabbrev",
+        aliases: &["ia"],
+        doc: "List or define an Insert-mode abbreviation (vim :iabbrev).",
+        fun: iabbrev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cabbrev",
+        aliases: &["ca"],
+        doc: "List or define a Command-line-mode abbreviation (vim :cabbrev).",
+        fun: cabbrev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unabbreviate",
+        aliases: &["una"],
+        doc: "Remove an abbreviation for both modes (vim :unabbreviate).",
+        fun: unabbreviate,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "iunabbreviate",
+        aliases: &["iuna"],
+        doc: "Remove an Insert-mode abbreviation (vim :iunabbreviate).",
+        fun: iunabbreviate,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cunabbreviate",
+        aliases: &["cuna"],
+        doc: "Remove a Command-line-mode abbreviation (vim :cunabbreviate).",
+        fun: cunabbreviate,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "abclear",
+        aliases: &["abc"],
+        doc: "Remove all abbreviations for both modes (vim :abclear).",
+        fun: abclear,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "iabclear",
+        aliases: &["iabc"],
+        doc: "Remove all Insert-mode abbreviations (vim :iabclear).",
+        fun: iabclear,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cabclear",
+        aliases: &["cabc"],
+        doc: "Remove all Command-line-mode abbreviations (vim :cabclear).",
+        fun: cabclear,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
