@@ -21,7 +21,6 @@
   - [Workspace trust](./workspace-trust.md)
 - [Ecosystem](./ecosystem.md)
   - [Migrating from Vim](./from-vim.md)
-  - [Zemacs mode in other software](./other-software.md)
 - [Configuration](./configuration.md)
   - [Editor](./editor.md)
   - [Themes](./themes.md)
