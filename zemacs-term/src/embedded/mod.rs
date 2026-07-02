@@ -682,6 +682,15 @@ pub fn pio_boards(query: &str) -> Vec<String> {
     v
 }
 
+/// `pio boards --json-output [query]` — the Board Explorer as JSON.
+pub fn pio_boards_json(query: &str) -> Vec<String> {
+    let mut v = vec![s(PIO), s("boards"), s("--json-output")];
+    if !query.trim().is_empty() {
+        v.push(s(query));
+    }
+    v
+}
+
 /// `pio boards --installed [query]` — only boards from installed platforms.
 pub fn pio_boards_installed(query: &str) -> Vec<String> {
     let mut v = vec![s(PIO), s("boards"), s("--installed")];
@@ -817,9 +826,21 @@ pub fn pio_upgrade_with(extra: &[String]) -> Vec<String> {
 }
 
 /// `pio remote run [extra…] [-e env]` — remote build with extra options
-/// (`-r/--force-remote`, `-v`, `--disable-auto-clean`).
+/// (`-r/--force-remote`, `-v`, `--disable-auto-clean`, `-t <target>`,
+/// `--upload-port <p>`, `-s`).
 pub fn pio_remote_run_with(settings: &EmbeddedSettings, extra: &[String]) -> Vec<String> {
     let mut v = vec![s(PIO), s("remote"), s("run")];
+    v.extend(extra.iter().cloned());
+    v.extend(settings.pio_env_args());
+    v
+}
+
+/// `pio remote test [extra…] [-e env]` — remote unit tests with extra options
+/// (`-r/--force-remote`, `-v`, `-f <filter>`, `-i <ignore>`,
+/// `--without-building`, `--without-uploading`, `--test-port <p>`,
+/// `--upload-port <p>`).
+pub fn pio_remote_test_with(settings: &EmbeddedSettings, extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("remote"), s("test")];
     v.extend(extra.iter().cloned());
     v.extend(settings.pio_env_args());
     v
@@ -857,6 +878,14 @@ pub fn pio_pkg_show_type(pkg: &str, pkg_type: &str) -> Vec<String> {
 /// (a single call string), as opposed to the `exec -- <argv>` form.
 pub fn pio_pkg_exec_call(args: &[String]) -> Vec<String> {
     let mut v = vec![s(PIO), s("pkg"), s("exec"), s("-c")];
+    v.extend(args.iter().cloned());
+    v
+}
+
+/// `pio pkg exec -p <pkg> -- <argv…>` — run a tool from a *specific* installed
+/// package (scoped via `-p/--package`), disambiguating tools shared by name.
+pub fn pio_pkg_exec_package(pkg: &str, args: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("pkg"), s("exec"), s("-p"), s(pkg), s("--")];
     v.extend(args.iter().cloned());
     v
 }
@@ -1302,6 +1331,38 @@ mod tests {
         let argv = pio_pkg_unpublish_undo("owner/pkg@1.0.0");
         assert_eq!(argv[..4], ["pio", "pkg", "unpublish", "owner/pkg@1.0.0"]);
         assert!(argv.contains(&"--undo".to_string()));
+    }
+
+    #[test]
+    fn pio_boards_json_appends_json_and_optional_query() {
+        assert_eq!(pio_boards_json(""), ["pio", "boards", "--json-output"]);
+        assert_eq!(
+            pio_boards_json("esp32"),
+            ["pio", "boards", "--json-output", "esp32"]
+        );
+    }
+
+    #[test]
+    fn pio_pkg_exec_package_scopes_and_terminates_flags() {
+        let argv = pio_pkg_exec_package("tool-esptoolpy", &["esptool.py".into(), "--help".into()]);
+        assert!(argv.windows(2).any(|w| w == ["-p", "tool-esptoolpy"]));
+        // The `--` guard must precede the tool argv so its flags are not parsed by pio.
+        let dd = argv.iter().position(|a| a == "--").unwrap();
+        assert_eq!(argv[dd + 1], "esptool.py");
+    }
+
+    #[test]
+    fn pio_remote_run_and_test_with_thread_extra_and_env() {
+        let mut st = settings();
+        st.env = "esp32dev".into();
+        let run = pio_remote_run_with(&st, &["-t".into(), "upload".into()]);
+        assert_eq!(run[..3], ["pio", "remote", "run"]);
+        assert!(run.windows(2).any(|w| w == ["-t", "upload"]));
+        assert!(run.windows(2).any(|w| w == ["-e", "esp32dev"]));
+        let test = pio_remote_test_with(&st, &["--without-building".into()]);
+        assert_eq!(test[..3], ["pio", "remote", "test"]);
+        assert!(test.contains(&"--without-building".to_string()));
+        assert!(test.windows(2).any(|w| w == ["-e", "esp32dev"]));
     }
 
     #[test]

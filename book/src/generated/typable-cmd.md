@@ -92,6 +92,7 @@
 | `:pio-test`, `:platformio-test` | Run the PlatformIO project's unit tests (`pio test`); failures go to the compilation list. |
 | `:pio-check`, `:platformio-check` | PlatformIO static code analysis (`pio check`); findings go to the compilation list. |
 | `:pio-boards`, `:platformio-boards` | The PlatformIO Board Explorer (`pio boards [query]`); output in the Run console. |
+| `:pio-boards-json`, `:platformio-boards-json` | The Board Explorer as JSON (`pio boards --json-output [query]`), shown in a scratch buffer. |
 | `:pio-lib-install`, `:pio-pkg-install`, `:platformio-lib-install` | Add a library to the PlatformIO project (`pio pkg install -l <name>`), live in a terminal panel. |
 | `:pio-lib-list`, `:pio-pkg-list`, `:pio-libs` | List installed PlatformIO project packages (`pio pkg list`). |
 | `:pio-lib-uninstall`, `:pio-pkg-uninstall` | Remove a PlatformIO project library (`pio pkg uninstall -l <name>`), live in a terminal panel. |
@@ -120,6 +121,7 @@
 | `:pio-project-config`, `:platformio-project-config` | Show the computed PlatformIO project configuration (`pio project config`). |
 | `:pio-project-metadata`, `:platformio-project-metadata` | Dump the IDE/LSP metadata for the project (`pio project metadata`). |
 | `:pio-pkg-exec`, `:platformio-pkg-exec` | Run a tool from an installed package (`pio pkg exec -- <argv>`), live in a terminal panel. |
+| `:pio-pkg-exec-pkg`, `:platformio-pkg-exec-pkg` | Run a tool from a specific installed package (`pio pkg exec -p <pkg> -- <argv>`), live in a terminal panel. |
 | `:pio-platform-install`, `:pio-core-install`, `:platformio-platform-install` | Install a development platform globally (`pio pkg install -g -p <spec>`), live in a terminal panel. |
 | `:pio-pkg-pack`, `:platformio-pkg-pack` | Build a tarball of the current package (`pio pkg pack [-o <path>]`), live in a terminal panel. |
 | `:pio-pkg-publish`, `:platformio-pkg-publish` | Publish the current package to the PlatformIO registry (`pio pkg publish`), live in a terminal panel. |

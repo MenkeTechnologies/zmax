@@ -4022,6 +4022,17 @@ fn pio_boards(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     Ok(())
 }
 
+/// `:pio-boards-json [query]` — the Board Explorer as JSON
+/// (`pio boards --json-output`), shown in a scratch buffer.
+fn pio_boards_json(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_boards_json(&args.join(" ")), true);
+    Ok(())
+}
+
 /// `:pio-lib-install <name>` (alias `:pio-pkg-install`) — add a library to the
 /// PlatformIO project (`pio pkg install -l`), live in a panel.
 fn pio_lib_install(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -4351,6 +4362,23 @@ fn pio_pkg_exec(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
     require_tool(embedded::PIO)?;
     let dir = embedded::load().sketch_dir();
     embedded_spawn_terminal(cx, embedded::pio_pkg_exec(&tokens), dir);
+    Ok(())
+}
+
+/// `:pio-pkg-exec-pkg <pkg> <argv…>` — run a tool from a *specific* installed
+/// package (`pio pkg exec -p <pkg> -- <argv>`), live in a terminal panel.
+fn pio_pkg_exec_package(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let (pkg, rest) = match tokens.split_first() {
+        Some((pkg, rest)) if !pkg.trim().is_empty() && !rest.is_empty() => (pkg.trim(), rest),
+        _ => bail!("usage: :pio-pkg-exec-pkg <pkg> <program> [args…]  (e.g. tool-esptoolpy esptool.py --help)"),
+    };
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_pkg_exec_package(pkg, rest), dir);
     Ok(())
 }
 
@@ -4715,25 +4743,34 @@ fn pio_remote_device_list(cx: &mut compositor::Context, _args: Args, event: Prom
     Ok(())
 }
 
-/// `:pio-remote-run` — build/upload the project through a remote agent.
-fn pio_remote_run(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+/// `:pio-remote-run [args…]` — build/upload the project through a remote agent;
+/// extra args forward `pio remote run` flags (`-t <target>`, `--upload-port <p>`,
+/// `-r`, `-s`, `-v`, `--disable-auto-clean`).
+fn pio_remote_run(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
-    let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_remote_run(), dir);
+    let st = embedded::load();
+    let dir = st.sketch_dir();
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    embedded_spawn_terminal(cx, embedded::pio_remote_run_with(&st, &tokens), dir);
     Ok(())
 }
 
-/// `:pio-remote-test` — run unit tests through a remote agent.
-fn pio_remote_test(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+/// `:pio-remote-test [args…]` — run unit tests through a remote agent; extra args
+/// forward `pio remote test` flags (`-f <filter>`, `-i <ignore>`,
+/// `--without-building`, `--without-uploading`, `--test-port <p>`,
+/// `--upload-port <p>`, `-r`, `-v`).
+fn pio_remote_test(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
-    let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_remote_test(), dir);
+    let st = embedded::load();
+    let dir = st.sketch_dir();
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    embedded_spawn_terminal(cx, embedded::pio_remote_test_with(&st, &tokens), dir);
     Ok(())
 }
 
@@ -21298,6 +21335,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "pio-boards-json",
+        aliases: &["platformio-boards-json"],
+        doc: "The Board Explorer as JSON (`pio boards --json-output [query]`), shown in a scratch buffer.",
+        fun: pio_boards_json,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "pio-lib-install",
         aliases: &["pio-pkg-install", "platformio-lib-install"],
         doc: "Add a library to the PlatformIO project (`pio pkg install -l <name>`), live in a terminal panel.",
@@ -21602,6 +21650,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-exec-pkg",
+        aliases: &["platformio-pkg-exec-pkg"],
+        doc: "Run a tool from a specific installed package (`pio pkg exec -p <pkg> -- <argv>`), live in a terminal panel.",
+        fun: pio_pkg_exec_package,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
             ..Signature::DEFAULT
         },
     },

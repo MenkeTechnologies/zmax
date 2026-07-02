@@ -181,7 +181,8 @@ PlatformIO environment, monitor filters) persist to
   every monitor invocation).
 - **Boards & ports** — `:arduino-boards` (pick FQBN), `:arduino-ports` /
   `:pio-devices` (pick serial port), `:arduino-board-info`, `:pio-boards`
-  (Board Explorer), `:pio-boards-installed` (installed platforms only).
+  (Board Explorer), `:pio-boards-installed` (installed platforms only),
+  `:pio-boards-json` (Board Explorer as JSON).
   `:pio-device-logical` lists logical (disk) devices, `:pio-device-mdns`
   lists multicast-DNS / network (OTA) devices, and `:pio-device-serial` lists
   serial ports only.
@@ -219,8 +220,9 @@ PlatformIO environment, monitor filters) persist to
 - **Platforms & packages** — `:pio-platform-install <spec>` installs a
   development platform globally, `:pio-tool-install <spec>` a tool package
   (compilers, uploaders, debuggers); `:pio-pkg-exec <argv>` runs a tool from an
-  installed package (e.g. `esptool.py`, `openocd`), or the `-c/--call` form via
-  `:pio-pkg-exec-call <argv>`; `:pio-pkg-show-type <pkg> <library|platform|tool>`
+  installed package (e.g. `esptool.py`, `openocd`), the `-c/--call` form via
+  `:pio-pkg-exec-call <argv>`, or a specific package via
+  `:pio-pkg-exec-pkg <pkg> <argv>` (`-p`); `:pio-pkg-show-type <pkg> <library|platform|tool>`
   scopes registry details to a package type. Registry authoring via
   `:pio-pkg-pack` (`-o <path>` for the output), `:pio-pkg-publish`,
   `:pio-pkg-unpublish` (`:pio-pkg-unpublish-undo <pkg>` restores it). Install
@@ -233,7 +235,9 @@ PlatformIO environment, monitor filters) persist to
   (forwards `--name` / `--share` / `--working-dir`) / `:pio-remote-agent-list`,
   `:pio-remote-devices`, `:pio-remote-monitor`, `:pio-remote-run` /
   `:pio-remote-run-force` (`-r`), `:pio-remote-test`, `:pio-remote-update`
-  (`--dry-run`).
+  (`--dry-run`). `:pio-remote-run` and `:pio-remote-test` forward any extra
+  flags (`-t <target>`, `--upload-port`, `--test-port`, `-f`/`-i`,
+  `--without-building`/`-uploading`).
 - **PlatformIO account & org** — `:pio-account-login` / `-logout` / `-show` /
   `-token` (forwards `--regenerate` / `--json-output`) / `-register` /
   `-password` / `-update` / `-forgot` / `-destroy`;
