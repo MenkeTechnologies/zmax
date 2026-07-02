@@ -11739,11 +11739,14 @@ fn delete_selection_impl(cx: &mut Context, op: Operation, yank: YankAction) {
         // yank the selection
         let text = doc.text().slice(..);
         let values: Vec<String> = selection.fragments(text).map(Cow::into_owned).collect();
-        let reg_name = cx
-            .register
-            .unwrap_or_else(|| cx.editor.config.load().default_yank_register);
+        // vim small-delete register `-`: a delete of less than one line (not
+        // linewise and containing no newline) goes to `-` instead of rotating
+        // the numbered ring `1`-`9`.
+        let small = !only_whole_lines && !values.iter().any(|v| v.contains('\n'));
+        let default = cx.editor.config.load().default_yank_register;
+        let target = cx.register.filter(|&r| r != default);
         crate::emacs_kill::record(values.join("\n"));
-        if let Err(err) = cx.editor.registers.write(reg_name, values) {
+        if let Err(err) = cx.editor.registers.write_deleted(target, values, small) {
             cx.editor.set_error(err.to_string());
             return;
         }
@@ -12231,8 +12234,6 @@ fn ensure_selections_forward(cx: &mut Context) {
 /// the span from the insert anchor to the exit cursor (a close approximation of
 /// vim's `.` register; intra-insert cursor jumps make it best-effort).
 static INSERT_ANCHOR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-static LAST_INSERTED_TEXT: Lazy<std::sync::Mutex<String>> =
-    Lazy::new(|| std::sync::Mutex::new(String::new()));
 
 fn enter_insert_mode(cx: &mut Context) {
     cx.editor.mode = Mode::Insert;
@@ -14486,17 +14487,20 @@ fn complete_current_statement(cx: &mut Context) {
 }
 
 fn normal_mode(cx: &mut Context) {
-    // Capture the text inserted this session (for i_CTRL-A) before leaving insert.
+    // Capture the text inserted this session (for i_CTRL-A and the vim `.`
+    // register) before leaving insert.
     if cx.editor.mode == Mode::Insert {
-        let (view, doc) = current!(cx.editor);
-        let text = doc.text().slice(..);
-        let end = doc.selection(view.id).primary().cursor(text);
-        let start = INSERT_ANCHOR
-            .load(std::sync::atomic::Ordering::Relaxed)
-            .min(text.len_chars());
-        if end > start {
-            let s: String = text.slice(start..end).chars().collect();
-            *LAST_INSERTED_TEXT.lock().unwrap() = s;
+        let inserted = {
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text().slice(..);
+            let end = doc.selection(view.id).primary().cursor(text);
+            let start = INSERT_ANCHOR
+                .load(std::sync::atomic::Ordering::Relaxed)
+                .min(text.len_chars());
+            (end > start).then(|| text.slice(start..end).chars().collect::<String>())
+        };
+        if let Some(s) = inserted {
+            cx.editor.last_inserted_text = s;
         }
     }
     cx.editor.enter_normal_mode();
@@ -14504,7 +14508,7 @@ fn normal_mode(cx: &mut Context) {
 
 /// vim `i_CTRL-A`: insert the text of the most recently completed insert session.
 fn insert_last_inserted_text(cx: &mut Context) {
-    let text = LAST_INSERTED_TEXT.lock().unwrap().clone();
+    let text = cx.editor.last_inserted_text.clone();
     if text.is_empty() {
         return;
     }
@@ -15623,25 +15627,23 @@ fn commit_undo_checkpoint(cx: &mut Context) {
 // Yank / Paste
 
 fn yank(cx: &mut Context) {
-    yank_impl(
-        cx.editor,
-        cx.register
-            .unwrap_or(cx.editor.config().default_yank_register),
-    );
+    // `None` = the unnamed default; vim distribution then also fills `0`.
+    yank_impl(cx.editor, cx.register);
     exit_select_mode(cx);
 }
 
 fn yank_to_clipboard(cx: &mut Context) {
-    yank_impl(cx.editor, '+');
+    yank_impl(cx.editor, Some('+'));
     exit_select_mode(cx);
 }
 
 fn yank_to_primary_clipboard(cx: &mut Context) {
-    yank_impl(cx.editor, '*');
+    yank_impl(cx.editor, Some('*'));
     exit_select_mode(cx);
 }
 
-fn yank_impl(editor: &mut Editor, register: char) {
+fn yank_impl(editor: &mut Editor, register: Option<char>) {
+    let default = editor.config().default_yank_register;
     let (view, doc) = current!(editor);
     let (from, to, values) = {
         let text = doc.text().slice(..);
@@ -15654,14 +15656,18 @@ fn yank_impl(editor: &mut Editor, register: char) {
         (primary.from(), primary.to(), values)
     };
     let selections = values.len();
+    let reg_display = register.unwrap_or(default);
     // vim: yanking sets the `[`/`]` marks to the start/end of the yanked text.
     doc.set_mark('[', from);
     doc.set_mark(']', to.saturating_sub(1).max(from));
 
     crate::emacs_kill::record(values.join("\n"));
-    match editor.registers.write(register, values) {
+    // Route through the unnamed default when no register was selected, so vim's
+    // yank register `0` and unnamed `"` are populated alongside the target.
+    let target = register.filter(|&r| r != default);
+    match editor.registers.write_yanked(target, values) {
         Ok(_) => editor.set_status(format!(
-            "yanked {selections} selection{} to register {register}",
+            "yanked {selections} selection{} to register {reg_display}",
             if selections == 1 { "" } else { "s" }
         )),
         Err(err) => editor.set_error(err.to_string()),
