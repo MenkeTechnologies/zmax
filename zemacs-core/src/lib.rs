@@ -28,6 +28,7 @@ pub mod rmail;
 pub mod increment;
 pub mod indent;
 pub mod line_ending;
+pub mod line_filter;
 pub mod macros;
 pub mod match_brackets;
 pub mod merge_ops;
