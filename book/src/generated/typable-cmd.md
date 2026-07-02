@@ -161,6 +161,23 @@
 | `:pio-access-revoke`, `:platformio-access-revoke` | Revoke access to a resource (`pio access revoke <resource> <team>`), live in a terminal panel. |
 | `:pio-access-public`, `:platformio-access-public` | Make a published resource public (`pio access public <resource>`), live in a terminal panel. |
 | `:pio-access-private`, `:platformio-access-private` | Make a published resource private (`pio access private <resource>`), live in a terminal panel. |
+| `:pio`, `:platformio` | Run an arbitrary `pio` command in a terminal panel (any subcommand/flag, including `pio home`). |
+| `:arduino-cli`, `:acli`, `:arduino` | Run an arbitrary `arduino-cli` command in a terminal panel (any subcommand/flag). |
+| `:arduino-core-download`, `:arduino-download-core` | Fetch a core without installing it (`arduino-cli core download <package>`), live in a terminal panel. |
+| `:arduino-lib-download`, `:arduino-download-lib` | Fetch a library without installing it (`arduino-cli lib download <name>`), live in a terminal panel. |
+| `:arduino-lib-update-index`, `:arduino-lib-index` | Refresh the arduino-cli library index (`arduino-cli lib update-index`). |
+| `:arduino-board-search`, `:arduino-boards-search` | Search the Boards Manager for a board (`arduino-cli board search [query]`). |
+| `:arduino-cache-clean`, `:arduino-clean-cache` | Delete the Boards/Library Manager download cache (`arduino-cli cache clean`). |
+| `:arduino-completion`, `:arduino-cli-completion` | Emit a shell completion script (`arduino-cli completion <bash|zsh|fish|powershell>`). |
+| `:arduino-config-get`, `:arduino-cfg-get` | Read one arduino-cli configuration key (`arduino-cli config get <key>`). |
+| `:arduino-config-set`, `:arduino-cfg-set` | Set an arduino-cli configuration value (`arduino-cli config set <key> <value…>`). |
+| `:arduino-config-add`, `:arduino-cfg-add` | Append value(s) to an arduino-cli list setting (`arduino-cli config add <key> <value…>`). |
+| `:arduino-config-remove`, `:arduino-cfg-remove` | Remove value(s) from an arduino-cli list setting (`arduino-cli config remove <key> <value…>`). |
+| `:arduino-config-delete`, `:arduino-cfg-delete` | Delete an arduino-cli settings key and its sub-keys (`arduino-cli config delete <key>`). |
+| `:arduino-config-init`, `:arduino-cfg-init` | Write the current configuration to a config file (`arduino-cli config init`). |
+| `:arduino-board-attach`, `:arduino-attach` | Attach a sketch to a board (`arduino-cli board attach -p <port> -b <fqbn> [sketch]`), live in a terminal panel. |
+| `:arduino-profile-create`, `:arduino-profile-new` | Create/update a build profile in the sketch project file (`arduino-cli profile create`), live in a terminal panel. |
+| `:arduino-profile-set-default`, `:arduino-profile-default` | Set the default build profile (`arduino-cli profile set-default <name>`). |
 | `:next-error`, `:cnext-error` | Visit the next compilation error's location (emacs next-error / M-g n). |
 | `:previous-error`, `:cprevious-error` | Visit the previous compilation error's location (emacs previous-error / M-g p). |
 | `:first-error` | Visit the first compilation error's location (emacs first-error). |

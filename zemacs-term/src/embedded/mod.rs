@@ -417,6 +417,74 @@ pub fn arduino_core_install(pkg: &str) -> Vec<String> {
     vec![s(ARDUINO_CLI), s("core"), s("install"), s(pkg)]
 }
 
+/// `arduino-cli core download <package>` — fetch a core without installing it.
+pub fn arduino_core_download(pkg: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("core"), s("download"), s(pkg)]
+}
+
+/// `arduino-cli lib download <name>` — fetch a library without installing it.
+pub fn arduino_lib_download(name: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("download"), s(name)]
+}
+
+/// `arduino-cli lib update-index` — refresh the library index.
+pub fn arduino_lib_update_index() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("update-index")]
+}
+
+/// `arduino-cli board search [query]` — search the Boards Manager for a board.
+pub fn arduino_board_search(query: &str) -> Vec<String> {
+    let mut v = vec![s(ARDUINO_CLI), s("board"), s("search")];
+    if !query.trim().is_empty() {
+        v.push(s(query.trim()));
+    }
+    v
+}
+
+/// `arduino-cli cache clean` — delete the Boards/Library Manager download cache.
+pub fn arduino_cache_clean() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("cache"), s("clean")]
+}
+
+/// `arduino-cli completion <shell>` — emit a shell completion script.
+pub fn arduino_completion(shell: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("completion"), s(shell)]
+}
+
+/// `arduino-cli config dump` is already exposed via [`arduino_config_dump`]; this
+/// is the generic `arduino-cli config <action> [args…]` for `get`, `set`,
+/// `add`, `remove`, `delete`, `init` — whose value arguments the user supplies.
+pub fn arduino_config(action: &str, args: &[String]) -> Vec<String> {
+    let mut v = vec![s(ARDUINO_CLI), s("config"), s(action)];
+    v.extend(args.iter().cloned());
+    v
+}
+
+/// Generic `arduino-cli <group> <sub> [args…]` for the leaves whose arguments
+/// the user supplies (`board attach`, `profile create`/`set-default`, …). Keeps
+/// one builder rather than inventing a signature per rarely-used leaf.
+pub fn arduino_sub(group: &str, sub: &str, args: &[String]) -> Vec<String> {
+    let mut v = vec![s(ARDUINO_CLI), s(group), s(sub)];
+    v.extend(args.iter().cloned());
+    v
+}
+
+/// `arduino-cli <args…>` — raw passthrough so any arduino-cli command, flag, or
+/// future subcommand is reachable from inside zemacs.
+pub fn arduino_passthrough(args: &[String]) -> Vec<String> {
+    let mut v = vec![s(ARDUINO_CLI)];
+    v.extend(args.iter().cloned());
+    v
+}
+
+/// `pio <args…>` — raw passthrough so any `pio` command, flag, or future
+/// subcommand (including `home`) is reachable from inside zemacs.
+pub fn pio_passthrough(args: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO)];
+    v.extend(args.iter().cloned());
+    v
+}
+
 /// `pio run [-e env]` — build the PlatformIO project.
 pub fn pio_build(settings: &EmbeddedSettings) -> Vec<String> {
     let mut v = vec![s(PIO), s("run")];
@@ -1108,6 +1176,39 @@ mod tests {
         assert_eq!(pio_settings_reset(), ["pio", "settings", "reset"]);
         assert_eq!(pio_system_completion("zsh"), ["pio", "system", "completion", "zsh"]);
         assert_eq!(pio_remote_device_monitor(), ["pio", "remote", "device", "monitor"]);
+    }
+
+    #[test]
+    fn arduino_extra_leaves_and_config() {
+        assert_eq!(arduino_core_download("arduino:avr"), ["arduino-cli", "core", "download", "arduino:avr"]);
+        assert_eq!(arduino_lib_download("Servo"), ["arduino-cli", "lib", "download", "Servo"]);
+        assert_eq!(arduino_lib_update_index(), ["arduino-cli", "lib", "update-index"]);
+        assert_eq!(arduino_board_search(""), ["arduino-cli", "board", "search"]);
+        assert_eq!(arduino_board_search("uno"), ["arduino-cli", "board", "search", "uno"]);
+        assert_eq!(arduino_cache_clean(), ["arduino-cli", "cache", "clean"]);
+        assert_eq!(arduino_completion("zsh"), ["arduino-cli", "completion", "zsh"]);
+        assert_eq!(
+            arduino_config("set", &["board_manager.additional_urls".to_string(), "http://x".to_string()]),
+            ["arduino-cli", "config", "set", "board_manager.additional_urls", "http://x"]
+        );
+        assert_eq!(arduino_config("init", &[]), ["arduino-cli", "config", "init"]);
+        assert_eq!(
+            arduino_sub("profile", "set-default", &["nano".to_string()]),
+            ["arduino-cli", "profile", "set-default", "nano"]
+        );
+    }
+
+    #[test]
+    fn raw_passthroughs_prepend_binary() {
+        assert_eq!(
+            pio_passthrough(&["home".to_string(), "--port".to_string(), "8080".to_string()]),
+            ["pio", "home", "--port", "8080"]
+        );
+        assert_eq!(
+            arduino_passthrough(&["version".to_string()]),
+            ["arduino-cli", "version"]
+        );
+        assert_eq!(pio_passthrough(&[]), ["pio"]);
     }
 
     #[test]
