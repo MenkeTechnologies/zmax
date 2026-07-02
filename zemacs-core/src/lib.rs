@@ -23,6 +23,7 @@ pub mod match_brackets;
 pub mod movement;
 pub mod object;
 mod position;
+pub mod region_ops;
 pub mod search;
 pub mod selection;
 pub mod snippets;
