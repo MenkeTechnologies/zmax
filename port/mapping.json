@@ -27707,5 +27707,61 @@
    "typable:all"
   ],
   "note": ":al[l] -> zemacs :all (open a window per arg file)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_bfirst",
+  "status": "ported",
+  "evidence": [
+   "typable:bfirst"
+  ],
+  "note": ":bf[irst] -> zemacs :bfirst (first buffer)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_brewind",
+  "status": "ported",
+  "evidence": [
+   "typable:bfirst"
+  ],
+  "note": ":br[ewind] -> zemacs :bfirst / :brewind"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_blast",
+  "status": "ported",
+  "evidence": [
+   "typable:blast"
+  ],
+  "note": ":bl[ast] -> zemacs :blast (last buffer)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_bmodified",
+  "status": "ported",
+  "evidence": [
+   "typable:bmodified"
+  ],
+  "note": ":bm[odified] -> zemacs :bmodified (next modified buffer)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_ball",
+  "status": "ported",
+  "evidence": [
+   "typable:ball"
+  ],
+  "note": ":ba[ll] -> zemacs :ball (window per buffer)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_badd",
+  "status": "ported",
+  "evidence": [
+   "typable:badd"
+  ],
+  "note": ":bad[d] -> zemacs :badd (add file to buffer list, no edit)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_bufdo",
+  "status": "ported",
+  "evidence": [
+   "typable:bufdo"
+  ],
+  "note": ":bufd[o] -> zemacs :bufdo (run Ex cmd in each buffer)"
  }
 ]

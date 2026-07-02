@@ -391,6 +391,118 @@ fn arg_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Vim buffer-list navigation ex-commands. zemacs stores documents in a
+// BTreeMap<DocumentId, _>, so `documents()` yields them in buffer-number order;
+// these reuse Editor::switch / ::open (no new state).
+// ---------------------------------------------------------------------------
+
+/// Document ids in buffer-number order.
+fn buffer_ids(editor: &Editor) -> Vec<DocumentId> {
+    editor.documents().map(|d| d.id()).collect()
+}
+
+/// `:bfirst` / `:brewind` — go to the first buffer.
+fn buffer_first(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if let Some(&id) = buffer_ids(cx.editor).first() {
+        cx.editor.switch(id, Action::Replace);
+    }
+    Ok(())
+}
+
+/// `:blast` — go to the last buffer.
+fn buffer_last(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if let Some(&id) = buffer_ids(cx.editor).last() {
+        cx.editor.switch(id, Action::Replace);
+    }
+    Ok(())
+}
+
+/// `:bmodified` — go to the next modified buffer after the current one (vim E84
+/// when there is none).
+fn buffer_modified(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let ids = buffer_ids(cx.editor);
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let cur = doc!(cx.editor).id();
+    let start = ids.iter().position(|&i| i == cur).unwrap_or(0);
+    let n = ids.len();
+    for step in 1..=n {
+        let id = ids[(start + step) % n];
+        let modified = cx
+            .editor
+            .documents()
+            .find(|d| d.id() == id)
+            .map_or(false, |d| d.is_modified());
+        if modified {
+            cx.editor.switch(id, Action::Replace);
+            return Ok(());
+        }
+    }
+    bail!("No modified buffer");
+}
+
+/// `:ball` — open a window for each buffer.
+fn buffer_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    for (i, id) in buffer_ids(cx.editor).into_iter().enumerate() {
+        let action = if i == 0 {
+            Action::Replace
+        } else {
+            Action::HorizontalSplit
+        };
+        cx.editor.switch(id, action);
+    }
+    Ok(())
+}
+
+/// `:badd {file}` — add a file to the buffer list without editing it.
+fn buffer_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("badd: needs a file");
+    }
+    for arg in args.iter() {
+        let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(arg.as_ref()));
+        cx.editor.open(&path, Action::Load)?;
+    }
+    Ok(())
+}
+
+/// `:bufdo {cmd}` — run an Ex command in each listed buffer.
+fn buffer_do(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cmd = args.join(" ");
+    if cmd.is_empty() {
+        bail!("bufdo: needs a command");
+    }
+    for id in buffer_ids(cx.editor) {
+        cx.editor.switch(id, Action::Replace);
+        run_command_line(cx, &cmd);
+    }
+    Ok(())
+}
+
 fn buffer_close_by_ids_impl(
     cx: &mut compositor::Context,
     doc_ids: &[DocumentId],
@@ -16673,6 +16785,72 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bfirst",
+        aliases: &["brewind", "brew"],
+        doc: "Go to the first buffer in the buffer list (vim :bfirst / :brewind).",
+        fun: buffer_first,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "blast",
+        aliases: &["bl"],
+        doc: "Go to the last buffer in the buffer list (vim :blast).",
+        fun: buffer_last,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bmodified",
+        aliases: &["bm"],
+        doc: "Go to the next modified buffer (vim :bmodified).",
+        fun: buffer_modified,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ball",
+        aliases: &["sball"],
+        doc: "Open a window for each buffer in the buffer list (vim :ball).",
+        fun: buffer_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "badd",
+        aliases: &[],
+        doc: "Add a file to the buffer list without editing it (vim :badd).",
+        fun: buffer_add,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bufdo",
+        aliases: &[],
+        doc: "Run an Ex command in each listed buffer (vim :bufdo).",
+        fun: buffer_do,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },
