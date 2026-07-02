@@ -4,6 +4,7 @@ pub mod dashboard;
 pub mod switcher;
 pub mod calc;
 pub mod calendar;
+pub mod rmail;
 mod document;
 pub mod dired;
 pub(crate) mod editor;

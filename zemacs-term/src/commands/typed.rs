@@ -14383,6 +14383,39 @@ fn goto_char(cx: &mut compositor::Context, pos: usize) {
     view.ensure_cursor_in_view(doc, scrolloff);
 }
 
+/// Open a fresh message-mode draft buffer: the To/Subject template, plus an
+/// optional pre-filled body (for Rmail reply/forward/mail). Point lands on the
+/// To: line when empty, else at the start of the body. Shared by `compose-mail`
+/// and the Rmail reader.
+pub(crate) fn open_mail_draft(cx: &mut compositor::Context, to: &str, subject: &str, body: &str) {
+    cx.editor.new_file(Action::Replace);
+    let mut text = zemacs_core::email::compose_template(to, subject);
+    if !body.is_empty() {
+        text.push('\n');
+        text.push_str(body);
+    }
+    {
+        let (view, doc) = current!(cx.editor);
+        let insert = Transaction::insert(
+            doc.text(),
+            &zemacs_core::Selection::point(0),
+            text.as_str().into(),
+        );
+        doc.apply(&insert, view.id);
+        doc.append_changes_to_history(view);
+    }
+    let target = if to.is_empty() {
+        header_line_end(doc!(cx.editor).text(), "To")
+    } else {
+        body_start(doc!(cx.editor).text())
+    };
+    if let Some(pos) = target {
+        goto_char(cx, pos);
+    }
+    cx.editor
+        .set_status("compose-mail: SPC m c send · SPC m s queue · SPC m a attach");
+}
+
 /// Emacs `compose-mail` (C-x m): open a new buffer with the message-mode
 /// template (`:compose-mail [to] [subject...]`) and put point on the To: line.
 fn compose_mail(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -14396,24 +14429,7 @@ fn compose_mail(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
         .map(|s| s.to_string())
         .collect::<Vec<_>>()
         .join(" ");
-    cx.editor.new_file(Action::Replace);
-    let template = zemacs_core::email::compose_template(&to, &subject);
-    {
-        let (view, doc) = current!(cx.editor);
-        let insert = Transaction::insert(
-            doc.text(),
-            &zemacs_core::Selection::point(0),
-            template.as_str().into(),
-        );
-        doc.apply(&insert, view.id);
-        doc.append_changes_to_history(view);
-    }
-    let pos = header_line_end(doc!(cx.editor).text(), "To");
-    if let Some(pos) = pos {
-        goto_char(cx, pos);
-    }
-    cx.editor
-        .set_status("compose-mail: SPC m c send · SPC m s queue · SPC m a attach");
+    open_mail_draft(cx, &to, &subject, "");
     Ok(())
 }
 

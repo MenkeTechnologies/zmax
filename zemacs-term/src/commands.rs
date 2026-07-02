@@ -616,6 +616,7 @@ impl MappableCommand {
         file_explorer_in_current_directory, "Open file explorer at current working directory",
         calendar, "Open the Calendar month grid (emacs calendar)",
         calc_dispatch, "Open the RPN Calc stack calculator (emacs calc / C-x *)",
+        rmail, "Open the Rmail mail reader on ~/RMAIL (emacs rmail)",
         dired, "Open the Dired directory editor (emacs C-x d)",
         dired_jump, "Open Dired on the current buffer's directory (emacs C-x C-j)",
         tex_insert_braces, "TeX: insert a {} brace pair (emacs tex-insert-braces)",
@@ -12301,6 +12302,21 @@ fn dired(cx: &mut Context) {
 /// Emacs `calendar`: open the Calendar month grid at today's date.
 fn calendar(cx: &mut Context) {
     cx.push_layer(Box::new(crate::ui::calendar::Calendar::new()));
+}
+
+/// Emacs `rmail`: open the Rmail mail reader on the primary mail file
+/// (`~/RMAIL`, `rmail-file-name`). A missing file opens an empty reader.
+fn rmail(cx: &mut Context) {
+    let path = zemacs_stdx::path::home_dir()
+        .map(|h| h.join("RMAIL"))
+        .unwrap_or_else(|_| std::path::PathBuf::from("RMAIL"));
+    let text = std::fs::read_to_string(&path).unwrap_or_default();
+    let mailbox = zemacs_core::rmail::Mailbox::from_mbox(&text);
+    if mailbox.is_empty() {
+        cx.editor
+            .set_status(format!("rmail: no messages in {}", path.display()));
+    }
+    cx.push_layer(Box::new(crate::ui::rmail::Rmail::new(mailbox, path)));
 }
 
 /// Emacs `calc` / `C-x *` (calc-dispatch): open the RPN stack calculator.

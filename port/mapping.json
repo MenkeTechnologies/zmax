@@ -27051,5 +27051,389 @@
    "typable:mml-attach-file"
   ],
   "note": "emacs mail-add-attachment -> zemacs :mail-add-attachment (alias of :mml-attach-file) inserts an MML attachment tag"
+ },
+ {
+  "spec_id": "emacs.command.rmail",
+  "status": "ported",
+  "evidence": [
+   "static:rmail"
+  ],
+  "note": "emacs rmail -> zemacs rmail opens the Rmail reader on ~/RMAIL"
+ },
+ {
+  "spec_id": "emacs.command.rmail_mode",
+  "status": "ported",
+  "evidence": [
+   "static:rmail"
+  ],
+  "note": "emacs rmail-mode -> entered by opening the zemacs Rmail reader"
+ },
+ {
+  "spec_id": "emacs.command.rmail_next_undeleted_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:n"
+  ],
+  "note": "rmail-next-undeleted-message -> Rmail n"
+ },
+ {
+  "spec_id": "emacs.command.rmail_previous_undeleted_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:p"
+  ],
+  "note": "rmail-previous-undeleted-message -> Rmail p"
+ },
+ {
+  "spec_id": "emacs.command.rmail_next_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-n"
+  ],
+  "note": "rmail-next-message -> Rmail M-n (includes deleted)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_previous_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-p"
+  ],
+  "note": "rmail-previous-message -> Rmail M-p"
+ },
+ {
+  "spec_id": "emacs.command.rmail_first_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:<"
+  ],
+  "note": "rmail-first-message -> Rmail <"
+ },
+ {
+  "spec_id": "emacs.command.rmail_last_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:>"
+  ],
+  "note": "rmail-last-message -> Rmail >"
+ },
+ {
+  "spec_id": "emacs.command.rmail_show_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:j"
+  ],
+  "note": "rmail-show-message -> Rmail j (numeric prefix jump)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_beginning_of_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:."
+  ],
+  "note": "rmail-beginning-of-message -> Rmail . (scroll to top)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_end_of_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:/"
+  ],
+  "note": "rmail-end-of-message -> Rmail / (scroll to bottom)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_delete_forward",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:d"
+  ],
+  "note": "rmail-delete-forward -> Rmail d"
+ },
+ {
+  "spec_id": "emacs.command.rmail_delete_backward",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:C-d"
+  ],
+  "note": "rmail-delete-backward -> Rmail C-d"
+ },
+ {
+  "spec_id": "emacs.command.rmail_undelete_previous_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:u"
+  ],
+  "note": "rmail-undelete-previous-message -> Rmail u"
+ },
+ {
+  "spec_id": "emacs.command.rmail_expunge",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:x"
+  ],
+  "note": "rmail-expunge -> Rmail x"
+ },
+ {
+  "spec_id": "emacs.command.rmail_expunge_and_save",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:s"
+  ],
+  "note": "rmail-expunge-and-save -> Rmail s (writes the mbox)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_get_new_mail",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:g"
+  ],
+  "note": "rmail-get-new-mail -> Rmail g (reload the mbox file)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_toggle_header",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:t"
+  ],
+  "note": "rmail-toggle-header -> Rmail t (pruned vs full headers)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_reply",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:r"
+  ],
+  "note": "rmail-reply -> Rmail r (opens a message-mode draft, To/Subject/cited body)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_forward",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:f"
+  ],
+  "note": "rmail-forward -> Rmail f (message-mode draft, Fwd: subject, quoted body)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_mail",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:m"
+  ],
+  "note": "rmail-mail -> Rmail m (opens an empty message-mode draft)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_quit",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:q"
+  ],
+  "note": "rmail-quit -> Rmail q"
+ },
+ {
+  "spec_id": "emacs.command.rmail_next_same_subject",
+  "status": "partial",
+  "evidence": [
+   "key:rmail:N"
+  ],
+  "note": "rmail-next-same-subject -> Rmail N (C-c C-n is the vim quit chord here, so N is the reachable alias)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_previous_same_subject",
+  "status": "partial",
+  "evidence": [
+   "key:rmail:P"
+  ],
+  "note": "rmail-previous-same-subject -> Rmail P (alias for C-c C-p)"
+ },
+ {
+  "spec_id": "emacs.keybinding.dot_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:."
+  ],
+  "note": "Rmail ."
+ },
+ {
+  "spec_id": "emacs.keybinding.slash_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:/"
+  ],
+  "note": "Rmail /"
+ },
+ {
+  "spec_id": "emacs.keybinding.lt_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:<"
+  ],
+  "note": "Rmail <"
+ },
+ {
+  "spec_id": "emacs.keybinding.gt_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:>"
+  ],
+  "note": "Rmail >"
+ },
+ {
+  "spec_id": "emacs.keybinding.c_d_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:C-d"
+  ],
+  "note": "Rmail C-d"
+ },
+ {
+  "spec_id": "emacs.keybinding.d_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:d"
+  ],
+  "note": "Rmail d"
+ },
+ {
+  "spec_id": "emacs.keybinding.del_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:del"
+  ],
+  "note": "Rmail DEL"
+ },
+ {
+  "spec_id": "emacs.keybinding.f_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:f"
+  ],
+  "note": "Rmail f"
+ },
+ {
+  "spec_id": "emacs.keybinding.g_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:g"
+  ],
+  "note": "Rmail g"
+ },
+ {
+  "spec_id": "emacs.keybinding.j_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:j"
+  ],
+  "note": "Rmail j"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:m"
+  ],
+  "note": "Rmail m"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_n_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-n"
+  ],
+  "note": "Rmail M-n"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_p_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-p"
+  ],
+  "note": "Rmail M-p"
+ },
+ {
+  "spec_id": "emacs.keybinding.n_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:n"
+  ],
+  "note": "Rmail n"
+ },
+ {
+  "spec_id": "emacs.keybinding.p_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:p"
+  ],
+  "note": "Rmail p"
+ },
+ {
+  "spec_id": "emacs.keybinding.q_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:q"
+  ],
+  "note": "Rmail q"
+ },
+ {
+  "spec_id": "emacs.keybinding.r_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:r"
+  ],
+  "note": "Rmail r"
+ },
+ {
+  "spec_id": "emacs.keybinding.s_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:s"
+  ],
+  "note": "Rmail s"
+ },
+ {
+  "spec_id": "emacs.keybinding.spc_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail: "
+  ],
+  "note": "Rmail SPC"
+ },
+ {
+  "spec_id": "emacs.keybinding.t_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:t"
+  ],
+  "note": "Rmail t"
+ },
+ {
+  "spec_id": "emacs.keybinding.u_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:u"
+  ],
+  "note": "Rmail u"
+ },
+ {
+  "spec_id": "emacs.keybinding.x_lparenrmail_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:x"
+  ],
+  "note": "Rmail x"
+ },
+ {
+  "spec_id": "emacs.keybinding.c_c_c_n_lparenrmail_rparen",
+  "status": "partial",
+  "evidence": [
+   "key:rmail:N"
+  ],
+  "note": "C-c C-n (next same subject) -> Rmail N alias"
+ },
+ {
+  "spec_id": "emacs.keybinding.c_c_c_p_lparenrmail_rparen",
+  "status": "partial",
+  "evidence": [
+   "key:rmail:P"
+  ],
+  "note": "C-c C-p (previous same subject) -> Rmail P alias"
  }
 ]

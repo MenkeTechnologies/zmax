@@ -74,6 +74,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space a c", "Applications", "calc_dispatch"), // SPC a c : calc-dispatch (open the RPN calculator)
     ("space a =", "Applications", ":calc"),         // SPC a = : quick infix eval of the region/args
     ("space a m", "Applications", ":compose-mail"), // SPC a m : compose-mail (message-mode draft)
+    ("space a r", "Applications", "rmail"),         // SPC a r : rmail (open the mail reader)
     ("space m c", "Mail", ":message-send-and-exit"),   // SPC m c : send and kill (C-c C-c)
     ("space m s", "Mail", ":message-send"),            // SPC m s : queue draft (C-c C-s)
     ("space m k", "Mail", ":message-kill-buffer"),     // SPC m k : kill draft (C-c C-k)
