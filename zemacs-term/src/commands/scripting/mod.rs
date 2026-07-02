@@ -181,6 +181,111 @@ pub(super) fn api_delete_region(start: i64, end: i64) -> Result<(), String> {
     })
 }
 
+// ── Line-oriented editor API (Vimscript getline/setline/cursor/…) ──────────
+
+/// Buffer line count in Vim terms (ropey counts the char after a trailing
+/// newline as an extra empty line; Vim's line count does not include it).
+pub(super) fn api_line_count() -> Result<i64, String> {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let t = doc.text();
+        let n = t.len_lines();
+        if n > 1 && t.line(n - 1).len_chars() == 0 {
+            (n - 1) as i64
+        } else {
+            n as i64
+        }
+    })
+}
+
+/// 1-based line `lnum` without its trailing newline, or `None` if out of range.
+pub(super) fn api_get_line(lnum: i64) -> Result<Option<String>, String> {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        let t = doc.text();
+        if lnum < 1 {
+            return None;
+        }
+        let i = (lnum - 1) as usize;
+        if i >= t.len_lines() {
+            return None;
+        }
+        let mut s = t.line(i).to_string();
+        while s.ends_with('\n') || s.ends_with('\r') {
+            s.pop();
+        }
+        Some(s)
+    })
+}
+
+/// Primary cursor as `(line, col)`, both 1-based.
+pub(super) fn api_cursor() -> Result<(i64, i64), String> {
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let t = doc.text();
+        let c = doc.selection(view.id).primary().cursor(t.slice(..));
+        let line = t.char_to_line(c);
+        let col = c - t.line_to_char(line);
+        ((line + 1) as i64, (col + 1) as i64)
+    })
+}
+
+/// Move the primary cursor to 1-based `(line, col)`, clamped to the buffer.
+pub(super) fn api_set_cursor(line: i64, col: i64) -> Result<(), String> {
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let t = doc.text();
+        let li = ((line.max(1) - 1) as usize).min(t.len_lines().saturating_sub(1));
+        let base = t.line_to_char(li);
+        let raw = t.line(li).to_string();
+        let linelen = raw.trim_end_matches(['\n', '\r']).chars().count();
+        let off = ((col.max(1) - 1) as usize).min(linelen);
+        doc.set_selection(view.id, Selection::point(base + off));
+    })
+}
+
+/// `setline`/`append` over the live buffer. `append == false` replaces the lines
+/// from `lnum`; `append == true` inserts after line `lnum` (`lnum == 0` before
+/// line 1). Returns 0 on success, 1 on an out-of-range replace.
+pub(super) fn api_set_lines(lnum: i64, lines: Vec<String>, append: bool) -> Result<i64, String> {
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let nlines = doc.text().len_lines();
+        if append {
+            let li = (lnum.max(0) as usize).min(nlines);
+            let pos = doc.text().line_to_char(li);
+            let ins: String = lines.iter().map(|l| format!("{l}\n")).collect();
+            let tendril: Tendril = ins.into();
+            let tx = Transaction::change(doc.text(), std::iter::once((pos, pos, Some(tendril))));
+            doc.apply(&tx, view.id);
+            0
+        } else {
+            if lnum < 1 {
+                return 1;
+            }
+            let start_li = ((lnum - 1) as usize).min(nlines);
+            let end_li = (start_li + lines.len()).min(nlines);
+            let a = doc.text().line_to_char(start_li);
+            let b = doc.text().line_to_char(end_li);
+            let repl: String = lines.iter().map(|l| format!("{l}\n")).collect();
+            let tendril: Tendril = repl.into();
+            let tx = Transaction::change(doc.text(), std::iter::once((a, b, Some(tendril))));
+            doc.apply(&tx, view.id);
+            0
+        }
+    })
+}
+
+/// Current buffer path/name (empty for an unnamed buffer).
+pub(super) fn api_buf_name() -> Result<String, String> {
+    with_cx(|cx| {
+        let (_view, doc) = current!(cx.editor);
+        doc.path()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    })
+}
+
 // ── Public entry points ────────────────────────────────────────────────────
 
 /// Evaluate an elisp source string against the live editor. Returns the printed
@@ -208,6 +313,22 @@ fn install_viml_host_hooks() {
     if VIML_HOOKS_INSTALLED.with(|c| c.replace(true)) {
         return;
     }
+    // Editor builtins (getline/setline/append/getbufline, line()/col()/getpos()/
+    // setpos()/cursor(), bufname()/bufnr()) → the live buffer/cursor. Installed
+    // once; each callback resolves the current context via `with_cx` at call time.
+    vimlrs::fusevm_bridge::install_editor_host(vimlrs::fusevm_bridge::EditorHost {
+        line_count: Box::new(|| api_line_count().unwrap_or(1)),
+        get_line: Box::new(|n| api_get_line(n).ok().flatten()),
+        set_lines: Box::new(|lnum, lines, append| api_set_lines(lnum, lines, append).unwrap_or(1)),
+        cursor: Box::new(|| api_cursor().unwrap_or((1, 1))),
+        set_cursor: Box::new(|l, c| {
+            let _ = api_set_cursor(l, c);
+        }),
+        buf_name: Box::new(|| api_buf_name().unwrap_or_default()),
+        // Vimscript's current-buffer number; zemacs presents a single current
+        // buffer to scripts, so 1 (matches `bufnr('')` on a normal buffer).
+        buf_nr: Box::new(|| 1),
+    });
     vimlrs::fusevm_bridge::install_set_hook(Box::new(|args: &str| {
         let _ = with_cx(|cx| {
             crate::commands::typed::run_command_line(cx, &format!("set {args}"));
