@@ -1467,7 +1467,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "v" => override_methods,           // SPC l v : override inherited members (JetBrains Ctrl-O)
                 "g" => generate_code,              // SPC l g : generate code — getters/constructors/impls (JetBrains Generate)
                 "k" => hover,                      // SPC l k : hover
-                "d" => peek_definition,            // SPC l d : peek definition in a popup (JetBrains Quick Definition)
+                "q" => peek_definition,            // SPC l q : peek definition in a popup (JetBrains Quick Definition)
                 "s" => signature_help,             // SPC l s : signature help
                 "f" => format_selections,          // SPC l f : format
                 // --- layouts (named window configurations) ---
