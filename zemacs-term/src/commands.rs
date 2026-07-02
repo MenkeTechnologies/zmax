@@ -889,6 +889,8 @@ impl MappableCommand {
         tab_only, "Close all other tabpages (:tabonly)",
         goto_first_tabpage, "Go to the first tabpage (:tabfirst)",
         goto_last_tabpage, "Go to the last tabpage (:tablast)",
+        tab_select, "Go to the [count]-th tab (emacs tab-select)",
+        tab_recent, "Switch to the most recently visited tab (emacs tab-recent)",
         move_to_opposite_group, "Move the current editor to the opposite split group (JetBrains)",
         rotate_view, "Goto next window",
         rotate_view_reverse, "Goto previous window",
@@ -13631,10 +13633,20 @@ pub(crate) fn build_tabs_picker(editor: &mut Editor) -> Box<dyn Component> {
     Box::new(overlaid(picker))
 }
 
+/// The tab that was active before the most recent switch, so `tab-recent` can
+/// jump back to it. Updated by every tab-navigation command below.
+static PREV_TAB: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+fn record_prev_tab(editor: &Editor) {
+    PREV_TAB.store(editor.current_tab(), std::sync::atomic::Ordering::Relaxed);
+}
+
 fn goto_next_tabpage(cx: &mut Context) {
+    record_prev_tab(cx.editor);
     cx.editor.goto_next_tabpage();
 }
 fn goto_previous_tabpage(cx: &mut Context) {
+    record_prev_tab(cx.editor);
     cx.editor.goto_previous_tabpage();
 }
 fn new_tab(cx: &mut Context) {
@@ -13647,11 +13659,31 @@ fn tab_only(cx: &mut Context) {
     cx.editor.tab_only();
 }
 fn goto_first_tabpage(cx: &mut Context) {
+    record_prev_tab(cx.editor);
     cx.editor.switch_tab(0);
 }
 fn goto_last_tabpage(cx: &mut Context) {
+    record_prev_tab(cx.editor);
     let n = cx.editor.tab_count();
     cx.editor.switch_tab(n.saturating_sub(1));
+}
+
+/// Emacs `tab-select`: switch to the [count]-th tab (1-based; default 1).
+fn tab_select(cx: &mut Context) {
+    let n = cx.count.map_or(1, |c| c.get());
+    record_prev_tab(cx.editor);
+    cx.editor.switch_tab(n.saturating_sub(1));
+}
+
+/// Emacs `tab-recent` (C-x t o): switch to the most recently visited tab.
+fn tab_recent(cx: &mut Context) {
+    let cur = cx.editor.current_tab();
+    let prev = PREV_TAB
+        .load(std::sync::atomic::Ordering::Relaxed)
+        .min(cx.editor.tab_count().saturating_sub(1));
+    cx.editor.switch_tab(prev);
+    // Remember where we came from so repeated `tab-recent` toggles.
+    PREV_TAB.store(cur, std::sync::atomic::Ordering::Relaxed);
 }
 
 /// Pin the current file to the project's harpoon list (jump to it later with

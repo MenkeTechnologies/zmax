@@ -28531,5 +28531,21 @@
    "typable:kill-all-abbrevs"
   ],
   "note": "kill-all-abbrevs: remove every defined abbreviation"
+ },
+ {
+  "spec_id": "emacs.command.tab_select",
+  "status": "ported",
+  "evidence": [
+   "static:tab_select"
+  ],
+  "note": "tab-select: switch to the [count]-th tab via Editor::switch_tab"
+ },
+ {
+  "spec_id": "emacs.command.tab_recent",
+  "status": "ported",
+  "evidence": [
+   "static:tab_recent"
+  ],
+  "note": "tab-recent: switch to the most recently visited tab (tracked across the tab-navigation commands)"
  }
 ]
