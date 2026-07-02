@@ -9023,7 +9023,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "ropey",
  "toml 1.1.2+spec-1.1.0",
@@ -9074,7 +9074,7 @@ dependencies = [
 
 [[package]]
 name = "zemacs-core"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -9111,7 +9111,7 @@ dependencies = [
 
 [[package]]
 name = "zemacs-dap"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "anyhow",
  "futures-executor",
@@ -9131,7 +9131,7 @@ dependencies = [
 
 [[package]]
 name = "zemacs-dap-types"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "serde",
  "serde_json",
@@ -9139,7 +9139,7 @@ dependencies = [
 
 [[package]]
 name = "zemacs-event"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "anyhow",
  "foldhash 0.2.0",
@@ -9153,7 +9153,7 @@ dependencies = [
 
 [[package]]
 name = "zemacs-loader"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "anyhow",
  "cc",
@@ -9173,7 +9173,7 @@ dependencies = [
 
 [[package]]
 name = "zemacs-lsp"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -9207,11 +9207,11 @@ dependencies = [
 
 [[package]]
 name = "zemacs-parsec"
-version = "0.2.10"
+version = "0.2.11"
 
 [[package]]
 name = "zemacs-stdx"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "bitflags 2.13.0",
  "dunce",
@@ -9232,7 +9232,7 @@ dependencies = [
 
 [[package]]
 name = "zemacs-term"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -9293,7 +9293,7 @@ dependencies = [
 
 [[package]]
 name = "zemacs-tui"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "arrayvec",
  "bitflags 2.13.0",
@@ -9310,7 +9310,7 @@ dependencies = [
 
 [[package]]
 name = "zemacs-vcs"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -9326,7 +9326,7 @@ dependencies = [
 
 [[package]]
 name = "zemacs-view"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "anyhow",
  "arc-swap",
