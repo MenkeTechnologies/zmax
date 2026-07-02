@@ -14032,6 +14032,55 @@ fn retab(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyho
     Ok(())
 }
 
+/// Rewrite each line in the primary selection's line range with `f` applied to its
+/// content (the line ending is excluded and preserved). Shared by [`tabify`] and
+/// [`untabify`], both of which are per-line column transforms over the region.
+fn map_region_lines(
+    cx: &mut compositor::Context,
+    f: impl Fn(&str, usize) -> String,
+) -> anyhow::Result<()> {
+    let (view, doc) = current!(cx.editor);
+    let tab_width = doc.tab_width();
+    let slice = doc.text().slice(..);
+    let (first, last) = primary_line_range(doc, view.id);
+
+    let mut changes = Vec::new();
+    for line in first..=last {
+        let lstart = slice.line_to_char(line);
+        let lend = line_ending::line_end_char_index(&slice, line);
+        let content: String = slice.slice(lstart..lend).chunks().collect();
+        let converted = f(&content, tab_width);
+        if converted != content {
+            changes.push((lstart, lend, Some(Tendril::from(converted.as_str()))));
+        }
+    }
+    if changes.is_empty() {
+        return Ok(());
+    }
+    let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Emacs `tabify`: convert runs of blanks in the region to TABs wherever that does
+/// not change the column they end at (per-line, honoring the buffer `tab_width`).
+fn tabify(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    map_region_lines(cx, zemacs_core::whitespace::tabify)
+}
+
+/// Emacs `untabify`: expand every TAB in the region to spaces at the buffer
+/// `tab_width` (per-line).
+fn untabify(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    map_region_lines(cx, zemacs_core::whitespace::untabify)
+}
+
 fn join_lines_cmd(
     cx: &mut compositor::Context,
     args: Args,
@@ -14270,6 +14319,120 @@ fn just_one_space(
         Selection::point((start + 1).min(doc.text().len_chars())),
     );
     doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// The run of spaces/tabs (never newlines) around `cursor` in `slice`, as the
+/// half-open char range `[start, end)`. Mirrors
+/// [`zemacs_core::whitespace::horizontal_space_run`] on the live rope.
+fn horizontal_space_run(slice: &zemacs_core::ropey::RopeSlice, cursor: usize) -> (usize, usize) {
+    let len = slice.len_chars();
+    let cursor = cursor.min(len);
+    let mut start = cursor;
+    while start > 0 && matches!(slice.char(start - 1), ' ' | '\t') {
+        start -= 1;
+    }
+    let mut end = cursor;
+    while end < len && matches!(slice.char(end), ' ' | '\t') {
+        end += 1;
+    }
+    (start, end)
+}
+
+fn delete_horizontal_space(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let (start, end) = horizontal_space_run(&slice, cursor);
+    if start == end {
+        return Ok(());
+    }
+
+    // Emacs `delete-horizontal-space` (M-\): remove every space/tab around point.
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((start, end, None)));
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::point(start));
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Remembers the last `cycle-spacing` result so a repeated invocation with point
+/// unmoved advances to the next phase; any other cursor position restarts the cycle.
+struct CycleSpacingState {
+    /// Cursor position produced by the previous phase.
+    pos: usize,
+    /// Phase applied last time (the next call runs `phase.next()`).
+    phase: zemacs_core::whitespace::CycleSpacing,
+    /// The original whitespace run, captured on the first phase for later restore.
+    original: String,
+}
+
+thread_local! {
+    static CYCLE_SPACING: std::cell::RefCell<Option<CycleSpacingState>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+fn cycle_spacing(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    use zemacs_core::whitespace::CycleSpacing;
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+
+    // Decide the phase: a consecutive call at the same point advances the cycle,
+    // otherwise start over and capture the current whitespace run for restore.
+    let (phase, original) = CYCLE_SPACING.with(|c| {
+        match &*c.borrow() {
+            Some(st) if st.pos == cursor => (st.phase.next(), st.original.clone()),
+            _ => {
+                let (start, end) = horizontal_space_run(&slice, cursor);
+                let text: String = slice.slice(start..end).chunks().collect();
+                (CycleSpacing::first(), text)
+            }
+        }
+    });
+
+    let (start, end) = horizontal_space_run(&slice, cursor);
+    let (replacement, new_cursor) = match phase {
+        CycleSpacing::JustOne => (" ".to_string(), start + 1),
+        CycleSpacing::None => (String::new(), start),
+        CycleSpacing::Restore => (original.clone(), start + original.chars().count()),
+    };
+
+    let repl = if replacement.is_empty() {
+        None
+    } else {
+        Some(Tendril::from(replacement.as_str()))
+    };
+    let transaction = Transaction::change(doc.text(), std::iter::once((start, end, repl)));
+    doc.apply(&transaction, view.id);
+    let new_cursor = new_cursor.min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::point(new_cursor));
+    doc.append_changes_to_history(view);
+
+    CYCLE_SPACING.with(|c| {
+        *c.borrow_mut() = Some(CycleSpacingState {
+            pos: new_cursor,
+            phase,
+            original,
+        });
+    });
     Ok(())
 }
 
@@ -21530,6 +21693,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Collapse spaces and tabs around the cursor to a single space.",
         fun: just_one_space,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "delete-horizontal-space",
+        aliases: &[],
+        doc: "Delete all spaces and tabs around the cursor (emacs M-\\).",
+        fun: delete_horizontal_space,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cycle-spacing",
+        aliases: &[],
+        doc: "Cycle the whitespace around the cursor: one space, then none, then restore.",
+        fun: cycle_spacing,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tabify",
+        aliases: &[],
+        doc: "Convert runs of spaces in the region to tabs at tab stops (emacs tabify).",
+        fun: tabify,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "untabify",
+        aliases: &[],
+        doc: "Expand tabs in the region to spaces at the buffer tab width (emacs untabify).",
+        fun: untabify,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
