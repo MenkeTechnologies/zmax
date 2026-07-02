@@ -24565,5 +24565,239 @@
    "builtin:viml:synIDtrans"
   ],
   "note": "implemented by embedded vimlrs (pub fn f_synIDtrans)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_map",
+  "status": "ported",
+  "evidence": [
+   "typable:map"
+  ],
+  "note": "vim :map -> :map creates a normal+select-mode key mapping via register_map_line, and a no-rhs :map lists current bindings"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_mapclear",
+  "status": "ported",
+  "evidence": [
+   "typable:mapclear"
+  ],
+  "note": "vim :mapclear -> :mapclear clears runtime normal+select-mode mappings via vim_map_cmd"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_imap",
+  "status": "ported",
+  "evidence": [
+   "typable:imap"
+  ],
+  "note": "vim :imap -> :imap creates an insert-mode key mapping via register_map_line"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_imapclear",
+  "status": "ported",
+  "evidence": [
+   "typable:imapclear"
+  ],
+  "note": "vim :imapclear -> :imapclear clears runtime insert-mode mappings"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_inoremap",
+  "status": "ported",
+  "evidence": [
+   "typable:inoremap"
+  ],
+  "note": "vim :inoremap -> :inoremap creates a non-recursive insert-mode key mapping"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_iunmap",
+  "status": "ported",
+  "evidence": [
+   "typable:iunmap"
+  ],
+  "note": "vim :iunmap -> :iunmap removes an insert-mode key mapping"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_cnext_1",
+  "status": "ported",
+  "evidence": [
+   "typable:cnext"
+  ],
+  "note": "vim :cnext -> :cnext (alias cn) jumps to the next quickfix entry"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_cnfile_1",
+  "status": "ported",
+  "evidence": [
+   "typable:cnfile"
+  ],
+  "note": "vim :cnfile -> :cnfile (alias cnf) jumps to the first quickfix entry in the next file"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_lnext_1",
+  "status": "ported",
+  "evidence": [
+   "typable:lnext"
+  ],
+  "note": "vim :lnext -> :lnext (aliases lne/ln) jumps to the next location-list entry"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_nmap",
+  "status": "ported",
+  "evidence": [
+   "typable:nmap"
+  ],
+  "note": "vim :nmap -> zemacs :nmap maps {lhs}->{rhs} in Normal mode (register_map_line routes 'n'->Mode::Normal)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_nnoremap",
+  "status": "ported",
+  "evidence": [
+   "typable:nnoremap"
+  ],
+  "note": "vim :nnoremap -> zemacs :nnoremap non-recursive Normal-mode map"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_nmapclear",
+  "status": "ported",
+  "evidence": [
+   "typable:nmapclear"
+  ],
+  "note": "vim :nmapclear -> zemacs :nmapclear clears runtime Normal-mode mappings"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_nunmap",
+  "status": "ported",
+  "evidence": [
+   "typable:nunmap"
+  ],
+  "note": "vim :nunmap -> zemacs :nunmap removes a runtime Normal-mode {lhs} mapping"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_noremap",
+  "status": "ported",
+  "evidence": [
+   "typable:noremap"
+  ],
+  "note": "vim :noremap -> zemacs :noremap non-recursive map in Normal+Select"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_unmap",
+  "status": "ported",
+  "evidence": [
+   "typable:unmap"
+  ],
+  "note": "vim :unmap -> zemacs :unmap removes a runtime mapping (Normal+Select)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_vmap",
+  "status": "ported",
+  "evidence": [
+   "typable:vmap"
+  ],
+  "note": "vim :vmap (Visual+Select) -> zemacs :vmap maps in Select mode"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_vnoremap",
+  "status": "ported",
+  "evidence": [
+   "typable:vnoremap"
+  ],
+  "note": "vim :vnoremap -> zemacs :vnoremap non-recursive Select-mode map"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_vmapclear",
+  "status": "ported",
+  "evidence": [
+   "typable:vmapclear"
+  ],
+  "note": "vim :vmapclear -> zemacs :vmapclear clears Select(visual)-mode mappings"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_vunmap",
+  "status": "ported",
+  "evidence": [
+   "typable:vunmap"
+  ],
+  "note": "vim :vunmap -> zemacs :vunmap removes a runtime Select/visual-mode mapping"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_xmap",
+  "status": "ported",
+  "evidence": [
+   "typable:xmap"
+  ],
+  "note": "vim :xmap (Visual) -> zemacs :xmap maps in Select mode ('x'->Mode::Select)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_xnoremap",
+  "status": "ported",
+  "evidence": [
+   "typable:xnoremap"
+  ],
+  "note": "vim :xnoremap -> zemacs :xnoremap non-recursive visual-mode map"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_xunmap",
+  "status": "ported",
+  "evidence": [
+   "typable:xunmap"
+  ],
+  "note": "vim :xunmap -> zemacs :xunmap removes a runtime visual-mode mapping"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_smap",
+  "status": "ported",
+  "evidence": [
+   "typable:smap"
+  ],
+  "note": "vim :smap (Select) -> zemacs :smap maps in Select mode ('s'->Mode::Select)"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_snoremap",
+  "status": "ported",
+  "evidence": [
+   "typable:snoremap"
+  ],
+  "note": "vim :snoremap -> zemacs :snoremap non-recursive Select-mode map"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_omap",
+  "status": "partial",
+  "evidence": [
+   "typable:omap"
+  ],
+  "note": "vim :omap (Operator-pending) -> zemacs :omap; no zemacs Operator-pending mode, approximated onto Normal"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_onoremap",
+  "status": "partial",
+  "evidence": [
+   "typable:onoremap"
+  ],
+  "note": "vim :onoremap -> zemacs :onoremap; Operator-pending approximated onto Normal"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_tilde",
+  "status": "partial",
+  "evidence": [
+   "static:repeat_substitute"
+  ],
+  "note": "vim :~ (repeat last :substitute) -> zemacs repeat_substitute re-runs editor.last_substitute on current line"
+ },
+ {
+  "spec_id": "neovim.cmdline-editing.ctrl_k_lbrace_char1_rbrace_lbrace_char2_rbrace",
+  "status": "ported",
+  "evidence": [
+   "key:insert:C-k",
+   "static:insert_digraph"
+  ],
+  "note": "vim CTRL-K {char1}{char2} -> zemacs insert_digraph (i_CTRL-K, two-char mnemonic via digraph_lookup)"
+ },
+ {
+  "spec_id": "neovim.insert-mode.ctrl_v_lbrace_number_rbrace_insert_three_digit_decimal_number_as_a_single",
+  "status": "partial",
+  "evidence": [
+   "key:insert:C-v",
+   "static:insert_char_interactive"
+  ],
+  "note": "vim i_CTRL-V -> insert_char_interactive (inserts the next key literally); decimal-code-to-byte sub-variant not supported"
  }
 ]

@@ -86,6 +86,54 @@ pub fn clear(lines: &[String], l0: usize, l1: usize, c0: usize, c1: usize) -> Ve
         .collect()
 }
 
+/// Emacs `open-rectangle`: insert `|c1-c0|` spaces at column `c0` on each line in
+/// range, shifting existing text right. Short lines are padded to `c0` first.
+pub fn open(lines: &[String], l0: usize, l1: usize, c0: usize, c1: usize) -> Vec<String> {
+    let (c0, c1) = (c0.min(c1), c0.max(c1));
+    let width = c1 - c0;
+    lines
+        .iter()
+        .enumerate()
+        .map(|(i, line)| {
+            if i < l0 || i > l1 {
+                return line.clone();
+            }
+            let mut cs = cols(line);
+            if cs.len() < c0 {
+                cs.resize(c0, ' ');
+            }
+            cs.splice(c0..c0, std::iter::repeat_n(' ', width));
+            cs.into_iter().collect()
+        })
+        .collect()
+}
+
+/// Emacs `delete-whitespace-rectangle`: starting at the rectangle's left column
+/// `c0` on each line in range, delete the following run of spaces/tabs. Lines
+/// shorter than `c0` are left untouched.
+pub fn delete_whitespace(lines: &[String], l0: usize, l1: usize, c0: usize) -> Vec<String> {
+    lines
+        .iter()
+        .enumerate()
+        .map(|(i, line)| {
+            if i < l0 || i > l1 {
+                return line.clone();
+            }
+            let cs = cols(line);
+            if c0 >= cs.len() {
+                return line.clone();
+            }
+            let mut end = c0;
+            while end < cs.len() && (cs[end] == ' ' || cs[end] == '\t') {
+                end += 1;
+            }
+            let mut out: String = cs[..c0].iter().collect();
+            out.extend(cs[end..].iter());
+            out
+        })
+        .collect()
+}
+
 /// Insert `rect` with its top-left corner at (`line`, `col`): `rect[i]` goes into
 /// line `line + i`, padding short lines with spaces up to `col`. Lines beyond
 /// the buffer are appended.
