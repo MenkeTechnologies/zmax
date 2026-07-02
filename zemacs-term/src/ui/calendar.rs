@@ -42,6 +42,8 @@ fn today() -> Date {
 pub struct Calendar {
     point: Date,
     today: Date,
+    /// Diary entries loaded from `~/diary`, used to mark dates and show entries.
+    diary: Vec<zemacs_core::diary::Entry>,
 }
 
 impl Calendar {
@@ -50,6 +52,7 @@ impl Calendar {
         Calendar {
             point: today,
             today,
+            diary: crate::commands::diary_entries(),
         }
     }
 }
@@ -69,6 +72,18 @@ impl Component for Calendar {
         let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
             compositor.pop();
         });
+        // `d` shows the diary entries for the date at point (emacs
+        // diary-view-entries, `d` in calendar-mode).
+        if let key!('d') = key {
+            let hits = zemacs_core::diary::entries_for(&self.diary, self.point);
+            if hits.is_empty() {
+                cx.editor.set_status("Diary: no entries for this date");
+            } else {
+                let joined = hits.iter().map(|e| e.text.as_str()).collect::<Vec<_>>().join(" · ");
+                cx.editor.set_status(format!("Diary: {joined}"));
+            }
+            return EventResult::Consumed(None);
+        }
         match key {
             key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
             ctrl!('f') | key!(Right) | key!('l') => self.point = add_days(self.point, 1),
@@ -102,6 +117,7 @@ impl Component for Calendar {
         let info_style = theme.get("ui.linenr");
         let sel_style = theme.get("ui.selection");
         let today_style = theme.get("diff.plus");
+        let diary_style = theme.get("warning");
 
         surface.clear_with(area, bg);
         if area.width < 22 || area.height < 6 {
@@ -111,7 +127,7 @@ impl Component for Calendar {
         let p = self.point;
         let title = format!(" {} {}", MONTH_NAMES[(p.month - 1) as usize], p.year);
         surface.set_stringn(area.x, area.y, &title, area.width as usize, header_style);
-        let hint = "C-f/b day  C-n/p week  M-{/} month  . today  q quit";
+        let hint = "C-f/b day  C-n/p week  M-{/} month  . today  d diary  q quit";
         if title.len() + hint.len() + 3 < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -145,6 +161,8 @@ impl Component for Calendar {
                 break;
             }
             let s = format!("{:>2}", d);
+            let has_diary =
+                zemacs_core::diary::has_entry(&self.diary, Date::new(p.year, p.month, d));
             let style = if d == p.day {
                 sel_style
             } else if p.year == self.today.year
@@ -152,6 +170,8 @@ impl Component for Calendar {
                 && d == self.today.day
             {
                 today_style
+            } else if has_diary {
+                diary_style
             } else {
                 text_style
             };

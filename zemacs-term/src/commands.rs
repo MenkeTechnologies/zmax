@@ -617,6 +617,12 @@ impl MappableCommand {
         buffer_menu, "Open the Buffer Menu (emacs buffer-menu / C-x C-b)",
         list_buffers, "List open buffers in the Buffer Menu (emacs list-buffers)",
         calendar, "Open the Calendar month grid (emacs calendar)",
+        diary, "Show today's diary entries (emacs diary)",
+        diary_view_entries, "Show diary entries for the current date (emacs diary-view-entries)",
+        diary_show_all_entries, "Open the diary file (emacs diary-show-all-entries)",
+        diary_insert_entry, "Add a diary entry for today (emacs diary-insert-entry)",
+        diary_insert_weekly_entry, "Add a weekly diary entry for today (emacs diary-insert-weekly-entry)",
+        diary_mark_entries, "Mark calendar dates that have diary entries (emacs diary-mark-entries)",
         calc_dispatch, "Open the RPN Calc stack calculator (emacs calc / C-x *)",
         occur, "List lines matching a regexp in an *Occur* overlay (emacs occur / M-s o)",
         rmail, "Open the Rmail mail reader on ~/RMAIL (emacs rmail)",
@@ -12503,6 +12509,125 @@ fn list_buffers(cx: &mut Context) {
 /// Emacs `calendar`: open the Calendar month grid at today's date.
 fn calendar(cx: &mut Context) {
     cx.push_layer(Box::new(crate::ui::calendar::Calendar::new()));
+}
+
+// ---------------------------------------------------------------------------
+// Emacs diary: dated entries in `~/diary` that the Calendar reads. Parsing +
+// date-matching is the pure zemacs_core::diary; these commands read/write the
+// file and report matches. (Calendar marking of diary dates lives in
+// ui/calendar.rs, which loads the same file.)
+// ---------------------------------------------------------------------------
+
+/// The diary file path (`diary-file`, default `~/diary`).
+pub(crate) fn diary_path() -> std::path::PathBuf {
+    zemacs_stdx::path::home_dir()
+        .map(|h| h.join("diary"))
+        .unwrap_or_else(|_| std::path::PathBuf::from("diary"))
+}
+
+/// Today's date from the system clock (UTC day).
+pub(crate) fn diary_today() -> zemacs_core::calendar::Date {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    zemacs_core::calendar::from_serial(secs / 86_400)
+}
+
+/// Read + parse the diary file (empty list if it does not exist).
+pub(crate) fn diary_entries() -> Vec<zemacs_core::diary::Entry> {
+    match std::fs::read_to_string(diary_path()) {
+        Ok(text) => zemacs_core::diary::parse_file(&text),
+        Err(_) => Vec::new(),
+    }
+}
+
+/// Show the diary entries for `date` in the status line.
+fn diary_show_for(cx: &mut Context, date: zemacs_core::calendar::Date) {
+    let entries = diary_entries();
+    let hits = zemacs_core::diary::entries_for(&entries, date);
+    if hits.is_empty() {
+        cx.editor.set_status(format!(
+            "Diary: no entries for {} {}, {}",
+            zemacs_core::calendar::MONTH_NAMES[(date.month - 1) as usize],
+            date.day,
+            date.year
+        ));
+    } else {
+        let joined = hits.iter().map(|e| e.text.as_str()).collect::<Vec<_>>().join(" · ");
+        cx.editor.set_status(format!("Diary: {joined}"));
+    }
+}
+
+/// Emacs `diary`: display the diary entries for today.
+fn diary(cx: &mut Context) {
+    diary_show_for(cx, diary_today());
+}
+
+/// Emacs `diary-view-entries`: display the entries for the current date (from
+/// the Calendar this is the date at point; run standalone it is today).
+fn diary_view_entries(cx: &mut Context) {
+    diary_show_for(cx, diary_today());
+}
+
+/// Emacs `diary-show-all-entries`: open the diary file for editing.
+fn diary_show_all_entries(cx: &mut Context) {
+    let path = diary_path();
+    if let Err(e) = cx.editor.open(&path, Action::Replace) {
+        cx.editor.set_error(format!("diary: cannot open {}: {e}", path.display()));
+    }
+}
+
+/// Append a diary header for `date` to the file and open it with point at the
+/// end, ready to type the entry (Emacs `insert-diary-entry` family).
+fn diary_insert(cx: &mut Context, header: String) {
+    let path = diary_path();
+    let mut contents = std::fs::read_to_string(&path).unwrap_or_default();
+    if !contents.is_empty() && !contents.ends_with('\n') {
+        contents.push('\n');
+    }
+    contents.push_str(&header);
+    if let Err(e) = std::fs::write(&path, &contents) {
+        cx.editor.set_error(format!("diary: cannot write {}: {e}", path.display()));
+        return;
+    }
+    if cx.editor.open(&path, Action::Replace).is_ok() {
+        let (view, doc) = current!(cx.editor);
+        let end = doc.text().len_chars();
+        doc.set_selection(view.id, Selection::point(end));
+    }
+}
+
+/// Emacs `diary-insert-entry` / `insert-diary-entry`: add a dated entry for
+/// today.
+fn diary_insert_entry(cx: &mut Context) {
+    diary_insert(cx, zemacs_core::diary::format_daily(diary_today()));
+}
+
+/// Emacs `diary-insert-weekly-entry` / `insert-weekly-diary-entry`: add a
+/// weekly entry on today's weekday.
+fn diary_insert_weekly_entry(cx: &mut Context) {
+    diary_insert(cx, zemacs_core::diary::format_weekly(diary_today()));
+}
+
+/// Emacs `diary-mark-entries`: mark the calendar dates that have diary entries.
+/// The Calendar Component marks them visually when open; standalone this reports
+/// how many of the current month's days carry an entry.
+fn diary_mark_entries(cx: &mut Context) {
+    let entries = diary_entries();
+    let today = diary_today();
+    let dim = zemacs_core::calendar::days_in_month(today.year, today.month);
+    let marked = (1..=dim)
+        .filter(|&d| {
+            zemacs_core::diary::has_entry(&entries, zemacs_core::calendar::Date::new(today.year, today.month, d))
+        })
+        .count();
+    cx.editor.set_status(format!(
+        "Diary: {marked} marked date{} in {} {}",
+        if marked == 1 { "" } else { "s" },
+        zemacs_core::calendar::MONTH_NAMES[(today.month - 1) as usize],
+        today.year
+    ));
 }
 
 /// Emacs `occur` (`M-s o`): read a regexp, then list every line in the current
