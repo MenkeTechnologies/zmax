@@ -794,6 +794,8 @@ impl MappableCommand {
         clear_rectangle, "Blank the rectangle with spaces (emacs C-x r c)",
         copy_rectangle_as_kill, "Copy the rectangle without deleting (emacs C-x r M-w)",
         yank_rectangle, "Insert the saved rectangle at point (emacs C-x r y)",
+        open_rectangle, "Insert blank space to shift the rectangle right (emacs C-x r o)",
+        delete_whitespace_rectangle, "Delete whitespace after the rectangle's left column on each line (emacs delete-whitespace-rectangle)",
         bookmark_set, "Set a named persistent bookmark at point (emacs C-x r m)",
         bookmark_jump, "Jump to a bookmark via a picker (emacs C-x r b / C-x r l)",
         define_abbrev, "Define a global abbrev: <name> <expansion> (emacs C-x a g)",
@@ -11897,6 +11899,8 @@ enum RectOp {
     Clear,
     CopyAsKill,
     Yank,
+    Open,
+    DeleteWhitespace,
 }
 
 /// Split the document into lines without their trailing line ending.
@@ -11947,6 +11951,10 @@ fn rectangle_op(cx: &mut Context, op: RectOp) {
             }
             crate::emacs_rect::yank(&lines, l0, c0, &rect)
         }
+        RectOp::Open => crate::emacs_rect::open(&lines, l0, l1, c0, c1),
+        RectOp::DeleteWhitespace => {
+            crate::emacs_rect::delete_whitespace(&lines, l0, l1, c0.min(c1))
+        }
     };
 
     let new_text = new_lines.join(le);
@@ -11981,6 +11989,16 @@ fn copy_rectangle_as_kill(cx: &mut Context) {
 /// Emacs `yank-rectangle` (C-x r y): insert the saved rectangle at point.
 fn yank_rectangle(cx: &mut Context) {
     rectangle_op(cx, RectOp::Yank);
+}
+/// Emacs `open-rectangle` (C-x r o): insert blank space to fill the rectangle,
+/// shifting the original text to the right.
+fn open_rectangle(cx: &mut Context) {
+    rectangle_op(cx, RectOp::Open);
+}
+/// Emacs `delete-whitespace-rectangle`: on each line, delete the whitespace run
+/// starting at the rectangle's left column.
+fn delete_whitespace_rectangle(cx: &mut Context) {
+    rectangle_op(cx, RectOp::DeleteWhitespace);
 }
 
 /// Emacs `bookmark-set` (C-x r m): prompt for a name and store the current

@@ -24799,5 +24799,21 @@
    "static:insert_char_interactive"
   ],
   "note": "vim i_CTRL-V -> insert_char_interactive (inserts the next key literally); decimal-code-to-byte sub-variant not supported"
+ },
+ {
+  "spec_id": "emacs.command.open_rectangle",
+  "status": "ported",
+  "evidence": [
+   "static:open_rectangle"
+  ],
+  "note": "emacs open-rectangle (C-x r o) -> open_rectangle: inserts blank space over the block, shifting text right"
+ },
+ {
+  "spec_id": "emacs.command.delete_whitespace_rectangle",
+  "status": "ported",
+  "evidence": [
+   "static:delete_whitespace_rectangle"
+  ],
+  "note": "emacs delete-whitespace-rectangle -> delete_whitespace_rectangle: deletes the whitespace run at the block's left column on each line"
  }
 ]

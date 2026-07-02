@@ -102,7 +102,7 @@ pub fn open(lines: &[String], l0: usize, l1: usize, c0: usize, c1: usize) -> Vec
             if cs.len() < c0 {
                 cs.resize(c0, ' ');
             }
-            cs.splice(c0..c0, std::iter::repeat_n(' ', width));
+            cs.splice(c0..c0, vec![' '; width]);
             cs.into_iter().collect()
         })
         .collect()
@@ -195,5 +195,30 @@ mod tests {
     #[test]
     fn extract_handles_swapped_columns() {
         assert_eq!(extract(&grid(), 0, 0, 4, 1), vec!["bcd"]);
+    }
+
+    #[test]
+    fn open_shifts_text_right_by_rect_width() {
+        // columns [1,4) => insert 3 spaces at col 1 on each line
+        assert_eq!(
+            open(&grid(), 0, 2, 1, 4),
+            vec!["a   bcdef", "g   hijkl", "m   nopqr"]
+        );
+    }
+
+    #[test]
+    fn open_pads_short_lines_to_left_column() {
+        let lines = vec!["abcdef".into(), "xy".into()];
+        let out = open(&lines, 0, 1, 4, 6); // width 2 at col 4
+        assert_eq!(out[0], "abcd  ef");
+        assert_eq!(out[1], "xy    "); // padded to col 4 then 2 spaces
+    }
+
+    #[test]
+    fn delete_whitespace_removes_run_from_left_column() {
+        let lines = vec!["a   bc".into(), "d\t e".into(), "fg".into()];
+        // left column 1: line0 drops "   ", line1 drops "\t ", line2 unchanged (col 1 = 'g')
+        let out = delete_whitespace(&lines, 0, 2, 1);
+        assert_eq!(out, vec!["abc", "de", "fg"]);
     }
 }
