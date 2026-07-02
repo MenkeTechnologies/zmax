@@ -124,7 +124,7 @@ time = "0.3"
 # Small, self-seeding PRNG for the insert generators (UUIDs, passwords).
 fastrand = "2"
 # Integrated terminal: a real PTY (portable-pty) parsed into a screen grid (vt100).
-portable-pty = "0.8"
+portable-pty = "0.9"
 vt100 = "0.15"
 
 parking_lot.workspace = true
