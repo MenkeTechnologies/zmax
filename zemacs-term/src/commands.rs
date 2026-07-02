@@ -13674,7 +13674,7 @@ fn goto_last_tabpage(cx: &mut Context) {
     cx.editor.switch_tab(n.saturating_sub(1));
 }
 
-/// Emacs `tab-select`: switch to the [count]-th tab (1-based; default 1).
+/// Emacs `tab-select`: switch to the `[count]`-th tab (1-based; default 1).
 fn tab_select(cx: &mut Context) {
     let n = cx.count.map_or(1, |c| c.get());
     record_prev_tab(cx.editor);

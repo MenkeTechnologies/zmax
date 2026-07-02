@@ -11979,7 +11979,7 @@ fn fzf_gfiles(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     Ok(())
 }
 
-/// fzf.vim `:Rg`/`:Ag` [pattern] — ripgrep across the tree, open the pick at its
+/// fzf.vim `:Rg`/`:Ag` `[pattern]` — ripgrep across the tree, open the pick at its
 /// line. With no pattern, matches every line (fuzzy-filter live in fzf).
 fn fzf_rg(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {

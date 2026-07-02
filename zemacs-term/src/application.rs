@@ -1971,7 +1971,7 @@ fn collect_leaf_paths(node: &crate::appdata::SplitNode, out: &mut Vec<String>) {
     }
 }
 
-/// Convert a persisted [`crate::appdata::SplitNode`] into a live [`TreeShape`],
+/// Convert a persisted [`crate::appdata::SplitNode`] into a live [`zemacs_view::tree::TreeShape`],
 /// dropping leaves whose file failed to open and collapsing now-empty splits.
 #[cfg(not(feature = "integration"))]
 fn node_to_shape(

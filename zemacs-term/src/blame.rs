@@ -1,5 +1,5 @@
 //! Git blame data behind two views of the same cache:
-//!   * a GitLens-style current-line hint ("Author, <relative time> · <summary>")
+//!   * a GitLens-style current-line hint (`"Author, <relative time> · <summary>"`)
 //!     shown as an idle status hint by the editor, toggled with
 //!     `toggle_inline_blame`; and
 //!   * the JetBrains "Annotate" gutter column (`toggle_blame_annotate`), rendered

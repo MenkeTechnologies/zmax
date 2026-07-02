@@ -297,7 +297,7 @@ impl Calc {
         self.stack.last().copied()
     }
 
-    /// Snapshot the stack before a mutation so [`undo`] can restore it. Any new
+    /// Snapshot the stack before a mutation so [`Self::undo`] can restore it. Any new
     /// action invalidates the redo history, exactly as Calc's undo ring does.
     fn checkpoint(&mut self) {
         self.undo.push(self.stack.clone());
@@ -337,7 +337,7 @@ impl Calc {
         }
     }
 
-    /// `M-TAB` (`calc-roll-up`): the inverse of [`roll_down`].
+    /// `M-TAB` (`calc-roll-up`): the inverse of [`Self::roll_down`].
     pub fn roll_up(&mut self) {
         if self.stack.len() >= 2 {
             self.checkpoint();

@@ -3,6 +3,7 @@
 | `:terminal`, `:term` | Open an integrated terminal (PTY shell) running $SHELL. |
 | `:ide`, `:workbench` | Enter IDE mode (file-tree sidebar + panels, like `--ide` / F2). |
 | `:diff`, `:gdiff` | Open a read-only side-by-side diff of the buffer vs. its git HEAD version. |
+| `:reveal`, `:browse`, `:open-repo` | Open this repository's homepage (GitHub/GitLab/Bitbucket/…) in the browser. |
 | `:compare-ref`, `:compare-branch` | Diff the buffer against its version at a git ref (JetBrains Compare with Branch). |
 | `:merge`, `:resolve` | Resolve the buffer's git merge conflicts in a 3-pane (ours/result/theirs) view. |
 | `:magit`, `:git`, `:gst` | Open the Magit-style git status (stage/unstage/discard/commit changes by section). |
@@ -94,7 +95,7 @@
 | `:write-buffer-close!`, `:wbc!` | Force write changes to disk creating necessary subdirectories and closes the buffer. Accepts an optional path (:write-buffer-close! some/path.txt) |
 | `:new`, `:n` | Create a new scratch buffer. |
 | `:Scratch`, `:scratch` | Open a new scratch buffer, optionally with a language (SPC b S). |
-| `:RevealInFinder`, `:reveal` | Reveal the current file in the OS file manager (JetBrains Reveal in Finder). |
+| `:RevealInFinder`, `:reveal-in-finder` | Reveal the current file in the OS file manager (JetBrains Reveal in Finder). |
 | `:compose-mail`, `:mail`, `:compose` | Open a message-mode mail draft (emacs compose-mail, C-x m). :compose-mail [to] [subject...] |
 | `:compose-mail-other-window` | Open a mail draft in a split (emacs compose-mail-other-window). |
 | `:message-send` | Assemble and queue the current mail draft (emacs message-send, C-c C-s). |

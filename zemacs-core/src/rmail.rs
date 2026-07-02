@@ -339,7 +339,7 @@ impl Mailbox {
     }
 
     /// Serialise the mailbox back to Unix mbox text (`s` `rmail-expunge-and-save`
-    /// writes the result of [`expunge`] followed by this).
+    /// writes the result of [`Self::expunge`] followed by this).
     pub fn to_mbox(&self) -> String {
         let mut out = String::new();
         for m in &self.msgs {

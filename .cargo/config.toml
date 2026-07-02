@@ -20,8 +20,14 @@ rustflags = ["--cfg", "tokio_unstable", "-C", "target-feature=-crt-static"]
 # build links. The architecturally-clean fix is to gate each export behind a
 # feature only the standalone AOT build enables — that lives in the interpreter
 # submodules and is tracked there; this keeps the host build green meanwhile.
+#
+# rustdocflags mirrors rustflags because doctests are linked by *rustdoc*, which
+# ignores rustflags — without this the zemacs-term doctests (the crate that pulls
+# in all five interpreters) still hit the duplicate symbol on Linux even though
+# the regular test binaries link fine.
 [target.'cfg(target_os = "linux")']
 rustflags = ["-C", "link-arg=-Wl,--allow-multiple-definition"]
+rustdocflags = ["-C", "link-arg=-Wl,--allow-multiple-definition"]
 
 
 # Bake the in-repo runtime/ directory (grammars, queries, themes, tutor) in as
