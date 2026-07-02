@@ -465,6 +465,12 @@ impl Theme {
         &self.name
     }
 
+    /// Rename a theme built programmatically (e.g. one synthesised from a Vim
+    /// colour scheme). The name is what the status line / theme picker display.
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+
     pub fn get(&self, scope: &str) -> Style {
         self.try_get(scope).unwrap_or_default()
     }
