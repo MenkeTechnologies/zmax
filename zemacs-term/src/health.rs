@@ -140,9 +140,13 @@ pub fn clipboard() -> std::io::Result<()> {
                 "    {}",
                 "For troubleshooting system clipboard issues, refer".red()
             )?;
-            writeln!(stdout, "    {}",
+            writeln!(
+                stdout,
+                "    {}",
                 "https://github.com/MenkeTechnologies/zemacs"
-            .red().underlined())?;
+                    .red()
+                    .underlined()
+            )?;
         }
         name => writeln!(stdout, "System clipboard provider: {}", name)?,
     }

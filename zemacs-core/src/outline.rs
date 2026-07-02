@@ -47,7 +47,11 @@ pub fn headings(text: &str) -> Vec<Heading> {
     let mut char_pos = 0;
     for (line_no, line) in text.split('\n').enumerate() {
         if let Some(level) = heading_level(line) {
-            out.push(Heading { line: line_no, level, char_pos });
+            out.push(Heading {
+                line: line_no,
+                level,
+                char_pos,
+            });
         }
         char_pos += line.chars().count() + 1; // +1 for the '\n'
     }
@@ -195,7 +199,7 @@ beta body
         assert_eq!((hs[0].line, hs[0].level), (0, 1)); // * Alpha
         assert_eq!((hs[1].line, hs[1].level), (2, 2)); // ** Alpha.1
         assert_eq!((hs[3].line, hs[3].level), (6, 1)); // * Beta
-        // char_pos of "** Alpha.1" = len("* Alpha\nalpha body\n")
+                                                       // char_pos of "** Alpha.1" = len("* Alpha\nalpha body\n")
         assert_eq!(hs[1].char_pos, "* Alpha\nalpha body\n".chars().count());
     }
 

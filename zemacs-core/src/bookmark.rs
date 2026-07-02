@@ -87,10 +87,7 @@ impl BookmarkStore {
     /// `bookmark-jump` lookup (`C-x r b`): the location named `name`, if any.
     pub fn get(&self, name: &str) -> Option<&Bookmark> {
         let name = name.trim();
-        self.entries
-            .iter()
-            .find(|(n, _)| n == name)
-            .map(|(_, b)| b)
+        self.entries.iter().find(|(n, _)| n == name).map(|(_, b)| b)
     }
 
     /// `bookmark-delete`: remove `name`. Returns the removed bookmark, if any.
@@ -277,10 +274,7 @@ mod tests {
         s.set("second", mk("/two with space.rs", 0, None));
         let text = s.serialize();
         // second is front (most recent) and has no column.
-        assert_eq!(
-            text,
-            "second\t/two with space.rs\t0\nfirst\t/one.rs\t10\t3"
-        );
+        assert_eq!(text, "second\t/two with space.rs\t0\nfirst\t/one.rs\t10\t3");
         let back = BookmarkStore::deserialize(&text);
         assert_eq!(back, s);
     }

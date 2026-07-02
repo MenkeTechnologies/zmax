@@ -28,7 +28,11 @@ pub fn join_lines(lines: &[String], space_separated: bool) -> String {
             out.push_str(line.trim_end());
             continue;
         }
-        let seg = if space_separated { line.trim() } else { line.trim_start() };
+        let seg = if space_separated {
+            line.trim()
+        } else {
+            line.trim_start()
+        };
         if space_separated && !seg.is_empty() && !out.is_empty() && !out.ends_with(' ') {
             out.push(' ');
         }
@@ -671,7 +675,10 @@ mod tests {
             reverse: true,
             ..Default::default()
         };
-        assert_eq!(sort_lines(&v(&["a", "B", "c"]), ci_rev), v(&["c", "B", "a"]));
+        assert_eq!(
+            sort_lines(&v(&["a", "B", "c"]), ci_rev),
+            v(&["c", "B", "a"])
+        );
         let uniq = SortOptions {
             unique: true,
             ..Default::default()
@@ -712,7 +719,10 @@ mod tests {
 
     #[test]
     fn transpose_lines_swaps() {
-        assert_eq!(transpose_lines(&v(&["a", "b", "c"]), 0), v(&["b", "a", "c"]));
+        assert_eq!(
+            transpose_lines(&v(&["a", "b", "c"]), 0),
+            v(&["b", "a", "c"])
+        );
         // no-op on last line
         assert_eq!(transpose_lines(&v(&["a", "b"]), 1), v(&["a", "b"]));
     }
@@ -737,15 +747,9 @@ mod tests {
 
     #[test]
     fn transpose_chars_mid_and_end() {
-        assert_eq!(
-            transpose_chars("abcd", 2),
-            Some(("acbd".to_string(), 3))
-        );
+        assert_eq!(transpose_chars("abcd", 2), Some(("acbd".to_string(), 3)));
         // at end: swap last two
-        assert_eq!(
-            transpose_chars("abcd", 4),
-            Some(("abdc".to_string(), 4))
-        );
+        assert_eq!(transpose_chars("abcd", 4), Some(("abdc".to_string(), 4)));
         assert_eq!(transpose_chars("a", 1), None);
         assert_eq!(transpose_chars("ab", 0), None);
     }
@@ -775,10 +779,7 @@ mod tests {
         // atom slurp
         assert_eq!(slurp_forward("(a) b", 1).as_deref(), Some("(a b)"));
         // balanced-form slurp
-        assert_eq!(
-            slurp_forward("(a) (b c)", 1).as_deref(),
-            Some("(a (b c))")
-        );
+        assert_eq!(slurp_forward("(a) (b c)", 1).as_deref(), Some("(a (b c))"));
         // nothing to slurp
         assert_eq!(slurp_forward("(a)", 1), None);
     }

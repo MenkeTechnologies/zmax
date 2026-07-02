@@ -240,7 +240,10 @@ impl Mailbox {
         if self.msgs.is_empty() {
             self.current = 0;
         } else {
-            self.current = self.current.saturating_sub(deleted_before).min(self.msgs.len() - 1);
+            self.current = self
+                .current
+                .saturating_sub(deleted_before)
+                .min(self.msgs.len() - 1);
         }
     }
 
@@ -367,7 +370,11 @@ impl Mailbox {
 /// Build the message-mode draft body for `r`/`f`/`m` (`rmail-reply`,
 /// `rmail-forward`, `rmail-mail`). Returns `(to, subject, cited_body)`.
 pub fn reply_fields(msg: &Msg) -> (String, String, String) {
-    let to = msg.header("Reply-To").or_else(|| msg.header("From")).unwrap_or("").to_string();
+    let to = msg
+        .header("Reply-To")
+        .or_else(|| msg.header("From"))
+        .unwrap_or("")
+        .to_string();
     let subject = format!("Re: {}", normalize_subject(msg.subject()));
     let cited = cite_body(msg);
     (to, subject, cited)
@@ -396,7 +403,11 @@ fn normalize_subject(subject: &str) -> String {
     let mut s = subject.trim();
     loop {
         let lower = s.to_ascii_lowercase();
-        if let Some(rest) = lower.strip_prefix("re:").or_else(|| lower.strip_prefix("fwd:")).or_else(|| lower.strip_prefix("fw:")) {
+        if let Some(rest) = lower
+            .strip_prefix("re:")
+            .or_else(|| lower.strip_prefix("fwd:"))
+            .or_else(|| lower.strip_prefix("fw:"))
+        {
             let cut = s.len() - rest.len();
             s = s[cut..].trim_start();
         } else {
@@ -410,9 +421,9 @@ fn message_contains(msg: &Msg, needle_lower: &str) -> bool {
     if msg.body.to_lowercase().contains(needle_lower) {
         return true;
     }
-    msg.headers
-        .iter()
-        .any(|(k, v)| k.to_lowercase().contains(needle_lower) || v.to_lowercase().contains(needle_lower))
+    msg.headers.iter().any(|(k, v)| {
+        k.to_lowercase().contains(needle_lower) || v.to_lowercase().contains(needle_lower)
+    })
 }
 
 #[cfg(test)]
@@ -445,7 +456,10 @@ Third.
     fn parses_all_messages() {
         let mb = Mailbox::from_mbox(MBOX);
         assert_eq!(mb.len(), 3);
-        assert_eq!(mb.current().unwrap().header("From"), Some("Alice <alice@example.com>"));
+        assert_eq!(
+            mb.current().unwrap().header("From"),
+            Some("Alice <alice@example.com>")
+        );
         assert_eq!(mb.current().unwrap().subject(), "Hello");
         // The `From is a tricky...` body line must survive as body, not a split.
         assert!(mb.msgs[0].body.contains("From is a tricky"));

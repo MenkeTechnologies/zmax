@@ -157,10 +157,7 @@ mod tests {
             Some("b".to_string())
         );
         // fully closed -> nothing to close
-        assert_eq!(
-            unclosed_environment("\\begin{a}\\end{a}"),
-            None
-        );
+        assert_eq!(unclosed_environment("\\begin{a}\\end{a}"), None);
         // nested, inner closed -> outer remains open
         assert_eq!(
             unclosed_environment("\\begin{a}\\begin{b}\\end{b}"),

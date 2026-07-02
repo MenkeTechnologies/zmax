@@ -76,17 +76,23 @@ mod tests {
         let text = "alpha\nbeta\ngamma beta\ndelta\n";
         let hits = occur(text, substr("beta"));
         assert_eq!(hits.len(), 2);
-        assert_eq!(hits[0], Match {
-            line_number: 2,
-            line_text: "beta".to_string(),
-            match_col: 0,
-        });
+        assert_eq!(
+            hits[0],
+            Match {
+                line_number: 2,
+                line_text: "beta".to_string(),
+                match_col: 0,
+            }
+        );
         // Third line: "gamma beta" — first match starts at column 6.
-        assert_eq!(hits[1], Match {
-            line_number: 3,
-            line_text: "gamma beta".to_string(),
-            match_col: 6,
-        });
+        assert_eq!(
+            hits[1],
+            Match {
+                line_number: 3,
+                line_text: "gamma beta".to_string(),
+                match_col: 6,
+            }
+        );
     }
 
     #[test]
@@ -111,7 +117,10 @@ mod tests {
         let anchored = |line: &str| line.starts_with("foo").then_some(0usize);
         let text = "foobar\nx foo\nfoo\n";
         let hits = occur(text, anchored);
-        assert_eq!(hits.iter().map(|m| m.line_number).collect::<Vec<_>>(), vec![1, 3]);
+        assert_eq!(
+            hits.iter().map(|m| m.line_number).collect::<Vec<_>>(),
+            vec![1, 3]
+        );
     }
 
     #[test]

@@ -232,7 +232,13 @@ impl Component for Calc {
             let start = trail.len().saturating_sub(rows);
             for (i, line) in trail[start..].iter().enumerate() {
                 let s = format!("      {line}");
-                surface.set_stringn(area.x, trail_top + i as u16, &s, area.width as usize, info_style);
+                surface.set_stringn(
+                    area.x,
+                    trail_top + i as u16,
+                    &s,
+                    area.width as usize,
+                    info_style,
+                );
             }
         }
 
@@ -249,7 +255,13 @@ impl Component for Calc {
 
         // Entry / status line.
         if !self.status.is_empty() {
-            surface.set_stringn(area.x, entry_y, &self.status, area.width as usize, err_style);
+            surface.set_stringn(
+                area.x,
+                entry_y,
+                &self.status,
+                area.width as usize,
+                err_style,
+            );
         } else {
             let shown = if self.entry.is_empty() {
                 "_".to_string()

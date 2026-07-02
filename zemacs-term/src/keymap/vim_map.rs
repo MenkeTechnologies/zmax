@@ -87,7 +87,10 @@ pub fn register_map_line(line: &str) -> Result<MapOutcome, String> {
     if clear {
         let mut st = STATE.lock().unwrap();
         st.mappings.retain(|m| !shares_mode(&m.modes, &modes));
-        return Ok(MapOutcome::Applied(format!("mapclear ({})", modes_desc(&modes))));
+        return Ok(MapOutcome::Applied(format!(
+            "mapclear ({})",
+            modes_desc(&modes)
+        )));
     }
 
     // Consume the leading `<silent>`/`<buffer>`/`<expr>`/… map arguments.
@@ -119,8 +122,8 @@ pub fn register_map_line(line: &str) -> Result<MapOutcome, String> {
         return Ok(MapOutcome::List(modes));
     }
 
-    let value = rhs_to_value(rhs_raw, lhs_raw)
-        .ok_or_else(|| format!("unsupported rhs `{rhs_raw}`"))?;
+    let value =
+        rhs_to_value(rhs_raw, lhs_raw).ok_or_else(|| format!("unsupported rhs `{rhs_raw}`"))?;
 
     let mut st = STATE.lock().unwrap();
     // A `<Plug>Name` lhs defines a plug target rather than a real key binding.
@@ -137,7 +140,10 @@ pub fn register_map_line(line: &str) -> Result<MapOutcome, String> {
         keys,
         value,
     });
-    Ok(MapOutcome::Applied(format!("{} {lhs_raw}", modes_desc(&modes))))
+    Ok(MapOutcome::Applied(format!(
+        "{} {lhs_raw}",
+        modes_desc(&modes)
+    )))
 }
 
 /// Merge every recorded runtime mapping on top of `keys` (the live
@@ -221,9 +227,11 @@ fn mode_from_cmd(cmd: &str) -> Option<(Vec<Mode>, bool, bool, bool)> {
 fn strip_map_args(mut rest: &str) -> &str {
     loop {
         let lower = rest.to_ascii_lowercase();
-        let matched = ["<silent>", "<buffer>", "<nowait>", "<expr>", "<unique>", "<script>"]
-            .iter()
-            .find_map(|a| lower.strip_prefix(a).map(|r| rest.len() - r.len()));
+        let matched = [
+            "<silent>", "<buffer>", "<nowait>", "<expr>", "<unique>", "<script>",
+        ]
+        .iter()
+        .find_map(|a| lower.strip_prefix(a).map(|r| rest.len() - r.len()));
         match matched {
             Some(n) => rest = rest[n..].trim_start(),
             None => return rest,
@@ -259,14 +267,10 @@ fn rhs_to_value(rhs: &str, lhs_for_name: &str) -> Option<KeyTrie> {
             .map(|(_, v)| v.clone());
     }
     // `:Cmd …<CR>` or nvim `<Cmd>Cmd …<CR>` → a typable command.
-    let cmd_body = rhs
-        .strip_prefix(':')
-        .or_else(|| {
-            let lower = rhs.to_ascii_lowercase();
-            lower
-                .strip_prefix("<cmd>")
-                .map(|_| &rhs["<Cmd>".len()..])
-        });
+    let cmd_body = rhs.strip_prefix(':').or_else(|| {
+        let lower = rhs.to_ascii_lowercase();
+        lower.strip_prefix("<cmd>").map(|_| &rhs["<Cmd>".len()..])
+    });
     if let Some(body) = cmd_body {
         let body = strip_trailing_cr(body).trim();
         if body.is_empty() {
@@ -436,7 +440,10 @@ mod tests {
         assert_eq!(mode_from_cmd("inoremap").unwrap().0, vec![Mode::Insert]);
         assert_eq!(mode_from_cmd("vmap").unwrap().0, vec![Mode::Select]);
         assert_eq!(mode_from_cmd("xnoremap").unwrap().0, vec![Mode::Select]);
-        assert_eq!(mode_from_cmd("map").unwrap().0, vec![Mode::Normal, Mode::Select]);
+        assert_eq!(
+            mode_from_cmd("map").unwrap().0,
+            vec![Mode::Normal, Mode::Select]
+        );
         assert!(mode_from_cmd("cnoremap").is_none()); // cmdline: no zemacs mode
         assert!(mode_from_cmd("nnoremap").unwrap().3); // noremap flag
     }
@@ -448,11 +455,21 @@ mod tests {
     #[test]
     fn no_rhs_lists_bindings() {
         let _g = TEST_GUARD.lock().unwrap();
-        assert!(matches!(register_map_line("nmap").unwrap(), MapOutcome::List(ref m) if *m == vec![Mode::Normal]));
-        assert!(matches!(register_map_line("vmap").unwrap(), MapOutcome::List(ref m) if *m == vec![Mode::Select]));
-        assert!(matches!(register_map_line("map").unwrap(), MapOutcome::List(_)));
+        assert!(
+            matches!(register_map_line("nmap").unwrap(), MapOutcome::List(ref m) if *m == vec![Mode::Normal])
+        );
+        assert!(
+            matches!(register_map_line("vmap").unwrap(), MapOutcome::List(ref m) if *m == vec![Mode::Select])
+        );
+        assert!(matches!(
+            register_map_line("map").unwrap(),
+            MapOutcome::List(_)
+        ));
         // a bound lhs (no rhs) also lists; a full mapping applies.
-        assert!(matches!(register_map_line("nmap gx").unwrap(), MapOutcome::List(_)));
+        assert!(matches!(
+            register_map_line("nmap gx").unwrap(),
+            MapOutcome::List(_)
+        ));
         assert!(matches!(
             register_map_line("nnoremap gx :Foo<CR>").unwrap(),
             MapOutcome::Applied(_)

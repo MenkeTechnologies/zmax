@@ -180,12 +180,19 @@ impl AbbrevTable {
             if chars[start..] != lhs_chars[..] {
                 continue;
             }
-            let preceding = if start == 0 { None } else { Some(chars[start - 1]) };
+            let preceding = if start == 0 {
+                None
+            } else {
+                Some(chars[start - 1])
+            };
             if !should_trigger(&lhs, preceding) {
                 continue;
             }
             let rhs = self.lookup(mode, &lhs)?.to_string();
-            if best.as_ref().is_none_or(|(b, _)| lhs.chars().count() > b.chars().count()) {
+            if best
+                .as_ref()
+                .is_none_or(|(b, _)| lhs.chars().count() > b.chars().count())
+            {
                 best = Some((lhs, rhs));
             }
         }

@@ -84,10 +84,12 @@ impl Occur {
         let m = self.matches.get(self.cursor)?;
         let (line, col) = (m.line_number, m.match_col);
         let (doc_id, view_id) = (self.doc_id, self.view_id);
-        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.pop();
-            jump(cx.editor, doc_id, view_id, line, col);
-        }))
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                jump(cx.editor, doc_id, view_id, line, col);
+            },
+        ))
     }
 
     /// `g` (`revert-buffer`): re-run the regexp against the current buffer text,
@@ -124,7 +126,9 @@ fn jump(editor: &mut Editor, doc_id: DocumentId, view_id: ViewId, line: usize, c
         return;
     };
     let text = doc.text();
-    let line_idx = line.saturating_sub(1).min(text.len_lines().saturating_sub(1));
+    let line_idx = line
+        .saturating_sub(1)
+        .min(text.len_lines().saturating_sub(1));
     let pos = (text.line_to_char(line_idx) + col).min(text.len_chars());
     doc.set_selection(view_id, zemacs_core::Selection::point(pos));
 }
@@ -157,7 +161,13 @@ impl Component for Occur {
             // Display the occurrence in the source buffer, keeping the list open.
             ctrl!('o') => {
                 if let Some(m) = self.matches.get(self.cursor) {
-                    jump(cx.editor, self.doc_id, self.view_id, m.line_number, m.match_col);
+                    jump(
+                        cx.editor,
+                        self.doc_id,
+                        self.view_id,
+                        m.line_number,
+                        m.match_col,
+                    );
                 }
             }
 
@@ -202,7 +212,13 @@ impl Component for Occur {
         self.viewport = body_h as usize;
 
         if self.matches.is_empty() {
-            surface.set_stringn(area.x, body_y, "(no matches)", area.width as usize, info_style);
+            surface.set_stringn(
+                area.x,
+                body_y,
+                "(no matches)",
+                area.width as usize,
+                info_style,
+            );
             return;
         }
 
@@ -221,7 +237,11 @@ impl Component for Occur {
             .take(body_h as usize)
         {
             let y = body_y + (offset - self.scroll) as u16;
-            let style = if offset == self.cursor { sel_style } else { text_style };
+            let style = if offset == self.cursor {
+                sel_style
+            } else {
+                text_style
+            };
             surface.set_stringn(area.x, y, &self.entry_line(m), area.width as usize, style);
         }
 

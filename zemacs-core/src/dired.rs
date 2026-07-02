@@ -66,13 +66,18 @@ pub fn sort_entries(entries: &mut [DiredEntry], key: SortKey, reverse: bool) {
             .cmp(&a.is_dir)
             .then_with(|| {
                 let ord = match key {
-                    SortKey::Name => a.name.to_ascii_lowercase().cmp(&b.name.to_ascii_lowercase()),
+                    SortKey::Name => a
+                        .name
+                        .to_ascii_lowercase()
+                        .cmp(&b.name.to_ascii_lowercase()),
                     SortKey::Size => a.size.cmp(&b.size),
                     // most-recent first is the useful default for time
                     SortKey::Time => b.mtime.cmp(&a.mtime),
-                    SortKey::Ext => extension(&a.name)
-                        .cmp(&extension(&b.name))
-                        .then_with(|| a.name.to_ascii_lowercase().cmp(&b.name.to_ascii_lowercase())),
+                    SortKey::Ext => extension(&a.name).cmp(&extension(&b.name)).then_with(|| {
+                        a.name
+                            .to_ascii_lowercase()
+                            .cmp(&b.name.to_ascii_lowercase())
+                    }),
                 };
                 if reverse {
                     ord.reverse()
@@ -114,7 +119,10 @@ pub enum NameTransform<'a> {
     Upcase,
     Downcase,
     /// Replace the first occurrence of `from` with `to`.
-    Replace { from: &'a str, to: &'a str },
+    Replace {
+        from: &'a str,
+        to: &'a str,
+    },
 }
 
 pub fn transform_name(name: &str, t: NameTransform) -> String {
@@ -233,7 +241,10 @@ mod tests {
 
     #[test]
     fn name_transforms() {
-        assert_eq!(transform_name("Foo.TXT", NameTransform::Downcase), "foo.txt");
+        assert_eq!(
+            transform_name("Foo.TXT", NameTransform::Downcase),
+            "foo.txt"
+        );
         assert_eq!(transform_name("foo", NameTransform::Upcase), "FOO");
         assert_eq!(
             transform_name(

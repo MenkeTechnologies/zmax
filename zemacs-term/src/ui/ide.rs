@@ -840,7 +840,11 @@ impl Ide {
             bottom_splits: self.bottom_splits,
             bottom_mid_folded: self.bottom_mid_folded,
             auto_reveal: self.auto_reveal,
-            bottom_tabs: self.bottom_tabs.iter().map(|t| t.persist_name().to_string()).collect(),
+            bottom_tabs: self
+                .bottom_tabs
+                .iter()
+                .map(|t| t.persist_name().to_string())
+                .collect(),
             bottom_focus_col: self.bottom_focus_col,
             expanded_dirs: self
                 .project
@@ -2055,7 +2059,11 @@ impl Ide {
                 }
                 // Right-click the minimap → fold it (or expand when collapsed).
                 if in_rect(&self.stripe_rect, col, row) {
-                    let label = if self.fold_minimap { "Expand Minimap" } else { "Fold Minimap" };
+                    let label = if self.fold_minimap {
+                        "Expand Minimap"
+                    } else {
+                        "Fold Minimap"
+                    };
                     let entries = vec![fold_item(label, "minimap")];
                     return IdeAction::ShowMenu(ContextMenu::new(row, col, entries));
                 }
@@ -3068,7 +3076,11 @@ impl Ide {
             (" ◼\u{fe0e} Stop ", theme.get("error"), ToolHit::Stop),
             (" ⟳\u{fe0e} Rerun ", theme.get("function"), ToolHit::Rerun),
             (" 🐞 Debug ", theme.get("keyword"), ToolHit::Debug),
-            (" ⚙\u{fe0e} Settings ", theme.get("comment"), ToolHit::Settings),
+            (
+                " ⚙\u{fe0e} Settings ",
+                theme.get("comment"),
+                ToolHit::Settings,
+            ),
             (" ? Help ", theme.get("comment"), ToolHit::Help),
         ];
         let gap = 1u16;
@@ -4680,7 +4692,10 @@ pub fn file_context_menu(
 /// The JetBrains project-view context menu, as a tree of `Entry`s. Shared by the
 /// file-tree right-click and the editor-pane right-click. Each action maps to a
 /// real zemacs operation; unsupported IDE-only items are omitted.
-pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::context_menu::Entry> {
+pub(crate) fn file_menu_entries(
+    path: PathBuf,
+    is_dir: bool,
+) -> Vec<crate::ui::context_menu::Entry> {
     use crate::ui::context_menu::Entry;
     use zemacs_view::editor::Action;
 
@@ -4688,7 +4703,9 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
     let dir = if is_dir {
         path.clone()
     } else {
-        path.parent().map(|p| p.to_path_buf()).unwrap_or_else(|| PathBuf::from("."))
+        path.parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."))
     };
     let name = path
         .file_name()
@@ -4705,10 +4722,18 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
             "New",
             vec![
                 Entry::item("File", move |compositor, _cx| {
-                    compositor.push(Box::new(name_prompt(FileActionKind::NewFile, d1.clone(), true)));
+                    compositor.push(Box::new(name_prompt(
+                        FileActionKind::NewFile,
+                        d1.clone(),
+                        true,
+                    )));
                 }),
                 Entry::item("Directory", move |compositor, _cx| {
-                    compositor.push(Box::new(name_prompt(FileActionKind::NewFolder, d2.clone(), true)));
+                    compositor.push(Box::new(name_prompt(
+                        FileActionKind::NewFolder,
+                        d2.clone(),
+                        true,
+                    )));
                 }),
             ],
         ));
@@ -4730,7 +4755,10 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
         let abs = path.clone();
         let nm = name.clone();
         let root = zemacs_loader::find_workspace().0;
-        let rel = path.strip_prefix(&root).map(|p| p.to_path_buf()).unwrap_or_else(|_| path.clone());
+        let rel = path
+            .strip_prefix(&root)
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|_| path.clone());
         e.push(Entry::sub(
             "Copy Path/Reference…",
             vec![
@@ -4763,11 +4791,16 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
             let args: Vec<&str> = if is_cut {
                 vec![src.to_str().unwrap_or(""), target.to_str().unwrap_or("")]
             } else {
-                vec!["-R", src.to_str().unwrap_or(""), target.to_str().unwrap_or("")]
+                vec![
+                    "-R",
+                    src.to_str().unwrap_or(""),
+                    target.to_str().unwrap_or(""),
+                ]
             };
             match std::process::Command::new(prog).args(&args).status() {
                 Ok(s) if s.success() => {
-                    cx.editor.set_status(format!("pasted → {}", target.display()));
+                    cx.editor
+                        .set_status(format!("pasted → {}", target.display()));
                     if is_cut {
                         *FILE_CLIP.lock().unwrap() = None;
                     }
@@ -4783,7 +4816,11 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
     {
         let p = path.clone();
         e.push(Entry::item("Rename…", move |compositor, _cx| {
-            compositor.push(Box::new(name_prompt(FileActionKind::Rename, p.clone(), is_dir)));
+            compositor.push(Box::new(name_prompt(
+                FileActionKind::Rename,
+                p.clone(),
+                is_dir,
+            )));
         }));
         let p = path.clone();
         e.push(Entry::item_key("Delete…", "⌫", move |_c, cx| {
@@ -4811,13 +4848,17 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
         }));
         // Open in Right Split
         let p = path.clone();
-        e.push(Entry::item_key("Open in Right Split", "⇧↵", move |_c, cx| {
-            if let Err(zemacs_view::DocumentOpenError::BinaryFile) =
-                cx.editor.open(&p, Action::VerticalSplit)
-            {
-                cx.editor.set_error("binary file — use :hex");
-            }
-        }));
+        e.push(Entry::item_key(
+            "Open in Right Split",
+            "⇧↵",
+            move |_c, cx| {
+                if let Err(zemacs_view::DocumentOpenError::BinaryFile) =
+                    cx.editor.open(&p, Action::VerticalSplit)
+                {
+                    cx.editor.set_error("binary file — use :hex");
+                }
+            },
+        ));
     }
 
     // Open In ›
@@ -4825,7 +4866,10 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
         let p = path.clone();
         let d = dir.clone();
         let root = zemacs_loader::find_workspace().0;
-        let rel = path.strip_prefix(&root).map(|p| p.to_string_lossy().into_owned()).ok();
+        let rel = path
+            .strip_prefix(&root)
+            .map(|p| p.to_string_lossy().into_owned())
+            .ok();
         e.push(Entry::sub(
             "Open In",
             vec![
@@ -4835,11 +4879,9 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
                 Entry::item("Terminal", move |_c, _cx| {
                     spawn_detached("open", &["-a", "Terminal", d.to_str().unwrap_or("")], None);
                 }),
-                Entry::item("GitHub", move |_c, cx| {
-                    match &rel {
-                        Some(r) => spawn_detached("gh", &["browse", "--", r], None),
-                        None => cx.editor.set_error("not in a repo"),
-                    }
+                Entry::item("GitHub", move |_c, cx| match &rel {
+                    Some(r) => spawn_detached("gh", &["browse", "--", r], None),
+                    None => cx.editor.set_error("not in a repo"),
                 }),
             ],
         ));
@@ -4855,17 +4897,28 @@ pub(crate) fn file_menu_entries(path: PathBuf, is_dir: bool) -> Vec<crate::ui::c
         }));
         // Compare With HEAD — git diff into the Run console.
         let p = path.clone();
-        e.push(Entry::item_key("Compare With HEAD", "SPC g =", move |compositor, cx| {
-            if let Some(view) = compositor.find::<crate::ui::EditorView>() {
-                let cwd = p.parent().map(|d| d.to_path_buf()).unwrap_or_else(|| PathBuf::from("."));
-                let quoted = p.to_string_lossy().replace('\'', "'\\''");
-                view.start_run(cx, format!("git --no-pager diff -- '{quoted}'"), cwd);
-            }
-        }));
+        e.push(Entry::item_key(
+            "Compare With HEAD",
+            "SPC g =",
+            move |compositor, cx| {
+                if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                    let cwd = p
+                        .parent()
+                        .map(|d| d.to_path_buf())
+                        .unwrap_or_else(|| PathBuf::from("."));
+                    let quoted = p.to_string_lossy().replace('\'', "'\\''");
+                    view.start_run(cx, format!("git --no-pager diff -- '{quoted}'"), cwd);
+                }
+            },
+        ));
         // Create Gist
         let p = path.clone();
         e.push(Entry::item("Create Gist…", move |_c, _cx| {
-            spawn_detached("gh", &["gist", "create", "--web", p.to_str().unwrap_or("")], None);
+            spawn_detached(
+                "gh",
+                &["gist", "create", "--web", p.to_str().unwrap_or("")],
+                None,
+            );
         }));
     }
 

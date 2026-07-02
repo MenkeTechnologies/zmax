@@ -19,8 +19,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tui::buffer::Buffer as Surface;
 use zemacs_core::calendar::{
     add_days, add_months, add_years, beginning_of_month, beginning_of_week, beginning_of_year,
-    day_of_year, end_of_month, end_of_week, end_of_year, from_serial, iso_week, julian_day, weekday,
-    Date, MONTH_NAMES, WEEKDAY_ABBR,
+    day_of_year, end_of_month, end_of_week, end_of_year, from_serial, iso_week, julian_day,
+    weekday, Date, MONTH_NAMES, WEEKDAY_ABBR,
 };
 use zemacs_view::graphics::Rect;
 
@@ -80,7 +80,11 @@ impl Component for Calendar {
             if hits.is_empty() {
                 cx.editor.set_status("Diary: no entries for this date");
             } else {
-                let joined = hits.iter().map(|e| e.text.as_str()).collect::<Vec<_>>().join(" · ");
+                let joined = hits
+                    .iter()
+                    .map(|e| e.text.as_str())
+                    .collect::<Vec<_>>()
+                    .join(" · ");
                 cx.editor.set_status(format!("Diary: {joined}"));
             }
             return EventResult::Consumed(None);
@@ -95,15 +99,13 @@ impl Component for Calendar {
                 return EventResult::Consumed(None);
             }
             key!('J') => {
-                cx.editor.set_status(format!("Julian day number: {}", julian_day(p)));
+                cx.editor
+                    .set_status(format!("Julian day number: {}", julian_day(p)));
                 return EventResult::Consumed(None);
             }
             key!('p') => {
-                cx.editor.set_status(format!(
-                    "Day {} of {}",
-                    day_of_year(p),
-                    p.year
-                ));
+                cx.editor
+                    .set_status(format!("Day {} of {}", day_of_year(p), p.year));
                 return EventResult::Consumed(None);
             }
             _ => {}

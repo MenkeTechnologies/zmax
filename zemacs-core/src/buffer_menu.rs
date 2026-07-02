@@ -151,7 +151,9 @@ impl BufferMenu {
 
     /// The mark on the row under point.
     pub fn current_mark(&self) -> Mark {
-        self.current_key().map(|k| self.mark_of(k)).unwrap_or(Mark::None)
+        self.current_key()
+            .map(|k| self.mark_of(k))
+            .unwrap_or(Mark::None)
     }
 
     /// Set (or clear, for `Mark::None`) the mark on a buffer id.

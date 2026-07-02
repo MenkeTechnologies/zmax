@@ -277,8 +277,7 @@ impl Component for Startify {
                 match ev.kind {
                     // Left-click activates the entry on that row (and selects it).
                     MouseEventKind::Down(MouseButton::Left) => {
-                        if let Some(&(_, idx)) =
-                            self.row_hits.iter().find(|&&(ry, _)| ry == ev.row)
+                        if let Some(&(_, idx)) = self.row_hits.iter().find(|&&(ry, _)| ry == ev.row)
                         {
                             self.selected = idx;
                             return EventResult::Consumed(Some(self.activate(idx)));

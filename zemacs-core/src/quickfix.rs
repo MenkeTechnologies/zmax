@@ -71,7 +71,12 @@ pub fn above(locs: &[Loc], cursor_line: usize, count: usize) -> Option<usize> {
 /// Walk `cands` (already ordered nearest-line-first) and return the
 /// representative of the count-th distinct line. `last_in_group` picks the last
 /// entry of that line rather than the first (the `:cabove` rule).
-fn nth_line_group(locs: &[Loc], cands: &[usize], count: usize, last_in_group: bool) -> Option<usize> {
+fn nth_line_group(
+    locs: &[Loc],
+    cands: &[usize],
+    count: usize,
+    last_in_group: bool,
+) -> Option<usize> {
     let mut groups = 0usize;
     let mut i = 0;
     while i < cands.len() {

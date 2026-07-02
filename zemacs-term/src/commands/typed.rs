@@ -210,7 +210,9 @@ fn edit_arg_file(cx: &mut compositor::Context, file: &str) -> anyhow::Result<()>
 
 /// Optional leading count argument (`:next 2`); defaults to 1.
 fn arg_count(args: &Args) -> usize {
-    args.first().and_then(|s| s.parse::<usize>().ok()).unwrap_or(1)
+    args.first()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(1)
 }
 
 /// `:args` — with no argument, echo the list; with file arguments, replace the
@@ -249,8 +251,9 @@ fn argadd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     }
     let files: Vec<String> = args.iter().map(|s| s.to_string()).collect();
     with_arglist(|a| a.add(files));
-    cx.editor
-        .set_status(with_arglist(|a| format!("{} files in the arg list", a.len())));
+    cx.editor.set_status(with_arglist(|a| {
+        format!("{} files in the arg list", a.len())
+    }));
     Ok(())
 }
 
@@ -276,7 +279,8 @@ fn argdelete(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     }
     let pats: Vec<&str> = args.iter().map(|s| s.as_ref()).collect();
     let n = with_arglist(|a| a.delete_matching(&pats));
-    cx.editor.set_status(format!("removed {n} from the arg list"));
+    cx.editor
+        .set_status(format!("removed {n} from the arg list"));
     Ok(())
 }
 
@@ -286,8 +290,9 @@ fn argdedupe(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         return Ok(());
     }
     with_arglist(|a| a.dedupe());
-    cx.editor
-        .set_status(with_arglist(|a| format!("{} files in the arg list", a.len())));
+    cx.editor.set_status(with_arglist(|a| {
+        format!("{} files in the arg list", a.len())
+    }));
     Ok(())
 }
 
@@ -361,7 +366,11 @@ fn argdo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let cmd = args.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" ");
+    let cmd = args
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
     if cmd.is_empty() {
         bail!("argdo: needs a command");
     }
@@ -509,7 +518,11 @@ fn next_error(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
 
 /// `:previous-error` — Emacs `previous-error` (`M-g p`): visit the previous
 /// error's location.
-fn previous_error(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn previous_error(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -521,7 +534,11 @@ fn previous_error(cx: &mut compositor::Context, _args: Args, event: PromptEvent)
 }
 
 /// `:first-error` — Emacs `first-error`: visit the first error's location.
-fn first_error(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn first_error(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -582,14 +599,23 @@ fn abbrev_list(mode: AbbrevMode, prefix: Option<&str>) -> String {
 
 /// Shared body for `:abbreviate` / `:iabbrev` / `:cabbrev`: no args lists all,
 /// a lone lhs lists matching entries, and `{lhs} {rhs…}` defines a new one.
-fn abbrev_define(cx: &mut compositor::Context, mode: AbbrevMode, args: &Args) -> anyhow::Result<()> {
+fn abbrev_define(
+    cx: &mut compositor::Context,
+    mode: AbbrevMode,
+    args: &Args,
+) -> anyhow::Result<()> {
     if args.len() < 2 {
         let prefix = args.first().map(|s| s.as_ref());
         cx.editor.set_status(abbrev_list(mode, prefix));
         return Ok(());
     }
     let lhs = args[0].to_string();
-    let rhs = args.iter().skip(1).map(|s| s.to_string()).collect::<Vec<_>>().join(" ");
+    let rhs = args
+        .iter()
+        .skip(1)
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
     if !with_abbrevs(|t| t.add(mode, &lhs, &rhs)) {
         bail!("E474: Not a valid abbreviation: {lhs}");
     }
@@ -597,7 +623,11 @@ fn abbrev_define(cx: &mut compositor::Context, mode: AbbrevMode, args: &Args) ->
 }
 
 /// Shared body for `:unabbreviate` / `:iunabbreviate` / `:cunabbreviate`.
-fn abbrev_undefine(cx: &mut compositor::Context, mode: AbbrevMode, args: &Args) -> anyhow::Result<()> {
+fn abbrev_undefine(
+    cx: &mut compositor::Context,
+    mode: AbbrevMode,
+    args: &Args,
+) -> anyhow::Result<()> {
     let Some(lhs) = args.first().map(|s| s.to_string()) else {
         bail!("E474: Argument required");
     };
@@ -633,7 +663,11 @@ fn cabbrev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
 }
 
 /// `:unabbreviate {lhs}` — remove an abbreviation (both modes).
-fn unabbreviate(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn unabbreviate(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -641,7 +675,11 @@ fn unabbreviate(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
 }
 
 /// `:iunabbreviate {lhs}` — remove an Insert-mode abbreviation.
-fn iunabbreviate(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn iunabbreviate(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -649,7 +687,11 @@ fn iunabbreviate(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
 }
 
 /// `:cunabbreviate {lhs}` — remove a Command-line abbreviation.
-fn cunabbreviate(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn cunabbreviate(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -698,7 +740,11 @@ fn buffer_ids(editor: &Editor) -> Vec<DocumentId> {
 }
 
 /// `:bfirst` / `:brewind` — go to the first buffer.
-fn buffer_first(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn buffer_first(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -709,7 +755,11 @@ fn buffer_first(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
 }
 
 /// `:blast` — go to the last buffer.
-fn buffer_last(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn buffer_last(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -813,7 +863,8 @@ fn spell_wrong(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     for w in args.iter() {
         crate::spell::add_bad(w.as_ref());
     }
-    cx.editor.set_status(format!("marked {} word(s) as misspelled", args.len()));
+    cx.editor
+        .set_status(format!("marked {} word(s) as misspelled", args.len()));
     Ok(())
 }
 
@@ -829,7 +880,8 @@ fn spell_rare(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     for w in args.iter() {
         crate::spell::add_bad(w.as_ref());
     }
-    cx.editor.set_status(format!("flagged {} rare word(s)", args.len()));
+    cx.editor
+        .set_status(format!("flagged {} rare word(s)", args.len()));
     Ok(())
 }
 
@@ -844,7 +896,10 @@ fn spell_undo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     for w in args.iter() {
         crate::spell::remove_user(w.as_ref());
     }
-    cx.editor.set_status(format!("removed {} word(s) from the spell lists", args.len()));
+    cx.editor.set_status(format!(
+        "removed {} word(s) from the spell lists",
+        args.len()
+    ));
     Ok(())
 }
 
@@ -2563,8 +2618,7 @@ fn compare_ref(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
         return Ok(());
     }
     let Some(reff) = args.first().map(|r| r.to_string()) else {
-        cx.editor
-            .set_error("usage: :compare-ref <branch|tag|sha>");
+        cx.editor.set_error("usage: :compare-ref <branch|tag|sha>");
         return Ok(());
     };
     let (doc_id, name, path, current) = {
@@ -3334,7 +3388,9 @@ fn current_buffer_text(cx: &compositor::Context) -> String {
 
 /// Optional leading `[count]` for the cursor-relative motions; defaults to 1.
 fn qf_dir_count(args: &Args) -> usize {
-    args.first().and_then(|s| s.parse::<usize>().ok()).unwrap_or(1)
+    args.first()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(1)
 }
 
 macro_rules! qf_nav_cmd {
@@ -3397,19 +3453,39 @@ qf_nav_cmd!(quickfix_pfile_cmd, QfKind::Quickfix, |cx, _a| {
 // Cursor-relative motions (`:cabove`/`:cbelow`/`:cafter`/`:cbefore`): the
 // count argument selects the count-th stop in that direction (default 1).
 qf_nav_cmd!(quickfix_above_cmd, QfKind::Quickfix, |cx, a| {
-    crate::commands::qf_move_dir(cx.editor, QfKind::Quickfix, crate::commands::QfDir::Above, qf_dir_count(a));
+    crate::commands::qf_move_dir(
+        cx.editor,
+        QfKind::Quickfix,
+        crate::commands::QfDir::Above,
+        qf_dir_count(a),
+    );
     Ok(())
 });
 qf_nav_cmd!(quickfix_below_cmd, QfKind::Quickfix, |cx, a| {
-    crate::commands::qf_move_dir(cx.editor, QfKind::Quickfix, crate::commands::QfDir::Below, qf_dir_count(a));
+    crate::commands::qf_move_dir(
+        cx.editor,
+        QfKind::Quickfix,
+        crate::commands::QfDir::Below,
+        qf_dir_count(a),
+    );
     Ok(())
 });
 qf_nav_cmd!(quickfix_after_cmd, QfKind::Quickfix, |cx, a| {
-    crate::commands::qf_move_dir(cx.editor, QfKind::Quickfix, crate::commands::QfDir::After, qf_dir_count(a));
+    crate::commands::qf_move_dir(
+        cx.editor,
+        QfKind::Quickfix,
+        crate::commands::QfDir::After,
+        qf_dir_count(a),
+    );
     Ok(())
 });
 qf_nav_cmd!(quickfix_before_cmd, QfKind::Quickfix, |cx, a| {
-    crate::commands::qf_move_dir(cx.editor, QfKind::Quickfix, crate::commands::QfDir::Before, qf_dir_count(a));
+    crate::commands::qf_move_dir(
+        cx.editor,
+        QfKind::Quickfix,
+        crate::commands::QfDir::Before,
+        qf_dir_count(a),
+    );
     Ok(())
 });
 qf_nav_cmd!(quickfix_buffer_cmd, QfKind::Quickfix, |cx, _a| {
@@ -3484,19 +3560,39 @@ qf_nav_cmd!(loclist_ll_cmd, QfKind::Location, |cx, a| {
     Ok(())
 });
 qf_nav_cmd!(loclist_above_cmd, QfKind::Location, |cx, a| {
-    crate::commands::qf_move_dir(cx.editor, QfKind::Location, crate::commands::QfDir::Above, qf_dir_count(a));
+    crate::commands::qf_move_dir(
+        cx.editor,
+        QfKind::Location,
+        crate::commands::QfDir::Above,
+        qf_dir_count(a),
+    );
     Ok(())
 });
 qf_nav_cmd!(loclist_below_cmd, QfKind::Location, |cx, a| {
-    crate::commands::qf_move_dir(cx.editor, QfKind::Location, crate::commands::QfDir::Below, qf_dir_count(a));
+    crate::commands::qf_move_dir(
+        cx.editor,
+        QfKind::Location,
+        crate::commands::QfDir::Below,
+        qf_dir_count(a),
+    );
     Ok(())
 });
 qf_nav_cmd!(loclist_after_cmd, QfKind::Location, |cx, a| {
-    crate::commands::qf_move_dir(cx.editor, QfKind::Location, crate::commands::QfDir::After, qf_dir_count(a));
+    crate::commands::qf_move_dir(
+        cx.editor,
+        QfKind::Location,
+        crate::commands::QfDir::After,
+        qf_dir_count(a),
+    );
     Ok(())
 });
 qf_nav_cmd!(loclist_before_cmd, QfKind::Location, |cx, a| {
-    crate::commands::qf_move_dir(cx.editor, QfKind::Location, crate::commands::QfDir::Before, qf_dir_count(a));
+    crate::commands::qf_move_dir(
+        cx.editor,
+        QfKind::Location,
+        crate::commands::QfDir::Before,
+        qf_dir_count(a),
+    );
     Ok(())
 });
 qf_nav_cmd!(loclist_buffer_cmd, QfKind::Location, |cx, _a| {
@@ -11800,11 +11896,21 @@ fn fzf_rg(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     }
     let pat = args.join(" ");
     let pat = pat.trim();
-    let needle = if pat.is_empty() { ".".to_string() } else { pat.replace('\'', "'\\''") };
-    let cmd = format!(
-        "rg --column --line-number --no-heading --color=never --smart-case -- '{needle}'"
+    let needle = if pat.is_empty() {
+        ".".to_string()
+    } else {
+        pat.replace('\'', "'\\''")
+    };
+    let cmd =
+        format!("rg --column --line-number --no-heading --color=never --smart-case -- '{needle}'");
+    queue_fzf_cmd(
+        cx,
+        "Rg",
+        "fzf-goto {}",
+        cmd,
+        vec!["--no-sort".into()],
+        false,
     );
-    queue_fzf_cmd(cx, "Rg", "fzf-goto {}", cmd, vec!["--no-sort".into()], false);
     Ok(())
 }
 
@@ -11815,7 +11921,14 @@ fn fzf_todo(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
         let cmd = "rg --column --line-number --no-heading --color=never -i \
                    -e '\\b(TODO|FIXME|HACK|XXX)\\b' -e '(todo|unimplemented)!' 2>/dev/null"
             .to_string();
-        queue_fzf_cmd(cx, "Todo", "fzf-goto {}", cmd, vec!["--no-sort".into()], false);
+        queue_fzf_cmd(
+            cx,
+            "Todo",
+            "fzf-goto {}",
+            cmd,
+            vec!["--no-sort".into()],
+            false,
+        );
     }
     Ok(())
 }
@@ -11848,20 +11961,38 @@ fn fzf_blines(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
             .map(|i| format!("{}: {}", i + 1, text.line(i).to_string().trim_end()))
             .collect()
     };
-    queue_fzf(cx, "BLines", "fzf-line {}", cands, vec!["--no-sort".into()], false);
+    queue_fzf(
+        cx,
+        "BLines",
+        "fzf-line {}",
+        cands,
+        vec!["--no-sort".into()],
+        false,
+    );
     Ok(())
 }
 
 /// fzf.vim `:Colors` — fuzzy-pick a colorscheme, applied live.
 fn fzf_colors(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
-        queue_fzf(cx, "Colors", "theme {}", all_theme_names(), vec!["+m".into()], false);
+        queue_fzf(
+            cx,
+            "Colors",
+            "theme {}",
+            all_theme_names(),
+            vec!["+m".into()],
+            false,
+        );
     }
     Ok(())
 }
 
 /// fzf.vim `:Buffers` — fuzzy-pick an open buffer by path and switch to it.
-fn fzf_buffers(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn fzf_buffers(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
         let cands: Vec<String> = cx
             .editor
@@ -11874,10 +12005,16 @@ fn fzf_buffers(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
 }
 
 /// fzf.vim `:Commands` — fuzzy-pick a `:` command and run it.
-fn fzf_commands(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn fzf_commands(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
-        let mut cands: Vec<String> =
-            TYPABLE_COMMAND_LIST.iter().map(|c| c.name.to_string()).collect();
+        let mut cands: Vec<String> = TYPABLE_COMMAND_LIST
+            .iter()
+            .map(|c| c.name.to_string())
+            .collect();
         cands.sort();
         queue_fzf(cx, "Commands", "{}", cands, vec!["+m".into()], false);
     }
@@ -11894,7 +12031,11 @@ fn register_lines(cx: &compositor::Context, reg: char) -> Vec<String> {
 }
 
 /// fzf.vim `:History` — fuzzy-pick a recently opened file and open it.
-fn fzf_history(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn fzf_history(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
         let cands: Vec<String> = crate::recent_files::load_frecent()
             .iter()
@@ -11950,7 +12091,14 @@ fn fzf_lines(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
             }
         }
     }
-    queue_fzf(cx, "Lines", "fzf-goto {}", cands, vec!["--no-sort".into()], false);
+    queue_fzf(
+        cx,
+        "Lines",
+        "fzf-goto {}",
+        cands,
+        vec!["--no-sort".into()],
+        false,
+    );
     Ok(())
 }
 
@@ -11981,7 +12129,11 @@ fn fzf_git_show(
 }
 
 /// fzf.vim `:Commits` — fuzzy-pick a repo commit and show it.
-fn fzf_commits(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn fzf_commits(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
         queue_fzf_cmd(
             cx,
@@ -12016,7 +12168,14 @@ fn fzf_bcommits(
         "git log --oneline --color=never -- '{}'",
         path.replace('\'', "'\\''")
     );
-    queue_fzf_cmd(cx, "BCommits", "fzf-git-show {}", cmd, vec!["--no-sort".into()], false);
+    queue_fzf_cmd(
+        cx,
+        "BCommits",
+        "fzf-git-show {}",
+        cmd,
+        vec!["--no-sort".into()],
+        false,
+    );
     Ok(())
 }
 
@@ -12034,7 +12193,14 @@ fn fzf_filetypes(
             .collect();
         cands.sort();
         cands.dedup();
-        queue_fzf(cx, "Filetypes", "set-language {}", cands, vec!["+m".into()], false);
+        queue_fzf(
+            cx,
+            "Filetypes",
+            "set-language {}",
+            cands,
+            vec!["+m".into()],
+            false,
+        );
     }
     Ok(())
 }
@@ -12065,13 +12231,24 @@ fn fzf_jumps(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         let ltext = text.line(line - 1).to_string();
         cands.push(format!("{path}:{line}:1: {}", ltext.trim_end()));
     }
-    queue_fzf(cx, "Jumps", "fzf-goto {}", cands, vec!["--no-sort".into()], false);
+    queue_fzf(
+        cx,
+        "Jumps",
+        "fzf-goto {}",
+        cands,
+        vec!["--no-sort".into()],
+        false,
+    );
     Ok(())
 }
 
 /// `:LocalHistory` — JetBrains Local History: fuzzy-pick a saved snapshot of the
 /// current file (newest first) and open that past version.
-fn local_history(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn local_history(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -12096,7 +12273,14 @@ fn local_history(cx: &mut compositor::Context, _args: Args, event: PromptEvent) 
             format!("{age}\t{}", p.to_string_lossy())
         })
         .collect();
-    queue_fzf(cx, "LocalHistory", "local-history-open {}", cands, vec!["--no-sort".into()], false);
+    queue_fzf(
+        cx,
+        "LocalHistory",
+        "local-history-open {}",
+        cands,
+        vec!["--no-sort".into()],
+        false,
+    );
     Ok(())
 }
 
@@ -12154,17 +12338,27 @@ fn fzf_recent_locations(
         let ltext = text.line(line - 1).to_string();
         cands.push(format!("{path}:{line}:1: {}", ltext.trim_end()));
     }
-    queue_fzf(cx, "RecentLocations", "fzf-goto {}", cands, vec!["--no-sort".into()], false);
+    queue_fzf(
+        cx,
+        "RecentLocations",
+        "fzf-goto {}",
+        cands,
+        vec!["--no-sort".into()],
+        false,
+    );
     Ok(())
 }
 
 /// fzf.vim `:Windows` — fuzzy-pick an open window and focus it.
-fn fzf_windows(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn fzf_windows(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let docs: Vec<zemacs_view::DocumentId> =
-        cx.editor.tree.views().map(|(v, _)| v.doc).collect();
+    let docs: Vec<zemacs_view::DocumentId> = cx.editor.tree.views().map(|(v, _)| v.doc).collect();
     let cands: Vec<String> = docs
         .iter()
         .enumerate()
@@ -12177,7 +12371,14 @@ fn fzf_windows(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
             format!("{}: {name}", i + 1)
         })
         .collect();
-    queue_fzf(cx, "Windows", "fzf-window {}", cands, vec!["+m".into()], false);
+    queue_fzf(
+        cx,
+        "Windows",
+        "fzf-window {}",
+        cands,
+        vec!["+m".into()],
+        false,
+    );
     Ok(())
 }
 
@@ -12186,15 +12387,18 @@ fn fzf_window(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let num: String = args.join(" ").chars().take_while(|c| c.is_ascii_digit()).collect();
+    let num: String = args
+        .join(" ")
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
     let Ok(n) = num.parse::<usize>() else {
         return Ok(());
     };
     if n == 0 {
         return Ok(());
     }
-    let view_ids: Vec<zemacs_view::ViewId> =
-        cx.editor.tree.views().map(|(v, _)| v.id).collect();
+    let view_ids: Vec<zemacs_view::ViewId> = cx.editor.tree.views().map(|(v, _)| v.id).collect();
     if let Some(&id) = view_ids.get(n - 1) {
         cx.editor.focus(id);
     }
@@ -12209,8 +12413,7 @@ fn fzf_marks(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     let cands: Vec<String> = {
         let (_, doc) = current_ref!(cx.editor);
         let text = doc.text();
-        let mut m: Vec<(usize, char)> =
-            doc.marks().iter().map(|(&ch, &pos)| (pos, ch)).collect();
+        let mut m: Vec<(usize, char)> = doc.marks().iter().map(|(&ch, &pos)| (pos, ch)).collect();
         m.sort();
         m.iter()
             .map(|&(pos, ch)| {
@@ -12221,7 +12424,14 @@ fn fzf_marks(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
             })
             .collect()
     };
-    queue_fzf(cx, "Marks", "fzf-line {}", cands, vec!["--no-sort".into()], false);
+    queue_fzf(
+        cx,
+        "Marks",
+        "fzf-line {}",
+        cands,
+        vec!["--no-sort".into()],
+        false,
+    );
     Ok(())
 }
 
@@ -12231,7 +12441,14 @@ fn fzf_marks(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
 fn fzf_tags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
         let cmd = "ctags -x -R . 2>/dev/null | awk '{print $4\":\"$3\":1: \"$1}'".to_string();
-        queue_fzf_cmd(cx, "Tags", "fzf-goto {}", cmd, vec!["--no-sort".into()], false);
+        queue_fzf_cmd(
+            cx,
+            "Tags",
+            "fzf-goto {}",
+            cmd,
+            vec!["--no-sort".into()],
+            false,
+        );
     }
     Ok(())
 }
@@ -12253,12 +12470,23 @@ fn fzf_btags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         "ctags -x '{}' 2>/dev/null | awk '{{print $4\":\"$3\":1: \"$1}}'",
         path.replace('\'', "'\\''")
     );
-    queue_fzf_cmd(cx, "BTags", "fzf-goto {}", cmd, vec!["--no-sort".into()], false);
+    queue_fzf_cmd(
+        cx,
+        "BTags",
+        "fzf-goto {}",
+        cmd,
+        vec!["--no-sort".into()],
+        false,
+    );
     Ok(())
 }
 
 /// fzf.vim `:Snippets` — fuzzy-pick a snippet trigger and insert its body.
-fn fzf_snippets(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn fzf_snippets(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -12268,7 +12496,14 @@ fn fzf_snippets(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
         .iter()
         .map(|s| format!("{}\t{}\t{}", s.trigger, s.scope, s.description))
         .collect();
-    queue_fzf(cx, "Snippets", "fzf-snippet {}", cands, vec!["+m".into()], false);
+    queue_fzf(
+        cx,
+        "Snippets",
+        "fzf-snippet {}",
+        cands,
+        vec!["+m".into()],
+        false,
+    );
     Ok(())
 }
 
@@ -12313,7 +12548,9 @@ fn fzf_maps(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
             let maps = view.keymaps.map();
             let mut cands = Vec::new();
             for mode in [Mode::Normal, Mode::Insert, Mode::Select] {
-                let Some(trie) = maps.get(&mode) else { continue };
+                let Some(trie) = maps.get(&mode) else {
+                    continue;
+                };
                 let mut rows: Vec<(String, String)> = trie
                     .reverse_map()
                     .iter()
@@ -12321,7 +12558,9 @@ fn fzf_maps(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
                         let name = name.clone();
                         binds.iter().map(move |b| {
                             (
-                                b.iter().map(|k| k.key_sequence_format()).collect::<String>(),
+                                b.iter()
+                                    .map(|k| k.key_sequence_format())
+                                    .collect::<String>(),
                                 name.clone(),
                             )
                         })
@@ -12361,10 +12600,21 @@ fn fzf_map(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
 
 /// fzf.vim `:Helptags` — fuzzy-pick a help tag (command / `:typable` / topic)
 /// and open the inline Help browser pre-filtered to it.
-fn fzf_helptags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn fzf_helptags(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
         let cands = crate::ui::help::HelpPanel::new().entry_titles();
-        queue_fzf(cx, "Helptags", "fzf-helptag {}", cands, vec!["+m".into()], false);
+        queue_fzf(
+            cx,
+            "Helptags",
+            "fzf-helptag {}",
+            cands,
+            vec!["+m".into()],
+            false,
+        );
     }
     Ok(())
 }
@@ -12380,9 +12630,9 @@ fn fzf_helptag(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     }
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
         move |_editor: &mut Editor, compositor: &mut Compositor| {
-            compositor.push(Box::new(crate::ui::preferences::PreferencesPanel::new_help(
-                title.clone(),
-            )));
+            compositor.push(Box::new(
+                crate::ui::preferences::PreferencesPanel::new_help(title.clone()),
+            ));
         },
     ));
     cx.jobs.callback(async move { Ok(call) });
@@ -12432,14 +12682,19 @@ fn list_keybinds(cx: &mut compositor::Context, modes: Vec<zemacs_view::document:
                         let name = name.clone();
                         binds.iter().map(move |b| {
                             (
-                                b.iter().map(|k| k.key_sequence_format()).collect::<String>(),
+                                b.iter()
+                                    .map(|k| k.key_sequence_format())
+                                    .collect::<String>(),
                                 name.clone(),
                             )
                         })
                     })
                     .collect();
                 rows.sort();
-                out.push_str(&format!("--- {mode:?} mode — {} bindings ---\n", rows.len()));
+                out.push_str(&format!(
+                    "--- {mode:?} mode — {} bindings ---\n",
+                    rows.len()
+                ));
                 for (keys, name) in rows {
                     out.push_str(&format!("{keys:<22} {name}\n"));
                 }
@@ -12456,11 +12711,7 @@ fn list_keybinds(cx: &mut compositor::Context, modes: Vec<zemacs_view::document:
 
 macro_rules! vim_map_typable {
     ($fn:ident, $word:literal) => {
-        fn $fn(
-            cx: &mut compositor::Context,
-            args: Args,
-            event: PromptEvent,
-        ) -> anyhow::Result<()> {
+        fn $fn(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
             if event != PromptEvent::Validate {
                 return Ok(());
             }
@@ -12560,7 +12811,8 @@ fn ex_normal(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     let keys = match zemacs_view::input::parse_macro(raw) {
         Ok(keys) => keys,
         Err(err) => {
-            cx.editor.set_error(format!(":normal — invalid keys: {err}"));
+            cx.editor
+                .set_error(format!(":normal — invalid keys: {err}"));
             return Ok(());
         }
     };
@@ -12607,7 +12859,8 @@ fn ex_resize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     } else if let Ok(target) = a.parse::<i16>() {
         target - cx.editor.tree.node_height(view) as i16
     } else {
-        cx.editor.set_error(format!(":resize — invalid argument `{a}`"));
+        cx.editor
+            .set_error(format!(":resize — invalid argument `{a}`"));
         return Ok(());
     };
     cx.editor.tree.resize_vertical(view, delta);
@@ -12636,7 +12889,9 @@ fn ex_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
         .map(|d| d.id())
         .collect();
     match matches.as_slice() {
-        [] => cx.editor.set_error(format!("E94: No matching buffer for {needle}")),
+        [] => cx
+            .editor
+            .set_error(format!("E94: No matching buffer for {needle}")),
         [id] => cx.editor.switch(*id, zemacs_view::editor::Action::Replace),
         _ => cx
             .editor
@@ -14329,19 +14584,13 @@ fn thesaurus(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
                     editor.set_status(format!("thesaurus: no synonyms for '{word}'"));
                     return;
                 }
-                let columns = [ui::PickerColumn::new(
-                    "synonym",
-                    |s: &String, _: &()| s.as_str().into(),
-                )];
-                let picker = ui::Picker::new(
-                    columns,
-                    0,
-                    syns,
-                    (),
-                    move |cx, syn: &String, _action| {
+                let columns = [ui::PickerColumn::new("synonym", |s: &String, _: &()| {
+                    s.as_str().into()
+                })];
+                let picker =
+                    ui::Picker::new(columns, 0, syns, (), move |cx, syn: &String, _action| {
                         replace_word_under_cursor(cx.editor, syn);
-                    },
-                );
+                    });
                 compositor.push(Box::new(overlaid(picker)));
             },
         ));
@@ -14447,8 +14696,7 @@ fn delete_horizontal_space(
     }
 
     // Emacs `delete-horizontal-space` (M-\): remove every space/tab around point.
-    let transaction =
-        Transaction::change(doc.text(), std::iter::once((start, end, None)));
+    let transaction = Transaction::change(doc.text(), std::iter::once((start, end, None)));
     doc.apply(&transaction, view.id);
     doc.set_selection(view.id, Selection::point(start));
     doc.append_changes_to_history(view);
@@ -14487,14 +14735,12 @@ fn cycle_spacing(
 
     // Decide the phase: a consecutive call at the same point advances the cycle,
     // otherwise start over and capture the current whitespace run for restore.
-    let (phase, original) = CYCLE_SPACING.with(|c| {
-        match &*c.borrow() {
-            Some(st) if st.pos == cursor => (st.phase.next(), st.original.clone()),
-            _ => {
-                let (start, end) = horizontal_space_run(&slice, cursor);
-                let text: String = slice.slice(start..end).chunks().collect();
-                (CycleSpacing::first(), text)
-            }
+    let (phase, original) = CYCLE_SPACING.with(|c| match &*c.borrow() {
+        Some(st) if st.pos == cursor => (st.phase.next(), st.original.clone()),
+        _ => {
+            let (start, end) = horizontal_space_run(&slice, cursor);
+            let text: String = slice.slice(start..end).chunks().collect();
+            (CycleSpacing::first(), text)
         }
     });
 
@@ -14926,13 +15172,20 @@ fn sort_numeric_fields_cmd(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let field: i64 = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(1);
+    let field: i64 = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .unwrap_or(1);
 
     let (view, doc) = current!(cx.editor);
     let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
         return Ok(());
     };
-    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let block: String = doc
+        .text()
+        .slice(region_start..region_end)
+        .chunks()
+        .collect();
     let had_trailing = block.ends_with('\n');
     let mut lines: Vec<String> = block.split('\n').map(str::to_string).collect();
     if had_trailing {
@@ -14966,7 +15219,10 @@ fn sort_columns_cmd(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let beg: usize = args.first().and_then(|a| a.trim().parse().ok()).unwrap_or(0);
+    let beg: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .unwrap_or(0);
     let end: usize = args
         .get(1)
         .and_then(|a| a.trim().parse().ok())
@@ -14976,7 +15232,11 @@ fn sort_columns_cmd(
     let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
         return Ok(());
     };
-    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let block: String = doc
+        .text()
+        .slice(region_start..region_end)
+        .chunks()
+        .collect();
     let had_trailing = block.ends_with('\n');
     let mut lines: Vec<String> = block.split('\n').map(str::to_string).collect();
     if had_trailing {
@@ -15014,7 +15274,11 @@ fn sort_paragraphs_cmd(
     let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
         return Ok(());
     };
-    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let block: String = doc
+        .text()
+        .slice(region_start..region_end)
+        .chunks()
+        .collect();
     let out = zemacs_core::sort::sort_paragraphs(&block, args.has_flag("reverse"));
     if out == block {
         return Ok(());
@@ -15561,7 +15825,11 @@ pub(crate) fn open_mail_draft(cx: &mut compositor::Context, to: &str, subject: &
 
 /// Emacs `compose-mail` (C-x m): open a new buffer with the message-mode
 /// template (`:compose-mail [to] [subject...]`) and put point on the To: line.
-fn compose_mail(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn compose_mail(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -15604,7 +15872,8 @@ fn outbox_dir() -> anyhow::Result<std::path::PathBuf> {
 fn queue_current_draft(cx: &mut compositor::Context) -> anyhow::Result<std::path::PathBuf> {
     let raw = doc!(cx.editor).text().to_string();
     let msg = zemacs_core::email::parse_buffer(&raw);
-    msg.validate().map_err(|e| anyhow::anyhow!("message: {e}"))?;
+    msg.validate()
+        .map_err(|e| anyhow::anyhow!("message: {e}"))?;
     let wire = msg.assemble();
     let dir = outbox_dir()?;
     let stamp = std::time::SystemTime::now()
@@ -15617,7 +15886,11 @@ fn queue_current_draft(cx: &mut compositor::Context) -> anyhow::Result<std::path
 }
 
 /// Emacs `message-send` (C-c C-s): assemble + queue the draft, keeping the buffer.
-fn message_send(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn message_send(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -15640,8 +15913,10 @@ fn message_send_and_exit(
     }
     let path = queue_current_draft(cx)?;
     run_command_line(cx, "buffer-close!");
-    cx.editor
-        .set_status(format!("message queued to {} — buffer killed", path.display()));
+    cx.editor.set_status(format!(
+        "message queued to {} — buffer killed",
+        path.display()
+    ));
     Ok(())
 }
 
@@ -15684,7 +15959,11 @@ fn message_goto_to(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> an
     message_goto(cx, "To")
 }
 
-fn message_goto_subject(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+fn message_goto_subject(
+    cx: &mut compositor::Context,
+    _a: Args,
+    e: PromptEvent,
+) -> anyhow::Result<()> {
     if e != PromptEvent::Validate {
         return Ok(());
     }

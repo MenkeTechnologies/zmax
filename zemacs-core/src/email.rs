@@ -273,7 +273,10 @@ mod tests {
 
     #[test]
     fn signature_and_attachment_markup() {
-        assert_eq!(signature_block("Sent from zemacs"), "\n-- \nSent from zemacs\n");
+        assert_eq!(
+            signature_block("Sent from zemacs"),
+            "\n-- \nSent from zemacs\n"
+        );
         let tag = mml_attach_tag("/tmp/a.png", "image/png");
         assert!(tag.contains("type=\"image/png\""));
         assert!(tag.contains("filename=\"/tmp/a.png\""));
@@ -283,7 +286,10 @@ mod tests {
 
     #[test]
     fn long_header_is_folded_under_78_cols() {
-        let long = (0..20).map(|i| format!("addr{i}@example.com")).collect::<Vec<_>>().join(" ");
+        let long = (0..20)
+            .map(|i| format!("addr{i}@example.com"))
+            .collect::<Vec<_>>()
+            .join(" ");
         let folded = fold_header("To", &long);
         for line in folded.split("\r\n") {
             assert!(line.len() <= 78, "line too long: {line:?}");

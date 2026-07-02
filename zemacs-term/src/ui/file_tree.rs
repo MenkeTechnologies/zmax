@@ -258,7 +258,9 @@ impl FileTree {
             if *budget == 0 {
                 return;
             }
-            let Ok(rd) = std::fs::read_dir(dir) else { return };
+            let Ok(rd) = std::fs::read_dir(dir) else {
+                return;
+            };
             for entry in rd.flatten() {
                 let p = entry.path();
                 if !p.is_dir() {

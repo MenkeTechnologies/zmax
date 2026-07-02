@@ -1823,7 +1823,9 @@ fn restore_session(appdata: Option<&crate::appdata::AppData>, editor: &mut Edito
             })
             .collect();
         if !bps.is_empty() {
-            editor.breakpoints.insert(std::path::PathBuf::from(&fb.path), bps);
+            editor
+                .breakpoints
+                .insert(std::path::PathBuf::from(&fb.path), bps);
         }
     }
 
@@ -1874,7 +1876,10 @@ fn restore_session(appdata: Option<&crate::appdata::AppData>, editor: &mut Edito
 /// Capture the live window split tree as a persistable [`crate::appdata::SplitNode`]
 /// (paths + horizontal/vertical arrangement + weights).
 #[cfg(not(feature = "integration"))]
-fn shape_to_split(editor: &Editor, shape: &zemacs_view::tree::TreeShape) -> crate::appdata::SplitNode {
+fn shape_to_split(
+    editor: &Editor,
+    shape: &zemacs_view::tree::TreeShape,
+) -> crate::appdata::SplitNode {
     use zemacs_view::tree::{Layout, TreeShape};
     match shape {
         TreeShape::Leaf { doc, focused } => {
@@ -1893,7 +1898,12 @@ fn shape_to_split(editor: &Editor, shape: &zemacs_view::tree::TreeShape) -> crat
             }
         }
         TreeShape::Split { layout, children } => crate::appdata::SplitNode {
-            kind: if matches!(layout, Layout::Horizontal) { "h" } else { "v" }.into(),
+            kind: if matches!(layout, Layout::Horizontal) {
+                "h"
+            } else {
+                "v"
+            }
+            .into(),
             weight: 1.0,
             path: None,
             focused: false,

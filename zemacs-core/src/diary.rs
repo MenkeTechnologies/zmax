@@ -43,7 +43,13 @@ impl DateSpec {
 }
 
 const WEEKDAYS: [&str; 7] = [
-    "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
 ];
 
 /// Full month name -> 1-based month number (case-insensitive, 3+ char prefix).
@@ -54,7 +60,9 @@ fn parse_month_name(word: &str) -> Option<u32> {
     }
     MONTH_NAMES
         .iter()
-        .position(|m| m.to_ascii_lowercase().starts_with(&w) || w.starts_with(&m.to_ascii_lowercase()))
+        .position(|m| {
+            m.to_ascii_lowercase().starts_with(&w) || w.starts_with(&m.to_ascii_lowercase())
+        })
         .map(|i| i as u32 + 1)
 }
 
@@ -96,7 +104,11 @@ pub fn parse_line(line: &str) -> Option<(DateSpec, String)> {
                 return None;
             }
             let spec = if parts.len() == 3 {
-                DateSpec::Specific { year: parts[2].parse().ok()?, month, day }
+                DateSpec::Specific {
+                    year: parts[2].parse().ok()?,
+                    month,
+                    day,
+                }
             } else {
                 DateSpec::Yearly { month, day }
             };
@@ -175,16 +187,29 @@ mod tests {
     fn parses_monthname_forms() {
         assert_eq!(
             parse_line("October 12, 2024 Dentist"),
-            Some((DateSpec::Specific { year: 2024, month: 10, day: 12 }, "Dentist".to_string()))
+            Some((
+                DateSpec::Specific {
+                    year: 2024,
+                    month: 10,
+                    day: 12
+                },
+                "Dentist".to_string()
+            ))
         );
         assert_eq!(
             parse_line("October 12 Payday"),
-            Some((DateSpec::Yearly { month: 10, day: 12 }, "Payday".to_string()))
+            Some((
+                DateSpec::Yearly { month: 10, day: 12 },
+                "Payday".to_string()
+            ))
         );
         // 3-letter month abbreviation.
         assert_eq!(
             parse_line("Dec 25 Christmas"),
-            Some((DateSpec::Yearly { month: 12, day: 25 }, "Christmas".to_string()))
+            Some((
+                DateSpec::Yearly { month: 12, day: 25 },
+                "Christmas".to_string()
+            ))
         );
     }
 
@@ -192,11 +217,21 @@ mod tests {
     fn parses_numeric_and_weekday_forms() {
         assert_eq!(
             parse_line("10/31 Halloween"),
-            Some((DateSpec::Yearly { month: 10, day: 31 }, "Halloween".to_string()))
+            Some((
+                DateSpec::Yearly { month: 10, day: 31 },
+                "Halloween".to_string()
+            ))
         );
         assert_eq!(
             parse_line("12/25/2024 Xmas"),
-            Some((DateSpec::Specific { year: 2024, month: 12, day: 25 }, "Xmas".to_string()))
+            Some((
+                DateSpec::Specific {
+                    year: 2024,
+                    month: 12,
+                    day: 25
+                },
+                "Xmas".to_string()
+            ))
         );
         assert_eq!(
             parse_line("Monday Standup"),
@@ -216,8 +251,18 @@ mod tests {
     fn matching_by_kind() {
         // 2024-12-25 is a Wednesday.
         let d = Date::new(2024, 12, 25);
-        assert!(DateSpec::Specific { year: 2024, month: 12, day: 25 }.matches(d));
-        assert!(!DateSpec::Specific { year: 2023, month: 12, day: 25 }.matches(d));
+        assert!(DateSpec::Specific {
+            year: 2024,
+            month: 12,
+            day: 25
+        }
+        .matches(d));
+        assert!(!DateSpec::Specific {
+            year: 2023,
+            month: 12,
+            day: 25
+        }
+        .matches(d));
         assert!(DateSpec::Yearly { month: 12, day: 25 }.matches(d));
         assert!(DateSpec::Yearly { month: 12, day: 25 }.matches(Date::new(2030, 12, 25)));
         assert_eq!(weekday(d), 3); // Wednesday

@@ -120,7 +120,11 @@ fn column_key(line: &str, beg: usize, end: usize) -> String {
 /// the column boundary — this treats a tab as a single column character.
 pub fn sort_columns(lines: &[String], beg: usize, end: usize, reverse: bool) -> Vec<String> {
     let mut v = lines.to_vec();
-    v.sort_by(|a, b| column_key(a, beg, end).cmp(&column_key(b, beg, end)).then_with(|| a.cmp(b)));
+    v.sort_by(|a, b| {
+        column_key(a, beg, end)
+            .cmp(&column_key(b, beg, end))
+            .then_with(|| a.cmp(b))
+    });
     if reverse {
         v.reverse();
     }

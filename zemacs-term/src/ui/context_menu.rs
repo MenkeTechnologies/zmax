@@ -37,7 +37,10 @@ pub enum Entry {
 }
 
 impl Entry {
-    pub fn item(label: impl Into<String>, action: impl FnOnce(&mut Compositor, &mut Context) + 'static) -> Self {
+    pub fn item(
+        label: impl Into<String>,
+        action: impl FnOnce(&mut Compositor, &mut Context) + 'static,
+    ) -> Self {
         Entry::Item {
             label: label.into(),
             shortcut: String::new(),
@@ -219,8 +222,14 @@ fn panel_width(list: &[Entry]) -> u16 {
     let inner = list
         .iter()
         .map(|e| match e {
-            Entry::Item { label, shortcut, .. } => {
-                let sc = if shortcut.is_empty() { 0 } else { shortcut.chars().count() + 3 };
+            Entry::Item {
+                label, shortcut, ..
+            } => {
+                let sc = if shortcut.is_empty() {
+                    0
+                } else {
+                    shortcut.chars().count() + 3
+                };
                 label.chars().count() + sc
             }
             Entry::Sub { label, .. } => label.chars().count() + 2,
@@ -263,7 +272,11 @@ impl Component for ContextMenu {
                 MouseEventKind::Down(MouseButton::Left) => match self.hit(ev.column, ev.row) {
                     Some((depth, idx)) => {
                         self.open.truncate(depth);
-                        if self.list_at(&self.open).get(idx).is_some_and(Entry::is_selectable) {
+                        if self
+                            .list_at(&self.open)
+                            .get(idx)
+                            .is_some_and(Entry::is_selectable)
+                        {
                             self.sel = idx;
                             self.choose(idx)
                         } else {
@@ -275,7 +288,11 @@ impl Component for ContextMenu {
                 MouseEventKind::Moved => {
                     if let Some((depth, idx)) = self.hit(ev.column, ev.row) {
                         self.open.truncate(depth);
-                        if self.list_at(&self.open).get(idx).is_some_and(Entry::is_selectable) {
+                        if self
+                            .list_at(&self.open)
+                            .get(idx)
+                            .is_some_and(Entry::is_selectable)
+                        {
                             self.sel = idx;
                             // Auto-open a hovered submenu (JetBrains behavior).
                             if matches!(self.deepest().get(idx), Some(Entry::Sub { .. })) {
@@ -372,12 +389,20 @@ impl Component for ContextMenu {
                         let line = "─".repeat(inner_w);
                         surface.set_stringn(area.x + 1, ry, &line, inner_w, border_style);
                     }
-                    Entry::Item { label, shortcut, .. } => {
+                    Entry::Item {
+                        label, shortcut, ..
+                    } => {
                         if highlighted {
                             surface
                                 .set_style(Rect::new(area.x + 1, ry, area.width - 2, 1), row_style);
                         }
-                        surface.set_stringn(area.x + 1, ry, &format!(" {label}"), inner_w, row_style);
+                        surface.set_stringn(
+                            area.x + 1,
+                            ry,
+                            &format!(" {label}"),
+                            inner_w,
+                            row_style,
+                        );
                         if !shortcut.is_empty() {
                             let sc = format!("{shortcut} ");
                             let scw = sc.chars().count() as u16;
@@ -391,7 +416,13 @@ impl Component for ContextMenu {
                             surface
                                 .set_style(Rect::new(area.x + 1, ry, area.width - 2, 1), row_style);
                         }
-                        surface.set_stringn(area.x + 1, ry, &format!(" {label}"), inner_w, row_style);
+                        surface.set_stringn(
+                            area.x + 1,
+                            ry,
+                            &format!(" {label}"),
+                            inner_w,
+                            row_style,
+                        );
                         // Accent the arrow on unselected rows; on a highlighted row
                         // keep it in the row style so it stays legible.
                         let arrow_style = if highlighted { row_style } else { arrow_accent };

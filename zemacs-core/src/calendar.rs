@@ -152,8 +152,18 @@ pub fn iso_week(d: Date) -> (i32, u32, u32) {
 }
 
 pub const MONTH_NAMES: [&str; 12] = [
-    "January", "February", "March", "April", "May", "June", "July", "August",
-    "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 ];
 
 pub const WEEKDAY_ABBR: [&str; 7] = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -195,19 +205,37 @@ mod tests {
 
     #[test]
     fn add_months_clamps_day() {
-        assert_eq!(add_months(Date::new(2026, 1, 31), 1), Date::new(2026, 2, 28));
-        assert_eq!(add_months(Date::new(2024, 1, 31), 1), Date::new(2024, 2, 29));
-        assert_eq!(add_months(Date::new(2026, 12, 15), 1), Date::new(2027, 1, 15));
-        assert_eq!(add_months(Date::new(2026, 1, 15), -1), Date::new(2025, 12, 15));
+        assert_eq!(
+            add_months(Date::new(2026, 1, 31), 1),
+            Date::new(2026, 2, 28)
+        );
+        assert_eq!(
+            add_months(Date::new(2024, 1, 31), 1),
+            Date::new(2024, 2, 29)
+        );
+        assert_eq!(
+            add_months(Date::new(2026, 12, 15), 1),
+            Date::new(2027, 1, 15)
+        );
+        assert_eq!(
+            add_months(Date::new(2026, 1, 15), -1),
+            Date::new(2025, 12, 15)
+        );
     }
 
     #[test]
     fn week_bounds_and_counts() {
         // 2026-07-02 is a Thursday; its week runs Sun 06-28 .. Sat 07-04.
-        assert_eq!(beginning_of_week(Date::new(2026, 7, 2)), Date::new(2026, 6, 28));
+        assert_eq!(
+            beginning_of_week(Date::new(2026, 7, 2)),
+            Date::new(2026, 6, 28)
+        );
         assert_eq!(end_of_week(Date::new(2026, 7, 2)), Date::new(2026, 7, 4));
         assert_eq!(count_days(Date::new(2026, 7, 1), Date::new(2026, 7, 1)), 1);
-        assert_eq!(count_days(Date::new(2026, 7, 1), Date::new(2026, 7, 10)), 10);
+        assert_eq!(
+            count_days(Date::new(2026, 7, 1), Date::new(2026, 7, 10)),
+            10
+        );
     }
 
     #[test]
@@ -219,10 +247,16 @@ mod tests {
 
     #[test]
     fn month_and_year_bounds() {
-        assert_eq!(beginning_of_month(Date::new(2024, 2, 15)), Date::new(2024, 2, 1));
+        assert_eq!(
+            beginning_of_month(Date::new(2024, 2, 15)),
+            Date::new(2024, 2, 1)
+        );
         assert_eq!(end_of_month(Date::new(2024, 2, 15)), Date::new(2024, 2, 29)); // leap Feb
         assert_eq!(end_of_month(Date::new(2023, 2, 15)), Date::new(2023, 2, 28));
-        assert_eq!(beginning_of_year(Date::new(2026, 7, 2)), Date::new(2026, 1, 1));
+        assert_eq!(
+            beginning_of_year(Date::new(2026, 7, 2)),
+            Date::new(2026, 1, 1)
+        );
         assert_eq!(end_of_year(Date::new(2026, 7, 2)), Date::new(2026, 12, 31));
     }
 

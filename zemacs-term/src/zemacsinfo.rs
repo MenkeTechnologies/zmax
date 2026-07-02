@@ -393,9 +393,7 @@ fn parse(contents: &str, home: Option<&Path>) -> HashMap<char, zemacs_view::Glob
             if parts.len() == 3 && parts[0].chars().count() == 1 {
                 let mark = parts[0].chars().next().unwrap();
                 if mark.is_ascii_uppercase() {
-                    if let (Ok(l), Ok(c)) =
-                        (parts[1].parse::<usize>(), parts[2].parse::<usize>())
-                    {
+                    if let (Ok(l), Ok(c)) = (parts[1].parse::<usize>(), parts[2].parse::<usize>()) {
                         marks.insert(
                             mark,
                             GlobalMark {
@@ -440,7 +438,10 @@ mod tests {
     #[test]
     fn untildify_reverses_tildify() {
         let home = Path::new("/Users/me");
-        assert_eq!(untildify("~/.zshrc", Some(home)), Path::new("/Users/me/.zshrc"));
+        assert_eq!(
+            untildify("~/.zshrc", Some(home)),
+            Path::new("/Users/me/.zshrc")
+        );
         assert_eq!(untildify("~", Some(home)), Path::new("/Users/me"));
         assert_eq!(untildify("/etc/hosts", Some(home)), Path::new("/etc/hosts"));
         // No home: a leading `~` is left untouched.

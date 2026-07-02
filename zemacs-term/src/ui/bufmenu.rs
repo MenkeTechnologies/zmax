@@ -124,10 +124,12 @@ impl BufferMenu {
     /// with `action` (RET/f/1 → Replace, o/2 → split).
     fn select_current(&self, action: Action) -> Option<Callback> {
         let id = self.current_doc()?;
-        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.pop();
-            cx.editor.switch(id, action);
-        }))
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                cx.editor.switch(id, action);
+            },
+        ))
     }
 
     /// `v` (`Buffer-menu-select`): select the buffer at point plus every buffer
@@ -145,17 +147,19 @@ impl BufferMenu {
         if ids.is_empty() {
             return None;
         }
-        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.pop();
-            for (i, id) in ids.iter().enumerate() {
-                let action = if i == 0 {
-                    Action::Replace
-                } else {
-                    Action::HorizontalSplit
-                };
-                cx.editor.switch(*id, action);
-            }
-        }))
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                for (i, id) in ids.iter().enumerate() {
+                    let action = if i == 0 {
+                        Action::Replace
+                    } else {
+                        Action::HorizontalSplit
+                    };
+                    cx.editor.switch(*id, action);
+                }
+            },
+        ))
     }
 
     /// `x` (`Buffer-menu-execute`): save the `S`-flagged buffers, then kill the
@@ -305,7 +309,13 @@ impl Component for BufferMenu {
         self.viewport = body_h as usize;
 
         if self.menu.is_empty() {
-            surface.set_stringn(area.x, body_y, "(no buffers)", area.width as usize, info_style);
+            surface.set_stringn(
+                area.x,
+                body_y,
+                "(no buffers)",
+                area.width as usize,
+                info_style,
+            );
             return;
         }
 
@@ -345,12 +355,7 @@ impl Component for BufferMenu {
         let footer = if self.status.is_empty() {
             let d = self.menu.flagged(Mark::Delete).len();
             let s = self.menu.flagged(Mark::Save).len();
-            format!(
-                "{} buffers  {} to kill  {} to save",
-                self.menu.len(),
-                d,
-                s
-            )
+            format!("{} buffers  {} to kill  {} to save", self.menu.len(), d, s)
         } else {
             self.status.clone()
         };

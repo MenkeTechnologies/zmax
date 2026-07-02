@@ -28,7 +28,10 @@ struct Infix<'a> {
 
 impl<'a> Infix<'a> {
     fn new(s: &'a str) -> Self {
-        Infix { s: s.as_bytes(), i: 0 }
+        Infix {
+            s: s.as_bytes(),
+            i: 0,
+        }
     }
     fn peek(&mut self) -> Option<u8> {
         while self.i < self.s.len() && self.s[self.i].is_ascii_whitespace() {
@@ -130,7 +133,9 @@ impl<'a> Infix<'a> {
         while self.i < self.s.len() && self.s[self.i].is_ascii_alphabetic() {
             self.i += 1;
         }
-        let name = std::str::from_utf8(&self.s[start..self.i]).unwrap_or("").to_ascii_lowercase();
+        let name = std::str::from_utf8(&self.s[start..self.i])
+            .unwrap_or("")
+            .to_ascii_lowercase();
         match name.as_str() {
             "pi" => return Ok(std::f64::consts::PI),
             "e" if self.peek() != Some(b'(') => return Ok(std::f64::consts::E),
@@ -180,7 +185,8 @@ impl<'a> Infix<'a> {
             }
         }
         let tok = std::str::from_utf8(&self.s[start..self.i]).unwrap_or("");
-        tok.parse::<f64>().map_err(|_| format!("invalid number '{tok}'"))
+        tok.parse::<f64>()
+            .map_err(|_| format!("invalid number '{tok}'"))
     }
 }
 

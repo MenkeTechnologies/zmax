@@ -108,7 +108,13 @@ fn hex_preview(bytes: &[u8]) -> String {
         }
         let ascii: String = chunk
             .iter()
-            .map(|&b| if (0x20..0x7f).contains(&b) { b as char } else { '.' })
+            .map(|&b| {
+                if (0x20..0x7f).contains(&b) {
+                    b as char
+                } else {
+                    '.'
+                }
+            })
             .collect();
         out.push_str(&format!("{:08x}  {hex}|{ascii}|\n", i * 16));
     }

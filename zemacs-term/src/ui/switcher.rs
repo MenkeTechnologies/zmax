@@ -34,14 +34,46 @@ enum ToolAction {
 }
 
 const TOOLS: &[Tool] = &[
-    Tool { label: "Project", shortcut: "", action: ToolAction::Panel("project") },
-    Tool { label: "Bookmarks", shortcut: "", action: ToolAction::Panel("bookmarks") },
-    Tool { label: "Problems", shortcut: "", action: ToolAction::Panel("problems") },
-    Tool { label: "Structure", shortcut: "", action: ToolAction::Panel("structure") },
-    Tool { label: "Git", shortcut: "", action: ToolAction::Panel("git") },
-    Tool { label: "Run", shortcut: "", action: ToolAction::Panel("run") },
-    Tool { label: "TODO", shortcut: "", action: ToolAction::Todo },
-    Tool { label: "Recent Locations", shortcut: "", action: ToolAction::RecentLocations },
+    Tool {
+        label: "Project",
+        shortcut: "",
+        action: ToolAction::Panel("project"),
+    },
+    Tool {
+        label: "Bookmarks",
+        shortcut: "",
+        action: ToolAction::Panel("bookmarks"),
+    },
+    Tool {
+        label: "Problems",
+        shortcut: "",
+        action: ToolAction::Panel("problems"),
+    },
+    Tool {
+        label: "Structure",
+        shortcut: "",
+        action: ToolAction::Panel("structure"),
+    },
+    Tool {
+        label: "Git",
+        shortcut: "",
+        action: ToolAction::Panel("git"),
+    },
+    Tool {
+        label: "Run",
+        shortcut: "",
+        action: ToolAction::Panel("run"),
+    },
+    Tool {
+        label: "TODO",
+        shortcut: "",
+        action: ToolAction::Todo,
+    },
+    Tool {
+        label: "Recent Locations",
+        shortcut: "",
+        action: ToolAction::RecentLocations,
+    },
 ];
 
 pub struct RecentFilesSwitcher {
@@ -51,9 +83,9 @@ pub struct RecentFilesSwitcher {
     open: Vec<PathBuf>,
     edited_only: bool,
     root: PathBuf,
-    sel: usize,       // selected recent-file index
-    left_sel: usize,  // selected left-rail index
-    on_left: bool,    // focus is on the left rail
+    sel: usize,      // selected recent-file index
+    left_sel: usize, // selected left-rail index
+    on_left: bool,   // focus is on the left rail
     // Click hit regions recorded at render.
     file_rows: Vec<(u16, usize)>, // (screen row, file index)
     tool_rows: Vec<(u16, usize)>, // (screen row, tool index)
@@ -99,31 +131,35 @@ impl RecentFilesSwitcher {
     }
 
     fn open_file(path: PathBuf) -> EventResult {
-        EventResult::Consumed(Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.remove(ID);
-            if let Err(zemacs_view::DocumentOpenError::BinaryFile) =
-                cx.editor.open(&path, zemacs_view::editor::Action::Replace)
-            {
-                crate::commands::typed::push_hex_view(cx, path);
-            }
-        })))
+        EventResult::Consumed(Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.remove(ID);
+                if let Err(zemacs_view::DocumentOpenError::BinaryFile) =
+                    cx.editor.open(&path, zemacs_view::editor::Action::Replace)
+                {
+                    crate::commands::typed::push_hex_view(cx, path);
+                }
+            },
+        )))
     }
 
     fn run_tool(action: ToolAction) -> EventResult {
-        EventResult::Consumed(Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.remove(ID);
-            match action {
-                ToolAction::Panel(name) => {
-                    if let Some(view) = compositor.find::<crate::ui::EditorView>() {
-                        view.focus_ide_panel(name);
+        EventResult::Consumed(Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.remove(ID);
+                match action {
+                    ToolAction::Panel(name) => {
+                        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+                            view.focus_ide_panel(name);
+                        }
+                    }
+                    ToolAction::Todo => crate::commands::typed::run_command_line(cx, "Todo"),
+                    ToolAction::RecentLocations => {
+                        crate::commands::typed::run_command_line(cx, "RecentLocations")
                     }
                 }
-                ToolAction::Todo => crate::commands::typed::run_command_line(cx, "Todo"),
-                ToolAction::RecentLocations => {
-                    crate::commands::typed::run_command_line(cx, "RecentLocations")
-                }
-            }
-        })))
+            },
+        )))
     }
 
     fn activate(&mut self) -> EventResult {
@@ -208,8 +244,7 @@ impl Component for RecentFilesSwitcher {
                             self.left_sel = i;
                             return self.activate();
                         }
-                    } else if let Some(&(_, i)) =
-                        self.file_rows.iter().find(|&&(r, _)| r == ev.row)
+                    } else if let Some(&(_, i)) = self.file_rows.iter().find(|&&(r, _)| r == ev.row)
                     {
                         self.on_left = false;
                         self.sel = i;
@@ -266,7 +301,13 @@ impl Component for RecentFilesSwitcher {
         let inner = Rect::new(area.x + 1, area.y + 1, area.width - 2, area.height - 2);
 
         // Header row: title + right-aligned "Show edited only" toggle.
-        surface.set_stringn(inner.x + 1, inner.y, " Recent Files", inner.width as usize, accent);
+        surface.set_stringn(
+            inner.x + 1,
+            inner.y,
+            " Recent Files",
+            inner.width as usize,
+            accent,
+        );
         let check = if self.edited_only { "☑" } else { "☐" };
         let toggle = format!("{check} Show edited only  e ");
         let tw = toggle.chars().count() as u16;
@@ -326,7 +367,11 @@ impl Component for RecentFilesSwitcher {
                 .and_then(|p| p.strip_prefix(&self.root).ok().or(Some(p)))
                 .map(|p| {
                     let s = p.to_string_lossy();
-                    if s.is_empty() { "./".to_string() } else { s.into_owned() }
+                    if s.is_empty() {
+                        "./".to_string()
+                    } else {
+                        s.into_owned()
+                    }
                 })
                 .unwrap_or_default();
             let icon = crate::ui::icons::file_icon(&name);
@@ -346,7 +391,13 @@ impl Component for RecentFilesSwitcher {
 
         // Footer: workspace path.
         let footer = format!(" {}", self.root.to_string_lossy());
-        surface.set_stringn(inner.x + 1, inner.y + inner.height - 1, &footer, inner.width as usize, dim);
+        surface.set_stringn(
+            inner.x + 1,
+            inner.y + inner.height - 1,
+            &footer,
+            inner.width as usize,
+            dim,
+        );
     }
 
     fn id(&self) -> Option<&'static str> {

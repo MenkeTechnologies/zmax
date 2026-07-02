@@ -833,8 +833,7 @@ fn render_calendar(surface: &mut Surface, theme: &zemacs_view::Theme, area: Rect
     let accent = theme.get("function").add_modifier(Modifier::BOLD);
     let today_style = theme.get("function").add_modifier(Modifier::REVERSED);
 
-    let now = time::OffsetDateTime::now_local()
-        .unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+    let now = time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
     let today = now.date();
     let (year, month, today_day) = (today.year(), today.month(), today.day());
 
@@ -844,7 +843,13 @@ fn render_calendar(surface: &mut Surface, theme: &zemacs_view::Theme, area: Rect
     surface.set_stringn(tx, area.y, &title, area.width as usize, accent);
 
     // Weekday header (Sunday-first), 3 cells wide each to match the day grid.
-    surface.set_stringn(area.x, area.y + 1, "Su Mo Tu We Th Fr Sa", area.width as usize, dim);
+    surface.set_stringn(
+        area.x,
+        area.y + 1,
+        "Su Mo Tu We Th Fr Sa",
+        area.width as usize,
+        dim,
+    );
 
     let first = match time::Date::from_calendar_date(year, month, 1) {
         Ok(d) => d,

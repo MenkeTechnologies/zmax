@@ -6103,7 +6103,10 @@ fn select_line_span(doc: &mut Document, view_id: ViewId, start: usize, span: usi
     let last = (first + span).min(text.len_lines().saturating_sub(1));
     let s = text.line_to_char(first);
     let e = text.line_to_char((last + 1).min(text.len_lines()));
-    doc.set_selection(view_id, Selection::single(s, e.max(s + 1).min(text.len_chars())));
+    doc.set_selection(
+        view_id,
+        Selection::single(s, e.max(s + 1).min(text.len_chars())),
+    );
 }
 
 fn shift_line_down(cx: &mut Context) {
@@ -12274,8 +12277,7 @@ fn bookmark_rename(cx: &mut Context) {
                             cx.editor
                                 .set_status(format!("Bookmark renamed to '{input}'"));
                         } else {
-                            cx.editor
-                                .set_error(format!("Cannot rename to '{input}'"));
+                            cx.editor.set_error(format!("Cannot rename to '{input}'"));
                         }
                     },
                 );
@@ -12565,7 +12567,11 @@ fn diary_show_for(cx: &mut Context, date: zemacs_core::calendar::Date) {
             date.year
         ));
     } else {
-        let joined = hits.iter().map(|e| e.text.as_str()).collect::<Vec<_>>().join(" · ");
+        let joined = hits
+            .iter()
+            .map(|e| e.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" · ");
         cx.editor.set_status(format!("Diary: {joined}"));
     }
 }
@@ -12585,7 +12591,8 @@ fn diary_view_entries(cx: &mut Context) {
 fn diary_show_all_entries(cx: &mut Context) {
     let path = diary_path();
     if let Err(e) = cx.editor.open(&path, Action::Replace) {
-        cx.editor.set_error(format!("diary: cannot open {}: {e}", path.display()));
+        cx.editor
+            .set_error(format!("diary: cannot open {}: {e}", path.display()));
     }
 }
 
@@ -12599,7 +12606,8 @@ fn diary_insert(cx: &mut Context, header: String) {
     }
     contents.push_str(&header);
     if let Err(e) = std::fs::write(&path, &contents) {
-        cx.editor.set_error(format!("diary: cannot write {}: {e}", path.display()));
+        cx.editor
+            .set_error(format!("diary: cannot write {}: {e}", path.display()));
         return;
     }
     if cx.editor.open(&path, Action::Replace).is_ok() {
@@ -12630,7 +12638,10 @@ fn diary_mark_entries(cx: &mut Context) {
     let dim = zemacs_core::calendar::days_in_month(today.year, today.month);
     let marked = (1..=dim)
         .filter(|&d| {
-            zemacs_core::diary::has_entry(&entries, zemacs_core::calendar::Date::new(today.year, today.month, d))
+            zemacs_core::diary::has_entry(
+                &entries,
+                zemacs_core::calendar::Date::new(today.year, today.month, d),
+            )
         })
         .count();
     cx.editor.set_status(format!(
@@ -12677,11 +12688,11 @@ fn occur(cx: &mut Context) {
                 re.find(line).map(|hit| line[..hit.start()].chars().count())
             });
             if matches.is_empty() {
-                cx.editor.set_status(format!("occur: no matches for {input}"));
+                cx.editor
+                    .set_status(format!("occur: no matches for {input}"));
                 return;
             }
-            let overlay =
-                crate::ui::occur::Occur::new(doc_id, view_id, input.to_string(), matches);
+            let overlay = crate::ui::occur::Occur::new(doc_id, view_id, input.to_string(), matches);
             let call = crate::job::Callback::EditorCompositor(Box::new(
                 move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
                     compositor.push(Box::new(overlay));
@@ -13355,9 +13366,7 @@ fn qf_entry_is_current(entry_path: &std::path::Path, doc_abs: Option<&std::path:
     let entry_abs = if entry_path.is_absolute() {
         entry_path.to_path_buf()
     } else {
-        std::env::current_dir()
-            .unwrap_or_default()
-            .join(entry_path)
+        std::env::current_dir().unwrap_or_default().join(entry_path)
     };
     match (
         std::fs::canonicalize(&entry_abs),
@@ -13967,11 +13976,7 @@ fn search_everywhere(cx: &mut Context) {
 
     // Run a picker command from a menu-entry callback: build a Context, execute
     // the command, then dispatch the layer-push callbacks it queued.
-    fn run(
-        compositor: &mut Compositor,
-        cx: &mut compositor::Context,
-        cmd: fn(&mut Context),
-    ) {
+    fn run(compositor: &mut Compositor, cx: &mut compositor::Context, cmd: fn(&mut Context)) {
         let cbs = {
             let mut c = Context {
                 editor: cx.editor,
@@ -14117,7 +14122,11 @@ fn help_fmt_bindings(km: &crate::keymap::ReverseKeymap, name: &str) -> String {
         .map(|binds| {
             binds
                 .iter()
-                .map(|b| b.iter().map(|k| k.key_sequence_format()).collect::<String>())
+                .map(|b| {
+                    b.iter()
+                        .map(|k| k.key_sequence_format())
+                        .collect::<String>()
+                })
                 .collect::<Vec<_>>()
                 .join("   ")
         })
@@ -14140,7 +14149,11 @@ fn help_report_full(c: &MappableCommand, km: &crate::keymap::ReverseKeymap) -> S
 }
 
 fn help_report_bindings(c: &MappableCommand, km: &crate::keymap::ReverseKeymap) -> String {
-    format!("{} is bound to:\n\n  {}\n", c.name(), help_fmt_bindings(km, c.name()))
+    format!(
+        "{} is bound to:\n\n  {}\n",
+        c.name(),
+        help_fmt_bindings(km, c.name())
+    )
 }
 
 /// Shared command picker used by describe-command / where-is / describe-key.
@@ -14190,10 +14203,16 @@ fn help_command_picker(
             ),
         ];
         let rmap_select = rmap.clone();
-        let picker = Picker::new(columns, primary, commands, rmap, move |cx, command, _action| {
-            let text = report(command, &rmap_select);
-            show_text_in_scratch(cx.editor, &text);
-        });
+        let picker = Picker::new(
+            columns,
+            primary,
+            commands,
+            rmap,
+            move |cx, command, _action| {
+                let text = report(command, &rmap_select);
+                show_text_in_scratch(cx.editor, &text);
+            },
+        );
         compositor.push(Box::new(overlaid(picker)));
     }));
 }
@@ -14224,7 +14243,9 @@ fn describe_bindings(cx: &mut Context) {
                 let name = name.clone();
                 binds.iter().map(move |b| {
                     (
-                        b.iter().map(|k| k.key_sequence_format()).collect::<String>(),
+                        b.iter()
+                            .map(|k| k.key_sequence_format())
+                            .collect::<String>(),
                         name.clone(),
                     )
                 })
@@ -14629,8 +14650,9 @@ fn postfix_expand(cx: &mut Context) {
     let line_start = slice.line_to_char(line);
     let before: String = slice.slice(line_start..cursor).into();
     let Some(dot) = before.rfind('.') else {
-        cx.editor
-            .set_error("postfix: type `expr.kw` (if/for/while/match/let/return/not/paren/print/dbg)");
+        cx.editor.set_error(
+            "postfix: type `expr.kw` (if/for/while/match/let/return/not/paren/print/dbg)",
+        );
         return;
     };
     let kw = before[dot + 1..].trim();
@@ -14646,7 +14668,8 @@ fn postfix_expand(cx: &mut Context) {
         return;
     }
     let Some((repl, cur_off)) = postfix_template(kw, expr, semi) else {
-        cx.editor.set_error(format!("postfix: unknown template `.{kw}`"));
+        cx.editor
+            .set_error(format!("postfix: unknown template `.{kw}`"));
         return;
     };
     let from = line_start + before[..boundary].chars().count();
@@ -14776,13 +14799,45 @@ fn line_opens_block(code: &str) -> bool {
         return false;
     }
     const MODS: &[&str] = &[
-        "pub", "async", "unsafe", "const", "static", "extern", "default", "final", "public",
-        "private", "protected", "virtual", "override", "abstract",
+        "pub",
+        "async",
+        "unsafe",
+        "const",
+        "static",
+        "extern",
+        "default",
+        "final",
+        "public",
+        "private",
+        "protected",
+        "virtual",
+        "override",
+        "abstract",
     ];
     const OPENERS: &[&str] = &[
-        "if", "else", "for", "while", "do", "switch", "try", "catch", "finally", "fn", "func",
-        "function", "class", "struct", "enum", "impl", "trait", "match", "loop", "mod",
-        "namespace", "interface", "union",
+        "if",
+        "else",
+        "for",
+        "while",
+        "do",
+        "switch",
+        "try",
+        "catch",
+        "finally",
+        "fn",
+        "func",
+        "function",
+        "class",
+        "struct",
+        "enum",
+        "impl",
+        "trait",
+        "match",
+        "loop",
+        "mod",
+        "namespace",
+        "interface",
+        "union",
     ];
     // First token, with any `(`/`{`/`<` stripped (`for(`, `pub(crate)`).
     let head = |w: &str| w.split(['(', '{', '<']).next().unwrap_or(w).to_string();
@@ -14852,9 +14907,11 @@ fn complete_current_statement(cx: &mut Context) {
                 + 2 // " {"
                 + le.chars().count()
                 + body_indent.chars().count();
-            let transaction =
-                Transaction::change(text, std::iter::once((line_end, line_end, Some(insert.into()))))
-                    .with_selection(Selection::point(caret));
+            let transaction = Transaction::change(
+                text,
+                std::iter::once((line_end, line_end, Some(insert.into()))),
+            )
+            .with_selection(Selection::point(caret));
             doc.apply(&transaction, view.id);
             true
         } else {
@@ -14923,7 +14980,10 @@ fn push_jump(view: &mut View, doc: &mut Document) {
     // vim `` ` ``/`'` "previous context" mark: remember where the cursor was
     // before the jump so `` `` `` (exact) and `''` (line) return to it. Both
     // marks share the position; the two keys differ only in how goto resolves.
-    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let pos = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
     doc.set_mark('`', pos);
     doc.set_mark('\'', pos);
     let jump = (doc.id(), doc.selection(view.id).clone());
@@ -18619,10 +18679,17 @@ fn ispell_check(lines: &[String]) -> Option<Vec<Vec<zemacs_core::ispell::Misspel
         for l in body {
             if l.trim().is_empty() {
                 per_line.push(std::mem::take(&mut cur));
-            } else if let Some(zemacs_core::ispell::WordCheck::Misspelled { word, offset, suggestions }) =
-                zemacs_core::ispell::parse_line(l)
+            } else if let Some(zemacs_core::ispell::WordCheck::Misspelled {
+                word,
+                offset,
+                suggestions,
+            }) = zemacs_core::ispell::parse_line(l)
             {
-                cur.push(zemacs_core::ispell::Misspelling { word, offset, suggestions });
+                cur.push(zemacs_core::ispell::Misspelling {
+                    word,
+                    offset,
+                    suggestions,
+                });
             }
         }
         if !cur.is_empty() {
@@ -18645,7 +18712,8 @@ fn ispell_word(cx: &mut Context) {
         return;
     };
     let Some(per_line) = ispell_check(&[word.clone()]) else {
-        cx.editor.set_error("no speller found (install aspell, hunspell, or ispell)");
+        cx.editor
+            .set_error("no speller found (install aspell, hunspell, or ispell)");
         return;
     };
     let miss = per_line.into_iter().next().unwrap_or_default();
@@ -18654,7 +18722,8 @@ fn ispell_word(cx: &mut Context) {
         return;
     };
     if m.suggestions.is_empty() {
-        cx.editor.set_status(format!("\"{word}\" is misspelled (no suggestions)"));
+        cx.editor
+            .set_status(format!("\"{word}\" is misspelled (no suggestions)"));
         return;
     }
     let suggestions: Vec<String> = m.suggestions.into_iter().take(9).collect();
@@ -18675,7 +18744,10 @@ fn ispell_word(cx: &mut Context) {
         }
         let repl = suggestions[idx - 1].clone();
         let (view, doc) = current!(cx.editor);
-        let tx = Transaction::change(doc.text(), [(start, end, Some(repl.as_str().into()))].into_iter());
+        let tx = Transaction::change(
+            doc.text(),
+            [(start, end, Some(repl.as_str().into()))].into_iter(),
+        );
         doc.apply(&tx, view.id);
     });
 }
@@ -18688,7 +18760,8 @@ fn ispell_range(cx: &mut Context, from: usize, to: usize, label: &str) {
     // Feed line by line so offsets map back per line.
     let lines: Vec<String> = slice.to_string().split('\n').map(str::to_string).collect();
     let Some(per_line) = ispell_check(&lines) else {
-        cx.editor.set_error("no speller found (install aspell, hunspell, or ispell)");
+        cx.editor
+            .set_error("no speller found (install aspell, hunspell, or ispell)");
         return;
     };
     // Map (line index, in-line offset) back to a buffer char position.
@@ -18760,7 +18833,8 @@ fn ispell(cx: &mut Context) {
 /// Emacs `ispell-kill-ispell`: there is no persistent speller process (each
 /// check spawns a fresh one), so this just reports that.
 fn ispell_kill_ispell(cx: &mut Context) {
-    cx.editor.set_status("ispell: no persistent process to kill");
+    cx.editor
+        .set_status("ispell: no persistent process to kill");
 }
 
 /// Emacs `ispell-change-dictionary`: prompt for the dictionary passed to the
@@ -18777,7 +18851,11 @@ fn ispell_change_dictionary(cx: &mut Context) {
             }
             let dict = input.trim().to_string();
             if let Ok(mut slot) = ispell_dictionary().write() {
-                *slot = if dict.is_empty() { None } else { Some(dict.clone()) };
+                *slot = if dict.is_empty() {
+                    None
+                } else {
+                    Some(dict.clone())
+                };
             }
             cx.editor.set_status(format!(
                 "ispell dictionary: {}",
@@ -22490,7 +22568,10 @@ mod complete_statement_tests {
     fn closes_parens_and_adds_semicolon() {
         // finish a call: close the open paren, then terminate.
         assert_eq!(statement_completion_suffix("foo(bar", true), ");");
-        assert_eq!(statement_completion_suffix("let x = foo(a, b(c)", true), ");");
+        assert_eq!(
+            statement_completion_suffix("let x = foo(a, b(c)", true),
+            ");"
+        );
         // nested brackets close in the right order.
         assert_eq!(statement_completion_suffix("x = a[i](", true), ");");
         assert_eq!(statement_completion_suffix("m[k", true), "];");
@@ -22537,15 +22618,34 @@ mod complete_statement_tests {
     fn detects_block_openers() {
         use super::line_opens_block;
         for h in [
-            "if (x)", "if x", "for (i=0", "while true", "else", "} else if (y)",
-            "fn foo()", "pub fn foo()", "pub(crate) fn foo()", "impl Foo", "match x",
-            "struct S", "public class C", "loop", "async fn go()",
+            "if (x)",
+            "if x",
+            "for (i=0",
+            "while true",
+            "else",
+            "} else if (y)",
+            "fn foo()",
+            "pub fn foo()",
+            "pub(crate) fn foo()",
+            "impl Foo",
+            "match x",
+            "struct S",
+            "public class C",
+            "loop",
+            "async fn go()",
         ] {
             assert!(line_opens_block(h), "should open a block: {h:?}");
         }
         for n in [
-            "let x = 1", "foo()", "return value", "x += 1", "if (x) {", "y;", "// if x",
-            "int total", "self.run()",
+            "let x = 1",
+            "foo()",
+            "return value",
+            "x += 1",
+            "if (x) {",
+            "y;",
+            "// if x",
+            "int total",
+            "self.run()",
         ] {
             assert!(!line_opens_block(n), "should NOT open a block: {n:?}");
         }

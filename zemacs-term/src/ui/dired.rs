@@ -197,13 +197,15 @@ impl Dired {
             }
             None
         } else {
-            Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-                compositor.pop();
-                if let Err(err) = cx.editor.open(&path, Action::Replace) {
-                    cx.editor
-                        .set_error(format!("failed to open {}: {err}", path.display()));
-                }
-            }))
+            Some(Box::new(
+                move |compositor: &mut Compositor, cx: &mut Context| {
+                    compositor.pop();
+                    if let Err(err) = cx.editor.open(&path, Action::Replace) {
+                        cx.editor
+                            .set_error(format!("failed to open {}: {err}", path.display()));
+                    }
+                },
+            ))
         }
     }
 
@@ -398,7 +400,10 @@ impl Component for Dired {
             .take(body_h as usize)
         {
             let y = body_y + (offset - self.scroll) as u16;
-            let m = mark_char(self.marked.contains(&e.name), self.flagged.contains(&e.name));
+            let m = mark_char(
+                self.marked.contains(&e.name),
+                self.flagged.contains(&e.name),
+            );
             let kind = if e.is_symlink {
                 "l"
             } else if e.is_dir {

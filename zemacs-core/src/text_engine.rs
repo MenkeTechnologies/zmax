@@ -208,10 +208,7 @@ fn split_at_col(chars: &[char], col: usize) -> (String, String) {
         left.push_str(&" ".repeat(pad));
         (left, String::new())
     } else {
-        (
-            chars[..col].iter().collect(),
-            chars[col..].iter().collect(),
-        )
+        (chars[..col].iter().collect(), chars[col..].iter().collect())
     }
 }
 
@@ -288,10 +285,7 @@ pub fn string_insert_rectangle(lines: &[String], col: usize, s: &str) -> Vec<Str
 /// touching pair, exactly what an editor does after multi-cursor edits produce
 /// adjacent/overlapping regions. Zero-width ranges are preserved as cursors.
 pub fn merge_ranges(ranges: &[(usize, usize)]) -> Vec<(usize, usize)> {
-    let mut v: Vec<(usize, usize)> = ranges
-        .iter()
-        .map(|&(a, b)| (a.min(b), a.max(b)))
-        .collect();
+    let mut v: Vec<(usize, usize)> = ranges.iter().map(|&(a, b)| (a.min(b), a.max(b))).collect();
     v.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
     let mut out: Vec<(usize, usize)> = Vec::new();
     for (s, e) in v {
@@ -487,7 +481,10 @@ pub fn subword_boundaries(ident: &str) -> Vec<usize> {
             let p = chars[i - 1];
             is_sep(p)
                 || (!p.is_uppercase() && c.is_uppercase())
-                || (p.is_uppercase() && c.is_uppercase() && i + 1 < n && chars[i + 1].is_lowercase())
+                || (p.is_uppercase()
+                    && c.is_uppercase()
+                    && i + 1 < n
+                    && chars[i + 1].is_lowercase())
                 || (!p.is_ascii_digit() && c.is_ascii_digit())
         };
         if boundary {
@@ -925,12 +922,12 @@ mod tests {
             "the quick\nbrown fox"
         );
         // collapses existing newlines and applies the prefix
-        assert_eq!(
-            fill_paragraph("aa\n  bb   cc", 8, "// "),
-            "// aa bb\n// cc"
-        );
+        assert_eq!(fill_paragraph("aa\n  bb   cc", 8, "// "), "// aa bb\n// cc");
         // over-long word still emitted alone
-        assert_eq!(fill_paragraph("supercalifragilistic hi", 5, ""), "supercalifragilistic\nhi");
+        assert_eq!(
+            fill_paragraph("supercalifragilistic hi", 5, ""),
+            "supercalifragilistic\nhi"
+        );
     }
 
     #[test]
@@ -1000,10 +997,7 @@ mod tests {
 
     #[test]
     fn merge_and_subtract_ranges() {
-        assert_eq!(
-            merge_ranges(&[(5, 8), (0, 3), (2, 6)]),
-            vec![(0, 8)]
-        );
+        assert_eq!(merge_ranges(&[(5, 8), (0, 3), (2, 6)]), vec![(0, 8)]);
         assert_eq!(
             merge_ranges(&[(0, 2), (2, 4), (10, 12)]),
             vec![(0, 4), (10, 12)]
@@ -1063,7 +1057,7 @@ mod tests {
         assert_eq!(t.undo(), Some(&"a"));
         assert_eq!(t.undo(), Some(&"root"));
         assert_eq!(t.undo(), None); // at root
-        // create a second branch off the root
+                                    // create a second branch off the root
         t.record("c");
         assert_eq!(*t.current_state(), "c");
         assert_eq!(t.undo(), Some(&"root"));

@@ -577,10 +577,7 @@ pub fn indent_guide_columns(lines: &[String], tab_width: usize) -> Vec<Vec<usize
                     }
                 }
             };
-            (1..)
-                .map(|k| k * tw)
-                .take_while(|&col| col < ind)
-                .collect()
+            (1..).map(|k| k * tw).take_while(|&col| col < ind).collect()
         })
         .collect()
 }
@@ -626,7 +623,11 @@ pub fn wrap_in_tag(inner: &str, abbr: &str) -> String {
     let mut classes: Vec<String> = Vec::new();
     let mut mode = 't'; // t=tag, i=id, c=class
     let mut buf = String::new();
-    let flush = |mode: char, buf: &mut String, tag: &mut String, id: &mut String, classes: &mut Vec<String>| {
+    let flush = |mode: char,
+                 buf: &mut String,
+                 tag: &mut String,
+                 id: &mut String,
+                 classes: &mut Vec<String>| {
         if buf.is_empty() {
             return;
         }
@@ -750,7 +751,11 @@ fn render_counter(format: &str, value: i64) -> String {
 
 /// Byte spans of every occurrence of `needle` in `haystack` — the match list an
 /// interactive query-replace steps through.
-pub fn query_replace_matches(haystack: &str, needle: &str, ignore_case: bool) -> Vec<(usize, usize)> {
+pub fn query_replace_matches(
+    haystack: &str,
+    needle: &str,
+    ignore_case: bool,
+) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     if needle.is_empty() {
         return out;
@@ -932,7 +937,7 @@ mod tests {
     #[test]
     fn visual_motion_down_and_up() {
         let offs = soft_wrap_offsets("the quick brown fox jumps", 10); // [0,10,20]
-        // caret at col 2 of row 0 (char 2) -> down to row 1 col 2 -> char 12
+                                                                       // caret at col 2 of row 0 (char 2) -> down to row 1 col 2 -> char 12
         assert_eq!(visual_move_down(&offs, 25, 2), 12);
         // and back up
         assert_eq!(visual_move_up(&offs, 12), 2);
@@ -1018,11 +1023,7 @@ mod tests {
 
     #[test]
     fn markdown_table_align() {
-        let rows = vec![
-            v(&["name", "age"]),
-            v(&["alice", "30"]),
-            v(&["bob", "7"]),
-        ];
+        let rows = vec![v(&["name", "age"]), v(&["alice", "30"]), v(&["bob", "7"])];
         let out = format_markdown_table(&rows);
         assert_eq!(out[0], "| name  | age |");
         assert_eq!(out[1], "| ----- | --- |");
@@ -1046,7 +1047,7 @@ mod tests {
         let empty = Vec::<usize>::new();
         assert_eq!(guides[0], empty); // no indent
         assert_eq!(guides[1], empty); // indent 4 -> no guide before col 4
-        // blank line inherits min(4,4)=4 -> still no guide (col 4 not < 4)
+                                      // blank line inherits min(4,4)=4 -> still no guide (col 4 not < 4)
         assert_eq!(guides[2], empty);
         // deeper indent shows a guide
         let deep = v(&["a", "        x"]);
@@ -1094,7 +1095,10 @@ mod tests {
         let out = query_replace(hay, "cat", "dog", false, |i| i == 1);
         assert_eq!(out, "cat dog cat");
         // replace all
-        assert_eq!(query_replace(hay, "cat", "dog", false, |_| true), "dog dog dog");
+        assert_eq!(
+            query_replace(hay, "cat", "dog", false, |_| true),
+            "dog dog dog"
+        );
     }
 
     #[test]

@@ -432,16 +432,12 @@ impl Component for Rmail {
 
             // Reply / forward / new mail — open a message-mode draft.
             key!('r') => {
-                if let Some((to, subject, body)) =
-                    self.mailbox.current().map(reply_fields)
-                {
+                if let Some((to, subject, body)) = self.mailbox.current().map(reply_fields) {
                     return EventResult::Consumed(Some(self.compose(to, subject, body)));
                 }
             }
             key!('f') => {
-                if let Some((to, subject, body)) =
-                    self.mailbox.current().map(forward_fields)
-                {
+                if let Some((to, subject, body)) = self.mailbox.current().map(forward_fields) {
                     return EventResult::Consumed(Some(self.compose(to, subject, body)));
                 }
             }
@@ -488,7 +484,10 @@ impl Component for Rmail {
                 );
             }
             let rows = area.height.saturating_sub(2) as usize;
-            let top = self.sum_cursor.saturating_sub(rows / 2).min(shown.saturating_sub(rows));
+            let top = self
+                .sum_cursor
+                .saturating_sub(rows / 2)
+                .min(shown.saturating_sub(rows));
             for (row, pos) in (top..shown).take(rows).enumerate() {
                 let idx = self.sum[pos];
                 let y = area.y + 2 + row as u16;
@@ -499,7 +498,13 @@ impl Component for Rmail {
                 } else {
                     text_style
                 };
-                surface.set_stringn(area.x, y, &self.summary_line(idx), area.width as usize, style);
+                surface.set_stringn(
+                    area.x,
+                    y,
+                    &self.summary_line(idx),
+                    area.width as usize,
+                    style,
+                );
             }
             self.render_prompt(area, surface, info_style);
             return;
@@ -507,7 +512,11 @@ impl Component for Rmail {
 
         // Mode line.
         let total = self.mailbox.len();
-        let cur = if total == 0 { 0 } else { self.mailbox.current + 1 };
+        let cur = if total == 0 {
+            0
+        } else {
+            self.mailbox.current + 1
+        };
         let deleted = self.mailbox.current().map(|m| m.deleted).unwrap_or(false);
         let subject = self.mailbox.current().map(|m| m.subject()).unwrap_or("");
         let mode = format!(
@@ -578,7 +587,13 @@ impl Rmail {
             return false;
         };
         let line = format!("{}{}", prompt.label, prompt.input);
-        surface.set_stringn(area.x, area.y + area.height - 1, &line, area.width as usize, style);
+        surface.set_stringn(
+            area.x,
+            area.y + area.height - 1,
+            &line,
+            area.width as usize,
+            style,
+        );
         true
     }
 }
@@ -619,7 +634,10 @@ fn one_message_mbox(msg: &zemacs_core::rmail::Msg) -> String {
 /// Append text to a file, creating it if needed.
 fn append_file(path: &std::path::Path, text: &str) -> std::io::Result<()> {
     use std::io::Write;
-    let mut f = std::fs::OpenOptions::new().create(true).append(true).open(path)?;
+    let mut f = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
     f.write_all(text.as_bytes())
 }
 

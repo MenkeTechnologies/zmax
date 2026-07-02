@@ -152,7 +152,10 @@ mod tests {
             breakpoints: vec![FileBreakpoints {
                 path: "/p/src/main.rs".into(),
                 breakpoints: vec![
-                    BreakpointData { line: 12, ..Default::default() },
+                    BreakpointData {
+                        line: 12,
+                        ..Default::default()
+                    },
                     BreakpointData {
                         line: 40,
                         condition: Some("x > 3".into()),
@@ -198,14 +201,20 @@ mod tests {
         let s = toml::to_string_pretty(&data).unwrap();
         let p: AppData = toml::from_str(&s).unwrap();
         assert_eq!(p.breakpoints.len(), 1);
-        assert_eq!(p.breakpoints[0].breakpoints[1].condition.as_deref(), Some("x > 3"));
+        assert_eq!(
+            p.breakpoints[0].breakpoints[1].condition.as_deref(),
+            Some("x > 3")
+        );
         let splits = p.splits.unwrap();
         assert_eq!(splits.kind, "h");
         assert_eq!(splits.children.len(), 2);
         assert_eq!(splits.children[0].path.as_deref(), Some("/p/a.rs"));
         assert!(splits.children[0].focused);
         assert_eq!(splits.children[1].kind, "v");
-        assert_eq!(splits.children[1].children[0].path.as_deref(), Some("/p/b.rs"));
+        assert_eq!(
+            splits.children[1].children[0].path.as_deref(),
+            Some("/p/b.rs")
+        );
         assert!(p.ide.auto_reveal);
         assert_eq!(p.ide.bottom_tabs, vec!["run", "git", "debug"]);
         assert_eq!(p.ide.bottom_focus_col, 2);

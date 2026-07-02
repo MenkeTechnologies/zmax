@@ -110,15 +110,9 @@ mod tests {
         // Every span is contiguous and the last reaches the end (char count).
         let text = "ab\ncd\ne";
         let spans = line_spans(text);
-        assert_eq!(
-            spans,
-            vec![(0, 3, "ab"), (3, 6, "cd"), (6, 7, "e")]
-        );
+        assert_eq!(spans, vec![(0, 3, "ab"), (3, 6, "cd"), (6, 7, "e")]);
         // Trailing newline: no spurious empty final span.
-        assert_eq!(
-            line_spans("ab\n"),
-            vec![(0, 3, "ab")]
-        );
+        assert_eq!(line_spans("ab\n"), vec![(0, 3, "ab")]);
         // Empty input yields nothing.
         assert!(line_spans("").is_empty());
     }
@@ -141,18 +135,33 @@ mod tests {
         let flush = flush_lines_ranges(text, contains("ap"));
         let mut all: Vec<_> = ranges.iter().chain(flush.iter()).copied().collect();
         all.sort();
-        assert_eq!(all, line_spans(text).into_iter().map(|(s, e, _)| (s, e)).collect::<Vec<_>>());
+        assert_eq!(
+            all,
+            line_spans(text)
+                .into_iter()
+                .map(|(s, e, _)| (s, e))
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
     fn all_match_and_none_match() {
         let text = "aa\nab\nac";
         // all lines contain 'a': flush removes everything, keep removes nothing.
-        assert_eq!(delete_ranges(text, &flush_lines_ranges(text, contains("a"))), "");
-        assert_eq!(delete_ranges(text, &keep_lines_ranges(text, contains("a"))), text);
+        assert_eq!(
+            delete_ranges(text, &flush_lines_ranges(text, contains("a"))),
+            ""
+        );
+        assert_eq!(
+            delete_ranges(text, &keep_lines_ranges(text, contains("a"))),
+            text
+        );
         // no line contains 'z': flush removes nothing, keep removes everything.
         assert!(flush_lines_ranges(text, contains("z")).is_empty());
-        assert_eq!(delete_ranges(text, &keep_lines_ranges(text, contains("z"))), "");
+        assert_eq!(
+            delete_ranges(text, &keep_lines_ranges(text, contains("z"))),
+            ""
+        );
     }
 
     #[test]

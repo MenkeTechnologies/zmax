@@ -528,6 +528,9 @@ mod tests {
             );
         }
         // A non-colliding generated fallback still survives under C-h.
-        assert_eq!(cmd(&km, Mode::Normal, "C-h C-f").as_deref(), Some("browse_faq"));
+        assert_eq!(
+            cmd(&km, Mode::Normal, "C-h C-f").as_deref(),
+            Some("browse_faq")
+        );
     }
 }

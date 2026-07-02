@@ -2232,7 +2232,10 @@ fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::conte
             // `gh browse` wants a repo-relative path; an absolute path yields a
             // malformed `…/tree/<branch>//Users/…` URL. Strip the workspace root.
             let root = zemacs_loader::find_workspace().0;
-            let rel = pg.strip_prefix(&root).map(|p| p.to_string_lossy().into_owned()).ok();
+            let rel = pg
+                .strip_prefix(&root)
+                .map(|p| p.to_string_lossy().into_owned())
+                .ok();
             e.push(Entry::sub(
                 "Open In",
                 vec![
@@ -2242,11 +2245,9 @@ fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::conte
                     Entry::item("Terminal", move |_co, _cx| {
                         ctx_spawn("open", &["-a", "Terminal", dt.to_str().unwrap_or("")]);
                     }),
-                    Entry::item("GitHub", move |_co, cx| {
-                        match &rel {
-                            Some(r) => ctx_spawn("gh", &["browse", "--", r]),
-                            None => cx.editor.set_error("not in a repo"),
-                        }
+                    Entry::item("GitHub", move |_co, cx| match &rel {
+                        Some(r) => ctx_spawn("gh", &["browse", "--", r]),
+                        None => cx.editor.set_error("not in a repo"),
                     }),
                 ],
             ));
@@ -2286,8 +2287,18 @@ fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::conte
                         });
                     })
                 },
-                mkgit("Diff", "git --no-pager diff '{}'", path.clone(), dir.clone()),
-                mkgit("Log", "git --no-pager log --oneline -- '{}'", path.clone(), dir.clone()),
+                mkgit(
+                    "Diff",
+                    "git --no-pager diff '{}'",
+                    path.clone(),
+                    dir.clone(),
+                ),
+                mkgit(
+                    "Log",
+                    "git --no-pager log --oneline -- '{}'",
+                    path.clone(),
+                    dir.clone(),
+                ),
             ],
         ));
         e.push(mkgit(
@@ -2770,7 +2781,8 @@ impl Component for EditorView {
                         let mut e = Vec::new();
                         e.push(Entry::item_key("Close", "SPC b d", move |_c, cx| {
                             if cx.editor.close_document(doc_id, false).is_err() {
-                                cx.editor.set_error("unsaved changes (use :bc!)".to_string());
+                                cx.editor
+                                    .set_error("unsaved changes (use :bc!)".to_string());
                             }
                         }));
                         let others: Vec<_> = all.iter().copied().filter(|d| *d != doc_id).collect();

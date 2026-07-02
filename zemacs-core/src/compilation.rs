@@ -194,7 +194,10 @@ fn parse_optional_col(s: &str) -> (Option<usize>, &str) {
     let Some(after_colon) = s.strip_prefix(':') else {
         return (None, s);
     };
-    let digits: String = after_colon.chars().take_while(|c| c.is_ascii_digit()).collect();
+    let digits: String = after_colon
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
     if digits.is_empty() {
         return (None, s);
     }

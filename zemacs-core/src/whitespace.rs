@@ -173,7 +173,11 @@ pub fn just_one_space(s: &str, idx: usize, n: usize) -> (String, usize) {
 pub fn delete_horizontal_space(s: &str, idx: usize, backward_only: bool) -> (String, usize) {
     let chars: Vec<char> = s.chars().collect();
     let (start, run_end) = horizontal_space_run(&chars, idx);
-    let end = if backward_only { idx.min(chars.len()) } else { run_end };
+    let end = if backward_only {
+        idx.min(chars.len())
+    } else {
+        run_end
+    };
     let mut out: String = chars[..start].iter().collect();
     out.extend(&chars[end..]);
     (out, start)
@@ -263,7 +267,7 @@ mod tests {
         assert_eq!(tabify("        x", 4), "\t\tx"); // 8 spaces = 2 tabs
         assert_eq!(tabify("     x", 4), "\t x"); // 5 spaces = 1 tab + 1 space
         assert_eq!(tabify("    x", 4), "\tx"); // exactly one stop
-        // A lone space between words is NOT a candidate run (needs 2+ blanks).
+                                               // A lone space between words is NOT a candidate run (needs 2+ blanks).
         assert_eq!(tabify("a b", 4), "a b");
         // A run of >=2 interior spaces IS converted, from its own start column.
         assert_eq!(tabify("a       b", 4), "a\t\tb"); // col1..col8 -> tabs to 4 then 8
@@ -328,12 +332,24 @@ mod tests {
 
     #[test]
     fn delete_horizontal_space_both_and_backward() {
-        assert_eq!(delete_horizontal_space("a   b", 2, false), ("ab".to_string(), 1));
-        assert_eq!(delete_horizontal_space("a\t \tb", 2, false), ("ab".to_string(), 1));
+        assert_eq!(
+            delete_horizontal_space("a   b", 2, false),
+            ("ab".to_string(), 1)
+        );
+        assert_eq!(
+            delete_horizontal_space("a\t \tb", 2, false),
+            ("ab".to_string(), 1)
+        );
         // backward-only keeps the blanks after point.
-        assert_eq!(delete_horizontal_space("a   b", 2, true), ("a  b".to_string(), 1));
+        assert_eq!(
+            delete_horizontal_space("a   b", 2, true),
+            ("a  b".to_string(), 1)
+        );
         // No surrounding blanks: no-op at point.
-        assert_eq!(delete_horizontal_space("ab", 1, false), ("ab".to_string(), 1));
+        assert_eq!(
+            delete_horizontal_space("ab", 1, false),
+            ("ab".to_string(), 1)
+        );
     }
 
     #[test]

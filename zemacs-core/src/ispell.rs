@@ -102,9 +102,15 @@ pub fn parse_output(block: &str) -> Vec<Misspelling> {
         .lines()
         .filter_map(parse_line)
         .filter_map(|c| match c {
-            WordCheck::Misspelled { word, offset, suggestions } => {
-                Some(Misspelling { word, offset, suggestions })
-            }
+            WordCheck::Misspelled {
+                word,
+                offset,
+                suggestions,
+            } => Some(Misspelling {
+                word,
+                offset,
+                suggestions,
+            }),
             WordCheck::Correct => None,
         })
         .collect()
@@ -167,7 +173,11 @@ mod tests {
     fn guesses_parse_like_suggestions() {
         let c = parse_line("? wrdz 2 7: words, wards").unwrap();
         match c {
-            WordCheck::Misspelled { word, offset, suggestions } => {
+            WordCheck::Misspelled {
+                word,
+                offset,
+                suggestions,
+            } => {
                 assert_eq!(word, "wrdz");
                 assert_eq!(offset, 6);
                 assert_eq!(suggestions, vec!["words", "wards"]);
