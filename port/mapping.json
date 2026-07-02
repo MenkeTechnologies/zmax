@@ -24517,5 +24517,13 @@
    "typable:org-capture"
   ],
   "note": "org layer -> zemacs implements a subset of org-mode (agenda, capture, todo, cycle, promote/demote, priority)"
+ },
+ {
+  "spec_id": "emacs.command.check_parens",
+  "status": "ported",
+  "evidence": [
+   "static:check_parens"
+  ],
+  "note": "emacs check-parens -> check_parens: scans buffer, moves to the first unbalanced (/[/{ and reports line:col, or 'All brackets balanced'"
  }
 ]

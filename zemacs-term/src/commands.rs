@@ -892,6 +892,7 @@ impl MappableCommand {
         resize_view_equalize, "Make all windows equal size (CTRL-W =)",
         golden_ratio_resize, "Resize the focused window to the golden ratio (SPC t g)",
         rot13, "ROT13-encode the selection (g?)",
+        check_parens, "Move to the first unbalanced bracket, or report all balanced (check-parens)",
         url_encode, "Percent-encode (URL-encode) the selection",
         url_decode, "Percent-decode (URL-decode) the selection",
         parse_query_selection, "Expand a URL query string into decoded key=value lines",
@@ -3484,6 +3485,28 @@ fn rot13(cx: &mut Context) {
             })
             .collect()
     });
+}
+
+/// Emacs `check-parens`: scan the whole buffer for the first `(`/`[`/`{` that
+/// breaks bracket balance (an unmatched/mismatched closer, or the innermost
+/// still-open opener). Moves the cursor there and reports line:col, or reports
+/// that everything is balanced. Delegates the structural scan to the pure,
+/// unit-tested `zemacs_core::text_engine::first_unbalanced`.
+fn check_parens(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    match zemacs_core::text_engine::first_unbalanced(&doc.text().to_string()) {
+        Some(pos) => {
+            let pos = pos.min(text.len_chars().saturating_sub(1));
+            let line = text.char_to_line(pos);
+            let col = pos - text.line_to_char(line);
+            push_jump(view, doc);
+            doc.set_selection(view.id, Selection::point(pos));
+            cx.editor
+                .set_error(format!("Unbalanced bracket at {}:{}", line + 1, col + 1));
+        }
+        None => cx.editor.set_status("All brackets balanced"),
+    }
 }
 
 /// Percent-encode per RFC 3986: keep the unreserved set (A-Z a-z 0-9 - _ . ~),
