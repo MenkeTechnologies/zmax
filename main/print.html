@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-817ba554.js";
+            window.path_to_searchindex_js = "searchindex-1eba273b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1685,6 +1685,43 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-account-logout</code>, <code>:platformio-account-logout</code></td><td>Sign out of the PlatformIO account (<code>pio account logout</code>).</td></tr>
 <tr><td><code>:pio-account-show</code>, <code>:platformio-account-show</code></td><td>Show the current PlatformIO account information (<code>pio account show</code>).</td></tr>
 <tr><td><code>:pio-account-token</code>, <code>:platformio-account-token</code></td><td>Print (or regenerate) the account auth token (<code>pio account token</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-env</code>, <code>:pio-environment</code>, <code>:platformio-env</code></td><td>Select the PlatformIO build environment (<code>[env:…]</code>); no arg picks from platformio.ini, <code>-</code> clears.</td></tr>
+<tr><td><code>:pio-list-targets</code>, <code>:platformio-list-targets</code></td><td>Enumerate the project’s build targets (<code>pio run --list-targets</code>).</td></tr>
+<tr><td><code>:pio-list-tests</code>, <code>:platformio-list-tests</code></td><td>List the project’s test suites (<code>pio test --list-tests</code>).</td></tr>
+<tr><td><code>:pio-test-filter</code>, <code>:platformio-test-filter</code></td><td>Run only the tests matching a pattern (<code>pio test -f &lt;pattern&gt;</code>).</td></tr>
+<tr><td><code>:pio-check-severity</code>, <code>:platformio-check-severity</code></td><td>Static analysis filtered by minimum defect severity (`pio check –severity &lt;low</td></tr>
+<tr><td><code>:pio-tool-install</code>, <code>:platformio-tool-install</code></td><td>Install a tool package globally (<code>pio pkg install -g -t &lt;spec&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-boards-installed</code>, <code>:platformio-boards-installed</code></td><td>List boards from installed platforms only (<code>pio boards --installed</code>).</td></tr>
+<tr><td><code>:pio-monitor-filter</code>, <code>:platformio-monitor-filter</code></td><td>Add a serial monitor filter for this project (e.g. time, log2file, hexlify, send_on_enter).</td></tr>
+<tr><td><code>:pio-monitor-filters-clear</code>, <code>:platformio-monitor-filters-clear</code></td><td>Remove all configured serial monitor filters.</td></tr>
+<tr><td><code>:pio-monitor-eol</code>, <code>:platformio-monitor-eol</code></td><td>Set the serial monitor end-of-line mode (<code>CR</code>, <code>LF</code>, or <code>CRLF</code>).</td></tr>
+<tr><td><code>:pio-monitor-parity</code>, <code>:platformio-monitor-parity</code></td><td>Set the serial monitor parity (<code>N</code>, <code>E</code>, <code>O</code>, <code>S</code>, or <code>M</code>).</td></tr>
+<tr><td><code>:pio-remote-monitor</code>, <code>:platformio-remote-monitor</code></td><td>Serial monitor over a Remote agent (<code>pio remote device monitor</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-settings-reset</code>, <code>:platformio-settings-reset</code></td><td>Restore PlatformIO Core settings to their defaults (<code>pio settings reset</code>).</td></tr>
+<tr><td><code>:pio-system-completion</code>, <code>:platformio-system-completion</code></td><td>Emit a shell completion script (`pio system completion &lt;bash</td></tr>
+<tr><td><code>:pio-ci</code>, <code>:platformio-ci</code></td><td>Build a standalone source tree in an isolated project (<code>pio ci &lt;src&gt; -b &lt;board&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-register</code>, <code>:platformio-account-register</code></td><td>Create a new PlatformIO account (<code>pio account register</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-password</code>, <code>:platformio-account-password</code></td><td>Change the PlatformIO account password (<code>pio account password</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-update</code>, <code>:platformio-account-update</code></td><td>Update PlatformIO profile information (<code>pio account update</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-forgot</code>, <code>:platformio-account-forgot</code></td><td>Begin PlatformIO account password recovery (<code>pio account forgot</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-destroy</code>, <code>:platformio-account-destroy</code></td><td>Permanently destroy the PlatformIO account (<code>pio account destroy</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-org-list</code>, <code>:platformio-org-list</code></td><td>List PlatformIO organizations and their members (<code>pio org list</code>).</td></tr>
+<tr><td><code>:pio-org-create</code>, <code>:platformio-org-create</code></td><td>Create a new PlatformIO organization (<code>pio org create &lt;orgname&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-org-add</code>, <code>:platformio-org-add</code></td><td>Add an owner to a PlatformIO organization (<code>pio org add &lt;orgname&gt; &lt;username&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-org-remove</code>, <code>:platformio-org-remove</code></td><td>Remove an owner from a PlatformIO organization (<code>pio org remove &lt;orgname&gt; &lt;username&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-org-update</code>, <code>:platformio-org-update</code></td><td>Update a PlatformIO organization (<code>pio org update &lt;orgname&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-org-destroy</code>, <code>:platformio-org-destroy</code></td><td>Destroy a PlatformIO organization (<code>pio org destroy &lt;orgname&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-team-list</code>, <code>:platformio-team-list</code></td><td>List teams in a PlatformIO organization (<code>pio team list &lt;orgname&gt;</code>).</td></tr>
+<tr><td><code>:pio-team-create</code>, <code>:platformio-team-create</code></td><td>Create a team in a PlatformIO organization (<code>pio team create &lt;orgname:team&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-team-add</code>, <code>:platformio-team-add</code></td><td>Add a member to a PlatformIO team (<code>pio team add &lt;orgname:team&gt; &lt;username&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-team-remove</code>, <code>:platformio-team-remove</code></td><td>Remove a member from a PlatformIO team (<code>pio team remove &lt;orgname:team&gt; &lt;username&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-team-update</code>, <code>:platformio-team-update</code></td><td>Update a PlatformIO team (<code>pio team update &lt;orgname:team&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-team-destroy</code>, <code>:platformio-team-destroy</code></td><td>Destroy a PlatformIO team (<code>pio team destroy &lt;orgname:team&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-access-list</code>, <code>:platformio-access-list</code></td><td>List published resources and their access levels (<code>pio access list</code>).</td></tr>
+<tr><td><code>:pio-access-grant</code>, <code>:platformio-access-grant</code></td><td>Grant access to a resource (<code>pio access grant &lt;level&gt; &lt;resource&gt; &lt;team&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-access-revoke</code>, <code>:platformio-access-revoke</code></td><td>Revoke access to a resource (<code>pio access revoke &lt;resource&gt; &lt;team&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-access-public</code>, <code>:platformio-access-public</code></td><td>Make a published resource public (<code>pio access public &lt;resource&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-access-private</code>, <code>:platformio-access-private</code></td><td>Make a published resource private (<code>pio access private &lt;resource&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:next-error</code>, <code>:cnext-error</code></td><td>Visit the next compilation error’s location (emacs next-error / M-g n).</td></tr>
 <tr><td><code>:previous-error</code>, <code>:cprevious-error</code></td><td>Visit the previous compilation error’s location (emacs previous-error / M-g p).</td></tr>
 <tr><td><code>:first-error</code></td><td>Visit the first compilation error’s location (emacs first-error).</td></tr>
