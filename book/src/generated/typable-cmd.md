@@ -58,6 +58,17 @@
 | `:pio-devices`, `:pio-device-list` | Pick a serial port from `pio device list` and set it for this project. |
 | `:pio-device-logical`, `:platformio-device-logical` | List logical (disk) devices (`pio device list --logical`). |
 | `:pio-device-mdns`, `:platformio-device-mdns` | List multicast-DNS / network (OTA) devices (`pio device list --mdns`). |
+| `:pio-device-serial`, `:platformio-device-serial` | List serial ports only (`pio device list --serial`). |
+| `:pio-pkg-list-libraries`, `:platformio-pkg-list-libraries`, `:pio-libs-only` | List installed libraries only (`pio pkg list --only-libraries`). |
+| `:pio-pkg-list-platforms`, `:platformio-pkg-list-platforms` | List installed platforms only (`pio pkg list --only-platforms`). |
+| `:pio-pkg-list-tools`, `:platformio-pkg-list-tools` | List installed tool packages only (`pio pkg list --only-tools`). |
+| `:pio-test-json`, `:platformio-test-json` | Unit-test results as JSON (`pio test --json-output`), shown in a scratch buffer. |
+| `:pio-project-config-json`, `:platformio-project-config-json` | Computed project configuration as JSON (`pio project config --json-output`). |
+| `:pio-project-metadata-json`, `:platformio-project-metadata-json` | IDE/LSP metadata as JSON (`pio project metadata --json-output`). |
+| `:pio-system-info-json`, `:platformio-system-info-json` | System-wide PlatformIO information as JSON (`pio system info --json-output`). |
+| `:pio-pkg-search-page`, `:platformio-pkg-search-page` | A specific page of registry search results (`pio pkg search <query> --page <n>`). |
+| `:pio-pkg-unpublish-undo`, `:platformio-pkg-unpublish-undo` | Restore a previously unpublished package (`pio pkg unpublish <pkg> --undo`). |
+| `:pio-init-no-deps`, `:platformio-init-no-deps` | Scaffold a project without installing dependencies (`pio project init --board <board> --no-install-dependencies`). |
 | `:pio-home`, `:platformio-home` | Launch the PlatformIO Home GUI (`pio home`), live in a terminal panel; extra args tune the server. |
 | `:pio-init`, `:platformio-init` | Scaffold a PlatformIO project for a board (`pio project init --board <id>`). |
 | `:embedded-baud`, `:serial-baud` | Set the serial monitor baud rate for this project (e.g. 9600, 115200). |

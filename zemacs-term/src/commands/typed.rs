@@ -4511,6 +4511,149 @@ fn pio_device_mdns(cx: &mut compositor::Context, _args: Args, event: PromptEvent
     Ok(())
 }
 
+/// `:pio-device-serial` — list serial ports only (`pio device list --serial`),
+/// the explicit serial sibling of `--logical`/`--mdns`.
+fn pio_device_serial(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_device_list_serial(), false);
+    Ok(())
+}
+
+/// `:pio-pkg-list-libraries` — installed libraries only
+/// (`pio pkg list --only-libraries`).
+fn pio_pkg_list_libraries(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_pkg_list_scope("libraries"), true);
+    Ok(())
+}
+
+/// `:pio-pkg-list-platforms` — installed platforms only
+/// (`pio pkg list --only-platforms`).
+fn pio_pkg_list_platforms(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_pkg_list_scope("platforms"), true);
+    Ok(())
+}
+
+/// `:pio-pkg-list-tools` — installed tool packages only
+/// (`pio pkg list --only-tools`).
+fn pio_pkg_list_tools(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_pkg_list_scope("tools"), true);
+    Ok(())
+}
+
+/// `:pio-test-json` — unit-test results as JSON (`pio test --json-output`), shown
+/// in a scratch buffer (the report sibling of `:pio-check-json`).
+fn pio_test_json(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    embedded_browse(cx, embedded::pio_test_with(&st, &["--json-output".to_string()]), true);
+    Ok(())
+}
+
+/// `:pio-project-config-json` — the computed project configuration as JSON
+/// (`pio project config --json-output`).
+fn pio_project_config_json(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_project_config_json(), true);
+    Ok(())
+}
+
+/// `:pio-project-metadata-json` — IDE/LSP metadata as JSON
+/// (`pio project metadata --json-output`).
+fn pio_project_metadata_json(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_project_metadata_json(), true);
+    Ok(())
+}
+
+/// `:pio-system-info-json` — system-wide PlatformIO information as JSON
+/// (`pio system info --json-output`).
+fn pio_system_info_json(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_system_info_json(), true);
+    Ok(())
+}
+
+/// `:pio-pkg-search-page <query> <n>` — a specific page of registry search
+/// results (`pio pkg search <query> --page <n>`).
+fn pio_pkg_search_page(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let page = tokens.last().map(|s| s.trim().to_string()).unwrap_or_default();
+    if tokens.len() < 2 || page.parse::<u32>().is_err() {
+        bail!("usage: :pio-pkg-search-page <query> <n>  (e.g. wifi 2)");
+    }
+    let query = tokens[..tokens.len() - 1].join(" ");
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_pkg_search_page(query.trim(), &page), false);
+    Ok(())
+}
+
+/// `:pio-pkg-unpublish-undo <pkg>` — restore a previously unpublished package
+/// (`pio pkg unpublish <pkg> --undo`).
+fn pio_pkg_unpublish_undo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pkg = args.join(" ");
+    if pkg.trim().is_empty() {
+        bail!("usage: :pio-pkg-unpublish-undo <pkg>  (e.g. Foo@1.0.0)");
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_pkg_unpublish_undo(pkg.trim()), root);
+    Ok(())
+}
+
+/// `:pio-init-no-deps <board>` — scaffold a project without installing declared
+/// dependencies (`pio project init --board <board> --no-install-dependencies`).
+fn pio_init_no_deps(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let board = args.join(" ").trim().to_string();
+    if board.is_empty() {
+        bail!("usage: :pio-init-no-deps <board>  (e.g. uno, esp32dev)");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    let argv = embedded::pio_project_init_with(&[
+        "--board".to_string(),
+        board,
+        "--no-install-dependencies".to_string(),
+    ]);
+    embedded_spawn_terminal(cx, argv, dir);
+    Ok(())
+}
+
 /// `:pio-settings-get [name]` — print PlatformIO Core settings (all, or one key).
 fn pio_settings_get(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -20777,6 +20920,127 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-device-serial",
+        aliases: &["platformio-device-serial"],
+        doc: "List serial ports only (`pio device list --serial`).",
+        fun: pio_device_serial,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-list-libraries",
+        aliases: &["platformio-pkg-list-libraries", "pio-libs-only"],
+        doc: "List installed libraries only (`pio pkg list --only-libraries`).",
+        fun: pio_pkg_list_libraries,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-list-platforms",
+        aliases: &["platformio-pkg-list-platforms"],
+        doc: "List installed platforms only (`pio pkg list --only-platforms`).",
+        fun: pio_pkg_list_platforms,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-list-tools",
+        aliases: &["platformio-pkg-list-tools"],
+        doc: "List installed tool packages only (`pio pkg list --only-tools`).",
+        fun: pio_pkg_list_tools,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-json",
+        aliases: &["platformio-test-json"],
+        doc: "Unit-test results as JSON (`pio test --json-output`), shown in a scratch buffer.",
+        fun: pio_test_json,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-project-config-json",
+        aliases: &["platformio-project-config-json"],
+        doc: "Computed project configuration as JSON (`pio project config --json-output`).",
+        fun: pio_project_config_json,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-project-metadata-json",
+        aliases: &["platformio-project-metadata-json"],
+        doc: "IDE/LSP metadata as JSON (`pio project metadata --json-output`).",
+        fun: pio_project_metadata_json,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-system-info-json",
+        aliases: &["platformio-system-info-json"],
+        doc: "System-wide PlatformIO information as JSON (`pio system info --json-output`).",
+        fun: pio_system_info_json,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-search-page",
+        aliases: &["platformio-pkg-search-page"],
+        doc: "A specific page of registry search results (`pio pkg search <query> --page <n>`).",
+        fun: pio_pkg_search_page,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-unpublish-undo",
+        aliases: &["platformio-pkg-unpublish-undo"],
+        doc: "Restore a previously unpublished package (`pio pkg unpublish <pkg> --undo`).",
+        fun: pio_pkg_unpublish_undo,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-init-no-deps",
+        aliases: &["platformio-init-no-deps"],
+        doc: "Scaffold a project without installing dependencies (`pio project init --board <board> --no-install-dependencies`).",
+        fun: pio_init_no_deps,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },
