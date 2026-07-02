@@ -150,8 +150,17 @@ PlatformIO environment, monitor filters) persist to
   `:pio-cleanall`, `:pio-test`, `:pio-check`, `:pio-size`, `:pio-list-targets`.
   Compiler diagnostics land in the `*compilation*` list so `:next-error` walks
   avr-gcc/arm-gcc errors; uploads run live in a PTY panel.
+- **Build options** — `:pio-build-verbose` (`-v`), `:pio-build-silent` (`-s`),
+  `:pio-run-jobs <n>` (parallel jobs), `:pio-build-no-auto-clean`, `:pio-target
+  <name>` (any `pio run -t`), and `:pio-upload-to <port>` (flash to a specific
+  port).
 - **Test / analysis** — `:pio-list-tests`, `:pio-test-filter <pattern>` (run one
-  suite), `:pio-check-severity <low|medium|high>`.
+  suite), `:pio-check-severity <low|medium|high>`. Test options:
+  `:pio-test-verbose`, `:pio-test-ignore <pattern>`, `:pio-test-without-building`
+  / `-without-uploading` / `-without-testing`, `:pio-test-no-reset`. Analysis
+  options: `:pio-check-verbose`, `:pio-check-json`, `:pio-check-flags <flags>`,
+  `:pio-check-fail-on <low|medium|high>`, `:pio-check-skip-packages`,
+  `:pio-check-src-filters <pattern>`.
 - **PlatformIO build targets** — the full `pio run -t` surface: `:pio-compiledb`
   (generate `compile_commands.json` for the C/C++ LSP), `:pio-buildfs` /
   `:pio-uploadfs` (SPIFFS/LittleFS filesystem image), `:pio-uploadeep`,
@@ -162,7 +171,11 @@ PlatformIO environment, monitor filters) persist to
   board (Arduino IDE Serial Plotter). `:embedded-baud <rate>` sets the rate;
   `:pio-monitor-filter <name>` (e.g. `time`, `log2file`, `hexlify`,
   `send_on_enter`), `:pio-monitor-filters-clear`, `:pio-monitor-eol <CR|LF|CRLF>`
-  and `:pio-monitor-parity <N|E|O|S|M>` tune the PlatformIO monitor.
+  and `:pio-monitor-parity <N|E|O|S|M>` tune the PlatformIO monitor, as do
+  `:pio-monitor-rts <0|1>`, `:pio-monitor-dtr <0|1>`, `:pio-monitor-echo`,
+  `:pio-monitor-raw`, `:pio-monitor-encoding <enc>`, `:pio-monitor-flow
+  <none|rtscts|xonxoff>` and `:pio-monitor-reconnect <on|off>` (all persisted
+  per project and threaded into every monitor invocation).
 - **Boards & ports** — `:arduino-boards` (pick FQBN), `:arduino-ports` /
   `:pio-devices` (pick serial port), `:arduino-board-info`, `:pio-boards`
   (Board Explorer), `:pio-boards-installed` (installed platforms only).
@@ -183,10 +196,12 @@ PlatformIO environment, monitor filters) persist to
   `:arduino-completion <shell>`. Build profiles: `:arduino-board-attach`,
   `:arduino-profile-create`, `:arduino-profile-set-default`.
 - **Debug** — `:arduino-debug` / `:pio-debug` launch the respective debuggers in
-  a terminal panel.
+  a terminal panel; `:pio-debug-verbose`, `:pio-debug-interface <name>` and
+  `:pio-debug-load-mode <always|modified|manual>` tune the PlatformIO session.
 - **Maintenance** — `:arduino-update` / `:arduino-upgrade` / `:arduino-outdated`
   refresh and upgrade cores + libraries together; `:arduino-config` dumps the
-  active configuration; `:pio-upgrade` upgrades PlatformIO Core itself;
+  active configuration; `:pio-upgrade` upgrades PlatformIO Core itself
+  (`:pio-upgrade-dev` tracks the development branch);
   `:pio-system-info`, `:pio-system-prune` (drop unused caches/packages) with
   scoped variants `:pio-prune-cache` / `:pio-prune-core` / `:pio-prune-platform`
   and `:pio-prune-dry-run` (report without deleting),
@@ -198,10 +213,14 @@ PlatformIO environment, monitor filters) persist to
   development platform globally, `:pio-tool-install <spec>` a tool package
   (compilers, uploaders, debuggers); `:pio-pkg-exec <argv>` runs a tool from an
   installed package (e.g. `esptool.py`, `openocd`); registry authoring via
-  `:pio-pkg-pack`, `:pio-pkg-publish`, `:pio-pkg-unpublish`.
+  `:pio-pkg-pack`, `:pio-pkg-publish`, `:pio-pkg-unpublish`. Install options:
+  `:pio-pkg-install-force <spec>` (`-f`), `:pio-pkg-install-global <spec>` (`-g`),
+  `:pio-lib-install-nosave <name>` (`--no-save`); `:pio-pkg-search-sort <query>
+  <relevance|popularity|trending|added|updated>` sorts registry search.
 - **PlatformIO Remote** — drive a remote agent: `:pio-remote-agent-start` /
-  `:pio-remote-agent-list`, `:pio-remote-devices`, `:pio-remote-monitor`,
-  `:pio-remote-run`, `:pio-remote-test`, `:pio-remote-update`.
+  `:pio-remote-agent-start-named <name>` / `:pio-remote-agent-list`,
+  `:pio-remote-devices`, `:pio-remote-monitor`, `:pio-remote-run` /
+  `:pio-remote-run-force` (`-r`), `:pio-remote-test`, `:pio-remote-update`.
 - **PlatformIO account & org** — `:pio-account-login` / `-logout` / `-show` /
   `-token` / `-register` / `-password` / `-update` / `-forgot` / `-destroy`;
   organizations `:pio-org-list` / `-create` / `-add` / `-remove` / `-update` /
@@ -209,8 +228,11 @@ PlatformIO environment, monitor filters) persist to
   `-update` / `-destroy`; registry access `:pio-access-list` / `-grant` /
   `-revoke` / `-public` / `-private`.
 - **Sketches / projects** — `:arduino-new-sketch`, `:arduino-sketch-archive`,
-  `:pio-init <board>`, `:pio-project-config` (computed config),
-  `:pio-project-metadata` (IDE/LSP metadata dump).
+  `:pio-init <board>`, `:pio-init-sample <board>` (with example code),
+  `:pio-init-ide <ide>` (generate IDE integration files),
+  `:pio-init-option <name=value>` (seed a `platformio.ini` option),
+  `:pio-project-config` (computed config), `:pio-project-metadata` (IDE/LSP
+  metadata dump).
 - **Raw passthrough** — `:pio <args…>` and `:arduino-cli <args…>` (alias `:acli`)
   run any backend command in a terminal panel, so every subcommand, flag, and
   future capability of both CLIs is reachable even when it has no named command.

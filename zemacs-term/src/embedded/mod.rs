@@ -78,6 +78,24 @@ pub struct EmbeddedSettings {
     pub eol: String,
     /// Serial monitor parity: `N`, `E`, `O`, `S`, or `M`. Empty = default (`N`).
     pub parity: String,
+    /// Initial RTS line state (`0` or `1`). Empty = leave unset (`--rts`).
+    pub rts: String,
+    /// Initial DTR line state (`0` or `1`). Empty = leave unset (`--dtr`).
+    pub dtr: String,
+    /// Enable local echo in the monitor (`--echo`).
+    pub echo: bool,
+    /// Disable encodings/transformations of device output (`--raw`).
+    pub raw: bool,
+    /// Monitor encoding, e.g. `UTF-8`, `Latin-1`, `hexlify`. Empty = default
+    /// (`--encoding`).
+    pub encoding: String,
+    /// Enable RTS/CTS hardware flow control (`--rtscts`).
+    pub rtscts: bool,
+    /// Enable XON/XOFF software flow control (`--xonxoff`).
+    pub xonxoff: bool,
+    /// Disable automatic reconnection when the monitor link drops
+    /// (`--no-reconnect`).
+    pub no_reconnect: bool,
 }
 
 impl Default for EmbeddedSettings {
@@ -92,6 +110,14 @@ impl Default for EmbeddedSettings {
             filters: Vec::new(),
             eol: String::new(),
             parity: String::new(),
+            rts: String::new(),
+            dtr: String::new(),
+            echo: false,
+            raw: false,
+            encoding: String::new(),
+            rtscts: false,
+            xonxoff: false,
+            no_reconnect: false,
         }
     }
 }
@@ -169,6 +195,33 @@ impl EmbeddedSettings {
         if !self.parity.trim().is_empty() {
             v.push(s("--parity"));
             v.push(self.parity.trim().to_string());
+        }
+        if !self.rts.trim().is_empty() {
+            v.push(s("--rts"));
+            v.push(self.rts.trim().to_string());
+        }
+        if !self.dtr.trim().is_empty() {
+            v.push(s("--dtr"));
+            v.push(self.dtr.trim().to_string());
+        }
+        if !self.encoding.trim().is_empty() {
+            v.push(s("--encoding"));
+            v.push(self.encoding.trim().to_string());
+        }
+        if self.echo {
+            v.push(s("--echo"));
+        }
+        if self.raw {
+            v.push(s("--raw"));
+        }
+        if self.rtscts {
+            v.push(s("--rtscts"));
+        }
+        if self.xonxoff {
+            v.push(s("--xonxoff"));
+        }
+        if self.no_reconnect {
+            v.push(s("--no-reconnect"));
         }
         v.extend(self.pio_env_args());
         v
@@ -650,6 +703,99 @@ pub fn pio_debug(settings: &EmbeddedSettings) -> Vec<String> {
 /// `pio upgrade` — upgrade PlatformIO Core itself.
 pub fn pio_upgrade() -> Vec<String> {
     vec![s(PIO), s("upgrade")]
+}
+
+// ── Flag-carrying builders ───────────────────────────────────────────────────
+//
+// Each appends a verified flag vector (checked against `<cmd> --help` on
+// PlatformIO 6.1.19) to the base verb, then threads the selected build
+// environment. The typed-command layer supplies the specific flags so every
+// documented option is reachable first-class, not only via the raw `:pio`
+// passthrough.
+
+/// `pio run [extra…] [-e env]` — build with extra options (`-v`, `-s`, `-j <n>`,
+/// `-t <target>`, `--upload-port <p>`, `--disable-auto-clean`).
+pub fn pio_run_with(settings: &EmbeddedSettings, extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("run")];
+    v.extend(extra.iter().cloned());
+    v.extend(settings.pio_env_args());
+    v
+}
+
+/// `pio test [extra…] [-e env]` — unit tests with extra options (`-v`, `-i
+/// <pattern>`, `--without-building`, `--without-uploading`, `--without-testing`,
+/// `--no-reset`).
+pub fn pio_test_with(settings: &EmbeddedSettings, extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("test")];
+    v.extend(extra.iter().cloned());
+    v.extend(settings.pio_env_args());
+    v
+}
+
+/// `pio check [extra…] [-e env]` — static analysis with extra options (`-v`,
+/// `--json-output`, `--flags <f>`, `--fail-on-defect <sev>`, `--skip-packages`,
+/// `--src-filters <pat>`).
+pub fn pio_check_with(settings: &EmbeddedSettings, extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("check")];
+    v.extend(extra.iter().cloned());
+    v.extend(settings.pio_env_args());
+    v
+}
+
+/// `pio debug [extra…] [-e env]` — debugger with extra options (`-v`,
+/// `--interface <name>`, `--load-mode <always|modified|manual>`).
+pub fn pio_debug_with(settings: &EmbeddedSettings, extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("debug")];
+    v.extend(extra.iter().cloned());
+    v.extend(settings.pio_env_args());
+    v
+}
+
+/// `pio project init [extra…]` — scaffold/update with extra options (`--ide
+/// <name>`, `--sample-code`, `-O <name=value>`, `--board <id>`).
+pub fn pio_project_init_with(extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("project"), s("init")];
+    v.extend(extra.iter().cloned());
+    v
+}
+
+/// `pio pkg install [extra…]` — install with extra options (`-f`, `-g`,
+/// `--skip-dependencies`, `--no-save`, `-l/-p/-t <spec>`).
+pub fn pio_pkg_install_with(extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("pkg"), s("install")];
+    v.extend(extra.iter().cloned());
+    v
+}
+
+/// `pio upgrade [extra…]` — upgrade Core with extra options (`--dev`,
+/// `--only-dependencies`).
+pub fn pio_upgrade_with(extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("upgrade")];
+    v.extend(extra.iter().cloned());
+    v
+}
+
+/// `pio remote run [extra…] [-e env]` — remote build with extra options
+/// (`-r/--force-remote`, `-v`, `--disable-auto-clean`).
+pub fn pio_remote_run_with(settings: &EmbeddedSettings, extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("remote"), s("run")];
+    v.extend(extra.iter().cloned());
+    v.extend(settings.pio_env_args());
+    v
+}
+
+/// `pio remote agent start [extra…]` — start an agent with extra options
+/// (`--name <n>`, `--share <email>`, `--working-dir <dir>`).
+pub fn pio_remote_agent_start_with(extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("remote"), s("agent"), s("start")];
+    v.extend(extra.iter().cloned());
+    v
+}
+
+/// `pio pkg search <query> --sort <relevance|popularity|trending|added|updated>`
+/// — registry search with an explicit sort order.
+pub fn pio_pkg_search_sort(query: &str, sort: &str) -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("search"), s(query), s("--sort"), s(sort)]
 }
 
 /// `pio run -t <target> [-e env]` — a built-in PlatformIO build target. Covers
@@ -1292,6 +1438,77 @@ mod tests {
             ["pio", "system", "prune", "-f", "--platform-packages"]
         );
         assert_eq!(pio_system_prune_dry_run(), ["pio", "system", "prune", "--dry-run"]);
+    }
+
+    #[test]
+    fn pio_monitor_carries_line_discipline() {
+        let mut st = settings();
+        st.rts = "0".into();
+        st.dtr = "1".into();
+        st.echo = true;
+        st.raw = true;
+        st.encoding = "hexlify".into();
+        st.rtscts = true;
+        st.xonxoff = true;
+        st.no_reconnect = true;
+        let argv = pio_monitor(&st);
+        assert!(argv.windows(2).any(|w| w == ["--rts", "0"]));
+        assert!(argv.windows(2).any(|w| w == ["--dtr", "1"]));
+        assert!(argv.windows(2).any(|w| w == ["--encoding", "hexlify"]));
+        assert!(argv.contains(&"--echo".to_string()));
+        assert!(argv.contains(&"--raw".to_string()));
+        assert!(argv.contains(&"--rtscts".to_string()));
+        assert!(argv.contains(&"--xonxoff".to_string()));
+        assert!(argv.contains(&"--no-reconnect".to_string()));
+        // Defaults add none of them.
+        let plain = pio_monitor(&settings());
+        assert!(!plain.contains(&"--echo".to_string()));
+        assert!(!plain.iter().any(|a| a == "--rts"));
+    }
+
+    #[test]
+    fn pio_flag_carrying_builders_thread_env() {
+        let mut st = settings();
+        st.env = "uno".into();
+        assert_eq!(pio_run_with(&st, &["-v".into()]), ["pio", "run", "-v", "-e", "uno"]);
+        assert_eq!(
+            pio_run_with(&st, &["-j".into(), "4".into()]),
+            ["pio", "run", "-j", "4", "-e", "uno"]
+        );
+        assert_eq!(
+            pio_test_with(&st, &["--without-building".into()]),
+            ["pio", "test", "--without-building", "-e", "uno"]
+        );
+        assert_eq!(
+            pio_check_with(&st, &["--json-output".into()]),
+            ["pio", "check", "--json-output", "-e", "uno"]
+        );
+        assert_eq!(
+            pio_debug_with(&st, &["--interface".into(), "gdb".into()]),
+            ["pio", "debug", "--interface", "gdb", "-e", "uno"]
+        );
+        assert_eq!(
+            pio_remote_run_with(&st, &["-r".into()]),
+            ["pio", "remote", "run", "-r", "-e", "uno"]
+        );
+        // Project-global builders take no env.
+        assert_eq!(
+            pio_project_init_with(&["--ide".into(), "vscode".into()]),
+            ["pio", "project", "init", "--ide", "vscode"]
+        );
+        assert_eq!(
+            pio_pkg_install_with(&["-f".into(), "-l".into(), "Servo".into()]),
+            ["pio", "pkg", "install", "-f", "-l", "Servo"]
+        );
+        assert_eq!(pio_upgrade_with(&["--dev".into()]), ["pio", "upgrade", "--dev"]);
+        assert_eq!(
+            pio_remote_agent_start_with(&["--name".into(), "lab".into()]),
+            ["pio", "remote", "agent", "start", "--name", "lab"]
+        );
+        assert_eq!(
+            pio_pkg_search_sort("Adafruit", "popularity"),
+            ["pio", "pkg", "search", "Adafruit", "--sort", "popularity"]
+        );
     }
 
     #[test]
