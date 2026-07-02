@@ -29,6 +29,7 @@ mod capture;
 pub mod elisp;
 pub mod stryke;
 pub mod viml;
+mod viml_theme;
 pub mod zsh;
 
 thread_local! {
@@ -264,6 +265,7 @@ pub(super) fn flush_host_into_buffer(h: &mut ElispHost) {
 pub fn eval_elisp(cx: &mut compositor::Context, src: &str) -> Result<String, String> {
     let _guard = CxGuard::new(cx);
     elisp::ensure_builtins();
+    elisp::ensure_editor_lisp();
     elisprs::with_host(load_buffer_into_host);
     let value = elisprs::eval_str(src)?;
     elisprs::with_host(flush_host_into_buffer);
@@ -327,13 +329,61 @@ fn install_viml_host_hooks() {
             }
         });
     }));
+    // Colours. vimlrs records every `:highlight` group (and, for `:colorscheme`,
+    // sources the scheme's `colors/*.vim` first) in its highlight registry. Each
+    // `:highlight` just marks the theme dirty; `:colorscheme` (fired once the
+    // scheme file is fully sourced) rebuilds + applies the zemacs theme from the
+    // registry. Trailing standalone `:highlight` overrides in the vimrc are
+    // flushed after sourcing (see `flush_viml_theme`).
+    vimlrs::fusevm_bridge::add_colorscheme_dir(zemacs_loader::config_dir());
+    vimlrs::fusevm_bridge::install_highlight_hook(Box::new(|_args: &str| {
+        VIML_THEME_DIRTY.with(|d| d.set(true));
+    }));
+    vimlrs::fusevm_bridge::install_colorscheme_hook(Box::new(|name: &str| {
+        VIML_SCHEME_NAME.with(|n| *n.borrow_mut() = name.to_string());
+        VIML_THEME_DIRTY.with(|d| d.set(false));
+        let _ = with_cx(|cx| apply_viml_theme(cx, name));
+    }));
+}
+
+thread_local! {
+    /// Set whenever a `:highlight` runs; a post-source flush rebuilds the theme
+    /// so trailing `:highlight` overrides (outside a `:colorscheme`) still apply.
+    static VIML_THEME_DIRTY: Cell<bool> = const { Cell::new(false) };
+    /// The most recent `:colorscheme` name, for naming a theme built from
+    /// standalone `:highlight` commands (no `:colorscheme`).
+    static VIML_SCHEME_NAME: std::cell::RefCell<String> =
+        const { std::cell::RefCell::new(String::new()) };
+}
+
+/// Build a theme from vimlrs's current highlight registry and apply it live.
+fn apply_viml_theme(cx: &mut compositor::Context, name: &str) {
+    if let Some(theme) = viml_theme::build_theme(name) {
+        if let Err(e) = cx.editor.set_theme(theme) {
+            log::debug!("vim colorscheme `{name}` not applied: {e}");
+        }
+    }
+}
+
+/// After sourcing a vimrc, apply any pending `:highlight` changes that were not
+/// already applied by a `:colorscheme` (e.g. a vimrc that only sets highlights,
+/// or adds overrides after its `:colorscheme` line).
+fn flush_viml_theme(cx: &mut compositor::Context) {
+    if VIML_THEME_DIRTY.with(|d| d.replace(false)) {
+        let name = VIML_SCHEME_NAME.with(|n| n.borrow().clone());
+        apply_viml_theme(cx, &name);
+    }
 }
 
 pub fn eval_viml(cx: &mut compositor::Context, src: &str) -> Result<String, String> {
     // Publish the context so host hooks (e.g. `:set`) can reach the live editor.
     let _guard = CxGuard::new(cx);
     install_viml_host_hooks();
-    viml::eval(src)
+    let out = viml::eval(src);
+    // Apply any `:highlight`s not already applied by a `:colorscheme` (e.g. a
+    // bare `:hi Comment …` typed at the `:vim` prompt).
+    with_cx(flush_viml_theme).ok();
+    out
 }
 
 /// Filter the primary selection (or the whole buffer, if the selection is
@@ -406,20 +456,55 @@ pub fn load_init_scripts(cx: &mut compositor::Context) {
     if init_el.exists() {
         let _guard = CxGuard::new(cx);
         elisp::ensure_builtins();
-        if let Err(e) = elisprs::eval_file(&init_el.to_string_lossy()) {
-            cx.editor.set_error(format!("init.el: {e}"));
+        elisp::ensure_editor_lisp();
+        // Load via eval_str, not eval_file: eval_file resets the host (for its
+        // bytecode cache), which would wipe the editor subrs / editor-lisp that
+        // init.el needs. Correctness over the cache for a small config file.
+        match std::fs::read_to_string(&init_el) {
+            Ok(src) => {
+                elisprs::with_host(load_buffer_into_host);
+                if let Err(e) = elisprs::eval_str(&src) {
+                    cx.editor.set_error(format!("init.el: {e}"));
+                } else {
+                    elisprs::with_host(flush_host_into_buffer);
+                }
+            }
+            Err(e) => cx.editor.set_error(format!("init.el: {e}")),
         }
     }
 
     #[cfg(unix)]
     {
-        let init_vim = dir.join("init.vim");
-        if init_vim.exists() {
-            let _guard = CxGuard::new(cx);
-            install_viml_host_hooks();
-            if let Err(e) = vimlrs::fusevm_bridge::eval_file(&init_vim) {
-                cx.editor.set_error(format!("init.vim: {}", e.0));
+        // Source the user's Vim configuration so zemacs honours their `.vimrc`
+        // (options via `:set`, mappings via `:map`, and colours via
+        // `:colorscheme`/`:highlight`). Files are sourced in increasing priority
+        // — a real `~/.vimrc`/nvim `init.vim` first, then zemacs's own
+        // `init.vim`, so a zemacs-specific override wins. Each is best-effort and
+        // independent; one failing does not stop the others.
+        let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
+        let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+        if let Some(home) = &home {
+            candidates.push(home.join(".vimrc"));
+            candidates.push(home.join(".vim/vimrc"));
+            candidates.push(home.join(".config/nvim/init.vim"));
+        }
+        candidates.push(dir.join("init.vim"));
+
+        let mut any = false;
+        for path in candidates {
+            if path.exists() {
+                let _guard = CxGuard::new(cx);
+                install_viml_host_hooks();
+                if let Err(e) = vimlrs::fusevm_bridge::eval_file(&path) {
+                    cx.editor.set_error(format!("{}: {}", path.display(), e.0));
+                }
+                any = true;
             }
+        }
+        // Apply any highlights a sourced vimrc defined without a `:colorscheme`.
+        if any {
+            let _guard = CxGuard::new(cx);
+            let _ = with_cx(flush_viml_theme);
         }
     }
 }
@@ -441,6 +526,23 @@ mod tests {
         assert!(super::api_error("boom").is_err());
     }
 
+    /// The editor subrs and the editor-lisp command layer install onto the host.
+    /// Definitions need no active editor context (they don't call the subrs), so
+    /// this exercises the install path without a full `compositor::Context`.
+    #[test]
+    fn editor_layer_installs() {
+        super::elisp::ensure_builtins();
+        super::elisp::ensure_editor_lisp();
+        let bound = |expr: &str| elisprs::print(&elisprs::eval_str(expr).unwrap(), true);
+        // buffer-identity subrs and the command wrappers are all defined.
+        assert_eq!(bound("(fboundp 'editor-command)"), "t");
+        assert_eq!(bound("(fboundp 'buffer-name)"), "t");
+        assert_eq!(bound("(fboundp 'message)"), "t");
+        assert_eq!(bound("(fboundp 'find-file)"), "t");
+        assert_eq!(bound("(fboundp 'switch-to-buffer)"), "t");
+        assert_eq!(bound("zemacs--editor-lisp-loaded"), "t");
+    }
+
     /// The embedded vimlrs interpreter links, evaluates, and captures `:echo`.
     #[cfg(unix)]
     #[test]
@@ -455,6 +557,61 @@ mod tests {
     fn viml_state_persists() {
         super::viml::eval("let g:zz = 41").unwrap();
         assert_eq!(super::viml::eval("g:zz + 1").unwrap(), "42");
+    }
+
+    /// A vimrc's `:highlight` commands are translated into a live zemacs theme:
+    /// `Normal` paints the text/background surface, syntax groups map to
+    /// tree-sitter scopes, and Vim display attributes become modifiers.
+    #[cfg(unix)]
+    #[test]
+    fn viml_highlights_build_theme() {
+        use zemacs_view::theme::{Color, Modifier};
+        super::viml::eval("highlight Normal guifg=#abcdef guibg=#111111").unwrap();
+        super::viml::eval("hi Comment guifg=#00ff00 gui=italic").unwrap();
+        super::viml::eval("hi String ctermfg=203").unwrap();
+
+        let theme = super::viml_theme::build_theme("acme").expect("theme built");
+        assert_eq!(theme.name(), "vim:acme");
+        // Normal → ui.text (fg) + ui.background (bg).
+        assert_eq!(theme.get("ui.text").fg, Some(Color::Rgb(0xab, 0xcd, 0xef)));
+        assert_eq!(
+            theme.get("ui.background").bg,
+            Some(Color::Rgb(0x11, 0x11, 0x11))
+        );
+        // Syntax groups → tree-sitter scopes, with attributes → modifiers.
+        let comment = theme.get("comment");
+        assert_eq!(comment.fg, Some(Color::Rgb(0x00, 0xff, 0x00)));
+        assert!(comment.add_modifier.contains(Modifier::ITALIC));
+        // A cterm-only colour becomes an indexed colour.
+        assert_eq!(theme.get("string").fg, Some(Color::Indexed(203)));
+    }
+
+    /// `:colorscheme {name}` sources `colors/{name}.vim` from a registered dir,
+    /// running its `:highlight` commands, so the whole scheme file feeds the
+    /// zemacs theme — the real `.vimrc` path, end to end.
+    #[cfg(unix)]
+    #[test]
+    fn viml_colorscheme_file_builds_theme() {
+        use std::io::Write;
+        use zemacs_view::theme::Color;
+
+        let dir = std::env::temp_dir().join(format!("zemacs-colo-{}", std::process::id()));
+        let colors = dir.join("colors");
+        std::fs::create_dir_all(&colors).unwrap();
+        let mut f = std::fs::File::create(colors.join("zztest.vim")).unwrap();
+        writeln!(f, "highlight Normal guifg=#fedcba guibg=#020202").unwrap();
+        writeln!(f, "hi Keyword guifg=#ff8800").unwrap();
+        drop(f);
+
+        vimlrs::fusevm_bridge::add_colorscheme_dir(dir.clone());
+        super::viml::eval("colorscheme zztest").unwrap();
+        assert_eq!(super::viml::eval("g:colors_name").unwrap(), "zztest");
+
+        let theme = super::viml_theme::build_theme("zztest").expect("theme built");
+        assert_eq!(theme.get("ui.text").fg, Some(Color::Rgb(0xfe, 0xdc, 0xba)));
+        assert_eq!(theme.get("keyword").fg, Some(Color::Rgb(0xff, 0x88, 0x00)));
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// The embedded awkrs interpreter filters string input → string output.
