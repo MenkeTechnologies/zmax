@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-4d08c8a7.js";
+            window.path_to_searchindex_js = "searchindex-0ea0c7f0.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -277,6 +277,17 @@
 <tr><td><code>:pio-lib-list</code>, <code>:pio-pkg-list</code>, <code>:pio-libs</code></td><td>List installed PlatformIO project packages (<code>pio pkg list</code>).</td></tr>
 <tr><td><code>:pio-lib-uninstall</code>, <code>:pio-pkg-uninstall</code></td><td>Remove a PlatformIO project library (<code>pio pkg uninstall -l &lt;name&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-lib-update</code>, <code>:pio-pkg-update</code></td><td>Update installed PlatformIO project packages (<code>pio pkg update</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-update</code></td><td>Refresh the core and library indexes together (arduino-cli update).</td></tr>
+<tr><td><code>:arduino-upgrade</code></td><td>Upgrade all installed cores and libraries (arduino-cli upgrade), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-outdated</code></td><td>List cores and libraries with newer versions available (arduino-cli outdated).</td></tr>
+<tr><td><code>:arduino-lib-deps</code></td><td>Show dependency status for a library (arduino-cli lib deps <name>).</name></td></tr>
+<tr><td><code>:arduino-config</code>, <code>:arduino-config-dump</code></td><td>Print the active arduino-cli configuration (arduino-cli config dump).</td></tr>
+<tr><td><code>:arduino-debug</code></td><td>Launch the arduino-cli debugger for the selected board, live in a terminal panel.</td></tr>
+<tr><td><code>:pio-lib-search</code>, <code>:pio-pkg-search</code>, <code>:platformio-lib-search</code></td><td>Search the PlatformIO registry for a library (<code>pio pkg search &lt;query&gt;</code>).</td></tr>
+<tr><td><code>:pio-lib-outdated</code>, <code>:pio-pkg-outdated</code></td><td>List installed project packages with newer versions available (<code>pio pkg outdated</code>).</td></tr>
+<tr><td><code>:pio-lib-show</code>, <code>:pio-pkg-show</code></td><td>Show PlatformIO registry details for a package (<code>pio pkg show &lt;pkg&gt;</code>).</td></tr>
+<tr><td><code>:pio-debug</code>, <code>:platformio-debug</code></td><td>Launch the PlatformIO Unified Debugger for the project, live in a terminal panel.</td></tr>
+<tr><td><code>:pio-upgrade</code>, <code>:platformio-upgrade</code></td><td>Upgrade PlatformIO Core itself (<code>pio upgrade</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:next-error</code>, <code>:cnext-error</code></td><td>Visit the next compilation error’s location (emacs next-error / M-g n).</td></tr>
 <tr><td><code>:previous-error</code>, <code>:cprevious-error</code></td><td>Visit the previous compilation error’s location (emacs previous-error / M-g p).</td></tr>
 <tr><td><code>:first-error</code></td><td>Visit the first compilation error’s location (emacs first-error).</td></tr>
