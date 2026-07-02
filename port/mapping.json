@@ -28427,5 +28427,21 @@
    "typable:spellrare"
   ],
   "note": ":spellrare -> zemacs :spellrare flags words like bad words (no separate rare list)"
+ },
+ {
+  "spec_id": "emacs.command.align_current",
+  "status": "ported",
+  "evidence": [
+   "static:align_current"
+  ],
+  "note": "align-current: auto-detect the region's dominant delimiter and align into columns, sections split at blank lines (zemacs_core::power_edit::align_current)"
+ },
+ {
+  "spec_id": "emacs.command.align_entire",
+  "status": "ported",
+  "evidence": [
+   "static:align_entire"
+  ],
+  "note": "align-entire: align the whole region as one section (zemacs_core::power_edit::align_entire)"
  }
 ]

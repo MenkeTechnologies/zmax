@@ -858,11 +858,19 @@ pub fn transpose_grid(rows: &[Vec<String>]) -> Vec<Vec<String>> {
 /// rejoining with `" <delim> "`. Lines are left untouched if no delimiter is
 /// shared. zemacs original — beyond Emacs `align-regexp` / Vim easy-align.
 pub fn align_table_auto(lines: &[String]) -> Vec<String> {
-    const CANDS: [char; 5] = [',', '\t', '|', ':', ';'];
+    align_auto(lines, &[',', '\t', '|', ':', ';'])
+}
+
+/// Align `lines` on the dominant delimiter among `cands` (the one appearing on
+/// the most lines), padding each column to its widest cell. Lines are left
+/// untouched if no candidate is shared by at least two lines. Backs both
+/// [`align_table_auto`] and the Emacs `align-current` / `align-entire` commands
+/// (which pass a set that includes `=`).
+pub fn align_auto(lines: &[String], cands: &[char]) -> Vec<String> {
     // Score = number of lines that contain the delimiter; pick the max.
     let mut best = None;
     let mut best_score = 0usize;
-    for &d in &CANDS {
+    for &d in cands {
         let score = lines.iter().filter(|l| l.contains(d)).count();
         if score > best_score {
             best_score = score;
@@ -901,6 +909,33 @@ pub fn align_table_auto(lines: &[String]) -> Vec<String> {
             joined.trim_end().to_string()
         })
         .collect()
+}
+
+/// Delimiters `align-current` / `align-entire` auto-detect (assignments first).
+const ALIGN_CANDS: [char; 6] = ['=', ':', ',', '|', ';', '\t'];
+
+/// Emacs `align-entire`: align the whole region as one section on the dominant
+/// delimiter (including `=`, so assignments line up).
+pub fn align_entire(lines: &[String]) -> Vec<String> {
+    align_auto(lines, &ALIGN_CANDS)
+}
+
+/// Emacs `align-current`: align each blank-line-separated section of the region
+/// independently (blank lines are section boundaries and pass through unchanged).
+pub fn align_current(lines: &[String]) -> Vec<String> {
+    let mut out = Vec::with_capacity(lines.len());
+    let mut section: Vec<String> = Vec::new();
+    for line in lines {
+        if line.trim().is_empty() {
+            out.extend(align_auto(&section, &ALIGN_CANDS));
+            section.clear();
+            out.push(line.clone());
+        } else {
+            section.push(line.clone());
+        }
+    }
+    out.extend(align_auto(&section, &ALIGN_CANDS));
+    out
 }
 
 // ===========================================================================
@@ -1128,5 +1163,21 @@ mod tests {
         // no shared delimiter -> untouched
         let plain = v(&["hello", "world"]);
         assert_eq!(align_table_auto(&plain), plain);
+    }
+
+    #[test]
+    fn align_entire_lines_up_assignments() {
+        // align-entire aligns the whole region on `=` (assignments).
+        let out = align_entire(&v(&["a = 1", "bb = 2", "ccc = 3"]));
+        assert_eq!(out, v(&["a   = 1", "bb  = 2", "ccc = 3"]));
+    }
+
+    #[test]
+    fn align_current_respects_blank_line_sections() {
+        // Two sections separated by a blank line align independently; the blank
+        // line passes through.
+        let input = v(&["a = 1", "bbb = 2", "", "xx = 10", "y = 2"]);
+        let out = align_current(&input);
+        assert_eq!(out, v(&["a   = 1", "bbb = 2", "", "xx = 10", "y  = 2"]));
     }
 }

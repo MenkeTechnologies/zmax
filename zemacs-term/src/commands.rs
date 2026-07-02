@@ -462,6 +462,8 @@ impl MappableCommand {
         align_at_dot, "Align region at . (SPC x a .)",
         align_at_arithmetic, "Align region at arithmetic operators (SPC x a m)",
         align_at_regex, "Align region at a user-specified regexp (SPC x a r)",
+        align_current, "Auto-align the region into columns, per blank-line section (emacs align-current)",
+        align_entire, "Auto-align the whole region into columns as one section (emacs align-entire)",
         align_left_at_char, "Left-align region at a typed delimiter (SPC x a l)",
         align_right_at_char, "Right-align region at a typed delimiter (SPC x a L)",
         buffer_to_window_1, "Move current buffer to window 1 (SPC b . 1)",
@@ -6818,6 +6820,66 @@ fn align_region(editor: &mut Editor, pat: regex::Regex, right: bool) {
     let transaction =
         Transaction::change(doc.text(), std::iter::once((from, to, Some(out.into()))));
     doc.apply(&transaction, view.id);
+}
+
+/// Emacs `align-current` / `align-entire`: auto-detect the dominant delimiter in
+/// the selected region (assignments, table columns, …) and align it into
+/// columns via `zemacs_core::power_edit`. `entire` aligns the whole region as
+/// one section; otherwise blank lines split it into independently-aligned
+/// sections.
+fn align_region_auto(editor: &mut Editor, entire: bool) {
+    let (view, doc) = current!(editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let start_line = text.char_to_line(sel.from());
+    let end_char = sel.to().saturating_sub(1).max(sel.from());
+    let end_line = text.char_to_line(end_char);
+    let le = doc.line_ending.as_str();
+
+    let mut lines = Vec::new();
+    let mut last_has_nl = false;
+    for l in start_line..=end_line {
+        let mut s = text.line(l).to_string();
+        last_has_nl = s.ends_with('\n');
+        if last_has_nl {
+            s.pop();
+            if s.ends_with('\r') {
+                s.pop();
+            }
+        }
+        lines.push(s);
+    }
+    let aligned = if entire {
+        zemacs_core::power_edit::align_entire(&lines)
+    } else {
+        zemacs_core::power_edit::align_current(&lines)
+    };
+    if aligned == lines {
+        return;
+    }
+    let mut out = aligned.join(le);
+    if last_has_nl {
+        out.push_str(le);
+    }
+    let from = text.line_to_char(start_line);
+    let to = if last_has_nl {
+        text.line_to_char(end_line + 1)
+    } else {
+        text.len_chars()
+    };
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((from, to, Some(out.into()))));
+    doc.apply(&transaction, view.id);
+}
+
+/// Emacs `align-current`: align the region, sections split at blank lines.
+fn align_current(cx: &mut Context) {
+    align_region_auto(cx.editor, false);
+}
+
+/// Emacs `align-entire`: align the whole region as a single section.
+fn align_entire(cx: &mut Context) {
+    align_region_auto(cx.editor, true);
 }
 
 // --- region justification (Spacemacs `SPC x j *`, set-justification + fill) ---

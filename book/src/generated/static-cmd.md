@@ -150,6 +150,8 @@
 | `align_at_dot` | Align region at . (SPC x a .) | normal: `` <space>xa. ``, select: `` <space>xa. `` |
 | `align_at_arithmetic` | Align region at arithmetic operators (SPC x a m) | normal: `` <space>xam ``, select: `` <space>xam `` |
 | `align_at_regex` | Align region at a user-specified regexp (SPC x a r) | normal: `` <space>xar ``, select: `` <space>xar `` |
+| `align_current` | Auto-align the region into columns, per blank-line section (emacs align-current) |  |
+| `align_entire` | Auto-align the whole region into columns as one section (emacs align-entire) |  |
 | `align_left_at_char` | Left-align region at a typed delimiter (SPC x a l) | normal: `` <space>xal ``, select: `` <space>xal `` |
 | `align_right_at_char` | Right-align region at a typed delimiter (SPC x a L) | normal: `` <space>xaL ``, select: `` <space>xaL `` |
 | `buffer_to_window_1` | Move current buffer to window 1 (SPC b . 1) | normal: `` <space>b.1 ``, select: `` <space>b.1 `` |
