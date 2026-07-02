@@ -215,21 +215,60 @@ pub(super) fn api_buf_name() -> Result<String, String> {
 // an eval and flush it back afterwards. Every current and future elisp buffer
 // builtin then drives the live buffer for free.
 
+// The Emacs mark lives alongside point but has no home in elisprs's `EditBuffer`
+// (which only tracks text + point), so we hold it here, in 0-based char units,
+// mirrored from / flushed to the live selection's anchor just like point tracks
+// the head. Keeping it here — not reading the live selection on demand — is what
+// makes region queries coherent while point moves through the mirror mid-eval.
+thread_local! {
+    static MARK: Cell<Option<usize>> = const { Cell::new(None) };
+    static MARK_ACTIVE: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Set the mark to a 0-based char position and activate the region.
+pub(super) fn mark_set(pos0: usize) {
+    MARK.with(|m| m.set(Some(pos0)));
+    MARK_ACTIVE.with(|a| a.set(true));
+}
+
+/// The mark's 0-based position, or `None` if it has never been set.
+pub(super) fn mark_get() -> Option<usize> {
+    MARK.with(|m| m.get())
+}
+
+/// Whether the region is active (mark set and not since deactivated).
+pub(super) fn mark_is_active() -> bool {
+    MARK_ACTIVE.with(|a| a.get()) && MARK.with(|m| m.get().is_some())
+}
+
+/// Deactivate the region without forgetting the mark position.
+pub(super) fn mark_deactivate() {
+    MARK_ACTIVE.with(|a| a.set(false));
+}
+
 /// Copy the live current buffer's text and primary-cursor point (1-based) into
-/// the elisp interpreter's current `EditBuffer`. Takes the host by `&mut` (never
-/// `with_host`) so it is safe to call from inside a subr, which already holds
-/// the host borrow. Best-effort: a null context (no active eval) is a no-op.
+/// the elisp interpreter's current `EditBuffer`, and mirror the selection anchor
+/// into the mark. Takes the host by `&mut` (never `with_host`) so it is safe to
+/// call from inside a subr, which already holds the host borrow. Best-effort: a
+/// null context (no active eval) is a no-op.
 pub(super) fn load_buffer_into_host(h: &mut ElispHost) {
     let loaded = with_cx(|cx| {
         let (view, doc) = current!(cx.editor);
         let t = doc.text();
-        let cursor = doc.selection(view.id).primary().cursor(t.slice(..));
-        (t.to_string(), cursor + 1)
+        let range = doc.selection(view.id).primary();
+        let cursor = range.cursor(t.slice(..));
+        (t.to_string(), cursor + 1, range.anchor, cursor)
     });
-    if let Ok((text, point)) = loaded {
+    if let Ok((text, point, anchor, head)) = loaded {
         let buf = h.cur_buf();
         buf.text = text.chars().collect();
         buf.point = point.max(1);
+        // An anchor distinct from the caret means the live selection is a region
+        // → the mark is set and active; a bare cursor leaves the mark alone.
+        if anchor != head {
+            MARK.with(|m| m.set(Some(anchor)));
+            MARK_ACTIVE.with(|a| a.set(true));
+        }
     }
 }
 
@@ -250,8 +289,17 @@ pub(super) fn flush_host_into_buffer(h: &mut ElispHost) {
             doc.apply(&tx, view.id);
         }
         let max = doc.text().len_chars();
-        let idx = point.saturating_sub(1).min(max);
-        doc.set_selection(view.id, Selection::point(idx));
+        let head = point.saturating_sub(1).min(max);
+        // If the region is active, restore it as a live selection (anchor = mark,
+        // head = point) so `(set-mark) (forward-word)` visibly selects, like
+        // Emacs; otherwise collapse to a bare cursor at point.
+        let sel = match mark_get() {
+            Some(mark) if mark_is_active() && mark.min(max) != head => {
+                Selection::single(mark.min(max), head)
+            }
+            _ => Selection::point(head),
+        };
+        doc.set_selection(view.id, sel);
     });
 }
 
@@ -541,6 +589,30 @@ mod tests {
         assert_eq!(bound("(fboundp 'find-file)"), "t");
         assert_eq!(bound("(fboundp 'switch-to-buffer)"), "t");
         assert_eq!(bound("zemacs--editor-lisp-loaded"), "t");
+    }
+
+    /// Mark & region work against the mirrored buffer + mark state, so they are
+    /// exercisable without a live editor context. Region positions track the
+    /// mirror's point and the separately-held mark.
+    #[test]
+    fn mark_and_region() {
+        super::elisp::ensure_builtins();
+        let e = |s: &str| elisprs::print(&elisprs::eval_str(s).unwrap(), true);
+        // point 3, mark 8 → region [3,8), active.
+        assert_eq!(
+            e(
+                "(progn (erase-buffer) (insert \"hello world\") (goto-char 3) \
+               (set-mark 8) (list (region-beginning) (region-end) (region-active-p)))"
+            ),
+            "(3 8 t)"
+        );
+        // deactivate keeps the mark position but reports an inactive region.
+        assert_eq!(e("(progn (deactivate-mark) (region-active-p))"), "nil");
+        // whole-buffer marks point-min..point-max.
+        assert_eq!(
+            e("(progn (mark-whole-buffer) (list (region-beginning) (region-end)))"),
+            "(1 12)"
+        );
     }
 
     /// The embedded vimlrs interpreter links, evaluates, and captures `:echo`.
