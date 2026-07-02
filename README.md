@@ -174,8 +174,10 @@ PlatformIO environment, monitor filters) persist to
   and `:pio-monitor-parity <N|E|O|S|M>` tune the PlatformIO monitor, as do
   `:pio-monitor-rts <0|1>`, `:pio-monitor-dtr <0|1>`, `:pio-monitor-echo`,
   `:pio-monitor-raw`, `:pio-monitor-encoding <enc>`, `:pio-monitor-flow
-  <none|rtscts|xonxoff>` and `:pio-monitor-reconnect <on|off>` (all persisted
-  per project and threaded into every monitor invocation).
+  <none|rtscts|xonxoff>`, `:pio-monitor-reconnect <on|off>`,
+  `:pio-monitor-quiet`, `:pio-monitor-exit-char <n>` and
+  `:pio-monitor-menu-char <n>` (all persisted per project and threaded into
+  every monitor invocation).
 - **Boards & ports** — `:arduino-boards` (pick FQBN), `:arduino-ports` /
   `:pio-devices` (pick serial port), `:arduino-board-info`, `:pio-boards`
   (Board Explorer), `:pio-boards-installed` (installed platforms only).
@@ -212,17 +214,22 @@ PlatformIO environment, monitor filters) persist to
 - **Platforms & packages** — `:pio-platform-install <spec>` installs a
   development platform globally, `:pio-tool-install <spec>` a tool package
   (compilers, uploaders, debuggers); `:pio-pkg-exec <argv>` runs a tool from an
-  installed package (e.g. `esptool.py`, `openocd`); registry authoring via
-  `:pio-pkg-pack`, `:pio-pkg-publish`, `:pio-pkg-unpublish`. Install options:
+  installed package (e.g. `esptool.py`, `openocd`), or the `-c/--call` form via
+  `:pio-pkg-exec-call <argv>`; `:pio-pkg-show-type <pkg> <library|platform|tool>`
+  scopes registry details to a package type. Registry authoring via
+  `:pio-pkg-pack` (`-o <path>` for the output), `:pio-pkg-publish`,
+  `:pio-pkg-unpublish`. Install options:
   `:pio-pkg-install-force <spec>` (`-f`), `:pio-pkg-install-global <spec>` (`-g`),
   `:pio-lib-install-nosave <name>` (`--no-save`); `:pio-pkg-search-sort <query>
   <relevance|popularity|trending|added|updated>` sorts registry search.
-- **PlatformIO Remote** — drive a remote agent: `:pio-remote-agent-start` /
-  `:pio-remote-agent-start-named <name>` / `:pio-remote-agent-list`,
+- **PlatformIO Remote** — drive a remote agent: `:pio-remote-agent-start`
+  (forwards `--name` / `--share` / `--working-dir`) / `:pio-remote-agent-list`,
   `:pio-remote-devices`, `:pio-remote-monitor`, `:pio-remote-run` /
-  `:pio-remote-run-force` (`-r`), `:pio-remote-test`, `:pio-remote-update`.
+  `:pio-remote-run-force` (`-r`), `:pio-remote-test`, `:pio-remote-update`
+  (`--dry-run`).
 - **PlatformIO account & org** — `:pio-account-login` / `-logout` / `-show` /
-  `-token` / `-register` / `-password` / `-update` / `-forgot` / `-destroy`;
+  `-token` (forwards `--regenerate` / `--json-output`) / `-register` /
+  `-password` / `-update` / `-forgot` / `-destroy`;
   organizations `:pio-org-list` / `-create` / `-add` / `-remove` / `-update` /
   `-destroy`; teams `:pio-team-list` / `-create` / `-add` / `-remove` /
   `-update` / `-destroy`; registry access `:pio-access-list` / `-grant` /

@@ -96,6 +96,14 @@ pub struct EmbeddedSettings {
     /// Disable automatic reconnection when the monitor link drops
     /// (`--no-reconnect`).
     pub no_reconnect: bool,
+    /// Suppress non-error monitor diagnostics (`--quiet`).
+    pub quiet: bool,
+    /// ASCII code of the monitor exit character (default `3` = Ctrl+C). Empty =
+    /// leave unset (`--exit-char`).
+    pub exit_char: String,
+    /// ASCII code of the monitor menu character (default `20` = Ctrl+T). Empty =
+    /// leave unset (`--menu-char`).
+    pub menu_char: String,
 }
 
 impl Default for EmbeddedSettings {
@@ -118,6 +126,9 @@ impl Default for EmbeddedSettings {
             rtscts: false,
             xonxoff: false,
             no_reconnect: false,
+            quiet: false,
+            exit_char: String::new(),
+            menu_char: String::new(),
         }
     }
 }
@@ -222,6 +233,17 @@ impl EmbeddedSettings {
         }
         if self.no_reconnect {
             v.push(s("--no-reconnect"));
+        }
+        if self.quiet {
+            v.push(s("--quiet"));
+        }
+        if !self.exit_char.trim().is_empty() {
+            v.push(s("--exit-char"));
+            v.push(self.exit_char.trim().to_string());
+        }
+        if !self.menu_char.trim().is_empty() {
+            v.push(s("--menu-char"));
+            v.push(self.menu_char.trim().to_string());
         }
         v.extend(self.pio_env_args());
         v
@@ -796,6 +818,44 @@ pub fn pio_remote_agent_start_with(extra: &[String]) -> Vec<String> {
 /// — registry search with an explicit sort order.
 pub fn pio_pkg_search_sort(query: &str, sort: &str) -> Vec<String> {
     vec![s(PIO), s("pkg"), s("search"), s(query), s("--sort"), s(sort)]
+}
+
+/// `pio pkg pack [extra…]` — tarball the current package with extra options
+/// (`-o <path>` to choose the destination).
+pub fn pio_pkg_pack_with(extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("pkg"), s("pack")];
+    v.extend(extra.iter().cloned());
+    v
+}
+
+/// `pio pkg show <pkg> --type <library|platform|tool>` — registry details scoped
+/// to a package type (disambiguates same-named packages across types).
+pub fn pio_pkg_show_type(pkg: &str, pkg_type: &str) -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("show"), s("--type"), s(pkg_type), s(pkg)]
+}
+
+/// `pio pkg exec -c <argv…>` — run a package tool through the `-c/--call` form
+/// (a single call string), as opposed to the `exec -- <argv>` form.
+pub fn pio_pkg_exec_call(args: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("pkg"), s("exec"), s("-c")];
+    v.extend(args.iter().cloned());
+    v
+}
+
+/// `pio account token [extra…]` — print/regenerate the auth token with extra
+/// options (`--regenerate`, `--json-output`, `-p <password>`).
+pub fn pio_account_token_with(extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("account"), s("token")];
+    v.extend(extra.iter().cloned());
+    v
+}
+
+/// `pio remote update [extra…]` — update remote platforms/packages/libraries
+/// with extra options (`--dry-run`).
+pub fn pio_remote_update_with(extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("remote"), s("update")];
+    v.extend(extra.iter().cloned());
+    v
 }
 
 /// `pio run -t <target> [-e env]` — a built-in PlatformIO build target. Covers
@@ -1464,6 +1524,46 @@ mod tests {
         let plain = pio_monitor(&settings());
         assert!(!plain.contains(&"--echo".to_string()));
         assert!(!plain.iter().any(|a| a == "--rts"));
+    }
+
+    #[test]
+    fn pio_monitor_carries_quiet_and_control_chars() {
+        let mut st = settings();
+        st.quiet = true;
+        st.exit_char = "4".into();
+        st.menu_char = "1".into();
+        let argv = pio_monitor(&st);
+        assert!(argv.contains(&"--quiet".to_string()));
+        assert!(argv.windows(2).any(|w| w == ["--exit-char", "4"]));
+        assert!(argv.windows(2).any(|w| w == ["--menu-char", "1"]));
+        let plain = pio_monitor(&settings());
+        assert!(!plain.contains(&"--quiet".to_string()));
+        assert!(!plain.iter().any(|a| a == "--exit-char"));
+    }
+
+    #[test]
+    fn pio_remaining_leaf_builders() {
+        assert_eq!(
+            pio_pkg_pack_with(&["-o".into(), "dist/".into()]),
+            ["pio", "pkg", "pack", "-o", "dist/"]
+        );
+        assert_eq!(pio_pkg_pack_with(&[]), ["pio", "pkg", "pack"]);
+        assert_eq!(
+            pio_pkg_show_type("Servo", "library"),
+            ["pio", "pkg", "show", "--type", "library", "Servo"]
+        );
+        assert_eq!(
+            pio_pkg_exec_call(&["esptool.py --version".into()]),
+            ["pio", "pkg", "exec", "-c", "esptool.py --version"]
+        );
+        assert_eq!(
+            pio_account_token_with(&["--regenerate".into()]),
+            ["pio", "account", "token", "--regenerate"]
+        );
+        assert_eq!(
+            pio_remote_update_with(&["--dry-run".into()]),
+            ["pio", "remote", "update", "--dry-run"]
+        );
     }
 
     #[test]

@@ -110,7 +110,7 @@
 | `:pio-project-metadata`, `:platformio-project-metadata` | Dump the IDE/LSP metadata for the project (`pio project metadata`). |
 | `:pio-pkg-exec`, `:platformio-pkg-exec` | Run a tool from an installed package (`pio pkg exec -- <argv>`), live in a terminal panel. |
 | `:pio-platform-install`, `:pio-core-install`, `:platformio-platform-install` | Install a development platform globally (`pio pkg install -g -p <spec>`), live in a terminal panel. |
-| `:pio-pkg-pack`, `:platformio-pkg-pack` | Build a tarball of the current package (`pio pkg pack`), live in a terminal panel. |
+| `:pio-pkg-pack`, `:platformio-pkg-pack` | Build a tarball of the current package (`pio pkg pack [-o <path>]`), live in a terminal panel. |
 | `:pio-pkg-publish`, `:platformio-pkg-publish` | Publish the current package to the PlatformIO registry (`pio pkg publish`), live in a terminal panel. |
 | `:pio-pkg-unpublish`, `:platformio-pkg-unpublish` | Remove a previously published package (`pio pkg unpublish <pkg>`), live in a terminal panel. |
 | `:pio-system-info`, `:platformio-system-info` | Show system-wide PlatformIO information (`pio system info`). |
@@ -122,15 +122,15 @@
 | `:pio-settings-get`, `:platformio-settings-get` | Print PlatformIO Core settings, all or one key (`pio settings get [name]`). |
 | `:pio-settings-set`, `:platformio-settings-set` | Change a PlatformIO Core setting (`pio settings set <name> <value>`). |
 | `:pio-remote-agent-list`, `:pio-remote-agents`, `:platformio-remote-agent-list` | List active PlatformIO Remote agents (`pio remote agent list`). |
-| `:pio-remote-agent-start`, `:platformio-remote-agent-start` | Start a PlatformIO Remote agent on this machine (`pio remote agent start`), live in a terminal panel. |
+| `:pio-remote-agent-start`, `:platformio-remote-agent-start` | Start a PlatformIO Remote agent (`pio remote agent start [--name <n>] [--share <email>] [--working-dir <dir>]`). |
 | `:pio-remote-devices`, `:pio-remote-device-list`, `:platformio-remote-devices` | List serial devices attached to remote agents (`pio remote device list`). |
 | `:pio-remote-run`, `:platformio-remote-run` | Build/upload the project via a remote agent (`pio remote run`), live in a terminal panel. |
 | `:pio-remote-test`, `:platformio-remote-test` | Run unit tests via a remote agent (`pio remote test`), live in a terminal panel. |
-| `:pio-remote-update`, `:platformio-remote-update` | Update platforms/packages/libraries on remote agents (`pio remote update`), live in a terminal panel. |
+| `:pio-remote-update`, `:platformio-remote-update` | Update platforms/packages/libraries on remote agents (`pio remote update [--dry-run]`). |
 | `:pio-account-login`, `:platformio-account-login` | Sign in to a PlatformIO account (`pio account login`), live in a terminal panel. |
 | `:pio-account-logout`, `:platformio-account-logout` | Sign out of the PlatformIO account (`pio account logout`). |
 | `:pio-account-show`, `:platformio-account-show` | Show the current PlatformIO account information (`pio account show`). |
-| `:pio-account-token`, `:platformio-account-token` | Print (or regenerate) the account auth token (`pio account token`), live in a terminal panel. |
+| `:pio-account-token`, `:platformio-account-token` | Print the account auth token (`pio account token [--regenerate] [--json-output] [-p <password>]`). |
 | `:pio-env`, `:pio-environment`, `:platformio-env` | Select the PlatformIO build environment (`[env:…]`); no arg picks from platformio.ini, `-` clears. |
 | `:pio-list-targets`, `:platformio-list-targets` | Enumerate the project's build targets (`pio run --list-targets`). |
 | `:pio-list-tests`, `:platformio-list-tests` | List the project's test suites (`pio test --list-tests`). |
@@ -149,6 +149,11 @@
 | `:pio-monitor-encoding`, `:platformio-monitor-encoding` | Set the serial monitor encoding (e.g. `UTF-8`, `Latin-1`, `hexlify`); empty resets. |
 | `:pio-monitor-flow`, `:platformio-monitor-flow` | Select serial monitor flow control (`none`, `rtscts`, or `xonxoff`). |
 | `:pio-monitor-reconnect`, `:platformio-monitor-reconnect` | Toggle serial monitor auto-reconnect (`on` or `off`; `off` = `--no-reconnect`). |
+| `:pio-monitor-quiet`, `:platformio-monitor-quiet` | Toggle suppression of non-error serial monitor diagnostics (`--quiet`). |
+| `:pio-monitor-exit-char`, `:platformio-monitor-exit-char` | Set the serial monitor exit-char ASCII code (`--exit-char`; default 3 = Ctrl+C); empty resets. |
+| `:pio-monitor-menu-char`, `:platformio-monitor-menu-char` | Set the serial monitor menu-char ASCII code (`--menu-char`; default 20 = Ctrl+T); empty resets. |
+| `:pio-pkg-show-type`, `:platformio-pkg-show-type` | Registry details scoped to a package type (`pio pkg show --type <library|platform|tool> <pkg>`). |
+| `:pio-pkg-exec-call`, `:platformio-pkg-exec-call` | Run a package tool via the call form (`pio pkg exec -c <argv…>`), live in a terminal panel. |
 | `:pio-build-verbose`, `:platformio-build-verbose` | Verbose PlatformIO build (`pio run -v`), routed through `*compilation*`. |
 | `:pio-build-silent`, `:platformio-build-silent` | Quiet PlatformIO build showing warnings/errors only (`pio run -s`). |
 | `:pio-run-jobs`, `:platformio-run-jobs` | Build with N parallel jobs (`pio run -j <n>`). |
