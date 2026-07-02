@@ -4428,6 +4428,88 @@ fn pio_system_prune(cx: &mut compositor::Context, _args: Args, event: PromptEven
     Ok(())
 }
 
+/// `:pio-prune-cache` — prune only cached data (`pio system prune -f --cache`),
+/// leaving installed core/platform packages intact.
+fn pio_prune_cache(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_system_prune_scoped("cache"), root);
+    Ok(())
+}
+
+/// `:pio-prune-core` — prune only unnecessary core packages
+/// (`pio system prune -f --core-packages`).
+fn pio_prune_core(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_system_prune_scoped("core-packages"), root);
+    Ok(())
+}
+
+/// `:pio-prune-platform` — prune only unnecessary development-platform packages
+/// (`pio system prune -f --platform-packages`).
+fn pio_prune_platform(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_system_prune_scoped("platform-packages"), root);
+    Ok(())
+}
+
+/// `:pio-prune-dry-run` — report what `pio system prune` would remove without
+/// deleting anything (`pio system prune --dry-run`).
+fn pio_prune_dry_run(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_system_prune_dry_run(), false);
+    Ok(())
+}
+
+/// `:pio-home [args…]` — launch the PlatformIO Home GUI (`pio home`), live in a
+/// terminal panel. Extra args tune the server (`--port 8010`, `--host 0.0.0.0`,
+/// `--no-open`, `--shutdown-timeout <secs>`, `--session-id <id>`).
+fn pio_home(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_home(&tokens), root);
+    Ok(())
+}
+
+/// `:pio-device-logical` — list logical (disk) devices (`pio device list --logical`).
+fn pio_device_logical(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_device_list_logical(), false);
+    Ok(())
+}
+
+/// `:pio-device-mdns` — list multicast-DNS / network (OTA) devices
+/// (`pio device list --mdns`).
+fn pio_device_mdns(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_device_list_mdns(), false);
+    Ok(())
+}
+
 /// `:pio-settings-get [name]` — print PlatformIO Core settings (all, or one key).
 fn pio_settings_get(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -20037,6 +20119,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "pio-device-logical",
+        aliases: &["platformio-device-logical"],
+        doc: "List logical (disk) devices (`pio device list --logical`).",
+        fun: pio_device_logical,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-device-mdns",
+        aliases: &["platformio-device-mdns"],
+        doc: "List multicast-DNS / network (OTA) devices (`pio device list --mdns`).",
+        fun: pio_device_mdns,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-home",
+        aliases: &["platformio-home"],
+        doc: "Launch the PlatformIO Home GUI (`pio home`), live in a terminal panel; extra args tune the server.",
+        fun: pio_home,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "pio-init",
         aliases: &["platformio-init"],
         doc: "Scaffold a PlatformIO project for a board (`pio project init --board <id>`).",
@@ -20646,6 +20761,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["platformio-system-prune"],
         doc: "Remove unused PlatformIO caches/packages (`pio system prune -f`), live in a terminal panel.",
         fun: pio_system_prune,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-prune-cache",
+        aliases: &["platformio-prune-cache"],
+        doc: "Prune only cached PlatformIO data (`pio system prune -f --cache`).",
+        fun: pio_prune_cache,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-prune-core",
+        aliases: &["platformio-prune-core"],
+        doc: "Prune only unnecessary core packages (`pio system prune -f --core-packages`).",
+        fun: pio_prune_core,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-prune-platform",
+        aliases: &["platformio-prune-platform"],
+        doc: "Prune only unnecessary development-platform packages (`pio system prune -f --platform-packages`).",
+        fun: pio_prune_platform,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-prune-dry-run",
+        aliases: &["platformio-prune-dry-run"],
+        doc: "Show what `pio system prune` would remove without deleting (`pio system prune --dry-run`).",
+        fun: pio_prune_dry_run,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

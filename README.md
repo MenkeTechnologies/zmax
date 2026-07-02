@@ -166,6 +166,8 @@ PlatformIO environment, monitor filters) persist to
 - **Boards & ports** — `:arduino-boards` (pick FQBN), `:arduino-ports` /
   `:pio-devices` (pick serial port), `:arduino-board-info`, `:pio-boards`
   (Board Explorer), `:pio-boards-installed` (installed platforms only).
+  `:pio-device-logical` lists logical (disk) devices and `:pio-device-mdns`
+  lists multicast-DNS / network (OTA) devices.
 - **Boards Manager** — `:arduino-core-search`, `:arduino-board-search`,
   `:arduino-core-install`, `:arduino-core-download` (fetch without installing),
   `:arduino-core-list`, `:arduino-core-uninstall`, `:arduino-core-update-index`,
@@ -185,9 +187,13 @@ PlatformIO environment, monitor filters) persist to
 - **Maintenance** — `:arduino-update` / `:arduino-upgrade` / `:arduino-outdated`
   refresh and upgrade cores + libraries together; `:arduino-config` dumps the
   active configuration; `:pio-upgrade` upgrades PlatformIO Core itself;
-  `:pio-system-info`, `:pio-system-prune` (drop unused caches/packages),
+  `:pio-system-info`, `:pio-system-prune` (drop unused caches/packages) with
+  scoped variants `:pio-prune-cache` / `:pio-prune-core` / `:pio-prune-platform`
+  and `:pio-prune-dry-run` (report without deleting),
   `:pio-system-completion <shell>`, `:pio-settings-get` / `:pio-settings-set` /
-  `:pio-settings-reset`, `:pio-ci <src> -b <board>` (standalone CI build).
+  `:pio-settings-reset`, `:pio-ci <src> -b <board>` (standalone CI build);
+  `:pio-home` launches the PlatformIO Home GUI (`--port`, `--host`, `--no-open`
+  passed through).
 - **Platforms & packages** — `:pio-platform-install <spec>` installs a
   development platform globally, `:pio-tool-install <spec>` a tool package
   (compilers, uploaders, debuggers); `:pio-pkg-exec <argv>` runs a tool from an

@@ -56,6 +56,9 @@
 | `:pio-upload`, `:platformio-upload` | Build and upload the PlatformIO project (`pio run -t upload`), live in a terminal panel. |
 | `:pio-monitor`, `:platformio-monitor` | Open the PlatformIO serial monitor (`pio device monitor`). |
 | `:pio-devices`, `:pio-device-list` | Pick a serial port from `pio device list` and set it for this project. |
+| `:pio-device-logical`, `:platformio-device-logical` | List logical (disk) devices (`pio device list --logical`). |
+| `:pio-device-mdns`, `:platformio-device-mdns` | List multicast-DNS / network (OTA) devices (`pio device list --mdns`). |
+| `:pio-home`, `:platformio-home` | Launch the PlatformIO Home GUI (`pio home`), live in a terminal panel; extra args tune the server. |
 | `:pio-init`, `:platformio-init` | Scaffold a PlatformIO project for a board (`pio project init --board <id>`). |
 | `:embedded-baud`, `:serial-baud` | Set the serial monitor baud rate for this project (e.g. 9600, 115200). |
 | `:arduino-plotter`, `:serial-plotter` | Live-graph the numbers streaming from the serial port (Arduino IDE Serial Plotter). |
@@ -112,6 +115,10 @@
 | `:pio-pkg-unpublish`, `:platformio-pkg-unpublish` | Remove a previously published package (`pio pkg unpublish <pkg>`), live in a terminal panel. |
 | `:pio-system-info`, `:platformio-system-info` | Show system-wide PlatformIO information (`pio system info`). |
 | `:pio-system-prune`, `:platformio-system-prune` | Remove unused PlatformIO caches/packages (`pio system prune -f`), live in a terminal panel. |
+| `:pio-prune-cache`, `:platformio-prune-cache` | Prune only cached PlatformIO data (`pio system prune -f --cache`). |
+| `:pio-prune-core`, `:platformio-prune-core` | Prune only unnecessary core packages (`pio system prune -f --core-packages`). |
+| `:pio-prune-platform`, `:platformio-prune-platform` | Prune only unnecessary development-platform packages (`pio system prune -f --platform-packages`). |
+| `:pio-prune-dry-run`, `:platformio-prune-dry-run` | Show what `pio system prune` would remove without deleting (`pio system prune --dry-run`). |
 | `:pio-settings-get`, `:platformio-settings-get` | Print PlatformIO Core settings, all or one key (`pio settings get [name]`). |
 | `:pio-settings-set`, `:platformio-settings-set` | Change a PlatformIO Core setting (`pio settings set <name> <value>`). |
 | `:pio-remote-agent-list`, `:pio-remote-agents`, `:platformio-remote-agent-list` | List active PlatformIO Remote agents (`pio remote agent list`). |

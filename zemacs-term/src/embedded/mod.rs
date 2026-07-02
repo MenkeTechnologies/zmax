@@ -485,6 +485,16 @@ pub fn pio_passthrough(args: &[String]) -> Vec<String> {
     v
 }
 
+/// `pio home [args…]` — launch the PlatformIO Home GUI server (opens a browser
+/// unless `--no-open`). Extra args tune the server: `--port <n>` (default 8008),
+/// `--host <addr>`, `--no-open`, `--shutdown-timeout <secs>`, `--session-id`.
+/// Verified against `pio home --help` on PlatformIO 6.1.19.
+pub fn pio_home(args: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("home")];
+    v.extend(args.iter().cloned());
+    v
+}
+
 /// `pio run [-e env]` — build the PlatformIO project.
 pub fn pio_build(settings: &EmbeddedSettings) -> Vec<String> {
     let mut v = vec![s(PIO), s("run")];
@@ -517,6 +527,16 @@ pub fn pio_remote_device_monitor() -> Vec<String> {
 /// `pio device list --json-output`
 pub fn pio_device_list() -> Vec<String> {
     vec![s(PIO), s("device"), s("list"), s("--json-output")]
+}
+
+/// `pio device list --logical` — logical (disk) devices rather than serial ports.
+pub fn pio_device_list_logical() -> Vec<String> {
+    vec![s(PIO), s("device"), s("list"), s("--logical")]
+}
+
+/// `pio device list --mdns` — multicast-DNS services (network/OTA devices).
+pub fn pio_device_list_mdns() -> Vec<String> {
+    vec![s(PIO), s("device"), s("list"), s("--mdns")]
 }
 
 /// `pio project init --board <id>`
@@ -701,10 +721,28 @@ pub fn pio_system_info() -> Vec<String> {
     vec![s(PIO), s("system"), s("info")]
 }
 
-/// `pio system prune -f` — remove unused caches/packages without prompting
-/// (per project convention: no confirmation on maintenance ops).
+/// `pio system prune -f [--<scope>]` — remove unused data without prompting (per
+/// project convention: no confirmation on maintenance ops). `scope` narrows the
+/// sweep to one subset (`cache`, `core-packages`, `platform-packages`); an empty
+/// scope prunes everything. Verified against `pio system prune --help` on
+/// PlatformIO 6.1.19.
+pub fn pio_system_prune_scoped(scope: &str) -> Vec<String> {
+    let mut v = vec![s(PIO), s("system"), s("prune"), s("-f")];
+    if !scope.trim().is_empty() {
+        v.push(format!("--{}", scope.trim()));
+    }
+    v
+}
+
+/// `pio system prune -f` — remove all unused caches/packages without prompting.
 pub fn pio_system_prune() -> Vec<String> {
-    vec![s(PIO), s("system"), s("prune"), s("-f")]
+    pio_system_prune_scoped("")
+}
+
+/// `pio system prune --dry-run` — report what prune would remove, deleting
+/// nothing (read-only; no `-f` needed).
+pub fn pio_system_prune_dry_run() -> Vec<String> {
+    vec![s(PIO), s("system"), s("prune"), s("--dry-run")]
 }
 
 /// `pio settings get [name]` — print PlatformIO Core settings (all, or one key).
@@ -1239,6 +1277,32 @@ mod tests {
         assert_eq!(pio_project_metadata(), ["pio", "project", "metadata"]);
         assert_eq!(pio_system_info(), ["pio", "system", "info"]);
         assert_eq!(pio_system_prune(), ["pio", "system", "prune", "-f"]);
+    }
+
+    #[test]
+    fn pio_prune_scopes_and_dry_run() {
+        assert_eq!(pio_system_prune_scoped(""), ["pio", "system", "prune", "-f"]);
+        assert_eq!(pio_system_prune_scoped("cache"), ["pio", "system", "prune", "-f", "--cache"]);
+        assert_eq!(
+            pio_system_prune_scoped("core-packages"),
+            ["pio", "system", "prune", "-f", "--core-packages"]
+        );
+        assert_eq!(
+            pio_system_prune_scoped("platform-packages"),
+            ["pio", "system", "prune", "-f", "--platform-packages"]
+        );
+        assert_eq!(pio_system_prune_dry_run(), ["pio", "system", "prune", "--dry-run"]);
+    }
+
+    #[test]
+    fn pio_home_and_device_list_variants() {
+        assert_eq!(pio_home(&[]), ["pio", "home"]);
+        assert_eq!(
+            pio_home(&["--port".to_string(), "8010".to_string(), "--no-open".to_string()]),
+            ["pio", "home", "--port", "8010", "--no-open"]
+        );
+        assert_eq!(pio_device_list_logical(), ["pio", "device", "list", "--logical"]);
+        assert_eq!(pio_device_list_mdns(), ["pio", "device", "list", "--mdns"]);
     }
 
     #[test]
