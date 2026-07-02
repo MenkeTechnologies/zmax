@@ -72,6 +72,18 @@ pub(super) fn ensure_builtins() {
         h.defsubr("editor-command", 1, None, b_command);
         h.defsubr("buffer-file-name", 0, Some(1), b_buffer_file_name);
         h.defsubr("buffer-name", 0, Some(1), b_buffer_name);
+        // Mark & region. Point lives in the mirrored EditBuffer; the mark is held
+        // in `super` and flushed to the live selection anchor, so a script that
+        // sets the mark and moves point ends up with a real editor selection.
+        h.defsubr("set-mark", 1, Some(1), b_set_mark);
+        h.defsubr("push-mark", 0, Some(3), b_push_mark);
+        h.defsubr("mark", 0, Some(1), b_mark);
+        h.defsubr("region-beginning", 0, Some(0), b_region_beginning);
+        h.defsubr("region-end", 0, Some(0), b_region_end);
+        h.defsubr("region-active-p", 0, Some(0), b_region_active_p);
+        h.defsubr("use-region-p", 0, Some(0), b_region_active_p);
+        h.defsubr("deactivate-mark", 0, Some(1), b_deactivate_mark);
+        h.defsubr("mark-whole-buffer", 0, Some(0), b_mark_whole_buffer);
     });
 }
 
@@ -163,4 +175,70 @@ fn b_buffer_name(_h: &mut ElispHost, _args: &[Value]) -> Result<Value, String> {
         .filter(|n| !n.is_empty())
         .unwrap_or_else(|| "*scratch*".to_string());
     Ok(Value::str(name))
+}
+
+// ── mark & region ──
+//
+// Positions are 1-based points at the elisp boundary and 0-based char offsets in
+// the mark state (`super::mark_*`). Current point is read from the mirrored
+// `EditBuffer` so these stay consistent with elisp's own point-moving builtins.
+
+/// A nil optional arg is `Value::Undef`; treat that (and a missing arg) as absent.
+fn opt(args: &[Value], idx: usize) -> Option<&Value> {
+    args.get(idx).filter(|v| !matches!(v, Value::Undef))
+}
+
+fn b_set_mark(_h: &mut ElispHost, args: &[Value]) -> Result<Value, String> {
+    let pos = args[0].to_int().max(1) as usize;
+    super::mark_set(pos - 1);
+    Ok(Value::Int(pos as i64))
+}
+
+fn b_push_mark(h: &mut ElispHost, args: &[Value]) -> Result<Value, String> {
+    let pos = opt(args, 0)
+        .map(|v| v.to_int())
+        .unwrap_or_else(|| h.cur_buf().point as i64)
+        .max(1) as usize;
+    super::mark_set(pos - 1);
+    Ok(nil())
+}
+
+fn b_mark(_h: &mut ElispHost, args: &[Value]) -> Result<Value, String> {
+    let force = opt(args, 0).is_some();
+    match super::mark_get() {
+        Some(m) if force || super::mark_is_active() => Ok(Value::Int(m as i64 + 1)),
+        _ => Ok(nil()),
+    }
+}
+
+fn b_region_beginning(h: &mut ElispHost, _args: &[Value]) -> Result<Value, String> {
+    let p = h.cur_buf().point as i64;
+    match super::mark_get() {
+        Some(m) => Ok(Value::Int(p.min(m as i64 + 1))),
+        None => Err("The mark is not set now, so there is no region".to_string()),
+    }
+}
+
+fn b_region_end(h: &mut ElispHost, _args: &[Value]) -> Result<Value, String> {
+    let p = h.cur_buf().point as i64;
+    match super::mark_get() {
+        Some(m) => Ok(Value::Int(p.max(m as i64 + 1))),
+        None => Err("The mark is not set now, so there is no region".to_string()),
+    }
+}
+
+fn b_region_active_p(h: &mut ElispHost, _args: &[Value]) -> Result<Value, String> {
+    Ok(if super::mark_is_active() { t(h) } else { nil() })
+}
+
+fn b_deactivate_mark(_h: &mut ElispHost, _args: &[Value]) -> Result<Value, String> {
+    super::mark_deactivate();
+    Ok(nil())
+}
+
+fn b_mark_whole_buffer(h: &mut ElispHost, _args: &[Value]) -> Result<Value, String> {
+    let len = h.cur_buf().text.len();
+    super::mark_set(0);
+    h.cur_buf().point = len + 1;
+    Ok(nil())
 }
