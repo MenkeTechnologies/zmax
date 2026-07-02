@@ -12465,11 +12465,11 @@
  },
  {
   "spec_id": "emacs.command.delete_horizontal_space",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:just-one-space"
+   "typable:delete-horizontal-space"
   ],
-  "note": ""
+  "note": "delete-horizontal-space (M-\\\\): remove all spaces/tabs around point via zemacs_core::whitespace"
  },
  {
   "spec_id": "emacs.command.delete_blank_lines",
@@ -14289,19 +14289,19 @@
  },
  {
   "spec_id": "emacs.command.sort_numeric_fields",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:sort-by-field"
+   "typable:sort-numeric-fields"
   ],
-  "note": ""
+  "note": "sort-numeric-fields: sort by the numeric value of the Nth field (hex/octal/decimal) via zemacs_core::sort"
  },
  {
   "spec_id": "emacs.command.sort_paragraphs",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:sort"
+   "typable:sort-paragraphs"
   ],
-  "note": ""
+  "note": "sort-paragraphs: sort blank-line-separated blocks via zemacs_core::sort"
  },
  {
   "spec_id": "emacs.command.reverse_region",
@@ -14345,11 +14345,11 @@
  },
  {
   "spec_id": "emacs.command.occur",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:search_in_files"
+   "static:occur"
   ],
-  "note": ""
+  "note": "occur (M-s o): real *Occur* overlay listing regex-matching lines with jump-back (zemacs_core::occur + ui/occur.rs)"
  },
  {
   "spec_id": "emacs.command.grep",
@@ -20217,11 +20217,11 @@
  },
  {
   "spec_id": "emacs.command.cycle_spacing",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:just-one-space"
+   "typable:cycle-spacing"
   ],
-  "note": "emacs cycle-spacing -> :just-one-space (collapses surrounding whitespace to one space, cycle-spacing's default first action)"
+  "note": "cycle-spacing: collapse/remove/restore spaces around point via zemacs_core::whitespace"
  },
  {
   "spec_id": "neovim.ex-command.colon_delmarks",
@@ -20785,11 +20785,11 @@
  },
  {
   "spec_id": "emacs.command.next_error",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:run_next_error"
+   "typable:next-error"
   ],
-  "note": "Jumps to next file:line in the run/compile output = next-error for compilation output."
+  "note": "next-error: go to the next compilation error via zemacs_core::compilation"
  },
  {
   "spec_id": "emacs.command.left_word",
@@ -28083,5 +28083,53 @@
    "key:bufmenu:q"
   ],
   "note": "q = quit-window: close the Buffer Menu overlay"
+ },
+ {
+  "spec_id": "emacs.command.tabify",
+  "status": "ported",
+  "evidence": [
+   "typable:tabify"
+  ],
+  "note": "New pure zemacs-core::whitespace::tabify (faithful tabify.el: runs of 2+ blanks replaced via indent-to preserving end column) wired to typable :tabify over the primary selection's line range at buffer tab_width. Unit-tested incl round-trips."
+ },
+ {
+  "spec_id": "emacs.keybinding.ret_lparenoccur_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:occur:ret"
+  ],
+  "note": "occur-mode-goto-occurrence: RET pops the overlay and moves point to the occurrence in the source view."
+ },
+ {
+  "spec_id": "emacs.keybinding.o_lparenoccur_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:occur:o"
+  ],
+  "note": "occur-mode-goto-occurrence-other-window: o goes to the occurrence in the source window (overlay model pops + jumps)."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_o_lparenoccur_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:occur:C-o"
+  ],
+  "note": "occur-mode-display-occurrence: C-o sets the source selection to the occurrence while leaving the *Occur* list open."
+ },
+ {
+  "spec_id": "emacs.command.compile_goto_error",
+  "status": "partial",
+  "evidence": [
+   "typable:first-error"
+  ],
+  "note": "first-error/next-error open the source location of a compilation error (Editor::open + set_selection at line/col). Full compile-goto-error (visit the error under point in the *compilation* buffer) needs the optional buffer Component, not built."
+ },
+ {
+  "spec_id": "emacs.command.sort_columns",
+  "status": "ported",
+  "evidence": [
+   "typable:sort-columns"
+  ],
+  "note": "New. Sorts selected lines alphabetically by the character-column range [beg,end) via zemacs_core::sort::sort_columns; --reverse for descending. Tabs treated as single columns (Emacs rejects tabs)."
  }
 ]
