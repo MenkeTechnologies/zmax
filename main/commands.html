@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-bc622678.js";
+            window.path_to_searchindex_js = "searchindex-36b4e9ac.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -287,6 +287,7 @@
 <tr><td><code>:pio-test</code>, <code>:platformio-test</code></td><td>Run the PlatformIO project’s unit tests (<code>pio test</code>); failures go to the compilation list.</td></tr>
 <tr><td><code>:pio-check</code>, <code>:platformio-check</code></td><td>PlatformIO static code analysis (<code>pio check</code>); findings go to the compilation list.</td></tr>
 <tr><td><code>:pio-boards</code>, <code>:platformio-boards</code></td><td>The PlatformIO Board Explorer (<code>pio boards [query]</code>); output in the Run console.</td></tr>
+<tr><td><code>:pio-boards-json</code>, <code>:platformio-boards-json</code></td><td>The Board Explorer as JSON (<code>pio boards --json-output [query]</code>), shown in a scratch buffer.</td></tr>
 <tr><td><code>:pio-lib-install</code>, <code>:pio-pkg-install</code>, <code>:platformio-lib-install</code></td><td>Add a library to the PlatformIO project (<code>pio pkg install -l &lt;name&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-lib-list</code>, <code>:pio-pkg-list</code>, <code>:pio-libs</code></td><td>List installed PlatformIO project packages (<code>pio pkg list</code>).</td></tr>
 <tr><td><code>:pio-lib-uninstall</code>, <code>:pio-pkg-uninstall</code></td><td>Remove a PlatformIO project library (<code>pio pkg uninstall -l &lt;name&gt;</code>), live in a terminal panel.</td></tr>
@@ -315,6 +316,7 @@
 <tr><td><code>:pio-project-config</code>, <code>:platformio-project-config</code></td><td>Show the computed PlatformIO project configuration (<code>pio project config</code>).</td></tr>
 <tr><td><code>:pio-project-metadata</code>, <code>:platformio-project-metadata</code></td><td>Dump the IDE/LSP metadata for the project (<code>pio project metadata</code>).</td></tr>
 <tr><td><code>:pio-pkg-exec</code>, <code>:platformio-pkg-exec</code></td><td>Run a tool from an installed package (<code>pio pkg exec -- &lt;argv&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-pkg-exec-pkg</code>, <code>:platformio-pkg-exec-pkg</code></td><td>Run a tool from a specific installed package (<code>pio pkg exec -p &lt;pkg&gt; -- &lt;argv&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-platform-install</code>, <code>:pio-core-install</code>, <code>:platformio-platform-install</code></td><td>Install a development platform globally (<code>pio pkg install -g -p &lt;spec&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-pkg-pack</code>, <code>:platformio-pkg-pack</code></td><td>Build a tarball of the current package (<code>pio pkg pack [-o &lt;path&gt;]</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-pkg-publish</code>, <code>:platformio-pkg-publish</code></td><td>Publish the current package to the PlatformIO registry (<code>pio pkg publish</code>), live in a terminal panel.</td></tr>
