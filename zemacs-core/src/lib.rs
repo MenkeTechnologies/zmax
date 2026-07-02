@@ -9,6 +9,7 @@ pub mod case_conversion;
 pub mod chars;
 pub mod command_line;
 pub mod comment;
+pub mod compilation;
 pub mod completion;
 pub mod config;
 pub mod diagnostic;

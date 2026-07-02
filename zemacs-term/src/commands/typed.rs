@@ -392,6 +392,147 @@ fn arg_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
 }
 
 // ---------------------------------------------------------------------------
+// Emacs compilation (`compile`, `recompile`, `next-error`, `previous-error`,
+// `first-error`). One process-global error list plus the last shell command,
+// held in a thread-local like ARGLIST above. `compile` runs the command
+// synchronously as a local subprocess (capturing stdout+stderr), parses the
+// output with the pure `zemacs_core::compilation` engine, and stores the
+// resulting error list; the navigation commands walk that list and open each
+// entry's file at its reported line/column. This is the Emacs compilation side;
+// Vim's quickfix (`:cnext`/`:cabove`/…) is separate and untouched.
+// ---------------------------------------------------------------------------
+
+thread_local! {
+    static COMPILATION: std::cell::RefCell<zemacs_core::compilation::CompilationList> =
+        std::cell::RefCell::new(zemacs_core::compilation::CompilationList::new());
+    /// The last command handed to `:compile`, replayed by `:recompile`.
+    static COMPILE_COMMAND: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Run `f` against the global compilation error list.
+fn with_compilation<R>(f: impl FnOnce(&mut zemacs_core::compilation::CompilationList) -> R) -> R {
+    COMPILATION.with(|c| f(&mut c.borrow_mut()))
+}
+
+/// Run `command` through the editor's configured shell, capturing stdout and
+/// stderr together (Emacs interleaves both into `*compilation*`), parse the
+/// output into the global error list, and report the count on the status line.
+fn run_compile(cx: &mut compositor::Context, command: &str) -> anyhow::Result<()> {
+    let command = command.trim();
+    if command.is_empty() {
+        bail!("compile: needs a command");
+    }
+    let shell = cx.editor.config().shell.clone();
+    if shell.is_empty() {
+        bail!("compile: no shell configured");
+    }
+    let output = std::process::Command::new(&shell[0])
+        .args(&shell[1..])
+        .arg(command)
+        .output()
+        .map_err(|e| anyhow::anyhow!("compile: failed to run `{command}`: {e}"))?;
+
+    // Emacs' `*compilation*` shows stdout and stderr interleaved; most tools
+    // print diagnostics to stderr, so scan both.
+    let mut captured = String::from_utf8_lossy(&output.stdout).into_owned();
+    captured.push_str(&String::from_utf8_lossy(&output.stderr));
+
+    with_compilation(|c| c.set_output(&captured));
+    COMPILE_COMMAND.with(|last| *last.borrow_mut() = Some(command.to_string()));
+
+    let count = with_compilation(|c| c.len());
+    let status = output.status;
+    cx.editor.set_status(match count {
+        0 => format!("Compilation finished ({status}); no errors"),
+        1 => format!("Compilation finished ({status}); 1 error"),
+        n => format!("Compilation finished ({status}); {n} errors"),
+    });
+    Ok(())
+}
+
+/// Open the file named by a compilation entry at its 1-based line/column,
+/// converting to the editor's 0-based coordinates.
+fn goto_compile_entry(
+    cx: &mut compositor::Context,
+    entry: &zemacs_core::compilation::CompileEntry,
+) -> anyhow::Result<()> {
+    let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(&entry.file));
+    cx.editor.open(&path, Action::Replace)?;
+    let (view, doc) = current!(cx.editor);
+    let coords = zemacs_core::Position::new(
+        entry.line.saturating_sub(1),
+        entry.col.map(|c| c.saturating_sub(1)).unwrap_or(0),
+    );
+    let pos = Selection::point(pos_at_coords(doc.text().slice(..), coords, true));
+    doc.set_selection(view.id, pos);
+    align_view(doc, view, Align::Center);
+    Ok(())
+}
+
+/// `:compile {command}` — Emacs `compile` (`M-x compile`). Run the shell command,
+/// collect its output, and build the error list. With no argument, replay the
+/// last command (like `recompile`).
+fn compile(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let command = args.join(" ");
+    if command.trim().is_empty() {
+        return recompile(cx, args, event);
+    }
+    run_compile(cx, &command)
+}
+
+/// `:recompile` — Emacs `recompile`: re-run the last `compile` command.
+fn recompile(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let last = COMPILE_COMMAND.with(|c| c.borrow().clone());
+    match last {
+        Some(cmd) => run_compile(cx, &cmd),
+        None => bail!("recompile: no previous compile command"),
+    }
+}
+
+/// `:next-error` — Emacs `next-error` (`M-g n`): visit the next error's location.
+fn next_error(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let entry = with_compilation(|c| c.next().cloned());
+    match entry {
+        Some(e) => goto_compile_entry(cx, &e),
+        None => bail!("Moved past last error"),
+    }
+}
+
+/// `:previous-error` — Emacs `previous-error` (`M-g p`): visit the previous
+/// error's location.
+fn previous_error(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let entry = with_compilation(|c| c.previous().cloned());
+    match entry {
+        Some(e) => goto_compile_entry(cx, &e),
+        None => bail!("Moved back before first error"),
+    }
+}
+
+/// `:first-error` — Emacs `first-error`: visit the first error's location.
+fn first_error(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let entry = with_compilation(|c| c.first().cloned());
+    match entry {
+        Some(e) => goto_compile_entry(cx, &e),
+        None => bail!("No errors"),
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Vim abbreviations (`:abbreviate`, `:iabbrev`, `:cabbrev`, their `un…`/`…clear`
 // siblings). One process-global table in a thread-local, like ARGLIST above.
 // The pure state machine is `zemacs_core::abbrev::AbbrevTable`; these commands
@@ -17066,6 +17207,61 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["sall"],
         doc: "Open a window for each file in the argument list (vim :all / :sall).",
         fun: arg_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "compile",
+        aliases: &[],
+        doc: "Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile).",
+        fun: compile,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "recompile",
+        aliases: &[],
+        doc: "Re-run the last compile command (emacs recompile).",
+        fun: recompile,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "next-error",
+        aliases: &["cnext-error"],
+        doc: "Visit the next compilation error's location (emacs next-error / M-g n).",
+        fun: next_error,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "previous-error",
+        aliases: &["cprevious-error"],
+        doc: "Visit the previous compilation error's location (emacs previous-error / M-g p).",
+        fun: previous_error,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "first-error",
+        aliases: &[],
+        doc: "Visit the first compilation error's location (emacs first-error).",
+        fun: first_error,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
