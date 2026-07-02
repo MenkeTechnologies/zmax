@@ -1139,9 +1139,9 @@ impl MappableCommand {
         yank_till_char_forward, "Yank till next char (yt)",
         yank_find_char_backward, "Yank to prev char (yF)",
         yank_till_char_backward, "Yank till prev char (yT)",
-        set_mark, "Set mark (m{a-z})",
-        goto_mark, "Goto mark exact (`{a-z})",
-        goto_mark_line, "Goto mark line ('{a-z})",
+        set_mark, "Set mark (m{a-z} buffer, m{A-Z} global)",
+        goto_mark, "Goto mark exact (`{a-z/A-Z/0-9}, `` for last jump)",
+        goto_mark_line, "Goto mark line ('{a-z/A-Z/0-9}, '' for last jump)",
         repeat_substitute, "Repeat last :substitute (&)",
         repeat_substitute_global, "Repeat last :substitute on whole file (g&)",
         vim_record_macro, "Record macro into register (q{reg})",
@@ -2977,8 +2977,12 @@ fn find_char_then(
     })
 }
 
-// vim named marks: `m{a-z}` sets a mark at the cursor; `` `{a-z} `` jumps to the
-// exact mark position; `'{a-z}` jumps to the mark's line (first non-blank).
+// vim marks. `m{a-z}` sets a buffer-local mark; `m{A-Z}` sets a global mark
+// (file + position, stored on the editor, persisted to `.zemacsinfo`). `` `{m} ``
+// jumps to the exact position and `'{m}` to the mark's line (first non-blank).
+// Global (`A-Z`) and numbered file (`0-9`, restored from history) marks may live
+// in another file and open it on jump. `` `` `` / `''` return to the position
+// before the last jump. `m{0-9}` is ignored, matching vim.
 fn set_mark(cx: &mut Context) {
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
