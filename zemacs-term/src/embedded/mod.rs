@@ -614,6 +614,12 @@ pub fn pio_device_list_mdns() -> Vec<String> {
     vec![s(PIO), s("device"), s("list"), s("--mdns")]
 }
 
+/// `pio device list --serial` — serial ports only (explicit serial filter,
+/// sibling of `--logical`/`--mdns`).
+pub fn pio_device_list_serial() -> Vec<String> {
+    vec![s(PIO), s("device"), s("list"), s("--serial")]
+}
+
 /// `pio project init --board <id>`
 pub fn pio_init(board: &str) -> Vec<String> {
     vec![s(PIO), s("project"), s("init"), s("--board"), s(board)]
@@ -690,6 +696,13 @@ pub fn pio_pkg_list() -> Vec<String> {
     vec![s(PIO), s("pkg"), s("list")]
 }
 
+/// `pio pkg list --only-<scope>` — installed packages of one kind only, where
+/// `scope` is `libraries`, `platforms`, or `tools`. Verified against
+/// `pio pkg list --help` on PlatformIO 6.1.19.
+pub fn pio_pkg_list_scope(scope: &str) -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("list"), format!("--only-{}", scope)]
+}
+
 /// `pio pkg uninstall -l <name>` — remove a project library.
 pub fn pio_pkg_uninstall(name: &str) -> Vec<String> {
     vec![s(PIO), s("pkg"), s("uninstall"), s("-l"), s(name)]
@@ -703,6 +716,12 @@ pub fn pio_pkg_update() -> Vec<String> {
 /// `pio pkg search <query>` — search the PlatformIO registry (Library Manager).
 pub fn pio_pkg_search(query: &str) -> Vec<String> {
     vec![s(PIO), s("pkg"), s("search"), s(query)]
+}
+
+/// `pio pkg search <query> --page <n>` — a specific page of registry results
+/// (results are paginated). Verified against `pio pkg search --help` on 6.1.19.
+pub fn pio_pkg_search_page(query: &str, page: &str) -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("search"), s(query), s("--page"), s(page)]
 }
 
 /// `pio pkg outdated` — list installed packages with newer versions available.
@@ -880,10 +899,21 @@ pub fn pio_project_config() -> Vec<String> {
     vec![s(PIO), s("project"), s("config")]
 }
 
+/// `pio project config --json-output` — the computed configuration as JSON.
+pub fn pio_project_config_json() -> Vec<String> {
+    vec![s(PIO), s("project"), s("config"), s("--json-output")]
+}
+
 /// `pio project metadata` — dump the IDE/LSP metadata (include paths, defines,
 /// compiler flags) PlatformIO exposes to editor extensions.
 pub fn pio_project_metadata() -> Vec<String> {
     vec![s(PIO), s("project"), s("metadata")]
+}
+
+/// `pio project metadata --json-output` — the IDE/LSP metadata as JSON (the form
+/// editor extensions consume).
+pub fn pio_project_metadata_json() -> Vec<String> {
+    vec![s(PIO), s("project"), s("metadata"), s("--json-output")]
 }
 
 /// `pio pkg exec -- <argv…>` — run an executable from an installed package/tool
@@ -921,10 +951,21 @@ pub fn pio_pkg_unpublish(pkg: &str) -> Vec<String> {
     vec![s(PIO), s("pkg"), s("unpublish"), s(pkg)]
 }
 
+/// `pio pkg unpublish <pkg> --undo` — restore a package that was unpublished
+/// (undo a prior removal). Verified against `pio pkg unpublish --help` on 6.1.19.
+pub fn pio_pkg_unpublish_undo(pkg: &str) -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("unpublish"), s(pkg), s("--undo")]
+}
+
 /// `pio system info` — system-wide PlatformIO information (core version, paths,
 /// Python, platforms).
 pub fn pio_system_info() -> Vec<String> {
     vec![s(PIO), s("system"), s("info")]
+}
+
+/// `pio system info --json-output` — system-wide information as JSON.
+pub fn pio_system_info_json() -> Vec<String> {
+    vec![s(PIO), s("system"), s("info"), s("--json-output")]
 }
 
 /// `pio system prune -f [--<scope>]` — remove unused data without prompting (per
@@ -1216,6 +1257,51 @@ mod tests {
         let argv = pio_monitor(&settings());
         assert!(argv.windows(2).any(|w| w == ["-p", "/dev/cu.usbmodem1401"]));
         assert!(argv.windows(2).any(|w| w == ["-b", "115200"]));
+    }
+
+    #[test]
+    fn pio_device_list_serial_uses_serial_flag() {
+        assert_eq!(
+            pio_device_list_serial(),
+            vec!["pio", "device", "list", "--serial"]
+        );
+    }
+
+    #[test]
+    fn pio_pkg_list_scope_builds_only_flag() {
+        assert_eq!(
+            pio_pkg_list_scope("libraries"),
+            vec!["pio", "pkg", "list", "--only-libraries"]
+        );
+        assert_eq!(
+            pio_pkg_list_scope("platforms"),
+            vec!["pio", "pkg", "list", "--only-platforms"]
+        );
+        assert_eq!(
+            pio_pkg_list_scope("tools"),
+            vec!["pio", "pkg", "list", "--only-tools"]
+        );
+    }
+
+    #[test]
+    fn pio_json_report_builders_append_json_output() {
+        assert!(pio_project_config_json().ends_with(&["--json-output".to_string()]));
+        assert!(pio_project_metadata_json().ends_with(&["--json-output".to_string()]));
+        assert!(pio_system_info_json().ends_with(&["--json-output".to_string()]));
+    }
+
+    #[test]
+    fn pio_pkg_search_page_carries_query_and_page() {
+        let argv = pio_pkg_search_page("wifi", "2");
+        assert!(argv.windows(2).any(|w| w == ["--page", "2"]));
+        assert!(argv.contains(&"wifi".to_string()));
+    }
+
+    #[test]
+    fn pio_pkg_unpublish_undo_appends_undo() {
+        let argv = pio_pkg_unpublish_undo("owner/pkg@1.0.0");
+        assert_eq!(argv[..4], ["pio", "pkg", "unpublish", "owner/pkg@1.0.0"]);
+        assert!(argv.contains(&"--undo".to_string()));
     }
 
     #[test]

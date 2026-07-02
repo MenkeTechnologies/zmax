@@ -160,7 +160,8 @@ PlatformIO environment, monitor filters) persist to
   / `-without-uploading` / `-without-testing`, `:pio-test-no-reset`. Analysis
   options: `:pio-check-verbose`, `:pio-check-json`, `:pio-check-flags <flags>`,
   `:pio-check-fail-on <low|medium|high>`, `:pio-check-skip-packages`,
-  `:pio-check-src-filters <pattern>`.
+  `:pio-check-src-filters <pattern>`. `:pio-test-json` and `:pio-check-json`
+  dump the test / analysis results as JSON to a scratch buffer.
 - **PlatformIO build targets** — the full `pio run -t` surface: `:pio-compiledb`
   (generate `compile_commands.json` for the C/C++ LSP), `:pio-buildfs` /
   `:pio-uploadfs` (SPIFFS/LittleFS filesystem image), `:pio-uploadeep`,
@@ -181,8 +182,9 @@ PlatformIO environment, monitor filters) persist to
 - **Boards & ports** — `:arduino-boards` (pick FQBN), `:arduino-ports` /
   `:pio-devices` (pick serial port), `:arduino-board-info`, `:pio-boards`
   (Board Explorer), `:pio-boards-installed` (installed platforms only).
-  `:pio-device-logical` lists logical (disk) devices and `:pio-device-mdns`
-  lists multicast-DNS / network (OTA) devices.
+  `:pio-device-logical` lists logical (disk) devices, `:pio-device-mdns`
+  lists multicast-DNS / network (OTA) devices, and `:pio-device-serial` lists
+  serial ports only.
 - **Boards Manager** — `:arduino-core-search`, `:arduino-board-search`,
   `:arduino-core-install`, `:arduino-core-download` (fetch without installing),
   `:arduino-core-list`, `:arduino-core-uninstall`, `:arduino-core-update-index`,
@@ -192,7 +194,9 @@ PlatformIO environment, monitor filters) persist to
   `:arduino-lib-upgrade`, `:arduino-lib-update-index`, `:arduino-lib-examples`,
   `:arduino-lib-deps`; PlatformIO packages via `:pio-lib-search`,
   `:pio-lib-install`, `:pio-lib-list`, `:pio-lib-show`, `:pio-lib-uninstall`,
-  `:pio-lib-update`, `:pio-lib-outdated`.
+  `:pio-lib-update`, `:pio-lib-outdated`. `:pio-pkg-list-libraries` /
+  `:pio-pkg-list-platforms` / `:pio-pkg-list-tools` scope the installed-package
+  list to one kind.
 - **arduino-cli config & cache** — `:arduino-config` (dump), `:arduino-config-get`
   / `-set` / `-add` / `-remove` / `-delete` / `-init`, `:arduino-cache-clean`,
   `:arduino-completion <shell>`. Build profiles: `:arduino-board-attach`,
@@ -204,7 +208,8 @@ PlatformIO environment, monitor filters) persist to
   refresh and upgrade cores + libraries together; `:arduino-config` dumps the
   active configuration; `:pio-upgrade` upgrades PlatformIO Core itself
   (`:pio-upgrade-dev` tracks the development branch);
-  `:pio-system-info`, `:pio-system-prune` (drop unused caches/packages) with
+  `:pio-system-info` (`:pio-system-info-json` for the JSON form),
+  `:pio-system-prune` (drop unused caches/packages) with
   scoped variants `:pio-prune-cache` / `:pio-prune-core` / `:pio-prune-platform`
   and `:pio-prune-dry-run` (report without deleting),
   `:pio-system-completion <shell>`, `:pio-settings-get` / `:pio-settings-set` /
@@ -218,10 +223,12 @@ PlatformIO environment, monitor filters) persist to
   `:pio-pkg-exec-call <argv>`; `:pio-pkg-show-type <pkg> <library|platform|tool>`
   scopes registry details to a package type. Registry authoring via
   `:pio-pkg-pack` (`-o <path>` for the output), `:pio-pkg-publish`,
-  `:pio-pkg-unpublish`. Install options:
-  `:pio-pkg-install-force <spec>` (`-f`), `:pio-pkg-install-global <spec>` (`-g`),
-  `:pio-lib-install-nosave <name>` (`--no-save`); `:pio-pkg-search-sort <query>
-  <relevance|popularity|trending|added|updated>` sorts registry search.
+  `:pio-pkg-unpublish` (`:pio-pkg-unpublish-undo <pkg>` restores it). Install
+  options: `:pio-pkg-install-force <spec>` (`-f`),
+  `:pio-pkg-install-global <spec>` (`-g`), `:pio-lib-install-nosave <name>`
+  (`--no-save`); `:pio-pkg-search-sort <query>
+  <relevance|popularity|trending|added|updated>` sorts registry search and
+  `:pio-pkg-search-page <query> <n>` pages through it.
 - **PlatformIO Remote** — drive a remote agent: `:pio-remote-agent-start`
   (forwards `--name` / `--share` / `--working-dir`) / `:pio-remote-agent-list`,
   `:pio-remote-devices`, `:pio-remote-monitor`, `:pio-remote-run` /
@@ -236,10 +243,12 @@ PlatformIO environment, monitor filters) persist to
   `-revoke` / `-public` / `-private`.
 - **Sketches / projects** — `:arduino-new-sketch`, `:arduino-sketch-archive`,
   `:pio-init <board>`, `:pio-init-sample <board>` (with example code),
+  `:pio-init-no-deps <board>` (skip installing declared dependencies),
   `:pio-init-ide <ide>` (generate IDE integration files),
   `:pio-init-option <name=value>` (seed a `platformio.ini` option),
   `:pio-project-config` (computed config), `:pio-project-metadata` (IDE/LSP
-  metadata dump).
+  metadata dump); `:pio-project-config-json` / `:pio-project-metadata-json`
+  emit the JSON form.
 - **Raw passthrough** — `:pio <args…>` and `:arduino-cli <args…>` (alias `:acli`)
   run any backend command in a terminal panel, so every subcommand, flag, and
   future capability of both CLIs is reachable even when it has no named command.
