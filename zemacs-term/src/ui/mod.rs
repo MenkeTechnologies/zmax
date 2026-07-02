@@ -2,6 +2,7 @@ mod completion;
 pub mod context_menu;
 pub mod dashboard;
 pub mod switcher;
+pub mod bufmenu;
 pub mod calc;
 pub mod calendar;
 pub mod rmail;

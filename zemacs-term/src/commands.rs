@@ -614,6 +614,8 @@ impl MappableCommand {
         file_explorer, "Open file explorer in workspace root",
         file_explorer_in_current_buffer_directory, "Open file explorer at current buffer's directory",
         file_explorer_in_current_directory, "Open file explorer at current working directory",
+        buffer_menu, "Open the Buffer Menu (emacs buffer-menu / C-x C-b)",
+        list_buffers, "List open buffers in the Buffer Menu (emacs list-buffers)",
         calendar, "Open the Calendar month grid (emacs calendar)",
         calc_dispatch, "Open the RPN Calc stack calculator (emacs calc / C-x *)",
         rmail, "Open the Rmail mail reader on ~/RMAIL (emacs rmail)",
@@ -12369,6 +12371,17 @@ fn dired(cx: &mut Context) {
         Ok(d) => cx.push_layer(Box::new(d)),
         Err(e) => cx.editor.set_error(format!("dired: {e}")),
     }
+}
+
+/// Emacs `buffer-menu` (`C-x C-b`): open the full-screen Buffer Menu listing the
+/// open buffers, with `Buffer-menu-mode` keys (select, mark, delete, save).
+fn buffer_menu(cx: &mut Context) {
+    cx.push_layer(Box::new(crate::ui::bufmenu::BufferMenu::new(cx.editor)));
+}
+
+/// Emacs `list-buffers`: the same Buffer Menu as [`buffer_menu`].
+fn list_buffers(cx: &mut Context) {
+    cx.push_layer(Box::new(crate::ui::bufmenu::BufferMenu::new(cx.editor)));
 }
 
 /// Emacs `calendar`: open the Calendar month grid at today's date.
