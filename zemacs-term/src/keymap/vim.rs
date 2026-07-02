@@ -83,6 +83,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space m b", "Mail", ":message-goto-body"),       // SPC m b : goto body (mail-text)
     ("space f R", "Files",   ":move"),             // SPC f R : rename file
     ("space f D", "Files",   ":delete-file"),      // SPC f D : delete file + buffer
+    ("space b M", "Buffers", "buffer_menu"),       // SPC b M : Buffer Menu (emacs buffer-menu)
     ("space b d", "Buffers", ":buffer-close"),     // SPC b d : kill buffer
     ("space b D", "Buffers", ":buffer-close-others"), // SPC b C-d / others
     ("space b R", "Buffers", ":reload"),           // SPC b R : revert

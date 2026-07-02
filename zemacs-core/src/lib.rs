@@ -2,6 +2,7 @@ pub use encoding_rs as encoding;
 
 pub mod arglist;
 pub mod auto_pairs;
+pub mod buffer_menu;
 pub mod case_conversion;
 pub mod chars;
 pub mod command_line;
