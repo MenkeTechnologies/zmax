@@ -618,6 +618,7 @@ impl MappableCommand {
         list_buffers, "List open buffers in the Buffer Menu (emacs list-buffers)",
         calendar, "Open the Calendar month grid (emacs calendar)",
         calc_dispatch, "Open the RPN Calc stack calculator (emacs calc / C-x *)",
+        occur, "List lines matching a regexp in an *Occur* overlay (emacs occur / M-s o)",
         rmail, "Open the Rmail mail reader on ~/RMAIL (emacs rmail)",
         dired, "Open the Dired directory editor (emacs C-x d)",
         dired_jump, "Open Dired on the current buffer's directory (emacs C-x C-j)",
@@ -12496,6 +12497,57 @@ fn list_buffers(cx: &mut Context) {
 /// Emacs `calendar`: open the Calendar month grid at today's date.
 fn calendar(cx: &mut Context) {
     cx.push_layer(Box::new(crate::ui::calendar::Calendar::new()));
+}
+
+/// Emacs `occur` (`M-s o`): read a regexp, then list every line in the current
+/// buffer that matches it in an `*Occur*` overlay whose entries jump back to the
+/// source line. The regexp is read in the minibuffer; matching, jumping and the
+/// `occur-mode` keys live in [`crate::ui::occur::Occur`].
+fn occur(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let doc_id = doc.id();
+    let view_id = view.id;
+    ui::prompt(
+        cx,
+        "List lines matching regexp: ".into(),
+        Some('/'),
+        |_editor: &Editor, _input: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate || input.is_empty() {
+                return;
+            }
+            let re = match regex::Regex::new(input) {
+                Ok(re) => re,
+                Err(e) => {
+                    cx.editor.set_error(format!("occur: invalid regexp: {e}"));
+                    return;
+                }
+            };
+            let Some(text) = cx
+                .editor
+                .documents()
+                .find(|d| d.id() == doc_id)
+                .map(|d| d.text().to_string())
+            else {
+                return;
+            };
+            let matches = zemacs_core::occur::occur(&text, |line| {
+                re.find(line).map(|hit| line[..hit.start()].chars().count())
+            });
+            if matches.is_empty() {
+                cx.editor.set_status(format!("occur: no matches for {input}"));
+                return;
+            }
+            let overlay =
+                crate::ui::occur::Occur::new(doc_id, view_id, input.to_string(), matches);
+            let call = crate::job::Callback::EditorCompositor(Box::new(
+                move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
+                    compositor.push(Box::new(overlay));
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        },
+    );
 }
 
 /// Emacs `rmail`: open the Rmail mail reader on the primary mail file
