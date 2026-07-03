@@ -28565,6 +28565,22 @@
   "note": "outline-mode: reveal the subtree of every heading whose line matches the regexp, opening any folds that hid it (outline-show-by-heading-regexp); folding via the document fold state"
  },
  {
+  "spec_id": "emacs.command.write_region",
+  "status": "ported",
+  "evidence": [
+   "typable:write-region"
+  ],
+  "note": "emacs write-region -> :write-region <path>: write the region (or buffer) to the named file, replacing it"
+ },
+ {
+  "spec_id": "emacs.command.append_to_file",
+  "status": "ported",
+  "evidence": [
+   "typable:append-to-file"
+  ],
+  "note": "emacs append-to-file -> :append-to-file <path>: append the region (or buffer) to the end of the named file"
+ },
+ {
   "spec_id": "emacs.command.insert_abbrevs",
   "status": "ported",
   "evidence": [
