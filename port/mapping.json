@@ -12233,11 +12233,11 @@
  },
  {
   "spec_id": "emacs.command.transpose_lines",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:move-line-up"
+   "static:transpose_line"
   ],
-  "note": ""
+  "note": "transpose-lines (C-x C-t): swap the current line with the previous one"
  },
  {
   "spec_id": "emacs.command.upcase_word",
@@ -14249,19 +14249,19 @@
  },
  {
   "spec_id": "emacs.command.transpose_sexps",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:transpose-words"
+   "static:transpose_sexp"
   ],
-  "note": ""
+  "note": "transpose-sexps (C-M-t): swap the current s-expression with the previous one"
  },
  {
   "spec_id": "emacs.command.transpose_paragraphs",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:move-line-up"
+   "static:transpose_paragraph"
   ],
-  "note": ""
+  "note": "transpose-paragraphs: swap the current paragraph with the previous one"
  },
  {
   "spec_id": "emacs.command.zap_to_char",

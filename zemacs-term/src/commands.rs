@@ -444,6 +444,7 @@ impl MappableCommand {
         ediff_buffer, "Diff the current buffer against a picked buffer (SPC D b b)",
         compare_with_clipboard, "Diff the current buffer against the clipboard (JetBrains Compare with Clipboard)",
         transpose_paragraph, "Swap the current paragraph with the previous one (SPC x t p)",
+        transpose_line, "Swap the current line with the previous one (emacs transpose-lines, C-x C-t)",
         move_element_right, "Swap the syntax node under the cursor with its next sibling (JetBrains Move Element Right)",
         move_element_left, "Swap the syntax node under the cursor with its previous sibling (JetBrains Move Element Left)",
         convert_indent_to_spaces, "Convert leading indentation to spaces (JetBrains Convert Indents to Spaces)",
@@ -7534,6 +7535,36 @@ fn transpose_paragraph(cx: &mut Context) {
         std::iter::once((pr.0, cr.1, Some(swapped.into()))),
     );
     doc.apply(&transaction, view.id);
+}
+
+/// Emacs `transpose-lines` (C-x C-t): swap the current line with the previous
+/// one and move point to the following line.
+fn transpose_line(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let cur_line = text.char_to_line(
+        doc.selection(view.id)
+            .primary()
+            .head
+            .min(text.len_chars().saturating_sub(1)),
+    );
+    if cur_line == 0 {
+        cx.editor.set_status("no previous line to transpose");
+        return;
+    }
+    // Split on '\n' (newline-stripped content) so re-joining with '\n' keeps the
+    // separators correct even when the last line has no trailing newline.
+    let whole = text.to_string();
+    let lines: Vec<String> = whole.split('\n').map(String::from).collect();
+    // transpose_lines swaps index i with i+1; use cur_line-1 to swap prev+current.
+    let swapped = zemacs_core::region_ops::transpose_lines(&lines, cur_line - 1).join("\n");
+    let len = doc.text().len_chars();
+    let transaction = Transaction::change(doc.text(), std::iter::once((0, len, Some(swapped.into()))));
+    doc.apply(&transaction, view.id);
+    // Emacs leaves point on the line after the swapped pair.
+    let dest = (cur_line + 1).min(doc.text().len_lines().saturating_sub(1));
+    let pos = doc.text().line_to_char(dest);
+    doc.set_selection(view.id, Selection::point(pos));
 }
 
 fn make_3_windows(cx: &mut Context) {
