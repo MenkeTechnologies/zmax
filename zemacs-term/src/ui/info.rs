@@ -10,8 +10,10 @@ use zemacs_view::info::Info;
 /// When a map has more entries than fit (cols × this), the popup becomes
 /// vertically scrollable (PgDn/PgUp or the mouse wheel; see `Info::scroll`).
 const MAX_ROWS: usize = 16;
-/// Widest a single `KEY : description` column is allowed to grow.
-const COL_CAP: usize = 48;
+/// Widest a single `KEY : description` column is allowed to grow — a sanity
+/// ceiling so one pathologically long entry cannot dominate the grid. Normal
+/// which-key descriptions are well under this, so they are shown in full.
+const COL_CAP: usize = 80;
 /// Max columns the which-key grid fills across the width (Spacemacs uses up to 8).
 const MAX_COLS: usize = 8;
 /// Spaces between columns.
@@ -32,30 +34,42 @@ fn grid(
     if n == 0 {
         return (String::new(), 0, 0, 0, 1);
     }
-    let widest = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
     let budget = max_width.saturating_sub(6); // borders + margin
-    let cols_fit = (budget / (widest.clamp(8, COL_CAP) + SEP)).max(1);
-    // Use as many columns as fit the full width (Spacemacs' which-key fills the
-    // window — up to MAX_COLS), so the grid is wide and short; only overflow
-    // scrolls.
-    let cols = cols_fit.min(MAX_COLS).min(n).max(1);
+    let max_cols = MAX_COLS.min(n).max(1);
+
+    // Natural (untruncated, COL_CAP-bounded) width of each column for a given
+    // column count `cols`, laid out column-major.
+    let nat_widths = |cols: usize| -> Vec<usize> {
+        let rows = n.div_ceil(cols);
+        (0..cols)
+            .map(|c| {
+                let s = (c * rows).min(n);
+                let e = ((c + 1) * rows).min(n);
+                lines[s..e]
+                    .iter()
+                    .map(|l| l.chars().count())
+                    .max()
+                    .unwrap_or(0)
+                    .min(COL_CAP)
+            })
+            .collect()
+    };
+    let total_w = |w: &[usize]| w.iter().sum::<usize>() + SEP * w.len().saturating_sub(1);
+
+    // Prefer the MOST columns whose full-width layout fits the popup, so every
+    // description is shown in full (Spacemacs' which-key fills the window). Only
+    // consider column counts that leave no empty trailing column, and only when
+    // even a single column overflows do we truncate it to the budget.
+    let (cols, col_w) = (1..=max_cols)
+        .rev()
+        .filter(|&c| (c - 1) * n.div_ceil(c) < n) // every column is non-empty
+        .map(|c| (c, nat_widths(c)))
+        .find(|(_, w)| total_w(w) <= budget)
+        .unwrap_or_else(|| (1, vec![nat_widths(1)[0].min(budget)]));
+
     let rows_total = n.div_ceil(cols);
     let visible = rows_total.min(max_rows);
     let scroll = scroll.min(rows_total.saturating_sub(visible));
-
-    // Column-major: column `c` holds items [c*rows_total .. (c+1)*rows_total).
-    let col_w: Vec<usize> = (0..cols)
-        .map(|c| {
-            let s = c * rows_total;
-            let e = ((c + 1) * rows_total).min(n);
-            lines[s..e]
-                .iter()
-                .map(|l| l.chars().count())
-                .max()
-                .unwrap_or(0)
-                .min(COL_CAP)
-        })
-        .collect();
 
     let mut out = String::new();
     for r in scroll..scroll + visible {
@@ -76,6 +90,44 @@ fn grid(
     }
     let width = col_w.iter().sum::<usize>() + SEP * cols.saturating_sub(1);
     (out, width, visible, rows_total, cols)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wide_descriptions_are_not_truncated_when_they_fit() {
+        // Descriptions ~54 chars — longer than the old 48-wide column cap. In a
+        // wide popup they must be shown in FULL (the which-key cutoff bug).
+        let a = "i : Ask the AI provider about the selection/buffer text";
+        let b = "k : Generate a shell command from natural language help";
+        let lines = vec![a, b];
+        let (text, width, _h, _rows, _cols) = grid(&lines, 0, 16, 220);
+        assert!(text.contains("selection/buffer text"), "clipped: {text:?}");
+        assert!(text.contains("natural language help"), "clipped: {text:?}");
+        assert!(width <= 220 - 6, "grid must fit the popup budget: {width}");
+    }
+
+    #[test]
+    fn many_short_entries_fill_multiple_columns() {
+        let lines: Vec<String> = (0..12).map(|i| format!("{i} : short entry")).collect();
+        let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+        let (_text, _w, _h, rows, cols) = grid(&refs, 0, 16, 220);
+        // Short entries + a wide popup → a wide, short grid (more than one column).
+        assert!(cols > 1, "expected multiple columns, got {cols}");
+        assert_eq!(rows, 12usize.div_ceil(cols));
+    }
+
+    #[test]
+    fn narrow_popup_truncates_to_the_budget() {
+        // One entry far wider than a narrow popup: falls back to a single column
+        // bounded by the budget (truncation only when it genuinely cannot fit).
+        let long = "x : an extremely long which-key description that will not fit a narrow popup";
+        let (_text, width, _h, _rows, cols) = grid(&[long], 0, 16, 30);
+        assert_eq!(cols, 1);
+        assert!(width <= 30 - 6, "column must be bounded by the budget: {width}");
+    }
 }
 
 impl Component for Info {
