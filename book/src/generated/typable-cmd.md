@@ -187,7 +187,7 @@
 | `:pio-remote-update`, `:platformio-remote-update` | Update platforms/packages/libraries on remote agents (`pio remote update [--dry-run]`). |
 | `:pio-account-login`, `:platformio-account-login` | Sign in to a PlatformIO account (`pio account login`), live in a terminal panel. |
 | `:pio-account-logout`, `:platformio-account-logout` | Sign out of the PlatformIO account (`pio account logout`). |
-| `:pio-account-show`, `:platformio-account-show` | Show the current PlatformIO account information (`pio account show`). |
+| `:pio-account-show`, `:platformio-account-show` | Show the current PlatformIO account information (`pio account show`); extra args forward --offline/--json-output. |
 | `:pio-account-token`, `:platformio-account-token` | Print the account auth token (`pio account token [--regenerate] [--json-output] [-p <password>]`). |
 | `:pio-env`, `:pio-environment`, `:platformio-env` | Select the PlatformIO build environment (`[env:…]`); no arg picks from platformio.ini, `-` clears. |
 | `:pio-list-targets`, `:platformio-list-targets` | Enumerate the project's build targets (`pio run --list-targets`). |
@@ -243,7 +243,7 @@
 | `:pio-upgrade-dev`, `:platformio-upgrade-dev` | Upgrade PlatformIO Core to the development branch (`pio upgrade --dev`). |
 | `:pio-remote-run-force`, `:platformio-remote-run-force` | Force the build to run on the remote agent (`pio remote run -r`). |
 | `:pio-remote-agent-start-named`, `:platformio-remote-agent-start-named` | Start a named Remote agent (`pio remote agent start --name <name>`). |
-| `:pio-remote-monitor`, `:platformio-remote-monitor` | Serial monitor over a Remote agent (`pio remote device monitor`), live in a terminal panel. |
+| `:pio-remote-monitor`, `:platformio-remote-monitor` | Serial monitor over a Remote agent (`pio remote device monitor`); extra args forward -p/-b/-f/--eol/--sock etc. |
 | `:pio-settings-reset`, `:platformio-settings-reset` | Restore PlatformIO Core settings to their defaults (`pio settings reset`). |
 | `:pio-system-completion`, `:platformio-system-completion` | Emit a shell completion script (`pio system completion <bash|zsh|fish|powershell>`). |
 | `:pio-ci`, `:platformio-ci` | Build a standalone source tree in an isolated project (`pio ci <src> -b <board>`), live in a terminal panel. |

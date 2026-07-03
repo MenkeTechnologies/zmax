@@ -5415,12 +5415,13 @@ fn pio_account_logout(cx: &mut compositor::Context, _args: Args, event: PromptEv
 }
 
 /// `:pio-account-show` — the current PlatformIO account information.
-fn pio_account_show(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_account_show(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
-    embedded_browse(cx, embedded::pio_account_show(), false);
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    embedded_browse(cx, embedded::pio_account_show_with(&tokens), false);
     Ok(())
 }
 
@@ -6274,13 +6275,14 @@ fn pio_remote_agent_start_named(cx: &mut compositor::Context, args: Args, event:
 
 /// `:pio-remote-monitor` — serial monitor over a Remote agent (`pio remote device
 /// monitor`), live in a terminal panel.
-fn pio_remote_monitor(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_monitor(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_remote_device_monitor(), dir);
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    embedded_spawn_terminal(cx, embedded::pio_remote_device_monitor_with(&tokens), dir);
     Ok(())
 }
 
@@ -23066,11 +23068,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "pio-account-show",
         aliases: &["platformio-account-show"],
-        doc: "Show the current PlatformIO account information (`pio account show`).",
+        doc: "Show the current PlatformIO account information (`pio account show`); extra args forward --offline/--json-output.",
         fun: pio_account_show,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (0, Some(0)),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -23682,11 +23684,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "pio-remote-monitor",
         aliases: &["platformio-remote-monitor"],
-        doc: "Serial monitor over a Remote agent (`pio remote device monitor`), live in a terminal panel.",
+        doc: "Serial monitor over a Remote agent (`pio remote device monitor`); extra args forward -p/-b/-f/--eol/--sock etc.",
         fun: pio_remote_monitor,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (0, Some(0)),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },

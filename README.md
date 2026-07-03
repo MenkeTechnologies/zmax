@@ -274,12 +274,14 @@ PlatformIO environment, monitor filters) persist to
   `:pio-pkg-list-global` / `:pio-pkg-update-global`.
 - **PlatformIO Remote** — drive a remote agent: `:pio-remote-agent-start`
   (forwards `--name` / `--share` / `--working-dir`) / `:pio-remote-agent-list`,
-  `:pio-remote-devices`, `:pio-remote-monitor`, `:pio-remote-run` /
+  `:pio-remote-devices`, `:pio-remote-monitor` (forwards `-p`/`-b`/`-f`/`--eol`/
+  `--sock` etc.), `:pio-remote-run` /
   `:pio-remote-run-force` (`-r`), `:pio-remote-test`, `:pio-remote-update`
   (`--dry-run`). `:pio-remote-run` and `:pio-remote-test` forward any extra
   flags (`-t <target>`, `--upload-port`, `--test-port`, `-f`/`-i`,
   `--without-building`/`-uploading`).
-- **PlatformIO account & org** — `:pio-account-login` / `-logout` / `-show` /
+- **PlatformIO account & org** — `:pio-account-login` / `-logout` / `-show`
+  (forwards `--offline` / `--json-output`) /
   `-token` (forwards `--regenerate` / `--json-output`) / `-register` /
   `-password` / `-update` / `-forgot` / `-destroy`;
   organizations `:pio-org-list` / `-create` / `-add` / `-remove` / `-update` /

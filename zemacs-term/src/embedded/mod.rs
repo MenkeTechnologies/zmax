@@ -775,11 +775,22 @@ pub fn pio_monitor(settings: &EmbeddedSettings) -> Vec<String> {
 }
 
 /// `pio remote device monitor` — the serial monitor over a Remote agent. Emitted
-/// bare: the remote monitor's option set could not be verified against the local
-/// `pio` (its `--help` needs the PlatformIO cloud), so no unverified flags are
-/// passed; the agent selects the attached device.
+/// bare (the agent selects the attached device); extra options are supplied via
+/// [`pio_remote_device_monitor_with`].
 pub fn pio_remote_device_monitor() -> Vec<String> {
     vec![s(PIO), s("remote"), s("device"), s("monitor")]
+}
+
+/// `pio remote device monitor [extra…]` — the Remote-agent serial monitor with
+/// extra options forwarded. Verified against `pio remote device monitor --help`
+/// (contrib-pioremote 1.0.2): shares the local monitor's flags (`-p`, `-b`,
+/// `-f`, `--eol`, `--parity`, `--raw`, `--quiet`, …) and adds `--sock <dir>` for
+/// a Unix-socket transport. Note: it has no `--no-reconnect`, so the persisted
+/// monitor settings are not auto-threaded here — the caller passes explicit flags.
+pub fn pio_remote_device_monitor_with(extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("remote"), s("device"), s("monitor")];
+    v.extend(extra.iter().cloned());
+    v
 }
 
 /// `pio device list --json-output`
@@ -1302,6 +1313,16 @@ pub fn pio_account_show() -> Vec<String> {
     vec![s(PIO), s("account"), s("show")]
 }
 
+/// `pio account show [extra…]` — account information with extra options
+/// (`--offline` to use cached data without a network round-trip, `--json-output`
+/// for the machine-readable form). Verified against `pio account show --help`
+/// on PlatformIO 6.1.19.
+pub fn pio_account_show_with(extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("account"), s("show")];
+    v.extend(extra.iter().cloned());
+    v
+}
+
 /// `pio account token` — print (or regenerate) the account auth token.
 pub fn pio_account_token() -> Vec<String> {
     vec![s(PIO), s("account"), s("token")]
@@ -1681,6 +1702,18 @@ mod tests {
         assert_eq!(pubv[..3], ["pio", "pkg", "publish"]);
         assert!(pubv.contains(&"--private".to_string()));
         assert!(pubv.windows(2).any(|w| w == ["--type", "library"]));
+    }
+
+    #[test]
+    fn pio_account_show_and_remote_monitor_forward_args() {
+        let av = pio_account_show_with(&["--offline".into()]);
+        assert_eq!(av[..3], ["pio", "account", "show"]);
+        assert!(av.contains(&"--offline".to_string()));
+        let rv = pio_remote_device_monitor_with(&["--sock".into(), "/tmp/sock".into()]);
+        assert_eq!(rv[..4], ["pio", "remote", "device", "monitor"]);
+        assert!(rv.windows(2).any(|w| w == ["--sock", "/tmp/sock"]));
+        // bare builder still emits no flags.
+        assert_eq!(pio_remote_device_monitor().len(), 4);
     }
 
     #[test]
