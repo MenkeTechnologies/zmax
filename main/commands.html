@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-1b6e4da2.js";
+            window.path_to_searchindex_js = "searchindex-e1a32fa8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -261,6 +261,19 @@
 <tr><td><code>:arduino-lib-list-updatable</code>, <code>:arduino-libs-updatable</code></td><td>Installed libraries with a newer version available (<code>arduino-cli lib list --updatable</code>).</td></tr>
 <tr><td><code>:arduino-lib-install-git</code>, <code>:arduino-lib-install-url</code></td><td>Install a library from a git repository (<code>arduino-cli lib install --git-url &lt;url&gt;</code>).</td></tr>
 <tr><td><code>:arduino-lib-install-zip</code>, <code>:arduino-lib-install-archive</code></td><td>Install a library from a local .zip (<code>arduino-cli lib install --zip-path &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:arduino-compile-quiet</code>, <code>:arduino-compile-silent</code></td><td>Quiet compile, errors only (<code>arduino-cli compile -q</code>).</td></tr>
+<tr><td><code>:arduino-compile-properties</code>, <code>:arduino-build-properties</code></td><td>Dump resolved build properties without building (<code>arduino-cli compile --show-properties</code>).</td></tr>
+<tr><td><code>:arduino-compile-preprocess</code>, <code>:arduino-preprocess</code></td><td>Output the preprocessed sketch (<code>arduino-cli compile --preprocess</code>).</td></tr>
+<tr><td><code>:arduino-compile-dump-profile</code>, <code>:arduino-dump-profile</code></td><td>Print a reproducible build profile for the sketch (<code>arduino-cli compile --dump-profile</code>).</td></tr>
+<tr><td><code>:arduino-compile-board-options</code>, <code>:arduino-board-options</code></td><td>Compile with custom board menu options (<code>arduino-cli compile --board-options &lt;opts&gt;</code>).</td></tr>
+<tr><td><code>:arduino-upload-verbose</code>, <code>:arduino-flash-verbose</code></td><td>Verbose build + flash (<code>arduino-cli compile --upload -v</code>).</td></tr>
+<tr><td><code>:arduino-debug-info</code>, <code>:arduino-debug-config</code></td><td>Print the debugger configuration without starting a session (<code>arduino-cli debug --info</code>).</td></tr>
+<tr><td><code>:arduino-debug-programmer</code>, <code>:arduino-debug-via-programmer</code></td><td>Launch the debugger through a programmer (<code>arduino-cli debug --programmer &lt;id&gt;</code>).</td></tr>
+<tr><td><code>:arduino-monitor-quiet</code>, <code>:arduino-monitor-silent</code></td><td>Serial monitor suppressing non-error diagnostics (<code>arduino-cli monitor --quiet</code>).</td></tr>
+<tr><td><code>:arduino-monitor-describe</code>, <code>:arduino-monitor-port-info</code></td><td>Describe the port’s supported monitor settings (<code>arduino-cli monitor --describe</code>).</td></tr>
+<tr><td><code>:arduino-core-list-updatable</code>, <code>:arduino-cores-updatable</code></td><td>Installed platforms with a newer version available (<code>arduino-cli core list --updatable</code>).</td></tr>
+<tr><td><code>:arduino-lib-install-no-deps</code>, <code>:arduino-lib-install-nodeps</code></td><td>Install a library without its declared dependencies (<code>arduino-cli lib install &lt;name&gt; --no-deps</code>).</td></tr>
+<tr><td><code>:arduino-board-details-full</code>, <code>:arduino-board-info-full</code></td><td>The complete board detail dump for the selected FQBN (<code>arduino-cli board details --full</code>).</td></tr>
 <tr><td><code>:arduino-boards</code>, <code>:arduino-board</code></td><td>Pick the target board (FQBN) from installed platforms (Arduino IDE board selector).</td></tr>
 <tr><td><code>:arduino-ports</code>, <code>:arduino-port</code></td><td>Pick the serial port from connected devices (arduino-cli board list).</td></tr>
 <tr><td><code>:arduino-lib-search</code>, <code>:arduino-lib</code></td><td>Search the Arduino library index and install the pick (Arduino IDE Library Manager).</td></tr>
