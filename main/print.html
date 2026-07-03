@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-5eefaedb.js";
+            window.path_to_searchindex_js = "searchindex-72e5456a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1724,6 +1724,10 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-test-junit</code>, <code>:platformio-test-junit</code></td><td>Run unit tests and write a JUnit XML report (<code>pio test --junit-output-path &lt;path&gt;</code>).</td></tr>
 <tr><td><code>:pio-test-json-path</code>, <code>:platformio-test-json-path</code></td><td>Run unit tests and write a JSON report (<code>pio test --json-output-path &lt;path&gt;</code>).</td></tr>
 <tr><td><code>:pio-test-port</code>, <code>:platformio-test-port</code></td><td>Run unit tests over a specific serial port (<code>pio test --test-port &lt;port&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-upload-port</code>, <code>:platformio-test-upload-port</code></td><td>Flash the test firmware to a specific serial port (<code>pio test --upload-port &lt;port&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-monitor-dtr</code>, <code>:platformio-test-monitor-dtr</code></td><td>Set the DTR line state for the post-test monitor (`pio test –monitor-dtr &lt;0</td></tr>
+<tr><td><code>:pio-test-monitor-rts</code>, <code>:platformio-test-monitor-rts</code></td><td>Set the RTS line state for the post-test monitor (`pio test –monitor-rts &lt;0</td></tr>
+<tr><td><code>:pio-project-metadata-path</code>, <code>:platformio-project-metadata-path</code></td><td>Write the IDE/LSP metadata JSON to a file (<code>pio project metadata --json-output-path &lt;path&gt;</code>).</td></tr>
 <tr><td><code>:pio-check-silent</code>, <code>:platformio-check-silent</code></td><td>Quiet static analysis, warnings/errors only (<code>pio check -s</code>).</td></tr>
 <tr><td><code>:pio-upgrade-deps-only</code>, <code>:platformio-upgrade-deps-only</code></td><td>Upgrade only PlatformIO Core’s dependencies (<code>pio upgrade --only-dependencies</code>).</td></tr>
 <tr><td><code>:pio-init-env-prefix</code>, <code>:platformio-init-env-prefix</code></td><td>Scaffold a project prefixing generated environment names (<code>pio project init --env-prefix &lt;prefix&gt;</code>).</td></tr>
@@ -6509,7 +6513,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>555</strong> (8.1%)</li>
 <li>Absent: <strong>3318</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 951 static commands, 1522 typable <code>:</code> commands, 2636 default keybindings</li>
+<li>zemacs source surface: 951 static commands, 1530 typable <code>:</code> commands, 2636 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
