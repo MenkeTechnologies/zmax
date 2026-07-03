@@ -20019,6 +20019,80 @@ fn set_justification_none(
     justify_region(cx, zemacs_core::text_engine::Justification::None)
 }
 
+/// Emacs `standard-indent` default: the column step used by
+/// `increase-left-margin` / `decrease-left-margin` when no count is given.
+const STANDARD_INDENT: usize = 4;
+
+/// Shared body for the Emacs enriched left-margin commands: rewrite the region's
+/// (or whole buffer's) content lines via the pure `transform`, then apply the
+/// change as one undo step.
+fn apply_left_margin(
+    cx: &mut compositor::Context,
+    transform: impl Fn(&str) -> String,
+) -> anyhow::Result<()> {
+    let (view, doc) = current!(cx.editor);
+    let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
+        return Ok(());
+    };
+    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let out = transform(&block);
+    if out == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(out.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// `:set-left-margin [col]` — Emacs `set-left-margin`: rewrite each content line
+/// of the region so its left margin is exactly `col` spaces (default 0).
+fn set_left_margin(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let margin = args.first().and_then(|s| s.parse::<usize>().ok()).unwrap_or(0);
+    apply_left_margin(cx, |block| {
+        zemacs_core::text_engine::set_left_margin(block, margin)
+    })
+}
+
+/// `:increase-left-margin [n]` — Emacs `increase-left-margin`: indent each
+/// content line of the region by `n` columns (default `standard-indent`, 4).
+fn increase_left_margin(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = args.first().and_then(|s| s.parse::<usize>().ok()).unwrap_or(STANDARD_INDENT);
+    apply_left_margin(cx, |block| {
+        zemacs_core::text_engine::adjust_left_margin(block, n as isize)
+    })
+}
+
+/// `:decrease-left-margin [n]` — Emacs `decrease-left-margin`: remove `n`
+/// columns of indentation from each content line of the region (default
+/// `standard-indent`, 4), clamped at column zero.
+fn decrease_left_margin(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = args.first().and_then(|s| s.parse::<usize>().ok()).unwrap_or(STANDARD_INDENT);
+    apply_left_margin(cx, |block| {
+        zemacs_core::text_engine::adjust_left_margin(block, -(n as isize))
+    })
+}
+
 /// Join the lines of `block` with `sep` into a single line, preserving a trailing
 /// newline if the block had one. Pure — unit tested.
 fn join_lines_with(block: &str, sep: &str) -> String {
@@ -30517,6 +30591,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-left-margin",
+        aliases: &[],
+        doc: "Set the region's left margin to a column of spaces (emacs set-left-margin).",
+        fun: set_left_margin,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "increase-left-margin",
+        aliases: &[],
+        doc: "Indent the region by standard-indent columns (emacs increase-left-margin).",
+        fun: increase_left_margin,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "decrease-left-margin",
+        aliases: &[],
+        doc: "Outdent the region by standard-indent columns (emacs decrease-left-margin).",
+        fun: decrease_left_margin,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

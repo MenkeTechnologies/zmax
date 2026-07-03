@@ -29403,5 +29403,21 @@
    "typable:set-justification-none"
   ],
   "note": "set-justification-none -> :set-justification-none: one-shot region transform trims trailing whitespace to turn justification off; does not restore the persistent enriched-mode justification text property"
+ },
+ {
+  "spec_id": "emacs.command.set_left_margin",
+  "status": "ported",
+  "evidence": [
+   "typable:set-left-margin"
+  ],
+  "note": "set-left-margin -> :set-left-margin [col]: rewrite each region content line so its left margin is exactly col spaces (default 0)"
+ },
+ {
+  "spec_id": "emacs.command.increase_left_margin",
+  "status": "ported",
+  "evidence": [
+   "typable:increase-left-margin"
+  ],
+  "note": "increase-left-margin -> :increase-left-margin [n]: indent each region content line by n columns (default standard-indent 4); :decrease-left-margin is the inverse"
  }
 ]

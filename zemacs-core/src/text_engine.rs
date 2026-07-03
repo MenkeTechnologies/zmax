@@ -276,6 +276,62 @@ pub fn justify_block(text: &str, width: usize, mode: Justification) -> String {
 }
 
 // ---------------------------------------------------------------------------
+// Left margin — Emacs enriched `set-left-margin` / `increase-left-margin` /
+// `decrease-left-margin`. The left margin is the number of leading columns of
+// indentation on each content line. These are pure block transforms: the
+// leading whitespace run (spaces and tabs) of every non-blank line is treated
+// as a column count (one column per character, matching enriched-mode's
+// space-based margins) and rewritten as spaces. Blank lines stay empty.
+// ---------------------------------------------------------------------------
+
+/// Length in characters of the leading run of spaces/tabs in `line`.
+fn leading_ws_len(line: &str) -> usize {
+    line.chars().take_while(|c| *c == ' ' || *c == '\t').count()
+}
+
+/// Rewrite each non-blank line of `block` so its leading indentation is exactly
+/// `margin` spaces (Emacs `set-left-margin`). Blank lines are left empty. A
+/// trailing newline on the block is preserved.
+pub fn set_left_margin(block: &str, margin: usize) -> String {
+    map_content_lines(block, |line| {
+        let rest = &line[leading_ws_len(line)..];
+        format!("{}{}", " ".repeat(margin), rest)
+    })
+}
+
+/// Shift the left margin of each non-blank line of `block` by `delta` columns
+/// (Emacs `increase-left-margin` for `delta > 0`, `decrease-left-margin` for
+/// `delta < 0`). The new margin is clamped at zero. Blank lines are left empty.
+pub fn adjust_left_margin(block: &str, delta: isize) -> String {
+    map_content_lines(block, |line| {
+        let cur = leading_ws_len(line) as isize;
+        let new = (cur + delta).max(0) as usize;
+        let rest = &line[leading_ws_len(line)..];
+        format!("{}{}", " ".repeat(new), rest)
+    })
+}
+
+/// Apply `f` to every non-blank line of `block`, leaving blank lines and a
+/// trailing newline untouched. Shared by the left-margin transforms.
+fn map_content_lines(block: &str, f: impl Fn(&str) -> String) -> String {
+    let had_trailing = block.ends_with('\n');
+    let body = block.strip_suffix('\n').unwrap_or(block);
+    let mut out: Vec<String> = Vec::new();
+    for line in body.split('\n') {
+        if line.trim().is_empty() {
+            out.push(line.to_string());
+        } else {
+            out.push(f(line));
+        }
+    }
+    let mut result = out.join("\n");
+    if had_trailing {
+        result.push('\n');
+    }
+    result
+}
+
+// ---------------------------------------------------------------------------
 // Tabs <-> spaces — Emacs `untabify`/`tabify`, VS Code "Convert Indentation to
 // Tabs/Spaces", Vim `:retab`.
 // ---------------------------------------------------------------------------
@@ -1164,6 +1220,34 @@ mod tests {
             justify_block("ab\n\ncd\n", 6, Justification::Right),
             "    ab\n\n    cd\n"
         );
+    }
+
+    #[test]
+    fn set_left_margin_normalizes_indentation_to_spaces() {
+        // Existing leading whitespace (spaces or tabs) is replaced by exactly
+        // `margin` spaces; content after the indent is untouched.
+        assert_eq!(set_left_margin("foo\n\tbar\n    baz", 2), "  foo\n  bar\n  baz");
+        // margin 0 flushes every line to column zero.
+        assert_eq!(set_left_margin("   x\n\t y", 0), "x\ny");
+    }
+
+    #[test]
+    fn set_left_margin_keeps_blank_lines_and_trailing_newline() {
+        assert_eq!(set_left_margin("a\n\nb\n", 3), "   a\n\n   b\n");
+    }
+
+    #[test]
+    fn increase_left_margin_adds_columns_per_line() {
+        // Positive delta indents each non-blank line by that many columns on top
+        // of its current indentation.
+        assert_eq!(adjust_left_margin("foo\n  bar", 4), "    foo\n      bar");
+    }
+
+    #[test]
+    fn decrease_left_margin_clamps_at_zero() {
+        // Negative delta removes indentation but never goes below column zero,
+        // and blank lines are left empty.
+        assert_eq!(adjust_left_margin("      a\n  b\n\nc", -4), "  a\nb\n\nc");
     }
 
     #[test]
