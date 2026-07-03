@@ -20093,6 +20093,96 @@ fn decrease_left_margin(
     })
 }
 
+/// Does the buffer `display_name` (a document's `display_name()`, i.e. its path
+/// or "[scratch]") match the user-typed `query` for the Emacs accumulate-text
+/// commands? Matches the whole name, or just its final path component, so
+/// `:append-to-buffer notes.txt` resolves `/home/u/notes.txt`. Pure — unit tested.
+fn buffer_name_matches(display_name: &str, query: &str) -> bool {
+    display_name == query
+        || std::path::Path::new(display_name)
+            .file_name()
+            .and_then(|s| s.to_str())
+            == Some(query)
+}
+
+/// Shared body for the Emacs "Accumulating Text" commands `append-to-buffer` /
+/// `prepend-to-buffer` / `copy-to-buffer`: copy the current selection (the
+/// region) into an already-open target buffer named `args`. `replace` overwrites
+/// the target's whole contents (copy-to-buffer); otherwise `at_end` chooses the
+/// end (append) or the beginning (prepend). The change lands in the target buffer
+/// as one undo step; the current buffer and view are unchanged. Unlike Emacs this
+/// does not create the buffer if absent — the target must already be open.
+fn accumulate_to_buffer(
+    cx: &mut compositor::Context,
+    args: &Args,
+    replace: bool,
+    at_end: bool,
+) -> anyhow::Result<()> {
+    let name = args.join(" ").trim().to_string();
+    if name.is_empty() {
+        bail!("usage: :<cmd> <buffer>");
+    }
+    // The region = the primary selection of the current buffer.
+    let region: String = {
+        let (view, doc) = current!(cx.editor);
+        let sel = doc.selection(view.id).primary();
+        doc.text().slice(sel.from()..sel.to()).chunks().collect()
+    };
+    let target_id = cx
+        .editor
+        .documents()
+        .find(|d| buffer_name_matches(&d.display_name(), &name))
+        .map(|d| d.id());
+    let Some(target_id) = target_id else {
+        bail!("no such buffer: {name}");
+    };
+    let view_id = cx.editor.get_synced_view_id(target_id);
+    let doc = doc_mut!(cx.editor, &target_id);
+    let view = view_mut!(cx.editor, view_id);
+    let len = doc.text().len_chars();
+    let (from, to) = if replace {
+        (0, len)
+    } else if at_end {
+        (len, len)
+    } else {
+        (0, 0)
+    };
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((from, to, Some(region.into()))),
+    );
+    doc.apply(&transaction, view_id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// `:append-to-buffer <buffer>` — Emacs `append-to-buffer`: insert the region at
+/// the end of an already-open buffer named `<buffer>`.
+fn append_to_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    accumulate_to_buffer(cx, &args, false, true)
+}
+
+/// `:prepend-to-buffer <buffer>` — Emacs `prepend-to-buffer`: insert the region
+/// at the beginning of an already-open buffer named `<buffer>`.
+fn prepend_to_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    accumulate_to_buffer(cx, &args, false, false)
+}
+
+/// `:copy-to-buffer <buffer>` — Emacs `copy-to-buffer`: replace the whole
+/// contents of an already-open buffer named `<buffer>` with the region.
+fn copy_to_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    accumulate_to_buffer(cx, &args, true, false)
+}
+
 /// Join the lines of `block` with `sep` into a single line, preserving a trailing
 /// newline if the block had one. Pure — unit tested.
 fn join_lines_with(block: &str, sep: &str) -> String {
@@ -30628,6 +30718,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "append-to-buffer",
+        aliases: &[],
+        doc: "Insert the region at the end of another open buffer (emacs append-to-buffer).",
+        fun: append_to_buffer,
+        completer: CommandCompleter::all(completers::buffer),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "prepend-to-buffer",
+        aliases: &[],
+        doc: "Insert the region at the start of another open buffer (emacs prepend-to-buffer).",
+        fun: prepend_to_buffer,
+        completer: CommandCompleter::all(completers::buffer),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "copy-to-buffer",
+        aliases: &[],
+        doc: "Replace another open buffer's contents with the region (emacs copy-to-buffer).",
+        fun: copy_to_buffer,
+        completer: CommandCompleter::all(completers::buffer),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "expand-region-abbrevs",
         aliases: &[],
         doc: "Expand every abbrev found in the region (emacs expand-region-abbrevs).",
@@ -31960,6 +32083,22 @@ fn exclude_workspace(
 #[cfg(test)]
 mod vim_set_tests {
     use super::*;
+
+    #[test]
+    fn buffer_name_matches_full_and_basename() {
+        use super::buffer_name_matches;
+        // A bare basename resolves an absolute-path buffer name.
+        assert!(buffer_name_matches("/home/u/notes.txt", "notes.txt"));
+        // The full name matches exactly.
+        assert!(buffer_name_matches("/home/u/notes.txt", "/home/u/notes.txt"));
+        // The scratch buffer name matches itself (it has no path component).
+        assert!(buffer_name_matches("[scratch]", "[scratch]"));
+        // A different basename does not match, and a partial component does not.
+        assert!(!buffer_name_matches("/home/u/notes.txt", "notes"));
+        assert!(!buffer_name_matches("/home/u/notes.txt", "u"));
+        // A relative name with no directory matches by its whole self.
+        assert!(buffer_name_matches("todo.md", "todo.md"));
+    }
 
     #[test]
     fn csv_column_extracts() {
