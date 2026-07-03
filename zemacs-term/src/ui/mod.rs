@@ -37,6 +37,7 @@ pub mod prompt;
 pub mod rat;
 pub mod repl;
 pub mod rmail;
+pub mod snake;
 pub mod solitaire;
 pub mod run;
 pub mod run_config;

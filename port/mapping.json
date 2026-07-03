@@ -14336,6 +14336,14 @@
   "note": "emacs blackbox -> blackbox: ray-tracing deduction puzzle (ui/blackbox.rs)"
  },
  {
+  "spec_id": "emacs.command.snake",
+  "status": "ported",
+  "evidence": [
+   "static:snake"
+  ],
+  "note": "emacs snake -> snake: self-animating overlay via request_redraw tick (ui/snake.rs)"
+ },
+ {
   "spec_id": "emacs.command.butterfly",
   "status": "ported",
   "evidence": [

@@ -904,6 +904,7 @@
 | `mpuz` | Play the multiplication puzzle (emacs mpuz) |  |
 | `bubbles` | Play the bubbles same-game (emacs bubbles) |  |
 | `blackbox` | Play blackbox, the ray-tracing puzzle (emacs blackbox) |  |
+| `snake` | Play snake (emacs snake) |  |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |
