@@ -16,7 +16,7 @@ use tui::buffer::Buffer as Surface;
 use zemacs_view::graphics::Rect;
 
 use crate::ui::dunnet_data::{
-    DIGGABLES, MAP, OBJECTS, OBJNAMES, OBJ_PTS, PERM_OBJECTS, ROOMS, ROOM_OBJECTS,
+    DIGGABLES, MAP, OBJECTS, OBJNAMES, OBJ_LBS, OBJ_PTS, PERM_OBJECTS, ROOMS, ROOM_OBJECTS,
 };
 use crate::{
     compositor::{Callback, Component, Compositor, Context, Event, EventResult},
@@ -68,6 +68,10 @@ pub struct Game {
     inbus: bool,
     awaiting_combo: bool,
     pub dead: Option<String>,
+    computer: bool,
+    floppy: bool,
+    nomail: bool,
+    jar: Vec<i16>,
 }
 
 /// The combination for the gamma-computing-center door (dunnet `dun-combination`).
@@ -79,6 +83,21 @@ const OBJ_WEIGHT: i16 = 8;
 const OBJ_TOWEL: i16 = 13;
 const OBJ_BUS: i16 = -18;
 const OBJ_LICENSE: i16 = 16;
+const OBJ_COMPUTER: i16 = -5;
+const OBJ_CPU: i16 = 2;
+const OBJ_BUTTON: i16 = -8;
+const OBJ_JAR: i16 = 19;
+const OBJ_CHUTE: i16 = -9;
+const OBJ_BOX: i16 = -15;
+const OBJ_DROP: i16 = -17;
+const OBJ_DISPOSAL: i16 = -26;
+const OBJ_PC: i16 = -29;
+const OBJ_FLOPPY: i16 = 27;
+const COMPUTER_ROOM: usize = 10;
+const RED_ROOM: usize = 46;
+const MAX_WEIGHT: i16 = 11;
+/// Objects that fit in the glass jar (dunnet.el `dun-put-objs`).
+const JAR_FITS: &[i16] = &[5, 7, 10, 16, 17, 18, 21, 22];
 
 impl Game {
     pub fn new() -> Self {
@@ -93,6 +112,10 @@ impl Game {
             inbus: false,
             awaiting_combo: false,
             dead: None,
+            computer: false,
+            floppy: false,
+            nomail: false,
+            jar: Vec::new(),
         };
         g.visited[START_ROOM] = true;
         g
@@ -261,6 +284,7 @@ impl Game {
                             vec!["You are already in the bus!".into()]
                         } else if self.inventory.contains(&OBJ_LICENSE) {
                             self.inbus = true;
+                            self.nomail = true;
                             vec!["You board the bus and get in the driver's seat.".into()]
                         } else {
                             vec!["You are not licensed for this type of vehicle.".into()]
@@ -303,21 +327,110 @@ impl Game {
         }
     }
 
-    /// Take the named object from the current room.
+    /// Total weight carried (inventory + jar contents), per `dun-inven-weight`.
+    fn inven_weight(&self) -> i16 {
+        self.inventory
+            .iter()
+            .chain(self.jar.iter())
+            .filter(|&&o| o >= 0)
+            .map(|&o| OBJ_LBS[o as usize])
+            .sum()
+    }
+
+    /// Take the named object from the current room, enforcing the 11-lb carry
+    /// limit (`dun-take-object`).
     pub fn take(&mut self, word: &str) -> String {
         let Some(num) = object_number(word) else {
             return format!("I don't know what a \"{word}\" is.");
         };
         if num < 0 || num == SPECIAL {
-            return "You can't take that!".into();
+            return "You cannot take that.".into();
         }
-        if let Some(pos) = self.room_objects[self.room].iter().position(|&o| o == num) {
-            self.room_objects[self.room].remove(pos);
-            self.inventory.push(num);
-            "Taken.".into()
+        if !self.room_objects[self.room].contains(&num) {
+            return "I do not see that here.".into();
+        }
+        if !self.inventory.is_empty() && self.inven_weight() + OBJ_LBS[num as usize] > MAX_WEIGHT {
+            return "Your load would be too heavy.".into();
+        }
+        let pos = self.room_objects[self.room].iter().position(|&o| o == num).unwrap();
+        self.room_objects[self.room].remove(pos);
+        self.inventory.push(num);
+        if num == OBJ_TOWEL && self.room == RED_ROOM {
+            "Taken.  Taking the towel reveals a hole in the floor.".into()
         } else {
-            "I don't see that here.".into()
+            "Taken.".into()
         }
+    }
+
+    /// Port of `dun-put`/`dun-put-objs`: put object `word1` in/on `word2`.
+    pub fn put(&mut self, word1: &str, word2: &str) -> String {
+        let Some(o1) = object_number(word1) else {
+            return "I don't know what that object is.".into();
+        };
+        if !self.inventory.contains(&o1) {
+            return "You don't have that.".into();
+        }
+        let Some(mut o2) = object_number(word2) else {
+            return "I don't know what that indirect object is.".into();
+        };
+        // A mail-drop / disposal both route to the treasure chute.
+        if (o2 == OBJ_DROP && !self.nomail) || o2 == OBJ_DISPOSAL {
+            o2 = OBJ_CHUTE;
+        }
+        // The indirect object must be present (in the room or carried).
+        if !self.here(o2) && !self.inventory.contains(&o2) && o2 != OBJ_CHUTE {
+            return "That indirect object is not here.".into();
+        }
+        self.put_objs(o1, o2)
+    }
+
+    fn remove_from_inventory(&mut self, obj: i16) {
+        if let Some(p) = self.inventory.iter().position(|&o| o == obj) {
+            self.inventory.remove(p);
+        }
+    }
+
+    fn put_objs(&mut self, o1: i16, o2: i16) -> String {
+        if o1 == OBJ_CPU && o2 == OBJ_COMPUTER {
+            self.remove_from_inventory(OBJ_CPU);
+            self.computer = true;
+            return "As you put the CPU board in the computer, it immediately springs to life.\nThe lights start flashing, and the fans seem to startup.".into();
+        }
+        if o1 == OBJ_WEIGHT && o2 == OBJ_BUTTON {
+            return self.drop("weight");
+        }
+        if o2 == OBJ_JAR {
+            if !JAR_FITS.contains(&o1) {
+                return "That will not fit in the jar.".into();
+            }
+            self.remove_from_inventory(o1);
+            self.jar.push(o1);
+            return "Done.".into();
+        }
+        if o2 == OBJ_CHUTE {
+            self.remove_from_inventory(o1);
+            // Slides into the treasure room (scoring).
+            self.room_objects[TREASURE_ROOM].push(o1);
+            return "You hear it slide down the chute and off into the distance.".into();
+        }
+        if o2 == OBJ_BOX {
+            if o1 != OBJ_KEY {
+                return "You can't put that in the key box!".into();
+            }
+            self.remove_from_inventory(OBJ_KEY);
+            self.room_objects[COMPUTER_ROOM].push(OBJ_KEY);
+            if let Some(p) = self.room_objects[self.room].iter().position(|&o| o == OBJ_BOX) {
+                self.room_objects[self.room].remove(p);
+            }
+            self.key_level += 1;
+            return "As you drop the key, the box begins to shake.  Finally it explodes\nwith a bang.  The key seems to have vanished!".into();
+        }
+        if o1 == OBJ_FLOPPY && o2 == OBJ_PC {
+            self.remove_from_inventory(OBJ_FLOPPY);
+            self.floppy = true;
+            return "Done.".into();
+        }
+        "You can't do that.".into()
     }
 
     /// Drop the named object into the current room.
@@ -401,6 +514,22 @@ impl Game {
             "take" | "get" | "grab" => vec![self.take(arg)],
             "drop" | "leave" => vec![self.drop(arg)],
             "dig" => vec![self.dig()],
+            "put" | "place" | "insert" => {
+                let o1 = arg;
+                let o2 = words[2..]
+                    .iter()
+                    .rev()
+                    .find(|w| !matches!(**w, "in" | "on" | "into" | "inside" | "the"))
+                    .copied()
+                    .unwrap_or("");
+                if o1.is_empty() {
+                    vec!["You must supply an object".into()]
+                } else if o2.is_empty() {
+                    vec!["You must supply an indirect object.".into()]
+                } else {
+                    vec![self.put(o1, o2)]
+                }
+            }
             "inventory" | "inv" | "i" => self.inventory_lines(),
             "examine" | "x" | "inspect" => match object_number(arg) {
                 Some(n) if n >= 0 => vec![OBJECTS[n as usize].0.to_string()],
@@ -582,7 +711,7 @@ mod tests {
         // "trees" or similar scenery resolves to a negative object number.
         let scenery = OBJNAMES.iter().find(|(_, n)| *n < 0);
         if let Some((word, _)) = scenery {
-            assert_eq!(g.take(word), "You can't take that!");
+            assert_eq!(g.take(word), "You cannot take that.");
         }
     }
 
@@ -648,6 +777,51 @@ mod tests {
         let dir = MAP[7].iter().position(|&d| d == 255).unwrap();
         g.go(dir);
         assert!(g.dead.is_some(), "walking past the bear kills you");
+    }
+
+    #[test]
+    fn carry_limit_is_eleven_pounds() {
+        let mut g = Game::new();
+        // The weight (object 8) weighs 10; put it in a room and load up so the
+        // total would exceed 11.
+        g.inventory = vec![0]; // shovel, 2 lbs
+        g.room_objects[g.room] = vec![8]; // the 10-lb weight
+        assert_eq!(g.take("weight"), "Your load would be too heavy.");
+        // Empty-handed, the same weight is takeable.
+        g.inventory.clear();
+        assert_eq!(g.take("weight"), "Taken.");
+    }
+
+    #[test]
+    fn put_key_in_box_raises_the_key_level() {
+        let mut g = Game::new();
+        g.inventory = vec![OBJ_KEY];
+        g.room_objects[g.room] = vec![OBJ_BOX];
+        let before = g.key_level;
+        let msg = g.put("key", "box");
+        assert!(msg.contains("explodes"));
+        assert_eq!(g.key_level, before + 1);
+        assert!(!g.inventory.contains(&OBJ_KEY), "key vanished from inventory");
+        assert!(g.room_objects[COMPUTER_ROOM].contains(&OBJ_KEY), "key reappears in computer room");
+    }
+
+    #[test]
+    fn put_cpu_in_computer_boots_it() {
+        let mut g = Game::new();
+        g.inventory = vec![OBJ_CPU];
+        g.room_objects[g.room] = vec![OBJ_COMPUTER];
+        assert!(g.put("cpu", "computer").contains("springs to life"));
+        assert!(g.computer);
+    }
+
+    #[test]
+    fn jar_only_holds_what_fits() {
+        let mut g = Game::new();
+        g.inventory = vec![7, 8]; // diamond fits, weight does not
+        g.room_objects[g.room] = vec![OBJ_JAR];
+        assert_eq!(g.put("diamond", "jar"), "Done.");
+        assert!(g.jar.contains(&7));
+        assert_eq!(g.put("weight", "jar"), "That will not fit in the jar.");
     }
 
     #[test]
