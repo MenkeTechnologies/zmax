@@ -20888,6 +20888,14 @@
   "note": "Encodes the selection to Morse code = morse-region."
  },
  {
+  "spec_id": "emacs.command.unmorse_region",
+  "status": "ported",
+  "evidence": [
+   "typable:morse-decode"
+  ],
+  "note": "Decodes the selected Morse code back to text = unmorse-region (typable alias `unmorse`)."
+ },
+ {
   "spec_id": "emacs.command.nato_region",
   "status": "ported",
   "evidence": [
