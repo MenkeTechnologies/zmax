@@ -102,6 +102,7 @@ obj_pts = parse("dun-object-pts")     # [ (int,..) ]
 room_objs = parse("dun-room-objects") # [ None | [ (int,..) ], ... ]
 perm = parse("dun-perm-objects")      # [ [ (str)|None ... ], ... ]
 objnames = parse("dun-objnames")      # [ [ (sym,name), (__dot__,(int,n)) ], ... ]
+diggables = parse("dun-diggables")    # [ None | [ (int,..) ], ... ]
 
 
 def s(x):
@@ -163,6 +164,15 @@ for p in perm:
     else:
         first = p[0] if isinstance(p, list) else p
         L.append("    %s," % s(first))
+L.append("];")
+L.append("")
+L.append("/// Objects revealed by digging in each room (empty = nothing to dig up).")
+L.append("pub const DIGGABLES: &[&[i16]] = &[")
+for entry in diggables:
+    if entry is None:
+        L.append("    &[],")
+    else:
+        L.append("    &[%s]," % ", ".join(str(i(x)) for x in entry))
 L.append("];")
 L.append("")
 L.append("/// How the player may name objects: (word, object number). Negative numbers")

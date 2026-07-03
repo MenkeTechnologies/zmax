@@ -15,7 +15,9 @@
 use tui::buffer::Buffer as Surface;
 use zemacs_view::graphics::Rect;
 
-use crate::ui::dunnet_data::{MAP, OBJECTS, OBJNAMES, OBJ_PTS, PERM_OBJECTS, ROOMS, ROOM_OBJECTS};
+use crate::ui::dunnet_data::{
+    DIGGABLES, MAP, OBJECTS, OBJNAMES, OBJ_PTS, PERM_OBJECTS, ROOMS, ROOM_OBJECTS,
+};
 use crate::{
     compositor::{Callback, Component, Compositor, Context, Event, EventResult},
     ctrl, key,
@@ -58,6 +60,8 @@ pub struct Game {
     pub room_objects: Vec<Vec<i16>>,
     pub inventory: Vec<i16>,
     visited: Vec<bool>,
+    /// Rooms already dug (a room yields its buried objects only once).
+    dug: std::collections::HashSet<usize>,
 }
 
 impl Game {
@@ -67,6 +71,7 @@ impl Game {
             room_objects: ROOM_OBJECTS.iter().map(|r| r.to_vec()).collect(),
             inventory: Vec::new(),
             visited: vec![false; ROOMS.len()],
+            dug: std::collections::HashSet::new(),
         };
         g.visited[START_ROOM] = true;
         g
@@ -140,6 +145,22 @@ impl Game {
         }
     }
 
+    /// Emacs `dun-dig`: with the shovel (object 0), dig up whatever is buried in
+    /// the current room (from `DIGGABLES`) into the room, once.
+    pub fn dig(&mut self) -> String {
+        if !self.inventory.contains(&0) {
+            return "You have nothing with which to dig.".into();
+        }
+        let buried = DIGGABLES.get(self.room).copied().unwrap_or(&[]);
+        if buried.is_empty() || self.dug.contains(&self.room) {
+            return "Digging here reveals nothing.".into();
+        }
+        self.room_objects[self.room].extend_from_slice(buried);
+        // A room only yields its buried objects once (mirrors dun-replace to nil).
+        self.dug.insert(self.room);
+        "I think you found something.".into()
+    }
+
     pub fn inventory_lines(&self) -> Vec<String> {
         if self.inventory.is_empty() {
             return vec!["You have nothing.".into()];
@@ -178,6 +199,7 @@ impl Game {
             "look" | "l" => self.describe(self.room, true),
             "take" | "get" | "grab" => vec![self.take(arg)],
             "drop" | "leave" => vec![self.drop(arg)],
+            "dig" => vec![self.dig()],
             "inventory" | "inv" | "i" => self.inventory_lines(),
             "examine" | "x" | "inspect" => match object_number(arg) {
                 Some(n) if n >= 0 => vec![OBJECTS[n as usize].0.to_string()],
@@ -361,6 +383,31 @@ mod tests {
         if let Some((word, _)) = scenery {
             assert_eq!(g.take(word), "You can't take that!");
         }
+    }
+
+    #[test]
+    fn digging_needs_the_shovel_and_yields_buried_objects_once() {
+        let mut g = Game::new();
+        // Room 3 (the fork, soft ground) buries object 2 (the CPU board).
+        assert_eq!(DIGGABLES[3], &[2]);
+        // Grab the shovel, walk to the fork: dead-end(1) -e-> 2 -e-> fork(3).
+        g.take("shovel");
+        g.go(2); // to room 2
+        g.go(2); // to room 3 (fork)
+        assert_eq!(g.room, 3);
+        assert!(!g.room_objects[3].contains(&2));
+        assert_eq!(g.dig(), "I think you found something.");
+        assert!(g.room_objects[3].contains(&2), "the board is dug up");
+        // A second dig yields nothing.
+        assert_eq!(g.dig(), "Digging here reveals nothing.");
+    }
+
+    #[test]
+    fn digging_without_a_shovel_fails() {
+        let mut g = Game::new();
+        g.go(2);
+        g.go(2); // fork, but no shovel in hand
+        assert_eq!(g.dig(), "You have nothing with which to dig.");
     }
 
     #[test]
