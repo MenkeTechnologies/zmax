@@ -1222,6 +1222,7 @@ impl MappableCommand {
         zone, "Run the zone screen-saver (emacs zone)",
         decipher, "Solve a cryptogram (emacs decipher)",
         dunnet, "Play the dunnet text adventure (emacs dunnet)",
+        animate_birthday_present, "Animate a birthday-present message (emacs animate-birthday-present)",
         spook, "Insert random NSA-bait phrases (emacs spook)",
         studlify_region, "StudlyCaps the selected region (emacs studlify-region)",
         studlify_buffer, "StudlyCaps the whole buffer (emacs studlify-buffer)",
@@ -13405,6 +13406,14 @@ fn spook(cx: &mut Context) {
 fn dunnet(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::dunnet::Dunnet::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `animate-birthday-present`: animate the birthday-song text swooping
+/// into place (self-animating overlay; see ui/animate.rs).
+fn animate_birthday_present(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::animate::Animate::birthday_present()) as Box<dyn Component>)
     });
 }
 
