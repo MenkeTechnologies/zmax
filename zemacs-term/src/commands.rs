@@ -1218,6 +1218,7 @@ impl MappableCommand {
         blackbox, "Play blackbox, the ray-tracing puzzle (emacs blackbox)",
         snake, "Play snake (emacs snake)",
         tetris, "Play tetris (emacs tetris)",
+        pong, "Play pong against the computer (emacs pong)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -13201,6 +13202,13 @@ fn snake(cx: &mut Context) {
 fn tetris(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::tetris::Tetris::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `pong`: play pong against the computer (self-animating overlay).
+fn pong(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::pong::Pong::new()) as Box<dyn Component>)
     });
 }
 

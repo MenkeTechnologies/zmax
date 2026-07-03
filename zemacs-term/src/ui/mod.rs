@@ -13,6 +13,7 @@ pub mod gomoku;
 pub mod hanoi;
 pub mod life;
 pub mod mpuz;
+pub mod pong;
 mod document;
 pub(crate) mod editor;
 mod file_tree;
