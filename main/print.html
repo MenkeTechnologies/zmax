@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-96d0f277.js";
+            window.path_to_searchindex_js = "searchindex-46c721a0.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -2493,6 +2493,11 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>switch_case</code></td><td>Switch (toggle) case</td><td>normal: <code>~</code>, select: <code>~</code></td></tr>
 <tr><td><code>switch_to_uppercase</code></td><td>Switch to uppercase</td><td>normal: <code>&lt;space&gt;xU</code>, <code>&lt;C-x&gt;&lt;C-u&gt;</code>, select: <code>&lt;space&gt;xU</code>, <code>&lt;C-x&gt;&lt;C-u&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-u&gt;</code></td></tr>
 <tr><td><code>switch_to_lowercase</code></td><td>Switch to lowercase</td><td>normal: <code>&lt;space&gt;xu</code>, <code>&lt;C-x&gt;&lt;C-l&gt;</code>, select: <code>&lt;space&gt;xu</code>, <code>&lt;C-x&gt;&lt;C-l&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-l&gt;</code></td></tr>
+<tr><td><code>upcase_word</code></td><td>Upper-case the word after point (emacs upcase-word, M-u)</td><td></td></tr>
+<tr><td><code>downcase_word</code></td><td>Lower-case the word after point (emacs downcase-word, M-l)</td><td></td></tr>
+<tr><td><code>capitalize_word</code></td><td>Capitalize the word after point (emacs capitalize-word, M-c)</td><td></td></tr>
+<tr><td><code>capitalize_region</code></td><td>Title-case every word in the region (emacs capitalize-region)</td><td></td></tr>
+<tr><td><code>upcase_initials_region</code></td><td>Upper-case the first letter of each word in the region (emacs upcase-initials-region)</td><td></td></tr>
 <tr><td><code>page_up</code></td><td>Move page up</td><td>normal: <code>z^</code>, <code>&lt;A-v&gt;</code>, <code>&lt;C-b&gt;</code>, <code>&lt;C-x&gt;[</code>, <code>&lt;S-up&gt;</code>, <code>&lt;pageup&gt;</code>, <code>&lt;S-minus&gt;</code>, select: <code>&lt;C-x&gt;[</code>, insert: <code>&lt;A-v&gt;</code>, <code>&lt;C-x&gt;[</code>, <code>&lt;S-up&gt;</code>, <code>&lt;pageup&gt;</code></td></tr>
 <tr><td><code>page_down</code></td><td>Move page down</td><td>normal: <code>z+</code>, <code>&lt;C-f&gt;</code>, <code>&lt;S-+&gt;</code>, <code>&lt;C-x&gt;]</code>, <code>&lt;S-ret&gt;</code>, <code>&lt;S-down&gt;</code>, <code>&lt;pagedown&gt;</code>, select: <code>&lt;C-x&gt;]</code>, insert: <code>&lt;C-x&gt;]</code>, <code>&lt;S-down&gt;</code>, <code>&lt;pagedown&gt;</code></td></tr>
 <tr><td><code>half_page_up</code></td><td>Move half page up</td><td></td></tr>
@@ -6537,11 +6542,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>2987</strong> (43.6%)</li>
-<li>Partial: <strong>549</strong> (8.0%)</li>
+<li>Ported: <strong>2992</strong> (43.7%)</li>
+<li>Partial: <strong>544</strong> (7.9%)</li>
 <li>Absent: <strong>3311</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 963 static commands, 1565 typable <code>:</code> commands, 2636 default keybindings</li>
+<li>zemacs source surface: 968 static commands, 1565 typable <code>:</code> commands, 2636 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -6597,7 +6602,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">593</td><td style="text-align: right">181</td><td style="text-align: right">19.7%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">598</td><td style="text-align: right">176</td><td style="text-align: right">19.9%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
@@ -6618,7 +6623,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">382</td><td style="text-align: right">96</td><td style="text-align: right">20.3%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">387</td><td style="text-align: right">91</td><td style="text-align: right">20.5%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
