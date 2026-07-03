@@ -1,7 +1,7 @@
 use crate::compositor::{Component, Context};
 use tui::buffer::Buffer as Surface;
 use tui::text::Text;
-use tui::widgets::{Block, Paragraph, Widget};
+use tui::widgets::{Paragraph, Widget};
 use zemacs_view::graphics::{Margin, Rect};
 use zemacs_view::info::Info;
 
@@ -10,10 +10,12 @@ use zemacs_view::info::Info;
 /// When a map has more entries than fit (cols × this), the popup becomes
 /// vertically scrollable (PgDn/PgUp or the mouse wheel; see `Info::scroll`).
 const MAX_ROWS: usize = 16;
-/// Widest a single `KEY : description` column is allowed to grow — a sanity
-/// ceiling so one pathologically long entry cannot dominate the grid. Normal
-/// which-key descriptions are well under this, so they are shown in full.
-const COL_CAP: usize = 80;
+/// Widest a single `KEY : description` column is allowed to grow. Entries past
+/// this are CUT OFF (like Spacemacs' `which-key-max-description-length`) so one
+/// long entry cannot dominate the grid and collapse the column count — the grid
+/// stays packed into several width-driven columns. Normal which-key descriptions
+/// are under this, so they are shown in full.
+const COL_CAP: usize = 34;
 /// Max columns the which-key grid fills across the width (Spacemacs uses up to 8).
 const MAX_COLS: usize = 8;
 /// Spaces between columns.
@@ -23,8 +25,9 @@ const SEP: usize = 3;
 /// Emacs' `describe-bindings`) and return the visible slice starting at `scroll`
 /// rows down. The columns are **distributed across the whole width** so the grid
 /// always fills the bar with no right-edge dead space; the column count (1..=8)
-/// is driven by the screen width — as many columns as fit the widest entry
-/// without truncation. Returns `(text, body_width, body_height, rows_total,
+/// is driven by the screen width — as many columns as fit at each column's
+/// content width, with entries past `COL_CAP` cut off so a long one can't
+/// collapse the count. Returns `(text, body_width, body_height, rows_total,
 /// cols)`; `body_width` is the full inner width the grid spans.
 fn grid(
     lines: &[&str],
@@ -33,7 +36,7 @@ fn grid(
     max_width: usize,
 ) -> (String, usize, usize, usize, usize) {
     let n = lines.len();
-    let budget = max_width.saturating_sub(6).max(1); // borders + margin
+    let budget = max_width.saturating_sub(2).max(1); // borderless: 1-col margin each side
     if n == 0 {
         return (String::new(), budget, 0, 0, 1);
     }
@@ -108,16 +111,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn wide_descriptions_are_not_truncated_when_they_fit() {
-        // Descriptions ~54 chars — longer than the old 48-wide column cap. In a
-        // wide popup they must be shown in FULL (the which-key cutoff bug).
-        let a = "i : Ask the AI provider about the selection/buffer text";
+    fn long_entries_are_cut_off_at_col_cap() {
+        // Descriptions past COL_CAP are cut off (Spacemacs caps the description
+        // length) so one long entry can't widen its column and collapse the count.
+        let a = "i : Ask the AI provider about the selection/buffer text"; // > COL_CAP
         let b = "k : Generate a shell command from natural language help";
         let lines = vec![a, b];
         let (text, width, _h, _rows, _cols) = grid(&lines, 0, 16, 220);
-        assert!(text.contains("selection/buffer text"), "clipped: {text:?}");
-        assert!(text.contains("natural language help"), "clipped: {text:?}");
-        assert!(width <= 220 - 6, "grid must fit the popup budget: {width}");
+        assert!(!text.contains("selection/buffer text"), "not cut off: {text:?}");
+        // Every rendered row still fits the bar.
+        for line in text.lines() {
+            assert!(line.chars().count() <= width, "row overruns bar: {line:?}");
+        }
     }
 
     #[test]
@@ -137,7 +142,7 @@ mod tests {
         let long = "x : an extremely long which-key description that will not fit a narrow popup";
         let (_text, width, _h, _rows, cols) = grid(&[long], 0, 16, 30);
         assert_eq!(cols, 1);
-        assert_eq!(width, 30 - 6, "the bar spans the full inner width");
+        assert_eq!(width, 30 - 2, "the bar spans the full inner width");
     }
 
     #[test]
@@ -153,7 +158,7 @@ mod tests {
         // The single-widest formula (~28 wide) would allow only ~3 columns; with
         // per-column widths the short columns pack in many more.
         assert!(cols >= 4, "expected a wide multi-column grid, got {cols}");
-        assert_eq!(width, 110 - 6);
+        assert_eq!(width, 110 - 2);
     }
 
     #[test]
@@ -167,7 +172,7 @@ mod tests {
                 .collect();
             let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
             let (_t, width, _h, _r, cols) = grid(&refs, 0, 16, w);
-            assert_eq!(width, w - 6, "grid must span the full inner width for w={w}");
+            assert_eq!(width, w - 2, "grid must span the full inner width for w={w}");
             assert!((1..=8).contains(&cols), "cols out of 1..=8: {cols}");
         }
     }
@@ -192,21 +197,12 @@ impl Component for Info {
         let max_scroll = rows_total.saturating_sub(body_h);
         self.scroll = (self.scroll as usize).min(max_scroll) as u16;
 
-        // Title carries a scroll indicator when there's more below/above.
-        let title = if scrollable {
-            let pct = (self.scroll as usize * 100)
-                .checked_div(max_scroll)
-                .unwrap_or(0);
-            format!("{}  [{pct}%  PgDn/PgUp]", self.title)
-        } else {
-            self.title.to_string()
-        };
-
-        // Full editor width, anchored at the bottom (above the statusline) —
-        // Spacemacs' which-key bar. The grid itself (`body_w`) is distributed to
-        // fill this width, so there is no dead space inside the bar.
+        // Borderless, full editor width, anchored at the bottom (above the
+        // statusline) — Spacemacs' which-key bar has no box, the content sits
+        // flush against the modeline. The grid itself (`body_w`) is distributed
+        // to fill the width, so there is no dead space inside the bar.
         let _ = body_w;
-        let height = body_h as u16 + 2; // +2 border
+        let height = body_h as u16;
         let area = viewport.intersection(Rect::new(
             viewport.x,
             viewport.y + viewport.height.saturating_sub(height + 1),
@@ -215,14 +211,23 @@ impl Component for Info {
         ));
         surface.clear_with(area, popup_style);
 
-        let block = Block::bordered().title(title).border_style(popup_style);
-
-        let margin = Margin::horizontal(1);
-        let inner = block.inner(area).inner(margin);
-        block.render(area, surface);
-
+        // One column of horizontal padding so content isn't jammed on the edge.
+        let inner = area.inner(Margin::horizontal(1));
         Paragraph::new(&Text::from(text.as_str()))
             .style(text_style)
             .render(inner, surface);
+
+        // With no title bar to host it, surface a compact scroll indicator at the
+        // top-right only when the map overflows (PgDn/PgUp / wheel still scroll).
+        if scrollable && area.height > 0 {
+            let pct = (self.scroll as usize * 100)
+                .checked_div(max_scroll)
+                .unwrap_or(0);
+            let ind = format!(" {pct}%  PgDn/PgUp ");
+            let w = ind.chars().count() as u16;
+            if area.width > w {
+                surface.set_string(area.x + area.width - w, area.y, &ind, popup_style);
+            }
+        }
     }
 }

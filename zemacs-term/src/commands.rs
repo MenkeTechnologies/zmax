@@ -1204,6 +1204,8 @@ impl MappableCommand {
         yank_textobject_around, "Yank around object (ya)",
         delete_find_char_forward, "Delete to next char (df)",
         delete_till_char_forward, "Delete till next char (dt)",
+        zap_to_char, "Kill through the next char, inclusive (emacs zap-to-char, M-z)",
+        zap_up_to_char, "Kill up to the next char, exclusive (emacs zap-up-to-char)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -3377,6 +3379,17 @@ fn yank_find_char_backward(cx: &mut Context) {
 }
 fn yank_till_char_backward(cx: &mut Context) {
     find_char_then(cx, Direction::Backward, false, true, Some(yank_textobject));
+}
+
+// emacs zap-to-char (M-z) / zap-up-to-char: read a char, then kill from point
+// through the Nth occurrence (inclusive) or up to but not including it
+// (exclusive) into the kill register — the same find + kill engine as vim
+// `df`/`dt`, exposed under the emacs names so the port maps to a real command.
+fn zap_to_char(cx: &mut Context) {
+    find_char_then(cx, Direction::Forward, true, true, Some(delete_selection));
+}
+fn zap_up_to_char(cx: &mut Context) {
+    find_char_then(cx, Direction::Forward, false, true, Some(delete_selection));
 }
 
 fn find_till_char(cx: &mut Context) {
