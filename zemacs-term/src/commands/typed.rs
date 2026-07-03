@@ -3691,6 +3691,168 @@ fn arduino_lib_install_zip(cx: &mut compositor::Context, args: Args, event: Prom
     Ok(())
 }
 
+/// Shared helper: run `arduino-cli compile <extra…>` and show its stdout in a
+/// scratch buffer (for the info-dumping flags that print rather than build).
+fn arduino_compile_browse(cx: &mut compositor::Context, extra: &[String]) -> anyhow::Result<()> {
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_compile_with(&settings, extra).map_err(|e| anyhow!(e))?;
+    embedded_browse(cx, argv, false);
+    Ok(())
+}
+
+/// `:arduino-compile-quiet` — quiet compile, errors only (`arduino-cli compile -q`).
+fn arduino_compile_quiet(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_compile_flags(cx, &["-q".to_string()])
+}
+
+/// `:arduino-compile-properties` — dump the resolved build properties without
+/// building (`arduino-cli compile --show-properties`), in a scratch buffer.
+fn arduino_compile_properties(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_compile_browse(cx, &["--show-properties".to_string()])
+}
+
+/// `:arduino-compile-preprocess` — output the preprocessed sketch
+/// (`arduino-cli compile --preprocess`), in a scratch buffer.
+fn arduino_compile_preprocess(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_compile_browse(cx, &["--preprocess".to_string()])
+}
+
+/// `:arduino-compile-dump-profile` — print a reproducible build profile for the
+/// sketch (`arduino-cli compile --dump-profile`), in a scratch buffer.
+fn arduino_compile_dump_profile(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_compile_browse(cx, &["--dump-profile".to_string()])
+}
+
+/// `:arduino-compile-board-options <opts>` — compile with custom board menu
+/// options (`arduino-cli compile --board-options <opts>`, e.g. `cpu=16MHzatmega328`).
+fn arduino_compile_board_options(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let opts = args.join(" ").trim().to_string();
+    if opts.is_empty() {
+        bail!("usage: :arduino-compile-board-options <opts>  (e.g. cpu=16MHzatmega328)");
+    }
+    arduino_compile_flags(cx, &["--board-options".to_string(), opts])
+}
+
+/// `:arduino-upload-verbose` — verbose build + flash
+/// (`arduino-cli compile --upload -v`).
+fn arduino_upload_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_upload_flags(cx, &["-v".to_string()])
+}
+
+/// `:arduino-debug-info` — print the debugger configuration without starting a
+/// session (`arduino-cli debug --info`), in a scratch buffer.
+fn arduino_debug_info(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_debug_with(&settings, &["--info".to_string()]).map_err(|e| anyhow!(e))?;
+    embedded_browse(cx, argv, false);
+    Ok(())
+}
+
+/// `:arduino-debug-programmer <id>` — launch the debugger through a programmer
+/// (`arduino-cli debug --programmer <id>`), live in a terminal panel.
+fn arduino_debug_programmer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let prog = args.join(" ").trim().to_string();
+    if prog.is_empty() {
+        bail!("usage: :arduino-debug-programmer <id>  (see :arduino-board-programmers)");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_debug_with(&settings, &["--programmer".to_string(), prog])
+        .map_err(|e| anyhow!(e))?;
+    embedded_spawn_terminal(cx, argv, settings.sketch_dir());
+    Ok(())
+}
+
+/// `:arduino-monitor-quiet` — serial monitor suppressing non-error diagnostics
+/// (`arduino-cli monitor --quiet`).
+fn arduino_monitor_quiet(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_monitor_flags(cx, &["--quiet".to_string()])
+}
+
+/// `:arduino-monitor-describe` — describe the port's supported monitor settings
+/// (`arduino-cli monitor --describe`), in a scratch buffer.
+fn arduino_monitor_describe(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_monitor_with(&settings, &["--describe".to_string()]).map_err(|e| anyhow!(e))?;
+    embedded_browse(cx, argv, false);
+    Ok(())
+}
+
+/// `:arduino-core-list-updatable` — installed platforms with a newer version
+/// available (`arduino-cli core list --updatable`).
+fn arduino_core_list_updatable(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_core_list_updatable(), false);
+    Ok(())
+}
+
+/// `:arduino-lib-install-no-deps <name>` — install a library without its declared
+/// dependencies (`arduino-cli lib install <name> --no-deps`).
+fn arduino_lib_install_no_deps(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ").trim().to_string();
+    if name.is_empty() {
+        bail!("usage: :arduino-lib-install-no-deps <name>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::arduino_lib_install_no_deps(&name), dir);
+    Ok(())
+}
+
+/// `:arduino-board-details-full` — the complete board detail dump for the
+/// selected FQBN (`arduino-cli board details --full`), in a scratch buffer.
+fn arduino_board_details_full(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    if settings.fqbn.is_empty() {
+        bail!("no board selected — run :arduino-boards to pick an FQBN");
+    }
+    embedded_browse(cx, embedded::arduino_board_details_full(&settings.fqbn), false);
+    Ok(())
+}
+
 /// `:arduino-boards` — the Arduino IDE "Board" selector. Fuzzy-pick from every
 /// board across the installed platforms; the choice becomes the project FQBN.
 fn arduino_boards(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -21368,6 +21530,149 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-quiet",
+        aliases: &["arduino-compile-silent"],
+        doc: "Quiet compile, errors only (`arduino-cli compile -q`).",
+        fun: arduino_compile_quiet,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-properties",
+        aliases: &["arduino-build-properties"],
+        doc: "Dump resolved build properties without building (`arduino-cli compile --show-properties`).",
+        fun: arduino_compile_properties,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-preprocess",
+        aliases: &["arduino-preprocess"],
+        doc: "Output the preprocessed sketch (`arduino-cli compile --preprocess`).",
+        fun: arduino_compile_preprocess,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-dump-profile",
+        aliases: &["arduino-dump-profile"],
+        doc: "Print a reproducible build profile for the sketch (`arduino-cli compile --dump-profile`).",
+        fun: arduino_compile_dump_profile,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-board-options",
+        aliases: &["arduino-board-options"],
+        doc: "Compile with custom board menu options (`arduino-cli compile --board-options <opts>`).",
+        fun: arduino_compile_board_options,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-upload-verbose",
+        aliases: &["arduino-flash-verbose"],
+        doc: "Verbose build + flash (`arduino-cli compile --upload -v`).",
+        fun: arduino_upload_verbose,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-debug-info",
+        aliases: &["arduino-debug-config"],
+        doc: "Print the debugger configuration without starting a session (`arduino-cli debug --info`).",
+        fun: arduino_debug_info,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-debug-programmer",
+        aliases: &["arduino-debug-via-programmer"],
+        doc: "Launch the debugger through a programmer (`arduino-cli debug --programmer <id>`).",
+        fun: arduino_debug_programmer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-monitor-quiet",
+        aliases: &["arduino-monitor-silent"],
+        doc: "Serial monitor suppressing non-error diagnostics (`arduino-cli monitor --quiet`).",
+        fun: arduino_monitor_quiet,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-monitor-describe",
+        aliases: &["arduino-monitor-port-info"],
+        doc: "Describe the port's supported monitor settings (`arduino-cli monitor --describe`).",
+        fun: arduino_monitor_describe,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-core-list-updatable",
+        aliases: &["arduino-cores-updatable"],
+        doc: "Installed platforms with a newer version available (`arduino-cli core list --updatable`).",
+        fun: arduino_core_list_updatable,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-install-no-deps",
+        aliases: &["arduino-lib-install-nodeps"],
+        doc: "Install a library without its declared dependencies (`arduino-cli lib install <name> --no-deps`).",
+        fun: arduino_lib_install_no_deps,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-board-details-full",
+        aliases: &["arduino-board-info-full"],
+        doc: "The complete board detail dump for the selected FQBN (`arduino-cli board details --full`).",
+        fun: arduino_board_details_full,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

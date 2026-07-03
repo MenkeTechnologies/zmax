@@ -66,6 +66,19 @@
 | `:arduino-lib-list-updatable`, `:arduino-libs-updatable` | Installed libraries with a newer version available (`arduino-cli lib list --updatable`). |
 | `:arduino-lib-install-git`, `:arduino-lib-install-url` | Install a library from a git repository (`arduino-cli lib install --git-url <url>`). |
 | `:arduino-lib-install-zip`, `:arduino-lib-install-archive` | Install a library from a local .zip (`arduino-cli lib install --zip-path <path>`). |
+| `:arduino-compile-quiet`, `:arduino-compile-silent` | Quiet compile, errors only (`arduino-cli compile -q`). |
+| `:arduino-compile-properties`, `:arduino-build-properties` | Dump resolved build properties without building (`arduino-cli compile --show-properties`). |
+| `:arduino-compile-preprocess`, `:arduino-preprocess` | Output the preprocessed sketch (`arduino-cli compile --preprocess`). |
+| `:arduino-compile-dump-profile`, `:arduino-dump-profile` | Print a reproducible build profile for the sketch (`arduino-cli compile --dump-profile`). |
+| `:arduino-compile-board-options`, `:arduino-board-options` | Compile with custom board menu options (`arduino-cli compile --board-options <opts>`). |
+| `:arduino-upload-verbose`, `:arduino-flash-verbose` | Verbose build + flash (`arduino-cli compile --upload -v`). |
+| `:arduino-debug-info`, `:arduino-debug-config` | Print the debugger configuration without starting a session (`arduino-cli debug --info`). |
+| `:arduino-debug-programmer`, `:arduino-debug-via-programmer` | Launch the debugger through a programmer (`arduino-cli debug --programmer <id>`). |
+| `:arduino-monitor-quiet`, `:arduino-monitor-silent` | Serial monitor suppressing non-error diagnostics (`arduino-cli monitor --quiet`). |
+| `:arduino-monitor-describe`, `:arduino-monitor-port-info` | Describe the port's supported monitor settings (`arduino-cli monitor --describe`). |
+| `:arduino-core-list-updatable`, `:arduino-cores-updatable` | Installed platforms with a newer version available (`arduino-cli core list --updatable`). |
+| `:arduino-lib-install-no-deps`, `:arduino-lib-install-nodeps` | Install a library without its declared dependencies (`arduino-cli lib install <name> --no-deps`). |
+| `:arduino-board-details-full`, `:arduino-board-info-full` | The complete board detail dump for the selected FQBN (`arduino-cli board details --full`). |
 | `:arduino-boards`, `:arduino-board` | Pick the target board (FQBN) from installed platforms (Arduino IDE board selector). |
 | `:arduino-ports`, `:arduino-port` | Pick the serial port from connected devices (arduino-cli board list). |
 | `:arduino-lib-search`, `:arduino-lib` | Search the Arduino library index and install the pick (Arduino IDE Library Manager). |
