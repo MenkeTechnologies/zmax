@@ -14121,11 +14121,11 @@
  },
  {
   "spec_id": "emacs.command.forward_sentence",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_next_paragraph"
+   "static:move_sentence_forward"
   ],
-  "note": ""
+  "note": "emacs forward-sentence (M-e) -> move_sentence_forward (movement::move_next_sentence)"
  },
  {
   "spec_id": "emacs.command.recenter",
@@ -14265,11 +14265,11 @@
  },
  {
   "spec_id": "emacs.command.zap_to_char",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:f"
+   "static:zap_to_char"
   ],
-  "note": "vim dt<c>"
+  "note": "emacs zap-to-char (M-z): read a char, kill through it inclusive into the kill register"
  },
  {
   "spec_id": "emacs.command.uncomment_region",
@@ -20145,11 +20145,11 @@
  },
  {
   "spec_id": "emacs.command.zap_up_to_char",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:delete_till_char_forward"
+   "static:zap_up_to_char"
   ],
-  "note": "zap-up-to-char = delete_till_char_forward (dt)."
+  "note": "emacs zap-up-to-char: read a char, kill up to but not including it into the kill register"
  },
  {
   "spec_id": "emacs.command.kill_region",
