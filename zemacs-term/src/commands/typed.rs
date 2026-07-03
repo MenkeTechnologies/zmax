@@ -8738,44 +8738,6 @@ fn list_directory(
     Ok(())
 }
 
-/// `:view-lossage` — Emacs `view-lossage`: display the most recently pressed
-/// keys, one per line, in a scratch buffer.
-fn view_lossage(
-    cx: &mut compositor::Context,
-    _args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
-    if event != PromptEvent::Validate {
-        return Ok(());
-    }
-    // The final key in the ring is the one that triggered this command; drop it.
-    let mut keys: Vec<_> = cx.editor.last_keys.iter().copied().collect();
-    keys.pop();
-    let mut body = format!("Recent keys ({}):\n\n", keys.len());
-    for key in &keys {
-        let s = key.to_string();
-        body.push_str("  ");
-        if s.chars().count() == 1 {
-            body.push_str(&s);
-        } else {
-            body.push('<');
-            body.push_str(&s);
-            body.push('>');
-        }
-        body.push('\n');
-    }
-    cx.editor.new_file(Action::Replace);
-    let (view, doc) = current!(cx.editor);
-    let insert = Transaction::insert(
-        doc.text(),
-        &zemacs_core::Selection::point(0),
-        body.as_str().into(),
-    );
-    doc.apply(&insert, view.id);
-    doc.append_changes_to_history(view);
-    Ok(())
-}
-
 /// Compute abbrev-expansion edits within `text`. Returns `(start_char,
 /// end_char, replacement)` triples in ascending, non-overlapping order — one per
 /// maximal keyword-character run that `lookup` resolves to an expansion. Pure —
@@ -30451,17 +30413,6 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
             positionals: (1, Some(1)),
-            ..Signature::DEFAULT
-        },
-    },
-    TypableCommand {
-        name: "view-lossage",
-        aliases: &[],
-        doc: "Show the most recently pressed keys in a scratch buffer (emacs view-lossage).",
-        fun: view_lossage,
-        completer: CommandCompleter::none(),
-        signature: Signature {
-            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
