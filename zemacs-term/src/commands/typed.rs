@@ -4023,6 +4023,21 @@ fn pio_upload(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// `:pio-exec [args…]` — build and run the program on the native platform
+/// (`pio run -t exec`), passing each argument through as a `--program-arg`
+/// (`-a`), live in a terminal panel so the program's stdout/stderr render.
+fn pio_exec(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let settings = embedded::load();
+    let dir = settings.sketch_dir();
+    let program_args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    embedded_spawn_terminal(cx, embedded::pio_run_exec(&settings, &program_args), dir);
+    Ok(())
+}
+
 /// `:pio-monitor` — PlatformIO serial monitor (`pio device monitor`), live panel.
 fn pio_monitor(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -21940,6 +21955,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-exec",
+        aliases: &["platformio-exec", "pio-run-exec"],
+        doc: "Build and run the native program (`pio run -t exec`); args pass through as --program-arg.",
+        fun: pio_exec,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },

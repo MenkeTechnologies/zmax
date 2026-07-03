@@ -85,6 +85,7 @@
 | `:arduino-core-install`, `:arduino-core` | Install a board-support core, e.g. `arduino:avr` (Arduino IDE Boards Manager). |
 | `:pio-build`, `:pio-run`, `:platformio-build` | Build the PlatformIO project (`pio run`); errors go to the compilation list. |
 | `:pio-upload`, `:platformio-upload` | Build and upload the PlatformIO project (`pio run -t upload`), live in a terminal panel. |
+| `:pio-exec`, `:platformio-exec`, `:pio-run-exec` | Build and run the native program (`pio run -t exec`); args pass through as --program-arg. |
 | `:pio-monitor`, `:platformio-monitor` | Open the PlatformIO serial monitor (`pio device monitor`). |
 | `:pio-devices`, `:pio-device-list` | Pick a serial port from `pio device list` and set it for this project. |
 | `:pio-device-logical`, `:platformio-device-logical` | List logical (disk) devices (`pio device list --logical`). |

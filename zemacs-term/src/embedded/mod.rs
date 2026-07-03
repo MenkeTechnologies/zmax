@@ -767,6 +767,20 @@ pub fn pio_upload(settings: &EmbeddedSettings) -> Vec<String> {
     v
 }
 
+/// `pio run -t exec [-a <arg>]… [-e env]` — build and execute the program on the
+/// native platform, passing each `program_args` entry as a separate `-a`
+/// (`--program-arg`). Verified end-to-end against `pio run -t exec -a … -a …` on
+/// PlatformIO 6.1.19 with the `native` platform.
+pub fn pio_run_exec(settings: &EmbeddedSettings, program_args: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("run"), s("-t"), s("exec")];
+    for a in program_args {
+        v.push(s("-a"));
+        v.push(a.clone());
+    }
+    v.extend(settings.pio_env_args());
+    v
+}
+
 /// `pio device monitor [-p port] -b baud [-f filter…] [--eol …] [--parity …] [-e env]`
 pub fn pio_monitor(settings: &EmbeddedSettings) -> Vec<String> {
     let mut v = vec![s(PIO), s("device"), s("monitor")];
@@ -1702,6 +1716,21 @@ mod tests {
         assert_eq!(pubv[..3], ["pio", "pkg", "publish"]);
         assert!(pubv.contains(&"--private".to_string()));
         assert!(pubv.windows(2).any(|w| w == ["--type", "library"]));
+    }
+
+    #[test]
+    fn pio_run_exec_threads_program_args_and_env() {
+        let mut st = settings();
+        st.env = "native".into();
+        let argv = pio_run_exec(&st, &["hello".into(), "world".into()]);
+        assert_eq!(argv[..4], ["pio", "run", "-t", "exec"]);
+        // one -a per program argument.
+        assert_eq!(argv.iter().filter(|a| *a == "-a").count(), 2);
+        assert!(argv.windows(2).any(|w| w == ["-a", "hello"]));
+        assert!(argv.windows(2).any(|w| w == ["-a", "world"]));
+        assert!(argv.windows(2).any(|w| w == ["-e", "native"]));
+        // no program args → bare exec target.
+        assert_eq!(pio_run_exec(&settings(), &[]), ["pio", "run", "-t", "exec"]);
     }
 
     #[test]

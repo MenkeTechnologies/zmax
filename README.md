@@ -167,7 +167,8 @@ PlatformIO environment, monitor filters) persist to
 - **PlatformIO build options** — `:pio-build-verbose` (`-v`), `:pio-build-silent` (`-s`),
   `:pio-run-jobs <n>` (parallel jobs), `:pio-build-no-auto-clean`, `:pio-target
   <name>` (any `pio run -t`), and `:pio-upload-to <port>` (flash to a specific
-  port).
+  port). `:pio-exec [args…]` builds and runs the native program (`pio run -t
+  exec`), forwarding each argument as a `--program-arg`.
 - **Test / analysis** — `:pio-list-tests`, `:pio-test-filter <pattern>` (run one
   suite), `:pio-check-severity <low|medium|high>`. Test options:
   `:pio-test-verbose`, `:pio-test-ignore <pattern>`, `:pio-test-without-building`
