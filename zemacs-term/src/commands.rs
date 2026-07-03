@@ -897,6 +897,12 @@ impl MappableCommand {
         up_list, "Move forward out of the enclosing list (emacs up-list)",
         backward_up_list, "Move backward out of the enclosing list (emacs backward-up-list, C-M-u)",
         kill_sexp, "Kill the s-expression after point (emacs kill-sexp, C-M-k)",
+        mark_sexp, "Set the region over the following s-expression (emacs mark-sexp, C-M-SPC)",
+        kill_sentence, "Kill from point to end of sentence (emacs kill-sentence, M-k)",
+        backward_kill_sentence, "Kill from start of sentence to point (emacs backward-kill-sentence, C-x DEL)",
+        forward_page, "Move to the next form-feed page (emacs forward-page, C-x ])",
+        backward_page, "Move to the previous form-feed page (emacs backward-page, C-x [)",
+        mark_page, "Select the current form-feed page (emacs mark-page, C-x C-p)",
         move_to_opposite_group, "Move the current editor to the opposite split group (JetBrains)",
         rotate_view, "Goto next window",
         rotate_view_reverse, "Goto previous window",
@@ -21375,6 +21381,127 @@ fn kill_sexp(cx: &mut Context) {
     let tx = Transaction::change(doc.text(), [(from, to, None)].into_iter());
     doc.apply(&tx, view.id);
     doc.append_changes_to_history(view);
+}
+
+/// Emacs `mark-sexp` (C-M-SPC): set the region from point to the end of the
+/// following s-expression, leaving point at its end (the mark stays behind).
+fn mark_sexp(cx: &mut Context) {
+    let (text, cursor) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        (
+            doc.text().to_string(),
+            doc.selection(view.id).primary().cursor(slice),
+        )
+    };
+    let Some(end) = zemacs_core::list_motion::forward_sexp(&text, cursor) else {
+        cx.editor.set_status("no s-expression after point");
+        return;
+    };
+    if end == cursor {
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    let end = end.min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::single(cursor, end));
+}
+
+/// Emacs `kill-sentence` (M-k): kill from point to the end of the sentence,
+/// saving the killed text to the kill ring.
+fn kill_sentence(cx: &mut Context) {
+    let (from, to, killed) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let end = zemacs_core::movement::next_sentence_boundary(slice, cursor);
+        if end <= cursor {
+            (cursor, cursor, String::new())
+        } else {
+            (cursor, end, slice.slice(cursor..end).to_string())
+        }
+    };
+    if from == to {
+        cx.editor.set_status("end of buffer");
+        return;
+    }
+    crate::emacs_kill::record(killed);
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(doc.text(), [(from, to, None)].into_iter());
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Emacs `backward-kill-sentence` (C-x DEL): kill from the start of the sentence
+/// to point, saving the killed text to the kill ring.
+fn backward_kill_sentence(cx: &mut Context) {
+    let (from, to, killed) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let start = zemacs_core::movement::prev_sentence_boundary(slice, cursor);
+        if start >= cursor {
+            (cursor, cursor, String::new())
+        } else {
+            (start, cursor, slice.slice(start..cursor).to_string())
+        }
+    };
+    if from == to {
+        cx.editor.set_status("beginning of buffer");
+        return;
+    }
+    crate::emacs_kill::record(killed);
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(doc.text(), [(from, to, None)].into_iter());
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Move point to a page boundary computed by a pure `zemacs_core::page` function
+/// (`forward-page` / `backward-page`). Pages are delimited by the `^L` form feed.
+fn page_motion(cx: &mut Context, f: fn(&str, usize) -> usize) {
+    let (text, cursor) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        (
+            doc.text().to_string(),
+            doc.selection(view.id).primary().cursor(slice),
+        )
+    };
+    let pos = f(&text, cursor);
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    push_jump(view, doc);
+    let pos = pos.min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::point(pos));
+    view.ensure_cursor_in_view(doc, scrolloff);
+}
+
+/// Emacs `forward-page` (C-x ]): move to the start of the next `^L`-delimited page.
+fn forward_page(cx: &mut Context) {
+    page_motion(cx, zemacs_core::page::forward_page);
+}
+
+/// Emacs `backward-page` (C-x [): move to the start of the previous page.
+fn backward_page(cx: &mut Context) {
+    page_motion(cx, zemacs_core::page::backward_page);
+}
+
+/// Emacs `mark-page` (C-x C-p): select the current `^L`-delimited page, leaving
+/// point at its start and the mark at its end.
+fn mark_page(cx: &mut Context) {
+    let (text, cursor) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        (
+            doc.text().to_string(),
+            doc.selection(view.id).primary().cursor(slice),
+        )
+    };
+    let (start, end) = zemacs_core::page::page_bounds(&text, cursor);
+    let (view, doc) = current!(cx.editor);
+    let len = doc.text().len_chars();
+    // anchor at page end, head (point) at page start — matches Emacs mark-page.
+    doc.set_selection(view.id, Selection::single(end.min(len), start.min(len)));
 }
 
 /// SPC b w: toggle the current buffer's read-only (writable) state.

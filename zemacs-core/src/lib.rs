@@ -38,6 +38,7 @@ pub mod movement;
 pub mod object;
 pub mod occur;
 pub mod outline;
+pub mod page;
 mod position;
 pub mod power_edit;
 pub mod quickfix;

@@ -585,6 +585,12 @@
 | `up_list` | Move forward out of the enclosing list (emacs up-list) |  |
 | `backward_up_list` | Move backward out of the enclosing list (emacs backward-up-list, C-M-u) |  |
 | `kill_sexp` | Kill the s-expression after point (emacs kill-sexp, C-M-k) |  |
+| `mark_sexp` | Set the region over the following s-expression (emacs mark-sexp, C-M-SPC) |  |
+| `kill_sentence` | Kill from point to end of sentence (emacs kill-sentence, M-k) |  |
+| `backward_kill_sentence` | Kill from start of sentence to point (emacs backward-kill-sentence, C-x DEL) |  |
+| `forward_page` | Move to the next form-feed page (emacs forward-page, C-x ]) |  |
+| `backward_page` | Move to the previous form-feed page (emacs backward-page, C-x [) |  |
+| `mark_page` | Select the current form-feed page (emacs mark-page, C-x C-p) |  |
 | `move_to_opposite_group` | Move the current editor to the opposite split group (JetBrains) |  |
 | `rotate_view` | Goto next window | normal: `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-x>o ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, select: `` <C-x>o ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, insert: `` <C-x>o `` |
 | `rotate_view_reverse` | Goto previous window | normal: `` <C-w>R ``, `` <C-w>W ``, `` <C-w>.R ``, `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, select: `` <space>wR ``, `` <space>wW ``, `` <space>w.R `` |

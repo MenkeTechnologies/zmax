@@ -377,7 +377,7 @@ fn is_sentence_space(c: char) -> bool {
 
 /// Char index of the start of the next sentence at or after `pos`.
 /// Returns `slice.len_chars()` if no further sentence start exists.
-pub(crate) fn next_sentence_boundary(slice: RopeSlice, pos: usize) -> usize {
+pub fn next_sentence_boundary(slice: RopeSlice, pos: usize) -> usize {
     let len = slice.len_chars();
     let mut i = pos;
     while i < len {
@@ -422,7 +422,7 @@ pub(crate) fn current_paragraph_start(slice: RopeSlice, pos: usize) -> usize {
 
 /// Char index of the start of the sentence before `pos` (or the start of the
 /// current sentence when `pos` is mid-sentence), bounded to this paragraph.
-pub(crate) fn prev_sentence_boundary(slice: RopeSlice, pos: usize) -> usize {
+pub fn prev_sentence_boundary(slice: RopeSlice, pos: usize) -> usize {
     let para = current_paragraph_start(slice, pos);
     let mut start = para;
     let mut i = para;

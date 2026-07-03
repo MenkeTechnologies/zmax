@@ -2717,7 +2717,7 @@
   "evidence": [
    "key:normal:d i"
   ],
-  "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+  "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
  },
  {
   "spec_id": "neovim.normal-mode.it",
@@ -9477,7 +9477,7 @@
   "evidence": [
    "typable:Files"
   ],
-  "note": "fzf.vim :Files \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `open {}` on the pick."
+  "note": "fzf.vim :Files → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `open {}` on the pick."
  },
  {
   "spec_id": "fzf.command.gfiles",
@@ -9485,7 +9485,7 @@
   "evidence": [
    "typable:GFiles"
   ],
-  "note": "fzf.vim :GFiles via external fzf binary (Application::run_fzf); git ls-files \u2192 open."
+  "note": "fzf.vim :GFiles via external fzf binary (Application::run_fzf); git ls-files → open."
  },
  {
   "spec_id": "fzf.command.gfiles_status",
@@ -9493,7 +9493,7 @@
   "evidence": [
    "typable:GFiles"
   ],
-  "note": "fzf.vim :GFiles via external fzf binary; git status --porcelain \u2192 open."
+  "note": "fzf.vim :GFiles via external fzf binary; git status --porcelain → open."
  },
  {
   "spec_id": "fzf.command.buffers",
@@ -9501,7 +9501,7 @@
   "evidence": [
    "typable:Buffers"
   ],
-  "note": "fzf.vim :Buffers \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `buffer {}` on the pick."
+  "note": "fzf.vim :Buffers → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `buffer {}` on the pick."
  },
  {
   "spec_id": "fzf.command.colors",
@@ -9509,7 +9509,7 @@
   "evidence": [
    "typable:Colors"
   ],
-  "note": "fzf.vim :Colors \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `theme {}` on the pick."
+  "note": "fzf.vim :Colors → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `theme {}` on the pick."
  },
  {
   "spec_id": "fzf.command.ag",
@@ -9517,7 +9517,7 @@
   "evidence": [
    "typable:Rg"
   ],
-  "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg \u2192 open at line (fzf-goto)."
+  "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
  },
  {
   "spec_id": "fzf.command.rg",
@@ -9525,7 +9525,7 @@
   "evidence": [
    "typable:Rg"
   ],
-  "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg \u2192 open at line (fzf-goto)."
+  "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
  },
  {
   "spec_id": "fzf.command.rg_reload",
@@ -9533,7 +9533,7 @@
   "evidence": [
    "typable:Rg"
   ],
-  "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg \u2192 open at line (fzf-goto)."
+  "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
  },
  {
   "spec_id": "fzf.command.lines",
@@ -9541,7 +9541,7 @@
   "evidence": [
    "typable:Lines"
   ],
-  "note": "fzf.vim :Lines via external fzf binary; all-buffer lines \u2192 open at line."
+  "note": "fzf.vim :Lines via external fzf binary; all-buffer lines → open at line."
  },
  {
   "spec_id": "fzf.command.blines",
@@ -9549,7 +9549,7 @@
   "evidence": [
    "typable:BLines"
   ],
-  "note": "fzf.vim :BLines via external fzf binary (Application::run_fzf); current-buffer lines \u2192 goto (fzf-line)."
+  "note": "fzf.vim :BLines via external fzf binary (Application::run_fzf); current-buffer lines → goto (fzf-line)."
  },
  {
   "spec_id": "fzf.command.tags",
@@ -9589,7 +9589,7 @@
   "evidence": [
    "typable:Locate"
   ],
-  "note": "fzf.vim :Locate via external fzf binary (Application::run_fzf); locate \u2192 open."
+  "note": "fzf.vim :Locate via external fzf binary (Application::run_fzf); locate → open."
  },
  {
   "spec_id": "fzf.command.history",
@@ -9597,7 +9597,7 @@
   "evidence": [
    "typable:History"
   ],
-  "note": "fzf.vim :History via external fzf binary; recent files \u2192 open."
+  "note": "fzf.vim :History via external fzf binary; recent files → open."
  },
  {
   "spec_id": "fzf.command.history_cmd",
@@ -9605,7 +9605,7 @@
   "evidence": [
    "typable:History:"
   ],
-  "note": "fzf.vim :History: via external fzf binary; command history \u2192 run."
+  "note": "fzf.vim :History: via external fzf binary; command history → run."
  },
  {
   "spec_id": "fzf.command.history_search",
@@ -9613,7 +9613,7 @@
   "evidence": [
    "typable:History/"
   ],
-  "note": "fzf.vim :History/ via external fzf binary; search history \u2192 search."
+  "note": "fzf.vim :History/ via external fzf binary; search history → search."
  },
  {
   "spec_id": "fzf.command.commands",
@@ -9621,7 +9621,7 @@
   "evidence": [
    "typable:Commands"
   ],
-  "note": "fzf.vim :Commands \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `{}` on the pick."
+  "note": "fzf.vim :Commands → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `{}` on the pick."
  },
  {
   "spec_id": "fzf.command.maps",
@@ -9637,7 +9637,7 @@
   "evidence": [
    "typable:BCommits"
   ],
-  "note": "fzf.vim :BCommits via external fzf binary; git log -- file \u2192 git show."
+  "note": "fzf.vim :BCommits via external fzf binary; git log -- file → git show."
  },
  {
   "spec_id": "fzf.command.commits",
@@ -9645,7 +9645,7 @@
   "evidence": [
    "typable:Commits"
   ],
-  "note": "fzf.vim :Commits via external fzf binary; git log \u2192 git show."
+  "note": "fzf.vim :Commits via external fzf binary; git log → git show."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_g_f_l",
@@ -18544,7 +18544,7 @@
    "key:insert:C-c ;",
    "key:normal:C-c ;"
   ],
-  "note": "Complete Current Statement (Cmd-Shift-Enter) = complete_current_statement, bound under the Emacs major-mode prefix C-c as `C-c ;` \u2014 active in Insert, Normal AND Select (spacemacs), so it fires while typing like JetBrains. Closes brackets/parens left open on the line, appends the language terminator (; for C/Rust/Java/JS/... via lang_uses_semicolons), leaves `{` blocks open, then opens an indented line below in insert mode. Line-local heuristic (not full PSI)."
+  "note": "Complete Current Statement (Cmd-Shift-Enter) = complete_current_statement, bound under the Emacs major-mode prefix C-c as `C-c ;` — active in Insert, Normal AND Select (spacemacs), so it fires while typing like JetBrains. Closes brackets/parens left open on the line, appends the language terminator (; for C/Rust/Java/JS/... via lang_uses_semicolons), leaves `{` blocks open, then opens an indented line below in insert mode. Line-local heuristic (not full PSI)."
  },
  {
   "spec_id": "jetbrains.coding-assistance.generate",
@@ -18553,7 +18553,7 @@
    "key:normal:space l g",
    "static:generate_code"
   ],
-  "note": "Generate (Cmd N) = generate_code: title-filtered (\"generate\") LSP code-action menu \u2014 getters/constructors/impls/derives (SPC l g)"
+  "note": "Generate (Cmd N) = generate_code: title-filtered (\"generate\") LSP code-action menu — getters/constructors/impls/derives (SPC l g)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_p_v",
@@ -23655,7 +23655,7 @@
   "evidence": [
    "typable:fold"
   ],
-  "note": "vim :fold \u2192 fold_create (create a fold over the range)"
+  "note": "vim :fold → fold_create (create a fold over the range)"
  },
  {
   "spec_id": "neovim.ex-command.colon_foldopen",
@@ -23663,7 +23663,7 @@
   "evidence": [
    "typable:foldopen"
   ],
-  "note": "vim :foldopen \u2192 fold_open"
+  "note": "vim :foldopen → fold_open"
  },
  {
   "spec_id": "neovim.ex-command.colon_foldclose",
@@ -23671,7 +23671,7 @@
   "evidence": [
    "typable:foldclose"
   ],
-  "note": "vim :foldclose \u2192 fold_close"
+  "note": "vim :foldclose → fold_close"
  },
  {
   "spec_id": "neovim.ex-command.colon_silent",
@@ -23679,7 +23679,7 @@
   "evidence": [
    "typable:silent"
   ],
-  "note": "vim :silent modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (suppress messages) is best-effort/not enforced."
+  "note": "vim :silent modifier — wrapped command runs via our :dispatcher; modifier effect (suppress messages) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_unsilent",
@@ -23687,7 +23687,7 @@
   "evidence": [
    "typable:unsilent"
   ],
-  "note": "vim :unsilent modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (show messages (default)) is best-effort/not enforced."
+  "note": "vim :unsilent modifier — wrapped command runs via our :dispatcher; modifier effect (show messages (default)) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_verbose",
@@ -23695,7 +23695,7 @@
   "evidence": [
    "typable:verbose"
   ],
-  "note": "vim :verbose modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (verbose level (leading count dropped)) is best-effort/not enforced."
+  "note": "vim :verbose modifier — wrapped command runs via our :dispatcher; modifier effect (verbose level (leading count dropped)) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_noautocmd",
@@ -23703,7 +23703,7 @@
   "evidence": [
    "typable:noautocmd"
   ],
-  "note": "vim :noautocmd modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (skip autocommands) is best-effort/not enforced."
+  "note": "vim :noautocmd modifier — wrapped command runs via our :dispatcher; modifier effect (skip autocommands) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_keepalt",
@@ -23711,7 +23711,7 @@
   "evidence": [
    "typable:keepalt"
   ],
-  "note": "vim :keepalt modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep alternate file) is best-effort/not enforced."
+  "note": "vim :keepalt modifier — wrapped command runs via our :dispatcher; modifier effect (keep alternate file) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_keepjumps",
@@ -23719,7 +23719,7 @@
   "evidence": [
    "typable:keepjumps"
   ],
-  "note": "vim :keepjumps modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep jumplist) is best-effort/not enforced."
+  "note": "vim :keepjumps modifier — wrapped command runs via our :dispatcher; modifier effect (keep jumplist) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_keepmarks",
@@ -23727,7 +23727,7 @@
   "evidence": [
    "typable:keepmarks"
   ],
-  "note": "vim :keepmarks modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep marks) is best-effort/not enforced."
+  "note": "vim :keepmarks modifier — wrapped command runs via our :dispatcher; modifier effect (keep marks) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_keeppatterns",
@@ -23735,7 +23735,7 @@
   "evidence": [
    "typable:keeppatterns"
   ],
-  "note": "vim :keeppatterns modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep search pattern) is best-effort/not enforced."
+  "note": "vim :keeppatterns modifier — wrapped command runs via our :dispatcher; modifier effect (keep search pattern) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_lockmarks",
@@ -23743,7 +23743,7 @@
   "evidence": [
    "typable:lockmarks"
   ],
-  "note": "vim :lockmarks modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (do not adjust marks) is best-effort/not enforced."
+  "note": "vim :lockmarks modifier — wrapped command runs via our :dispatcher; modifier effect (do not adjust marks) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_sandbox",
@@ -23751,7 +23751,7 @@
   "evidence": [
    "typable:sandbox"
   ],
-  "note": "vim :sandbox modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (sandbox) is best-effort/not enforced."
+  "note": "vim :sandbox modifier — wrapped command runs via our :dispatcher; modifier effect (sandbox) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_confirm",
@@ -23759,7 +23759,7 @@
   "evidence": [
    "typable:confirm"
   ],
-  "note": "vim :confirm modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (confirm prompts) is best-effort/not enforced."
+  "note": "vim :confirm modifier — wrapped command runs via our :dispatcher; modifier effect (confirm prompts) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_browse",
@@ -23767,7 +23767,7 @@
   "evidence": [
    "typable:browse"
   ],
-  "note": "vim :browse modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (file dialog (N/A in TUI)) is best-effort/not enforced."
+  "note": "vim :browse modifier — wrapped command runs via our :dispatcher; modifier effect (file dialog (N/A in TUI)) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_noswapfile",
@@ -23775,7 +23775,7 @@
   "evidence": [
    "typable:noswapfile"
   ],
-  "note": "vim :noswapfile modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (no swapfile) is best-effort/not enforced."
+  "note": "vim :noswapfile modifier — wrapped command runs via our :dispatcher; modifier effect (no swapfile) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_hide",
@@ -23783,7 +23783,7 @@
   "evidence": [
    "typable:hide"
   ],
-  "note": "vim :hide modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (hidden buffer) is best-effort/not enforced."
+  "note": "vim :hide modifier — wrapped command runs via our :dispatcher; modifier effect (hidden buffer) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_vertical",
@@ -23791,7 +23791,7 @@
   "evidence": [
    "typable:vertical"
   ],
-  "note": "vim :vertical modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (vertical split placement) is best-effort/not enforced."
+  "note": "vim :vertical modifier — wrapped command runs via our :dispatcher; modifier effect (vertical split placement) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_horizontal",
@@ -23799,7 +23799,7 @@
   "evidence": [
    "typable:horizontal"
   ],
-  "note": "vim :horizontal modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (horizontal split placement) is best-effort/not enforced."
+  "note": "vim :horizontal modifier — wrapped command runs via our :dispatcher; modifier effect (horizontal split placement) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_aboveleft",
@@ -23807,7 +23807,7 @@
   "evidence": [
    "typable:aboveleft"
   ],
-  "note": "vim :aboveleft modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split above/left) is best-effort/not enforced."
+  "note": "vim :aboveleft modifier — wrapped command runs via our :dispatcher; modifier effect (split above/left) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_belowright",
@@ -23815,7 +23815,7 @@
   "evidence": [
    "typable:belowright"
   ],
-  "note": "vim :belowright modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split below/right) is best-effort/not enforced."
+  "note": "vim :belowright modifier — wrapped command runs via our :dispatcher; modifier effect (split below/right) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_leftabove",
@@ -23823,7 +23823,7 @@
   "evidence": [
    "typable:leftabove"
   ],
-  "note": "vim :leftabove modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split left/above) is best-effort/not enforced."
+  "note": "vim :leftabove modifier — wrapped command runs via our :dispatcher; modifier effect (split left/above) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_rightbelow",
@@ -23831,7 +23831,7 @@
   "evidence": [
    "typable:rightbelow"
   ],
-  "note": "vim :rightbelow modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split right/below) is best-effort/not enforced."
+  "note": "vim :rightbelow modifier — wrapped command runs via our :dispatcher; modifier effect (split right/below) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_topleft",
@@ -23839,7 +23839,7 @@
   "evidence": [
    "typable:topleft"
   ],
-  "note": "vim :topleft modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split at top/left) is best-effort/not enforced."
+  "note": "vim :topleft modifier — wrapped command runs via our :dispatcher; modifier effect (split at top/left) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_botright",
@@ -23847,7 +23847,7 @@
   "evidence": [
    "typable:botright"
   ],
-  "note": "vim :botright modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split at bottom/right) is best-effort/not enforced."
+  "note": "vim :botright modifier — wrapped command runs via our :dispatcher; modifier effect (split at bottom/right) is best-effort/not enforced."
  },
  {
   "spec_id": "neovim.ex-command.colon_redrawstatus",
@@ -23855,7 +23855,7 @@
   "evidence": [
    "typable:redrawstatus"
   ],
-  "note": "vim :redrawstatus \u2192 full redraw (approximation)"
+  "note": "vim :redrawstatus → full redraw (approximation)"
  },
  {
   "spec_id": "neovim.ex-command.colon_redrawtabline",
@@ -23863,7 +23863,7 @@
   "evidence": [
    "typable:redrawtabline"
   ],
-  "note": "vim :redrawtabline \u2192 full redraw (approximation)"
+  "note": "vim :redrawtabline → full redraw (approximation)"
  },
  {
   "spec_id": "neovim.ex-command.colon_normal",
@@ -23871,7 +23871,7 @@
   "evidence": [
    "typable:normal"
   ],
-  "note": "vim :normal[!] {cmds} \u2192 ex_normal: parses the arg into a key sequence and replays it through compositor.handle_event (the macro-replay path), so every motion/operator/command applies."
+  "note": "vim :normal[!] {cmds} → ex_normal: parses the arg into a key sequence and replays it through compositor.handle_event (the macro-replay path), so every motion/operator/command applies."
  },
  {
   "spec_id": "neovim.ex-command.colon_mark",
@@ -23879,7 +23879,7 @@
   "evidence": [
    "typable:mark"
   ],
-  "note": "vim :mark {x} \u2192 ex_mark: doc.set_mark(x, cursor)"
+  "note": "vim :mark {x} → ex_mark: doc.set_mark(x, cursor)"
  },
  {
   "spec_id": "neovim.ex-command.colon_k",
@@ -23887,7 +23887,7 @@
   "evidence": [
    "typable:mark"
   ],
-  "note": "vim :k {x} \u2192 ex_mark (alias of :mark)"
+  "note": "vim :k {x} → ex_mark (alias of :mark)"
  },
  {
   "spec_id": "neovim.ex-command.colon_resize",
@@ -23895,7 +23895,7 @@
   "evidence": [
    "typable:resize"
   ],
-  "note": "vim :resize [+/-]{N} \u2192 ex_resize: relative grow/shrink or absolute height via tree.resize_vertical (height-only; :vertical resize width is best-effort)."
+  "note": "vim :resize [+/-]{N} → ex_resize: relative grow/shrink or absolute height via tree.resize_vertical (height-only; :vertical resize width is best-effort)."
  },
  {
   "spec_id": "neovim.ex-command.colon_buffer",
@@ -23903,7 +23903,7 @@
   "evidence": [
    "typable:buffer"
   ],
-  "note": "vim :buffer {name} / :b \u2192 ex_buffer: switch to the open buffer whose path contains {name} via editor.switch; errors on no match / >1 match (E93/E94). Buffer numbers not modeled."
+  "note": "vim :buffer {name} / :b → ex_buffer: switch to the open buffer whose path contains {name} via editor.switch; errors on no match / >1 match (E93/E94). Buffer numbers not modeled."
  },
  {
   "spec_id": "emacs.command.describe_command",
@@ -26401,7 +26401,7 @@
    "key:normal:C-x space",
    "static:visual_block_mode"
   ],
-  "note": "emacs C-x SPC (rectangle-mark-mode \u2014 toggle a rectangular region) -> visual_block_mode"
+  "note": "emacs C-x SPC (rectangle-mark-mode — toggle a rectangular region) -> visual_block_mode"
  },
  {
   "spec_id": "emacs.keybinding.c_x_apostrophe",
@@ -26410,7 +26410,7 @@
    "key:normal:C-x '",
    "static:expand_abbrev"
   ],
-  "note": "emacs C-x ' (expand-abbrev \u2014 expand the abbrev before point) -> expand_abbrev"
+  "note": "emacs C-x ' (expand-abbrev — expand the abbrev before point) -> expand_abbrev"
  },
  {
   "spec_id": "emacs.command.dired",
@@ -28579,5 +28579,53 @@
    "static:kill_sexp"
   ],
   "note": "kill-sexp (C-M-k): kill the s-expression after point (list or atom)"
+ },
+ {
+  "spec_id": "emacs.command.mark_sexp",
+  "status": "ported",
+  "evidence": [
+   "static:mark_sexp"
+  ],
+  "note": "mark-sexp (C-M-SPC): set the region over the following s-expression"
+ },
+ {
+  "spec_id": "emacs.command.kill_sentence",
+  "status": "ported",
+  "evidence": [
+   "static:kill_sentence"
+  ],
+  "note": "kill-sentence (M-k): kill from point to end of sentence, saved to the kill ring"
+ },
+ {
+  "spec_id": "emacs.command.backward_kill_sentence",
+  "status": "ported",
+  "evidence": [
+   "static:backward_kill_sentence"
+  ],
+  "note": "backward-kill-sentence (C-x DEL): kill from start of sentence to point"
+ },
+ {
+  "spec_id": "emacs.command.forward_page",
+  "status": "ported",
+  "evidence": [
+   "static:forward_page"
+  ],
+  "note": "forward-page (C-x ]): move to the next form-feed page"
+ },
+ {
+  "spec_id": "emacs.command.backward_page",
+  "status": "ported",
+  "evidence": [
+   "static:backward_page"
+  ],
+  "note": "backward-page (C-x [): move to the previous form-feed page"
+ },
+ {
+  "spec_id": "emacs.command.mark_page",
+  "status": "ported",
+  "evidence": [
+   "static:mark_page"
+  ],
+  "note": "mark-page (C-x C-p): select the current form-feed page"
  }
 ]
