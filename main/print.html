@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-ec33efe0.js";
+            window.path_to_searchindex_js = "searchindex-17c4f511.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1638,6 +1638,12 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:arduino-monitor-quiet</code>, <code>:arduino-monitor-silent</code></td><td>Serial monitor suppressing non-error diagnostics (<code>arduino-cli monitor --quiet</code>).</td></tr>
 <tr><td><code>:arduino-monitor-describe</code>, <code>:arduino-monitor-port-info</code></td><td>Describe the port’s supported monitor settings (<code>arduino-cli monitor --describe</code>).</td></tr>
 <tr><td><code>:arduino-core-list-updatable</code>, <code>:arduino-cores-updatable</code></td><td>Installed platforms with a newer version available (<code>arduino-cli core list --updatable</code>).</td></tr>
+<tr><td><code>:arduino-core-list-all</code>, <code>:arduino-cores-all</code></td><td>Every installed platform incl. release channels (<code>arduino-cli core list --all</code>).</td></tr>
+<tr><td><code>:arduino-lib-list-all</code>, <code>:arduino-libs-all</code></td><td>Installed libraries across all locations incl. built-in (<code>arduino-cli lib list --all</code>).</td></tr>
+<tr><td><code>:arduino-update-outdated</code>, <code>:arduino-update-show-outdated</code></td><td>Refresh indexes then list upgradable cores/libraries (<code>arduino-cli update --show-outdated</code>).</td></tr>
+<tr><td><code>:arduino-boards-hidden</code>, <code>:arduino-board-listall-hidden</code></td><td>Every known board including platform-hidden variants (<code>arduino-cli board listall --show-hidden</code>).</td></tr>
+<tr><td><code>:arduino-lib-search-names</code>, <code>:arduino-lib-search-name</code></td><td>A names-only library search (<code>arduino-cli lib search &lt;query&gt; --names</code>).</td></tr>
+<tr><td><code>:arduino-sketch-archive-full</code>, <code>:arduino-archive-full</code></td><td>Archive the sketch with its build output (<code>arduino-cli sketch archive --include-build-dir</code>).</td></tr>
 <tr><td><code>:arduino-lib-install-no-deps</code>, <code>:arduino-lib-install-nodeps</code></td><td>Install a library without its declared dependencies (<code>arduino-cli lib install &lt;name&gt; --no-deps</code>).</td></tr>
 <tr><td><code>:arduino-board-details-full</code>, <code>:arduino-board-info-full</code></td><td>The complete board detail dump for the selected FQBN (<code>arduino-cli board details --full</code>).</td></tr>
 <tr><td><code>:arduino-boards</code>, <code>:arduino-board</code></td><td>Pick the target board (FQBN) from installed platforms (Arduino IDE board selector).</td></tr>
@@ -6519,7 +6525,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>555</strong> (8.1%)</li>
 <li>Absent: <strong>3318</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 951 static commands, 1545 typable <code>:</code> commands, 2636 default keybindings</li>
+<li>zemacs source surface: 951 static commands, 1557 typable <code>:</code> commands, 2636 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
