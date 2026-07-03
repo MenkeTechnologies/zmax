@@ -726,6 +726,9 @@ impl MappableCommand {
         type_hierarchy_supertypes, "Type hierarchy: supertypes of the symbol (JetBrains Ctrl-H)",
         type_hierarchy_subtypes, "Type hierarchy: subtypes of the symbol",
         goto_window_top, "Goto window top",
+        what_line, "Report the line number of point (emacs what-line)",
+        count_lines_page, "Report lines on the current page, before + after point (emacs count-lines-page, C-x l)",
+        move_to_window_line_top_bottom, "Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r)",
         goto_window_center, "Goto window center",
         goto_window_bottom, "Goto window bottom",
         goto_last_accessed_file, "Goto last accessed file",
@@ -2372,6 +2375,59 @@ fn goto_window_center(cx: &mut Context) {
 
 fn goto_window_bottom(cx: &mut Context) {
     goto_window(cx, Align::Bottom)
+}
+
+/// Emacs `what-line` (M-x): report the line number of point (1-based) and the
+/// buffer's total line count on the status line.
+fn what_line(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    let line = text.char_to_line(cursor) + 1;
+    let total = text.len_lines();
+    cx.editor.set_status(format!("Line {line} of {total}"));
+}
+
+/// Emacs `count-lines-page` (C-x l): report how many lines are on the current
+/// `^L`-delimited page, split into those before and after point.
+fn count_lines_page(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let last = text.len_chars();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..)).min(last);
+    let whole = text.to_string();
+    let (start, end) = zemacs_core::page::page_bounds(&whole, cursor);
+    let (start, end) = (start.min(last), end.min(last));
+    let start_line = text.char_to_line(start);
+    let end_line = text.char_to_line(end.saturating_sub(1).max(start));
+    let cur_line = text.char_to_line(cursor);
+    let total = end_line - start_line + 1;
+    let before = cur_line - start_line;
+    let after = total.saturating_sub(before + 1);
+    cx.editor
+        .set_status(format!("Page has {total} lines ({before} + {after})"));
+}
+
+thread_local! {
+    /// Cycle phase for [`move_to_window_line_top_bottom`] (Emacs M-r cycles
+    /// centre → top → bottom on repeated presses).
+    static WINDOW_LINE_CYCLE: std::cell::Cell<u8> = const { std::cell::Cell::new(0) };
+}
+
+/// Emacs `move-to-window-line-top-bottom` (M-r): move point to the centre line of
+/// the window, then to the top, then the bottom on successive presses.
+fn move_to_window_line_top_bottom(cx: &mut Context) {
+    let phase = WINDOW_LINE_CYCLE.with(|c| {
+        let p = c.get();
+        c.set((p + 1) % 3);
+        p
+    });
+    let align = match phase {
+        0 => Align::Center,
+        1 => Align::Top,
+        _ => Align::Bottom,
+    };
+    goto_window(cx, align);
 }
 
 fn move_word_impl<F>(cx: &mut Context, move_fn: F)
