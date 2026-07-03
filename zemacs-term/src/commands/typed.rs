@@ -8650,6 +8650,87 @@ fn count_matches_cmd(
     Ok(())
 }
 
+/// The span the line-filter commands act on: the active region, or — when there
+/// is no selection (a bare point) — from point to the end of the buffer, matching
+/// Emacs's `keep-lines`/`flush-lines`/`copy-matching-lines` region-or-rest rule.
+fn line_filter_span(doc: &Document, view_id: ViewId) -> std::ops::Range<usize> {
+    let sel = doc.selection(view_id).primary();
+    if sel.from() == sel.to() {
+        sel.from()..doc.text().len_chars()
+    } else {
+        sel.from()..sel.to()
+    }
+}
+
+/// Emacs `copy-matching-lines` (a.k.a. `copy-lines`): copy every line matching the
+/// regex (in the region, or from point to buffer end) to the kill ring, without
+/// modifying the buffer.
+fn copy_matching_lines_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        anyhow::bail!("usage: :copy-matching-lines <regex>");
+    }
+    let (view, doc) = current!(cx.editor);
+    let span = line_filter_span(doc, view.id);
+    let s: String = doc.text().slice(..).slice(span).chunks().collect();
+    let matched = filter_lines(&s, pattern, true)?;
+    if matched.is_empty() {
+        cx.editor.set_status(format!("no lines match /{pattern}/"));
+        return Ok(());
+    }
+    let n = matched.lines().count();
+    crate::emacs_kill::record(matched);
+    cx.editor
+        .set_status(format!("copied {n} line(s) matching /{pattern}/ to the kill ring"));
+    Ok(())
+}
+
+/// Emacs `kill-matching-lines` (a.k.a. `delete-matching-lines` that saves text):
+/// delete every line matching the regex (region, or point to buffer end) and save
+/// the deleted lines to the kill ring.
+fn kill_matching_lines_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        anyhow::bail!("usage: :kill-matching-lines <regex>");
+    }
+    let (view, doc) = current!(cx.editor);
+    let span = line_filter_span(doc, view.id);
+    let (from, to) = (span.start, span.end);
+    let s: String = doc.text().slice(..).slice(from..to).chunks().collect();
+    let matched = filter_lines(&s, pattern, true)?;
+    if matched.is_empty() {
+        cx.editor.set_status(format!("no lines match /{pattern}/"));
+        return Ok(());
+    }
+    let n = matched.lines().count();
+    crate::emacs_kill::record(matched);
+    let survivors = filter_lines(&s, pattern, false)?;
+    let text = doc.text();
+    let transaction =
+        Transaction::change(text, std::iter::once((from, to, Some(survivors.into()))));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor
+        .set_status(format!("killed {n} line(s) matching /{pattern}/ to the kill ring"));
+    Ok(())
+}
+
 /// Collapse `input` to `count line` rows — the `sort | uniq -c | sort -rn` idiom.
 /// Rows are ordered by descending count, ties broken by first appearance. Pure —
 /// unit tested.
@@ -26288,6 +26369,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["count-regex", "how-many"],
         doc: "Report how many regex matches (and matching lines) are in the selection (Emacs how-many).",
         fun: count_matches_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "copy-matching-lines",
+        aliases: &["copy-lines-matching"],
+        doc: "Copy lines matching a regex (region, or point to end) to the kill ring (Emacs copy-matching-lines).",
+        fun: copy_matching_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "kill-matching-lines",
+        aliases: &["kill-lines-matching"],
+        doc: "Delete lines matching a regex (region, or point to end) and save them to the kill ring (Emacs kill-matching-lines).",
+        fun: kill_matching_lines_cmd,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),

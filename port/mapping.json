@@ -20833,11 +20833,11 @@
  },
  {
   "spec_id": "emacs.command.kill_matching_lines",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:remove-lines"
+   "typable:kill-matching-lines"
   ],
-  "note": "Drops selected lines matching a regex = flush-lines/kill-matching-lines (operates on selection)."
+  "note": "kill-matching-lines: delete lines matching a regex and save them to the kill ring"
  },
  {
   "spec_id": "emacs.command.gud_remove",
@@ -28627,5 +28627,13 @@
    "static:mark_page"
   ],
   "note": "mark-page (C-x C-p): select the current form-feed page"
+ },
+ {
+  "spec_id": "emacs.command.copy_matching_lines",
+  "status": "ported",
+  "evidence": [
+   "typable:copy-matching-lines"
+  ],
+  "note": "copy-matching-lines: copy lines matching a regex to the kill ring"
  }
 ]
