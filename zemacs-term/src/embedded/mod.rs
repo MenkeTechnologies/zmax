@@ -279,6 +279,75 @@ pub fn arduino_compile(settings: &EmbeddedSettings) -> Result<Vec<String>, Strin
     ])
 }
 
+/// `arduino-cli compile [extra…] --fqbn <fqbn> <sketch>` — compile with extra
+/// verified flags spliced before the sketch path (`-v`, `--clean`, `-j <n>`,
+/// `--warnings <lvl>`, `--only-compilation-database`, `--optimize-for-debug`,
+/// `--profile <name>`). Verified against `arduino-cli compile --help` on 1.5.1.
+pub fn arduino_compile_with(
+    settings: &EmbeddedSettings,
+    extra: &[String],
+) -> Result<Vec<String>, String> {
+    if settings.fqbn.is_empty() {
+        return Err("no board selected — run :arduino-boards to pick an FQBN".into());
+    }
+    let mut v = vec![s(ARDUINO_CLI), s("compile"), s("--fqbn"), settings.fqbn.clone()];
+    v.extend(extra.iter().cloned());
+    v.push(settings.sketch_dir().to_string_lossy().into_owned());
+    Ok(v)
+}
+
+/// `arduino-cli compile --upload -p <port> [extra…] --fqbn <fqbn> <sketch>` —
+/// build + flash with extra verified flags (`--verify`, `--programmer <p>`).
+pub fn arduino_upload_with(
+    settings: &EmbeddedSettings,
+    extra: &[String],
+) -> Result<Vec<String>, String> {
+    if settings.fqbn.is_empty() {
+        return Err("no board selected — run :arduino-boards to pick an FQBN".into());
+    }
+    if settings.port.is_empty() {
+        return Err("no serial port selected — run :arduino-ports".into());
+    }
+    let mut v = vec![
+        s(ARDUINO_CLI),
+        s("compile"),
+        s("--upload"),
+        s("-p"),
+        settings.port.clone(),
+        s("--fqbn"),
+        settings.fqbn.clone(),
+    ];
+    v.extend(extra.iter().cloned());
+    v.push(settings.sketch_dir().to_string_lossy().into_owned());
+    Ok(v)
+}
+
+/// `arduino-cli upload --input-dir|--input-file <path> -p <port> --fqbn <fqbn>` —
+/// flash a *pre-built* binary without compiling (the Arduino IDE "Upload Using
+/// Programmer" of an exported build). `flag` is `--input-dir` or `--input-file`.
+pub fn arduino_upload_input(
+    settings: &EmbeddedSettings,
+    flag: &str,
+    path: &str,
+) -> Result<Vec<String>, String> {
+    if settings.fqbn.is_empty() {
+        return Err("no board selected — run :arduino-boards to pick an FQBN".into());
+    }
+    if settings.port.is_empty() {
+        return Err("no serial port selected — run :arduino-ports".into());
+    }
+    Ok(vec![
+        s(ARDUINO_CLI),
+        s("upload"),
+        s(flag),
+        s(path),
+        s("-p"),
+        settings.port.clone(),
+        s("--fqbn"),
+        settings.fqbn.clone(),
+    ])
+}
+
 /// `arduino-cli compile --upload -p <port> --fqbn <fqbn> <sketch>`
 ///
 /// The Arduino IDE "Upload" button compiles the sketch *then* flashes it; plain
@@ -458,6 +527,59 @@ pub fn arduino_monitor(settings: &EmbeddedSettings) -> Result<Vec<String>, Strin
         s("-c"),
         format!("baudrate={}", settings.baud),
     ])
+}
+
+/// `arduino-cli monitor -p <port> [extra…] -c baudrate=<baud>` — serial monitor
+/// with extra verified flags (`--raw`, `--timestamp`, `--quiet`, `--describe`).
+pub fn arduino_monitor_with(
+    settings: &EmbeddedSettings,
+    extra: &[String],
+) -> Result<Vec<String>, String> {
+    if settings.port.is_empty() {
+        return Err("no serial port selected — run :arduino-ports".into());
+    }
+    let mut v = vec![s(ARDUINO_CLI), s("monitor"), s("-p"), settings.port.clone()];
+    v.extend(extra.iter().cloned());
+    v.push(s("-c"));
+    v.push(format!("baudrate={}", settings.baud));
+    Ok(v)
+}
+
+/// `arduino-cli board details --fqbn <fqbn> --list-programmers` — the programmers
+/// a board supports (for `:arduino-upload-programmer`).
+pub fn arduino_board_details_programmers(fqbn: &str) -> Vec<String> {
+    vec![
+        s(ARDUINO_CLI),
+        s("board"),
+        s("details"),
+        s("--fqbn"),
+        s(fqbn),
+        s("--list-programmers"),
+    ]
+}
+
+/// `arduino-cli board list --watch` — continuously watch for boards being
+/// connected/disconnected (long-running; hosted in a PTY panel).
+pub fn arduino_board_list_watch() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("board"), s("list"), s("--watch")]
+}
+
+/// `arduino-cli lib list --updatable` — only installed libraries with a newer
+/// version available.
+pub fn arduino_lib_list_updatable() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("list"), s("--updatable")]
+}
+
+/// `arduino-cli lib install --git-url <url>` — install a library straight from a
+/// git repository (requires arduino-cli's `library.enable_unsafe_install`).
+pub fn arduino_lib_install_git(url: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("install"), s("--git-url"), s(url)]
+}
+
+/// `arduino-cli lib install --zip-path <path>` — install a library from a local
+/// `.zip` archive (requires arduino-cli's `library.enable_unsafe_install`).
+pub fn arduino_lib_install_zip(path: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("install"), s("--zip-path"), s(path)]
 }
 
 /// `arduino-cli board listall --format json` (installed platforms' boards).
@@ -1361,6 +1483,64 @@ mod tests {
             ["arduino-cli", "version", "--format", "json"]
         );
         assert_eq!(arduino_daemon(&[]), ["arduino-cli", "daemon"]);
+    }
+
+    #[test]
+    fn arduino_compile_with_splices_flags_before_sketch() {
+        let argv = arduino_compile_with(&settings(), &["-v".into(), "--clean".into()]).unwrap();
+        assert_eq!(argv[0], "arduino-cli");
+        assert_eq!(argv[1], "compile");
+        // sketch path is the final positional; flags precede it.
+        let sketch = argv.last().unwrap();
+        assert!(argv.contains(&"-v".to_string()));
+        assert!(argv.contains(&"--clean".to_string()));
+        let clean_idx = argv.iter().position(|a| a == "--clean").unwrap();
+        assert!(clean_idx < argv.len() - 1, "flags must precede the sketch path {sketch}");
+    }
+
+    #[test]
+    fn arduino_compile_with_needs_a_board() {
+        let mut st = settings();
+        st.fqbn.clear();
+        assert!(arduino_compile_with(&st, &["-v".into()]).is_err());
+    }
+
+    #[test]
+    fn arduino_upload_with_carries_port_and_verify() {
+        let argv = arduino_upload_with(&settings(), &["--verify".into()]).unwrap();
+        assert_eq!(argv[1], "compile");
+        assert!(argv.contains(&"--upload".to_string()));
+        assert!(argv.contains(&"--verify".to_string()));
+        assert!(argv.windows(2).any(|w| w == ["-p", "/dev/cu.usbmodem1401"]));
+    }
+
+    #[test]
+    fn arduino_upload_input_flashes_prebuilt() {
+        let argv = arduino_upload_input(&settings(), "--input-dir", "build").unwrap();
+        assert_eq!(argv[1], "upload");
+        assert!(argv.windows(2).any(|w| w == ["--input-dir", "build"]));
+        assert!(argv.windows(2).any(|w| w == ["--fqbn", "arduino:avr:uno"]));
+    }
+
+    #[test]
+    fn arduino_monitor_with_carries_raw_and_baud() {
+        let argv = arduino_monitor_with(&settings(), &["--raw".into()]).unwrap();
+        assert!(argv.contains(&"--raw".to_string()));
+        assert!(argv.contains(&"baudrate=115200".to_string()));
+    }
+
+    #[test]
+    fn arduino_board_and_lib_flag_builders() {
+        assert!(arduino_board_details_programmers("arduino:avr:uno")
+            .contains(&"--list-programmers".to_string()));
+        assert_eq!(
+            arduino_board_list_watch(),
+            ["arduino-cli", "board", "list", "--watch"]
+        );
+        assert!(arduino_lib_list_updatable().contains(&"--updatable".to_string()));
+        assert!(arduino_lib_install_git("https://example.com/lib.git")
+            .contains(&"--git-url".to_string()));
+        assert!(arduino_lib_install_zip("/tmp/lib.zip").contains(&"--zip-path".to_string()));
     }
 
     #[test]

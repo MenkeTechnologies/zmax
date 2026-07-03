@@ -150,7 +150,16 @@ PlatformIO environment, monitor filters) persist to
   `:pio-cleanall`, `:pio-test`, `:pio-check`, `:pio-size`, `:pio-list-targets`.
   Compiler diagnostics land in the `*compilation*` list so `:next-error` walks
   avr-gcc/arm-gcc errors; uploads run live in a PTY panel.
-- **Build options** — `:pio-build-verbose` (`-v`), `:pio-build-silent` (`-s`),
+- **Arduino compile options** — `:arduino-compile-verbose` (`-v`),
+  `:arduino-compile-clean` (`--clean`), `:arduino-compile-jobs <n>` (`-j`),
+  `:arduino-compiledb` (`--only-compilation-database`, for the C/C++ LSP),
+  `:arduino-compile-warnings <none|default|more|all>`,
+  `:arduino-compile-profile <name>` (build against a sketch profile),
+  `:arduino-compile-debug-opt` (`--optimize-for-debug`). Upload options:
+  `:arduino-upload-verify` (`--verify`), `:arduino-upload-programmer <id>`,
+  `:arduino-upload-dir <dir>` / `:arduino-upload-file <file>` (flash a pre-built
+  binary without recompiling).
+- **PlatformIO build options** — `:pio-build-verbose` (`-v`), `:pio-build-silent` (`-s`),
   `:pio-run-jobs <n>` (parallel jobs), `:pio-build-no-auto-clean`, `:pio-target
   <name>` (any `pio run -t`), and `:pio-upload-to <port>` (flash to a specific
   port).
@@ -169,7 +178,10 @@ PlatformIO environment, monitor filters) persist to
   rebuilding), `:pio-envdump`.
 - **Serial** — `:arduino-monitor` / `:pio-monitor` (live PTY serial monitor) and
   `:arduino-plotter` / `:pio-plotter`, which graph the numbers streaming from the
-  board (Arduino IDE Serial Plotter). `:embedded-baud <rate>` sets the rate;
+  board (Arduino IDE Serial Plotter). `:embedded-baud <rate>` sets the rate.
+  `:arduino-monitor-raw` (no output transformations) and
+  `:arduino-monitor-timestamp` (timestamp each line) tune the arduino-cli
+  monitor;
   `:pio-monitor-filter <name>` (e.g. `time`, `log2file`, `hexlify`,
   `send_on_enter`), `:pio-monitor-filters-clear`, `:pio-monitor-eol <CR|LF|CRLF>`
   and `:pio-monitor-parity <N|E|O|S|M>` tune the PlatformIO monitor, as do
@@ -185,16 +197,21 @@ PlatformIO environment, monitor filters) persist to
   `:pio-boards-json` (Board Explorer as JSON).
   `:pio-device-logical` lists logical (disk) devices, `:pio-device-mdns`
   lists multicast-DNS / network (OTA) devices, and `:pio-device-serial` lists
-  serial ports only.
+  serial ports only. `:arduino-board-list-watch` watches for boards
+  connecting/disconnecting, and `:arduino-board-programmers` lists the
+  programmers the selected board supports.
 - **Boards Manager** — `:arduino-core-search`, `:arduino-board-search`,
   `:arduino-core-install`, `:arduino-core-download` (fetch without installing),
   `:arduino-core-list`, `:arduino-core-uninstall`, `:arduino-core-update-index`,
   `:arduino-core-upgrade`.
 - **Library Manager** — `:arduino-lib-search` (search + install) or
   `:arduino-lib-install <name>` (install by name),
-  `:arduino-lib-list`, `:arduino-lib-download`, `:arduino-lib-uninstall`,
+  `:arduino-lib-list` (`:arduino-lib-list-updatable` for upgradable ones only),
+  `:arduino-lib-download`, `:arduino-lib-uninstall`,
   `:arduino-lib-upgrade`, `:arduino-lib-update-index`, `:arduino-lib-examples`,
-  `:arduino-lib-deps`; PlatformIO packages via `:pio-lib-search`,
+  `:arduino-lib-deps`, `:arduino-lib-install-git <url>` /
+  `:arduino-lib-install-zip <path>` (install from a repo or archive);
+  PlatformIO packages via `:pio-lib-search`,
   `:pio-lib-install`, `:pio-lib-list`, `:pio-lib-show`, `:pio-lib-uninstall`,
   `:pio-lib-update`, `:pio-lib-outdated`. `:pio-pkg-list-libraries` /
   `:pio-pkg-list-platforms` / `:pio-pkg-list-tools` scope the installed-package

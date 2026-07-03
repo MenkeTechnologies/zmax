@@ -48,6 +48,24 @@
 | `:arduino-compile`, `:averify`, `:arduino-verify` | Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify). |
 | `:arduino-upload`, `:aupload` | Compile and flash the sketch to the connected board (arduino-cli compile --upload), live in a terminal panel. |
 | `:arduino-monitor`, `:amonitor`, `:serial-monitor` | Open the serial monitor for the selected port/baud (arduino-cli monitor). |
+| `:arduino-compile-verbose`, `:arduino-verify-verbose` | Verbose compile (`arduino-cli compile -v`); diagnostics into *compilation*. |
+| `:arduino-compile-clean`, `:arduino-rebuild` | Compile without cached build artifacts (`arduino-cli compile --clean`). |
+| `:arduino-compile-jobs`, `:arduino-compile-j` | Compile with N parallel jobs (`arduino-cli compile -j <n>`). |
+| `:arduino-compiledb`, `:arduino-compilation-database` | Generate compile_commands.json for the C/C++ LSP (`arduino-cli compile --only-compilation-database`). |
+| `:arduino-compile-warnings`, `:arduino-warnings` | Compile at a warning level (`arduino-cli compile --warnings <none|default|more|all>`). |
+| `:arduino-compile-profile`, `:arduino-build-profile` | Compile using a sketch build profile (`arduino-cli compile --profile <name>`). |
+| `:arduino-compile-debug-opt`, `:arduino-compile-for-debug` | Compile with debug-friendly optimization (`arduino-cli compile --optimize-for-debug`). |
+| `:arduino-upload-verify`, `:arduino-upload-verified` | Build + flash, then verify the flashed program (`arduino-cli compile --upload --verify`). |
+| `:arduino-upload-programmer`, `:arduino-upload-via-programmer` | Build + flash through a programmer (`arduino-cli compile --upload --programmer <id>`). |
+| `:arduino-upload-dir`, `:arduino-upload-input-dir` | Flash a pre-built binary folder without recompiling (`arduino-cli upload --input-dir <dir>`). |
+| `:arduino-upload-file`, `:arduino-upload-input-file` | Flash a specific pre-built binary without recompiling (`arduino-cli upload --input-file <file>`). |
+| `:arduino-monitor-raw`, `:arduino-monitor-noraw` | Serial monitor without output transformations (`arduino-cli monitor --raw`). |
+| `:arduino-monitor-timestamp`, `:arduino-monitor-ts` | Serial monitor prefixing each line with a timestamp (`arduino-cli monitor --timestamp`). |
+| `:arduino-board-programmers`, `:arduino-list-programmers` | List programmers the selected board supports (`arduino-cli board details --list-programmers`). |
+| `:arduino-board-list-watch`, `:arduino-boards-watch` | Watch for boards connecting/disconnecting (`arduino-cli board list --watch`), live in a panel. |
+| `:arduino-lib-list-updatable`, `:arduino-libs-updatable` | Installed libraries with a newer version available (`arduino-cli lib list --updatable`). |
+| `:arduino-lib-install-git`, `:arduino-lib-install-url` | Install a library from a git repository (`arduino-cli lib install --git-url <url>`). |
+| `:arduino-lib-install-zip`, `:arduino-lib-install-archive` | Install a library from a local .zip (`arduino-cli lib install --zip-path <path>`). |
 | `:arduino-boards`, `:arduino-board` | Pick the target board (FQBN) from installed platforms (Arduino IDE board selector). |
 | `:arduino-ports`, `:arduino-port` | Pick the serial port from connected devices (arduino-cli board list). |
 | `:arduino-lib-search`, `:arduino-lib` | Search the Arduino library index and install the pick (Arduino IDE Library Manager). |

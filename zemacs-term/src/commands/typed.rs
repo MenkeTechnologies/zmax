@@ -3447,6 +3447,250 @@ fn arduino_monitor(cx: &mut compositor::Context, _args: Args, event: PromptEvent
     Ok(())
 }
 
+/// Shared helper: `arduino-cli compile <extra…>` routed through `*compilation*`.
+fn arduino_compile_flags(cx: &mut compositor::Context, extra: &[String]) -> anyhow::Result<()> {
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_compile_with(&settings, extra).map_err(|e| anyhow!(e))?;
+    run_compile(cx, &embedded::shell_join(&argv))
+}
+
+/// Shared helper: `arduino-cli compile --upload <extra…>` in a terminal panel.
+fn arduino_upload_flags(cx: &mut compositor::Context, extra: &[String]) -> anyhow::Result<()> {
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_upload_with(&settings, extra).map_err(|e| anyhow!(e))?;
+    embedded_spawn_terminal(cx, argv, settings.sketch_dir());
+    Ok(())
+}
+
+/// Shared helper: `arduino-cli monitor <extra…>` in a live PTY panel.
+fn arduino_monitor_flags(cx: &mut compositor::Context, extra: &[String]) -> anyhow::Result<()> {
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_monitor_with(&settings, extra).map_err(|e| anyhow!(e))?;
+    embedded_spawn_terminal(cx, argv, settings.sketch_dir());
+    Ok(())
+}
+
+/// `:arduino-compile-verbose` — verbose compile (`arduino-cli compile -v`).
+fn arduino_compile_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_compile_flags(cx, &["-v".to_string()])
+}
+
+/// `:arduino-compile-clean` — compile without cached build artifacts
+/// (`arduino-cli compile --clean`).
+fn arduino_compile_clean(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_compile_flags(cx, &["--clean".to_string()])
+}
+
+/// `:arduino-compile-jobs <n>` — compile with N parallel jobs
+/// (`arduino-cli compile -j <n>`).
+fn arduino_compile_jobs(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = args.join(" ").trim().to_string();
+    if n.is_empty() || n.parse::<u32>().is_err() {
+        bail!("usage: :arduino-compile-jobs <n>  (e.g. 4)");
+    }
+    arduino_compile_flags(cx, &["-j".to_string(), n])
+}
+
+/// `:arduino-compiledb` — generate `compile_commands.json` for the C/C++ LSP
+/// (`arduino-cli compile --only-compilation-database`).
+fn arduino_compiledb(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_compile_flags(cx, &["--only-compilation-database".to_string()])
+}
+
+/// `:arduino-compile-warnings <none|default|more|all>` — compile at a warning
+/// level (`arduino-cli compile --warnings <lvl>`).
+fn arduino_compile_warnings(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let lvl = args.join(" ").trim().to_ascii_lowercase();
+    if !matches!(lvl.as_str(), "none" | "default" | "more" | "all") {
+        bail!("usage: :arduino-compile-warnings <none|default|more|all>");
+    }
+    arduino_compile_flags(cx, &["--warnings".to_string(), lvl])
+}
+
+/// `:arduino-compile-profile <name>` — compile using a sketch build profile
+/// (`arduino-cli compile --profile <name>`).
+fn arduino_compile_profile(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ").trim().to_string();
+    if name.is_empty() {
+        bail!("usage: :arduino-compile-profile <name>");
+    }
+    arduino_compile_flags(cx, &["--profile".to_string(), name])
+}
+
+/// `:arduino-compile-debug-opt` — compile with debug-friendly optimization
+/// (`arduino-cli compile --optimize-for-debug`), before a debug session.
+fn arduino_compile_debug_opt(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_compile_flags(cx, &["--optimize-for-debug".to_string()])
+}
+
+/// `:arduino-upload-verify` — build + flash, then verify the flashed program
+/// (`arduino-cli compile --upload --verify`).
+fn arduino_upload_verify(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_upload_flags(cx, &["--verify".to_string()])
+}
+
+/// `:arduino-upload-programmer <programmer>` — build + flash through a programmer
+/// (`arduino-cli compile --upload --programmer <id>`).
+fn arduino_upload_programmer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let prog = args.join(" ").trim().to_string();
+    if prog.is_empty() {
+        bail!("usage: :arduino-upload-programmer <id>  (see :arduino-board-programmers)");
+    }
+    arduino_upload_flags(cx, &["--programmer".to_string(), prog])
+}
+
+/// `:arduino-upload-dir <dir>` — flash a pre-built binary directory without
+/// recompiling (`arduino-cli upload --input-dir <dir>`).
+fn arduino_upload_dir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = args.join(" ").trim().to_string();
+    if dir.is_empty() {
+        bail!("usage: :arduino-upload-dir <dir>  (a folder of exported binaries)");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_upload_input(&settings, "--input-dir", &dir).map_err(|e| anyhow!(e))?;
+    embedded_spawn_terminal(cx, argv, settings.sketch_dir());
+    Ok(())
+}
+
+/// `:arduino-upload-file <file>` — flash a specific pre-built binary without
+/// recompiling (`arduino-cli upload --input-file <file>`).
+fn arduino_upload_file(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = args.join(" ").trim().to_string();
+    if file.is_empty() {
+        bail!("usage: :arduino-upload-file <file>  (e.g. build/sketch.ino.hex)");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    let argv = embedded::arduino_upload_input(&settings, "--input-file", &file).map_err(|e| anyhow!(e))?;
+    embedded_spawn_terminal(cx, argv, settings.sketch_dir());
+    Ok(())
+}
+
+/// `:arduino-monitor-raw` — serial monitor without output transformations
+/// (`arduino-cli monitor --raw`).
+fn arduino_monitor_raw(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_monitor_flags(cx, &["--raw".to_string()])
+}
+
+/// `:arduino-monitor-timestamp` — serial monitor prefixing each line with a
+/// timestamp (`arduino-cli monitor --timestamp`).
+fn arduino_monitor_timestamp(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    arduino_monitor_flags(cx, &["--timestamp".to_string()])
+}
+
+/// `:arduino-board-programmers` — list the programmers the selected board
+/// supports (`arduino-cli board details --fqbn <fqbn> --list-programmers`).
+fn arduino_board_programmers(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let settings = embedded::load();
+    if settings.fqbn.is_empty() {
+        bail!("no board selected — run :arduino-boards to pick an FQBN");
+    }
+    embedded_browse(cx, embedded::arduino_board_details_programmers(&settings.fqbn), false);
+    Ok(())
+}
+
+/// `:arduino-board-list-watch` — continuously watch for boards connecting /
+/// disconnecting (`arduino-cli board list --watch`), live in a terminal panel.
+fn arduino_board_list_watch(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::arduino_board_list_watch(), root);
+    Ok(())
+}
+
+/// `:arduino-lib-list-updatable` — installed libraries with a newer version
+/// available (`arduino-cli lib list --updatable`).
+fn arduino_lib_list_updatable(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_lib_list_updatable(), false);
+    Ok(())
+}
+
+/// `:arduino-lib-install-git <url>` — install a library from a git repository
+/// (`arduino-cli lib install --git-url <url>`), live in a terminal panel.
+fn arduino_lib_install_git(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let url = args.join(" ").trim().to_string();
+    if url.is_empty() {
+        bail!("usage: :arduino-lib-install-git <url>  (needs library.enable_unsafe_install)");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::arduino_lib_install_git(&url), dir);
+    Ok(())
+}
+
+/// `:arduino-lib-install-zip <path>` — install a library from a local `.zip`
+/// (`arduino-cli lib install --zip-path <path>`), live in a terminal panel.
+fn arduino_lib_install_zip(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ").trim().to_string();
+    if path.is_empty() {
+        bail!("usage: :arduino-lib-install-zip <path>  (needs library.enable_unsafe_install)");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::arduino_lib_install_zip(&path), dir);
+    Ok(())
+}
+
 /// `:arduino-boards` — the Arduino IDE "Board" selector. Fuzzy-pick from every
 /// board across the installed platforms; the choice becomes the project FQBN.
 fn arduino_boards(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -20926,6 +21170,204 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-verbose",
+        aliases: &["arduino-verify-verbose"],
+        doc: "Verbose compile (`arduino-cli compile -v`); diagnostics into *compilation*.",
+        fun: arduino_compile_verbose,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-clean",
+        aliases: &["arduino-rebuild"],
+        doc: "Compile without cached build artifacts (`arduino-cli compile --clean`).",
+        fun: arduino_compile_clean,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-jobs",
+        aliases: &["arduino-compile-j"],
+        doc: "Compile with N parallel jobs (`arduino-cli compile -j <n>`).",
+        fun: arduino_compile_jobs,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compiledb",
+        aliases: &["arduino-compilation-database"],
+        doc: "Generate compile_commands.json for the C/C++ LSP (`arduino-cli compile --only-compilation-database`).",
+        fun: arduino_compiledb,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-warnings",
+        aliases: &["arduino-warnings"],
+        doc: "Compile at a warning level (`arduino-cli compile --warnings <none|default|more|all>`).",
+        fun: arduino_compile_warnings,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-profile",
+        aliases: &["arduino-build-profile"],
+        doc: "Compile using a sketch build profile (`arduino-cli compile --profile <name>`).",
+        fun: arduino_compile_profile,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-debug-opt",
+        aliases: &["arduino-compile-for-debug"],
+        doc: "Compile with debug-friendly optimization (`arduino-cli compile --optimize-for-debug`).",
+        fun: arduino_compile_debug_opt,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-upload-verify",
+        aliases: &["arduino-upload-verified"],
+        doc: "Build + flash, then verify the flashed program (`arduino-cli compile --upload --verify`).",
+        fun: arduino_upload_verify,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-upload-programmer",
+        aliases: &["arduino-upload-via-programmer"],
+        doc: "Build + flash through a programmer (`arduino-cli compile --upload --programmer <id>`).",
+        fun: arduino_upload_programmer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-upload-dir",
+        aliases: &["arduino-upload-input-dir"],
+        doc: "Flash a pre-built binary folder without recompiling (`arduino-cli upload --input-dir <dir>`).",
+        fun: arduino_upload_dir,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-upload-file",
+        aliases: &["arduino-upload-input-file"],
+        doc: "Flash a specific pre-built binary without recompiling (`arduino-cli upload --input-file <file>`).",
+        fun: arduino_upload_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-monitor-raw",
+        aliases: &["arduino-monitor-noraw"],
+        doc: "Serial monitor without output transformations (`arduino-cli monitor --raw`).",
+        fun: arduino_monitor_raw,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-monitor-timestamp",
+        aliases: &["arduino-monitor-ts"],
+        doc: "Serial monitor prefixing each line with a timestamp (`arduino-cli monitor --timestamp`).",
+        fun: arduino_monitor_timestamp,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-board-programmers",
+        aliases: &["arduino-list-programmers"],
+        doc: "List programmers the selected board supports (`arduino-cli board details --list-programmers`).",
+        fun: arduino_board_programmers,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-board-list-watch",
+        aliases: &["arduino-boards-watch"],
+        doc: "Watch for boards connecting/disconnecting (`arduino-cli board list --watch`), live in a panel.",
+        fun: arduino_board_list_watch,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-list-updatable",
+        aliases: &["arduino-libs-updatable"],
+        doc: "Installed libraries with a newer version available (`arduino-cli lib list --updatable`).",
+        fun: arduino_lib_list_updatable,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-install-git",
+        aliases: &["arduino-lib-install-url"],
+        doc: "Install a library from a git repository (`arduino-cli lib install --git-url <url>`).",
+        fun: arduino_lib_install_git,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-install-zip",
+        aliases: &["arduino-lib-install-archive"],
+        doc: "Install a library from a local .zip (`arduino-cli lib install --zip-path <path>`).",
+        fun: arduino_lib_install_zip,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },
