@@ -4926,6 +4926,67 @@ fn pio_test_port(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
     pio_run_compile(cx, embedded::pio_test_with(&st, &["--test-port".to_string(), port]))
 }
 
+/// `:pio-test-upload-port <port>` — flash the test firmware to a specific serial
+/// port (`pio test --upload-port <port>`).
+fn pio_test_upload_port(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let port = args.join(" ").trim().to_string();
+    if port.is_empty() {
+        bail!("usage: :pio-test-upload-port <port>  (e.g. /dev/cu.usbmodem1401)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["--upload-port".to_string(), port]))
+}
+
+/// `:pio-test-monitor-dtr <0|1>` — set the DTR line state for the post-test
+/// serial monitor (`pio test --monitor-dtr <state>`).
+fn pio_test_monitor_dtr(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let state = args.join(" ").trim().to_string();
+    if !matches!(state.as_str(), "0" | "1") {
+        bail!("usage: :pio-test-monitor-dtr <0|1>");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["--monitor-dtr".to_string(), state]))
+}
+
+/// `:pio-test-monitor-rts <0|1>` — set the RTS line state for the post-test
+/// serial monitor (`pio test --monitor-rts <state>`).
+fn pio_test_monitor_rts(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let state = args.join(" ").trim().to_string();
+    if !matches!(state.as_str(), "0" | "1") {
+        bail!("usage: :pio-test-monitor-rts <0|1>");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["--monitor-rts".to_string(), state]))
+}
+
+/// `:pio-project-metadata-path <path>` — write the IDE/LSP metadata JSON to a
+/// file (`pio project metadata --json-output --json-output-path <path>`).
+fn pio_project_metadata_path(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ").trim().to_string();
+    if path.is_empty() {
+        bail!("usage: :pio-project-metadata-path <path>  (e.g. .pio/metadata.json)");
+    }
+    require_tool(embedded::PIO)?;
+    embedded_capture(&embedded::pio_project_metadata_path(&path))?;
+    cx.editor.set_status(format!("PlatformIO project metadata written to `{path}`"));
+    Ok(())
+}
+
 /// `:pio-check-silent` — quiet static analysis, warnings/errors only
 /// (`pio check -s`).
 fn pio_check_silent(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -22732,6 +22793,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["platformio-test-port"],
         doc: "Run unit tests over a specific serial port (`pio test --test-port <port>`).",
         fun: pio_test_port,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-upload-port",
+        aliases: &["platformio-test-upload-port"],
+        doc: "Flash the test firmware to a specific serial port (`pio test --upload-port <port>`).",
+        fun: pio_test_upload_port,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-monitor-dtr",
+        aliases: &["platformio-test-monitor-dtr"],
+        doc: "Set the DTR line state for the post-test monitor (`pio test --monitor-dtr <0|1>`).",
+        fun: pio_test_monitor_dtr,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-monitor-rts",
+        aliases: &["platformio-test-monitor-rts"],
+        doc: "Set the RTS line state for the post-test monitor (`pio test --monitor-rts <0|1>`).",
+        fun: pio_test_monitor_rts,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-project-metadata-path",
+        aliases: &["platformio-project-metadata-path"],
+        doc: "Write the IDE/LSP metadata JSON to a file (`pio project metadata --json-output-path <path>`).",
+        fun: pio_project_metadata_path,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),

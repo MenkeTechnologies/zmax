@@ -177,7 +177,10 @@ PlatformIO environment, monitor filters) persist to
   `:pio-check-src-filters <pattern>`, `:pio-check-silent` (`-s`). `:pio-test-json`
   and `:pio-check-json` dump the test / analysis results as JSON to a scratch
   buffer; `:pio-test-junit <path>` / `:pio-test-json-path <path>` write CI
-  reports, and `:pio-test-port <port>` runs tests over a specific serial port.
+  reports. `:pio-test-port <port>` runs tests over a specific serial port,
+  `:pio-test-upload-port <port>` flashes the test firmware to one, and
+  `:pio-test-monitor-dtr <0|1>` / `:pio-test-monitor-rts <0|1>` set the
+  post-test monitor line states.
 - **PlatformIO build targets** — the full `pio run -t` surface: `:pio-compiledb`
   (generate `compile_commands.json` for the C/C++ LSP), `:pio-buildfs` /
   `:pio-uploadfs` (SPIFFS/LittleFS filesystem image), `:pio-uploadeep`,
@@ -292,7 +295,8 @@ PlatformIO environment, monitor filters) persist to
   `:pio-project-config` (computed config), `:pio-project-config-lint` (validate
   `platformio.ini`), `:pio-project-metadata` (IDE/LSP
   metadata dump); `:pio-project-config-json` / `:pio-project-metadata-json`
-  emit the JSON form.
+  emit the JSON form, and `:pio-project-metadata-path <path>` writes the metadata
+  JSON to a file for external tooling.
 - **Raw passthrough** — `:pio <args…>` and `:arduino-cli <args…>` (alias `:acli`)
   run any backend command in a terminal panel, so every subcommand, flag, and
   future capability of both CLIs is reachable even when it has no named command.
