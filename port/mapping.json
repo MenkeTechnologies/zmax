@@ -14320,6 +14320,14 @@
   "note": "emacs mpuz -> mpuz: multiplication puzzle overlay (ui/mpuz.rs)"
  },
  {
+  "spec_id": "emacs.command.bubbles",
+  "status": "ported",
+  "evidence": [
+   "static:bubbles"
+  ],
+  "note": "emacs bubbles -> bubbles: same-game (pop groups, gravity, collapse) (ui/bubbles.rs)"
+ },
+ {
   "spec_id": "emacs.command.butterfly",
   "status": "ported",
   "evidence": [

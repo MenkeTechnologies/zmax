@@ -1214,6 +1214,7 @@ impl MappableCommand {
         gomoku, "Play five-in-a-row against the computer (emacs gomoku)",
         butterfly, "Flip the desired bit with a butterfly (emacs butterfly, xkcd 378)",
         mpuz, "Play the multiplication puzzle (emacs mpuz)",
+        bubbles, "Play the bubbles same-game (emacs bubbles)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -13169,6 +13170,13 @@ fn gomoku(cx: &mut Context) {
 fn mpuz(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::mpuz::Mpuz::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `bubbles`: play the same-game (pop connected same-colour groups).
+fn bubbles(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::bubbles::Bubbles::new()) as Box<dyn Component>)
     });
 }
 
