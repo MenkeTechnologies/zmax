@@ -159,14 +159,19 @@ impl Component for Info {
             self.title.to_string()
         };
 
-        // Full editor width, anchored at the bottom (above the statusline) —
-        // Spacemacs' which-key bar. (`body_w` still drives column layout inside.)
-        let _ = body_w;
+        // Size the box to the grid content, anchored at the bottom-left (above
+        // the statusline). A narrow grid — e.g. one wide column when long
+        // descriptions can't fit two — must NOT leave a full-width bar of dead
+        // space. Stay wide enough for the title, and never wider than the frame.
+        let title_w = title.chars().count() + 2; // border corners
+        let box_w = (body_w + 4) // borders (2) + horizontal margin (2)
+            .max(title_w)
+            .min(viewport.width as usize) as u16;
         let height = body_h as u16 + 2; // +2 border
         let area = viewport.intersection(Rect::new(
             viewport.x,
             viewport.y + viewport.height.saturating_sub(height + 1),
-            viewport.width,
+            box_w,
             height,
         ));
         surface.clear_with(area, popup_style);
