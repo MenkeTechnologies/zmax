@@ -315,9 +315,10 @@ pub struct Ide {
     bottom_div_x: [u16; 2], // screen columns of the two dividers (0 = not laid out)
     aux_sels: [usize; 3],  // per-column list selection (mirrored to aux_sel for the focused col)
     resizing_div: Option<usize>, // which divider (0|1) is being dragged
-    bottom_mid_folded: bool, // middle column collapsed → two-column layout
+    bottom_col_folded: [bool; 3], // per-column collapse (left | middle | right)
     bottom_body_y: u16,    // top row of the drawer body (for the fold-button hit)
-    mid_fold_btn_x: u16,   // column of the fold/unfold chevron (0 = none)
+    bottom_fold_x: [u16; 3], // per-column fold/unfold chevron x (0 = none this frame)
+    bottom_col_x: [(u16, u16); 3], // per-column body x-range [start,end); (0,0)=folded
     bottom_hits: Vec<(u16, u16, BottomHit)>,
     bottom_header_y: u16,
     bottom_divider_y: u16,
@@ -484,9 +485,10 @@ impl Ide {
             bottom_div_x: [0, 0],
             aux_sels: [0, 0, 0],
             resizing_div: None,
-            bottom_mid_folded: false,
+            bottom_col_folded: [false; 3],
             bottom_body_y: 0,
-            mid_fold_btn_x: 0,
+            bottom_fold_x: [0; 3],
+            bottom_col_x: [(0, 0); 3],
             bottom_hits: Vec::new(),
             bottom_header_y: 0,
             bottom_divider_y: u16::MAX,
@@ -655,15 +657,33 @@ impl Ide {
         self.bottom_zoom
     }
 
-    /// Fold/unfold the middle drawer column (collapses to a two-column layout).
-    pub fn toggle_mid_fold(&mut self) -> bool {
-        self.bottom_mid_folded = !self.bottom_mid_folded;
-        if self.bottom_mid_folded && self.bottom_focus_col == 1 {
-            self.set_focus_col(0);
+    /// Fold/unfold one drawer column (0 = left, 1 = middle, 2 = right). The
+    /// remaining columns share the freed width. Refuses to fold the last visible
+    /// column (something must stay shown). Returns the column's new fold state.
+    pub fn toggle_col_fold(&mut self, col: usize) -> bool {
+        if col >= 3 {
+            return false;
+        }
+        let folding = !self.bottom_col_folded[col];
+        // Never fold away the last visible column.
+        if folding && self.bottom_col_folded.iter().filter(|&&f| !f).count() <= 1 {
+            return self.bottom_col_folded[col];
+        }
+        self.bottom_col_folded[col] = folding;
+        if folding && self.bottom_focus_col == col {
+            // Move focus to the nearest still-visible column.
+            if let Some(vis) = (0..3).find(|&c| !self.bottom_col_folded[c]) {
+                self.set_focus_col(vis);
+            }
         }
         self.visible = true;
         self.fold_problems = false;
-        self.bottom_mid_folded
+        self.bottom_col_folded[col]
+    }
+
+    /// Fold/unfold the middle drawer column (kept for the existing binding).
+    pub fn toggle_mid_fold(&mut self) -> bool {
+        self.toggle_col_fold(1)
     }
 
     /// Re-run the last command (same cmd/cwd/shell), revealing the Run tab.
@@ -839,7 +859,9 @@ impl Ide {
             bottom_height: self.bottom_height,
             bottom_zoom: self.bottom_zoom,
             bottom_splits: self.bottom_splits,
-            bottom_mid_folded: self.bottom_mid_folded,
+            bottom_mid_folded: self.bottom_col_folded[1],
+            bottom_left_folded: self.bottom_col_folded[0],
+            bottom_right_folded: self.bottom_col_folded[2],
             auto_reveal: self.auto_reveal,
             bottom_tabs: self
                 .bottom_tabs
@@ -883,7 +905,7 @@ impl Ide {
         {
             self.bottom_splits = l.bottom_splits;
         }
-        self.bottom_mid_folded = l.bottom_mid_folded;
+        self.bottom_col_folded = [l.bottom_left_folded, l.bottom_mid_folded, l.bottom_right_folded];
         self.auto_reveal = l.auto_reveal;
         if l.bottom_focus_col < 3 {
             self.bottom_focus_col = l.bottom_focus_col;
@@ -1101,7 +1123,7 @@ impl Ide {
     fn select_tab(&mut self, t: BottomTab) {
         let c = Self::tab_col(t);
         if c == 1 {
-            self.bottom_mid_folded = false; // selecting a middle-column tab reveals it
+            self.bottom_col_folded[1] = false; // selecting a middle-column tab reveals it
         }
         self.set_focus_col(c);
         self.bottom_tabs[c] = t;
@@ -1701,18 +1723,19 @@ impl Ide {
                 // cursor (so the row handlers below act on that column's tab); a
                 // click on a vertical divider starts a resize.
                 if row > self.bottom_header_y && in_rect(&self.problems_rect, col, row) {
-                    let [d0, d1] = self.bottom_div_x;
-                    // the divider's top cell is the fold/unfold chevron
-                    if self.mid_fold_btn_x != 0
-                        && col == self.mid_fold_btn_x
-                        && row == self.bottom_body_y
-                    {
-                        self.bottom_mid_folded = !self.bottom_mid_folded;
-                        if self.bottom_mid_folded && self.bottom_focus_col == 1 {
-                            self.set_focus_col(0);
+                    // Each column's header row carries a fold (visible col) or
+                    // unfold (folded col) chevron; a click on it toggles that
+                    // column. Checked first so it wins over focus/resize.
+                    if row == self.bottom_body_y {
+                        if let Some(c) = (0..3).find(|&i| {
+                            self.bottom_fold_x[i] != 0 && col == self.bottom_fold_x[i]
+                        }) {
+                            self.toggle_col_fold(c);
+                            return IdeAction::None;
                         }
-                        return IdeAction::None;
                     }
+                    // A click on a live divider starts a resize drag.
+                    let [d0, d1] = self.bottom_div_x;
                     if d0 != 0 && col == d0 {
                         self.resizing_div = Some(0);
                         return IdeAction::None;
@@ -1721,20 +1744,11 @@ impl Ide {
                         self.resizing_div = Some(1);
                         return IdeAction::None;
                     }
-                    if d0 != 0 {
-                        let c = if self.bottom_mid_folded {
-                            if col > d0 {
-                                2
-                            } else {
-                                0
-                            }
-                        } else if col > d1 {
-                            2
-                        } else if col > d0 {
-                            1
-                        } else {
-                            0
-                        };
+                    // Otherwise focus the column whose body range holds the cursor.
+                    if let Some(c) = (0..3).find(|&i| {
+                        let (x0, x1) = self.bottom_col_x[i];
+                        x1 > x0 && col >= x0 && col < x1
+                    }) {
                         self.set_focus_col(c);
                     }
                     self.focus = Focus::Problems;
@@ -3504,65 +3518,110 @@ impl Ide {
             return;
         }
         // Body columns: col0 (Problems/Run/Git), col1 (Registers/Todo/Marks/Jumps),
-        // col2 (Recent/Harpoon/CI), separated by draggable dividers. The middle
-        // column is foldable -> a two-column layout. A divider's top cell is a
-        // fold/unfold chevron; the rest of it resizes.
+        // col2 (Recent/Harpoon/CI). Each visible column carries a fold chevron
+        // (◂) at its header's top-right cell; folding collapses it to a 1-cell
+        // handle (▸) that unfolds on click, and the remaining columns share the
+        // freed width. With all three visible the dividers stay draggable.
         let full = body_rect(area);
         self.bottom_body_y = full.y;
         let end = full.x + full.width;
         let focus_st = theme.get("ui.text.focus");
         let accent = theme.get("function");
+        self.bottom_div_x = [0, 0];
+        self.bottom_fold_x = [0; 3];
+        self.bottom_col_x = [(0, 0); 3];
         if full.width < 12 {
             // too narrow to split - fall back to the single focused tab
-            self.bottom_div_x = [0, 0];
-            self.mid_fold_btn_x = 0;
             let t = self.bottom_tab;
             self.render_tab_body(t, surface, theme, full);
             return;
         }
         let tabs = self.bottom_tabs;
-        if self.bottom_mid_folded {
-            // Two columns (col0 | col2); the middle is hidden behind the divider.
-            let s = self.bottom_splits[0].clamp(15, 85);
-            let d0 = full.x + (full.width as u32 * s as u32 / 100) as u16;
-            self.bottom_div_x = [d0, 0];
-            self.mid_fold_btn_x = d0;
-            let dst = if self.resizing_div == Some(0) {
-                focus_st
-            } else {
-                off
-            };
+        let folded = self.bottom_col_folded;
+        let vis: Vec<usize> = (0..3).filter(|&i| !folded[i]).collect();
+        if vis.is_empty() {
+            // Guarded against elsewhere, but never leave the drawer blank.
+            let t = self.bottom_tab;
+            self.render_tab_body(t, surface, theme, full);
+            return;
+        }
+        let vline = "\u{2502}";
+        // Draw a vertical rule down `x`, with `top` in the header cell.
+        let mut rule = |surface: &mut Surface, x: u16, style, top: &str, top_style| {
             for yy in full.y..full.y + full.height {
-                surface.set_stringn(d0, yy, "\u{2502}", 1, dst);
+                surface.set_stringn(x, yy, vline, 1, style);
             }
-            surface.set_stringn(d0, full.y, "\u{25B8}", 1, accent); // unfold chevron
-            let c0 = Rect::new(full.x, full.y, d0.saturating_sub(full.x), full.height);
-            let c2 = Rect::new(d0 + 1, full.y, end.saturating_sub(d0 + 1), full.height);
-            self.render_tab_body(tabs[0], surface, theme, c0);
-            self.render_tab_body(tabs[2], surface, theme, c2);
-        } else {
+            surface.set_stringn(x, full.y, top, 1, top_style);
+        };
+
+        if folded == [false, false, false] {
+            // Classic three-column layout with two draggable dividers.
             let s0 = self.bottom_splits[0].clamp(12, 60);
             let s1 = self.bottom_splits[1].clamp(s0 + 10, 88);
             let d0 = full.x + (full.width as u32 * s0 as u32 / 100) as u16;
             let d1 = full.x + (full.width as u32 * s1 as u32 / 100) as u16;
             self.bottom_div_x = [d0, d1];
-            self.mid_fold_btn_x = d1;
             for (dx, active) in [
                 (d0, self.resizing_div == Some(0)),
                 (d1, self.resizing_div == Some(1)),
             ] {
                 let dst = if active { focus_st } else { off };
                 for yy in full.y..full.y + full.height {
-                    surface.set_stringn(dx, yy, "\u{2502}", 1, dst);
+                    surface.set_stringn(dx, yy, vline, 1, dst);
                 }
             }
-            surface.set_stringn(d1, full.y, "\u{25C2}", 1, accent); // fold chevron (right divider)
-            let c0 = Rect::new(full.x, full.y, d0.saturating_sub(full.x), full.height);
-            let c1 = Rect::new(d0 + 1, full.y, d1.saturating_sub(d0 + 1), full.height);
-            let c2 = Rect::new(d1 + 1, full.y, end.saturating_sub(d1 + 1), full.height);
-            self.render_tab_body(tabs[0], surface, theme, c0);
-            self.render_tab_body(tabs[1], surface, theme, c1);
-            self.render_tab_body(tabs[2], surface, theme, c2);
+            let cols = [
+                Rect::new(full.x, full.y, d0.saturating_sub(full.x), full.height),
+                Rect::new(d0 + 1, full.y, d1.saturating_sub(d0 + 1), full.height),
+                Rect::new(d1 + 1, full.y, end.saturating_sub(d1 + 1), full.height),
+            ];
+            for i in 0..3 {
+                self.render_tab_body(tabs[i], surface, theme, cols[i]);
+                self.bottom_col_x[i] = (cols[i].x, cols[i].x + cols[i].width);
+                let fx = (cols[i].x + cols[i].width).saturating_sub(1);
+                if fx > cols[i].x {
+                    surface.set_stringn(fx, full.y, "\u{25C2}", 1, accent); // fold
+                    self.bottom_fold_x[i] = fx;
+                }
+            }
+        } else {
+            // One or more columns folded: even-split the visible ones; folded
+            // columns become 1-cell unfold handles.
+            let nfold = 3 - vis.len();
+            let adj = (0..2).filter(|&i| !folded[i] && !folded[i + 1]).count();
+            let fixed = (nfold + adj) as u16;
+            let avail = full.width.saturating_sub(fixed);
+            let share = avail / vis.len() as u16;
+            let extra = avail % vis.len() as u16;
+            let mut x = full.x;
+            let mut vi: u16 = 0;
+            let mut prev_visible = false;
+            for i in 0..3 {
+                if folded[i] {
+                    let ch = if i == 2 { "\u{25C2}" } else { "\u{25B8}" }; // unfold, pointing inward
+                    rule(surface, x, off, ch, accent);
+                    self.bottom_fold_x[i] = x;
+                    prev_visible = false;
+                    x += 1;
+                } else {
+                    if prev_visible {
+                        rule(surface, x, off, vline, off);
+                        x += 1;
+                    }
+                    let w = share + u16::from(vi < extra);
+                    vi += 1;
+                    let rect = Rect::new(x, full.y, w, full.height);
+                    self.render_tab_body(tabs[i], surface, theme, rect);
+                    self.bottom_col_x[i] = (x, x + w);
+                    let fx = (x + w).saturating_sub(1);
+                    if fx > x {
+                        surface.set_stringn(fx, full.y, "\u{25C2}", 1, accent); // fold
+                        self.bottom_fold_x[i] = fx;
+                    }
+                    prev_visible = true;
+                    x += w;
+                }
+            }
         }
     }
 
@@ -5276,7 +5335,7 @@ mod parse_tests {
         ide.fold_minimap = true;
         ide.bottom_height = 17;
         ide.bottom_splits = [25, 70];
-        ide.bottom_mid_folded = true;
+        ide.bottom_col_folded = [true, true, false];
         ide.bottom_zoom = true;
         let saved = ide.layout();
 
@@ -5287,7 +5346,7 @@ mod parse_tests {
         assert!(restored.fold_minimap);
         assert_eq!(restored.bottom_height, 17);
         assert_eq!(restored.bottom_splits, [25, 70]);
-        assert!(restored.bottom_mid_folded);
+        assert_eq!(restored.bottom_col_folded, [true, true, false]);
         assert!(restored.bottom_zoom);
     }
 
