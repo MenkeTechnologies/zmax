@@ -87,6 +87,84 @@ pub fn fill_paragraph(text: &str, width: usize, prefix: &str) -> String {
     out.join("\n")
 }
 
+/// The leading whitespace (spaces/tabs) of `line`, used as a per-paragraph fill
+/// prefix by the Fill-Prefix commands below.
+fn leading_ws(line: &str) -> &str {
+    let end = line
+        .char_indices()
+        .find(|(_, c)| *c != ' ' && *c != '\t')
+        .map(|(i, _)| i)
+        .unwrap_or(line.len());
+    &line[..end]
+}
+
+/// Shared engine for the two Emacs Fill-Prefix paragraph commands. Walks `text`
+/// line by line, accumulating runs of non-blank lines into paragraphs. When
+/// `split_on_indent` is set, a change in a line's leading indentation also breaks
+/// the paragraph (`fill-individual-paragraphs`); otherwise only blank lines break
+/// it (`fill-nonuniform-paragraphs`). Each paragraph is filled with
+/// [`fill_paragraph`] to `width`, using the smallest indentation among its lines
+/// as the fill prefix. Blank lines are emitted verbatim and a trailing newline is
+/// preserved.
+fn fill_grouped_paragraphs(text: &str, width: usize, split_on_indent: bool) -> String {
+    let had_trailing = text.ends_with('\n');
+    let body = text.strip_suffix('\n').unwrap_or(text);
+    let mut out: Vec<String> = Vec::new();
+    let mut para: Vec<&str> = Vec::new();
+
+    let flush = |para: &mut Vec<&str>, out: &mut Vec<String>| {
+        if para.is_empty() {
+            return;
+        }
+        let prefix = para
+            .iter()
+            .min_by_key(|l| leading_ws(l).chars().count())
+            .map(|l| leading_ws(l))
+            .unwrap_or("");
+        let joined = para.join("\n");
+        out.push(fill_paragraph(&joined, width, prefix));
+        para.clear();
+    };
+
+    for line in body.split('\n') {
+        if line.trim().is_empty() {
+            flush(&mut para, &mut out);
+            out.push(line.to_string());
+            continue;
+        }
+        if split_on_indent {
+            if let Some(first) = para.first() {
+                if leading_ws(first) != leading_ws(line) {
+                    flush(&mut para, &mut out);
+                }
+            }
+        }
+        para.push(line);
+    }
+    flush(&mut para, &mut out);
+
+    let mut result = out.join("\n");
+    if had_trailing {
+        result.push('\n');
+    }
+    result
+}
+
+/// Emacs `fill-individual-paragraphs`: divide `text` into paragraphs, treating
+/// every change in the amount of indentation as the start of a new paragraph, and
+/// fill each to `width` using that paragraph's own indentation as its fill prefix.
+pub fn fill_individual_paragraphs(text: &str, width: usize) -> String {
+    fill_grouped_paragraphs(text, width, true)
+}
+
+/// Emacs `fill-nonuniform-paragraphs`: like [`fill_individual_paragraphs`] but
+/// paragraphs are divided only by blank (paragraph-separating) lines, not by
+/// indentation changes; each paragraph's fill prefix is the smallest indentation
+/// of any of its lines.
+pub fn fill_nonuniform_paragraphs(text: &str, width: usize) -> String {
+    fill_grouped_paragraphs(text, width, false)
+}
+
 // ---------------------------------------------------------------------------
 // Tabs <-> spaces — Emacs `untabify`/`tabify`, VS Code "Convert Indentation to
 // Tabs/Spaces", Vim `:retab`.
@@ -911,6 +989,28 @@ mod tests {
         assert_eq!(
             fill_paragraph("supercalifragilistic hi", 5, ""),
             "supercalifragilistic\nhi"
+        );
+    }
+
+    #[test]
+    fn fill_individual_splits_on_indent_change() {
+        // Two indentation levels => two paragraphs, each filled under its own
+        // prefix; the change in indentation is the paragraph break.
+        let input = "aaa bbb ccc ddd\n  eee fff ggg hhh";
+        assert_eq!(
+            fill_individual_paragraphs(input, 9),
+            "aaa bbb\nccc ddd\n  eee fff\n  ggg hhh"
+        );
+    }
+
+    #[test]
+    fn fill_nonuniform_min_indent_and_blank_breaks() {
+        // Indentation changes do NOT split here; only the blank line does, and the
+        // prefix is the smallest indentation of the paragraph's lines ("  ").
+        let input = "  aaa bbb\n    ccc ddd\n\n  eee";
+        assert_eq!(
+            fill_nonuniform_paragraphs(input, 40),
+            "  aaa bbb ccc ddd\n\n  eee"
         );
     }
 

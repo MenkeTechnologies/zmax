@@ -19274,6 +19274,80 @@ fn sort_paragraphs_cmd(
     Ok(())
 }
 
+/// Resolve the fill width for the Fill-Prefix commands: an explicit numeric
+/// argument, else the document's configured `text-width` (the same width
+/// `:reflow` / `:set-fill-column` use).
+fn fill_prefix_width(cx: &compositor::Context, args: &Args) -> anyhow::Result<usize> {
+    match args.first().map(str::trim).filter(|s| !s.is_empty()) {
+        Some(n) => n
+            .parse::<usize>()
+            .map_err(|_| anyhow!("expected a fill width, got `{n}`")),
+        None => Ok(doc!(cx.editor).text_width()),
+    }
+}
+
+/// `:fill-individual-paragraphs [width]` — Emacs `fill-individual-paragraphs`:
+/// fill each paragraph of the region separately, treating every change in
+/// indentation as a new paragraph and using that paragraph's own indentation as
+/// its fill prefix.
+fn fill_individual_paragraphs_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let width = fill_prefix_width(cx, &args)?;
+    let (view, doc) = current!(cx.editor);
+    let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
+        return Ok(());
+    };
+    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let out = zemacs_core::text_engine::fill_individual_paragraphs(&block, width);
+    if out == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(out.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// `:fill-nonuniform-paragraphs [width]` — Emacs `fill-nonuniform-paragraphs`:
+/// fill each paragraph of the region separately, but split paragraphs only on
+/// blank lines (not indentation changes); the fill prefix is the smallest
+/// indentation of any line in the paragraph.
+fn fill_nonuniform_paragraphs_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let width = fill_prefix_width(cx, &args)?;
+    let (view, doc) = current!(cx.editor);
+    let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
+        return Ok(());
+    };
+    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let out = zemacs_core::text_engine::fill_nonuniform_paragraphs(&block, width);
+    if out == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(out.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 /// Join the lines of `block` with `sep` into a single line, preserving a trailing
 /// newline if the block had one. Pure — unit tested.
 fn join_lines_with(block: &str, sep: &str) -> String {
@@ -29542,6 +29616,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
                 doc: "sort in reverse (descending) order",
                 ..Flag::DEFAULT
             }],
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "fill-individual-paragraphs",
+        aliases: &[],
+        doc: "Fill each paragraph of the selection separately, splitting on indentation changes and using each paragraph's indentation as its fill prefix (emacs fill-individual-paragraphs).",
+        fun: fill_individual_paragraphs_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "fill-nonuniform-paragraphs",
+        aliases: &[],
+        doc: "Fill each paragraph of the selection separately, splitting only on blank lines and using the smallest indentation of each paragraph as its fill prefix (emacs fill-nonuniform-paragraphs).",
+        fun: fill_nonuniform_paragraphs_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

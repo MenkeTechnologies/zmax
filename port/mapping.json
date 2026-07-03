@@ -28987,5 +28987,21 @@
    "typable:make-symbolic-link"
   ],
   "note": "make-symbolic-link -> :make-symbolic-link <target> <linkname> (or <linkname> for the current file): create a symbolic link"
+ },
+ {
+  "spec_id": "emacs.command.fill_individual_paragraphs",
+  "status": "ported",
+  "evidence": [
+   "typable:fill-individual-paragraphs"
+  ],
+  "note": "fill-individual-paragraphs -> :fill-individual-paragraphs [width]: fill each paragraph of the region separately, splitting on indentation changes, each paragraph filled under its own indentation as fill prefix"
+ },
+ {
+  "spec_id": "emacs.command.fill_nonuniform_paragraphs",
+  "status": "ported",
+  "evidence": [
+   "typable:fill-nonuniform-paragraphs"
+  ],
+  "note": "fill-nonuniform-paragraphs -> :fill-nonuniform-paragraphs [width]: fill each paragraph of the region separately, splitting only on blank lines, using the smallest indentation of each paragraph as fill prefix"
  }
 ]
