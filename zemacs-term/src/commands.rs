@@ -832,6 +832,8 @@ impl MappableCommand {
         bookmark_set_no_overwrite, "Set a bookmark, refusing to overwrite an existing name (emacs C-x r M)",
         bookmark_jump, "Jump to a bookmark via a picker (emacs C-x r b)",
         list_bookmarks, "List bookmarks in a picker; select to jump (emacs C-x r l / list-bookmarks)",
+        bookmark_insert_location, "Insert a bookmark's file path at point (emacs bookmark-insert-location, C-x r I)",
+        bookmark_insert, "Insert the contents of a bookmark's file at point (emacs bookmark-insert)",
         bookmark_delete, "Delete a bookmark via a picker (emacs bookmark-delete)",
         bookmark_rename, "Rename a bookmark via a picker (emacs bookmark-rename)",
         define_abbrev, "Define a global abbrev: <name> <expansion> (emacs C-x a g)",
@@ -12755,6 +12757,50 @@ fn bookmark_jump(cx: &mut Context) {
 /// picker; selecting one jumps to it (same jump behaviour as `bookmark-jump`).
 fn list_bookmarks(cx: &mut Context) {
     bookmark_jump(cx);
+}
+
+/// Emacs `bookmark-insert-location` (C-x r I): pick a bookmark and insert its
+/// location (the bookmarked file's path) at point.
+fn bookmark_insert_location(cx: &mut Context) {
+    let marks = crate::emacs_bookmark::list();
+    if marks.is_empty() {
+        cx.editor.set_status("No bookmarks yet — set one with C-x r m");
+        return;
+    }
+    let picker = bookmark_picker(marks, |cx, item| {
+        let loc = item.1.display().to_string();
+        let (view, doc) = current!(cx.editor);
+        let tx = Transaction::insert(doc.text(), doc.selection(view.id), Tendril::from(loc.as_str()));
+        doc.apply(&tx, view.id);
+        doc.append_changes_to_history(view);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Emacs `bookmark-insert`: pick a bookmark and insert the contents of the file
+/// it points to at point.
+fn bookmark_insert(cx: &mut Context) {
+    let marks = crate::emacs_bookmark::list();
+    if marks.is_empty() {
+        cx.editor.set_status("No bookmarks yet — set one with C-x r m");
+        return;
+    }
+    let picker = bookmark_picker(marks, |cx, item| match std::fs::read_to_string(&item.1) {
+        Ok(contents) => {
+            let (view, doc) = current!(cx.editor);
+            let tx = Transaction::insert(
+                doc.text(),
+                doc.selection(view.id),
+                Tendril::from(contents.as_str()),
+            );
+            doc.apply(&tx, view.id);
+            doc.append_changes_to_history(view);
+        }
+        Err(e) => cx
+            .editor
+            .set_error(format!("unable to read \"{}\": {e}", item.1.display())),
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// Emacs `bookmark-delete`: pick a bookmark and delete it from the store.
