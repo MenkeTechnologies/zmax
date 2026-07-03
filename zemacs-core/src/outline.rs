@@ -308,6 +308,32 @@ pub fn outline_cycle_next(body_len: usize, hidden: usize) -> CycleStep {
     }
 }
 
+/// The next step of `outline-cycle-buffer` (org global TAB): the whole buffer
+/// cycles SHOW-ALL -> OVERVIEW (top headings only) -> CONTENTS (all headings, no
+/// bodies) -> SHOW-ALL.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum BufferCycleStep {
+    /// Show only the top-level headings.
+    Overview,
+    /// Show every heading but no body text.
+    Contents,
+    /// Reveal everything.
+    ShowAll,
+}
+
+/// Decide the next `outline-cycle-buffer` step from whether anything is hidden
+/// and whether any heading line itself is hidden (which only happens in the
+/// overview state, where subheadings are folded away).
+pub fn outline_cycle_buffer_next(any_hidden: bool, any_heading_hidden: bool) -> BufferCycleStep {
+    if !any_hidden {
+        BufferCycleStep::Overview
+    } else if any_heading_hidden {
+        BufferCycleStep::Contents
+    } else {
+        BufferCycleStep::ShowAll
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -439,6 +465,25 @@ beta body
         assert_eq!(outline_cycle_next(5, 0), CycleStep::Fold);
         // Empty body -> fold (no-op-ish).
         assert_eq!(outline_cycle_next(0, 0), CycleStep::Fold);
+    }
+
+    #[test]
+    fn outline_cycle_buffer_advances_overview_contents_showall() {
+        // Nothing hidden -> overview.
+        assert_eq!(
+            outline_cycle_buffer_next(false, false),
+            BufferCycleStep::Overview
+        );
+        // Headings hidden (overview) -> contents.
+        assert_eq!(
+            outline_cycle_buffer_next(true, true),
+            BufferCycleStep::Contents
+        );
+        // Only bodies hidden (contents) -> show all.
+        assert_eq!(
+            outline_cycle_buffer_next(true, false),
+            BufferCycleStep::ShowAll
+        );
     }
 
     #[test]

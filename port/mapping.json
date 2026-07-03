@@ -28533,6 +28533,14 @@
   "note": "outline-mode: org-style TAB cycling of the heading at point folded -> children -> subtree, chosen from how much of the subtree is hidden (zemacs_core::outline::outline_cycle_next); folding via the document fold state"
  },
  {
+  "spec_id": "emacs.command.outline_cycle_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:outline_cycle_buffer"
+  ],
+  "note": "outline-mode: org global TAB cycling of the whole buffer show-all -> overview (top headings) -> contents (all headings), chosen from the current fold state (zemacs_core::outline::outline_cycle_buffer_next); reuses sublevel_folds/all_bodies"
+ },
+ {
   "spec_id": "emacs.command.outline_hide_by_heading_regexp",
   "status": "ported",
   "evidence": [

@@ -1109,6 +1109,7 @@ impl MappableCommand {
         outline_show_children, "Reveal the immediate subheadings of the heading at point (emacs outline-show-children)",
         outline_show_branches, "Reveal every subheading in the subtree at point (emacs outline-show-branches)",
         outline_cycle, "Cycle the heading at point folded -> children -> subtree (emacs outline-cycle)",
+        outline_cycle_buffer, "Cycle the whole buffer show-all -> overview -> contents (emacs outline-cycle-buffer)",
         fold_create, "Create a fold over the selection (zf)",
         fold_toggle, "Toggle fold under cursor (za)",
         fold_open, "Open fold under cursor (zo)",
@@ -21340,6 +21341,33 @@ fn outline_cycle(cx: &mut Context) {
         }
         zemacs_core::outline::CycleStep::ShowAll => outline_open_folds_in(doc, bf, bl),
         zemacs_core::outline::CycleStep::Fold => outline_fold_range(doc, bf, bl),
+    }
+    doc.folds_mut().clamp(total.saturating_sub(1));
+    fold_snap_cursor(view, doc);
+}
+
+/// Emacs `outline-cycle-buffer` (org global TAB): cycle the whole buffer through
+/// SHOW-ALL -> OVERVIEW (top headings) -> CONTENTS (all headings) -> SHOW-ALL.
+fn outline_cycle_buffer(cx: &mut Context) {
+    let (_, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    let any_hidden = (0..total).any(|l| doc.folds().is_line_hidden(l));
+    let any_heading_hidden = hs.iter().any(|h| doc.folds().is_line_hidden(h.line));
+    doc.folds_mut().open_all();
+    match zemacs_core::outline::outline_cycle_buffer_next(any_hidden, any_heading_hidden) {
+        zemacs_core::outline::BufferCycleStep::Overview => {
+            for (first, last) in zemacs_core::outline::sublevel_folds(&hs, 1, total) {
+                outline_fold_range(doc, first, last);
+            }
+        }
+        zemacs_core::outline::BufferCycleStep::Contents => {
+            for (first, last) in zemacs_core::outline::all_bodies(&hs, total) {
+                outline_fold_range(doc, first, last);
+            }
+        }
+        zemacs_core::outline::BufferCycleStep::ShowAll => {}
     }
     doc.folds_mut().clamp(total.saturating_sub(1));
     fold_snap_cursor(view, doc);
