@@ -14328,6 +14328,14 @@
   "note": "emacs bubbles -> bubbles: same-game (pop groups, gravity, collapse) (ui/bubbles.rs)"
  },
  {
+  "spec_id": "emacs.command.blackbox",
+  "status": "ported",
+  "evidence": [
+   "static:blackbox"
+  ],
+  "note": "emacs blackbox -> blackbox: ray-tracing deduction puzzle (ui/blackbox.rs)"
+ },
+ {
   "spec_id": "emacs.command.butterfly",
   "status": "ported",
   "evidence": [

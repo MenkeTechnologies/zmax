@@ -54,7 +54,7 @@ impl Board {
         seen[r][c] = true;
         while let Some((y, x)) = stack.pop() {
             out.push((y, x));
-            let mut push = |ny: usize, nx: usize, stack: &mut Vec<(usize, usize)>, seen: &mut Vec<Vec<bool>>| {
+            let push = |ny: usize, nx: usize, stack: &mut Vec<(usize, usize)>, seen: &mut Vec<Vec<bool>>| {
                 if !seen[ny][nx] && self.cells[ny][nx] == Some(color) {
                     seen[ny][nx] = true;
                     stack.push((ny, nx));

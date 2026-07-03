@@ -3,6 +3,7 @@ pub mod calc;
 pub mod calendar;
 mod completion;
 pub mod context_menu;
+pub mod blackbox;
 pub mod bubbles;
 pub mod dashboard;
 pub mod dired;

@@ -1215,6 +1215,7 @@ impl MappableCommand {
         butterfly, "Flip the desired bit with a butterfly (emacs butterfly, xkcd 378)",
         mpuz, "Play the multiplication puzzle (emacs mpuz)",
         bubbles, "Play the bubbles same-game (emacs bubbles)",
+        blackbox, "Play blackbox, the ray-tracing puzzle (emacs blackbox)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -13177,6 +13178,13 @@ fn mpuz(cx: &mut Context) {
 fn bubbles(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::bubbles::Bubbles::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `blackbox`: play the ray-tracing deduction puzzle.
+fn blackbox(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::blackbox::Blackbox::new()) as Box<dyn Component>)
     });
 }
 
