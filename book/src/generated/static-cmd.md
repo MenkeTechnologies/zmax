@@ -620,6 +620,9 @@
 | `select_register` | Select register | normal: `` " `` |
 | `insert_register` | Insert register | insert: `` <C-r> `` |
 | `view_register` | Show a register's contents (emacs view-register, C-x r v) |  |
+| `not_modified` | Mark the buffer unmodified without saving (emacs not-modified, M-~) |  |
+| `insert_char_by_code` | Insert a character by Unicode code point (emacs insert-char, C-x 8 RET) |  |
+| `backward_delete_char_untabify` | Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify) |  |
 | `insert_last_inserted_text` | Insert the previously inserted text (vim i_CTRL-A) | insert: `` <C-a> `` |
 | `insert_last_inserted_and_stop` | Insert previously inserted text and stop insert (vim i_CTRL-@) | insert: `` <C-@> `` |
 | `copy_between_registers` | Copy between two registers |  |

@@ -932,6 +932,9 @@ impl MappableCommand {
         select_register, "Select register",
         insert_register, "Insert register",
         view_register, "Show a register's contents (emacs view-register, C-x r v)",
+        not_modified, "Mark the buffer unmodified without saving (emacs not-modified, M-~)",
+        insert_char_by_code, "Insert a character by Unicode code point (emacs insert-char, C-x 8 RET)",
+        backward_delete_char_untabify, "Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify)",
         insert_last_inserted_text, "Insert the previously inserted text (vim i_CTRL-A)",
         insert_last_inserted_and_stop, "Insert previously inserted text and stop insert (vim i_CTRL-@)",
         copy_between_registers, "Copy between two registers",
@@ -8874,6 +8877,81 @@ fn ediff_merge_file(cx: &mut Context) {
         },
     );
     cx.push_layer(Box::new(prompt));
+}
+
+/// Emacs `not-modified` (M-~): mark the buffer as unmodified without saving, so
+/// it no longer needs to be written.
+fn not_modified(cx: &mut Context) {
+    let (_view, doc) = current!(cx.editor);
+    doc.reset_modified();
+    cx.editor.set_status("(No changes need to be saved)");
+}
+
+/// Emacs `insert-char` (C-x 8 RET): prompt for a Unicode code point (hex, e.g.
+/// `3b1`, `U+3B1` or `0x3b1`) and insert that character at each cursor.
+fn insert_char_by_code(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Insert char (hex code point):".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let s = input
+                .trim()
+                .trim_start_matches(['U', 'u'])
+                .trim_start_matches('+')
+                .trim_start_matches("0x");
+            let Some(ch) = u32::from_str_radix(s, 16).ok().and_then(char::from_u32) else {
+                cx.editor.set_error(format!("invalid code point: {input}"));
+                return;
+            };
+            let (view, doc) = current!(cx.editor);
+            let tx = Transaction::insert(
+                doc.text(),
+                doc.selection(view.id),
+                Tendril::from(ch.to_string()),
+            );
+            doc.apply(&tx, view.id);
+            doc.append_changes_to_history(view);
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Emacs `backward-delete-char-untabify` (Program Modes): delete one character
+/// backward, but if it is a TAB first expand it into the equivalent spaces (at
+/// its display column) and then delete one — so the caret moves back one column
+/// through a tab instead of jumping a whole tab stop.
+fn backward_delete_char_untabify(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let tab_width = doc.tab_width();
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    if cursor == 0 {
+        return;
+    }
+    let replacement = if slice.char(cursor - 1) == '\t' {
+        // Visual column of the tab, expanding any earlier tabs on the line.
+        let line = slice.char_to_line(cursor - 1);
+        let mut col = 0usize;
+        for i in slice.line_to_char(line)..(cursor - 1) {
+            col += if slice.char(i) == '\t' {
+                tab_width - (col % tab_width)
+            } else {
+                1
+            };
+        }
+        let width = tab_width - (col % tab_width); // columns the tab occupies
+        Some(Tendril::from(" ".repeat(width.saturating_sub(1))))
+    } else {
+        None // plain backspace
+    };
+    let tx = Transaction::change(text, std::iter::once((cursor - 1, cursor, replacement)));
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
 }
 
 /// Kill all buffers whose name matches a prompted regex (Spacemacs `SPC b M`).
