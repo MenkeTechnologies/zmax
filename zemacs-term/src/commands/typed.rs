@@ -8738,6 +8738,103 @@ fn list_directory(
     Ok(())
 }
 
+/// `:getenv <var>` — Emacs `getenv`: report the value of environment variable
+/// VAR in the echo area (blank if unset).
+fn getenv_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let var = args.join(" ");
+    let var = var.trim();
+    if var.is_empty() {
+        anyhow::bail!("usage: :getenv <var>");
+    }
+    match std::env::var(var) {
+        Ok(val) => cx.editor.set_status(format!("{var}={val}")),
+        Err(_) => cx.editor.set_status(format!("{var} is unset")),
+    }
+    Ok(())
+}
+
+/// `:setenv <var> [value]` — Emacs `setenv`: set environment variable VAR to
+/// VALUE for this editor process. With no VALUE, unset VAR.
+fn setenv_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(var) = args.first() else {
+        anyhow::bail!("usage: :setenv <var> [value]");
+    };
+    if args.len() == 1 {
+        std::env::remove_var(var);
+        cx.editor.set_status(format!("Unset {var}"));
+    } else {
+        let value = args
+            .iter()
+            .skip(1)
+            .map(|s| s.as_ref())
+            .collect::<Vec<&str>>()
+            .join(" ");
+        std::env::set_var(var, &value);
+        cx.editor.set_status(format!("{var}={value}"));
+    }
+    Ok(())
+}
+
+/// `:apropos-command <regexp>` — Emacs `apropos-command`: list every command
+/// (typable + key-bindable) whose name matches REGEXP, in a scratch buffer.
+fn apropos_command(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        anyhow::bail!("usage: :apropos-command <regexp>");
+    }
+    let re = regex::Regex::new(pattern).map_err(|e| anyhow!("apropos-command: {e}"))?;
+    let mut names: Vec<&str> = TYPABLE_COMMAND_LIST
+        .iter()
+        .map(|c| c.name)
+        .chain(
+            crate::commands::MappableCommand::STATIC_COMMAND_LIST
+                .iter()
+                .map(|c| c.name()),
+        )
+        .filter(|name| re.is_match(name))
+        .collect();
+    names.sort_unstable();
+    names.dedup();
+    let mut body = format!("Commands matching \"{pattern}\" ({} found):\n\n", names.len());
+    for name in &names {
+        body.push_str("  ");
+        body.push_str(name);
+        body.push('\n');
+    }
+    cx.editor.new_file(Action::Replace);
+    let (view, doc) = current!(cx.editor);
+    let insert = Transaction::insert(
+        doc.text(),
+        &zemacs_core::Selection::point(0),
+        body.as_str().into(),
+    );
+    doc.apply(&insert, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 /// `:goto-line-relative <n>` — Emacs `goto-line-relative`: move to line N
 /// counting from the start of the accessible (narrowed) portion of the buffer.
 /// With no narrowing this is identical to `goto-line`.
@@ -30241,6 +30338,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "getenv",
+        aliases: &[],
+        doc: "Report the value of an environment variable (emacs getenv).",
+        fun: getenv_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "setenv",
+        aliases: &[],
+        doc: "Set (or, with no value, unset) an environment variable (emacs setenv).",
+        fun: setenv_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "apropos-command",
+        aliases: &[],
+        doc: "List commands whose name matches a regexp (emacs apropos-command).",
+        fun: apropos_command,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },

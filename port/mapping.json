@@ -29139,5 +29139,29 @@
    "typable:emacs-version"
   ],
   "note": "report editor version"
+ },
+ {
+  "spec_id": "emacs.command.getenv",
+  "status": "ported",
+  "evidence": [
+   "typable:getenv"
+  ],
+  "note": "report an environment variable"
+ },
+ {
+  "spec_id": "emacs.command.setenv",
+  "status": "ported",
+  "evidence": [
+   "typable:setenv"
+  ],
+  "note": "set/unset an environment variable"
+ },
+ {
+  "spec_id": "emacs.command.apropos_command",
+  "status": "ported",
+  "evidence": [
+   "typable:apropos-command"
+  ],
+  "note": "list commands matching a regexp"
  }
 ]
