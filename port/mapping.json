@@ -28955,5 +28955,37 @@
    "static:backward_delete_char_untabify"
   ],
   "note": "backward-delete-char-untabify: delete backward, expanding a tab into spaces first"
+ },
+ {
+  "spec_id": "emacs.command.write_region",
+  "status": "ported",
+  "evidence": [
+   "typable:write-region"
+  ],
+  "note": "write-region -> :write-region <file>: write the region (or whole buffer when nothing is selected) to a file, overwriting it"
+ },
+ {
+  "spec_id": "emacs.command.append_to_file",
+  "status": "ported",
+  "evidence": [
+   "typable:append-to-file"
+  ],
+  "note": "append-to-file (Accumulating Text) -> :append-to-file <file>: append the region (or whole buffer) to the end of a file, creating it if needed"
+ },
+ {
+  "spec_id": "emacs.command.add_name_to_file",
+  "status": "ported",
+  "evidence": [
+   "typable:add-name-to-file"
+  ],
+  "note": "add-name-to-file -> :add-name-to-file <newname>: create a hard link to the current buffer's visited file"
+ },
+ {
+  "spec_id": "emacs.command.make_symbolic_link",
+  "status": "ported",
+  "evidence": [
+   "typable:make-symbolic-link"
+  ],
+  "note": "make-symbolic-link -> :make-symbolic-link <target> <linkname> (or <linkname> for the current file): create a symbolic link"
  }
 ]

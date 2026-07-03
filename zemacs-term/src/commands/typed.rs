@@ -20721,6 +20721,142 @@ fn set_fill_column(
     Ok(())
 }
 
+/// The Emacs "region" for a whole-buffer/selection command: the primary
+/// selection's text, or the entire buffer when nothing is selected (the primary
+/// range is an empty point). Shared by `:write-region` and `:append-to-file`.
+fn region_or_buffer_text(cx: &mut compositor::Context) -> String {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    let sel = doc.selection(view.id).primary();
+    if sel.from() == sel.to() {
+        text.to_string()
+    } else {
+        text.slice(sel.from()..sel.to()).to_string()
+    }
+}
+
+/// The visited file path of the current buffer, or an error if it has none.
+fn current_file_path(cx: &compositor::Context) -> anyhow::Result<std::path::PathBuf> {
+    doc!(cx.editor)
+        .path()
+        .map(|p| p.to_path_buf())
+        .ok_or_else(|| anyhow!("buffer is not visiting a file"))
+}
+
+/// `:write-region <file>` — Emacs `write-region`: write the region (or the whole
+/// buffer when nothing is selected) to FILE, replacing its contents.
+fn write_region(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = args.first().map(str::trim).filter(|s| !s.is_empty());
+    let Some(file) = file else {
+        bail!("usage: :write-region <file>");
+    };
+    let path = zemacs_stdx::path::expand_tilde(Path::new(file));
+    let body = region_or_buffer_text(cx);
+    std::fs::write(&path, body.as_bytes())
+        .map_err(|e| anyhow!("write-region: {}: {e}", path.display()))?;
+    cx.editor
+        .set_status(format!("wrote region to {}", path.display()));
+    Ok(())
+}
+
+/// `:append-to-file <file>` — Emacs `append-to-file`: append the region (or the
+/// whole buffer when nothing is selected) to the end of FILE, creating it if
+/// necessary.
+fn append_to_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = args.first().map(str::trim).filter(|s| !s.is_empty());
+    let Some(file) = file else {
+        bail!("usage: :append-to-file <file>");
+    };
+    let path = zemacs_stdx::path::expand_tilde(Path::new(file));
+    let body = region_or_buffer_text(cx);
+    use std::io::Write as _;
+    let mut f = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| anyhow!("append-to-file: {}: {e}", path.display()))?;
+    f.write_all(body.as_bytes())
+        .map_err(|e| anyhow!("append-to-file: {}: {e}", path.display()))?;
+    cx.editor
+        .set_status(format!("appended region to {}", path.display()));
+    Ok(())
+}
+
+/// `:add-name-to-file <newname>` — Emacs `add-name-to-file`: create a hard link
+/// NEWNAME pointing at the same inode as the current buffer's visited file.
+fn add_name_to_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dest = args.first().map(str::trim).filter(|s| !s.is_empty());
+    let Some(dest) = dest else {
+        bail!("usage: :add-name-to-file <newname>");
+    };
+    let src = current_file_path(cx)?;
+    let dst = zemacs_stdx::path::expand_tilde(Path::new(dest)).into_owned();
+    std::fs::hard_link(&src, &dst)
+        .map_err(|e| anyhow!("add-name-to-file: {} -> {}: {e}", src.display(), dst.display()))?;
+    cx.editor
+        .set_status(format!("added name {}", dst.display()));
+    Ok(())
+}
+
+/// `:make-symbolic-link <target> <linkname>` — Emacs `make-symbolic-link`:
+/// create a symbolic link LINKNAME pointing at TARGET. With one argument, the
+/// link points at the current buffer's visited file.
+fn make_symbolic_link(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut it = args.iter().map(|s| s.trim()).filter(|s| !s.is_empty());
+    let (target, link) = match (it.next(), it.next()) {
+        (Some(target), Some(link)) => (
+            zemacs_stdx::path::expand_tilde(Path::new(target)).into_owned(),
+            zemacs_stdx::path::expand_tilde(Path::new(link)).into_owned(),
+        ),
+        (Some(link), None) => (
+            current_file_path(cx)?,
+            zemacs_stdx::path::expand_tilde(Path::new(link)).into_owned(),
+        ),
+        _ => bail!("usage: :make-symbolic-link <target> <linkname>"),
+    };
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&target, &link).map_err(|e| {
+        anyhow!(
+            "make-symbolic-link: {} -> {}: {e}",
+            link.display(),
+            target.display()
+        )
+    })?;
+    #[cfg(not(unix))]
+    bail!("make-symbolic-link: unsupported on this platform");
+    cx.editor
+        .set_status(format!("linked {} -> {}", link.display(), target.display()));
+    Ok(())
+}
+
 fn tree_sitter_subtree(
     cx: &mut compositor::Context,
     _args: Args,
@@ -29476,6 +29612,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "write-region",
+        aliases: &[],
+        doc: "Write the region (or whole buffer) to a file, overwriting it (emacs write-region).",
+        fun: write_region,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "append-to-file",
+        aliases: &[],
+        doc: "Append the region (or whole buffer) to the end of a file (emacs append-to-file).",
+        fun: append_to_file,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "add-name-to-file",
+        aliases: &[],
+        doc: "Hard-link the current buffer's file to a new name (emacs add-name-to-file).",
+        fun: add_name_to_file,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "make-symbolic-link",
+        aliases: &[],
+        doc: "Create a symbolic link (emacs make-symbolic-link): <target> <linkname>, or <linkname> for the current file.",
+        fun: make_symbolic_link,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(2)),
             ..Signature::DEFAULT
         },
     },
