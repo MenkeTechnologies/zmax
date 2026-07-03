@@ -29,6 +29,7 @@ pub mod events;
 pub mod file_watcher;
 pub mod harpoon;
 pub mod health;
+pub mod hi_lock;
 pub mod job;
 pub mod keymap;
 pub mod local_history;

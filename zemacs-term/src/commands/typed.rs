@@ -8684,6 +8684,97 @@ fn outline_hide_by_heading_regexp(
     Ok(())
 }
 
+/// `:highlight-regexp <regex>` — Emacs `highlight-regexp`: add a persistent
+/// Hi-Lock highlight for the regexp.
+fn highlight_regexp(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        anyhow::bail!("usage: :highlight-regexp <regex>");
+    }
+    crate::hi_lock::add(pattern, false).map_err(|e| anyhow!("highlight-regexp: {e}"))?;
+    cx.editor.set_status(format!("Highlighting /{pattern}/"));
+    Ok(())
+}
+
+/// `:highlight-phrase <phrase>` — Emacs `highlight-phrase`: highlight the phrase,
+/// treating runs of whitespace as `\s+` (so line breaks still match).
+fn highlight_phrase(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let phrase = args.join(" ");
+    let phrase = phrase.trim();
+    if phrase.is_empty() {
+        anyhow::bail!("usage: :highlight-phrase <phrase>");
+    }
+    // hi-lock-process-phrase: collapse whitespace to \s+ over the escaped phrase.
+    let escaped = regex::escape(phrase);
+    let collapsed = regex::Regex::new(r"\\?\s+")
+        .unwrap()
+        .replace_all(&escaped, r"\s+")
+        .into_owned();
+    crate::hi_lock::add(&collapsed, false).map_err(|e| anyhow!("highlight-phrase: {e}"))?;
+    cx.editor.set_status(format!("Highlighting phrase \"{phrase}\""));
+    Ok(())
+}
+
+/// `:highlight-lines-matching-regexp <regex>` — Emacs
+/// `highlight-lines-matching-regexp`: highlight whole lines matching the regexp.
+fn highlight_lines_matching_regexp(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        anyhow::bail!("usage: :highlight-lines-matching-regexp <regex>");
+    }
+    crate::hi_lock::add(pattern, true)
+        .map_err(|e| anyhow!("highlight-lines-matching-regexp: {e}"))?;
+    cx.editor.set_status(format!("Highlighting lines matching /{pattern}/"));
+    Ok(())
+}
+
+/// `:unhighlight-regexp [<regex>]` — Emacs `unhighlight-regexp`: remove the
+/// Hi-Lock highlight for the regexp, or every highlight when no argument is
+/// given.
+fn unhighlight_regexp(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        crate::hi_lock::clear();
+        cx.editor.set_status("Removed all highlights");
+    } else if crate::hi_lock::remove(pattern) {
+        cx.editor.set_status(format!("Removed highlight /{pattern}/"));
+    } else {
+        cx.editor.set_error(format!("No highlight /{pattern}/"));
+    }
+    Ok(())
+}
+
 /// `:outline-show-by-heading-regexp <regex>` — Emacs
 /// `outline-show-by-heading-regexp`: reveal the subtree of every heading whose
 /// line matches the regexp, opening any folds that were hiding it.
@@ -29772,6 +29863,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
                     ..Flag::DEFAULT
                 },
             ],
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "highlight-regexp",
+        aliases: &["hi-lock"],
+        doc: "Add a persistent highlight for the regexp (emacs highlight-regexp).",
+        fun: highlight_regexp,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "highlight-phrase",
+        aliases: &[],
+        doc: "Highlight the phrase, matching across whitespace/line breaks (emacs highlight-phrase).",
+        fun: highlight_phrase,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "highlight-lines-matching-regexp",
+        aliases: &[],
+        doc: "Highlight whole lines matching the regexp (emacs highlight-lines-matching-regexp).",
+        fun: highlight_lines_matching_regexp,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unhighlight-regexp",
+        aliases: &[],
+        doc: "Remove the highlight for the regexp, or all highlights if none given (emacs unhighlight-regexp).",
+        fun: unhighlight_regexp,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
