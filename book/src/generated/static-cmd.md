@@ -586,6 +586,9 @@
 | `backward_up_list` | Move backward out of the enclosing list (emacs backward-up-list, C-M-u) |  |
 | `kill_sexp` | Kill the s-expression after point (emacs kill-sexp, C-M-k) |  |
 | `mark_sexp` | Set the region over the following s-expression (emacs mark-sexp, C-M-SPC) |  |
+| `mark_word` | Set the region over the next word (emacs mark-word, M-@) |  |
+| `mark_paragraph` | Select the paragraph around point (emacs mark-paragraph, M-h) |  |
+| `mark_defun` | Select the function/defun around point (emacs mark-defun, C-M-h) |  |
 | `kill_sentence` | Kill from point to end of sentence (emacs kill-sentence, M-k) |  |
 | `backward_kill_sentence` | Kill from start of sentence to point (emacs backward-kill-sentence, C-x DEL) |  |
 | `forward_page` | Move to the next form-feed page (emacs forward-page, C-x ]) |  |
