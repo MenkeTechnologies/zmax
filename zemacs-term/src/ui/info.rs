@@ -19,11 +19,13 @@ const MAX_COLS: usize = 8;
 /// Spaces between columns.
 const SEP: usize = 3;
 
-/// Lay `lines` (each `"key : desc"`) into a fixed, width-bounded column grid
-/// (column-major, like Emacs' `describe-bindings`) and return the visible slice
-/// starting at `scroll` rows down. Returns `(text, body_width, body_height,
-/// rows_total, cols)` so the caller can size the box and decide whether a scroll
-/// indicator is needed.
+/// Lay `lines` (each `"key : desc"`) into a full-width, column-major grid (like
+/// Emacs' `describe-bindings`) and return the visible slice starting at `scroll`
+/// rows down. The columns are **distributed across the whole width** so the grid
+/// always fills the bar with no right-edge dead space; the column count (1..=8)
+/// is driven by the screen width — as many columns as fit the widest entry
+/// without truncation. Returns `(text, body_width, body_height, rows_total,
+/// cols)`; `body_width` is the full inner width the grid spans.
 fn grid(
     lines: &[&str],
     scroll: usize,
@@ -31,64 +33,54 @@ fn grid(
     max_width: usize,
 ) -> (String, usize, usize, usize, usize) {
     let n = lines.len();
+    let budget = max_width.saturating_sub(6).max(1); // borders + margin
     if n == 0 {
-        return (String::new(), 0, 0, 0, 1);
+        return (String::new(), budget, 0, 0, 1);
     }
-    let budget = max_width.saturating_sub(6); // borders + margin
-    let max_cols = MAX_COLS.min(n).max(1);
+    let widest = lines
+        .iter()
+        .map(|l| l.chars().count())
+        .max()
+        .unwrap_or(1)
+        .clamp(1, COL_CAP);
 
-    // Natural (untruncated, COL_CAP-bounded) width of each column for a given
-    // column count `cols`, laid out column-major.
-    let nat_widths = |cols: usize| -> Vec<usize> {
-        let rows = n.div_ceil(cols);
-        (0..cols)
-            .map(|c| {
-                let s = (c * rows).min(n);
-                let e = ((c + 1) * rows).min(n);
-                lines[s..e]
-                    .iter()
-                    .map(|l| l.chars().count())
-                    .max()
-                    .unwrap_or(0)
-                    .min(COL_CAP)
-            })
-            .collect()
-    };
-    let total_w = |w: &[usize]| w.iter().sum::<usize>() + SEP * w.len().saturating_sub(1);
-
-    // Prefer the MOST columns whose full-width layout fits the popup, so every
-    // description is shown in full (Spacemacs' which-key fills the window). Only
-    // consider column counts that leave no empty trailing column, and only when
-    // even a single column overflows do we truncate it to the budget.
-    let (cols, col_w) = (1..=max_cols)
-        .rev()
-        .filter(|&c| (c - 1) * n.div_ceil(c) < n) // every column is non-empty
-        .map(|c| (c, nat_widths(c)))
-        .find(|(_, w)| total_w(w) <= budget)
-        .unwrap_or_else(|| (1, vec![nat_widths(1)[0].min(budget)]));
-
+    // Column count driven by screen width: as many columns as fit the widest
+    // entry (so nothing is truncated when it fits), 1..=MAX_COLS, never more than
+    // there are items.
+    let cols = (budget / (widest + SEP)).clamp(1, MAX_COLS.min(n).max(1));
     let rows_total = n.div_ceil(cols);
     let visible = rows_total.min(max_rows);
     let scroll = scroll.min(rows_total.saturating_sub(visible));
 
+    // Distribute the FULL width across the columns so the grid spans the whole
+    // bar (no dead space); the leading `extra` columns absorb the remainder.
+    let base = budget / cols;
+    let extra = budget % cols;
+    let slot = |c: usize| base + usize::from(c < extra);
+
     let mut out = String::new();
     for r in scroll..scroll + visible {
         let mut line = String::new();
-        for (c, &w) in col_w.iter().enumerate() {
+        for c in 0..cols {
+            // Text width for this column = its slot minus the inter-column gap.
+            let gap = if c + 1 < cols { SEP } else { 0 };
+            let w = slot(c).saturating_sub(gap);
             let idx = c * rows_total + r;
-            if idx >= n {
-                break;
+            let cell: String = if idx < n {
+                lines[idx].chars().take(w).collect()
+            } else {
+                String::new()
+            };
+            line.push_str(&format!("{cell:<w$}"));
+            if gap > 0 {
+                line.push_str(&" ".repeat(gap));
             }
-            if c > 0 {
-                line.push_str(&" ".repeat(SEP));
-            }
-            let cell: String = lines[idx].chars().take(w).collect();
-            line.push_str(&format!("{cell:w$}"));
         }
         out.push_str(line.trim_end());
         out.push('\n');
     }
-    let width = col_w.iter().sum::<usize>() + SEP * cols.saturating_sub(1);
+    // The grid spans the full inner width.
+    let width = budget;
     (out, width, visible, rows_total, cols)
 }
 
@@ -126,7 +118,23 @@ mod tests {
         let long = "x : an extremely long which-key description that will not fit a narrow popup";
         let (_text, width, _h, _rows, cols) = grid(&[long], 0, 16, 30);
         assert_eq!(cols, 1);
-        assert!(width <= 30 - 6, "column must be bounded by the budget: {width}");
+        assert_eq!(width, 30 - 6, "the bar spans the full inner width");
+    }
+
+    #[test]
+    fn grid_always_spans_the_full_width_with_no_dead_space() {
+        // Whatever the entry lengths or column count, the grid fills the whole
+        // inner width (body_width == budget) so the full-width bar has no dead
+        // space, and the column count stays within 1..=8.
+        for &(w, count, desc_len) in &[(200usize, 20usize, 24usize), (90, 16, 78), (300, 40, 12)] {
+            let lines: Vec<String> = (0..count)
+                .map(|i| format!("{i} : {}", "x".repeat(desc_len)))
+                .collect();
+            let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+            let (_t, width, _h, _r, cols) = grid(&refs, 0, 16, w);
+            assert_eq!(width, w - 6, "grid must span the full inner width for w={w}");
+            assert!((1..=8).contains(&cols), "cols out of 1..=8: {cols}");
+        }
     }
 }
 
@@ -159,19 +167,15 @@ impl Component for Info {
             self.title.to_string()
         };
 
-        // Size the box to the grid content, anchored at the bottom-left (above
-        // the statusline). A narrow grid — e.g. one wide column when long
-        // descriptions can't fit two — must NOT leave a full-width bar of dead
-        // space. Stay wide enough for the title, and never wider than the frame.
-        let title_w = title.chars().count() + 2; // border corners
-        let box_w = (body_w + 4) // borders (2) + horizontal margin (2)
-            .max(title_w)
-            .min(viewport.width as usize) as u16;
+        // Full editor width, anchored at the bottom (above the statusline) —
+        // Spacemacs' which-key bar. The grid itself (`body_w`) is distributed to
+        // fill this width, so there is no dead space inside the bar.
+        let _ = body_w;
         let height = body_h as u16 + 2; // +2 border
         let area = viewport.intersection(Rect::new(
             viewport.x,
             viewport.y + viewport.height.saturating_sub(height + 1),
-            box_w,
+            viewport.width,
             height,
         ));
         surface.clear_with(area, popup_style);
