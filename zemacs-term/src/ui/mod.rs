@@ -9,6 +9,7 @@ pub mod bubbles;
 pub mod dashboard;
 pub mod dired;
 pub mod decipher;
+pub mod dissociate;
 pub mod dunnet;
 pub mod dunnet_data;
 pub mod doctor;

@@ -14392,6 +14392,14 @@
   "note": "emacs butterfly (xkcd 378) -> butterfly: inserts a butterfly, flips the bit"
  },
  {
+  "spec_id": "emacs.command.dissociated_press",
+  "status": "partial",
+  "evidence": [
+   "static:dissociated_press"
+  ],
+  "note": "emacs dissociated-press -> dissociated_press: faithful char-continuity travesty generator over the current buffer; bounded, non-interactive delivery (no per-screenful continue prompt), hence partial"
+ },
+ {
   "spec_id": "emacs.command.animate_birthday_present",
   "status": "ported",
   "evidence": [

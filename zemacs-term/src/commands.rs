@@ -1223,6 +1223,7 @@ impl MappableCommand {
         decipher, "Solve a cryptogram (emacs decipher)",
         dunnet, "Play the dunnet text adventure (emacs dunnet)",
         animate_birthday_present, "Animate a birthday-present message (emacs animate-birthday-present)",
+        dissociated_press, "Scramble the buffer with the travesty generator (emacs dissociated-press)",
         spook, "Insert random NSA-bait phrases (emacs spook)",
         studlify_region, "StudlyCaps the selected region (emacs studlify-region)",
         studlify_buffer, "StudlyCaps the whole buffer (emacs studlify-buffer)",
@@ -13414,6 +13415,22 @@ fn dunnet(cx: &mut Context) {
 fn animate_birthday_present(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::animate::Animate::birthday_present()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `dissociated-press`: scramble the current buffer's text with the
+/// travesty generator (see ui/dissociate.rs). Uses 2 chars of continuity (the
+/// emacs default) and reveals a bounded block; any key closes.
+fn dissociated_press(cx: &mut Context) {
+    let source = doc!(cx.editor).text().to_string();
+    if source.trim().is_empty() {
+        cx.editor
+            .set_error("The buffer contains no text to start from");
+        return;
+    }
+    let seed = fastrand::u64(..);
+    open_overlay(cx, move |_editor| {
+        Ok(Box::new(crate::ui::dissociate::Dissociate::new(&source, 2, seed)) as Box<dyn Component>)
     });
 }
 
