@@ -414,6 +414,12 @@ pub fn arduino_board_details(fqbn: &str) -> Vec<String> {
     vec![s(ARDUINO_CLI), s("board"), s("details"), s("--fqbn"), s(fqbn)]
 }
 
+/// `arduino-cli board details --fqbn <fqbn> --full` — the complete board detail
+/// dump (all tools, properties, and identification info).
+pub fn arduino_board_details_full(fqbn: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("board"), s("details"), s("--fqbn"), s(fqbn), s("--full")]
+}
+
 /// `arduino-cli core search <query>` — Boards Manager search.
 pub fn arduino_core_search(query: &str) -> Vec<String> {
     vec![s(ARDUINO_CLI), s("core"), s("search"), s(query)]
@@ -422,6 +428,12 @@ pub fn arduino_core_search(query: &str) -> Vec<String> {
 /// `arduino-cli core list` — installed platforms (Boards Manager, installed tab).
 pub fn arduino_core_list() -> Vec<String> {
     vec![s(ARDUINO_CLI), s("core"), s("list")]
+}
+
+/// `arduino-cli core list --updatable` — only installed platforms with a newer
+/// version available.
+pub fn arduino_core_list_updatable() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("core"), s("list"), s("--updatable")]
 }
 
 /// `arduino-cli core uninstall <pkg>`
@@ -512,6 +524,32 @@ pub fn arduino_debug(settings: &EmbeddedSettings) -> Result<Vec<String>, String>
         settings.port.clone(),
         settings.sketch_dir().to_string_lossy().into_owned(),
     ])
+}
+
+/// `arduino-cli debug [extra…] --fqbn <fqbn> -p <port> <sketch>` — debugger with
+/// extra verified flags spliced before the sketch (`--info`, `--programmer <p>`,
+/// `--interpreter <mode>`). Verified against `arduino-cli debug --help` on 1.5.1.
+pub fn arduino_debug_with(
+    settings: &EmbeddedSettings,
+    extra: &[String],
+) -> Result<Vec<String>, String> {
+    if settings.fqbn.is_empty() {
+        return Err("no board selected — run :arduino-boards to pick an FQBN".into());
+    }
+    if settings.port.is_empty() {
+        return Err("no serial port selected — run :arduino-ports".into());
+    }
+    let mut v = vec![
+        s(ARDUINO_CLI),
+        s("debug"),
+        s("--fqbn"),
+        settings.fqbn.clone(),
+        s("-p"),
+        settings.port.clone(),
+    ];
+    v.extend(extra.iter().cloned());
+    v.push(settings.sketch_dir().to_string_lossy().into_owned());
+    Ok(v)
 }
 
 /// `arduino-cli monitor -p <port> -c baudrate=<baud>`
@@ -607,6 +645,12 @@ pub fn arduino_lib_search(query: &str) -> Vec<String> {
 /// `arduino-cli lib install <name>`
 pub fn arduino_lib_install(name: &str) -> Vec<String> {
     vec![s(ARDUINO_CLI), s("lib"), s("install"), s(name)]
+}
+
+/// `arduino-cli lib install <name> --no-deps` — install a library without pulling
+/// its declared dependencies.
+pub fn arduino_lib_install_no_deps(name: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("install"), s(name), s("--no-deps")]
 }
 
 /// `arduino-cli core install <package>`
@@ -1527,6 +1571,34 @@ mod tests {
         let argv = arduino_monitor_with(&settings(), &["--raw".into()]).unwrap();
         assert!(argv.contains(&"--raw".to_string()));
         assert!(argv.contains(&"baudrate=115200".to_string()));
+    }
+
+    #[test]
+    fn arduino_debug_with_splices_flags_before_sketch() {
+        let argv = arduino_debug_with(&settings(), &["--info".into()]).unwrap();
+        assert_eq!(argv[1], "debug");
+        assert!(argv.contains(&"--info".to_string()));
+        // sketch path stays the trailing positional.
+        let info_idx = argv.iter().position(|a| a == "--info").unwrap();
+        assert!(info_idx < argv.len() - 1);
+        assert!(argv.windows(2).any(|w| w == ["-p", "/dev/cu.usbmodem1401"]));
+    }
+
+    #[test]
+    fn arduino_debug_with_needs_board_and_port() {
+        let mut st = settings();
+        st.port.clear();
+        assert!(arduino_debug_with(&st, &["--info".into()]).is_err());
+    }
+
+    #[test]
+    fn arduino_third_pass_flag_builders() {
+        assert!(arduino_core_list_updatable().contains(&"--updatable".to_string()));
+        assert_eq!(
+            arduino_lib_install_no_deps("Servo"),
+            ["arduino-cli", "lib", "install", "Servo", "--no-deps"]
+        );
+        assert!(arduino_board_details_full("arduino:avr:uno").contains(&"--full".to_string()));
     }
 
     #[test]
