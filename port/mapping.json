@@ -14144,6 +14144,14 @@
   "note": "what-line: report the line number of point"
  },
  {
+  "spec_id": "emacs.command.indent_relative",
+  "status": "ported",
+  "evidence": [
+   "static:indent_relative"
+  ],
+  "note": "emacs indent-relative -> indent_relative: space out to under the next indent point in the previous nonblank line, else advance to the next tab stop"
+ },
+ {
   "spec_id": "emacs.command.what_page",
   "status": "ported",
   "evidence": [

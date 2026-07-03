@@ -1236,6 +1236,7 @@ impl MappableCommand {
         studlify_region, "StudlyCaps the selected region (emacs studlify-region)",
         studlify_buffer, "StudlyCaps the whole buffer (emacs studlify-buffer)",
         studlify_word, "StudlyCaps the word after point (emacs studlify-word)",
+        indent_relative, "Indent to under the next indent point in the previous line (emacs indent-relative)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -3931,6 +3932,63 @@ fn studlify_word(cx: &mut Context) {
     );
     doc.apply(&transaction, view.id);
     exit_select_mode(cx);
+}
+
+/// Emacs `indent-relative` target column: the column of the next indent point (a
+/// non-whitespace character following whitespace) in `prev_line` at or after
+/// `start_column`. `None` means there is no further indent point, so the caller
+/// falls back to a tab stop. Columns are character positions (space-indented
+/// reference lines; a tab counts as one column).
+fn indent_relative_target(prev_line: &str, start_column: usize) -> Option<usize> {
+    let chars: Vec<char> = prev_line.chars().collect();
+    let len = chars.len();
+    let is_ws = |c: char| c == ' ' || c == '\t';
+    let mut pos = start_column.min(len);
+    // If start_column sits on a word character, skip to the end of that word.
+    if pos < len && !is_ws(chars[pos]) {
+        while pos < len && !is_ws(chars[pos]) {
+            pos += 1;
+        }
+    }
+    // Skip whitespace to the next indent point.
+    while pos < len && is_ws(chars[pos]) {
+        pos += 1;
+    }
+    (pos < len).then_some(pos)
+}
+
+/// Emacs `indent-relative`: space out to under the next indent point in the
+/// previous nonblank line; if there is none, advance to the next tab stop.
+fn indent_relative(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let cur_line = slice.char_to_line(cursor);
+    let start_column = cursor - slice.line_to_char(cur_line);
+    // The nearest non-empty line above the current one (emacs `^[^\n]`).
+    let mut prev: Option<String> = None;
+    for l in (0..cur_line).rev() {
+        let s: String = slice.line(l).chars().filter(|&c| c != '\n' && c != '\r').collect();
+        if !s.is_empty() {
+            prev = Some(s);
+            break;
+        }
+    }
+    let tab_width = doc.tab_width();
+    let target = prev
+        .as_deref()
+        .and_then(|p| indent_relative_target(p, start_column))
+        .filter(|&t| t > start_column)
+        .unwrap_or_else(|| ((start_column / tab_width) + 1) * tab_width);
+    let spaces = target.saturating_sub(start_column);
+    if spaces == 0 {
+        return;
+    }
+    let pad = " ".repeat(spaces);
+    let tx = Transaction::insert(text, doc.selection(view.id), Tendril::from(pad.as_str()));
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
 }
 
 // vim `g?` ROT13: rotate every ASCII letter 13 places, leave everything else
@@ -25670,6 +25728,19 @@ mod wildfire_tests {
             super::studlify("hello there general kenobi"),
             "hello theRe generaL keNoBi"
         );
+    }
+
+    // Target columns pinned against GNU Emacs 30.2 `indent-relative` with the
+    // reference line "foo    bar   baz" (indent points at columns 7 and 13).
+    #[test]
+    fn indent_relative_target_matches_emacs() {
+        let prev = "foo    bar   baz";
+        assert_eq!(super::indent_relative_target(prev, 0), Some(7));
+        assert_eq!(super::indent_relative_target(prev, 4), Some(7));
+        assert_eq!(super::indent_relative_target(prev, 7), Some(13));
+        assert_eq!(super::indent_relative_target(prev, 10), Some(13));
+        // Past the last indent point -> None (caller uses a tab stop).
+        assert_eq!(super::indent_relative_target(prev, 13), None);
     }
 
     #[test]
