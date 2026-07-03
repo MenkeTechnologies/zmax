@@ -29275,5 +29275,29 @@
    "key:dired:&"
   ],
   "note": "flag garbage (build/tex droppings)"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_redisplay",
+  "status": "ported",
+  "evidence": [
+   "key:dired:l"
+  ],
+  "note": "redisplay/refresh the listing"
+ },
+ {
+  "spec_id": "emacs.command.dired_next_marked_file",
+  "status": "ported",
+  "evidence": [
+   "key:dired:A-}"
+  ],
+  "note": "move to next marked file"
+ },
+ {
+  "spec_id": "emacs.command.dired_prev_marked_file",
+  "status": "ported",
+  "evidence": [
+   "key:dired:A-{"
+  ],
+  "note": "move to previous marked file"
  }
 ]
