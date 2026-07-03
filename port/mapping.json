@@ -14144,6 +14144,14 @@
   "note": "what-line: report the line number of point"
  },
  {
+  "spec_id": "emacs.command.what_page",
+  "status": "ported",
+  "evidence": [
+   "static:what_page"
+  ],
+  "note": "emacs what-page -> what_page: report the page number (^L-delimited) and the line within that page (zemacs_core::page::page_and_line)"
+ },
+ {
   "spec_id": "emacs.command.count_words_region",
   "status": "ported",
   "evidence": [
