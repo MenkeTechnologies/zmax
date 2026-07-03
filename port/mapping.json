@@ -29307,5 +29307,21 @@
    "key:dired:("
   ],
   "note": "toggle hide-details (name-only rows)"
+ },
+ {
+  "spec_id": "emacs.command.calendar_scroll_left_three_months",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:C-v"
+  ],
+  "note": "scroll calendar 3 months forward"
+ },
+ {
+  "spec_id": "emacs.command.calendar_scroll_right_three_months",
+  "status": "ported",
+  "evidence": [
+   "key:calendar:A-v"
+  ],
+  "note": "scroll calendar 3 months back"
  }
 ]

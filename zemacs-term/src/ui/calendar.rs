@@ -120,6 +120,9 @@ impl Component for Calendar {
             ctrl!('e') => self.point = end_of_week(self.point),
             alt!('}') | key!('>') | key!(PageDown) => self.point = add_months(self.point, 1),
             alt!('{') | key!('<') | key!(PageUp) => self.point = add_months(self.point, -1),
+            // Emacs C-v / M-v scroll the calendar three months at a time.
+            ctrl!('v') => self.point = add_months(self.point, 3),
+            alt!('v') => self.point = add_months(self.point, -3),
             key!(']') => self.point = add_years(self.point, 1),
             key!('[') => self.point = add_years(self.point, -1),
             key!('{') => self.point = beginning_of_month(self.point),
