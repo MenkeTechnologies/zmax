@@ -28549,6 +28549,14 @@
   "note": "outline-mode: fold the subtree of every heading whose line matches the regexp (outline-hide-by-heading-regexp); zemacs_core::outline::matching_subtree_bodies, folding via the document fold state"
  },
  {
+  "spec_id": "emacs.command.outline_show_by_heading_regexp",
+  "status": "ported",
+  "evidence": [
+   "typable:outline-show-by-heading-regexp"
+  ],
+  "note": "outline-mode: reveal the subtree of every heading whose line matches the regexp, opening any folds that hid it (outline-show-by-heading-regexp); folding via the document fold state"
+ },
+ {
   "spec_id": "emacs.command.set_fill_column",
   "status": "ported",
   "evidence": [

@@ -8641,6 +8641,57 @@ fn outline_hide_by_heading_regexp(
     Ok(())
 }
 
+/// `:outline-show-by-heading-regexp <regex>` — Emacs
+/// `outline-show-by-heading-regexp`: reveal the subtree of every heading whose
+/// line matches the regexp, opening any folds that were hiding it.
+fn outline_show_by_heading_regexp(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        anyhow::bail!("usage: :outline-show-by-heading-regexp <regex>");
+    }
+    let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let (_, doc) = current!(cx.editor);
+    let text = doc.text().to_string();
+    let total = doc.text().len_lines();
+    let hs = zemacs_core::outline::headings(&text);
+    let lines: Vec<&str> = text.split('\n').collect();
+    for h in &hs {
+        if !lines.get(h.line).is_some_and(|l| re.is_match(l)) {
+            continue;
+        }
+        // Open any folds hiding this heading (its ancestors).
+        loop {
+            let hiding: Vec<usize> = doc
+                .folds()
+                .closed_ranges()
+                .into_iter()
+                .filter(|&(s, e)| s < h.line && h.line <= e)
+                .map(|(s, _)| s)
+                .collect();
+            if hiding.is_empty() {
+                break;
+            }
+            for s in hiding {
+                doc.folds_mut().open(s);
+            }
+        }
+        // Reveal the matching heading's own subtree.
+        if let Some((bf, _)) = zemacs_core::outline::subtree_body(&hs, h.line, total) {
+            doc.folds_mut().open_recursive(bf);
+        }
+    }
+    doc.folds_mut().clamp(total.saturating_sub(1));
+    Ok(())
+}
+
 /// Keep (or, when `keep` is false, drop) the lines of `input` that match `pattern`
 /// — the in-buffer equivalent of `grep` / `grep -v`. Pure — unit tested.
 fn filter_lines(input: &str, pattern: &str, keep: bool) -> anyhow::Result<String> {
@@ -29400,6 +29451,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Fold the subtree of every heading whose line matches the regexp (emacs outline-hide-by-heading-regexp).",
         fun: outline_hide_by_heading_regexp,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "outline-show-by-heading-regexp",
+        aliases: &[],
+        doc: "Reveal the subtree of every heading whose line matches the regexp (emacs outline-show-by-heading-regexp).",
+        fun: outline_show_by_heading_regexp,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
