@@ -414,6 +414,20 @@ pub struct Config {
     /// is not Vim and does not read your personal Vim config unless you opt in.
     /// (zemacs's own `init.vim` in the config dir is always sourced regardless.)
     pub source_vimrc: bool,
+    /// When true, zemacs sources the user's personal Emacs configuration
+    /// (`~/.emacs.d/init.el`, `~/.config/emacs/init.el`, `~/.emacs`) at startup,
+    /// running its Emacs Lisp. **Defaults to false** — zemacs is not Emacs and
+    /// does not run your personal init.el unless you opt in. (zemacs's own
+    /// `init.el` in the config dir is always sourced regardless.)
+    pub source_emacs_config: bool,
+    /// Path to an arbitrary Emacs Lisp file to source at startup (`~` and env
+    /// vars are expanded). **Defaults to none** (nothing sourced). When both this
+    /// and `source-viml-file` are set, the Emacs Lisp file is sourced FIRST.
+    pub source_elisp_file: Option<String>,
+    /// Path to an arbitrary Vimscript file to source at startup (`~` and env vars
+    /// are expanded). **Defaults to none** (nothing sourced). Sourced AFTER
+    /// `source-elisp-file` when both are set.
+    pub source_viml_file: Option<String>,
     pub file_picker: FilePickerConfig,
     pub file_explorer: FileExplorerConfig,
     /// Configuration of the statusline elements
@@ -1332,6 +1346,9 @@ impl Default for Config {
             fzf: FzfConfig::default(),
             vim_sneak: true,
             source_vimrc: false,
+            source_emacs_config: false,
+            source_elisp_file: None,
+            source_viml_file: None,
             file_picker: FilePickerConfig::default(),
             file_explorer: FileExplorerConfig::default(),
             statusline: StatusLineConfig::default(),
