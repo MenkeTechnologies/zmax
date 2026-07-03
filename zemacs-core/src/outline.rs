@@ -279,6 +279,35 @@ pub fn matching_subtree_bodies(
     out
 }
 
+/// The next step of `outline-cycle` (org-style TAB) for the heading at point,
+/// chosen from how much of its subtree body is currently hidden: a fully hidden
+/// subtree reveals its immediate children, a partially hidden one (children
+/// shown) reveals everything, and a fully shown one folds back to hidden.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum CycleStep {
+    /// FOLDED -> CHILDREN: reveal the immediate subheadings only.
+    ShowChildren,
+    /// CHILDREN -> SUBTREE: reveal the whole subtree.
+    ShowAll,
+    /// SUBTREE -> FOLDED: hide the whole subtree body.
+    Fold,
+}
+
+/// Decide the next `outline-cycle` step from `body_len` (lines in the subtree
+/// body) and `hidden` (how many of them are currently hidden).
+pub fn outline_cycle_next(body_len: usize, hidden: usize) -> CycleStep {
+    if body_len == 0 || hidden == 0 {
+        // Nothing hidden (fully shown) -> fold it.
+        CycleStep::Fold
+    } else if hidden >= body_len {
+        // Fully folded -> show children.
+        CycleStep::ShowChildren
+    } else {
+        // Partially shown (children) -> show everything.
+        CycleStep::ShowAll
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -398,6 +427,18 @@ beta body
         );
         // Alpha.1 (line 2) has no subheadings: its whole body folds.
         assert_eq!(subtree_child_folds(&hs, 2, 1, total), vec![(3, 3)]);
+    }
+
+    #[test]
+    fn outline_cycle_advances_folded_children_all() {
+        // Fully hidden (5 of 5) -> reveal children.
+        assert_eq!(outline_cycle_next(5, 5), CycleStep::ShowChildren);
+        // Partially hidden (children shown) -> reveal all.
+        assert_eq!(outline_cycle_next(5, 2), CycleStep::ShowAll);
+        // Nothing hidden (fully shown) -> fold.
+        assert_eq!(outline_cycle_next(5, 0), CycleStep::Fold);
+        // Empty body -> fold (no-op-ish).
+        assert_eq!(outline_cycle_next(0, 0), CycleStep::Fold);
     }
 
     #[test]
