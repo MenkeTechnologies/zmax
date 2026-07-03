@@ -29171,5 +29171,29 @@
    "typable:expand-region-abbrevs"
   ],
   "note": "expand all abbrevs in region"
+ },
+ {
+  "spec_id": "emacs.command.comint_send_input",
+  "status": "ported",
+  "evidence": [
+   "key:comint:ret"
+  ],
+  "note": "run the input line"
+ },
+ {
+  "spec_id": "emacs.command.comint_previous_input",
+  "status": "ported",
+  "evidence": [
+   "key:comint:A-p"
+  ],
+  "note": "previous input (M-p)"
+ },
+ {
+  "spec_id": "emacs.command.comint_next_input",
+  "status": "ported",
+  "evidence": [
+   "key:comint:A-n"
+  ],
+  "note": "next input (M-n)"
  }
 ]
