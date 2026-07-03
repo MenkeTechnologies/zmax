@@ -14312,6 +14312,14 @@
   "note": "emacs gomoku -> gomoku: five-in-a-row vs a heuristic AI (ui/gomoku.rs)"
  },
  {
+  "spec_id": "emacs.command.mpuz",
+  "status": "ported",
+  "evidence": [
+   "static:mpuz"
+  ],
+  "note": "emacs mpuz -> mpuz: multiplication puzzle overlay (ui/mpuz.rs)"
+ },
+ {
   "spec_id": "emacs.command.butterfly",
   "status": "ported",
   "evidence": [

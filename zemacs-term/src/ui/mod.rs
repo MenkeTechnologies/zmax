@@ -10,6 +10,7 @@ pub mod fivex5;
 pub mod gomoku;
 pub mod hanoi;
 pub mod life;
+pub mod mpuz;
 mod document;
 pub(crate) mod editor;
 mod file_tree;
