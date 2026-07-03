@@ -28541,6 +28541,22 @@
   "note": "emacs bookmark-load -> :bookmark-load <path>: read bookmarks from the named file and merge them into the store (BookmarkStore::merge, emacs_bookmark::load_from)"
  },
  {
+  "spec_id": "emacs.command.bookmark_insert_location",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_insert_location"
+  ],
+  "note": "emacs bookmark-insert-location -> bookmark_insert_location: pick a bookmark and insert its file path at point"
+ },
+ {
+  "spec_id": "emacs.command.bookmark_insert",
+  "status": "ported",
+  "evidence": [
+   "static:bookmark_insert"
+  ],
+  "note": "emacs bookmark-insert -> bookmark_insert: pick a bookmark and insert the contents of the file it points to at point"
+ },
+ {
   "spec_id": "emacs.command.calendar_forward_year",
   "status": "ported",
   "evidence": [
