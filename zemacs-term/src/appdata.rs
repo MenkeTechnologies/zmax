@@ -23,6 +23,10 @@ pub struct IdeLayout {
     pub bottom_splits: [u16; 2],
     /// Bottom drawer middle column collapsed (two-column layout).
     pub bottom_mid_folded: bool,
+    /// Bottom drawer left column collapsed.
+    pub bottom_left_folded: bool,
+    /// Bottom drawer right column collapsed.
+    pub bottom_right_folded: bool,
     /// "Always select opened file" (auto-reveal the current buffer in the tree).
     pub auto_reveal: bool,
     /// The active tool-window tab in each of the three bottom columns, by name
