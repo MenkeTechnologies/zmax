@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-ac0981b1.js";
+            window.path_to_searchindex_js = "searchindex-ec33efe0.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1796,6 +1796,10 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-debug-verbose</code>, <code>:platformio-debug-verbose</code></td><td>Verbose PlatformIO debugger session (<code>pio debug -v</code>).</td></tr>
 <tr><td><code>:pio-debug-interface</code>, <code>:platformio-debug-interface</code></td><td>Debug with a specific interface (<code>pio debug --interface &lt;name&gt;</code>).</td></tr>
 <tr><td><code>:pio-debug-load-mode</code>, <code>:platformio-debug-load-mode</code></td><td>Control firmware reloading on debug start (`pio debug –load-mode &lt;always</td></tr>
+<tr><td><code>:pio-build-conf</code>, <code>:platformio-build-conf</code>, <code>:pio-build-project-conf</code></td><td>Build using an alternate platformio.ini (<code>pio run -c &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-conf</code>, <code>:platformio-test-conf</code></td><td>Run unit tests using an alternate platformio.ini (<code>pio test -c &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:pio-check-conf</code>, <code>:platformio-check-conf</code></td><td>Static analysis using an alternate platformio.ini (<code>pio check -c &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:pio-debug-conf</code>, <code>:platformio-debug-conf</code></td><td>Debug using an alternate platformio.ini (<code>pio debug -c &lt;path&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-init-ide</code>, <code>:platformio-init-ide</code></td><td>Generate IDE integration files (<code>pio project init --ide &lt;ide&gt;</code>).</td></tr>
 <tr><td><code>:pio-init-sample</code>, <code>:platformio-init-sample</code></td><td>Scaffold a project with example code (<code>pio project init --board &lt;board&gt; --sample-code</code>).</td></tr>
 <tr><td><code>:pio-init-option</code>, <code>:platformio-init-option</code></td><td>Set a <code>platformio.ini</code> option while initialising (<code>pio project init -O &lt;name=value&gt;</code>).</td></tr>
@@ -6515,7 +6519,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>555</strong> (8.1%)</li>
 <li>Absent: <strong>3318</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 951 static commands, 1536 typable <code>:</code> commands, 2636 default keybindings</li>
+<li>zemacs source surface: 951 static commands, 1545 typable <code>:</code> commands, 2636 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
