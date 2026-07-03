@@ -62,7 +62,23 @@ pub struct Game {
     visited: Vec<bool>,
     /// Rooms already dug (a room yields its buried objects only once).
     dug: std::collections::HashSet<usize>,
+    // Puzzle state used by the special (255) exits, mirroring the dunnet.el vars.
+    key_level: i32,
+    sauna_level: i32,
+    inbus: bool,
+    awaiting_combo: bool,
+    pub dead: Option<String>,
 }
+
+/// The combination for the gamma-computing-center door (dunnet `dun-combination`).
+const COMBINATION: &str = "633";
+// Object numbers referenced by the special exits (from the Emacs dump).
+const OBJ_KEY: i16 = 4;
+const OBJ_BEAR: i16 = -3;
+const OBJ_WEIGHT: i16 = 8;
+const OBJ_TOWEL: i16 = 13;
+const OBJ_BUS: i16 = -18;
+const OBJ_LICENSE: i16 = 16;
 
 impl Game {
     pub fn new() -> Self {
@@ -72,6 +88,11 @@ impl Game {
             inventory: Vec::new(),
             visited: vec![false; ROOMS.len()],
             dug: std::collections::HashSet::new(),
+            key_level: 0,
+            sauna_level: 0,
+            inbus: false,
+            awaiting_combo: false,
+            dead: None,
         };
         g.visited[START_ROOM] = true;
         g
@@ -105,13 +126,181 @@ impl Game {
     /// Move in `dir` (a matrix column). Returns the resulting output lines.
     pub fn go(&mut self, dir: usize) -> Vec<String> {
         let dest = MAP[self.room][dir];
-        if dest < 0 || dest == SPECIAL {
+        if dest == SPECIAL {
+            return self.special_move(dir);
+        }
+        if dest < 0 {
             return vec!["You can't go that way.".into()];
         }
-        self.room = dest as usize;
-        let lines = self.describe(self.room, false);
-        self.visited[self.room] = true;
+        self.enter(dest as usize)
+    }
+
+    /// Enter `room`, describing it. (Shared by ordinary and special moves.)
+    fn enter(&mut self, room: usize) -> Vec<String> {
+        self.room = room;
+        let lines = self.describe(room, false);
+        self.visited[room] = true;
         lines
+    }
+
+    fn here(&self, obj: i16) -> bool {
+        self.room_objects[self.room].contains(&obj)
+    }
+
+    fn die(&mut self, reason: &str, msg: &str) -> Vec<String> {
+        self.dead = Some(reason.to_string());
+        let mut out: Vec<String> = msg.split('\n').map(str::to_string).collect();
+        out.push(format!("You have died of {reason}.  Press Esc to leave."));
+        out
+    }
+
+    /// Port of `dun-special-move`: the 255 exits, each gated on a puzzle
+    /// condition. Faithful to dunnet.el; the swim-only lakefront exits and the
+    /// deep bus-driving traversal are left refusing (documented partial).
+    fn special_move(&mut self, dir: usize) -> Vec<String> {
+        // Matrix columns: northwest=6, up=8, down=9, in=10, out=11.
+        match self.room {
+            5 => {
+                // building-front: the door needs the brass key.
+                if self.inventory.contains(&OBJ_KEY) {
+                    self.enter(8)
+                } else {
+                    vec!["You don't have a key that can open this door.".into()]
+                }
+            }
+            32 => {
+                // north-end-of-cave-passage: a 3-digit combination lock.
+                self.awaiting_combo = true;
+                vec![
+                    "You must type a 3 digit combination code to enter this room.".into(),
+                    "Enter it as your next command.".into(),
+                ]
+            }
+            7 => {
+                // bear-hangout: the bear kills you if it is still here.
+                if self.here(OBJ_BEAR) {
+                    self.die(
+                        "a bear",
+                        "The bear is very annoyed that you would be so presumptuous as to try\nand walk right by it.  He tells you so by tearing your head off.",
+                    )
+                } else {
+                    vec!["You can't go that way.".into()]
+                }
+            }
+            89 => {
+                // vermont-station: the train takes you to the museum station.
+                let mut out = vec![
+                    "As you board the train it immediately leaves the station.  It is a very".into(),
+                    "bumpy ride, and finally throws you out at another station.".into(),
+                ];
+                out.extend(self.enter(90));
+                out
+            }
+            8 => {
+                // old-building-hallway: needs the key AND a raised key level.
+                if self.inventory.contains(&OBJ_KEY) && self.key_level > 0 {
+                    self.enter(11)
+                } else {
+                    vec!["You don't have a key that can open this door.".into()]
+                }
+            }
+            17 if dir == 6 => {
+                // maze-button-room northwest: passable only with the weight here.
+                if self.here(OBJ_WEIGHT) {
+                    self.enter(18)
+                } else {
+                    vec!["You can't go that way.".into()]
+                }
+            }
+            17 if dir == 8 => {
+                // maze-button-room up: blocked while the weight is here.
+                if self.here(OBJ_WEIGHT) {
+                    vec!["You can't go that way.".into()]
+                } else {
+                    self.enter(16)
+                }
+            }
+            88 => vec!["The door is locked.".into()],
+            23 => {
+                // reception-area: leaving is fatal once the sauna is cranked up.
+                if self.sauna_level != 3 {
+                    self.enter(24)
+                } else {
+                    self.die(
+                        "burning",
+                        "As you exit the building, you notice some flames coming out of one of the\nwindows.  Suddenly, the building explodes in a huge ball of fire.",
+                    )
+                }
+            }
+            46 => {
+                // red-room: a passage opens once the towel is removed.
+                if !self.here(OBJ_TOWEL) {
+                    self.enter(47)
+                } else {
+                    vec!["You can't go that way.".into()]
+                }
+            }
+            28 => {
+                // cave-entrance: a rockslide seals you into the misty room.
+                let mut out = vec![
+                    "As you enter the room you hear a rumbling noise.  You look back to see".into(),
+                    "huge rocks sliding down from the ceiling, and blocking your way out.".into(),
+                ];
+                out.extend(self.enter(29));
+                out
+            }
+            25 | 26 => vec!["You'd have to swim, and that isn't ported yet.".into()],
+            // The street grid (rooms 58..83): in/out boards/leaves the bus; the
+            // cliff and gate specials fire on ordinary moves.
+            r if r > 57 && r < 84 => {
+                if dir >= 10 {
+                    if !self.here(OBJ_BUS) {
+                        vec!["You can't go that way.".into()]
+                    } else if dir == 10 {
+                        if self.inbus {
+                            vec!["You are already in the bus!".into()]
+                        } else if self.inventory.contains(&OBJ_LICENSE) {
+                            self.inbus = true;
+                            vec!["You board the bus and get in the driver's seat.".into()]
+                        } else {
+                            vec!["You are not licensed for this type of vehicle.".into()]
+                        }
+                    } else if !self.inbus {
+                        vec!["You are already off the bus!".into()]
+                    } else {
+                        self.inbus = false;
+                        vec!["You hop off the bus.".into()]
+                    }
+                } else if r == 80 {
+                    // fifth-oaktree-intersection: a cliff.
+                    if self.inbus {
+                        self.die(
+                            "a bus accident",
+                            "The bus flies off the cliff, and plunges to the bottom, where it explodes.",
+                        )
+                    } else {
+                        self.die("a cliff", "You fall down the cliff and land on your head.")
+                    }
+                } else if r == 59 {
+                    // main-maple-intersection: the museum gate opens only for the bus.
+                    if !self.inbus {
+                        vec!["The gate will not open.".into()]
+                    } else {
+                        if let Some(p) = self.room_objects[59].iter().position(|&o| o == OBJ_BUS) {
+                            self.room_objects[59].remove(p);
+                        }
+                        self.room_objects[83].push(OBJ_BUS);
+                        let mut out =
+                            vec!["As the bus approaches, the gate opens and you drive through.".into()];
+                        out.extend(self.enter(83));
+                        out
+                    }
+                } else {
+                    vec!["You can't go that way.".into()]
+                }
+            }
+            _ => vec!["You can't go that way.".into()],
+        }
     }
 
     /// Take the named object from the current room.
@@ -183,6 +372,18 @@ impl Game {
 
     /// Run one typed command line, returning output lines.
     pub fn command(&mut self, line: &str) -> Vec<String> {
+        if self.dead.is_some() {
+            return vec!["You are dead.  Press Esc to leave.".into()];
+        }
+        // A pending combination lock consumes the next line (dun-special-move).
+        if self.awaiting_combo {
+            self.awaiting_combo = false;
+            return if line.trim() == COMBINATION {
+                self.enter(57) // gamma-computing-center
+            } else {
+                vec!["Sorry, that combination is incorrect.".into()]
+            };
+        }
         let words: Vec<&str> = line.split_whitespace().collect();
         let Some(&verb) = words.first() else {
             return Vec::new();
@@ -408,6 +609,45 @@ mod tests {
         g.go(2);
         g.go(2); // fork, but no shovel in hand
         assert_eq!(g.dig(), "You have nothing with which to dig.");
+    }
+
+    #[test]
+    fn building_front_needs_the_key() {
+        // Room 5 (building-front) has a 255 exit into room 8, gated on the key.
+        let mut g = Game::new();
+        assert!(MAP[5].contains(&255));
+        g.room = 5;
+        let dir = MAP[5].iter().position(|&d| d == 255).unwrap();
+        // Without the key it refuses; with the key you enter room 8.
+        assert_eq!(g.go(dir), vec!["You don't have a key that can open this door.".to_string()]);
+        g.inventory.push(OBJ_KEY);
+        g.go(dir);
+        assert_eq!(g.room, 8);
+    }
+
+    #[test]
+    fn combination_lock_gates_the_gamma_room() {
+        let mut g = Game::new();
+        g.room = 32;
+        let dir = MAP[32].iter().position(|&d| d == 255).unwrap();
+        g.go(dir);
+        assert!(g.awaiting_combo);
+        assert_eq!(g.command("000"), vec!["Sorry, that combination is incorrect.".to_string()]);
+        // Correct combo enters the gamma computing center (room 57).
+        g.room = 32;
+        g.go(dir);
+        g.command("633");
+        assert_eq!(g.room, 57);
+    }
+
+    #[test]
+    fn the_bear_is_fatal() {
+        let mut g = Game::new();
+        g.room = 7; // bear-hangout, the bear (-3) starts here
+        assert!(g.here(OBJ_BEAR));
+        let dir = MAP[7].iter().position(|&d| d == 255).unwrap();
+        g.go(dir);
+        assert!(g.dead.is_some(), "walking past the bear kills you");
     }
 
     #[test]
