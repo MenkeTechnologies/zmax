@@ -29323,5 +29323,45 @@
    "key:calendar:A-v"
   ],
   "note": "scroll calendar 3 months back"
+ },
+ {
+  "spec_id": "emacs.command.org_cycle",
+  "status": "ported",
+  "evidence": [
+   "typable:org-cycle"
+  ],
+  "note": "outline visibility cycling on org heading"
+ },
+ {
+  "spec_id": "emacs.command.org_todo",
+  "status": "ported",
+  "evidence": [
+   "typable:org-todo"
+  ],
+  "note": "cycle TODO/DONE keyword"
+ },
+ {
+  "spec_id": "emacs.command.org_agenda",
+  "status": "ported",
+  "evidence": [
+   "typable:org-agenda"
+  ],
+  "note": "open the org agenda view"
+ },
+ {
+  "spec_id": "emacs.command.align",
+  "status": "partial",
+  "evidence": [
+   "typable:align"
+  ],
+  "note": "delimiter-based align (not full rule-based align)"
+ },
+ {
+  "spec_id": "emacs.command.diff",
+  "status": "partial",
+  "evidence": [
+   "typable:diff"
+  ],
+  "note": "diff buffer vs git HEAD (not two arbitrary files)"
  }
 ]
