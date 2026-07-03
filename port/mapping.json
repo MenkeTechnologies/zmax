@@ -29091,5 +29091,45 @@
    "typable:fill-nonuniform-paragraphs"
   ],
   "note": "fill-nonuniform-paragraphs -> :fill-nonuniform-paragraphs [width]: fill each paragraph of the region separately, splitting only on blank lines, using the smallest indentation of each paragraph as fill prefix"
+ },
+ {
+  "spec_id": "emacs.command.set_visited_file_name",
+  "status": "ported",
+  "evidence": [
+   "typable:set-visited-file-name"
+  ],
+  "note": "change buffer's visited file"
+ },
+ {
+  "spec_id": "emacs.command.set_file_modes",
+  "status": "ported",
+  "evidence": [
+   "typable:set-file-modes"
+  ],
+  "note": "chmod a file, octal mode"
+ },
+ {
+  "spec_id": "emacs.command.copy_directory",
+  "status": "ported",
+  "evidence": [
+   "typable:copy-directory"
+  ],
+  "note": "recursive directory copy"
+ },
+ {
+  "spec_id": "emacs.command.insert_file_literally",
+  "status": "ported",
+  "evidence": [
+   "typable:insert-file-literally"
+  ],
+  "note": "insert raw file at point"
+ },
+ {
+  "spec_id": "emacs.command.list_directory",
+  "status": "ported",
+  "evidence": [
+   "typable:list-directory"
+  ],
+  "note": "directory listing in scratch buffer"
  }
 ]
