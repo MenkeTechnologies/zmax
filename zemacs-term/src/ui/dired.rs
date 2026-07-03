@@ -20,6 +20,7 @@
 //!   D — delete the marked files (or the file at point) immediately
 //!   w — copy the marked names (or the name at point) to the clipboard
 //!   s — cycle sort order (name/time/size/ext); r — reverse; `.` — toggle hidden
+//!   ( — toggle hide-details (name-only rows)
 //!   M-} / M-{ — next / previous marked file
 //!   R / l — refresh (redisplay); q/Esc — quit
 //!
@@ -53,6 +54,9 @@ pub struct Dired {
     sort: SortKey,
     reverse: bool,
     show_hidden: bool,
+    /// When false (Emacs `dired-hide-details-mode`), rows show only the mark and
+    /// file name, hiding the type/size columns.
+    show_details: bool,
     error: Option<String>,
 }
 
@@ -72,6 +76,7 @@ impl Dired {
             sort: SortKey::Name,
             reverse: false,
             show_hidden: false,
+            show_details: true,
             error: None,
         };
         d.read_dir()?;
@@ -287,6 +292,7 @@ impl Component for Dired {
             }
             alt!('}') => self.next_marked(1),
             alt!('{') => self.next_marked(-1),
+            key!('(') => self.show_details = !self.show_details,
             key!(Enter) | key!('f') => {
                 if let Some(cb) = self.visit() {
                     return EventResult::Consumed(Some(cb));
@@ -470,7 +476,12 @@ impl Component for Dired {
             } else {
                 e.name.clone()
             };
-            let line = format!("{} {} {:>7}  {}", m, kind, size, name);
+            let line = if self.show_details {
+                format!("{} {} {:>7}  {}", m, kind, size, name)
+            } else {
+                // dired-hide-details-mode: mark + name only.
+                format!("{} {}", m, name)
+            };
             let base = if offset == self.selected {
                 sel_style
             } else if e.is_dir {

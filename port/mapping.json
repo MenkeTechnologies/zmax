@@ -29299,5 +29299,13 @@
    "key:dired:A-{"
   ],
   "note": "move to previous marked file"
+ },
+ {
+  "spec_id": "emacs.command.dired_hide_details_mode",
+  "status": "ported",
+  "evidence": [
+   "key:dired:("
+  ],
+  "note": "toggle hide-details (name-only rows)"
  }
 ]
