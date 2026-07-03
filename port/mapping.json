@@ -29363,5 +29363,45 @@
    "typable:diff"
   ],
   "note": "diff buffer vs git HEAD (not two arbitrary files)"
+ },
+ {
+  "spec_id": "emacs.command.set_justification_left",
+  "status": "ported",
+  "evidence": [
+   "typable:set-justification-left"
+  ],
+  "note": "set-justification-left -> :set-justification-left: flush the region's lines to the left margin (strip surrounding whitespace)"
+ },
+ {
+  "spec_id": "emacs.command.set_justification_right",
+  "status": "ported",
+  "evidence": [
+   "typable:set-justification-right"
+  ],
+  "note": "set-justification-right -> :set-justification-right: right-justify each of the region's lines to the fill width"
+ },
+ {
+  "spec_id": "emacs.command.set_justification_center",
+  "status": "ported",
+  "evidence": [
+   "typable:set-justification-center"
+  ],
+  "note": "set-justification-center -> :set-justification-center: centre the region's lines within the fill width"
+ },
+ {
+  "spec_id": "emacs.command.set_justification_full",
+  "status": "ported",
+  "evidence": [
+   "typable:set-justification-full"
+  ],
+  "note": "set-justification-full -> :set-justification-full: justify the region's lines to both margins by stretching inter-word gaps (each paragraph's last line left flush)"
+ },
+ {
+  "spec_id": "emacs.command.set_justification_none",
+  "status": "partial",
+  "evidence": [
+   "typable:set-justification-none"
+  ],
+  "note": "set-justification-none -> :set-justification-none: one-shot region transform trims trailing whitespace to turn justification off; does not restore the persistent enriched-mode justification text property"
  }
 ]

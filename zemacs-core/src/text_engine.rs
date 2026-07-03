@@ -165,6 +165,116 @@ pub fn fill_nonuniform_paragraphs(text: &str, width: usize) -> String {
     fill_grouped_paragraphs(text, width, false)
 }
 
+/// The justification style applied by the Emacs `set-justification-*` commands.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Justification {
+    /// Flush left: strip surrounding whitespace (`set-justification-left`).
+    Left,
+    /// Flush right: left-pad so the text ends at `width` (`set-justification-right`).
+    Right,
+    /// Centre the text between column 0 and `width` (`set-justification-center`).
+    Center,
+    /// Both margins: stretch inter-word gaps to reach `width` (`set-justification-full`).
+    Full,
+    /// Justification off: strip only trailing whitespace (`set-justification-none`).
+    None,
+}
+
+/// Left-pad `s` with spaces so it is exactly `width` columns wide (flush right).
+/// Returns `s` unchanged when it is already at least `width` wide. Width is
+/// measured in `chars`, matching [`fill_paragraph`].
+fn pad_left(s: &str, width: usize) -> String {
+    let w = s.chars().count();
+    if w >= width {
+        return s.to_string();
+    }
+    let mut out = " ".repeat(width - w);
+    out.push_str(s);
+    out
+}
+
+/// Centre `s` between column 0 and `width` by left-padding with half the slack
+/// (the extra space, if any, falls on the right, matching Emacs `center-line`).
+fn pad_center(s: &str, width: usize) -> String {
+    let w = s.chars().count();
+    if w >= width {
+        return s.to_string();
+    }
+    let mut out = " ".repeat((width - w) / 2);
+    out.push_str(s);
+    out
+}
+
+/// Full-justify a single line to `width`: distribute the slack evenly across the
+/// inter-word gaps, giving the leftmost gaps the leftover space. A line with
+/// fewer than two words, or one already too wide to stretch, is returned
+/// single-spaced (there is nothing to stretch into).
+fn full_justify_line(s: &str, width: usize) -> String {
+    let words: Vec<&str> = s.split_whitespace().collect();
+    if words.len() < 2 {
+        return words.join(" ");
+    }
+    let text_len: usize = words.iter().map(|w| w.chars().count()).sum();
+    let gaps = words.len() - 1;
+    if text_len + gaps >= width {
+        return words.join(" ");
+    }
+    let slack = width - text_len;
+    let base = slack / gaps;
+    let extra = slack % gaps;
+    let mut out = String::new();
+    for (i, word) in words.iter().enumerate() {
+        out.push_str(word);
+        if i < gaps {
+            out.push_str(&" ".repeat(base + usize::from(i < extra)));
+        }
+    }
+    out
+}
+
+/// Emacs `set-justification-left/right/center/full/none`: re-justify each content
+/// line of `text` to `width` columns. Blank (whitespace-only) lines pass through
+/// unchanged and a trailing newline is preserved. This applies the justification
+/// as a one-shot text transform on the region's existing lines rather than
+/// setting the persistent `justification` text property of enriched mode.
+///
+/// For [`Justification::Full`] the last non-blank line of each paragraph (and any
+/// single-word line) is left flush-left, matching Emacs, which never stretches a
+/// paragraph's last line.
+pub fn justify_block(text: &str, width: usize, mode: Justification) -> String {
+    let had_trailing = text.ends_with('\n');
+    let body = text.strip_suffix('\n').unwrap_or(text);
+    let lines: Vec<&str> = body.split('\n').collect();
+    let n = lines.len();
+    let mut out: Vec<String> = Vec::with_capacity(n);
+    for (i, &line) in lines.iter().enumerate() {
+        if line.trim().is_empty() {
+            out.push(line.to_string());
+            continue;
+        }
+        let justified = match mode {
+            Justification::None => line.trim_end().to_string(),
+            Justification::Left => line.trim().to_string(),
+            Justification::Right => pad_left(line.trim(), width),
+            Justification::Center => pad_center(line.trim(), width),
+            Justification::Full => {
+                let last_in_para = i + 1 >= n || lines[i + 1].trim().is_empty();
+                if last_in_para {
+                    line.trim().to_string()
+                } else {
+                    full_justify_line(line.trim(), width)
+                }
+            }
+        };
+        out.push(justified);
+    }
+    let mut result = out.join("\n");
+    if had_trailing {
+        result.push('\n');
+    }
+    result
+}
+
 // ---------------------------------------------------------------------------
 // Tabs <-> spaces — Emacs `untabify`/`tabify`, VS Code "Convert Indentation to
 // Tabs/Spaces", Vim `:retab`.
@@ -989,6 +1099,70 @@ mod tests {
         assert_eq!(
             fill_paragraph("supercalifragilistic hi", 5, ""),
             "supercalifragilistic\nhi"
+        );
+    }
+
+    #[test]
+    fn justify_right_pads_to_width() {
+        // each content line ends flush at column `width`
+        assert_eq!(
+            justify_block("foo\nbarbar\n", 8, Justification::Right),
+            "     foo\n  barbar\n"
+        );
+        // already-wide line is left alone, never truncated
+        assert_eq!(
+            justify_block("toolongline", 4, Justification::Right),
+            "toolongline"
+        );
+    }
+
+    #[test]
+    fn justify_center_pads_half_the_slack() {
+        // width 7, "abc" (3) -> slack 4 -> 2 leading spaces, extra falls right
+        assert_eq!(justify_block("abc", 7, Justification::Center), "  abc");
+        // odd slack: width 6, "abc" (3) -> slack 3 -> 1 leading space
+        assert_eq!(justify_block("abc", 6, Justification::Center), " abc");
+    }
+
+    #[test]
+    fn justify_full_stretches_all_but_last_paragraph_line() {
+        // two-line paragraph: first line stretched to width 11, last left as-is.
+        // full-justify never re-wraps, so each existing line is stretched in place.
+        assert_eq!(
+            justify_block("the quick\nbrown", 11, Justification::Full),
+            "the   quick\nbrown"
+        );
+    }
+
+    #[test]
+    fn justify_full_distributes_extra_space_to_leftmost_gaps() {
+        // first line "a b c" (len 3) to width 8 -> slack 5 over 2 gaps -> 3 then 2
+        // spaces; the trailing "x" is the paragraph's last line, left flush.
+        assert_eq!(
+            justify_block("a b c\nx", 8, Justification::Full),
+            "a   b  c\nx"
+        );
+    }
+
+    #[test]
+    fn justify_left_and_none_flush_left() {
+        // left trims both ends; none trims only the trailing whitespace
+        assert_eq!(
+            justify_block("   hi there   ", 20, Justification::Left),
+            "hi there"
+        );
+        assert_eq!(
+            justify_block("   hi there   ", 20, Justification::None),
+            "   hi there"
+        );
+    }
+
+    #[test]
+    fn justify_preserves_blank_lines_and_trailing_newline() {
+        // blank separator line and the trailing newline both survive
+        assert_eq!(
+            justify_block("ab\n\ncd\n", 6, Justification::Right),
+            "    ab\n\n    cd\n"
         );
     }
 

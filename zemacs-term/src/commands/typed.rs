@@ -19926,6 +19926,99 @@ fn fill_nonuniform_paragraphs_cmd(
     Ok(())
 }
 
+/// Shared body for the five Emacs `set-justification-*` commands: re-justify each
+/// content line of the region (or the whole buffer when nothing is selected) to
+/// the document's fill width, using the pure [`zemacs_core::text_engine::justify_block`]
+/// engine, then apply the change as one undo step.
+fn justify_region(
+    cx: &mut compositor::Context,
+    mode: zemacs_core::text_engine::Justification,
+) -> anyhow::Result<()> {
+    let width = doc!(cx.editor).text_width();
+    let (view, doc) = current!(cx.editor);
+    let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
+        return Ok(());
+    };
+    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let out = zemacs_core::text_engine::justify_block(&block, width, mode);
+    if out == block {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((region_start, region_end, Some(out.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// `:set-justification-left` — Emacs `set-justification-left`: flush the region's
+/// lines to the left margin (strip surrounding whitespace).
+fn set_justification_left(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    justify_region(cx, zemacs_core::text_engine::Justification::Left)
+}
+
+/// `:set-justification-right` — Emacs `set-justification-right`: flush the
+/// region's lines to the right margin (left-pad each to the fill width).
+fn set_justification_right(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    justify_region(cx, zemacs_core::text_engine::Justification::Right)
+}
+
+/// `:set-justification-center` — Emacs `set-justification-center`: centre the
+/// region's lines between the left margin and the fill width.
+fn set_justification_center(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    justify_region(cx, zemacs_core::text_engine::Justification::Center)
+}
+
+/// `:set-justification-full` — Emacs `set-justification-full`: justify the
+/// region's lines to both margins by stretching inter-word gaps to the fill
+/// width (each paragraph's last line is left flush-left).
+fn set_justification_full(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    justify_region(cx, zemacs_core::text_engine::Justification::Full)
+}
+
+/// `:set-justification-none` — Emacs `set-justification-none`: turn justification
+/// off, stripping trailing whitespace but leaving the text where it is.
+fn set_justification_none(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    justify_region(cx, zemacs_core::text_engine::Justification::None)
+}
+
 /// Join the lines of `block` with `sep` into a single line, preserving a trailing
 /// newline if the block had one. Pure — unit tested.
 fn join_lines_with(block: &str, sep: &str) -> String {
@@ -30369,6 +30462,61 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-justification-left",
+        aliases: &[],
+        doc: "Flush the region's lines to the left margin (emacs set-justification-left).",
+        fun: set_justification_left,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-justification-right",
+        aliases: &[],
+        doc: "Right-justify the region's lines to the fill width (emacs set-justification-right).",
+        fun: set_justification_right,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-justification-center",
+        aliases: &[],
+        doc: "Centre the region's lines within the fill width (emacs set-justification-center).",
+        fun: set_justification_center,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-justification-full",
+        aliases: &[],
+        doc: "Justify the region's lines to both margins (emacs set-justification-full).",
+        fun: set_justification_full,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-justification-none",
+        aliases: &[],
+        doc: "Turn justification off for the region (emacs set-justification-none).",
+        fun: set_justification_none,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
