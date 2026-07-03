@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-e1a32fa8.js";
+            window.path_to_searchindex_js = "searchindex-5eefaedb.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -350,7 +350,17 @@
 <tr><td><code>:pio-pkg-exec-pkg</code>, <code>:platformio-pkg-exec-pkg</code></td><td>Run a tool from a specific installed package (<code>pio pkg exec -p &lt;pkg&gt; -- &lt;argv&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-platform-install</code>, <code>:pio-core-install</code>, <code>:platformio-platform-install</code></td><td>Install a development platform globally (<code>pio pkg install -g -p &lt;spec&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-pkg-pack</code>, <code>:platformio-pkg-pack</code></td><td>Build a tarball of the current package (<code>pio pkg pack [-o &lt;path&gt;]</code>), live in a terminal panel.</td></tr>
-<tr><td><code>:pio-pkg-publish</code>, <code>:platformio-pkg-publish</code></td><td>Publish the current package to the PlatformIO registry (<code>pio pkg publish</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-pkg-publish</code>, <code>:platformio-pkg-publish</code></td><td>Publish the current package to the PlatformIO registry (<code>pio pkg publish</code>); extra args forward –owner/–type/–private/–no-notify.</td></tr>
+<tr><td><code>:pio-project-config-lint</code>, <code>:platformio-project-config-lint</code>, <code>:pio-lint</code></td><td>Validate platformio.ini without building (<code>pio project config --lint</code>).</td></tr>
+<tr><td><code>:pio-pkg-list-global</code>, <code>:platformio-pkg-list-global</code>, <code>:pio-pkg-list-g</code></td><td>Globally installed packages (<code>pio pkg list -g</code>).</td></tr>
+<tr><td><code>:pio-pkg-update-global</code>, <code>:platformio-pkg-update-global</code>, <code>:pio-pkg-update-g</code></td><td>Update globally installed packages (<code>pio pkg update -g</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-pkg-install-skip-deps</code>, <code>:platformio-pkg-install-skip-deps</code></td><td>Install a package without its dependencies (<code>pio pkg install --skip-dependencies &lt;spec&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-junit</code>, <code>:platformio-test-junit</code></td><td>Run unit tests and write a JUnit XML report (<code>pio test --junit-output-path &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-json-path</code>, <code>:platformio-test-json-path</code></td><td>Run unit tests and write a JSON report (<code>pio test --json-output-path &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-port</code>, <code>:platformio-test-port</code></td><td>Run unit tests over a specific serial port (<code>pio test --test-port &lt;port&gt;</code>).</td></tr>
+<tr><td><code>:pio-check-silent</code>, <code>:platformio-check-silent</code></td><td>Quiet static analysis, warnings/errors only (<code>pio check -s</code>).</td></tr>
+<tr><td><code>:pio-upgrade-deps-only</code>, <code>:platformio-upgrade-deps-only</code></td><td>Upgrade only PlatformIO Core’s dependencies (<code>pio upgrade --only-dependencies</code>).</td></tr>
+<tr><td><code>:pio-init-env-prefix</code>, <code>:platformio-init-env-prefix</code></td><td>Scaffold a project prefixing generated environment names (<code>pio project init --env-prefix &lt;prefix&gt;</code>).</td></tr>
 <tr><td><code>:pio-pkg-unpublish</code>, <code>:platformio-pkg-unpublish</code></td><td>Remove a previously published package (<code>pio pkg unpublish &lt;pkg&gt;</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-system-info</code>, <code>:platformio-system-info</code></td><td>Show system-wide PlatformIO information (<code>pio system info</code>).</td></tr>
 <tr><td><code>:pio-system-prune</code>, <code>:platformio-system-prune</code></td><td>Remove unused PlatformIO caches/packages (<code>pio system prune -f</code>), live in a terminal panel.</td></tr>
