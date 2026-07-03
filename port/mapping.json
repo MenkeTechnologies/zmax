@@ -29195,5 +29195,37 @@
    "key:comint:A-n"
   ],
   "note": "next input (M-n)"
+ },
+ {
+  "spec_id": "emacs.command.gud_gdb",
+  "status": "ported",
+  "evidence": [
+   "static:gud_gdb"
+  ],
+  "note": "run gdb in a comint buffer"
+ },
+ {
+  "spec_id": "emacs.command.gud_up",
+  "status": "ported",
+  "evidence": [
+   "static:gud_up"
+  ],
+  "note": "stack frame up"
+ },
+ {
+  "spec_id": "emacs.command.gud_down",
+  "status": "ported",
+  "evidence": [
+   "static:gud_down"
+  ],
+  "note": "stack frame down"
+ },
+ {
+  "spec_id": "emacs.command.gud_stepi",
+  "status": "ported",
+  "evidence": [
+   "static:gud_stepi"
+  ],
+  "note": "step one instruction"
  }
 ]
