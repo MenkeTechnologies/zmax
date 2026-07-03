@@ -4038,6 +4038,22 @@ fn pio_exec(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
     Ok(())
 }
 
+/// `:pio-upload-monitor [port]` — build, flash, then open the serial monitor in
+/// one shot (`pio run -t upload -t monitor`), live in a terminal panel. With no
+/// argument it monitors the project's configured port; pass `port` to override
+/// (`--monitor-port <port>`). PlatformIO IDE's "Upload and Monitor".
+fn pio_upload_monitor(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let settings = embedded::load();
+    let dir = settings.sketch_dir();
+    let port = args.join(" ");
+    embedded_spawn_terminal(cx, embedded::pio_upload_monitor(&settings, port.trim()), dir);
+    Ok(())
+}
+
 /// `:pio-monitor` — PlatformIO serial monitor (`pio device monitor`), live panel.
 fn pio_monitor(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -21963,6 +21979,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["platformio-exec", "pio-run-exec"],
         doc: "Build and run the native program (`pio run -t exec`); args pass through as --program-arg.",
         fun: pio_exec,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-upload-monitor",
+        aliases: &["platformio-upload-monitor", "pio-flash-monitor"],
+        doc: "Build, flash, then open the serial monitor in one shot (`pio run -t upload -t monitor`); optional port overrides --monitor-port.",
+        fun: pio_upload_monitor,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, None),

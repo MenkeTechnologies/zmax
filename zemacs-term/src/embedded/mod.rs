@@ -767,6 +767,27 @@ pub fn pio_upload(settings: &EmbeddedSettings) -> Vec<String> {
     v
 }
 
+/// `pio run -t upload -t monitor [--monitor-port <port>] [-e env]` — the
+/// build → flash → serial-monitor one-shot (PlatformIO IDE "Upload and Monitor").
+/// `port_override` wins when non-empty; otherwise the project's configured
+/// `settings.port` is threaded as `--monitor-port`, and if that too is empty the
+/// flag is omitted so `pio` picks the port. Verified against `pio run -t monitor`
+/// on PlatformIO 6.1.19 (the `monitor` target enters `device_monitor_cmd`).
+pub fn pio_upload_monitor(settings: &EmbeddedSettings, port_override: &str) -> Vec<String> {
+    let mut v = vec![s(PIO), s("run"), s("-t"), s("upload"), s("-t"), s("monitor")];
+    let port = if !port_override.trim().is_empty() {
+        port_override.trim()
+    } else {
+        settings.port.trim()
+    };
+    if !port.is_empty() {
+        v.push(s("--monitor-port"));
+        v.push(port.to_string());
+    }
+    v.extend(settings.pio_env_args());
+    v
+}
+
 /// `pio run -t exec [-a <arg>]… [-e env]` — build and execute the program on the
 /// native platform, passing each `program_args` entry as a separate `-a`
 /// (`--program-arg`). Verified end-to-end against `pio run -t exec -a … -a …` on
@@ -1716,6 +1737,22 @@ mod tests {
         assert_eq!(pubv[..3], ["pio", "pkg", "publish"]);
         assert!(pubv.contains(&"--private".to_string()));
         assert!(pubv.windows(2).any(|w| w == ["--type", "library"]));
+    }
+
+    #[test]
+    fn pio_upload_monitor_chains_targets_and_port() {
+        let st = settings(); // port = /dev/cu.usbmodem1401
+        let argv = pio_upload_monitor(&st, "");
+        assert_eq!(argv[..6], ["pio", "run", "-t", "upload", "-t", "monitor"]);
+        // configured port threaded as --monitor-port when no override.
+        assert!(argv.windows(2).any(|w| w == ["--monitor-port", "/dev/cu.usbmodem1401"]));
+        // explicit override wins.
+        let argv2 = pio_upload_monitor(&st, "/dev/ttyUSB9");
+        assert!(argv2.windows(2).any(|w| w == ["--monitor-port", "/dev/ttyUSB9"]));
+        // no configured port and no override => flag omitted.
+        let mut bare = settings();
+        bare.port.clear();
+        assert!(!pio_upload_monitor(&bare, "").contains(&"--monitor-port".to_string()));
     }
 
     #[test]

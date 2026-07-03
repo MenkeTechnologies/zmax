@@ -169,6 +169,9 @@ PlatformIO environment, monitor filters) persist to
   <name>` (any `pio run -t`), and `:pio-upload-to <port>` (flash to a specific
   port). `:pio-exec [args…]` builds and runs the native program (`pio run -t
   exec`), forwarding each argument as a `--program-arg`.
+  `:pio-upload-monitor [port]` builds, flashes, then opens the serial monitor in
+  one shot (`pio run -t upload -t monitor`) — PlatformIO IDE's "Upload and
+  Monitor".
 - **Test / analysis** — `:pio-list-tests`, `:pio-test-filter <pattern>` (run one
   suite), `:pio-check-severity <low|medium|high>`. Test options:
   `:pio-test-verbose`, `:pio-test-ignore <pattern>`, `:pio-test-without-building`
