@@ -218,9 +218,12 @@ impl Component for Snake {
             surface.set_string(ox + (c + 1) as u16, oy - 1, "─", wall_style);
             surface.set_string(ox + (c + 1) as u16, oy + H as u16, "─", wall_style);
         }
-        for r in -1..=H {
-            surface.set_string(ox, oy + (r) as u16, "│", wall_style);
-            surface.set_string(ox + (W + 1) as u16, oy + (r) as u16, "│", wall_style);
+        // Side walls span the interior rows (the corners are on the top/bottom
+        // border above); r stays >= 0 so the u16 cast never wraps.
+        for r in 0..H {
+            let y = oy + r as u16;
+            surface.set_string(ox, y, "│", wall_style);
+            surface.set_string(ox + (W + 1) as u16, y, "│", wall_style);
         }
 
         let cell = |r: i16, c: i16| (ox + (c + 1) as u16, oy + r as u16);
