@@ -113,6 +113,21 @@ pub fn write_to(path: &Path) -> std::io::Result<usize> {
 /// (a definition replaces a same-named one). Returns how many were read.
 pub fn read_from(path: &Path) -> std::io::Result<usize> {
     let text = std::fs::read_to_string(path)?;
+    Ok(define_from_text(&text))
+}
+
+/// Every abbrev as a `name\texpansion` block, for `insert-abbrevs`.
+pub fn serialize() -> String {
+    load()
+        .iter()
+        .map(|(n, e)| format_line(n, e))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Define abbrevs from a `name\texpansion` block (`define-abbrevs`,
+/// `read-abbrev-file`), merging into the store. Returns how many were defined.
+pub fn define_from_text(text: &str) -> usize {
     let incoming: Vec<(String, String)> = text.lines().filter_map(parse_line).collect();
     let n = incoming.len();
     let mut rows = load();
@@ -121,7 +136,7 @@ pub fn read_from(path: &Path) -> std::io::Result<usize> {
         rows.push((name.clone(), exp.clone()));
     }
     save(&rows);
-    Ok(n)
+    n
 }
 
 #[cfg(test)]
