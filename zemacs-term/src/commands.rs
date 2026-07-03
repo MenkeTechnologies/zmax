@@ -820,7 +820,8 @@ impl MappableCommand {
         jump_to_register, "Jump to the position in a register (emacs C-x r j)",
         number_to_register, "Store the prefix count in a register (emacs C-x r n)",
         increment_register, "Add the prefix count to a number register (emacs C-x r +)",
-        emacs_insert_register, "Insert a number register's value as text (emacs C-x r i)",
+        emacs_insert_register, "Insert a number or rectangle register's value at point (emacs C-x r i)",
+        copy_rectangle_to_register, "Copy the selected rectangle into a register (emacs C-x r r)",
         kill_rectangle, "Kill (cut) the rectangle, saving it for yank (emacs C-x r k)",
         delete_rectangle, "Delete the rectangle without saving (emacs C-x r d)",
         clear_rectangle, "Blank the rectangle with spaces (emacs C-x r c)",
@@ -12518,19 +12519,63 @@ fn emacs_insert_register(cx: &mut Context) {
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
-            match crate::emacs_register::get_num(ch) {
-                Some(n) => {
-                    let mode = cx.editor.mode;
-                    let (view, doc) = current!(cx.editor);
-                    paste_impl(&[n.to_string()], doc, view, Paste::Before, 1, mode);
-                }
-                None => cx
-                    .editor
-                    .set_error(format!("Register {ch} does not hold a number")),
+            if let Some(n) = crate::emacs_register::get_num(ch) {
+                let mode = cx.editor.mode;
+                let (view, doc) = current!(cx.editor);
+                paste_impl(&[n.to_string()], doc, view, Paste::Before, 1, mode);
+            } else if let Some(rect) = crate::emacs_register::get_rect(ch) {
+                // A rectangle register yanks its rectangle at point.
+                let (view, doc) = current!(cx.editor);
+                let text = doc.text().clone();
+                let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+                let line = text.char_to_line(cursor);
+                let col = cursor - text.line_to_char(line);
+                let lines = doc_lines(&text);
+                let le = doc.line_ending.as_str();
+                let new_lines = crate::emacs_rect::yank(&lines, line, col, &rect);
+                let new_text = new_lines.join(le);
+                let old_len = text.len_chars();
+                let transaction = Transaction::change(
+                    &text,
+                    std::iter::once((0, old_len, Some(Tendril::from(new_text.as_str())))),
+                );
+                doc.apply(&transaction, view.id);
+                doc.append_changes_to_history(view);
+            } else {
+                cx.editor.set_error(format!(
+                    "Register {ch} does not hold a number or rectangle"
+                ));
             }
         }
     });
     cx.editor.autoinfo = Some(Info::new("Insert register", &[("char", "register name")]));
+}
+
+/// Emacs `copy-rectangle-to-register` (C-x r r): copy the selected rectangle
+/// into the register read next.
+fn copy_rectangle_to_register(cx: &mut Context) {
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        if let Some(ch) = event.char() {
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text().clone();
+            let sel = doc.selection(view.id).primary();
+            let (p0, p1) = (sel.from(), sel.to());
+            let l0 = text.char_to_line(p0);
+            let l1 = text.char_to_line(p1.max(p0).saturating_sub(1).max(p0));
+            let col_of = |pos: usize| pos - text.line_to_char(text.char_to_line(pos));
+            let (c0, c1) = (col_of(p0), col_of(p1));
+            let lines = doc_lines(&text);
+            let rect = crate::emacs_rect::extract(&lines, l0, l1, c0, c1);
+            crate::emacs_register::set_rect(ch, rect);
+            cx.editor
+                .set_status(format!("Rectangle copied to register {ch}"));
+        }
+    });
+    cx.editor.autoinfo = Some(Info::new(
+        "Copy rectangle to register",
+        &[("char", "register name")],
+    ));
 }
 
 #[derive(Clone, Copy)]

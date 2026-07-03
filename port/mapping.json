@@ -28557,6 +28557,14 @@
   "note": "emacs bookmark-insert -> bookmark_insert: pick a bookmark and insert the contents of the file it points to at point"
  },
  {
+  "spec_id": "emacs.command.copy_rectangle_to_register",
+  "status": "ported",
+  "evidence": [
+   "static:copy_rectangle_to_register"
+  ],
+  "note": "emacs copy-rectangle-to-register -> copy_rectangle_to_register: store the selected rectangle in a register (RegVal::Rect); insert-register (C-x r i) yanks it back as a rectangle"
+ },
+ {
   "spec_id": "emacs.command.calendar_forward_year",
   "status": "ported",
   "evidence": [

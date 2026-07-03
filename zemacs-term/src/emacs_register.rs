@@ -14,10 +14,11 @@ use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum RegVal {
     Pos(usize),
     Num(i64),
+    Rect(Vec<String>),
 }
 
 static REGS: Lazy<Mutex<HashMap<char, RegVal>>> = Lazy::new(|| Mutex::new(HashMap::new()));
@@ -61,6 +62,20 @@ pub fn incr(ch: char, by: i64) -> i64 {
     next
 }
 
+/// Store a rectangle (`copy-rectangle-to-register`), one string per row.
+pub fn set_rect(ch: char, rect: Vec<String>) {
+    REGS.lock().unwrap().insert(ch, RegVal::Rect(rect));
+}
+
+/// Read a rectangle register (`insert-register` on a rectangle); `None` if unset
+/// or not a rectangle.
+pub fn get_rect(ch: char) -> Option<Vec<String>> {
+    match REGS.lock().unwrap().get(&ch) {
+        Some(RegVal::Rect(r)) => Some(r.clone()),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -100,5 +115,19 @@ mod tests {
         // incrementing a position register overwrites from 0 (emacs treats it numerically)
         set_pos('p', 100);
         assert_eq!(incr('p', 2), 2);
+    }
+
+    #[test]
+    fn rectangle_round_trips_and_is_typed() {
+        let _g = GUARD.lock().unwrap_or_else(|e| e.into_inner());
+        reset();
+        set_rect('r', vec!["ab".to_string(), "cd".to_string()]);
+        assert_eq!(
+            get_rect('r'),
+            Some(vec!["ab".to_string(), "cd".to_string()])
+        );
+        assert_eq!(get_num('r'), None); // a rectangle is not a number
+        assert_eq!(get_pos('r'), None);
+        assert_eq!(get_rect('z'), None); // unset
     }
 }
