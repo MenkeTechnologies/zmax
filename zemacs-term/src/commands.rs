@@ -1222,6 +1222,9 @@ impl MappableCommand {
         zone, "Run the zone screen-saver (emacs zone)",
         decipher, "Solve a cryptogram (emacs decipher)",
         dunnet, "Play the dunnet text adventure (emacs dunnet)",
+        studlify_region, "StudlyCaps the selected region (emacs studlify-region)",
+        studlify_buffer, "StudlyCaps the whole buffer (emacs studlify-buffer)",
+        studlify_word, "StudlyCaps the word after point (emacs studlify-word)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -3786,6 +3789,122 @@ fn upcase_initials_region(cx: &mut Context) {
     switch_case_impl(cx, |slice| {
         zemacs_core::case_conversion::upcase_initials(slice.chars())
     });
+}
+
+/// Faithful port of emacs `studlify-region` (play/studly.el). For each word in
+/// the text, sum every character code in the word plus the character just past
+/// it (`offset`); then, for each character `c` of the word, if `(c + offset) % 4
+/// == 2` and `c` is an ASCII letter, toggle its case (XOR with the space bit).
+/// Operates on the whole slice as its own "region"; the char past a word that
+/// ends the slice reads as 0 (emacs `following-char` at end-of-buffer).
+fn studlify(s: &str) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let n = chars.len();
+    let is_word = |c: char| c.is_alphanumeric();
+    let following = |i: usize| -> u32 {
+        if i < n {
+            chars[i] as u32
+        } else {
+            0
+        }
+    };
+    let mut out = chars.clone();
+    let mut point = 0usize;
+    let mut begin = 0usize;
+    // Stop once nothing but non-word characters remain (looking-at "\\W*\\'").
+    while point <= n && !(point..n).all(|i| !is_word(chars[i])) {
+        // forward-word then backward-word == move to the start of the next word.
+        let mut p = point;
+        while p < n && !is_word(chars[p]) {
+            p += 1;
+        }
+        while p < n && is_word(chars[p]) {
+            p += 1;
+        }
+        let mut b = p;
+        while b > 0 && !is_word(chars[b - 1]) {
+            b -= 1;
+        }
+        while b > 0 && is_word(chars[b - 1]) {
+            b -= 1;
+        }
+        point = b;
+        begin = begin.max(point);
+        // forward-word == move to the end of this word.
+        while point < n && is_word(chars[point]) {
+            point += 1;
+        }
+        let word_end = point;
+        let mut offset: u32 = 0;
+        for i in begin..word_end {
+            offset = offset.wrapping_add(following(i));
+        }
+        offset = offset.wrapping_add(following(word_end));
+        // Emacs's apply loop does delete-char + insert (which advances point past
+        // the new char) then forward-char, so a toggle skips the next character.
+        let mut i = begin;
+        while i < word_end {
+            let c = out[i] as u32;
+            if (c.wrapping_add(offset)) % 4 == 2 && out[i].is_ascii_alphabetic() {
+                out[i] = char::from((out[i] as u8) ^ b' ');
+                i += 1;
+            }
+            i += 1;
+        }
+        begin = word_end;
+    }
+    out.into_iter().collect()
+}
+
+/// Emacs `studlify-region` (play/studly.el): StudlyCaps the selected region.
+fn studlify_region(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        let s: String = slice.chunks().collect();
+        studlify(&s).into()
+    });
+}
+
+/// Emacs `studlify-buffer` (play/studly.el): StudlyCaps the whole buffer.
+fn studlify_buffer(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let studlified = studlify(&text.to_string());
+    let transaction = Transaction::change(
+        text,
+        std::iter::once((0, text.len_chars(), Some(studlified.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    exit_select_mode(cx);
+}
+
+/// Emacs `studlify-word` (play/studly.el): StudlyCaps the word after point (or
+/// the next `count` words with a numeric prefix).
+fn studlify_word(cx: &mut Context) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let is_word = |c: char| c.is_alphanumeric();
+    let start = doc.selection(view.id).primary().cursor(text);
+    // Move forward over `count` words to find the region end (forward-word).
+    let mut end = start;
+    let len = text.len_chars();
+    for _ in 0..count {
+        while end < len && !is_word(text.char(end)) {
+            end += 1;
+        }
+        while end < len && is_word(text.char(end)) {
+            end += 1;
+        }
+    }
+    let (rb, re) = (start.min(end), start.max(end));
+    let region: String = text.slice(rb..re).chunks().collect();
+    let studlified = studlify(&region);
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((rb, re, Some(studlified.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    exit_select_mode(cx);
 }
 
 // vim `g?` ROT13: rotate every ASCII letter 13 places, leave everything else
@@ -25279,5 +25398,24 @@ mod wildfire_tests {
         // N=2 jumps straight to the inside of the 2nd-closest pair `()`.
         let g = wildfire_grow_range(None, slice, start, 2);
         assert_eq!(slice.slice(g.from()..g.to()), "a [b] c");
+    }
+
+    // Expected outputs captured from GNU Emacs 30.2 `studlify-buffer` on each
+    // input — the port must reproduce the exact per-word toggle pattern.
+    #[test]
+    fn studlify_matches_emacs() {
+        assert_eq!(super::studlify("Hello World"), "Hello WoRld");
+        assert_eq!(super::studlify("the quick brown fox"), "thE QuIck BrowN fox");
+        assert_eq!(super::studlify("StudlyCaps rocks"), "StudlyCaps rocks");
+        assert_eq!(super::studlify("abc def ghi"), "abc def ghi");
+        assert_eq!(super::studlify("AAAA bbbb CCCC"), "AAAA BbBb CCCC");
+        assert_eq!(
+            super::studlify("programming language design"),
+            "prOgramminG laNguage Design"
+        );
+        assert_eq!(
+            super::studlify("hello there general kenobi"),
+            "hello theRe generaL keNoBi"
+        );
     }
 }
