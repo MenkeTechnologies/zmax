@@ -8950,50 +8950,6 @@ fn emacs_version(
     Ok(())
 }
 
-/// `:add-name-to-file <old> <new>` — Emacs `add-name-to-file`: give the file
-/// OLD an additional name NEW (a hard link).
-fn add_name_to_file(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
-    if event != PromptEvent::Validate {
-        return Ok(());
-    }
-    if args.len() != 2 {
-        anyhow::bail!("usage: :add-name-to-file <old> <new>");
-    }
-    let old = args.first().unwrap();
-    let new = args.get(1).unwrap();
-    std::fs::hard_link(old, new).map_err(|e| anyhow!("add-name-to-file: {e}"))?;
-    cx.editor.set_status(format!("Linked {new} -> {old}"));
-    Ok(())
-}
-
-/// `:make-symbolic-link <target> <link>` — Emacs `make-symbolic-link`: create a
-/// symbolic link LINK that points to TARGET.
-fn make_symbolic_link(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
-    if event != PromptEvent::Validate {
-        return Ok(());
-    }
-    if args.len() != 2 {
-        anyhow::bail!("usage: :make-symbolic-link <target> <link>");
-    }
-    let target = args.first().unwrap();
-    let link = args.get(1).unwrap();
-    #[cfg(unix)]
-    std::os::unix::fs::symlink(target, link).map_err(|e| anyhow!("make-symbolic-link: {e}"))?;
-    #[cfg(not(unix))]
-    anyhow::bail!("make-symbolic-link: unsupported on this platform");
-    #[cfg(unix)]
-    cx.editor.set_status(format!("Symlinked {link} -> {target}"));
-    Ok(())
-}
-
 /// `:browse-url <url>` — Emacs `browse-url`: open URL in the OS default browser.
 fn browse_url(
     cx: &mut compositor::Context,
