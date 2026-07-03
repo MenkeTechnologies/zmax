@@ -235,6 +235,10 @@
 | `:pio-debug-verbose`, `:platformio-debug-verbose` | Verbose PlatformIO debugger session (`pio debug -v`). |
 | `:pio-debug-interface`, `:platformio-debug-interface` | Debug with a specific interface (`pio debug --interface <name>`). |
 | `:pio-debug-load-mode`, `:platformio-debug-load-mode` | Control firmware reloading on debug start (`pio debug --load-mode <always|modified|manual>`). |
+| `:pio-build-conf`, `:platformio-build-conf`, `:pio-build-project-conf` | Build using an alternate platformio.ini (`pio run -c <path>`). |
+| `:pio-test-conf`, `:platformio-test-conf` | Run unit tests using an alternate platformio.ini (`pio test -c <path>`). |
+| `:pio-check-conf`, `:platformio-check-conf` | Static analysis using an alternate platformio.ini (`pio check -c <path>`). |
+| `:pio-debug-conf`, `:platformio-debug-conf` | Debug using an alternate platformio.ini (`pio debug -c <path>`), live in a terminal panel. |
 | `:pio-init-ide`, `:platformio-init-ide` | Generate IDE integration files (`pio project init --ide <ide>`). |
 | `:pio-init-sample`, `:platformio-init-sample` | Scaffold a project with example code (`pio project init --board <board> --sample-code`). |
 | `:pio-init-option`, `:platformio-init-option` | Set a `platformio.ini` option while initialising (`pio project init -O <name=value>`). |
