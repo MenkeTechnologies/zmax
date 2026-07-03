@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-4dbc7df7.js";
+            window.path_to_searchindex_js = "searchindex-83099d39.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -674,6 +674,8 @@
 <tr><td><code>:filter</code>, <code>:keep-lines</code>, <code>:delete-non-matching-lines</code></td><td>Keep only the selected lines matching a regex (Emacs keep-lines; in-buffer grep).</td></tr>
 <tr><td><code>:reject</code>, <code>:remove-lines</code>, <code>:flush-lines</code>, <code>:delete-matching-lines</code></td><td>Drop the selected lines matching a regex (Emacs flush-lines; in-buffer grep -v).</td></tr>
 <tr><td><code>:count-matches</code>, <code>:count-regex</code>, <code>:how-many</code></td><td>Report how many regex matches (and matching lines) are in the selection (Emacs how-many).</td></tr>
+<tr><td><code>:copy-matching-lines</code>, <code>:copy-lines-matching</code></td><td>Copy lines matching a regex (region, or point to end) to the kill ring (Emacs copy-matching-lines).</td></tr>
+<tr><td><code>:kill-matching-lines</code>, <code>:kill-lines-matching</code></td><td>Delete lines matching a regex (region, or point to end) and save them to the kill ring (Emacs kill-matching-lines).</td></tr>
 <tr><td><code>:uniq-count</code>, <code>:frequency</code></td><td>Collapse the selected lines to <code>count line</code>, sorted by frequency (uniq -c</td></tr>
 <tr><td><code>:stats</code>, <code>:describe</code></td><td>Show count/sum/mean/min/max of the numbers in the selection (non-destructive).</td></tr>
 <tr><td><code>:seq</code>, <code>:sequence</code></td><td>Insert an integer sequence, one per line: :seq <start> <end> [step].</end></start></td></tr>
