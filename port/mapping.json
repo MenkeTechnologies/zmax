@@ -29251,5 +29251,29 @@
    "static:gud_watch"
   ],
   "note": "watch expr at point"
+ },
+ {
+  "spec_id": "emacs.command.dired_flag_backup_files",
+  "status": "ported",
+  "evidence": [
+   "key:dired:~"
+  ],
+  "note": "flag backup (~) files for deletion"
+ },
+ {
+  "spec_id": "emacs.command.dired_flag_auto_save_files",
+  "status": "ported",
+  "evidence": [
+   "key:dired:#"
+  ],
+  "note": "flag auto-save (#name#) files"
+ },
+ {
+  "spec_id": "emacs.command.dired_flag_garbage_files",
+  "status": "ported",
+  "evidence": [
+   "key:dired:&"
+  ],
+  "note": "flag garbage (build/tex droppings)"
  }
 ]

@@ -15,7 +15,8 @@
 //!   ^ / - — go up to the parent directory
 //!   m — mark; u — unmark (and advance); DEL — unmark previous; U — unmark all;
 //!   t — toggle all marks
-//!   d — flag for deletion (and advance); x — delete the flagged files;
+//!   d — flag for deletion (and advance); ~ flag backups; # flag auto-saves;
+//!   & flag garbage (build/tex droppings); x — delete the flagged files;
 //!   D — delete the marked files (or the file at point) immediately
 //!   w — copy the marked names (or the name at point) to the clipboard
 //!   s — cycle sort order (name/time/size/ext); r — reverse; `.` — toggle hidden
@@ -155,6 +156,19 @@ impl Dired {
         self.marked = next;
     }
 
+    /// Flag every entry whose name satisfies `pred` for deletion, returning the
+    /// number newly flagged — the shared engine behind the Emacs `~`/`#`/`&`
+    /// dired flag-by-pattern commands.
+    fn flag_matching(&mut self, pred: impl Fn(&str) -> bool) -> usize {
+        let mut n = 0;
+        for e in &self.entries {
+            if pred(&e.name) && self.flagged.insert(e.name.clone()) {
+                n += 1;
+            }
+        }
+        n
+    }
+
     /// Delete a set of names from disk (files or directory trees). Returns the
     /// count deleted; records the first error.
     fn delete_names(&mut self, names: &[String]) -> usize {
@@ -289,6 +303,21 @@ impl Component for Dired {
                     self.flagged.insert(n);
                     self.move_selection(1);
                 }
+            }
+            key!('~') => {
+                let n = self.flag_matching(zemacs_core::dired::is_backup_file);
+                cx.editor
+                    .set_status(format!("dired: flagged {n} backup file(s)"));
+            }
+            key!('#') => {
+                let n = self.flag_matching(zemacs_core::dired::is_auto_save_file);
+                cx.editor
+                    .set_status(format!("dired: flagged {n} auto-save file(s)"));
+            }
+            key!('&') => {
+                let n = self.flag_matching(zemacs_core::dired::is_garbage_file);
+                cx.editor
+                    .set_status(format!("dired: flagged {n} garbage file(s)"));
             }
             key!('x') => {
                 let names: Vec<String> = self

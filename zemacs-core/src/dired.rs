@@ -158,6 +158,31 @@ pub fn mark_char(marked: bool, flagged: bool) -> char {
     }
 }
 
+/// Emacs `dired-flag-backup-files` predicate: a GNU-style backup name, i.e. one
+/// ending in `~` (both `foo~` and versioned `foo.~3~`).
+pub fn is_backup_file(name: &str) -> bool {
+    name.ends_with('~')
+}
+
+/// Emacs `dired-flag-auto-save-files` predicate: an auto-save file `#name#`.
+pub fn is_auto_save_file(name: &str) -> bool {
+    name.len() > 2 && name.starts_with('#') && name.ends_with('#')
+}
+
+/// Extensions matched by Emacs `dired-garbage-files-regexp` (the dired-x
+/// default): intermediate build/tex droppings.
+const GARBAGE_EXTENSIONS: &[&str] = &[
+    "aux", "bak", "dvi", "log", "orig", "rej", "toc", "out",
+];
+
+/// Emacs `dired-flag-garbage-files` predicate: a backup/auto-save file, or a
+/// name whose extension is one of [`GARBAGE_EXTENSIONS`].
+pub fn is_garbage_file(name: &str) -> bool {
+    is_backup_file(name)
+        || is_auto_save_file(name)
+        || GARBAGE_EXTENSIONS.contains(&extension(name).as_str())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -264,5 +289,23 @@ mod tests {
         assert_eq!(mark_char(true, false), '*');
         assert_eq!(mark_char(false, true), 'D');
         assert_eq!(mark_char(true, true), 'D'); // flag wins
+    }
+
+    #[test]
+    fn garbage_predicates() {
+        assert!(is_backup_file("foo.c~"));
+        assert!(is_backup_file("foo.~3~"));
+        assert!(!is_backup_file("foo.c"));
+
+        assert!(is_auto_save_file("#foo.c#"));
+        assert!(!is_auto_save_file("foo.c"));
+        assert!(!is_auto_save_file("#")); // too short to be #name#
+
+        assert!(is_garbage_file("paper.aux"));
+        assert!(is_garbage_file("paper.log"));
+        assert!(is_garbage_file("foo.c~")); // backups count as garbage
+        assert!(is_garbage_file("#foo.c#")); // auto-saves count as garbage
+        assert!(!is_garbage_file("paper.tex"));
+        assert!(!is_garbage_file("main.rs"));
     }
 }
