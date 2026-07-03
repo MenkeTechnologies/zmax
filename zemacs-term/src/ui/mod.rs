@@ -1,3 +1,4 @@
+pub mod animate;
 pub mod bufmenu;
 pub mod calc;
 pub mod calendar;
