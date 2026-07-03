@@ -506,6 +506,53 @@ impl Game {
         self.describe(self.room, false)
     }
 
+    /// Port of `dun-break`: needs the axe (object 14). Breaking a held object
+    /// kills you; a scenery object shatters the axe; a regular object here is
+    /// destroyed. The ethernet cable would start the (unported) endgame.
+    pub fn break_obj(&mut self, word: &str) -> Vec<String> {
+        if !self.inventory.contains(&14) {
+            return vec!["You have nothing you can use to break things.".into()];
+        }
+        let Some(num) = object_number(word) else {
+            return vec!["I don't know what that is.".into()];
+        };
+        if self.inventory.contains(&num) {
+            return self.die(
+                "an axe",
+                "You take the object in your hands and swing the axe.  Unfortunately, you miss\nthe object and slice off your hand.  You bleed to death.",
+            );
+        }
+        if !self.here(num) {
+            return vec!["I don't see that here.".into()];
+        }
+        if num == -16 {
+            // obj-cable: normally cuts the connection and starts the endgame.
+            return vec![
+                "As you break the ethernet cable, everything starts to blur.  You collapse".into(),
+                "for a moment, then straighten yourself up.".into(),
+                "(The dunnet endgame computer puzzle is not yet ported.)".into(),
+            ];
+        }
+        if num < 0 {
+            self.remove_from_inventory(14);
+            vec!["Your axe shatters into a million pieces.".into()]
+        } else {
+            if let Some(p) = self.room_objects[self.room].iter().position(|&o| o == num) {
+                self.room_objects[self.room].remove(p);
+            }
+            vec!["Your axe breaks it into a million pieces.".into()]
+        }
+    }
+
+    /// Port of `dun-drive`.
+    pub fn drive(&self) -> String {
+        if !self.inbus {
+            "You cannot drive when you aren't in a vehicle.".into()
+        } else {
+            "To drive while you are in the bus, just give a direction.".into()
+        }
+    }
+
     /// Port of `dun-eat`: only the food (object 3) is edible; anything else
     /// chokes you to death.
     pub fn eat(&mut self, word: &str) -> String {
@@ -602,6 +649,8 @@ impl Game {
             },
             "eat" => vec![self.eat(arg)],
             "press" | "push" => vec![self.press(arg)],
+            "break" | "cut" => self.break_obj(arg),
+            "drive" => vec![self.drive()],
             "swim" => self.swim(),
             "score" => vec![format!(
                 "You have scored {} out of a possible 90 points.",
@@ -929,6 +978,33 @@ mod tests {
         assert!(g.black);
         assert_eq!(g.press("switch"), "The button is now in the off position.");
         assert!(!g.black);
+    }
+
+    #[test]
+    fn breaking_needs_the_axe_and_kills_on_held_objects() {
+        let mut g = Game::new();
+        // No axe -> refuse.
+        g.inventory = vec![0];
+        g.room_objects[g.room] = vec![7];
+        assert_eq!(g.break_obj("diamond"), vec!["You have nothing you can use to break things.".to_string()]);
+        // With the axe, breaking a held object is fatal.
+        g.inventory = vec![14, 7];
+        assert!(g.break_obj("diamond").iter().any(|l| l.contains("bleed to death")));
+        assert!(g.dead.is_some());
+        // With the axe, a regular object in the room is destroyed.
+        let mut g = Game::new();
+        g.inventory = vec![14];
+        g.room_objects[g.room] = vec![7];
+        assert!(g.break_obj("diamond")[0].contains("million pieces"));
+        assert!(!g.room_objects[g.room].contains(&7));
+    }
+
+    #[test]
+    fn drive_requires_the_bus() {
+        let mut g = Game::new();
+        assert_eq!(g.drive(), "You cannot drive when you aren't in a vehicle.");
+        g.inbus = true;
+        assert!(g.drive().contains("give a direction"));
     }
 
     #[test]
