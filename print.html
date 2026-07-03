@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-b0718e6c.js";
+            window.path_to_searchindex_js = "searchindex-556f2100.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -2493,6 +2493,11 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>switch_case</code></td><td>Switch (toggle) case</td><td>normal: <code>~</code>, select: <code>~</code></td></tr>
 <tr><td><code>switch_to_uppercase</code></td><td>Switch to uppercase</td><td>normal: <code>&lt;space&gt;xU</code>, <code>&lt;C-x&gt;&lt;C-u&gt;</code>, select: <code>&lt;space&gt;xU</code>, <code>&lt;C-x&gt;&lt;C-u&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-u&gt;</code></td></tr>
 <tr><td><code>switch_to_lowercase</code></td><td>Switch to lowercase</td><td>normal: <code>&lt;space&gt;xu</code>, <code>&lt;C-x&gt;&lt;C-l&gt;</code>, select: <code>&lt;space&gt;xu</code>, <code>&lt;C-x&gt;&lt;C-l&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-l&gt;</code></td></tr>
+<tr><td><code>upcase_word</code></td><td>Upper-case the word after point (emacs upcase-word, M-u)</td><td></td></tr>
+<tr><td><code>downcase_word</code></td><td>Lower-case the word after point (emacs downcase-word, M-l)</td><td></td></tr>
+<tr><td><code>capitalize_word</code></td><td>Capitalize the word after point (emacs capitalize-word, M-c)</td><td></td></tr>
+<tr><td><code>capitalize_region</code></td><td>Title-case every word in the region (emacs capitalize-region)</td><td></td></tr>
+<tr><td><code>upcase_initials_region</code></td><td>Upper-case the first letter of each word in the region (emacs upcase-initials-region)</td><td></td></tr>
 <tr><td><code>page_up</code></td><td>Move page up</td><td>normal: <code>z^</code>, <code>&lt;A-v&gt;</code>, <code>&lt;C-b&gt;</code>, <code>&lt;C-x&gt;[</code>, <code>&lt;S-up&gt;</code>, <code>&lt;pageup&gt;</code>, <code>&lt;S-minus&gt;</code>, select: <code>&lt;C-x&gt;[</code>, insert: <code>&lt;A-v&gt;</code>, <code>&lt;C-x&gt;[</code>, <code>&lt;S-up&gt;</code>, <code>&lt;pageup&gt;</code></td></tr>
 <tr><td><code>page_down</code></td><td>Move page down</td><td>normal: <code>z+</code>, <code>&lt;C-f&gt;</code>, <code>&lt;S-+&gt;</code>, <code>&lt;C-x&gt;]</code>, <code>&lt;S-ret&gt;</code>, <code>&lt;S-down&gt;</code>, <code>&lt;pagedown&gt;</code>, select: <code>&lt;C-x&gt;]</code>, insert: <code>&lt;C-x&gt;]</code>, <code>&lt;S-down&gt;</code>, <code>&lt;pagedown&gt;</code></td></tr>
 <tr><td><code>half_page_up</code></td><td>Move half page up</td><td></td></tr>
@@ -2539,6 +2544,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>ediff_buffer</code></td><td>Diff the current buffer against a picked buffer (SPC D b b)</td><td>normal: <code>&lt;space&gt;Dbb</code>, select: <code>&lt;space&gt;Dbb</code></td></tr>
 <tr><td><code>compare_with_clipboard</code></td><td>Diff the current buffer against the clipboard (JetBrains Compare with Clipboard)</td><td>normal: <code>&lt;space&gt;Dc</code>, select: <code>&lt;space&gt;Dc</code></td></tr>
 <tr><td><code>transpose_paragraph</code></td><td>Swap the current paragraph with the previous one (SPC x t p)</td><td>normal: <code>&lt;space&gt;xtp</code>, select: <code>&lt;space&gt;xtp</code></td></tr>
+<tr><td><code>transpose_line</code></td><td>Swap the current line with the previous one (emacs transpose-lines, C-x C-t)</td><td></td></tr>
 <tr><td><code>move_element_right</code></td><td>Swap the syntax node under the cursor with its next sibling (JetBrains Move Element Right)</td><td>normal: <code>&lt;space&gt;x&lt;gt&gt;</code>, select: <code>&lt;space&gt;x&lt;gt&gt;</code></td></tr>
 <tr><td><code>move_element_left</code></td><td>Swap the syntax node under the cursor with its previous sibling (JetBrains Move Element Left)</td><td>normal: <code>&lt;space&gt;x&lt;lt&gt;</code>, select: <code>&lt;space&gt;x&lt;lt&gt;</code></td></tr>
 <tr><td><code>convert_indent_to_spaces</code></td><td>Convert leading indentation to spaces (JetBrains Convert Indents to Spaces)</td><td></td></tr>
@@ -2820,6 +2826,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>type_hierarchy_supertypes</code></td><td>Type hierarchy: supertypes of the symbol (JetBrains Ctrl-H)</td><td>normal: <code>&lt;space&gt;gT</code>, select: <code>&lt;space&gt;gT</code></td></tr>
 <tr><td><code>type_hierarchy_subtypes</code></td><td>Type hierarchy: subtypes of the symbol</td><td></td></tr>
 <tr><td><code>goto_window_top</code></td><td>Goto window top</td><td>normal: <code>H</code></td></tr>
+<tr><td><code>what_line</code></td><td>Report the line number of point (emacs what-line)</td><td></td></tr>
+<tr><td><code>count_lines_page</code></td><td>Report lines on the current page, before + after point (emacs count-lines-page, C-x l)</td><td></td></tr>
+<tr><td><code>move_to_window_line_top_bottom</code></td><td>Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r)</td><td></td></tr>
 <tr><td><code>goto_window_center</code></td><td>Goto window center</td><td>normal: <code>M</code></td></tr>
 <tr><td><code>goto_window_bottom</code></td><td>Goto window bottom</td><td>normal: <code>L</code></td></tr>
 <tr><td><code>goto_last_accessed_file</code></td><td>Goto last accessed file</td><td>normal: <code>&lt;C-^&gt;</code>, <code>&lt;C-w&gt;^</code>, <code>g&lt;tab&gt;</code>, <code>&lt;C-tab&gt;</code>, <code>&lt;space&gt;w^</code>, <code>&lt;C-w&gt;&lt;C-^&gt;</code>, <code>&lt;C-w&gt;g&lt;tab&gt;</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code>, select: <code>&lt;space&gt;w^</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code></td></tr>
@@ -2998,6 +3007,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>backward_up_list</code></td><td>Move backward out of the enclosing list (emacs backward-up-list, C-M-u)</td><td></td></tr>
 <tr><td><code>kill_sexp</code></td><td>Kill the s-expression after point (emacs kill-sexp, C-M-k)</td><td></td></tr>
 <tr><td><code>mark_sexp</code></td><td>Set the region over the following s-expression (emacs mark-sexp, C-M-SPC)</td><td></td></tr>
+<tr><td><code>forward_sexp</code></td><td>Move forward over the next s-expression (emacs forward-sexp, C-M-f)</td><td></td></tr>
+<tr><td><code>backward_sexp</code></td><td>Move backward over the previous s-expression (emacs backward-sexp, C-M-b)</td><td></td></tr>
+<tr><td><code>copy_region_as_kill</code></td><td>Copy the region to the kill ring without deleting (emacs copy-region-as-kill, M-w)</td><td></td></tr>
 <tr><td><code>mark_word</code></td><td>Set the region over the next word (emacs mark-word, M-@)</td><td></td></tr>
 <tr><td><code>mark_paragraph</code></td><td>Select the paragraph around point (emacs mark-paragraph, M-h)</td><td></td></tr>
 <tr><td><code>mark_defun</code></td><td>Select the function/defun around point (emacs mark-defun, C-M-h)</td><td></td></tr>
@@ -3009,6 +3021,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>move_to_opposite_group</code></td><td>Move the current editor to the opposite split group (JetBrains)</td><td></td></tr>
 <tr><td><code>rotate_view</code></td><td>Goto next window</td><td>normal: <code>&lt;C-w&gt;p</code>, <code>&lt;C-w&gt;r</code>, <code>&lt;C-w&gt;w</code>, <code>&lt;C-x&gt;o</code>, <code>&lt;C-w&gt;.o</code>, <code>&lt;C-w&gt;.r</code>, <code>&lt;C-w&gt;.w</code>, <code>&lt;space&gt;wp</code>, <code>&lt;space&gt;wr</code>, <code>&lt;space&gt;ww</code>, <code>&lt;C-w&gt;&lt;C-p&gt;</code>, <code>&lt;C-w&gt;&lt;C-r&gt;</code>, <code>&lt;C-w&gt;&lt;C-w&gt;</code>, <code>&lt;C-w&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;b.o</code>, <code>&lt;space&gt;w.o</code>, <code>&lt;space&gt;w.r</code>, <code>&lt;space&gt;w.w</code>, <code>&lt;space&gt;w&lt;C-p&gt;</code>, <code>&lt;space&gt;w&lt;C-r&gt;</code>, <code>&lt;space&gt;w&lt;C-w&gt;</code>, <code>&lt;space&gt;w&lt;tab&gt;</code>, select: <code>&lt;C-x&gt;o</code>, <code>&lt;space&gt;wp</code>, <code>&lt;space&gt;wr</code>, <code>&lt;space&gt;ww</code>, <code>&lt;space&gt;b.o</code>, <code>&lt;space&gt;w.o</code>, <code>&lt;space&gt;w.r</code>, <code>&lt;space&gt;w.w</code>, <code>&lt;space&gt;w&lt;C-p&gt;</code>, <code>&lt;space&gt;w&lt;C-r&gt;</code>, <code>&lt;space&gt;w&lt;C-w&gt;</code>, <code>&lt;space&gt;w&lt;tab&gt;</code>, insert: <code>&lt;C-x&gt;o</code></td></tr>
 <tr><td><code>rotate_view_reverse</code></td><td>Goto previous window</td><td>normal: <code>&lt;C-w&gt;R</code>, <code>&lt;C-w&gt;W</code>, <code>&lt;C-w&gt;.R</code>, <code>&lt;space&gt;wR</code>, <code>&lt;space&gt;wW</code>, <code>&lt;space&gt;w.R</code>, select: <code>&lt;space&gt;wR</code>, <code>&lt;space&gt;wW</code>, <code>&lt;space&gt;w.R</code></td></tr>
+<tr><td><code>scroll_other_window</code></td><td>Scroll the other window forward (emacs scroll-other-window, C-M-v)</td><td></td></tr>
+<tr><td><code>scroll_other_window_down</code></td><td>Scroll the other window backward (emacs scroll-other-window-down, C-M-S-v)</td><td></td></tr>
 <tr><td><code>hsplit</code></td><td>Horizontal bottom split</td><td>normal: <code>&lt;C-w&gt;S</code>, <code>&lt;C-w&gt;s</code>, <code>&lt;C-x&gt;2</code>, <code>&lt;C-w&gt;.S</code>, <code>&lt;C-w&gt;.s</code>, <code>&lt;space&gt;wS</code>, <code>&lt;space&gt;ws</code>, <code>&lt;C-w&gt;&lt;C-s&gt;</code>, <code>&lt;space&gt;w.S</code>, <code>&lt;space&gt;w.s</code>, <code>&lt;C-w&gt;.&lt;minus&gt;</code>, <code>&lt;space&gt;w&lt;C-s&gt;</code>, <code>&lt;space&gt;w.&lt;minus&gt;</code>, select: <code>&lt;C-x&gt;2</code>, <code>&lt;space&gt;wS</code>, <code>&lt;space&gt;ws</code>, <code>&lt;space&gt;w.S</code>, <code>&lt;space&gt;w.s</code>, <code>&lt;space&gt;w&lt;C-s&gt;</code>, <code>&lt;space&gt;w.&lt;minus&gt;</code>, insert: <code>&lt;C-x&gt;2</code></td></tr>
 <tr><td><code>hsplit_new</code></td><td>Horizontal bottom split scratch buffer</td><td>normal: <code>&lt;C-w&gt;n</code>, <code>&lt;space&gt;wn</code>, <code>&lt;C-w&gt;&lt;C-n&gt;</code>, <code>&lt;space&gt;bNj</code>, <code>&lt;space&gt;bNk</code>, <code>&lt;space&gt;w&lt;C-n&gt;</code>, select: <code>&lt;space&gt;wn</code>, <code>&lt;space&gt;bNj</code>, <code>&lt;space&gt;bNk</code>, <code>&lt;space&gt;w&lt;C-n&gt;</code></td></tr>
 <tr><td><code>vsplit</code></td><td>Vertical right split</td><td>normal: <code>&lt;C-w&gt;/</code>, <code>&lt;C-w&gt;2</code>, <code>&lt;C-w&gt;V</code>, <code>&lt;C-w&gt;v</code>, <code>&lt;C-x&gt;3</code>, <code>&lt;C-x&gt;5</code>, <code>&lt;C-w&gt;./</code>, <code>&lt;C-w&gt;.V</code>, <code>&lt;C-w&gt;.v</code>, <code>&lt;C-x&gt;62</code>, <code>&lt;C-x&gt;6s</code>, <code>&lt;space&gt;w/</code>, <code>&lt;space&gt;w2</code>, <code>&lt;space&gt;wV</code>, <code>&lt;space&gt;wv</code>, <code>&lt;C-w&gt;&lt;C-v&gt;</code>, <code>&lt;space&gt;w./</code>, <code>&lt;space&gt;w.V</code>, <code>&lt;space&gt;w.v</code>, <code>&lt;space&gt;w&lt;C-v&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w2</code>, select: <code>&lt;C-x&gt;3</code>, <code>&lt;C-x&gt;5</code>, <code>&lt;C-x&gt;62</code>, <code>&lt;C-x&gt;6s</code>, <code>&lt;space&gt;w/</code>, <code>&lt;space&gt;w2</code>, <code>&lt;space&gt;wV</code>, <code>&lt;space&gt;wv</code>, <code>&lt;space&gt;w./</code>, <code>&lt;space&gt;w.V</code>, <code>&lt;space&gt;w.v</code>, <code>&lt;space&gt;w&lt;C-v&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w2</code>, insert: <code>&lt;C-x&gt;3</code>, <code>&lt;C-x&gt;5</code>, <code>&lt;C-x&gt;62</code>, <code>&lt;C-x&gt;6s</code></td></tr>
@@ -3017,6 +3031,10 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>wonly</code></td><td>Close windows except current</td><td>normal: <code>&lt;C-w&gt;1</code>, <code>&lt;C-w&gt;_</code>, <code>&lt;C-w&gt;m</code>, <code>&lt;C-w&gt;o</code>, <code>&lt;C-x&gt;1</code>, <code>&lt;C-w&gt;.D</code>, <code>&lt;C-w&gt;._</code>, <code>&lt;C-w&gt;.m</code>, <code>&lt;C-w&gt;|</code>, <code>&lt;C-x&gt;61</code>, <code>&lt;C-w&gt;.|</code>, <code>&lt;space&gt;w1</code>, <code>&lt;space&gt;w_</code>, <code>&lt;space&gt;wm</code>, <code>&lt;space&gt;wo</code>, <code>&lt;C-w&gt;&lt;C-o&gt;</code>, <code>&lt;space&gt;w.D</code>, <code>&lt;space&gt;w._</code>, <code>&lt;space&gt;w.m</code>, <code>&lt;space&gt;w|</code>, <code>&lt;space&gt;w.|</code>, <code>&lt;space&gt;w&lt;C-o&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w1</code>, select: <code>&lt;C-x&gt;1</code>, <code>&lt;C-x&gt;61</code>, <code>&lt;space&gt;w1</code>, <code>&lt;space&gt;w_</code>, <code>&lt;space&gt;wm</code>, <code>&lt;space&gt;wo</code>, <code>&lt;space&gt;w.D</code>, <code>&lt;space&gt;w._</code>, <code>&lt;space&gt;w.m</code>, <code>&lt;space&gt;w|</code>, <code>&lt;space&gt;w.|</code>, <code>&lt;space&gt;w&lt;C-o&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w1</code>, insert: <code>&lt;C-x&gt;1</code>, <code>&lt;C-x&gt;61</code></td></tr>
 <tr><td><code>select_register</code></td><td>Select register</td><td>normal: <code>"</code></td></tr>
 <tr><td><code>insert_register</code></td><td>Insert register</td><td>insert: <code>&lt;C-r&gt;</code></td></tr>
+<tr><td><code>view_register</code></td><td>Show a register’s contents (emacs view-register, C-x r v)</td><td></td></tr>
+<tr><td><code>not_modified</code></td><td>Mark the buffer unmodified without saving (emacs not-modified, M-~)</td><td></td></tr>
+<tr><td><code>insert_char_by_code</code></td><td>Insert a character by Unicode code point (emacs insert-char, C-x 8 RET)</td><td></td></tr>
+<tr><td><code>backward_delete_char_untabify</code></td><td>Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify)</td><td></td></tr>
 <tr><td><code>insert_last_inserted_text</code></td><td>Insert the previously inserted text (vim i_CTRL-A)</td><td>insert: <code>&lt;C-a&gt;</code></td></tr>
 <tr><td><code>insert_last_inserted_and_stop</code></td><td>Insert previously inserted text and stop insert (vim i_CTRL-@)</td><td>insert: <code>&lt;C-@&gt;</code></td></tr>
 <tr><td><code>copy_between_registers</code></td><td>Copy between two registers</td><td></td></tr>
@@ -6534,11 +6552,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>2985</strong> (43.6%)</li>
-<li>Partial: <strong>551</strong> (8.0%)</li>
-<li>Absent: <strong>3311</strong></li>
+<li>Ported: <strong>3007</strong> (43.9%)</li>
+<li>Partial: <strong>533</strong> (7.8%)</li>
+<li>Absent: <strong>3307</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 960 static commands, 1565 typable <code>:</code> commands, 2636 default keybindings</li>
+<li>zemacs source surface: 980 static commands, 1565 typable <code>:</code> commands, 2636 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -6594,7 +6612,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">591</td><td style="text-align: right">183</td><td style="text-align: right">19.6%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">613</td><td style="text-align: right">165</td><td style="text-align: right">20.4%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
@@ -6615,7 +6633,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">380</td><td style="text-align: right">98</td><td style="text-align: right">20.2%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">402</td><td style="text-align: right">80</td><td style="text-align: right">21.3%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
