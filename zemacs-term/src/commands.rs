@@ -393,6 +393,11 @@ impl MappableCommand {
         switch_case, "Switch (toggle) case",
         switch_to_uppercase, "Switch to uppercase",
         switch_to_lowercase, "Switch to lowercase",
+        upcase_word, "Upper-case the word after point (emacs upcase-word, M-u)",
+        downcase_word, "Lower-case the word after point (emacs downcase-word, M-l)",
+        capitalize_word, "Capitalize the word after point (emacs capitalize-word, M-c)",
+        capitalize_region, "Title-case every word in the region (emacs capitalize-region)",
+        upcase_initials_region, "Upper-case the first letter of each word in the region (emacs upcase-initials-region)",
         page_up, "Move page up",
         page_down, "Move page down",
         half_page_up, "Move half page up",
@@ -3612,6 +3617,82 @@ fn switch_to_uppercase(cx: &mut Context) {
 fn switch_to_lowercase(cx: &mut Context) {
     switch_case_impl(cx, |string| {
         string.chunks().map(|chunk| chunk.to_lowercase()).collect()
+    });
+}
+
+/// Transform the word after point (skipping any leading non-word characters)
+/// with `f`, replacing it and moving point to just past the result. Backs the
+/// Emacs word-case commands `upcase-word` (M-u), `downcase-word` (M-l) and
+/// `capitalize-word` (M-c).
+fn case_word(cx: &mut Context, f: fn(&str) -> Tendril) {
+    let span = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let chars: Vec<char> = slice.chars().collect();
+        let n = chars.len();
+        let mut i = doc.selection(view.id).primary().cursor(slice);
+        while i < n && !chars[i].is_alphanumeric() {
+            i += 1;
+        }
+        let start = i;
+        while i < n && chars[i].is_alphanumeric() {
+            i += 1;
+        }
+        if start == i {
+            None
+        } else {
+            let w: String = chars[start..i].iter().collect();
+            Some((start, i, f(&w)))
+        }
+    };
+    let Some((from, to, new)) = span else {
+        cx.editor.set_status("no word after point");
+        return;
+    };
+    let new_len = new.chars().count();
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(doc.text(), std::iter::once((from, to, Some(new))));
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    doc.set_selection(view.id, Selection::point(from + new_len));
+}
+
+/// Emacs `upcase-word` (M-u): upper-case the word after point.
+fn upcase_word(cx: &mut Context) {
+    case_word(cx, |w| {
+        let mut t = Tendril::new();
+        zemacs_core::case_conversion::to_upper_case_with(w.chars(), &mut t);
+        t
+    });
+}
+
+/// Emacs `downcase-word` (M-l): lower-case the word after point.
+fn downcase_word(cx: &mut Context) {
+    case_word(cx, |w| {
+        let mut t = Tendril::new();
+        zemacs_core::case_conversion::to_lower_case_with(w.chars(), &mut t);
+        t
+    });
+}
+
+/// Emacs `capitalize-word` (M-c): capitalize the word after point (first letter
+/// upper, rest lower).
+fn capitalize_word(cx: &mut Context) {
+    case_word(cx, |w| zemacs_core::case_conversion::capitalize_words(w.chars()));
+}
+
+/// Emacs `capitalize-region`: title-case every word in the selected region.
+fn capitalize_region(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        zemacs_core::case_conversion::capitalize_words(slice.chars())
+    });
+}
+
+/// Emacs `upcase-initials-region`: upper-case the first letter of each word in
+/// the region, leaving the rest of each word unchanged.
+fn upcase_initials_region(cx: &mut Context) {
+    switch_case_impl(cx, |slice| {
+        zemacs_core::case_conversion::upcase_initials(slice.chars())
     });
 }
 

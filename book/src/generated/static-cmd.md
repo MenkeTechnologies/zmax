@@ -81,6 +81,11 @@
 | `switch_case` | Switch (toggle) case | normal: `` ~ ``, select: `` ~ `` |
 | `switch_to_uppercase` | Switch to uppercase | normal: `` <space>xU ``, `` <C-x><C-u> ``, select: `` <space>xU ``, `` <C-x><C-u> ``, insert: `` <C-x><C-u> `` |
 | `switch_to_lowercase` | Switch to lowercase | normal: `` <space>xu ``, `` <C-x><C-l> ``, select: `` <space>xu ``, `` <C-x><C-l> ``, insert: `` <C-x><C-l> `` |
+| `upcase_word` | Upper-case the word after point (emacs upcase-word, M-u) |  |
+| `downcase_word` | Lower-case the word after point (emacs downcase-word, M-l) |  |
+| `capitalize_word` | Capitalize the word after point (emacs capitalize-word, M-c) |  |
+| `capitalize_region` | Title-case every word in the region (emacs capitalize-region) |  |
+| `upcase_initials_region` | Upper-case the first letter of each word in the region (emacs upcase-initials-region) |  |
 | `page_up` | Move page up | normal: `` z^ ``, `` <A-v> ``, `` <C-b> ``, `` <C-x>[ ``, `` <S-up> ``, `` <pageup> ``, `` <S-minus> ``, select: `` <C-x>[ ``, insert: `` <A-v> ``, `` <C-x>[ ``, `` <S-up> ``, `` <pageup> `` |
 | `page_down` | Move page down | normal: `` z+ ``, `` <C-f> ``, `` <S-+> ``, `` <C-x>] ``, `` <S-ret> ``, `` <S-down> ``, `` <pagedown> ``, select: `` <C-x>] ``, insert: `` <C-x>] ``, `` <S-down> ``, `` <pagedown> `` |
 | `half_page_up` | Move half page up |  |

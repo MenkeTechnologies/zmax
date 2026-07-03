@@ -12241,11 +12241,11 @@
  },
  {
   "spec_id": "emacs.command.upcase_word",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:symbol_up_case"
+   "static:upcase_word"
   ],
-  "note": ""
+  "note": "upcase-word (M-u): upper-case the word after point"
  },
  {
   "spec_id": "emacs.command.isearch_forward",
@@ -12569,19 +12569,19 @@
  },
  {
   "spec_id": "emacs.command.downcase_region",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:symbol_under_score"
+   "static:switch_to_lowercase"
   ],
-  "note": ""
+  "note": "downcase-region (C-x C-l): lower-case the selected region"
  },
  {
   "spec_id": "emacs.command.upcase_region",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:symbol_up_case"
+   "static:switch_to_uppercase"
   ],
-  "note": ""
+  "note": "upcase-region (C-x C-u): upper-case the selected region"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_x_t_p",
@@ -14241,11 +14241,11 @@
  },
  {
   "spec_id": "emacs.command.downcase_word",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:symbol_under_score"
+   "static:downcase_word"
   ],
-  "note": ""
+  "note": "downcase-word (M-l): lower-case the word after point"
  },
  {
   "spec_id": "emacs.command.transpose_sexps",
@@ -20193,11 +20193,11 @@
  },
  {
   "spec_id": "emacs.command.capitalize_word",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:title_case_selection"
+   "static:capitalize_word"
   ],
-  "note": "emacs capitalize-word = zemacs title_case_selection (capitalize each word in selection)"
+  "note": "capitalize-word (M-c): capitalize the word after point"
  },
  {
   "spec_id": "emacs.command.mark_word",
