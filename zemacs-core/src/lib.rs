@@ -5,6 +5,7 @@ pub mod arglist;
 pub mod auto_pairs;
 pub mod bookmark;
 pub mod buffer_menu;
+pub mod buffer_name;
 pub mod calc;
 pub mod calendar;
 pub mod case_conversion;

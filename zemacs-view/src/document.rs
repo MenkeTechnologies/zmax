@@ -179,6 +179,12 @@ pub struct Document {
     pub inlay_hints_oudated: bool,
 
     path: Option<PathBuf>,
+    /// Explicit buffer name set via Emacs `rename-buffer` / `rename-uniquely`.
+    /// When present it overrides the path-derived [`Document::display_name`],
+    /// matching Emacs, where a buffer's name is distinct from the file it
+    /// visits. Cleared by [`Document::set_path`] so save-as adopts the new file
+    /// name. See [`zemacs_core::buffer_name`].
+    buffer_name: Option<String>,
     relative_path: OnceCell<Option<PathBuf>>,
     /// Lazily-computed workspace root for this document (the ancestor that contains a `.git` /
     /// `.svn` / `.jj` / `.zemacs`). Avoids per-call `find_workspace_in` ancestor walks for hot
@@ -793,6 +799,7 @@ impl Document {
             id: DocumentId::default(),
             active_snippet: None,
             path: None,
+            buffer_name: None,
             relative_path: OnceCell::new(),
             workspace_root: OnceCell::new(),
             encoding,
@@ -1447,6 +1454,9 @@ impl Document {
     pub fn set_path(&mut self, path: Option<&Path>) {
         let path = path.map(zemacs_stdx::path::canonicalize);
 
+        // A save-as / open onto a new path adopts that file's name, so drop any
+        // Emacs `rename-buffer` override (matches `set-visited-file-name`).
+        self.buffer_name = None;
         // `take` to remove any prior relative path that may have existed.
         // This will get set in `relative_path()`.
         self.relative_path.take();
@@ -2438,8 +2448,25 @@ impl Document {
     }
 
     pub fn display_name(&self) -> Cow<'_, str> {
+        if let Some(name) = &self.buffer_name {
+            return Cow::Borrowed(name);
+        }
         self.relative_path()
             .map_or_else(|| SCRATCH_BUFFER_NAME.into(), |path| path.to_string_lossy())
+    }
+
+    /// The explicit buffer name set by Emacs `rename-buffer` / `rename-uniquely`,
+    /// or `None` when the display name is derived from the visited file / scratch.
+    pub fn buffer_name(&self) -> Option<&str> {
+        self.buffer_name.as_deref()
+    }
+
+    /// Override the buffer's display name (Emacs `rename-buffer`). Passing `None`
+    /// reverts to the path-derived / scratch name. Uniqueness against other
+    /// buffers is the caller's responsibility — see
+    /// [`zemacs_core::buffer_name`].
+    pub fn set_buffer_name(&mut self, name: Option<String>) {
+        self.buffer_name = name;
     }
 
     // transact(Fn) ?

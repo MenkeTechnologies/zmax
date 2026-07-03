@@ -20183,6 +20183,52 @@ fn copy_to_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
     accumulate_to_buffer(cx, &args, true, false)
 }
 
+/// `:rename-buffer <name>` — Emacs `rename-buffer`: give the current buffer an
+/// explicit display name distinct from the file it visits. Errors if another
+/// open buffer already carries `<name>` (matching Emacs' non-unique rename).
+fn rename_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ").trim().to_string();
+    if name.is_empty() {
+        bail!("usage: :rename-buffer <name>");
+    }
+    let current_id = doc!(cx.editor).id();
+    let clash = cx
+        .editor
+        .documents()
+        .any(|d| d.id() != current_id && d.display_name() == name);
+    if clash {
+        bail!("buffer name `{name}` is in use");
+    }
+    doc_mut!(cx.editor, &current_id).set_buffer_name(Some(name.clone()));
+    cx.editor.set_status(format!("renamed buffer to `{name}`"));
+    Ok(())
+}
+
+/// `:rename-uniquely` — Emacs `rename-uniquely`: rename the current buffer to a
+/// similar name carrying a numeric `<N>` suffix that no other buffer uses.
+fn rename_uniquely(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let current_id = doc!(cx.editor).id();
+    let current = doc!(cx.editor).display_name().into_owned();
+    // Every open buffer name is "taken"; the current buffer occupies its own
+    // name so an already-unique name still gains a `<2>` suffix (per Emacs).
+    let taken: Vec<String> = cx
+        .editor
+        .documents()
+        .map(|d| d.display_name().into_owned())
+        .collect();
+    let new_name =
+        zemacs_core::buffer_name::rename_uniquely(&current, |c| taken.iter().any(|t| t == c));
+    doc_mut!(cx.editor, &current_id).set_buffer_name(Some(new_name.clone()));
+    cx.editor.set_status(format!("renamed buffer to `{new_name}`"));
+    Ok(())
+}
+
 /// Join the lines of `block` with `sep` into a single line, preserving a trailing
 /// newline if the block had one. Pure — unit tested.
 fn join_lines_with(block: &str, sep: &str) -> String {
@@ -30747,6 +30793,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::all(completers::buffer),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rename-buffer",
+        aliases: &[],
+        doc: "Give the current buffer an explicit display name (emacs rename-buffer).",
+        fun: rename_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rename-uniquely",
+        aliases: &[],
+        doc: "Rename the current buffer to a unique name with a numeric suffix (emacs rename-uniquely).",
+        fun: rename_uniquely,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
