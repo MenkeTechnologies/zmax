@@ -414,6 +414,9 @@
 | `type_hierarchy_supertypes` | Type hierarchy: supertypes of the symbol (JetBrains Ctrl-H) | normal: `` <space>gT ``, select: `` <space>gT `` |
 | `type_hierarchy_subtypes` | Type hierarchy: subtypes of the symbol |  |
 | `goto_window_top` | Goto window top | normal: `` H `` |
+| `what_line` | Report the line number of point (emacs what-line) |  |
+| `count_lines_page` | Report lines on the current page, before + after point (emacs count-lines-page, C-x l) |  |
+| `move_to_window_line_top_bottom` | Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r) |  |
 | `goto_window_center` | Goto window center | normal: `` M `` |
 | `goto_window_bottom` | Goto window bottom | normal: `` L `` |
 | `goto_last_accessed_file` | Goto last accessed file | normal: `` <C-^> ``, `` <C-w>^ ``, `` g<tab> ``, `` <C-tab> ``, `` <space>w^ ``, `` <C-w><C-^> ``, `` <C-w>g<tab> ``, `` <space><tab> ``, `` <space>w<C-^> ``, `` <space>wg<tab> ``, select: `` <space>w^ ``, `` <space><tab> ``, `` <space>w<C-^> ``, `` <space>wg<tab> `` |

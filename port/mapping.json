@@ -14137,11 +14137,11 @@
  },
  {
   "spec_id": "emacs.command.what_line",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:wc"
+   "static:what_line"
   ],
-  "note": ""
+  "note": "what-line: report the line number of point"
  },
  {
   "spec_id": "emacs.command.count_words_region",
@@ -14153,11 +14153,11 @@
  },
  {
   "spec_id": "emacs.command.count_lines_page",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:wc"
+   "static:count_lines_page"
   ],
-  "note": ""
+  "note": "count-lines-page (C-x l): lines on the current page, before + after point"
  },
  {
   "spec_id": "emacs.command.describe_char",
@@ -20209,11 +20209,11 @@
  },
  {
   "spec_id": "emacs.command.move_to_window_line_top_bottom",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_window_center"
+   "static:move_to_window_line_top_bottom"
   ],
-  "note": "emacs move-to-window-line-top-bottom (M-r) = zemacs goto_window_center"
+  "note": "move-to-window-line-top-bottom (M-r): centre/top/bottom, cycling"
  },
  {
   "spec_id": "emacs.command.cycle_spacing",
