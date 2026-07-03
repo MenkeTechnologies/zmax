@@ -29419,5 +29419,29 @@
    "typable:increase-left-margin"
   ],
   "note": "increase-left-margin -> :increase-left-margin [n]: indent each region content line by n columns (default standard-indent 4); :decrease-left-margin is the inverse"
+ },
+ {
+  "spec_id": "emacs.command.append_to_buffer",
+  "status": "ported",
+  "evidence": [
+   "typable:append-to-buffer"
+  ],
+  "note": "append-to-buffer -> :append-to-buffer <buffer>: copy the region to the end of another open buffer (matched by name or basename) as one undo step; requires the target buffer to already be open (does not auto-create it)"
+ },
+ {
+  "spec_id": "emacs.command.prepend_to_buffer",
+  "status": "ported",
+  "evidence": [
+   "typable:prepend-to-buffer"
+  ],
+  "note": "prepend-to-buffer -> :prepend-to-buffer <buffer>: copy the region to the beginning of another open buffer; :copy-to-buffer replaces the target's whole contents with the region"
+ },
+ {
+  "spec_id": "emacs.command.copy_to_buffer",
+  "status": "ported",
+  "evidence": [
+   "typable:copy-to-buffer"
+  ],
+  "note": "copy-to-buffer -> :copy-to-buffer <buffer>: replace another open buffer's entire contents with the region"
  }
 ]
