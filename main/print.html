@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-b0718e6c.js";
+            window.path_to_searchindex_js = "searchindex-96d0f277.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -2998,6 +2998,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>backward_up_list</code></td><td>Move backward out of the enclosing list (emacs backward-up-list, C-M-u)</td><td></td></tr>
 <tr><td><code>kill_sexp</code></td><td>Kill the s-expression after point (emacs kill-sexp, C-M-k)</td><td></td></tr>
 <tr><td><code>mark_sexp</code></td><td>Set the region over the following s-expression (emacs mark-sexp, C-M-SPC)</td><td></td></tr>
+<tr><td><code>forward_sexp</code></td><td>Move forward over the next s-expression (emacs forward-sexp, C-M-f)</td><td></td></tr>
+<tr><td><code>backward_sexp</code></td><td>Move backward over the previous s-expression (emacs backward-sexp, C-M-b)</td><td></td></tr>
+<tr><td><code>copy_region_as_kill</code></td><td>Copy the region to the kill ring without deleting (emacs copy-region-as-kill, M-w)</td><td></td></tr>
 <tr><td><code>mark_word</code></td><td>Set the region over the next word (emacs mark-word, M-@)</td><td></td></tr>
 <tr><td><code>mark_paragraph</code></td><td>Select the paragraph around point (emacs mark-paragraph, M-h)</td><td></td></tr>
 <tr><td><code>mark_defun</code></td><td>Select the function/defun around point (emacs mark-defun, C-M-h)</td><td></td></tr>
@@ -6534,11 +6537,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>2985</strong> (43.6%)</li>
-<li>Partial: <strong>551</strong> (8.0%)</li>
+<li>Ported: <strong>2987</strong> (43.6%)</li>
+<li>Partial: <strong>549</strong> (8.0%)</li>
 <li>Absent: <strong>3311</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 960 static commands, 1565 typable <code>:</code> commands, 2636 default keybindings</li>
+<li>zemacs source surface: 963 static commands, 1565 typable <code>:</code> commands, 2636 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -6594,7 +6597,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">591</td><td style="text-align: right">183</td><td style="text-align: right">19.6%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">593</td><td style="text-align: right">181</td><td style="text-align: right">19.7%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
@@ -6615,7 +6618,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">380</td><td style="text-align: right">98</td><td style="text-align: right">20.2%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">382</td><td style="text-align: right">96</td><td style="text-align: right">20.3%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
