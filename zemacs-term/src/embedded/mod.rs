@@ -1144,6 +1144,19 @@ pub fn pio_project_metadata_json() -> Vec<String> {
     vec![s(PIO), s("project"), s("metadata"), s("--json-output")]
 }
 
+/// `pio project metadata --json-output --json-output-path <path>` — write the
+/// IDE/LSP metadata JSON to a file (for external tooling to read).
+pub fn pio_project_metadata_path(path: &str) -> Vec<String> {
+    vec![
+        s(PIO),
+        s("project"),
+        s("metadata"),
+        s("--json-output"),
+        s("--json-output-path"),
+        s(path),
+    ]
+}
+
 /// `pio pkg exec -- <argv…>` — run an executable from an installed package/tool
 /// (e.g. `esptool.py`, `openocd`) inside the project's tool environment.
 pub fn pio_pkg_exec(args: &[String]) -> Vec<String> {
@@ -1668,6 +1681,13 @@ mod tests {
         assert_eq!(pubv[..3], ["pio", "pkg", "publish"]);
         assert!(pubv.contains(&"--private".to_string()));
         assert!(pubv.windows(2).any(|w| w == ["--type", "library"]));
+    }
+
+    #[test]
+    fn pio_project_metadata_path_writes_to_file() {
+        let argv = pio_project_metadata_path("meta.json");
+        assert!(argv.windows(2).any(|w| w == ["--json-output-path", "meta.json"]));
+        assert!(argv.contains(&"--json-output".to_string()));
     }
 
     #[test]

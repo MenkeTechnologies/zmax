@@ -163,6 +163,10 @@
 | `:pio-test-junit`, `:platformio-test-junit` | Run unit tests and write a JUnit XML report (`pio test --junit-output-path <path>`). |
 | `:pio-test-json-path`, `:platformio-test-json-path` | Run unit tests and write a JSON report (`pio test --json-output-path <path>`). |
 | `:pio-test-port`, `:platformio-test-port` | Run unit tests over a specific serial port (`pio test --test-port <port>`). |
+| `:pio-test-upload-port`, `:platformio-test-upload-port` | Flash the test firmware to a specific serial port (`pio test --upload-port <port>`). |
+| `:pio-test-monitor-dtr`, `:platformio-test-monitor-dtr` | Set the DTR line state for the post-test monitor (`pio test --monitor-dtr <0|1>`). |
+| `:pio-test-monitor-rts`, `:platformio-test-monitor-rts` | Set the RTS line state for the post-test monitor (`pio test --monitor-rts <0|1>`). |
+| `:pio-project-metadata-path`, `:platformio-project-metadata-path` | Write the IDE/LSP metadata JSON to a file (`pio project metadata --json-output-path <path>`). |
 | `:pio-check-silent`, `:platformio-check-silent` | Quiet static analysis, warnings/errors only (`pio check -s`). |
 | `:pio-upgrade-deps-only`, `:platformio-upgrade-deps-only` | Upgrade only PlatformIO Core's dependencies (`pio upgrade --only-dependencies`). |
 | `:pio-init-env-prefix`, `:platformio-init-env-prefix` | Scaffold a project prefixing generated environment names (`pio project init --env-prefix <prefix>`). |
