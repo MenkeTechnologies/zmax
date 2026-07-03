@@ -215,15 +215,19 @@ PlatformIO environment, monitor filters) persist to
   lists multicast-DNS / network (OTA) devices, and `:pio-device-serial` lists
   serial ports only. `:arduino-board-list-watch` watches for boards
   connecting/disconnecting, and `:arduino-board-programmers` lists the
-  programmers the selected board supports.
+  programmers the selected board supports; `:arduino-boards-hidden` lists every
+  known board including platform-hidden variants.
 - **Boards Manager** — `:arduino-core-search`, `:arduino-board-search`,
   `:arduino-core-install`, `:arduino-core-download` (fetch without installing),
-  `:arduino-core-list` (`:arduino-core-list-updatable` for upgradable ones only),
+  `:arduino-core-list` (`:arduino-core-list-updatable` for upgradable ones,
+  `:arduino-core-list-all` for every installed platform),
   `:arduino-core-uninstall`, `:arduino-core-update-index`,
   `:arduino-core-upgrade`.
-- **Library Manager** — `:arduino-lib-search` (search + install) or
+- **Library Manager** — `:arduino-lib-search` (search + install),
+  `:arduino-lib-search-names <query>` (names-only), or
   `:arduino-lib-install <name>` (install by name),
-  `:arduino-lib-list` (`:arduino-lib-list-updatable` for upgradable ones only),
+  `:arduino-lib-list` (`:arduino-lib-list-updatable` for upgradable ones,
+  `:arduino-lib-list-all` incl. built-in),
   `:arduino-lib-download`, `:arduino-lib-uninstall`,
   `:arduino-lib-upgrade`, `:arduino-lib-update-index`, `:arduino-lib-examples`,
   `:arduino-lib-deps`, `:arduino-lib-install-git <url>` /
@@ -247,7 +251,8 @@ PlatformIO environment, monitor filters) persist to
   programmer; `:pio-debug-verbose`, `:pio-debug-interface <name>` and
   `:pio-debug-load-mode <always|modified|manual>` tune the PlatformIO session.
 - **Maintenance** — `:arduino-update` / `:arduino-upgrade` / `:arduino-outdated`
-  refresh and upgrade cores + libraries together; `:arduino-config` dumps the
+  refresh and upgrade cores + libraries together (`:arduino-update-outdated`
+  refreshes then reports upgradable items in one step); `:arduino-config` dumps the
   active configuration; `:pio-upgrade` upgrades PlatformIO Core itself
   (`:pio-upgrade-dev` tracks the development branch,
   `:pio-upgrade-deps-only` upgrades only its dependencies);
@@ -292,7 +297,8 @@ PlatformIO environment, monitor filters) persist to
   `-destroy`; teams `:pio-team-list` / `-create` / `-add` / `-remove` /
   `-update` / `-destroy`; registry access `:pio-access-list` / `-grant` /
   `-revoke` / `-public` / `-private`.
-- **Sketches / projects** — `:arduino-new-sketch`, `:arduino-sketch-archive`,
+- **Sketches / projects** — `:arduino-new-sketch`, `:arduino-sketch-archive`
+  (`:arduino-sketch-archive-full` includes the build output),
   `:pio-init <board>`, `:pio-init-sample <board>` (with example code),
   `:pio-init-no-deps <board>` (skip installing declared dependencies),
   `:pio-init-env-prefix <prefix>` (prefix generated env names),

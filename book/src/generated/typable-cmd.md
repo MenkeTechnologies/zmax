@@ -77,6 +77,12 @@
 | `:arduino-monitor-quiet`, `:arduino-monitor-silent` | Serial monitor suppressing non-error diagnostics (`arduino-cli monitor --quiet`). |
 | `:arduino-monitor-describe`, `:arduino-monitor-port-info` | Describe the port's supported monitor settings (`arduino-cli monitor --describe`). |
 | `:arduino-core-list-updatable`, `:arduino-cores-updatable` | Installed platforms with a newer version available (`arduino-cli core list --updatable`). |
+| `:arduino-core-list-all`, `:arduino-cores-all` | Every installed platform incl. release channels (`arduino-cli core list --all`). |
+| `:arduino-lib-list-all`, `:arduino-libs-all` | Installed libraries across all locations incl. built-in (`arduino-cli lib list --all`). |
+| `:arduino-update-outdated`, `:arduino-update-show-outdated` | Refresh indexes then list upgradable cores/libraries (`arduino-cli update --show-outdated`). |
+| `:arduino-boards-hidden`, `:arduino-board-listall-hidden` | Every known board including platform-hidden variants (`arduino-cli board listall --show-hidden`). |
+| `:arduino-lib-search-names`, `:arduino-lib-search-name` | A names-only library search (`arduino-cli lib search <query> --names`). |
+| `:arduino-sketch-archive-full`, `:arduino-archive-full` | Archive the sketch with its build output (`arduino-cli sketch archive --include-build-dir`). |
 | `:arduino-lib-install-no-deps`, `:arduino-lib-install-nodeps` | Install a library without its declared dependencies (`arduino-cli lib install <name> --no-deps`). |
 | `:arduino-board-details-full`, `:arduino-board-info-full` | The complete board detail dump for the selected FQBN (`arduino-cli board details --full`). |
 | `:arduino-boards`, `:arduino-board` | Pick the target board (FQBN) from installed platforms (Arduino IDE board selector). |

@@ -436,6 +436,12 @@ pub fn arduino_core_list_updatable() -> Vec<String> {
     vec![s(ARDUINO_CLI), s("core"), s("list"), s("--updatable")]
 }
 
+/// `arduino-cli core list --all` — every installed platform, including those
+/// hidden behind a release channel (sibling of `--updatable`).
+pub fn arduino_core_list_all() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("core"), s("list"), s("--all")]
+}
+
 /// `arduino-cli core uninstall <pkg>`
 pub fn arduino_core_uninstall(pkg: &str) -> Vec<String> {
     vec![s(ARDUINO_CLI), s("core"), s("uninstall"), s(pkg)]
@@ -454,6 +460,12 @@ pub fn arduino_core_update_index() -> Vec<String> {
 /// `arduino-cli lib list` — installed libraries (Library Manager, installed tab).
 pub fn arduino_lib_list() -> Vec<String> {
     vec![s(ARDUINO_CLI), s("lib"), s("list")]
+}
+
+/// `arduino-cli lib list --all` — installed libraries across all locations,
+/// including the built-in bundled libraries (sibling of `--updatable`).
+pub fn arduino_lib_list_all() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("list"), s("--all")]
 }
 
 /// `arduino-cli lib uninstall <name>`
@@ -481,9 +493,27 @@ pub fn arduino_sketch_archive(sketch_dir: &Path) -> Vec<String> {
     ]
 }
 
+/// `arduino-cli sketch archive --include-build-dir <dir>` — zip the sketch
+/// *with* its `build/` output included (for reproducible artifact bundles).
+pub fn arduino_sketch_archive_full(sketch_dir: &Path) -> Vec<String> {
+    vec![
+        s(ARDUINO_CLI),
+        s("sketch"),
+        s("archive"),
+        s("--include-build-dir"),
+        sketch_dir.to_string_lossy().into_owned(),
+    ]
+}
+
 /// `arduino-cli update` — refresh the core *and* library indexes together.
 pub fn arduino_update() -> Vec<String> {
     vec![s(ARDUINO_CLI), s("update")]
+}
+
+/// `arduino-cli update --show-outdated` — refresh the indexes *and* then list the
+/// cores/libraries that can be upgraded, in one step.
+pub fn arduino_update_show_outdated() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("update"), s("--show-outdated")]
 }
 
 /// `arduino-cli upgrade` — upgrade all installed cores *and* libraries.
@@ -625,6 +655,13 @@ pub fn arduino_board_listall() -> Vec<String> {
     vec![s(ARDUINO_CLI), s("board"), s("listall"), s("--format"), s("json")]
 }
 
+/// `arduino-cli board listall --show-hidden` — every known board *including*
+/// the ones platforms mark hidden (custom/OEM variants). Plain text (the
+/// `--show-hidden` view is for reading, not the fuzzy board picker).
+pub fn arduino_board_listall_hidden() -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("board"), s("listall"), s("--show-hidden")]
+}
+
 /// `arduino-cli board list --format json` (connected boards / ports).
 pub fn arduino_board_list() -> Vec<String> {
     vec![s(ARDUINO_CLI), s("board"), s("list"), s("--format"), s("json")]
@@ -640,6 +677,12 @@ pub fn arduino_lib_search(query: &str) -> Vec<String> {
         s("--format"),
         s("json"),
     ]
+}
+
+/// `arduino-cli lib search <query> --names` — library names only (a compact,
+/// fast-scanning result list, without the per-release detail).
+pub fn arduino_lib_search_names(query: &str) -> Vec<String> {
+    vec![s(ARDUINO_CLI), s("lib"), s("search"), s(query), s("--names")]
 }
 
 /// `arduino-cli lib install <name>`
@@ -1684,6 +1727,20 @@ mod tests {
         let mut st = settings();
         st.port.clear();
         assert!(arduino_debug_with(&st, &["--info".into()]).is_err());
+    }
+
+    #[test]
+    fn arduino_fourth_pass_flag_builders() {
+        assert_eq!(arduino_core_list_all(), ["arduino-cli", "core", "list", "--all"]);
+        assert_eq!(arduino_lib_list_all(), ["arduino-cli", "lib", "list", "--all"]);
+        assert!(arduino_update_show_outdated().contains(&"--show-outdated".to_string()));
+        assert!(arduino_board_listall_hidden().contains(&"--show-hidden".to_string()));
+        let ns = arduino_lib_search_names("servo");
+        assert_eq!(ns[..4], ["arduino-cli", "lib", "search", "servo"]);
+        assert!(ns.contains(&"--names".to_string()));
+        let arch = arduino_sketch_archive_full(std::path::Path::new("/tmp/sk"));
+        assert!(arch.contains(&"--include-build-dir".to_string()));
+        assert_eq!(arch.last().unwrap(), "/tmp/sk");
     }
 
     #[test]

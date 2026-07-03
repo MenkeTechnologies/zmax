@@ -3822,6 +3822,78 @@ fn arduino_core_list_updatable(cx: &mut compositor::Context, _args: Args, event:
     Ok(())
 }
 
+/// `:arduino-core-list-all` — every installed platform incl. release channels
+/// (`arduino-cli core list --all`).
+fn arduino_core_list_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_core_list_all(), false);
+    Ok(())
+}
+
+/// `:arduino-lib-list-all` — installed libraries across all locations, incl. the
+/// built-in bundled ones (`arduino-cli lib list --all`).
+fn arduino_lib_list_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_lib_list_all(), false);
+    Ok(())
+}
+
+/// `:arduino-update-outdated` — refresh the indexes and then list upgradable
+/// cores/libraries in one step (`arduino-cli update --show-outdated`).
+fn arduino_update_outdated(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_update_show_outdated(), false);
+    Ok(())
+}
+
+/// `:arduino-boards-hidden` — every known board including platform-hidden
+/// variants (`arduino-cli board listall --show-hidden`).
+fn arduino_boards_hidden(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_board_listall_hidden(), false);
+    Ok(())
+}
+
+/// `:arduino-lib-search-names <query>` — a names-only library search
+/// (`arduino-cli lib search <query> --names`).
+fn arduino_lib_search_names(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let query = args.join(" ");
+    if query.trim().is_empty() {
+        bail!("usage: :arduino-lib-search-names <query>");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    embedded_browse(cx, embedded::arduino_lib_search_names(query.trim()), false);
+    Ok(())
+}
+
+/// `:arduino-sketch-archive-full` — archive the sketch *with* its build output
+/// (`arduino-cli sketch archive --include-build-dir`).
+fn arduino_sketch_archive_full(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_capture(&embedded::arduino_sketch_archive_full(&dir))?;
+    cx.editor.set_status(format!("Archived sketch {} (with build dir)", dir.display()));
+    Ok(())
+}
+
 /// `:arduino-lib-install-no-deps <name>` — install a library without its declared
 /// dependencies (`arduino-cli lib install <name> --no-deps`).
 fn arduino_lib_install_no_deps(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -21942,6 +22014,72 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["arduino-cores-updatable"],
         doc: "Installed platforms with a newer version available (`arduino-cli core list --updatable`).",
         fun: arduino_core_list_updatable,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-core-list-all",
+        aliases: &["arduino-cores-all"],
+        doc: "Every installed platform incl. release channels (`arduino-cli core list --all`).",
+        fun: arduino_core_list_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-list-all",
+        aliases: &["arduino-libs-all"],
+        doc: "Installed libraries across all locations incl. built-in (`arduino-cli lib list --all`).",
+        fun: arduino_lib_list_all,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-update-outdated",
+        aliases: &["arduino-update-show-outdated"],
+        doc: "Refresh indexes then list upgradable cores/libraries (`arduino-cli update --show-outdated`).",
+        fun: arduino_update_outdated,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-boards-hidden",
+        aliases: &["arduino-board-listall-hidden"],
+        doc: "Every known board including platform-hidden variants (`arduino-cli board listall --show-hidden`).",
+        fun: arduino_boards_hidden,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-search-names",
+        aliases: &["arduino-lib-search-name"],
+        doc: "A names-only library search (`arduino-cli lib search <query> --names`).",
+        fun: arduino_lib_search_names,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-sketch-archive-full",
+        aliases: &["arduino-archive-full"],
+        doc: "Archive the sketch with its build output (`arduino-cli sketch archive --include-build-dir`).",
+        fun: arduino_sketch_archive_full,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
