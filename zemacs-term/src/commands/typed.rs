@@ -8562,6 +8562,182 @@ fn extract_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// `:set-visited-file-name <path>` — Emacs `set-visited-file-name`: change the
+/// file the current buffer is visiting to PATH. Does not rename the file on
+/// disk; the next write goes to the new name.
+fn set_visited_file_name(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ");
+    let path = path.trim();
+    if path.is_empty() {
+        anyhow::bail!("usage: :set-visited-file-name <path>");
+    }
+    let (_view, doc) = current!(cx.editor);
+    doc.set_path(Some(std::path::Path::new(path)));
+    cx.editor.set_status(format!("Visiting {path}"));
+    Ok(())
+}
+
+/// `:set-file-modes <path> <octal>` — Emacs `set-file-modes`: set the mode bits
+/// of PATH (like chmod). MODE is read as an octal string, matching emacs's
+/// interactive `read-file-modes`.
+fn set_file_modes(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.len() != 2 {
+        anyhow::bail!("usage: :set-file-modes <path> <octal-mode>");
+    }
+    let path = args.first().unwrap();
+    let mode_str = args.get(1).unwrap();
+    let mode = u32::from_str_radix(mode_str.trim_start_matches("0o"), 8)
+        .map_err(|_| anyhow!("set-file-modes: invalid octal mode {mode_str}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
+            .map_err(|e| anyhow!("set-file-modes: {e}"))?;
+        cx.editor.set_status(format!("Set mode of {path} to {mode:o}"));
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = mode;
+        anyhow::bail!("set-file-modes: unsupported on this platform");
+    }
+    Ok(())
+}
+
+/// Recursively copy `src` into `dst`, mirroring emacs `copy-directory` with
+/// `copy-contents` behaviour: every regular file and subdirectory under `src`
+/// is reproduced under `dst`.
+fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let target = dst.join(entry.file_name());
+        if file_type.is_dir() {
+            copy_dir_recursive(&entry.path(), &target)?;
+        } else {
+            std::fs::copy(entry.path(), &target)?;
+        }
+    }
+    Ok(())
+}
+
+/// `:copy-directory <src> <dst>` — Emacs `copy-directory`: recursively copy the
+/// directory SRC to DST. If DST names an existing directory, SRC is copied into
+/// it (as `SRC`'s basename), matching emacs's default.
+fn copy_directory(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.len() != 2 {
+        anyhow::bail!("usage: :copy-directory <src> <dst>");
+    }
+    let src = std::path::PathBuf::from(args.first().unwrap());
+    if !src.is_dir() {
+        anyhow::bail!("copy-directory: {} is not a directory", src.display());
+    }
+    let mut dst = std::path::PathBuf::from(args.get(1).unwrap());
+    // Emacs: copying into an existing directory nests under it.
+    if dst.is_dir() {
+        if let Some(name) = src.file_name() {
+            dst.push(name);
+        }
+    }
+    copy_dir_recursive(&src, &dst).map_err(|e| anyhow!("copy-directory: {e}"))?;
+    cx.editor
+        .set_status(format!("Copied {} to {}", src.display(), dst.display()));
+    Ok(())
+}
+
+/// `:insert-file-literally <path>` — Emacs `insert-file-literally`: insert the
+/// raw contents of PATH at point, with no coding-system conversion.
+fn insert_file_literally(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ");
+    let path = path.trim();
+    if path.is_empty() {
+        anyhow::bail!("usage: :insert-file-literally <path>");
+    }
+    let bytes = std::fs::read(path).map_err(|e| anyhow!("insert-file-literally: {e}"))?;
+    let text = String::from_utf8_lossy(&bytes).into_owned();
+    insert_at_cursors(cx, text);
+    cx.editor
+        .set_status(format!("Inserted {} bytes from {path}", bytes.len()));
+    Ok(())
+}
+
+/// `:list-directory <dir>` — Emacs `list-directory`: show a listing of DIR in a
+/// scratch buffer. With no argument, lists the current buffer's directory.
+fn list_directory(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = args.join(" ");
+    let dir = dir.trim();
+    let dir = if dir.is_empty() {
+        doc!(cx.editor)
+            .path()
+            .and_then(|p| p.parent())
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+    } else {
+        std::path::PathBuf::from(dir)
+    };
+    let mut entries: Vec<(bool, String)> = std::fs::read_dir(&dir)
+        .map_err(|e| anyhow!("list-directory: {e}"))?
+        .filter_map(|e| e.ok())
+        .map(|e| {
+            let is_dir = e.file_type().map(|t| t.is_dir()).unwrap_or(false);
+            (is_dir, e.file_name().to_string_lossy().into_owned())
+        })
+        .collect();
+    // Directories first, then names, alphabetical within each group — like `ls`.
+    entries.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+    let mut body = format!("Directory listing of {}:\n\n", dir.display());
+    for (is_dir, name) in &entries {
+        body.push_str(if *is_dir { "  d " } else { "  - " });
+        body.push_str(name);
+        body.push('\n');
+    }
+    cx.editor.new_file(Action::Replace);
+    let (view, doc) = current!(cx.editor);
+    let insert = Transaction::insert(
+        doc.text(),
+        &zemacs_core::Selection::point(0),
+        body.as_str().into(),
+    );
+    doc.apply(&insert, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 /// `:write-abbrev-file <path>` — Emacs `write-abbrev-file`: write every abbrev
 /// to the named file.
 fn write_abbrev_file(
@@ -29977,6 +30153,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "set-visited-file-name",
+        aliases: &[],
+        doc: "Change the file the current buffer is visiting (emacs set-visited-file-name).",
+        fun: set_visited_file_name,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "make-symbolic-link",
         aliases: &[],
         doc: "Create a symbolic link (emacs make-symbolic-link): <target> <linkname>, or <linkname> for the current file.",
@@ -29984,6 +30171,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
             positionals: (1, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-file-modes",
+        aliases: &[],
+        doc: "Set the mode bits of a file, chmod-style, MODE as octal (emacs set-file-modes).",
+        fun: set_file_modes,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "copy-directory",
+        aliases: &[],
+        doc: "Recursively copy a directory to a destination (emacs copy-directory).",
+        fun: copy_directory,
+        completer: CommandCompleter::all(completers::directory),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "insert-file-literally",
+        aliases: &[],
+        doc: "Insert the raw contents of a file at point (emacs insert-file-literally).",
+        fun: insert_file_literally,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "list-directory",
+        aliases: &[],
+        doc: "Show a listing of a directory in a scratch buffer (emacs list-directory).",
+        fun: list_directory,
+        completer: CommandCompleter::all(completers::directory),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
@@ -33125,5 +33356,27 @@ mod vim_set_tests {
         );
         // unknown option -> None
         assert!(translate_vim_option("definitelynotanoption", |_| false).is_none());
+    }
+
+    #[test]
+    fn copy_directory_recurses_files_and_subdirs() {
+        use super::copy_dir_recursive;
+        use std::fs;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let nested = src.join("a").join("b");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(src.join("top.txt"), b"top").unwrap();
+        fs::write(nested.join("deep.txt"), b"deep").unwrap();
+
+        let dst = tmp.path().join("dst");
+        copy_dir_recursive(&src, &dst).unwrap();
+
+        assert_eq!(fs::read(dst.join("top.txt")).unwrap(), b"top");
+        assert_eq!(
+            fs::read(dst.join("a").join("b").join("deep.txt")).unwrap(),
+            b"deep"
+        );
     }
 }
