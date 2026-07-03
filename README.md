@@ -190,7 +190,8 @@ PlatformIO environment, monitor filters) persist to
   `:arduino-core-install`, `:arduino-core-download` (fetch without installing),
   `:arduino-core-list`, `:arduino-core-uninstall`, `:arduino-core-update-index`,
   `:arduino-core-upgrade`.
-- **Library Manager** — `:arduino-lib-search` (search + install),
+- **Library Manager** — `:arduino-lib-search` (search + install) or
+  `:arduino-lib-install <name>` (install by name),
   `:arduino-lib-list`, `:arduino-lib-download`, `:arduino-lib-uninstall`,
   `:arduino-lib-upgrade`, `:arduino-lib-update-index`, `:arduino-lib-examples`,
   `:arduino-lib-deps`; PlatformIO packages via `:pio-lib-search`,
@@ -201,7 +202,10 @@ PlatformIO environment, monitor filters) persist to
 - **arduino-cli config & cache** — `:arduino-config` (dump), `:arduino-config-get`
   / `-set` / `-add` / `-remove` / `-delete` / `-init`, `:arduino-cache-clean`,
   `:arduino-completion <shell>`. Build profiles: `:arduino-board-attach`,
-  `:arduino-profile-create`, `:arduino-profile-set-default`.
+  `:arduino-profile-create`, `:arduino-profile-set-default`,
+  `:arduino-profile-lib-add <lib>` / `:arduino-profile-lib-remove <lib>`.
+  `:arduino-daemon` runs arduino-cli as a gRPC daemon and `:arduino-version`
+  reports the CLI version (`--format json`).
 - **Debug** — `:arduino-debug` / `:pio-debug` launch the respective debuggers in
   a terminal panel; `:pio-debug-verbose`, `:pio-debug-interface <name>` and
   `:pio-debug-load-mode <always|modified|manual>` tune the PlatformIO session.
