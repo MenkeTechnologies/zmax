@@ -839,6 +839,8 @@ impl MappableCommand {
         bookmark_rename, "Rename a bookmark via a picker (emacs bookmark-rename)",
         define_abbrev, "Define a global abbrev: <name> <expansion> (emacs C-x a g)",
         expand_abbrev, "Expand the abbrev before point (emacs C-x ')",
+        insert_abbrevs, "Insert a description of every defined abbrev at point (emacs insert-abbrevs)",
+        define_abbrevs, "Define abbrevs from the buffer text after point (emacs define-abbrevs)",
         paste_clipboard_after, "Paste clipboard after selections",
         paste_clipboard_before, "Paste clipboard before selections",
         paste_primary_clipboard_after, "Paste primary clipboard after selections",
@@ -13024,6 +13026,38 @@ fn expand_abbrev(cx: &mut Context) {
     let new_pos = start + expansion.chars().count();
     doc.set_selection(view.id, Selection::point(new_pos));
     doc.append_changes_to_history(view);
+}
+
+/// Emacs `insert-abbrevs`: insert after point a description of every defined
+/// abbrev (in the `name<TAB>expansion` store format).
+fn insert_abbrevs(cx: &mut Context) {
+    let body = crate::emacs_abbrev::serialize();
+    if body.is_empty() {
+        cx.editor.set_status("No abbrevs defined");
+        return;
+    }
+    let text = format!("{body}\n");
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::insert(
+        doc.text(),
+        doc.selection(view.id),
+        Tendril::from(text.as_str()),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Emacs `define-abbrevs`: define abbrevs from the definitions in the buffer
+/// after point (`name<TAB>expansion` lines), merging them into the table.
+fn define_abbrevs(cx: &mut Context) {
+    let region = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        text.slice(cursor..).chunks().collect::<String>()
+    };
+    let n = crate::emacs_abbrev::define_from_text(&region);
+    cx.editor.set_status(format!("Defined {n} abbrev(s)"));
 }
 
 fn ensure_selections_forward(cx: &mut Context) {
