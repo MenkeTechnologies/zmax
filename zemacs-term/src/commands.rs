@@ -1211,6 +1211,8 @@ impl MappableCommand {
         hanoi, "Watch the Towers of Hanoi solution (emacs hanoi)",
         life, "Run Conway's Game of Life (emacs life)",
         doctor, "Talk to the ELIZA psychotherapist (emacs doctor)",
+        gomoku, "Play five-in-a-row against the computer (emacs gomoku)",
+        butterfly, "Flip the desired bit with a butterfly (emacs butterfly, xkcd 378)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -8938,6 +8940,17 @@ fn insert_char_by_code(cx: &mut Context) {
     cx.push_layer(Box::new(prompt));
 }
 
+/// Emacs `butterfly` (xkcd 378 homage): flip the desired bit on the disk platter
+/// by inserting a butterfly at each cursor.
+fn butterfly(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::insert(doc.text(), doc.selection(view.id), Tendril::from("🦋"));
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor
+        .set_status("A cosmic ray flips the desired bit on the disk platter.");
+}
+
 /// Emacs `backward-delete-char-untabify` (Program Modes): delete one character
 /// backward, but if it is a TAB first expand it into the equivalent spaces (at
 /// its display column) and then delete one — so the caret moves back one column
@@ -13141,6 +13154,13 @@ fn life(cx: &mut Context) {
 fn doctor(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::doctor::Doctor::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `gomoku`: play five-in-a-row against the computer.
+fn gomoku(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::gomoku::Gomoku::new()) as Box<dyn Component>)
     });
 }
 

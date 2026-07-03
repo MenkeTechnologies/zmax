@@ -899,6 +899,8 @@
 | `hanoi` | Watch the Towers of Hanoi solution (emacs hanoi) |  |
 | `life` | Run Conway's Game of Life (emacs life) |  |
 | `doctor` | Talk to the ELIZA psychotherapist (emacs doctor) |  |
+| `gomoku` | Play five-in-a-row against the computer (emacs gomoku) |  |
+| `butterfly` | Flip the desired bit with a butterfly (emacs butterfly, xkcd 378) |  |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |

@@ -14304,6 +14304,22 @@
   "note": "emacs doctor -> doctor: ELIZA psychotherapist overlay (ui/doctor.rs)"
  },
  {
+  "spec_id": "emacs.command.gomoku",
+  "status": "ported",
+  "evidence": [
+   "static:gomoku"
+  ],
+  "note": "emacs gomoku -> gomoku: five-in-a-row vs a heuristic AI (ui/gomoku.rs)"
+ },
+ {
+  "spec_id": "emacs.command.butterfly",
+  "status": "ported",
+  "evidence": [
+   "static:butterfly"
+  ],
+  "note": "emacs butterfly (xkcd 378) -> butterfly: inserts a butterfly, flips the bit"
+ },
+ {
   "spec_id": "emacs.command.zap_to_char",
   "status": "ported",
   "evidence": [

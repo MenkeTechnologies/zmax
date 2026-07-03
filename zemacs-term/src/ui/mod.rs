@@ -7,6 +7,7 @@ pub mod dashboard;
 pub mod dired;
 pub mod doctor;
 pub mod fivex5;
+pub mod gomoku;
 pub mod hanoi;
 pub mod life;
 mod document;
