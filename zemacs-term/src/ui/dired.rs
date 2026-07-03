@@ -20,7 +20,8 @@
 //!   D — delete the marked files (or the file at point) immediately
 //!   w — copy the marked names (or the name at point) to the clipboard
 //!   s — cycle sort order (name/time/size/ext); r — reverse; `.` — toggle hidden
-//!   R — refresh; q/Esc — quit
+//!   M-} / M-{ — next / previous marked file
+//!   R / l — refresh (redisplay); q/Esc — quit
 //!
 //! Deferred to a later slice: in-mode copy/rename/mkdir (need a text prompt),
 //! chmod/chown/chgrp, wdired (editable listing), subdirectory insertion.
@@ -34,6 +35,7 @@ use zemacs_core::dired::{human_size, mark_char, sort_entries, DiredEntry, SortKe
 use zemacs_view::{editor::Action, graphics::Rect};
 
 use crate::{
+    alt,
     compositor::{Callback, Component, Compositor, Context, Event, EventResult},
     ctrl, key,
 };
@@ -156,6 +158,22 @@ impl Dired {
         self.marked = next;
     }
 
+    /// Move point to the next (`dir = 1`) or previous (`dir = -1`) marked file,
+    /// wrapping around — Emacs `dired-next-marked-file` / `dired-prev-marked-file`.
+    fn next_marked(&mut self, dir: isize) {
+        let n = self.entries.len();
+        if n == 0 || self.marked.is_empty() {
+            return;
+        }
+        for step in 1..=n as isize {
+            let idx = (self.selected as isize + dir * step).rem_euclid(n as isize) as usize;
+            if self.marked.contains(&self.entries[idx].name) {
+                self.selected = idx;
+                return;
+            }
+        }
+    }
+
     /// Flag every entry whose name satisfies `pred` for deletion, returning the
     /// number newly flagged — the shared engine behind the Emacs `~`/`#`/`&`
     /// dired flag-by-pattern commands.
@@ -262,11 +280,13 @@ impl Component for Dired {
             key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
             key!('g') | key!(Home) => self.selected = 0,
             key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
-            key!('R') => {
+            key!('R') | key!('l') => {
                 if let Err(err) = self.read_dir() {
                     self.error = Some(format!("{err}"));
                 }
             }
+            alt!('}') => self.next_marked(1),
+            alt!('{') => self.next_marked(-1),
             key!(Enter) | key!('f') => {
                 if let Some(cb) = self.visit() {
                     return EventResult::Consumed(Some(cb));
