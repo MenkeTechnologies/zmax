@@ -71,6 +71,20 @@ pub fn page_bounds(text: &str, cursor: usize) -> (usize, usize) {
     (start, forward_page(text, cursor))
 }
 
+/// The 1-based page number of `cursor` and its 1-based line number *within that
+/// page* (`what-page` / `page--what-page`). The page number is one plus the
+/// count of delimiters strictly before `cursor`, so a `^L` exactly at point
+/// still counts as the previous page. The line number counts newlines from the
+/// start of the current page to `cursor`.
+pub fn page_and_line(text: &str, cursor: usize) -> (usize, usize) {
+    let chars: Vec<char> = text.chars().collect();
+    let c = cursor.min(chars.len());
+    let page = 1 + chars[..c].iter().filter(|&&ch| ch == PAGE_DELIMITER).count();
+    let (start, _) = page_bounds(text, c);
+    let line = 1 + chars[start..c].iter().filter(|&&ch| ch == '\n').count();
+    (page, line)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,5 +120,27 @@ mod tests {
         assert_eq!(forward_page(t, 0), t.chars().count());
         assert_eq!(backward_page(t, 5), 0);
         assert_eq!(page_bounds(t, 5), (0, t.chars().count()));
+    }
+
+    // Pinned against GNU Emacs 30.2 `page--what-page` on
+    // "l1\nl2\n\014p2a\np2b\np2c\n\014p3a\n", point at each line's start.
+    #[test]
+    fn page_and_line_matches_emacs() {
+        let t = "l1\nl2\n\u{000C}p2a\np2b\np2c\n\u{000C}p3a\n";
+        let chars: Vec<char> = t.chars().collect();
+        let bol = |needle: &str| {
+            let idx = t.find(needle).unwrap();
+            // Char index of the start of the line containing `needle`.
+            let char_idx = t[..idx].chars().count();
+            let mut b = char_idx;
+            while b > 0 && chars[b - 1] != '\n' {
+                b -= 1;
+            }
+            b
+        };
+        assert_eq!(page_and_line(t, bol("l2")), (1, 2));
+        assert_eq!(page_and_line(t, bol("p2a")), (1, 3));
+        assert_eq!(page_and_line(t, bol("p2c")), (2, 3));
+        assert_eq!(page_and_line(t, bol("p3a")), (2, 4));
     }
 }

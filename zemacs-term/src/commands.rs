@@ -727,6 +727,7 @@ impl MappableCommand {
         type_hierarchy_subtypes, "Type hierarchy: subtypes of the symbol",
         goto_window_top, "Goto window top",
         what_line, "Report the line number of point (emacs what-line)",
+        what_page, "Report the page number and line within the page (emacs what-page)",
         count_lines_page, "Report lines on the current page, before + after point (emacs count-lines-page, C-x l)",
         move_to_window_line_top_bottom, "Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r)",
         goto_window_center, "Goto window center",
@@ -2414,6 +2415,21 @@ fn what_line(cx: &mut Context) {
     let line = text.char_to_line(cursor) + 1;
     let total = text.len_lines();
     cx.editor.set_status(format!("Line {line} of {total}"));
+}
+
+/// Emacs `what-page`: report the current page number and the line number within
+/// that page (pages are `^L`-delimited).
+fn what_page(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let last = text.len_chars();
+    let cursor = doc
+        .selection(view.id)
+        .primary()
+        .cursor(text.slice(..))
+        .min(last);
+    let (page, line) = zemacs_core::page::page_and_line(&text.to_string(), cursor);
+    cx.editor.set_status(format!("Page {page}, line {line}"));
 }
 
 /// Emacs `count-lines-page` (C-x l): report how many lines are on the current
