@@ -895,6 +895,11 @@ pub fn pio_pkg_list_scope(scope: &str) -> Vec<String> {
     vec![s(PIO), s("pkg"), s("list"), format!("--only-{}", scope)]
 }
 
+/// `pio pkg list -g` — globally installed packages (rather than the project's).
+pub fn pio_pkg_list_global() -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("list"), s("-g")]
+}
+
 /// `pio pkg uninstall -l <name>` — remove a project library.
 pub fn pio_pkg_uninstall(name: &str) -> Vec<String> {
     vec![s(PIO), s("pkg"), s("uninstall"), s("-l"), s(name)]
@@ -903,6 +908,11 @@ pub fn pio_pkg_uninstall(name: &str) -> Vec<String> {
 /// `pio pkg update` — update the project's installed packages.
 pub fn pio_pkg_update() -> Vec<String> {
     vec![s(PIO), s("pkg"), s("update")]
+}
+
+/// `pio pkg update -g` — update globally installed packages.
+pub fn pio_pkg_update_global() -> Vec<String> {
+    vec![s(PIO), s("pkg"), s("update"), s("-g")]
 }
 
 /// `pio pkg search <query>` — search the PlatformIO registry (Library Manager).
@@ -1116,6 +1126,12 @@ pub fn pio_project_config_json() -> Vec<String> {
     vec![s(PIO), s("project"), s("config"), s("--json-output")]
 }
 
+/// `pio project config --lint` — validate `platformio.ini`, reporting unknown
+/// options or malformed values without building.
+pub fn pio_project_config_lint() -> Vec<String> {
+    vec![s(PIO), s("project"), s("config"), s("--lint")]
+}
+
 /// `pio project metadata` — dump the IDE/LSP metadata (include paths, defines,
 /// compiler flags) PlatformIO exposes to editor extensions.
 pub fn pio_project_metadata() -> Vec<String> {
@@ -1156,6 +1172,16 @@ pub fn pio_pkg_pack() -> Vec<String> {
 /// `pio pkg publish` — publish the current package to the PlatformIO registry.
 pub fn pio_pkg_publish() -> Vec<String> {
     vec![s(PIO), s("pkg"), s("publish")]
+}
+
+/// `pio pkg publish [extra…]` — publish with extra options (`--owner <o>`,
+/// `--type <library|platform|tool>`, `--private`, `--notify`/`--no-notify`,
+/// `--released-at <date>`, `--no-interactive`, or a `<pkg>` path/tarball).
+/// Verified against `pio pkg publish --help` on PlatformIO 6.1.19.
+pub fn pio_pkg_publish_with(extra: &[String]) -> Vec<String> {
+    let mut v = vec![s(PIO), s("pkg"), s("publish")];
+    v.extend(extra.iter().cloned());
+    v
 }
 
 /// `pio pkg unpublish <pkg>` — remove a previously published package.
@@ -1625,6 +1651,32 @@ mod tests {
             arduino_sub("profile", "lib", &["remove".into(), "Servo".into()]),
             ["arduino-cli", "profile", "lib", "remove", "Servo"]
         );
+    }
+
+    #[test]
+    fn pio_third_pass_flag_builders() {
+        assert_eq!(
+            pio_pkg_list_global(),
+            ["pio", "pkg", "list", "-g"]
+        );
+        assert_eq!(
+            pio_pkg_update_global(),
+            ["pio", "pkg", "update", "-g"]
+        );
+        assert!(pio_project_config_lint().contains(&"--lint".to_string()));
+        let pubv = pio_pkg_publish_with(&["--private".into(), "--type".into(), "library".into()]);
+        assert_eq!(pubv[..3], ["pio", "pkg", "publish"]);
+        assert!(pubv.contains(&"--private".to_string()));
+        assert!(pubv.windows(2).any(|w| w == ["--type", "library"]));
+    }
+
+    #[test]
+    fn pio_test_with_carries_ci_report_flags() {
+        let mut st = settings();
+        st.env = "uno".into();
+        let argv = pio_test_with(&st, &["--junit-output-path".into(), "out.xml".into()]);
+        assert!(argv.windows(2).any(|w| w == ["--junit-output-path", "out.xml"]));
+        assert!(argv.windows(2).any(|w| w == ["-e", "uno"]));
     }
 
     #[test]

@@ -174,8 +174,10 @@ PlatformIO environment, monitor filters) persist to
   / `-without-uploading` / `-without-testing`, `:pio-test-no-reset`. Analysis
   options: `:pio-check-verbose`, `:pio-check-json`, `:pio-check-flags <flags>`,
   `:pio-check-fail-on <low|medium|high>`, `:pio-check-skip-packages`,
-  `:pio-check-src-filters <pattern>`. `:pio-test-json` and `:pio-check-json`
-  dump the test / analysis results as JSON to a scratch buffer.
+  `:pio-check-src-filters <pattern>`, `:pio-check-silent` (`-s`). `:pio-test-json`
+  and `:pio-check-json` dump the test / analysis results as JSON to a scratch
+  buffer; `:pio-test-junit <path>` / `:pio-test-json-path <path>` write CI
+  reports, and `:pio-test-port <port>` runs tests over a specific serial port.
 - **PlatformIO build targets** — the full `pio run -t` surface: `:pio-compiledb`
   (generate `compile_commands.json` for the C/C++ LSP), `:pio-buildfs` /
   `:pio-uploadfs` (SPIFFS/LittleFS filesystem image), `:pio-uploadeep`,
@@ -240,7 +242,8 @@ PlatformIO environment, monitor filters) persist to
 - **Maintenance** — `:arduino-update` / `:arduino-upgrade` / `:arduino-outdated`
   refresh and upgrade cores + libraries together; `:arduino-config` dumps the
   active configuration; `:pio-upgrade` upgrades PlatformIO Core itself
-  (`:pio-upgrade-dev` tracks the development branch);
+  (`:pio-upgrade-dev` tracks the development branch,
+  `:pio-upgrade-deps-only` upgrades only its dependencies);
   `:pio-system-info` (`:pio-system-info-json` for the JSON form),
   `:pio-system-prune` (drop unused caches/packages) with
   scoped variants `:pio-prune-cache` / `:pio-prune-core` / `:pio-prune-platform`
@@ -256,13 +259,16 @@ PlatformIO environment, monitor filters) persist to
   `:pio-pkg-exec-call <argv>`, or a specific package via
   `:pio-pkg-exec-pkg <pkg> <argv>` (`-p`); `:pio-pkg-show-type <pkg> <library|platform|tool>`
   scopes registry details to a package type. Registry authoring via
-  `:pio-pkg-pack` (`-o <path>` for the output), `:pio-pkg-publish`,
+  `:pio-pkg-pack` (`-o <path>` for the output), `:pio-pkg-publish` (extra args
+  forward `--owner` / `--type` / `--private` / `--no-notify`),
   `:pio-pkg-unpublish` (`:pio-pkg-unpublish-undo <pkg>` restores it). Install
   options: `:pio-pkg-install-force <spec>` (`-f`),
-  `:pio-pkg-install-global <spec>` (`-g`), `:pio-lib-install-nosave <name>`
-  (`--no-save`); `:pio-pkg-search-sort <query>
+  `:pio-pkg-install-global <spec>` (`-g`),
+  `:pio-pkg-install-skip-deps <spec>` (`--skip-dependencies`),
+  `:pio-lib-install-nosave <name>` (`--no-save`); `:pio-pkg-search-sort <query>
   <relevance|popularity|trending|added|updated>` sorts registry search and
-  `:pio-pkg-search-page <query> <n>` pages through it.
+  `:pio-pkg-search-page <query> <n>` pages through it. Global package management:
+  `:pio-pkg-list-global` / `:pio-pkg-update-global`.
 - **PlatformIO Remote** — drive a remote agent: `:pio-remote-agent-start`
   (forwards `--name` / `--share` / `--working-dir`) / `:pio-remote-agent-list`,
   `:pio-remote-devices`, `:pio-remote-monitor`, `:pio-remote-run` /
@@ -280,9 +286,11 @@ PlatformIO environment, monitor filters) persist to
 - **Sketches / projects** — `:arduino-new-sketch`, `:arduino-sketch-archive`,
   `:pio-init <board>`, `:pio-init-sample <board>` (with example code),
   `:pio-init-no-deps <board>` (skip installing declared dependencies),
+  `:pio-init-env-prefix <prefix>` (prefix generated env names),
   `:pio-init-ide <ide>` (generate IDE integration files),
   `:pio-init-option <name=value>` (seed a `platformio.ini` option),
-  `:pio-project-config` (computed config), `:pio-project-metadata` (IDE/LSP
+  `:pio-project-config` (computed config), `:pio-project-config-lint` (validate
+  `platformio.ini`), `:pio-project-metadata` (IDE/LSP
   metadata dump); `:pio-project-config-json` / `:pio-project-metadata-json`
   emit the JSON form.
 - **Raw passthrough** — `:pio <args…>` and `:arduino-cli <args…>` (alias `:acli`)

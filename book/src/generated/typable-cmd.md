@@ -155,7 +155,17 @@
 | `:pio-pkg-exec-pkg`, `:platformio-pkg-exec-pkg` | Run a tool from a specific installed package (`pio pkg exec -p <pkg> -- <argv>`), live in a terminal panel. |
 | `:pio-platform-install`, `:pio-core-install`, `:platformio-platform-install` | Install a development platform globally (`pio pkg install -g -p <spec>`), live in a terminal panel. |
 | `:pio-pkg-pack`, `:platformio-pkg-pack` | Build a tarball of the current package (`pio pkg pack [-o <path>]`), live in a terminal panel. |
-| `:pio-pkg-publish`, `:platformio-pkg-publish` | Publish the current package to the PlatformIO registry (`pio pkg publish`), live in a terminal panel. |
+| `:pio-pkg-publish`, `:platformio-pkg-publish` | Publish the current package to the PlatformIO registry (`pio pkg publish`); extra args forward --owner/--type/--private/--no-notify. |
+| `:pio-project-config-lint`, `:platformio-project-config-lint`, `:pio-lint` | Validate platformio.ini without building (`pio project config --lint`). |
+| `:pio-pkg-list-global`, `:platformio-pkg-list-global`, `:pio-pkg-list-g` | Globally installed packages (`pio pkg list -g`). |
+| `:pio-pkg-update-global`, `:platformio-pkg-update-global`, `:pio-pkg-update-g` | Update globally installed packages (`pio pkg update -g`), live in a terminal panel. |
+| `:pio-pkg-install-skip-deps`, `:platformio-pkg-install-skip-deps` | Install a package without its dependencies (`pio pkg install --skip-dependencies <spec>`). |
+| `:pio-test-junit`, `:platformio-test-junit` | Run unit tests and write a JUnit XML report (`pio test --junit-output-path <path>`). |
+| `:pio-test-json-path`, `:platformio-test-json-path` | Run unit tests and write a JSON report (`pio test --json-output-path <path>`). |
+| `:pio-test-port`, `:platformio-test-port` | Run unit tests over a specific serial port (`pio test --test-port <port>`). |
+| `:pio-check-silent`, `:platformio-check-silent` | Quiet static analysis, warnings/errors only (`pio check -s`). |
+| `:pio-upgrade-deps-only`, `:platformio-upgrade-deps-only` | Upgrade only PlatformIO Core's dependencies (`pio upgrade --only-dependencies`). |
+| `:pio-init-env-prefix`, `:platformio-init-env-prefix` | Scaffold a project prefixing generated environment names (`pio project init --env-prefix <prefix>`). |
 | `:pio-pkg-unpublish`, `:platformio-pkg-unpublish` | Remove a previously published package (`pio pkg unpublish <pkg>`), live in a terminal panel. |
 | `:pio-system-info`, `:platformio-system-info` | Show system-wide PlatformIO information (`pio system info`). |
 | `:pio-system-prune`, `:platformio-system-prune` | Remove unused PlatformIO caches/packages (`pio system prune -f`), live in a terminal panel. |

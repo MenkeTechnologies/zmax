@@ -4816,14 +4816,152 @@ fn pio_pkg_pack(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
     Ok(())
 }
 
-/// `:pio-pkg-publish` — publish the current package to the PlatformIO registry.
-fn pio_pkg_publish(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+/// `:pio-pkg-publish [args…]` — publish the current package to the PlatformIO
+/// registry; extra args forward `pio pkg publish` options (`--owner <o>`,
+/// `--type <library|platform|tool>`, `--private`, `--no-notify`,
+/// `--released-at <date>`, `--no-interactive`).
+fn pio_pkg_publish(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_pkg_publish(), dir);
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    embedded_spawn_terminal(cx, embedded::pio_pkg_publish_with(&tokens), dir);
+    Ok(())
+}
+
+/// `:pio-project-config-lint` — validate `platformio.ini` without building
+/// (`pio project config --lint`), in a scratch buffer.
+fn pio_project_config_lint(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_project_config_lint(), true);
+    Ok(())
+}
+
+/// `:pio-pkg-list-global` — globally installed packages (`pio pkg list -g`).
+fn pio_pkg_list_global(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    embedded_browse(cx, embedded::pio_pkg_list_global(), true);
+    Ok(())
+}
+
+/// `:pio-pkg-update-global` — update globally installed packages
+/// (`pio pkg update -g`), live in a terminal panel.
+fn pio_pkg_update_global(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_pkg_update_global(), root);
+    Ok(())
+}
+
+/// `:pio-pkg-install-skip-deps <spec>` — install a package without its
+/// dependencies (`pio pkg install --skip-dependencies <spec>`).
+fn pio_pkg_install_skip_deps(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let spec = args.join(" ").trim().to_string();
+    if spec.is_empty() {
+        bail!("usage: :pio-pkg-install-skip-deps <spec>");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    let argv = embedded::pio_pkg_install_with(&["--skip-dependencies".to_string(), spec]);
+    embedded_spawn_terminal(cx, argv, dir);
+    Ok(())
+}
+
+/// `:pio-test-junit <path>` — run unit tests and write a JUnit XML report
+/// (`pio test --junit-output-path <path>`); failures also land in *compilation*.
+fn pio_test_junit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ").trim().to_string();
+    if path.is_empty() {
+        bail!("usage: :pio-test-junit <path>  (e.g. reports/junit.xml)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["--junit-output-path".to_string(), path]))
+}
+
+/// `:pio-test-json-path <path>` — run unit tests and write a JSON report
+/// (`pio test --json-output-path <path>`).
+fn pio_test_json_path(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ").trim().to_string();
+    if path.is_empty() {
+        bail!("usage: :pio-test-json-path <path>  (e.g. reports/tests.json)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["--json-output-path".to_string(), path]))
+}
+
+/// `:pio-test-port <port>` — run unit tests over a specific serial port
+/// (`pio test --test-port <port>`).
+fn pio_test_port(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let port = args.join(" ").trim().to_string();
+    if port.is_empty() {
+        bail!("usage: :pio-test-port <port>  (e.g. /dev/cu.usbmodem1401)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["--test-port".to_string(), port]))
+}
+
+/// `:pio-check-silent` — quiet static analysis, warnings/errors only
+/// (`pio check -s`).
+fn pio_check_silent(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_check_with(&st, &["-s".to_string()]))
+}
+
+/// `:pio-upgrade-deps-only` — upgrade only PlatformIO Core's dependencies
+/// (`pio upgrade --only-dependencies`), live in a terminal panel.
+fn pio_upgrade_deps_only(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::PIO)?;
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::pio_upgrade_with(&["--only-dependencies".to_string()]), root);
+    Ok(())
+}
+
+/// `:pio-init-env-prefix <prefix>` — scaffold a project prefixing generated
+/// environment names (`pio project init --env-prefix <prefix>`).
+fn pio_init_env_prefix(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let prefix = args.join(" ").trim().to_string();
+    if prefix.is_empty() {
+        bail!("usage: :pio-init-env-prefix <prefix>");
+    }
+    require_tool(embedded::PIO)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_project_init_with(&["--env-prefix".to_string(), prefix]), dir);
     Ok(())
 }
 
@@ -22515,11 +22653,121 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "pio-pkg-publish",
         aliases: &["platformio-pkg-publish"],
-        doc: "Publish the current package to the PlatformIO registry (`pio pkg publish`), live in a terminal panel.",
+        doc: "Publish the current package to the PlatformIO registry (`pio pkg publish`); extra args forward --owner/--type/--private/--no-notify.",
         fun: pio_pkg_publish,
         completer: CommandCompleter::none(),
         signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-project-config-lint",
+        aliases: &["platformio-project-config-lint", "pio-lint"],
+        doc: "Validate platformio.ini without building (`pio project config --lint`).",
+        fun: pio_project_config_lint,
+        completer: CommandCompleter::none(),
+        signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-list-global",
+        aliases: &["platformio-pkg-list-global", "pio-pkg-list-g"],
+        doc: "Globally installed packages (`pio pkg list -g`).",
+        fun: pio_pkg_list_global,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-update-global",
+        aliases: &["platformio-pkg-update-global", "pio-pkg-update-g"],
+        doc: "Update globally installed packages (`pio pkg update -g`), live in a terminal panel.",
+        fun: pio_pkg_update_global,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-pkg-install-skip-deps",
+        aliases: &["platformio-pkg-install-skip-deps"],
+        doc: "Install a package without its dependencies (`pio pkg install --skip-dependencies <spec>`).",
+        fun: pio_pkg_install_skip_deps,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-junit",
+        aliases: &["platformio-test-junit"],
+        doc: "Run unit tests and write a JUnit XML report (`pio test --junit-output-path <path>`).",
+        fun: pio_test_junit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-json-path",
+        aliases: &["platformio-test-json-path"],
+        doc: "Run unit tests and write a JSON report (`pio test --json-output-path <path>`).",
+        fun: pio_test_json_path,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-port",
+        aliases: &["platformio-test-port"],
+        doc: "Run unit tests over a specific serial port (`pio test --test-port <port>`).",
+        fun: pio_test_port,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-check-silent",
+        aliases: &["platformio-check-silent"],
+        doc: "Quiet static analysis, warnings/errors only (`pio check -s`).",
+        fun: pio_check_silent,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-upgrade-deps-only",
+        aliases: &["platformio-upgrade-deps-only"],
+        doc: "Upgrade only PlatformIO Core's dependencies (`pio upgrade --only-dependencies`).",
+        fun: pio_upgrade_deps_only,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-init-env-prefix",
+        aliases: &["platformio-init-env-prefix"],
+        doc: "Scaffold a project prefixing generated environment names (`pio project init --env-prefix <prefix>`).",
+        fun: pio_init_env_prefix,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },
