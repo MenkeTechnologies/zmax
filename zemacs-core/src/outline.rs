@@ -225,6 +225,41 @@ pub fn subtree_leaf_bodies(
     out
 }
 
+/// Fold ranges for `outline-show-children` (reveal only the subheadings up to
+/// `extra_levels` deeper than the heading at `line`, hiding their bodies and any
+/// still-deeper headings). `extra_levels` = 1 shows just the immediate children.
+pub fn subtree_child_folds(
+    hs: &[Heading],
+    line: usize,
+    extra_levels: u32,
+    total_lines: usize,
+) -> Vec<(usize, usize)> {
+    let Some(i) = current_index(hs, line) else {
+        return Vec::new();
+    };
+    let Some((start, end)) = subtree_bounds(hs, line, total_lines) else {
+        return Vec::new();
+    };
+    let max_level = hs[i].level + extra_levels;
+    // Headings inside the subtree shallow enough to stay visible.
+    let shown: Vec<&Heading> = hs
+        .iter()
+        .filter(|h| h.line >= start && h.line <= end && h.level <= max_level)
+        .collect();
+    let mut out = Vec::new();
+    for (idx, h) in shown.iter().enumerate() {
+        let stop = shown
+            .get(idx + 1)
+            .map(|n| n.line.saturating_sub(1))
+            .unwrap_or(end)
+            .min(end);
+        if stop > h.line {
+            out.push((h.line + 1, stop));
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -330,5 +365,19 @@ beta body
         );
         // Cursor on Alpha.1 (line 2): only its own body folds.
         assert_eq!(subtree_leaf_bodies(&hs, 2, total), vec![(3, 3)]);
+    }
+
+    #[test]
+    fn show_children_reveals_immediate_subheadings() {
+        let hs = headings(DOC);
+        let total = DOC.split('\n').count();
+        // Cursor on Alpha (line 0), one level: reveal Alpha.1 and Alpha.2
+        // headings, fold Alpha's body and each child's body.
+        assert_eq!(
+            subtree_child_folds(&hs, 0, 1, total),
+            vec![(1, 1), (3, 3), (5, 5)]
+        );
+        // Alpha.1 (line 2) has no subheadings: its whole body folds.
+        assert_eq!(subtree_child_folds(&hs, 2, 1, total), vec![(3, 3)]);
     }
 }

@@ -1103,6 +1103,8 @@ impl MappableCommand {
         outline_show_all, "Reveal all outline body text (emacs outline-show-all)",
         outline_hide_sublevels, "Show only the top N levels of headings (emacs outline-hide-sublevels)",
         outline_hide_leaves, "Fold bodies in the current subtree, keeping subheadings (emacs outline-hide-leaves)",
+        outline_show_children, "Reveal the immediate subheadings of the heading at point (emacs outline-show-children)",
+        outline_show_branches, "Reveal every subheading in the subtree at point (emacs outline-show-branches)",
         fold_create, "Create a fold over the selection (zf)",
         fold_toggle, "Toggle fold under cursor (za)",
         fold_open, "Open fold under cursor (zo)",
@@ -21112,6 +21114,38 @@ fn outline_hide_leaves(cx: &mut Context) {
     }
     doc.folds_mut().clamp(total.saturating_sub(1));
     fold_snap_cursor(view, doc);
+}
+
+/// Reveal the subtree at `line` and then re-apply the given fold ranges — the
+/// shared body of `outline-show-children` / `outline-show-branches`, which reach
+/// their end state regardless of the prior fold state.
+fn outline_show_with_folds(cx: &mut Context, folds: impl Fn(&[zemacs_core::outline::Heading], usize, usize) -> Vec<(usize, usize)>) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    if let Some((first, _)) = zemacs_core::outline::subtree_body(&hs, line, total) {
+        doc.folds_mut().open_recursive(first);
+    }
+    for (first, last) in folds(&hs, line, total) {
+        outline_fold_range(doc, first, last);
+    }
+    doc.folds_mut().clamp(total.saturating_sub(1));
+    fold_snap_cursor(view, doc);
+}
+
+/// Emacs `outline-show-children` (C-c C-i): reveal only the immediate
+/// subheadings of the heading at point, keeping their bodies folded.
+fn outline_show_children(cx: &mut Context) {
+    outline_show_with_folds(cx, |hs, line, total| {
+        zemacs_core::outline::subtree_child_folds(hs, line, 1, total)
+    });
+}
+
+/// Emacs `outline-show-branches`: reveal every subheading in the subtree at
+/// point (at all levels), keeping their bodies folded.
+fn outline_show_branches(cx: &mut Context) {
+    outline_show_with_folds(cx, zemacs_core::outline::subtree_leaf_bodies);
 }
 
 fn fold_create(cx: &mut Context) {

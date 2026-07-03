@@ -28501,6 +28501,22 @@
   "note": "outline-mode: fold bodies within the current subtree, keeping subheadings visible (outline-hide-leaves); zemacs_core::outline::subtree_leaf_bodies, folding via the document fold state"
  },
  {
+  "spec_id": "emacs.command.outline_show_children",
+  "status": "ported",
+  "evidence": [
+   "static:outline_show_children"
+  ],
+  "note": "outline-mode: reveal only the immediate subheadings of the heading at point (outline-show-children); zemacs_core::outline::subtree_child_folds, folding via the document fold state"
+ },
+ {
+  "spec_id": "emacs.command.outline_show_branches",
+  "status": "ported",
+  "evidence": [
+   "static:outline_show_branches"
+  ],
+  "note": "outline-mode: reveal every subheading in the subtree at point (outline-show-branches); zemacs_core::outline::subtree_leaf_bodies, folding via the document fold state"
+ },
+ {
   "spec_id": "emacs.command.calendar_forward_year",
   "status": "ported",
   "evidence": [
