@@ -8,6 +8,8 @@ pub mod bubbles;
 pub mod dashboard;
 pub mod dired;
 pub mod decipher;
+pub mod dunnet;
+pub mod dunnet_data;
 pub mod doctor;
 pub mod fivex5;
 pub mod gomoku;
