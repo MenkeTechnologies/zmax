@@ -1054,6 +1054,7 @@ impl MappableCommand {
         dashboard, "Open the system-stats Dashboard (Preferences)",
         search_in_files, "Open the project-wide Find in Files panel",
         terminal, "Open an integrated terminal (PTY shell)",
+        comint_shell, "Open a comint line-oriented shell buffer (emacs M-x shell)",
         run_config_manager, "Manage run/debug configurations",
         run_active_config, "Run the active run configuration",
         clear_run_output, "Clear the Run tool window output",
@@ -20067,6 +20068,17 @@ fn terminal(cx: &mut Context) {
         match crate::ui::terminal::TerminalPanel::new() {
             Ok(panel) => compositor.push(Box::new(panel)),
             Err(e) => editor.set_error(format!("terminal: {e}")),
+        }
+    }));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Open a comint line-oriented shell buffer on `$SHELL` (emacs `M-x shell`).
+fn comint_shell(cx: &mut Context) {
+    let call: job::Callback = Callback::EditorCompositor(Box::new(|editor, compositor| {
+        match crate::ui::comint::Comint::shell() {
+            Ok(panel) => compositor.push(Box::new(panel)),
+            Err(e) => editor.set_error(format!("shell: {e}")),
         }
     }));
     cx.jobs.callback(async move { Ok(call) });

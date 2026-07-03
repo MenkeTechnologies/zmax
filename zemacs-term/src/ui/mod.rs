@@ -2,6 +2,7 @@ pub mod animate;
 pub mod bufmenu;
 pub mod calc;
 pub mod calendar;
+pub mod comint;
 mod completion;
 pub mod context_menu;
 pub mod blackbox;
