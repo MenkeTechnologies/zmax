@@ -37,34 +37,53 @@ fn grid(
     if n == 0 {
         return (String::new(), budget, 0, 0, 1);
     }
-    let widest = lines
-        .iter()
-        .map(|l| l.chars().count())
-        .max()
-        .unwrap_or(1)
-        .clamp(1, COL_CAP);
+    let max_cols = MAX_COLS.min(n).max(1);
 
-    // Column count driven by screen width: as many columns as fit the widest
-    // entry (so nothing is truncated when it fits), 1..=MAX_COLS, never more than
-    // there are items.
-    let cols = (budget / (widest + SEP)).clamp(1, MAX_COLS.min(n).max(1));
+    // Each column is sized to ITS OWN content (variable widths), column-major —
+    // so short entries let many columns fit (like Spacemacs' which-key), not the
+    // few that the single widest entry would allow.
+    let col_widths = |cols: usize| -> Vec<usize> {
+        let rows = n.div_ceil(cols);
+        (0..cols)
+            .map(|c| {
+                let s = (c * rows).min(n);
+                let e = ((c + 1) * rows).min(n);
+                lines[s..e]
+                    .iter()
+                    .map(|l| l.chars().count())
+                    .max()
+                    .unwrap_or(0)
+                    .min(COL_CAP)
+            })
+            .collect()
+    };
+    // The MOST columns whose natural (untruncated) widths fit the bar, leaving no
+    // empty trailing column. Falls back to a single budget-bounded column.
+    let (cols, cw) = (1..=max_cols)
+        .rev()
+        .filter(|&c| (c - 1) * n.div_ceil(c) < n)
+        .map(|c| (c, col_widths(c)))
+        .find(|(_, w)| w.iter().sum::<usize>() + SEP * w.len().saturating_sub(1) <= budget)
+        .unwrap_or_else(|| (1, vec![col_widths(1)[0].min(budget)]));
+
     let rows_total = n.div_ceil(cols);
     let visible = rows_total.min(max_rows);
     let scroll = scroll.min(rows_total.saturating_sub(visible));
 
-    // Distribute the FULL width across the columns so the grid spans the whole
-    // bar (no dead space); the leading `extra` columns absorb the remainder.
-    let base = budget / cols;
-    let extra = budget % cols;
-    let slot = |c: usize| base + usize::from(c < extra);
+    // Spread the leftover width evenly into the inter-column gaps so the grid
+    // fills the whole bar and the last column reaches the right edge — no dead
+    // space. (With one column there is no gap; short content then trails.)
+    let content: usize = cw.iter().sum();
+    let gaps = cols.saturating_sub(1);
+    let leftover = budget.saturating_sub(content + SEP * gaps);
+    let gap_base = if gaps > 0 { SEP + leftover / gaps } else { 0 };
+    let gap_extra = if gaps > 0 { leftover % gaps } else { 0 };
 
     let mut out = String::new();
     for r in scroll..scroll + visible {
         let mut line = String::new();
         for c in 0..cols {
-            // Text width for this column = its slot minus the inter-column gap.
-            let gap = if c + 1 < cols { SEP } else { 0 };
-            let w = slot(c).saturating_sub(gap);
+            let w = cw[c];
             let idx = c * rows_total + r;
             let cell: String = if idx < n {
                 lines[idx].chars().take(w).collect()
@@ -72,8 +91,8 @@ fn grid(
                 String::new()
             };
             line.push_str(&format!("{cell:<w$}"));
-            if gap > 0 {
-                line.push_str(&" ".repeat(gap));
+            if c + 1 < cols {
+                line.push_str(&" ".repeat(gap_base + usize::from(c < gap_extra)));
             }
         }
         out.push_str(line.trim_end());
@@ -119,6 +138,22 @@ mod tests {
         let (_text, width, _h, _rows, cols) = grid(&[long], 0, 16, 30);
         assert_eq!(cols, 1);
         assert_eq!(width, 30 - 6, "the bar spans the full inner width");
+    }
+
+    #[test]
+    fn variable_widths_fit_many_short_columns_like_spacemacs() {
+        // A Spacemacs-style menu: mostly short labels with a couple of longer
+        // ones. Per-column widths (not the single global widest) must let several
+        // columns fit and fill the bar — the whole point of the reference layout.
+        let mut lines: Vec<String> = (0..40).map(|i| format!("{i} : +grp")).collect();
+        lines[3] = "', : select window by number".into();
+        lines[20] = "l : layouts-transient-state".into();
+        let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+        let (_t, width, _h, _r, cols) = grid(&refs, 0, 16, 110);
+        // The single-widest formula (~28 wide) would allow only ~3 columns; with
+        // per-column widths the short columns pack in many more.
+        assert!(cols >= 4, "expected a wide multi-column grid, got {cols}");
+        assert_eq!(width, 110 - 6);
     }
 
     #[test]
