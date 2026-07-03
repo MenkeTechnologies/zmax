@@ -14409,19 +14409,19 @@
  },
  {
   "spec_id": "emacs.command.mark_defun",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_next_function"
+   "static:mark_defun"
   ],
-  "note": ""
+  "note": "mark-defun (C-M-h): select the function/defun around point"
  },
  {
   "spec_id": "emacs.command.mark_paragraph",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_next_paragraph"
+   "static:mark_paragraph"
   ],
-  "note": ""
+  "note": "mark-paragraph (M-h): select the paragraph around point"
  },
  {
   "spec_id": "emacs.command.delete_window",
@@ -20201,11 +20201,11 @@
  },
  {
   "spec_id": "emacs.command.mark_word",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:extend_next_word_end"
+   "static:mark_word"
   ],
-  "note": "emacs mark-word (M-@) = zemacs extend_next_word_end"
+  "note": "mark-word (M-@): set the region over the next word"
  },
  {
   "spec_id": "emacs.command.move_to_window_line_top_bottom",

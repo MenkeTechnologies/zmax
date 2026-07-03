@@ -898,6 +898,9 @@ impl MappableCommand {
         backward_up_list, "Move backward out of the enclosing list (emacs backward-up-list, C-M-u)",
         kill_sexp, "Kill the s-expression after point (emacs kill-sexp, C-M-k)",
         mark_sexp, "Set the region over the following s-expression (emacs mark-sexp, C-M-SPC)",
+        mark_word, "Set the region over the next word (emacs mark-word, M-@)",
+        mark_paragraph, "Select the paragraph around point (emacs mark-paragraph, M-h)",
+        mark_defun, "Select the function/defun around point (emacs mark-defun, C-M-h)",
         kill_sentence, "Kill from point to end of sentence (emacs kill-sentence, M-k)",
         backward_kill_sentence, "Kill from start of sentence to point (emacs backward-kill-sentence, C-x DEL)",
         forward_page, "Move to the next form-feed page (emacs forward-page, C-x ])",
@@ -21404,6 +21407,73 @@ fn mark_sexp(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let end = end.min(doc.text().len_chars());
     doc.set_selection(view.id, Selection::single(cursor, end));
+}
+
+/// Emacs `mark-word` (M-@): set the region from point over the next word, leaving
+/// the mark behind and point at the word end (the count-th word with a count).
+fn mark_word(cx: &mut Context) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let point = doc.selection(view.id).primary().cursor(slice);
+    let moved = movement::move_next_word_end(slice, Range::point(point), count);
+    let head = moved.cursor(slice);
+    if head == point {
+        cx.editor.set_status("no word after point");
+        return;
+    }
+    doc.set_selection(view.id, Selection::single(point, head));
+}
+
+/// Emacs `mark-paragraph` (M-h): select the paragraph around point, leaving point
+/// at its beginning and the mark at its end.
+fn mark_paragraph(cx: &mut Context) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let point = doc.selection(view.id).primary().cursor(slice);
+    let obj = textobject::textobject_paragraph(
+        slice,
+        Range::point(point),
+        textobject::TextObject::Around,
+        count,
+    );
+    // point (head) at paragraph start, mark (anchor) at end.
+    doc.set_selection(view.id, Selection::single(obj.to(), obj.from()));
+}
+
+/// Emacs `mark-defun` (C-M-h): select the function/defun around point via the
+/// tree-sitter `function` object, leaving point at its start and mark at its end.
+fn mark_defun(cx: &mut Context) {
+    let count = cx.count();
+    let loader = cx.editor.syn_loader.load();
+    let result = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        doc.syntax().map(|syntax| {
+            let obj = textobject::textobject_treesitter(
+                slice,
+                range,
+                textobject::TextObject::Around,
+                "function",
+                syntax,
+                &loader,
+                count,
+            );
+            (view.id, obj.from(), obj.to())
+        })
+    };
+    match result {
+        Some((vid, from, to)) if from != to => {
+            let (_view, doc) = current!(cx.editor);
+            let len = doc.text().len_chars();
+            doc.set_selection(vid, Selection::single(to.min(len), from.min(len)));
+        }
+        _ => cx
+            .editor
+            .set_status("mark-defun: no function at point (needs a parsed syntax tree)"),
+    }
 }
 
 /// Emacs `kill-sentence` (M-k): kill from point to the end of the sentence,
