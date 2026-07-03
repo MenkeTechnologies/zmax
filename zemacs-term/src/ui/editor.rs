@@ -760,6 +760,9 @@ impl EditorView {
 
         Self::doc_diagnostics_highlights_into(doc, theme, &mut overlays);
 
+        // Emacs Hi-Lock: persistent user regexp highlights (all windows).
+        overlays.extend(Self::doc_hilock_highlights(doc, view, theme));
+
         if is_focused {
             if config.lsp.auto_document_highlight {
                 if let Some(overlay) = Self::doc_document_highlights(doc, view, theme) {
@@ -1191,6 +1194,68 @@ impl EditorView {
     /// cursor within the visible viewport (vim-illuminate / JetBrains
     /// identifier-under-caret behaviour). Bounded to the visible line range so
     /// the per-frame scan stays cheap regardless of file size.
+    /// Emacs Hi-Lock overlays: one homogeneous overlay per active pattern (each
+    /// coloured by its index), scanning only the visible line range. Empty when
+    /// no `highlight-regexp` pattern is active.
+    pub fn doc_hilock_highlights(
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+    ) -> Vec<OverlayHighlights> {
+        if crate::hi_lock::is_empty() {
+            return Vec::new();
+        }
+        let text = doc.text().slice(..);
+        if text.len_chars() == 0 {
+            return Vec::new();
+        }
+        let view_offset = doc.view_offset(view.id);
+        let height = view.inner_area(doc).height as usize;
+        let first_line = text.char_to_line(view_offset.anchor);
+        let last_line = (first_line + height + 1).min(text.len_lines());
+        let scan_start = text.line_to_char(first_line);
+        let scan_end = text.line_to_char(last_line);
+        let haystack: String = text.slice(scan_start..scan_end).chars().collect();
+
+        let matches =
+            crate::hi_lock::with_patterns(|pats| crate::hi_lock::viewport_matches(&haystack, pats));
+        if matches.is_empty() {
+            return Vec::new();
+        }
+
+        // A small palette cycled per pattern index; all fall back to the
+        // guaranteed match highlight so patterns are always visible.
+        const SCOPES: [&str; 5] = [
+            "ui.highlight",
+            "diagnostic.warning",
+            "diagnostic.info",
+            "diagnostic.error",
+            "diagnostic.hint",
+        ];
+        let fallback = theme.find_highlight_exact("ui.cursor.match");
+
+        let mut by_pat: std::collections::BTreeMap<usize, Vec<ops::Range<usize>>> =
+            std::collections::BTreeMap::new();
+        for (cs, ce, idx) in matches {
+            by_pat
+                .entry(idx)
+                .or_default()
+                .push((scan_start + cs)..(scan_start + ce));
+        }
+
+        let mut out = Vec::new();
+        for (idx, mut ranges) in by_pat {
+            ranges.sort_by_key(|r| r.start);
+            let highlight = theme
+                .find_highlight_exact(SCOPES[idx % SCOPES.len()])
+                .or(fallback);
+            if let Some(highlight) = highlight {
+                out.push(OverlayHighlights::Homogeneous { highlight, ranges });
+            }
+        }
+        out
+    }
+
     pub fn doc_word_occurrence_highlights(
         doc: &Document,
         view: &View,
