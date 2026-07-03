@@ -134,6 +134,17 @@ impl BookmarkStore {
         Some(self.entries.remove(pos).1)
     }
 
+    /// Merge every bookmark from `other` into this store (`bookmark-load`
+    /// without overwriting the whole list): each incoming bookmark is `set`, so
+    /// a name that already exists is replaced by the loaded one. Incoming order
+    /// is preserved at the front. Returns how many bookmarks were merged in.
+    pub fn merge(&mut self, other: &BookmarkStore) -> usize {
+        for (name, mark) in other.entries.iter().rev() {
+            self.set(name, mark.clone());
+        }
+        other.entries.len()
+    }
+
     /// Serialize to the simple text format: one `name\tfile\tline[\tcolumn]`
     /// record per line, in list order. A column is written only when present.
     /// Round-trips through [`deserialize`](BookmarkStore::deserialize).
@@ -211,6 +222,22 @@ mod tests {
         assert_eq!(s.len(), 2);
         assert_eq!(s.list()[0].0, "a"); // moved to front
         assert_eq!(s.get("a"), Some(&mk("/a.rs", 9, Some(4))));
+    }
+
+    #[test]
+    fn merge_adds_new_and_replaces_duplicates() {
+        let mut base = BookmarkStore::new();
+        base.set("a", mk("/a.rs", 1, None));
+        base.set("b", mk("/b.rs", 2, None));
+        let mut incoming = BookmarkStore::new();
+        incoming.set("b", mk("/b2.rs", 20, Some(3))); // duplicate name
+        incoming.set("c", mk("/c.rs", 5, None)); // new
+        assert_eq!(base.merge(&incoming), 2);
+        assert_eq!(base.len(), 3); // a, b, c
+        // Loaded "b" replaced the original.
+        assert_eq!(base.get("b"), Some(&mk("/b2.rs", 20, Some(3))));
+        assert_eq!(base.get("a"), Some(&mk("/a.rs", 1, None)));
+        assert_eq!(base.get("c"), Some(&mk("/c.rs", 5, None)));
     }
 
     #[test]

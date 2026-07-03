@@ -8562,6 +8562,50 @@ fn extract_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// `:bookmark-write <path>` — Emacs `bookmark-write`: write every current
+/// bookmark to the named file in the bookmark text format.
+fn bookmark_write(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ");
+    let path = path.trim();
+    if path.is_empty() {
+        anyhow::bail!("usage: :bookmark-write <path>");
+    }
+    let n = crate::emacs_bookmark::write_to(std::path::Path::new(path))
+        .map_err(|e| anyhow!("bookmark-write: {e}"))?;
+    cx.editor
+        .set_status(format!("Wrote {n} bookmark(s) to {path}"));
+    Ok(())
+}
+
+/// `:bookmark-load <path>` — Emacs `bookmark-load`: read bookmarks from the
+/// named file and merge them into the store.
+fn bookmark_load(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ");
+    let path = path.trim();
+    if path.is_empty() {
+        anyhow::bail!("usage: :bookmark-load <path>");
+    }
+    let n = crate::emacs_bookmark::load_from(std::path::Path::new(path))
+        .map_err(|e| anyhow!("bookmark-load: {e}"))?;
+    cx.editor
+        .set_status(format!("Loaded {n} bookmark(s) from {path}"));
+    Ok(())
+}
+
 /// `:outline-hide-by-heading-regexp <regex>` — Emacs
 /// `outline-hide-by-heading-regexp`: fold the subtree of every heading whose
 /// heading line matches the regexp.
@@ -29331,6 +29375,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bookmark-write",
+        aliases: &[],
+        doc: "Write every bookmark to the named file (emacs bookmark-write).",
+        fun: bookmark_write,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bookmark-load",
+        aliases: &[],
+        doc: "Load bookmarks from the named file, merging them into the store (emacs bookmark-load).",
+        fun: bookmark_load,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },

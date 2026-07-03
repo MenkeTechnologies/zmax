@@ -28525,6 +28525,22 @@
   "note": "outline-mode: fold the subtree of every heading whose line matches the regexp (outline-hide-by-heading-regexp); zemacs_core::outline::matching_subtree_bodies, folding via the document fold state"
  },
  {
+  "spec_id": "emacs.command.bookmark_write",
+  "status": "ported",
+  "evidence": [
+   "typable:bookmark-write"
+  ],
+  "note": "emacs bookmark-write -> :bookmark-write <path>: export every bookmark to the named file in the store text format (emacs_bookmark::write_to)"
+ },
+ {
+  "spec_id": "emacs.command.bookmark_load",
+  "status": "ported",
+  "evidence": [
+   "typable:bookmark-load"
+  ],
+  "note": "emacs bookmark-load -> :bookmark-load <path>: read bookmarks from the named file and merge them into the store (BookmarkStore::merge, emacs_bookmark::load_from)"
+ },
+ {
   "spec_id": "emacs.command.calendar_forward_year",
   "status": "ported",
   "evidence": [

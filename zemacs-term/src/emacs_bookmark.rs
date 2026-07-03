@@ -7,7 +7,7 @@
 //! `name\tfile\tline[\tcolumn]` record per line — the engine's text format).
 //! `commands.rs` prompts for the name on set and offers a picker on jump.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use zemacs_core::bookmark::{Bookmark, BookmarkStore};
 use zemacs_loader::config_dir;
@@ -85,4 +85,26 @@ pub fn list() -> Vec<(String, PathBuf, usize, Option<usize>)> {
 /// The bookmark names, for prompt completion.
 pub fn names() -> Vec<String> {
     load().names().map(str::to_string).collect()
+}
+
+/// `bookmark-write` (`C-x r w`): write every current bookmark to `path` in the
+/// store's text format. Returns how many bookmarks were written.
+pub fn write_to(path: &Path) -> std::io::Result<usize> {
+    let store = load();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(path, store.serialize())?;
+    Ok(store.len())
+}
+
+/// `bookmark-load`: read bookmarks from `path` and merge them into the store
+/// (loaded bookmarks replace same-named ones). Returns how many were merged.
+pub fn load_from(path: &Path) -> std::io::Result<usize> {
+    let text = std::fs::read_to_string(path)?;
+    let incoming = BookmarkStore::deserialize(&text);
+    let mut store = load();
+    let n = store.merge(&incoming);
+    save(&store);
+    Ok(n)
 }
