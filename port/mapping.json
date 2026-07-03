@@ -21154,11 +21154,11 @@
  },
  {
   "spec_id": "emacs.command.shell",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:terminal"
+   "static:comint_shell"
   ],
-  "note": "Integrated PTY terminal gives an interactive shell; comint line-mode niceties differ from Emacs shell."
+  "note": "comint line-oriented shell buffer (M-x shell): input line + streamed output, M-p/M-n input ring"
  },
  {
   "spec_id": "emacs.command.recentf_open",
