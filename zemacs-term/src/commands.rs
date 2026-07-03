@@ -1108,6 +1108,7 @@ impl MappableCommand {
         outline_hide_leaves, "Fold bodies in the current subtree, keeping subheadings (emacs outline-hide-leaves)",
         outline_show_children, "Reveal the immediate subheadings of the heading at point (emacs outline-show-children)",
         outline_show_branches, "Reveal every subheading in the subtree at point (emacs outline-show-branches)",
+        outline_cycle, "Cycle the heading at point folded -> children -> subtree (emacs outline-cycle)",
         fold_create, "Create a fold over the selection (zf)",
         fold_toggle, "Toggle fold under cursor (za)",
         fold_open, "Open fold under cursor (zo)",
@@ -21295,6 +21296,53 @@ fn outline_show_children(cx: &mut Context) {
 /// point (at all levels), keeping their bodies folded.
 fn outline_show_branches(cx: &mut Context) {
     outline_show_with_folds(cx, zemacs_core::outline::subtree_leaf_bodies);
+}
+
+/// Open every closed fold whose header line is within `first..=last`.
+fn outline_open_folds_in(doc: &mut Document, first: usize, last: usize) {
+    let starts: Vec<usize> = doc
+        .folds()
+        .closed_ranges()
+        .into_iter()
+        .map(|(s, _)| s)
+        .filter(|&s| s >= first && s <= last)
+        .collect();
+    for s in starts {
+        doc.folds_mut().open(s);
+    }
+}
+
+/// Emacs `outline-cycle` (org-style TAB): cycle the heading at point through
+/// FOLDED -> CHILDREN -> SUBTREE based on how much of its subtree is hidden.
+fn outline_cycle(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    let Some((bf, bl)) = zemacs_core::outline::subtree_body(&hs, line, total) else {
+        // Not on a heading with a body — just toggle the fold at the cursor line.
+        doc.folds_mut().toggle(line);
+        fold_snap_cursor(view, doc);
+        return;
+    };
+    // Lines that actually hide when folded (bf is the still-visible fold header).
+    let hide_lines: Vec<usize> = ((bf + 1)..=bl).filter(|&l| l < total).collect();
+    let hidden = hide_lines
+        .iter()
+        .filter(|&&l| doc.folds().is_line_hidden(l))
+        .count();
+    match zemacs_core::outline::outline_cycle_next(hide_lines.len(), hidden) {
+        zemacs_core::outline::CycleStep::ShowChildren => {
+            outline_open_folds_in(doc, bf, bl);
+            for (first, last) in zemacs_core::outline::subtree_child_folds(&hs, line, 1, total) {
+                outline_fold_range(doc, first, last);
+            }
+        }
+        zemacs_core::outline::CycleStep::ShowAll => outline_open_folds_in(doc, bf, bl),
+        zemacs_core::outline::CycleStep::Fold => outline_fold_range(doc, bf, bl),
+    }
+    doc.folds_mut().clamp(total.saturating_sub(1));
+    fold_snap_cursor(view, doc);
 }
 
 fn fold_create(cx: &mut Context) {
