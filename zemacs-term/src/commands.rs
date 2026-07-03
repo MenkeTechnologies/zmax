@@ -1222,6 +1222,7 @@ impl MappableCommand {
         zone, "Run the zone screen-saver (emacs zone)",
         decipher, "Solve a cryptogram (emacs decipher)",
         dunnet, "Play the dunnet text adventure (emacs dunnet)",
+        spook, "Insert random NSA-bait phrases (emacs spook)",
         studlify_region, "StudlyCaps the selected region (emacs studlify-region)",
         studlify_buffer, "StudlyCaps the whole buffer (emacs studlify-buffer)",
         studlify_word, "StudlyCaps the word after point (emacs studlify-word)",
@@ -13348,6 +13349,58 @@ fn decipher(cx: &mut Context) {
     });
 }
 
+/// Greedy word-wrap used by `spook` to emulate emacs `fill-region-as-paragraph`
+/// at the default `fill-column` (70): join words with single spaces, breaking
+/// to a new line before a word would push the column past `width`.
+fn fill_words(words: &[&str], width: usize) -> String {
+    let mut out = String::new();
+    let mut col = 0usize;
+    for (k, w) in words.iter().enumerate() {
+        let wl = w.chars().count();
+        if k == 0 {
+            out.push_str(w);
+            col = wl;
+        } else if col + 1 + wl > width {
+            out.push('\n');
+            out.push_str(w);
+            col = wl;
+        } else {
+            out.push(' ');
+            out.push_str(w);
+            col += 1 + wl;
+        }
+    }
+    out
+}
+
+/// Emacs `spook` (play/spook.el): insert 15 random phrases from the NSA
+/// line-eater corpus (`etc/spook.lines`) at point, filled into a paragraph.
+/// Faithful to `cookie-insert`: shuffle the phrase vector, take
+/// `spook-phrase-default-count` (15, capped at len-1) of them, and
+/// `fill-region-as-paragraph` the block.
+fn spook(cx: &mut Context) {
+    let phrases = crate::ui::spook_data::PHRASES;
+    let n = phrases.len();
+    let count = 15.min(n.saturating_sub(1));
+    // Fisher-Yates prefix shuffle — matches cookie-shuffle-vector's algorithm.
+    let mut idx: Vec<usize> = (0..n).collect();
+    for i in 0..count {
+        let j = i + fastrand::usize(0..(n - i));
+        idx.swap(i, j);
+    }
+    let chosen: Vec<&str> = idx[..count].iter().map(|&i| phrases[i]).collect();
+    let text = format!("\n{}\n", fill_words(&chosen, 70));
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::insert(
+        doc.text(),
+        doc.selection(view.id),
+        Tendril::from(text.as_str()),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status("Checking authorization...Approved");
+}
+
 /// Emacs `dunnet`: open the text adventure (explorable core; see ui/dunnet.rs).
 fn dunnet(cx: &mut Context) {
     open_overlay(cx, |_editor| {
@@ -25417,5 +25470,25 @@ mod wildfire_tests {
             super::studlify("hello there general kenobi"),
             "hello theRe generaL keNoBi"
         );
+    }
+
+    #[test]
+    fn fill_words_wraps_at_column() {
+        // Greedy wrap: break before a word would cross the width.
+        let w = ["aaaa", "bbbb", "cccc", "dddd"];
+        assert_eq!(super::fill_words(&w, 9), "aaaa bbbb\ncccc dddd");
+        // A single word longer than width still lands on its own line.
+        assert_eq!(super::fill_words(&["short", "muchlongerword"], 8), "short\nmuchlongerword");
+        // Empty input yields empty output.
+        assert_eq!(super::fill_words(&[], 70), "");
+    }
+
+    // spook_data must parse to the full etc/spook.lines corpus.
+    #[test]
+    fn spook_corpus_loaded() {
+        let p = crate::ui::spook_data::PHRASES;
+        assert_eq!(p.len(), 1227);
+        assert_eq!(p[0], "$400 million in gold bullion");
+        assert!(p.iter().all(|s| !s.is_empty()));
     }
 }

@@ -43,6 +43,7 @@ pub mod repl;
 pub mod rmail;
 pub mod snake;
 pub mod solitaire;
+pub mod spook_data;
 pub mod tetris;
 pub mod zone;
 pub mod run;

@@ -14392,6 +14392,14 @@
   "note": "emacs butterfly (xkcd 378) -> butterfly: inserts a butterfly, flips the bit"
  },
  {
+  "spec_id": "emacs.command.spook",
+  "status": "ported",
+  "evidence": [
+   "static:spook"
+  ],
+  "note": "emacs spook -> spook: inserts 15 random etc/spook.lines phrases (cookie-insert), filled to fill-column"
+ },
+ {
   "spec_id": "emacs.command.zap_to_char",
   "status": "ported",
   "evidence": [
