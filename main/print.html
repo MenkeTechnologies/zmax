@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-300c45d8.js";
+            window.path_to_searchindex_js = "searchindex-adb15112.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -2826,6 +2826,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>type_hierarchy_supertypes</code></td><td>Type hierarchy: supertypes of the symbol (JetBrains Ctrl-H)</td><td>normal: <code>&lt;space&gt;gT</code>, select: <code>&lt;space&gt;gT</code></td></tr>
 <tr><td><code>type_hierarchy_subtypes</code></td><td>Type hierarchy: subtypes of the symbol</td><td></td></tr>
 <tr><td><code>goto_window_top</code></td><td>Goto window top</td><td>normal: <code>H</code></td></tr>
+<tr><td><code>what_line</code></td><td>Report the line number of point (emacs what-line)</td><td></td></tr>
+<tr><td><code>count_lines_page</code></td><td>Report lines on the current page, before + after point (emacs count-lines-page, C-x l)</td><td></td></tr>
+<tr><td><code>move_to_window_line_top_bottom</code></td><td>Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r)</td><td></td></tr>
 <tr><td><code>goto_window_center</code></td><td>Goto window center</td><td>normal: <code>M</code></td></tr>
 <tr><td><code>goto_window_bottom</code></td><td>Goto window bottom</td><td>normal: <code>L</code></td></tr>
 <tr><td><code>goto_last_accessed_file</code></td><td>Goto last accessed file</td><td>normal: <code>&lt;C-^&gt;</code>, <code>&lt;C-w&gt;^</code>, <code>g&lt;tab&gt;</code>, <code>&lt;C-tab&gt;</code>, <code>&lt;space&gt;w^</code>, <code>&lt;C-w&gt;&lt;C-^&gt;</code>, <code>&lt;C-w&gt;g&lt;tab&gt;</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code>, select: <code>&lt;space&gt;w^</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code></td></tr>
@@ -6545,11 +6548,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>2997</strong> (43.8%)</li>
-<li>Partial: <strong>541</strong> (7.9%)</li>
+<li>Ported: <strong>3000</strong> (43.8%)</li>
+<li>Partial: <strong>538</strong> (7.9%)</li>
 <li>Absent: <strong>3309</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 971 static commands, 1565 typable <code>:</code> commands, 2636 default keybindings</li>
+<li>zemacs source surface: 974 static commands, 1565 typable <code>:</code> commands, 2636 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -6605,7 +6608,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">603</td><td style="text-align: right">173</td><td style="text-align: right">20.0%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">606</td><td style="text-align: right">170</td><td style="text-align: right">20.1%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
@@ -6626,7 +6629,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">392</td><td style="text-align: right">88</td><td style="text-align: right">20.8%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">395</td><td style="text-align: right">85</td><td style="text-align: right">21.0%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
