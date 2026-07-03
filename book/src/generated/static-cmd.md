@@ -902,6 +902,7 @@
 | `gomoku` | Play five-in-a-row against the computer (emacs gomoku) |  |
 | `butterfly` | Flip the desired bit with a butterfly (emacs butterfly, xkcd 378) |  |
 | `mpuz` | Play the multiplication puzzle (emacs mpuz) |  |
+| `bubbles` | Play the bubbles same-game (emacs bubbles) |  |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |
