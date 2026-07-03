@@ -29163,5 +29163,13 @@
    "typable:apropos-command"
   ],
   "note": "list commands matching a regexp"
+ },
+ {
+  "spec_id": "emacs.command.expand_region_abbrevs",
+  "status": "ported",
+  "evidence": [
+   "typable:expand-region-abbrevs"
+  ],
+  "note": "expand all abbrevs in region"
  }
 ]
