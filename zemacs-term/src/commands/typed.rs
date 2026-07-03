@@ -8738,6 +8738,81 @@ fn list_directory(
     Ok(())
 }
 
+/// Compute abbrev-expansion edits within `text`. Returns `(start_char,
+/// end_char, replacement)` triples in ascending, non-overlapping order — one per
+/// maximal keyword-character run that `lookup` resolves to an expansion. Pure —
+/// unit tested.
+fn abbrev_region_edits(
+    text: &str,
+    lookup: impl Fn(&str) -> Option<String>,
+) -> Vec<(usize, usize, String)> {
+    use zemacs_core::abbrev::is_keyword_char;
+    let mut edits = Vec::new();
+    let mut run_start: Option<usize> = None;
+    let mut word = String::new();
+    let mut count = 0usize;
+    for (i, c) in text.chars().enumerate() {
+        count = i + 1;
+        if is_keyword_char(c) {
+            if run_start.is_none() {
+                run_start = Some(i);
+            }
+            word.push(c);
+        } else if let Some(start) = run_start.take() {
+            if let Some(rhs) = lookup(&word) {
+                edits.push((start, i, rhs));
+            }
+            word.clear();
+        }
+    }
+    if let Some(start) = run_start.take() {
+        if let Some(rhs) = lookup(&word) {
+            edits.push((start, count, rhs));
+        }
+    }
+    edits
+}
+
+/// `:expand-region-abbrevs` — Emacs `expand-region-abbrevs`: expand every
+/// abbreviation found in the region (or whole buffer when the selection is
+/// empty), using the global/local abbrev tables.
+fn expand_region_abbrevs(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let rope = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let (from, to) = if sel.from() == sel.to() {
+        (0, rope.len_chars())
+    } else {
+        (sel.from(), sel.to())
+    };
+    let region: String = rope.slice(from..to).chars().collect();
+    let edits = abbrev_region_edits(&region, |w| {
+        with_abbrevs(|t| t.lookup(AbbrevMode::Both, w).map(str::to_string))
+    });
+    if edits.is_empty() {
+        cx.editor.set_status("No abbrevs to expand in region");
+        return Ok(());
+    }
+    let n = edits.len();
+    let transaction = Transaction::change(
+        rope,
+        edits
+            .into_iter()
+            .map(|(s, e, rhs)| (from + s, from + e, Some(rhs.as_str().into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!("Expanded {n} abbrev(s)"));
+    Ok(())
+}
+
 /// `:getenv <var>` — Emacs `getenv`: report the value of environment variable
 /// VAR in the echo area (blank if unset).
 fn getenv_cmd(
@@ -30342,6 +30417,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "expand-region-abbrevs",
+        aliases: &[],
+        doc: "Expand every abbrev found in the region (emacs expand-region-abbrevs).",
+        fun: expand_region_abbrevs,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "getenv",
         aliases: &[],
         doc: "Report the value of an environment variable (emacs getenv).",
@@ -33622,6 +33708,37 @@ mod vim_set_tests {
         );
         // unknown option -> None
         assert!(translate_vim_option("definitelynotanoption", |_| false).is_none());
+    }
+
+    #[test]
+    fn abbrev_region_edits_expands_matching_runs() {
+        use super::abbrev_region_edits;
+        use std::collections::HashMap;
+
+        let table: HashMap<&str, &str> =
+            [("teh", "the"), ("recieve", "receive")].into_iter().collect();
+        let lookup = |w: &str| table.get(w).map(|s| s.to_string());
+
+        // Two abbrevs in a sentence; punctuation and spaces break runs.
+        let edits = abbrev_region_edits("teh cat, recieve it", lookup);
+        assert_eq!(
+            edits,
+            vec![
+                (0, 3, "the".to_string()),
+                (9, 16, "receive".to_string()),
+            ]
+        );
+
+        // Trailing run at end-of-text is handled.
+        let lookup2 = |w: &str| table.get(w).map(|s| s.to_string());
+        assert_eq!(
+            abbrev_region_edits("say teh", lookup2),
+            vec![(4, 7, "the".to_string())]
+        );
+
+        // No matches -> no edits.
+        let lookup3 = |w: &str| table.get(w).map(|s| s.to_string());
+        assert!(abbrev_region_edits("all correct words", lookup3).is_empty());
     }
 
     #[test]
