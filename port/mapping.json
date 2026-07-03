@@ -14195,9 +14195,9 @@
   "spec_id": "emacs.command.delete_duplicate_lines",
   "status": "ported",
   "evidence": [
-   "typable:dedup"
+   "typable:delete-duplicate-lines"
   ],
-  "note": ""
+  "note": "emacs delete-duplicate-lines -> dedup (exact-name alias delete-duplicate-lines): keep first of each line, drop later duplicates."
  },
  {
   "spec_id": "emacs.command.split_line",
@@ -14459,9 +14459,9 @@
   "spec_id": "emacs.command.reverse_region",
   "status": "ported",
   "evidence": [
-   "typable:reverse"
+   "typable:reverse-region"
   ],
-  "note": ""
+  "note": "emacs reverse-region -> reverse (exact-name alias reverse-region): reverse the order of the selected lines."
  },
  {
   "spec_id": "emacs.command.flush_lines",

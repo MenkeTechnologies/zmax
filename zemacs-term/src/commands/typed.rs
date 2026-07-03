@@ -26575,8 +26575,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "dedup",
-        aliases: &["unique-lines"],
-        doc: "Remove all duplicate lines globally, keeping first occurrence and order.",
+        aliases: &["unique-lines", "delete-duplicate-lines"],
+        doc: "Remove all duplicate lines globally, keeping first occurrence and order. Emacs delete-duplicate-lines.",
         fun: dedup_all_cmd,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -28969,8 +28969,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "reverse",
-        aliases: &["reverse-lines", "tac"],
-        doc: "Reverse the order of the selected lines (or the whole buffer).",
+        aliases: &["reverse-lines", "reverse-region", "tac"],
+        doc: "Reverse the order of the selected lines (or the whole buffer). Emacs reverse-region.",
         fun: reverse_lines,
         completer: CommandCompleter::none(),
         signature: Signature {
