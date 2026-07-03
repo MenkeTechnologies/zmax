@@ -918,6 +918,8 @@ impl MappableCommand {
         move_to_opposite_group, "Move the current editor to the opposite split group (JetBrains)",
         rotate_view, "Goto next window",
         rotate_view_reverse, "Goto previous window",
+        scroll_other_window, "Scroll the other window forward (emacs scroll-other-window, C-M-v)",
+        scroll_other_window_down, "Scroll the other window backward (emacs scroll-other-window-down, C-M-S-v)",
         hsplit, "Horizontal bottom split",
         hsplit_new, "Horizontal bottom split scratch buffer",
         vsplit, "Vertical right split",
@@ -18220,6 +18222,42 @@ fn rotate_view(cx: &mut Context) {
 
 fn rotate_view_reverse(cx: &mut Context) {
     cx.editor.focus_prev()
+}
+
+/// Scroll the *other* window without leaving the current one — Emacs
+/// `scroll-other-window` (C-M-v, `Forward`) and `scroll-other-window-down`
+/// (C-M-S-v, `Backward`). Scrolls by a near-full screen (window height minus two
+/// context lines), matching Emacs.
+fn scroll_other_window_impl(cx: &mut Context, direction: Direction) {
+    if cx.editor.tree.views().count() < 2 {
+        cx.editor.set_status("no other window to scroll");
+        return;
+    }
+    let orig = cx.editor.tree.focus;
+    let other = cx.editor.tree.next();
+    if other == orig {
+        cx.editor.set_status("no other window to scroll");
+        return;
+    }
+    // Retarget `current!` to the other view directly (a lightweight ViewId swap,
+    // avoiding the side effects of `Editor::focus` — mode reset, history commit,
+    // focus-lost dispatch), scroll its viewport, then restore focus. `scroll`
+    // with `sync_cursor = false` moves only the view offset, not the cursor.
+    cx.editor.tree.focus = other;
+    let offset = {
+        let (view, _doc) = current_ref!(cx.editor);
+        view.inner_height().saturating_sub(2).max(1)
+    };
+    scroll(cx, offset, direction, false);
+    cx.editor.tree.focus = orig;
+}
+
+fn scroll_other_window(cx: &mut Context) {
+    scroll_other_window_impl(cx, Direction::Forward);
+}
+
+fn scroll_other_window_down(cx: &mut Context) {
+    scroll_other_window_impl(cx, Direction::Backward);
 }
 
 fn jump_view_right(cx: &mut Context) {

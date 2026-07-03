@@ -28635,5 +28635,21 @@
    "typable:copy-matching-lines"
   ],
   "note": "copy-matching-lines: copy lines matching a regex to the kill ring"
+ },
+ {
+  "spec_id": "emacs.command.scroll_other_window",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_other_window"
+  ],
+  "note": "scroll-other-window (C-M-v): scroll the other window forward"
+ },
+ {
+  "spec_id": "emacs.command.scroll_other_window_down",
+  "status": "ported",
+  "evidence": [
+   "static:scroll_other_window_down"
+  ],
+  "note": "scroll-other-window-down (C-M-S-v): scroll the other window backward"
  }
 ]
