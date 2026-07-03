@@ -1219,6 +1219,7 @@ impl MappableCommand {
         snake, "Play snake (emacs snake)",
         tetris, "Play tetris (emacs tetris)",
         pong, "Play pong against the computer (emacs pong)",
+        zone, "Run the zone screen-saver (emacs zone)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -13209,6 +13210,13 @@ fn tetris(cx: &mut Context) {
 fn pong(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::pong::Pong::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `zone`: run the screen-saver (any key stops it).
+fn zone(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::zone::Zone::new()) as Box<dyn Component>)
     });
 }
 

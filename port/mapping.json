@@ -14360,6 +14360,14 @@
   "note": "emacs pong -> pong: vs-computer paddle game, self-animating overlay (ui/pong.rs)"
  },
  {
+  "spec_id": "emacs.command.zone",
+  "status": "ported",
+  "evidence": [
+   "static:zone"
+  ],
+  "note": "emacs zone -> zone: tick-driven screen-saver overlay, any key stops (ui/zone.rs)"
+ },
+ {
   "spec_id": "emacs.command.butterfly",
   "status": "ported",
   "evidence": [

@@ -41,6 +41,7 @@ pub mod rmail;
 pub mod snake;
 pub mod solitaire;
 pub mod tetris;
+pub mod zone;
 pub mod run;
 pub mod run_config;
 pub mod search;
