@@ -1740,6 +1740,22 @@ mod tests {
     }
 
     #[test]
+    fn pio_with_builders_thread_project_conf() {
+        let mut st = settings();
+        st.env = "uno".into();
+        for argv in [
+            pio_run_with(&st, &["-c".into(), "platformio-ci.ini".into()]),
+            pio_test_with(&st, &["-c".into(), "platformio-ci.ini".into()]),
+            pio_check_with(&st, &["-c".into(), "platformio-ci.ini".into()]),
+            pio_debug_with(&st, &["-c".into(), "platformio-ci.ini".into()]),
+        ] {
+            assert!(argv.windows(2).any(|w| w == ["-c", "platformio-ci.ini"]));
+            // the selected env is still threaded alongside the alternate config.
+            assert!(argv.windows(2).any(|w| w == ["-e", "uno"]));
+        }
+    }
+
+    #[test]
     fn pio_upload_monitor_chains_targets_and_port() {
         let st = settings(); // port = /dev/cu.usbmodem1401
         let argv = pio_upload_monitor(&st, "");

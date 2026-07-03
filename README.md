@@ -298,6 +298,9 @@ PlatformIO environment, monitor filters) persist to
   `:pio-init-env-prefix <prefix>` (prefix generated env names),
   `:pio-init-ide <ide>` (generate IDE integration files),
   `:pio-init-option <name=value>` (seed a `platformio.ini` option),
+  `:pio-build-conf <path>` / `:pio-test-conf` / `:pio-check-conf` /
+  `:pio-debug-conf` run those actions against an alternate `platformio.ini`
+  (`-c`, for CI/debug config variants).
   `:pio-project-config` (computed config), `:pio-project-config-lint` (validate
   `platformio.ini`), `:pio-project-metadata` (IDE/LSP
   metadata dump); `:pio-project-config-json` / `:pio-project-metadata-json`

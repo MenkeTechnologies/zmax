@@ -6139,6 +6139,68 @@ fn pio_debug_load_mode(cx: &mut compositor::Context, args: Args, event: PromptEv
     Ok(())
 }
 
+/// `:pio-build-conf <path>` — build using an alternate `platformio.ini`
+/// (`pio run -c <path>`), for multi-config projects (CI/debug variants).
+fn pio_build_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ").trim().to_string();
+    if path.is_empty() {
+        bail!("usage: :pio-build-conf <path>  (e.g. platformio-ci.ini)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_run_with(&st, &["-c".to_string(), path]))
+}
+
+/// `:pio-test-conf <path>` — run unit tests using an alternate `platformio.ini`
+/// (`pio test -c <path>`).
+fn pio_test_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ").trim().to_string();
+    if path.is_empty() {
+        bail!("usage: :pio-test-conf <path>  (e.g. platformio-ci.ini)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_test_with(&st, &["-c".to_string(), path]))
+}
+
+/// `:pio-check-conf <path>` — static analysis using an alternate `platformio.ini`
+/// (`pio check -c <path>`).
+fn pio_check_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ").trim().to_string();
+    if path.is_empty() {
+        bail!("usage: :pio-check-conf <path>  (e.g. platformio-ci.ini)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    pio_run_compile(cx, embedded::pio_check_with(&st, &["-c".to_string(), path]))
+}
+
+/// `:pio-debug-conf <path>` — debug using an alternate `platformio.ini`
+/// (`pio debug -c <path>`), live in a terminal panel.
+fn pio_debug_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ").trim().to_string();
+    if path.is_empty() {
+        bail!("usage: :pio-debug-conf <path>  (e.g. platformio-debug.ini)");
+    }
+    require_tool(embedded::PIO)?;
+    let st = embedded::load();
+    let dir = st.sketch_dir();
+    embedded_spawn_terminal(cx, embedded::pio_debug_with(&st, &["-c".to_string(), path]), dir);
+    Ok(())
+}
+
 /// `:pio-init-ide <ide>` — (re)generate IDE integration files for the project
 /// (`pio project init --ide <ide>`).
 fn pio_init_ide(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -23621,6 +23683,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-build-conf",
+        aliases: &["platformio-build-conf", "pio-build-project-conf"],
+        doc: "Build using an alternate platformio.ini (`pio run -c <path>`).",
+        fun: pio_build_conf,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-test-conf",
+        aliases: &["platformio-test-conf"],
+        doc: "Run unit tests using an alternate platformio.ini (`pio test -c <path>`).",
+        fun: pio_test_conf,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-check-conf",
+        aliases: &["platformio-check-conf"],
+        doc: "Static analysis using an alternate platformio.ini (`pio check -c <path>`).",
+        fun: pio_check_conf,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pio-debug-conf",
+        aliases: &["platformio-debug-conf"],
+        doc: "Debug using an alternate platformio.ini (`pio debug -c <path>`), live in a terminal panel.",
+        fun: pio_debug_conf,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },
