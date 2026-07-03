@@ -29045,22 +29045,6 @@
   "note": "backward-delete-char-untabify: delete backward, expanding a tab into spaces first"
  },
  {
-  "spec_id": "emacs.command.write_region",
-  "status": "ported",
-  "evidence": [
-   "typable:write-region"
-  ],
-  "note": "write-region -> :write-region <file>: write the region (or whole buffer when nothing is selected) to a file, overwriting it"
- },
- {
-  "spec_id": "emacs.command.append_to_file",
-  "status": "ported",
-  "evidence": [
-   "typable:append-to-file"
-  ],
-  "note": "append-to-file (Accumulating Text) -> :append-to-file <file>: append the region (or whole buffer) to the end of a file, creating it if needed"
- },
- {
   "spec_id": "emacs.command.add_name_to_file",
   "status": "ported",
   "evidence": [
@@ -29131,5 +29115,13 @@
    "typable:list-directory"
   ],
   "note": "directory listing in scratch buffer"
+ },
+ {
+  "spec_id": "emacs.command.browse_url",
+  "status": "ported",
+  "evidence": [
+   "typable:browse-url"
+  ],
+  "note": "open a URL in the OS browser"
  }
 ]

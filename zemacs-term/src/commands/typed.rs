@@ -8738,6 +8738,69 @@ fn list_directory(
     Ok(())
 }
 
+/// `:add-name-to-file <old> <new>` — Emacs `add-name-to-file`: give the file
+/// OLD an additional name NEW (a hard link).
+fn add_name_to_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.len() != 2 {
+        anyhow::bail!("usage: :add-name-to-file <old> <new>");
+    }
+    let old = args.first().unwrap();
+    let new = args.get(1).unwrap();
+    std::fs::hard_link(old, new).map_err(|e| anyhow!("add-name-to-file: {e}"))?;
+    cx.editor.set_status(format!("Linked {new} -> {old}"));
+    Ok(())
+}
+
+/// `:make-symbolic-link <target> <link>` — Emacs `make-symbolic-link`: create a
+/// symbolic link LINK that points to TARGET.
+fn make_symbolic_link(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.len() != 2 {
+        anyhow::bail!("usage: :make-symbolic-link <target> <link>");
+    }
+    let target = args.first().unwrap();
+    let link = args.get(1).unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(target, link).map_err(|e| anyhow!("make-symbolic-link: {e}"))?;
+    #[cfg(not(unix))]
+    anyhow::bail!("make-symbolic-link: unsupported on this platform");
+    #[cfg(unix)]
+    cx.editor.set_status(format!("Symlinked {link} -> {target}"));
+    Ok(())
+}
+
+/// `:browse-url <url>` — Emacs `browse-url`: open URL in the OS default browser.
+fn browse_url(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let url = args.join(" ");
+    let url = url.trim();
+    if url.is_empty() {
+        anyhow::bail!("usage: :browse-url <url>");
+    }
+    crate::commands::open_in_browser(url).map_err(|e| anyhow!("browse-url: {e}"))?;
+    cx.editor.set_status(format!("Opening {url}"));
+    Ok(())
+}
+
 /// `:write-abbrev-file <path>` — Emacs `write-abbrev-file`: write every abbrev
 /// to the named file.
 fn write_abbrev_file(
@@ -30147,6 +30210,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Hard-link the current buffer's file to a new name (emacs add-name-to-file).",
         fun: add_name_to_file,
         completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "browse-url",
+        aliases: &[],
+        doc: "Open a URL in the OS default browser (emacs browse-url).",
+        fun: browse_url,
+        completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, Some(1)),
             ..Signature::DEFAULT
