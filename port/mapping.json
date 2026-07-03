@@ -12193,11 +12193,11 @@
  },
  {
   "spec_id": "emacs.command.yank_pop",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:register_picker"
+   "static:yank_pop"
   ],
-  "note": ""
+  "note": "yank-pop (M-y): replace the just-yanked text with the next kill-ring entry"
  },
  {
   "spec_id": "emacs.command.delete_char",
@@ -24074,11 +24074,11 @@
  },
  {
   "spec_id": "emacs.command.view_register",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:register_picker"
+   "static:view_register"
   ],
-  "note": "emacs view-register -> zemacs register_picker lists registers with their contents preview (picker vs single-register echo)"
+  "note": "view-register (C-x r v): show a register’s contents"
  },
  {
   "spec_id": "emacs.command.suspend_frame",

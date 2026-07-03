@@ -931,6 +931,7 @@ impl MappableCommand {
         wonly, "Close windows except current",
         select_register, "Select register",
         insert_register, "Insert register",
+        view_register, "Show a register's contents (emacs view-register, C-x r v)",
         insert_last_inserted_text, "Insert the previously inserted text (vim i_CTRL-A)",
         insert_last_inserted_and_stop, "Insert previously inserted text and stop insert (vim i_CTRL-@)",
         copy_between_registers, "Copy between two registers",
@@ -18598,6 +18599,33 @@ fn insert_register(cx: &mut Context) {
             );
         }
     })
+}
+
+/// Emacs `view-register` (C-x r v): prompt for a register and show its contents
+/// on the status line as a one-line preview.
+fn view_register(cx: &mut Context) {
+    cx.editor.autoinfo = Some(Info::from_registers("View register", &cx.editor.registers));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let Some(ch) = event.char() else {
+            return;
+        };
+        let contents: Option<Vec<String>> = cx
+            .editor
+            .registers
+            .read(ch, cx.editor)
+            .map(|vals| vals.map(|v| v.to_string()).collect());
+        match contents {
+            Some(v) if !v.is_empty() => {
+                let joined = v.join(" ⏎ ");
+                let n = joined.chars().count();
+                let preview: String = joined.chars().take(140).collect();
+                let ell = if n > 140 { "…" } else { "" };
+                cx.editor.set_status(format!("Register {ch}: {preview}{ell}"));
+            }
+            _ => cx.editor.set_status(format!("Register {ch} is empty")),
+        }
+    });
 }
 
 /// The primary selection's text (empty when the selection is a caret).

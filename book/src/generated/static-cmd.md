@@ -619,6 +619,7 @@
 | `wonly` | Close windows except current | normal: `` <C-w>1 ``, `` <C-w>_ ``, `` <C-w>m ``, `` <C-w>o ``, `` <C-x>1 ``, `` <C-w>.D ``, `` <C-w>._ ``, `` <C-w>.m ``, `` <C-w>\| ``, `` <C-x>61 ``, `` <C-w>.\| ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <C-w><C-o> ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w\| ``, `` <space>w.\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, select: `` <C-x>1 ``, `` <C-x>61 ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w\| ``, `` <space>w.\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, insert: `` <C-x>1 ``, `` <C-x>61 `` |
 | `select_register` | Select register | normal: `` " `` |
 | `insert_register` | Insert register | insert: `` <C-r> `` |
+| `view_register` | Show a register's contents (emacs view-register, C-x r v) |  |
 | `insert_last_inserted_text` | Insert the previously inserted text (vim i_CTRL-A) | insert: `` <C-a> `` |
 | `insert_last_inserted_and_stop` | Insert previously inserted text and stop insert (vim i_CTRL-@) | insert: `` <C-@> `` |
 | `copy_between_registers` | Copy between two registers |  |
