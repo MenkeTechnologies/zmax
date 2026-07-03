@@ -19153,6 +19153,43 @@ fn sort_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     Ok(())
 }
 
+/// `:sort-pages` — Emacs `sort-pages`: sort the `^L`-delimited pages in the
+/// selection (or the whole buffer) alphabetically; `--reverse` for descending.
+/// Uses the faithful `sort-subr` engine (`zemacs_core::sort_subr`).
+fn sort_pages_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    // Sort the selected span, or the whole buffer when the selection is empty.
+    let (start, end) = if sel.from() == sel.to() {
+        (0, text.len_chars())
+    } else {
+        (sel.from(), sel.to())
+    };
+    if start >= end {
+        return Ok(());
+    }
+    let region: String = text.slice(start..end).chunks().collect();
+    let sorted = zemacs_core::sort_subr::sort_pages(&region, args.has_flag("reverse"));
+    if sorted == region {
+        return Ok(());
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((start, end, Some(sorted.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 /// The char range of the primary selection's line span, or the whole buffer when
 /// the selection is confined to a single line — the region the Emacs `sort-*`
 /// line commands operate on (Emacs sorts the active region, else the accessible
@@ -29681,6 +29718,23 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sort-pages",
+        aliases: &[],
+        doc: "Sort the ^L-delimited pages in the selection (or buffer) alphabetically (emacs sort-pages).",
+        fun: sort_pages_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            flags: &[Flag {
+                name: "reverse",
+                alias: Some('r'),
+                doc: "sort in reverse (descending) order",
+                ..Flag::DEFAULT
+            }],
             ..Signature::DEFAULT
         },
     },

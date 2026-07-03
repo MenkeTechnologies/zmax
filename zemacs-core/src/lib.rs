@@ -48,6 +48,7 @@ pub mod search;
 pub mod selection;
 pub mod snippets;
 pub mod sort;
+pub mod sort_subr;
 pub mod surround;
 pub mod syntax;
 pub mod test;
