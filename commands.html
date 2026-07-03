@@ -12,8 +12,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="favicon-d5706b94.svg">
-        <link rel="shortcut icon" href="favicon-cc1a8b51.png">
+        <link rel="icon" href="favicon-fe65bc9e.svg">
+        <link rel="shortcut icon" href="favicon-d57d1f2f.png">
         <link rel="stylesheet" href="css/variables-8adf115d.css">
         <link rel="stylesheet" href="css/general-0392ca55.css">
         <link rel="stylesheet" href="css/chrome-fc474251.css">
@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-209278b8.js";
+            window.path_to_searchindex_js = "searchindex-b0718e6c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-c0d3b1d1.js"></script>
+        <script src="toc-9094bf62.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -198,6 +198,7 @@
 <tr><td><code>:terminal</code>, <code>:term</code></td><td>Open an integrated terminal (PTY shell) running $SHELL.</td></tr>
 <tr><td><code>:ide</code>, <code>:workbench</code></td><td>Enter IDE mode (file-tree sidebar + panels, like <code>--ide</code> / F2).</td></tr>
 <tr><td><code>:diff</code>, <code>:gdiff</code></td><td>Open a read-only side-by-side diff of the buffer vs. its git HEAD version.</td></tr>
+<tr><td><code>:reveal</code>, <code>:browse</code>, <code>:open-repo</code></td><td>Open this repository’s homepage (GitHub/GitLab/Bitbucket/…) in the browser.</td></tr>
 <tr><td><code>:compare-ref</code>, <code>:compare-branch</code></td><td>Diff the buffer against its version at a git ref (JetBrains Compare with Branch).</td></tr>
 <tr><td><code>:merge</code>, <code>:resolve</code></td><td>Resolve the buffer’s git merge conflicts in a 3-pane (ours/result/theirs) view.</td></tr>
 <tr><td><code>:magit</code>, <code>:git</code>, <code>:gst</code></td><td>Open the Magit-style git status (stage/unstage/discard/commit changes by section).</td></tr>
@@ -239,6 +240,266 @@
 <tr><td><code>:all</code>, <code>:sall</code></td><td>Open a window for each file in the argument list (vim :all / :sall).</td></tr>
 <tr><td><code>:compile</code></td><td>Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile).</td></tr>
 <tr><td><code>:recompile</code></td><td>Re-run the last compile command (emacs recompile).</td></tr>
+<tr><td><code>:arduino-compile</code>, <code>:averify</code>, <code>:arduino-verify</code></td><td>Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify).</td></tr>
+<tr><td><code>:arduino-upload</code>, <code>:aupload</code></td><td>Compile and flash the sketch to the connected board (arduino-cli compile –upload), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-monitor</code>, <code>:amonitor</code>, <code>:serial-monitor</code></td><td>Open the serial monitor for the selected port/baud (arduino-cli monitor).</td></tr>
+<tr><td><code>:arduino-compile-verbose</code>, <code>:arduino-verify-verbose</code></td><td>Verbose compile (<code>arduino-cli compile -v</code>); diagnostics into <em>compilation</em>.</td></tr>
+<tr><td><code>:arduino-compile-clean</code>, <code>:arduino-rebuild</code></td><td>Compile without cached build artifacts (<code>arduino-cli compile --clean</code>).</td></tr>
+<tr><td><code>:arduino-compile-jobs</code>, <code>:arduino-compile-j</code></td><td>Compile with N parallel jobs (<code>arduino-cli compile -j &lt;n&gt;</code>).</td></tr>
+<tr><td><code>:arduino-compiledb</code>, <code>:arduino-compilation-database</code></td><td>Generate compile_commands.json for the C/C++ LSP (<code>arduino-cli compile --only-compilation-database</code>).</td></tr>
+<tr><td><code>:arduino-compile-warnings</code>, <code>:arduino-warnings</code></td><td>Compile at a warning level (`arduino-cli compile –warnings &lt;none</td></tr>
+<tr><td><code>:arduino-compile-profile</code>, <code>:arduino-build-profile</code></td><td>Compile using a sketch build profile (<code>arduino-cli compile --profile &lt;name&gt;</code>).</td></tr>
+<tr><td><code>:arduino-compile-debug-opt</code>, <code>:arduino-compile-for-debug</code></td><td>Compile with debug-friendly optimization (<code>arduino-cli compile --optimize-for-debug</code>).</td></tr>
+<tr><td><code>:arduino-upload-verify</code>, <code>:arduino-upload-verified</code></td><td>Build + flash, then verify the flashed program (<code>arduino-cli compile --upload --verify</code>).</td></tr>
+<tr><td><code>:arduino-upload-programmer</code>, <code>:arduino-upload-via-programmer</code></td><td>Build + flash through a programmer (<code>arduino-cli compile --upload --programmer &lt;id&gt;</code>).</td></tr>
+<tr><td><code>:arduino-upload-dir</code>, <code>:arduino-upload-input-dir</code></td><td>Flash a pre-built binary folder without recompiling (<code>arduino-cli upload --input-dir &lt;dir&gt;</code>).</td></tr>
+<tr><td><code>:arduino-upload-file</code>, <code>:arduino-upload-input-file</code></td><td>Flash a specific pre-built binary without recompiling (<code>arduino-cli upload --input-file &lt;file&gt;</code>).</td></tr>
+<tr><td><code>:arduino-monitor-raw</code>, <code>:arduino-monitor-noraw</code></td><td>Serial monitor without output transformations (<code>arduino-cli monitor --raw</code>).</td></tr>
+<tr><td><code>:arduino-monitor-timestamp</code>, <code>:arduino-monitor-ts</code></td><td>Serial monitor prefixing each line with a timestamp (<code>arduino-cli monitor --timestamp</code>).</td></tr>
+<tr><td><code>:arduino-board-programmers</code>, <code>:arduino-list-programmers</code></td><td>List programmers the selected board supports (<code>arduino-cli board details --list-programmers</code>).</td></tr>
+<tr><td><code>:arduino-board-list-watch</code>, <code>:arduino-boards-watch</code></td><td>Watch for boards connecting/disconnecting (<code>arduino-cli board list --watch</code>), live in a panel.</td></tr>
+<tr><td><code>:arduino-lib-list-updatable</code>, <code>:arduino-libs-updatable</code></td><td>Installed libraries with a newer version available (<code>arduino-cli lib list --updatable</code>).</td></tr>
+<tr><td><code>:arduino-lib-install-git</code>, <code>:arduino-lib-install-url</code></td><td>Install a library from a git repository (<code>arduino-cli lib install --git-url &lt;url&gt;</code>).</td></tr>
+<tr><td><code>:arduino-lib-install-zip</code>, <code>:arduino-lib-install-archive</code></td><td>Install a library from a local .zip (<code>arduino-cli lib install --zip-path &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:arduino-compile-quiet</code>, <code>:arduino-compile-silent</code></td><td>Quiet compile, errors only (<code>arduino-cli compile -q</code>).</td></tr>
+<tr><td><code>:arduino-compile-properties</code>, <code>:arduino-build-properties</code></td><td>Dump resolved build properties without building (<code>arduino-cli compile --show-properties</code>).</td></tr>
+<tr><td><code>:arduino-compile-preprocess</code>, <code>:arduino-preprocess</code></td><td>Output the preprocessed sketch (<code>arduino-cli compile --preprocess</code>).</td></tr>
+<tr><td><code>:arduino-compile-dump-profile</code>, <code>:arduino-dump-profile</code></td><td>Print a reproducible build profile for the sketch (<code>arduino-cli compile --dump-profile</code>).</td></tr>
+<tr><td><code>:arduino-compile-board-options</code>, <code>:arduino-board-options</code></td><td>Compile with custom board menu options (<code>arduino-cli compile --board-options &lt;opts&gt;</code>).</td></tr>
+<tr><td><code>:arduino-compile-build-property</code>, <code>:arduino-build-property</code></td><td>Compile overriding a build property (<code>arduino-cli compile --build-property &lt;key=value&gt;</code>).</td></tr>
+<tr><td><code>:arduino-compile-output-dir</code>, <code>:arduino-compile-out-dir</code></td><td>Compile and save build artifacts to a directory (<code>arduino-cli compile --output-dir &lt;dir&gt;</code>).</td></tr>
+<tr><td><code>:arduino-upload-verbose</code>, <code>:arduino-flash-verbose</code></td><td>Verbose build + flash (<code>arduino-cli compile --upload -v</code>).</td></tr>
+<tr><td><code>:arduino-debug-info</code>, <code>:arduino-debug-config</code></td><td>Print the debugger configuration without starting a session (<code>arduino-cli debug --info</code>).</td></tr>
+<tr><td><code>:arduino-debug-programmer</code>, <code>:arduino-debug-via-programmer</code></td><td>Launch the debugger through a programmer (<code>arduino-cli debug --programmer &lt;id&gt;</code>).</td></tr>
+<tr><td><code>:arduino-monitor-quiet</code>, <code>:arduino-monitor-silent</code></td><td>Serial monitor suppressing non-error diagnostics (<code>arduino-cli monitor --quiet</code>).</td></tr>
+<tr><td><code>:arduino-monitor-describe</code>, <code>:arduino-monitor-port-info</code></td><td>Describe the port’s supported monitor settings (<code>arduino-cli monitor --describe</code>).</td></tr>
+<tr><td><code>:arduino-core-list-updatable</code>, <code>:arduino-cores-updatable</code></td><td>Installed platforms with a newer version available (<code>arduino-cli core list --updatable</code>).</td></tr>
+<tr><td><code>:arduino-core-list-all</code>, <code>:arduino-cores-all</code></td><td>Every installed platform incl. release channels (<code>arduino-cli core list --all</code>).</td></tr>
+<tr><td><code>:arduino-lib-list-all</code>, <code>:arduino-libs-all</code></td><td>Installed libraries across all locations incl. built-in (<code>arduino-cli lib list --all</code>).</td></tr>
+<tr><td><code>:arduino-update-outdated</code>, <code>:arduino-update-show-outdated</code></td><td>Refresh indexes then list upgradable cores/libraries (<code>arduino-cli update --show-outdated</code>).</td></tr>
+<tr><td><code>:arduino-boards-hidden</code>, <code>:arduino-board-listall-hidden</code></td><td>Every known board including platform-hidden variants (<code>arduino-cli board listall --show-hidden</code>).</td></tr>
+<tr><td><code>:arduino-lib-search-names</code>, <code>:arduino-lib-search-name</code></td><td>A names-only library search (<code>arduino-cli lib search &lt;query&gt; --names</code>).</td></tr>
+<tr><td><code>:arduino-sketch-archive-full</code>, <code>:arduino-archive-full</code></td><td>Archive the sketch with its build output (<code>arduino-cli sketch archive --include-build-dir</code>).</td></tr>
+<tr><td><code>:arduino-lib-install-no-deps</code>, <code>:arduino-lib-install-nodeps</code></td><td>Install a library without its declared dependencies (<code>arduino-cli lib install &lt;name&gt; --no-deps</code>).</td></tr>
+<tr><td><code>:arduino-board-details-full</code>, <code>:arduino-board-info-full</code></td><td>The complete board detail dump for the selected FQBN (<code>arduino-cli board details --full</code>).</td></tr>
+<tr><td><code>:arduino-boards</code>, <code>:arduino-board</code></td><td>Pick the target board (FQBN) from installed platforms (Arduino IDE board selector).</td></tr>
+<tr><td><code>:arduino-ports</code>, <code>:arduino-port</code></td><td>Pick the serial port from connected devices (arduino-cli board list).</td></tr>
+<tr><td><code>:arduino-lib-search</code>, <code>:arduino-lib</code></td><td>Search the Arduino library index and install the pick (Arduino IDE Library Manager).</td></tr>
+<tr><td><code>:arduino-core-install</code>, <code>:arduino-core</code></td><td>Install a board-support core, e.g. <code>arduino:avr</code> (Arduino IDE Boards Manager).</td></tr>
+<tr><td><code>:pio-build</code>, <code>:pio-run</code>, <code>:platformio-build</code></td><td>Build the PlatformIO project (<code>pio run</code>); errors go to the compilation list.</td></tr>
+<tr><td><code>:pio-upload</code>, <code>:platformio-upload</code></td><td>Build and upload the PlatformIO project (<code>pio run -t upload</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-exec</code>, <code>:platformio-exec</code>, <code>:pio-run-exec</code></td><td>Build and run the native program (<code>pio run -t exec</code>); args pass through as –program-arg.</td></tr>
+<tr><td><code>:pio-upload-monitor</code>, <code>:platformio-upload-monitor</code>, <code>:pio-flash-monitor</code></td><td>Build, flash, then open the serial monitor in one shot (<code>pio run -t upload -t monitor</code>); optional port overrides –monitor-port.</td></tr>
+<tr><td><code>:pio-monitor</code>, <code>:platformio-monitor</code></td><td>Open the PlatformIO serial monitor (<code>pio device monitor</code>).</td></tr>
+<tr><td><code>:pio-devices</code>, <code>:pio-device-list</code></td><td>Pick a serial port from <code>pio device list</code> and set it for this project.</td></tr>
+<tr><td><code>:pio-device-logical</code>, <code>:platformio-device-logical</code></td><td>List logical (disk) devices (<code>pio device list --logical</code>).</td></tr>
+<tr><td><code>:pio-device-mdns</code>, <code>:platformio-device-mdns</code></td><td>List multicast-DNS / network (OTA) devices (<code>pio device list --mdns</code>).</td></tr>
+<tr><td><code>:pio-device-serial</code>, <code>:platformio-device-serial</code></td><td>List serial ports only (<code>pio device list --serial</code>).</td></tr>
+<tr><td><code>:pio-pkg-list-libraries</code>, <code>:platformio-pkg-list-libraries</code>, <code>:pio-libs-only</code></td><td>List installed libraries only (<code>pio pkg list --only-libraries</code>).</td></tr>
+<tr><td><code>:pio-pkg-list-platforms</code>, <code>:platformio-pkg-list-platforms</code></td><td>List installed platforms only (<code>pio pkg list --only-platforms</code>).</td></tr>
+<tr><td><code>:pio-pkg-list-tools</code>, <code>:platformio-pkg-list-tools</code></td><td>List installed tool packages only (<code>pio pkg list --only-tools</code>).</td></tr>
+<tr><td><code>:pio-test-json</code>, <code>:platformio-test-json</code></td><td>Unit-test results as JSON (<code>pio test --json-output</code>), shown in a scratch buffer.</td></tr>
+<tr><td><code>:pio-project-config-json</code>, <code>:platformio-project-config-json</code></td><td>Computed project configuration as JSON (<code>pio project config --json-output</code>).</td></tr>
+<tr><td><code>:pio-project-metadata-json</code>, <code>:platformio-project-metadata-json</code></td><td>IDE/LSP metadata as JSON (<code>pio project metadata --json-output</code>).</td></tr>
+<tr><td><code>:pio-system-info-json</code>, <code>:platformio-system-info-json</code></td><td>System-wide PlatformIO information as JSON (<code>pio system info --json-output</code>).</td></tr>
+<tr><td><code>:pio-pkg-search-page</code>, <code>:platformio-pkg-search-page</code></td><td>A specific page of registry search results (<code>pio pkg search &lt;query&gt; --page &lt;n&gt;</code>).</td></tr>
+<tr><td><code>:pio-pkg-unpublish-undo</code>, <code>:platformio-pkg-unpublish-undo</code></td><td>Restore a previously unpublished package (<code>pio pkg unpublish &lt;pkg&gt; --undo</code>).</td></tr>
+<tr><td><code>:pio-init-no-deps</code>, <code>:platformio-init-no-deps</code></td><td>Scaffold a project without installing dependencies (<code>pio project init --board &lt;board&gt; --no-install-dependencies</code>).</td></tr>
+<tr><td><code>:pio-home</code>, <code>:platformio-home</code></td><td>Launch the PlatformIO Home GUI (<code>pio home</code>), live in a terminal panel; extra args tune the server.</td></tr>
+<tr><td><code>:pio-init</code>, <code>:platformio-init</code></td><td>Scaffold a PlatformIO project for a board (<code>pio project init --board &lt;id&gt;</code>).</td></tr>
+<tr><td><code>:embedded-baud</code>, <code>:serial-baud</code></td><td>Set the serial monitor baud rate for this project (e.g. 9600, 115200).</td></tr>
+<tr><td><code>:arduino-plotter</code>, <code>:serial-plotter</code></td><td>Live-graph the numbers streaming from the serial port (Arduino IDE Serial Plotter).</td></tr>
+<tr><td><code>:pio-plotter</code>, <code>:platformio-plotter</code></td><td>Live-graph the PlatformIO serial monitor output (serial plotter).</td></tr>
+<tr><td><code>:arduino-new-sketch</code>, <code>:arduino-sketch-new</code></td><td>Scaffold a new sketch (<code>arduino-cli sketch new</code>) and open its .ino (Arduino IDE New Sketch).</td></tr>
+<tr><td><code>:arduino-compile-export</code>, <code>:aexport</code>, <code>:arduino-export</code></td><td>Compile and export the built binaries to the sketch folder (Arduino IDE Export Compiled Binary).</td></tr>
+<tr><td><code>:arduino-burn-bootloader</code>, <code>:arduino-bootloader</code></td><td>Flash the bootloader to the selected board (Arduino IDE Burn Bootloader), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-board-info</code>, <code>:arduino-board-details</code></td><td>Print the selected board’s specs and menu options (Arduino IDE Get Board Info).</td></tr>
+<tr><td><code>:arduino-core-search</code>, <code>:arduino-boards-manager</code></td><td>Search the Boards Manager index for a core (Arduino IDE Boards Manager).</td></tr>
+<tr><td><code>:arduino-core-list</code>, <code>:arduino-cores</code></td><td>List installed board-support cores (Boards Manager, installed tab).</td></tr>
+<tr><td><code>:arduino-core-uninstall</code></td><td>Uninstall a board-support core, e.g. <code>arduino:avr</code>.</td></tr>
+<tr><td><code>:arduino-core-update-index</code>, <code>:arduino-update-index</code></td><td>Refresh the Boards Manager package index (arduino-cli core update-index).</td></tr>
+<tr><td><code>:arduino-core-upgrade</code></td><td>Upgrade all installed board-support cores (arduino-cli core upgrade), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-lib-list</code>, <code>:arduino-libs</code></td><td>List installed Arduino libraries (Library Manager, installed tab).</td></tr>
+<tr><td><code>:arduino-lib-uninstall</code></td><td>Uninstall an Arduino library by name (arduino-cli lib uninstall).</td></tr>
+<tr><td><code>:arduino-lib-upgrade</code></td><td>Upgrade all installed Arduino libraries (arduino-cli lib upgrade), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-lib-examples</code></td><td>List a library’s example sketches (arduino-cli lib examples <name>).</name></td></tr>
+<tr><td><code>:arduino-sketch-archive</code>, <code>:arduino-archive</code></td><td>Zip the whole sketch (Arduino IDE Sketch → Archive Sketch).</td></tr>
+<tr><td><code>:pio-clean</code>, <code>:platformio-clean</code></td><td>Remove PlatformIO build artifacts (<code>pio run -t clean</code>); output goes to the compilation list.</td></tr>
+<tr><td><code>:pio-test</code>, <code>:platformio-test</code></td><td>Run the PlatformIO project’s unit tests (<code>pio test</code>); failures go to the compilation list.</td></tr>
+<tr><td><code>:pio-check</code>, <code>:platformio-check</code></td><td>PlatformIO static code analysis (<code>pio check</code>); findings go to the compilation list.</td></tr>
+<tr><td><code>:pio-boards</code>, <code>:platformio-boards</code></td><td>The PlatformIO Board Explorer (<code>pio boards [query]</code>); output in the Run console.</td></tr>
+<tr><td><code>:pio-boards-json</code>, <code>:platformio-boards-json</code></td><td>The Board Explorer as JSON (<code>pio boards --json-output [query]</code>), shown in a scratch buffer.</td></tr>
+<tr><td><code>:pio-lib-install</code>, <code>:pio-pkg-install</code>, <code>:platformio-lib-install</code></td><td>Add a library to the PlatformIO project (<code>pio pkg install -l &lt;name&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-lib-list</code>, <code>:pio-pkg-list</code>, <code>:pio-libs</code></td><td>List installed PlatformIO project packages (<code>pio pkg list</code>).</td></tr>
+<tr><td><code>:pio-lib-uninstall</code>, <code>:pio-pkg-uninstall</code></td><td>Remove a PlatformIO project library (<code>pio pkg uninstall -l &lt;name&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-lib-update</code>, <code>:pio-pkg-update</code></td><td>Update installed PlatformIO project packages (<code>pio pkg update</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-update</code></td><td>Refresh the core and library indexes together (arduino-cli update).</td></tr>
+<tr><td><code>:arduino-upgrade</code></td><td>Upgrade all installed cores and libraries (arduino-cli upgrade), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-outdated</code></td><td>List cores and libraries with newer versions available (arduino-cli outdated).</td></tr>
+<tr><td><code>:arduino-lib-deps</code></td><td>Show dependency status for a library (arduino-cli lib deps <name>).</name></td></tr>
+<tr><td><code>:arduino-config</code>, <code>:arduino-config-dump</code></td><td>Print the active arduino-cli configuration (arduino-cli config dump).</td></tr>
+<tr><td><code>:arduino-debug</code></td><td>Launch the arduino-cli debugger for the selected board, live in a terminal panel.</td></tr>
+<tr><td><code>:pio-lib-search</code>, <code>:pio-pkg-search</code>, <code>:platformio-lib-search</code></td><td>Search the PlatformIO registry for a library (<code>pio pkg search &lt;query&gt;</code>).</td></tr>
+<tr><td><code>:pio-lib-outdated</code>, <code>:pio-pkg-outdated</code></td><td>List installed project packages with newer versions available (<code>pio pkg outdated</code>).</td></tr>
+<tr><td><code>:pio-lib-show</code>, <code>:pio-pkg-show</code></td><td>Show PlatformIO registry details for a package (<code>pio pkg show &lt;pkg&gt;</code>).</td></tr>
+<tr><td><code>:pio-debug</code>, <code>:platformio-debug</code></td><td>Launch the PlatformIO Unified Debugger for the project, live in a terminal panel.</td></tr>
+<tr><td><code>:pio-upgrade</code>, <code>:platformio-upgrade</code></td><td>Upgrade PlatformIO Core itself (<code>pio upgrade</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-size</code>, <code>:platformio-size</code></td><td>Show the program size report (<code>pio run -t size</code>).</td></tr>
+<tr><td><code>:pio-compiledb</code>, <code>:platformio-compiledb</code></td><td>Generate compile_commands.json for the C/C++ LSP (<code>pio run -t compiledb</code>).</td></tr>
+<tr><td><code>:pio-buildfs</code>, <code>:platformio-buildfs</code></td><td>Build the SPIFFS/LittleFS filesystem image (<code>pio run -t buildfs</code>).</td></tr>
+<tr><td><code>:pio-uploadfs</code>, <code>:platformio-uploadfs</code></td><td>Flash the filesystem image to the board (<code>pio run -t uploadfs</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-uploadeep</code>, <code>:platformio-uploadeep</code></td><td>Flash the EEPROM (<code>pio run -t uploadeep</code>, AVR boards), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-bootloader</code>, <code>:platformio-bootloader</code></td><td>Burn the bootloader (<code>pio run -t bootloader</code>, AVR boards), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-fuses</code>, <code>:platformio-fuses</code></td><td>Set the microcontroller fuses (<code>pio run -t fuses</code>, AVR boards), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-nobuild</code>, <code>:platformio-nobuild</code></td><td>Flash the existing firmware without rebuilding (<code>pio run -t nobuild</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-envdump</code>, <code>:platformio-envdump</code></td><td>Dump the resolved build environment (<code>pio run -t envdump</code>).</td></tr>
+<tr><td><code>:pio-cleanall</code>, <code>:platformio-cleanall</code></td><td>Remove all build artifacts including dependencies (<code>pio run -t cleanall</code>).</td></tr>
+<tr><td><code>:pio-project-config</code>, <code>:platformio-project-config</code></td><td>Show the computed PlatformIO project configuration (<code>pio project config</code>).</td></tr>
+<tr><td><code>:pio-project-metadata</code>, <code>:platformio-project-metadata</code></td><td>Dump the IDE/LSP metadata for the project (<code>pio project metadata</code>).</td></tr>
+<tr><td><code>:pio-pkg-exec</code>, <code>:platformio-pkg-exec</code></td><td>Run a tool from an installed package (<code>pio pkg exec -- &lt;argv&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-pkg-exec-pkg</code>, <code>:platformio-pkg-exec-pkg</code></td><td>Run a tool from a specific installed package (<code>pio pkg exec -p &lt;pkg&gt; -- &lt;argv&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-platform-install</code>, <code>:pio-core-install</code>, <code>:platformio-platform-install</code></td><td>Install a development platform globally (<code>pio pkg install -g -p &lt;spec&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-pkg-pack</code>, <code>:platformio-pkg-pack</code></td><td>Build a tarball of the current package (<code>pio pkg pack [-o &lt;path&gt;]</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-pkg-publish</code>, <code>:platformio-pkg-publish</code></td><td>Publish the current package to the PlatformIO registry (<code>pio pkg publish</code>); extra args forward –owner/–type/–private/–no-notify.</td></tr>
+<tr><td><code>:pio-project-config-lint</code>, <code>:platformio-project-config-lint</code>, <code>:pio-lint</code></td><td>Validate platformio.ini without building (<code>pio project config --lint</code>).</td></tr>
+<tr><td><code>:pio-pkg-list-global</code>, <code>:platformio-pkg-list-global</code>, <code>:pio-pkg-list-g</code></td><td>Globally installed packages (<code>pio pkg list -g</code>).</td></tr>
+<tr><td><code>:pio-pkg-update-global</code>, <code>:platformio-pkg-update-global</code>, <code>:pio-pkg-update-g</code></td><td>Update globally installed packages (<code>pio pkg update -g</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-pkg-install-skip-deps</code>, <code>:platformio-pkg-install-skip-deps</code></td><td>Install a package without its dependencies (<code>pio pkg install --skip-dependencies &lt;spec&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-junit</code>, <code>:platformio-test-junit</code></td><td>Run unit tests and write a JUnit XML report (<code>pio test --junit-output-path &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-json-path</code>, <code>:platformio-test-json-path</code></td><td>Run unit tests and write a JSON report (<code>pio test --json-output-path &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-port</code>, <code>:platformio-test-port</code></td><td>Run unit tests over a specific serial port (<code>pio test --test-port &lt;port&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-upload-port</code>, <code>:platformio-test-upload-port</code></td><td>Flash the test firmware to a specific serial port (<code>pio test --upload-port &lt;port&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-monitor-dtr</code>, <code>:platformio-test-monitor-dtr</code></td><td>Set the DTR line state for the post-test monitor (`pio test –monitor-dtr &lt;0</td></tr>
+<tr><td><code>:pio-test-monitor-rts</code>, <code>:platformio-test-monitor-rts</code></td><td>Set the RTS line state for the post-test monitor (`pio test –monitor-rts &lt;0</td></tr>
+<tr><td><code>:pio-project-metadata-path</code>, <code>:platformio-project-metadata-path</code></td><td>Write the IDE/LSP metadata JSON to a file (<code>pio project metadata --json-output-path &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:pio-check-silent</code>, <code>:platformio-check-silent</code></td><td>Quiet static analysis, warnings/errors only (<code>pio check -s</code>).</td></tr>
+<tr><td><code>:pio-upgrade-deps-only</code>, <code>:platformio-upgrade-deps-only</code></td><td>Upgrade only PlatformIO Core’s dependencies (<code>pio upgrade --only-dependencies</code>).</td></tr>
+<tr><td><code>:pio-init-env-prefix</code>, <code>:platformio-init-env-prefix</code></td><td>Scaffold a project prefixing generated environment names (<code>pio project init --env-prefix &lt;prefix&gt;</code>).</td></tr>
+<tr><td><code>:pio-pkg-unpublish</code>, <code>:platformio-pkg-unpublish</code></td><td>Remove a previously published package (<code>pio pkg unpublish &lt;pkg&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-system-info</code>, <code>:platformio-system-info</code></td><td>Show system-wide PlatformIO information (<code>pio system info</code>).</td></tr>
+<tr><td><code>:pio-system-prune</code>, <code>:platformio-system-prune</code></td><td>Remove unused PlatformIO caches/packages (<code>pio system prune -f</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-prune-cache</code>, <code>:platformio-prune-cache</code></td><td>Prune only cached PlatformIO data (<code>pio system prune -f --cache</code>).</td></tr>
+<tr><td><code>:pio-prune-core</code>, <code>:platformio-prune-core</code></td><td>Prune only unnecessary core packages (<code>pio system prune -f --core-packages</code>).</td></tr>
+<tr><td><code>:pio-prune-platform</code>, <code>:platformio-prune-platform</code></td><td>Prune only unnecessary development-platform packages (<code>pio system prune -f --platform-packages</code>).</td></tr>
+<tr><td><code>:pio-prune-dry-run</code>, <code>:platformio-prune-dry-run</code></td><td>Show what <code>pio system prune</code> would remove without deleting (<code>pio system prune --dry-run</code>).</td></tr>
+<tr><td><code>:pio-settings-get</code>, <code>:platformio-settings-get</code></td><td>Print PlatformIO Core settings, all or one key (<code>pio settings get [name]</code>).</td></tr>
+<tr><td><code>:pio-settings-set</code>, <code>:platformio-settings-set</code></td><td>Change a PlatformIO Core setting (<code>pio settings set &lt;name&gt; &lt;value&gt;</code>).</td></tr>
+<tr><td><code>:pio-remote-agent-list</code>, <code>:pio-remote-agents</code>, <code>:platformio-remote-agent-list</code></td><td>List active PlatformIO Remote agents (<code>pio remote agent list</code>).</td></tr>
+<tr><td><code>:pio-remote-agent-start</code>, <code>:platformio-remote-agent-start</code></td><td>Start a PlatformIO Remote agent (<code>pio remote agent start [--name &lt;n&gt;] [--share &lt;email&gt;] [--working-dir &lt;dir&gt;]</code>).</td></tr>
+<tr><td><code>:pio-remote-devices</code>, <code>:pio-remote-device-list</code>, <code>:platformio-remote-devices</code></td><td>List serial devices attached to remote agents (<code>pio remote device list</code>).</td></tr>
+<tr><td><code>:pio-remote-run</code>, <code>:platformio-remote-run</code></td><td>Build/upload the project via a remote agent (<code>pio remote run</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-remote-test</code>, <code>:platformio-remote-test</code></td><td>Run unit tests via a remote agent (<code>pio remote test</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-remote-update</code>, <code>:platformio-remote-update</code></td><td>Update platforms/packages/libraries on remote agents (<code>pio remote update [--dry-run]</code>).</td></tr>
+<tr><td><code>:pio-account-login</code>, <code>:platformio-account-login</code></td><td>Sign in to a PlatformIO account (<code>pio account login</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-logout</code>, <code>:platformio-account-logout</code></td><td>Sign out of the PlatformIO account (<code>pio account logout</code>).</td></tr>
+<tr><td><code>:pio-account-show</code>, <code>:platformio-account-show</code></td><td>Show the current PlatformIO account information (<code>pio account show</code>); extra args forward –offline/–json-output.</td></tr>
+<tr><td><code>:pio-account-token</code>, <code>:platformio-account-token</code></td><td>Print the account auth token (<code>pio account token [--regenerate] [--json-output] [-p &lt;password&gt;]</code>).</td></tr>
+<tr><td><code>:pio-env</code>, <code>:pio-environment</code>, <code>:platformio-env</code></td><td>Select the PlatformIO build environment (<code>[env:…]</code>); no arg picks from platformio.ini, <code>-</code> clears.</td></tr>
+<tr><td><code>:pio-list-targets</code>, <code>:platformio-list-targets</code></td><td>Enumerate the project’s build targets (<code>pio run --list-targets</code>).</td></tr>
+<tr><td><code>:pio-list-tests</code>, <code>:platformio-list-tests</code></td><td>List the project’s test suites (<code>pio test --list-tests</code>).</td></tr>
+<tr><td><code>:pio-test-filter</code>, <code>:platformio-test-filter</code></td><td>Run only the tests matching a pattern (<code>pio test -f &lt;pattern&gt;</code>).</td></tr>
+<tr><td><code>:pio-check-severity</code>, <code>:platformio-check-severity</code></td><td>Static analysis filtered by minimum defect severity (`pio check –severity &lt;low</td></tr>
+<tr><td><code>:pio-tool-install</code>, <code>:platformio-tool-install</code></td><td>Install a tool package globally (<code>pio pkg install -g -t &lt;spec&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-boards-installed</code>, <code>:platformio-boards-installed</code></td><td>List boards from installed platforms only (<code>pio boards --installed</code>).</td></tr>
+<tr><td><code>:pio-monitor-filter</code>, <code>:platformio-monitor-filter</code></td><td>Add a serial monitor filter for this project (e.g. time, log2file, hexlify, send_on_enter).</td></tr>
+<tr><td><code>:pio-monitor-filters-clear</code>, <code>:platformio-monitor-filters-clear</code></td><td>Remove all configured serial monitor filters.</td></tr>
+<tr><td><code>:pio-monitor-eol</code>, <code>:platformio-monitor-eol</code></td><td>Set the serial monitor end-of-line mode (<code>CR</code>, <code>LF</code>, or <code>CRLF</code>).</td></tr>
+<tr><td><code>:pio-monitor-parity</code>, <code>:platformio-monitor-parity</code></td><td>Set the serial monitor parity (<code>N</code>, <code>E</code>, <code>O</code>, <code>S</code>, or <code>M</code>).</td></tr>
+<tr><td><code>:pio-monitor-rts</code>, <code>:platformio-monitor-rts</code></td><td>Set the initial RTS line state for the serial monitor (<code>0</code> or <code>1</code>).</td></tr>
+<tr><td><code>:pio-monitor-dtr</code>, <code>:platformio-monitor-dtr</code></td><td>Set the initial DTR line state for the serial monitor (<code>0</code> or <code>1</code>).</td></tr>
+<tr><td><code>:pio-monitor-echo</code>, <code>:platformio-monitor-echo</code></td><td>Toggle local echo in the serial monitor (<code>--echo</code>).</td></tr>
+<tr><td><code>:pio-monitor-raw</code>, <code>:platformio-monitor-raw</code></td><td>Toggle raw serial monitor mode, disabling output transforms (<code>--raw</code>).</td></tr>
+<tr><td><code>:pio-monitor-encoding</code>, <code>:platformio-monitor-encoding</code></td><td>Set the serial monitor encoding (e.g. <code>UTF-8</code>, <code>Latin-1</code>, <code>hexlify</code>); empty resets.</td></tr>
+<tr><td><code>:pio-monitor-flow</code>, <code>:platformio-monitor-flow</code></td><td>Select serial monitor flow control (<code>none</code>, <code>rtscts</code>, or <code>xonxoff</code>).</td></tr>
+<tr><td><code>:pio-monitor-reconnect</code>, <code>:platformio-monitor-reconnect</code></td><td>Toggle serial monitor auto-reconnect (<code>on</code> or <code>off</code>; <code>off</code> = <code>--no-reconnect</code>).</td></tr>
+<tr><td><code>:pio-monitor-quiet</code>, <code>:platformio-monitor-quiet</code></td><td>Toggle suppression of non-error serial monitor diagnostics (<code>--quiet</code>).</td></tr>
+<tr><td><code>:pio-monitor-exit-char</code>, <code>:platformio-monitor-exit-char</code></td><td>Set the serial monitor exit-char ASCII code (<code>--exit-char</code>; default 3 = Ctrl+C); empty resets.</td></tr>
+<tr><td><code>:pio-monitor-menu-char</code>, <code>:platformio-monitor-menu-char</code></td><td>Set the serial monitor menu-char ASCII code (<code>--menu-char</code>; default 20 = Ctrl+T); empty resets.</td></tr>
+<tr><td><code>:pio-pkg-show-type</code>, <code>:platformio-pkg-show-type</code></td><td>Registry details scoped to a package type (`pio pkg show –type &lt;library</td></tr>
+<tr><td><code>:pio-pkg-exec-call</code>, <code>:platformio-pkg-exec-call</code></td><td>Run a package tool via the call form (<code>pio pkg exec -c &lt;argv…&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-build-verbose</code>, <code>:platformio-build-verbose</code></td><td>Verbose PlatformIO build (<code>pio run -v</code>), routed through <code>*compilation*</code>.</td></tr>
+<tr><td><code>:pio-build-silent</code>, <code>:platformio-build-silent</code></td><td>Quiet PlatformIO build showing warnings/errors only (<code>pio run -s</code>).</td></tr>
+<tr><td><code>:pio-run-jobs</code>, <code>:platformio-run-jobs</code></td><td>Build with N parallel jobs (<code>pio run -j &lt;n&gt;</code>).</td></tr>
+<tr><td><code>:pio-build-no-auto-clean</code>, <code>:platformio-build-no-auto-clean</code></td><td>Build without the pre-build clean (<code>pio run --disable-auto-clean</code>).</td></tr>
+<tr><td><code>:pio-target</code>, <code>:platformio-target</code></td><td>Run an arbitrary PlatformIO build target (<code>pio run -t &lt;name&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-upload-to</code>, <code>:platformio-upload-to</code></td><td>Build + flash to a specific port (<code>pio run -t upload --upload-port &lt;port&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-verbose</code>, <code>:platformio-test-verbose</code></td><td>Verbose PlatformIO unit tests (<code>pio test -v</code>).</td></tr>
+<tr><td><code>:pio-test-ignore</code>, <code>:platformio-test-ignore</code></td><td>Run tests except those matching a pattern (<code>pio test -i &lt;pattern&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-without-building</code>, <code>:platformio-test-without-building</code></td><td>Test the last build without rebuilding (<code>pio test --without-building</code>).</td></tr>
+<tr><td><code>:pio-test-without-uploading</code>, <code>:platformio-test-without-uploading</code></td><td>Run tests without flashing first (<code>pio test --without-uploading</code>).</td></tr>
+<tr><td><code>:pio-test-without-testing</code>, <code>:platformio-test-without-testing</code></td><td>Build + upload but skip running the tests (<code>pio test --without-testing</code>).</td></tr>
+<tr><td><code>:pio-test-no-reset</code>, <code>:platformio-test-no-reset</code></td><td>Do not reset the board between tests (<code>pio test --no-reset</code>).</td></tr>
+<tr><td><code>:pio-check-verbose</code>, <code>:platformio-check-verbose</code></td><td>Verbose static code analysis (<code>pio check -v</code>).</td></tr>
+<tr><td><code>:pio-check-json</code>, <code>:platformio-check-json</code></td><td>Static analysis as JSON (<code>pio check --json-output</code>), shown in a scratch buffer.</td></tr>
+<tr><td><code>:pio-check-flags</code>, <code>:platformio-check-flags</code></td><td>Static analysis with extra tool flags (<code>pio check --flags &lt;flags&gt;</code>).</td></tr>
+<tr><td><code>:pio-check-fail-on</code>, <code>:platformio-check-fail-on</code></td><td>Fail on defects at or above a severity (`pio check –fail-on-defect &lt;low</td></tr>
+<tr><td><code>:pio-check-skip-packages</code>, <code>:platformio-check-skip-packages</code></td><td>Analyse only project sources, skipping libraries (<code>pio check --skip-packages</code>).</td></tr>
+<tr><td><code>:pio-check-src-filters</code>, <code>:platformio-check-src-filters</code></td><td>Restrict analysis to matching sources (<code>pio check --src-filters &lt;pattern&gt;</code>).</td></tr>
+<tr><td><code>:pio-debug-verbose</code>, <code>:platformio-debug-verbose</code></td><td>Verbose PlatformIO debugger session (<code>pio debug -v</code>).</td></tr>
+<tr><td><code>:pio-debug-interface</code>, <code>:platformio-debug-interface</code></td><td>Debug with a specific interface (<code>pio debug --interface &lt;name&gt;</code>).</td></tr>
+<tr><td><code>:pio-debug-load-mode</code>, <code>:platformio-debug-load-mode</code></td><td>Control firmware reloading on debug start (`pio debug –load-mode &lt;always</td></tr>
+<tr><td><code>:pio-build-conf</code>, <code>:platformio-build-conf</code>, <code>:pio-build-project-conf</code></td><td>Build using an alternate platformio.ini (<code>pio run -c &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:pio-test-conf</code>, <code>:platformio-test-conf</code></td><td>Run unit tests using an alternate platformio.ini (<code>pio test -c &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:pio-check-conf</code>, <code>:platformio-check-conf</code></td><td>Static analysis using an alternate platformio.ini (<code>pio check -c &lt;path&gt;</code>).</td></tr>
+<tr><td><code>:pio-debug-conf</code>, <code>:platformio-debug-conf</code></td><td>Debug using an alternate platformio.ini (<code>pio debug -c &lt;path&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-init-ide</code>, <code>:platformio-init-ide</code></td><td>Generate IDE integration files (<code>pio project init --ide &lt;ide&gt;</code>).</td></tr>
+<tr><td><code>:pio-init-sample</code>, <code>:platformio-init-sample</code></td><td>Scaffold a project with example code (<code>pio project init --board &lt;board&gt; --sample-code</code>).</td></tr>
+<tr><td><code>:pio-init-option</code>, <code>:platformio-init-option</code></td><td>Set a <code>platformio.ini</code> option while initialising (<code>pio project init -O &lt;name=value&gt;</code>).</td></tr>
+<tr><td><code>:pio-pkg-install-force</code>, <code>:platformio-pkg-install-force</code></td><td>Reinstall a package even if present (<code>pio pkg install -f &lt;spec&gt;</code>).</td></tr>
+<tr><td><code>:pio-pkg-install-global</code>, <code>:platformio-pkg-install-global</code></td><td>Install a package globally (<code>pio pkg install -g &lt;spec&gt;</code>).</td></tr>
+<tr><td><code>:pio-lib-install-nosave</code>, <code>:platformio-lib-install-nosave</code></td><td>Install a library without writing it to <code>platformio.ini</code> (<code>pio pkg install -l &lt;name&gt; --no-save</code>).</td></tr>
+<tr><td><code>:pio-pkg-search-sort</code>, <code>:platformio-pkg-search-sort</code></td><td>Registry search with a sort order (`pio pkg search <query> –sort &lt;relevance</query></td></tr>
+<tr><td><code>:pio-upgrade-dev</code>, <code>:platformio-upgrade-dev</code></td><td>Upgrade PlatformIO Core to the development branch (<code>pio upgrade --dev</code>).</td></tr>
+<tr><td><code>:pio-remote-run-force</code>, <code>:platformio-remote-run-force</code></td><td>Force the build to run on the remote agent (<code>pio remote run -r</code>).</td></tr>
+<tr><td><code>:pio-remote-agent-start-named</code>, <code>:platformio-remote-agent-start-named</code></td><td>Start a named Remote agent (<code>pio remote agent start --name &lt;name&gt;</code>).</td></tr>
+<tr><td><code>:pio-remote-monitor</code>, <code>:platformio-remote-monitor</code></td><td>Serial monitor over a Remote agent (<code>pio remote device monitor</code>); extra args forward -p/-b/-f/–eol/–sock etc.</td></tr>
+<tr><td><code>:pio-settings-reset</code>, <code>:platformio-settings-reset</code></td><td>Restore PlatformIO Core settings to their defaults (<code>pio settings reset</code>).</td></tr>
+<tr><td><code>:pio-system-completion</code>, <code>:platformio-system-completion</code></td><td>Emit a shell completion script (`pio system completion &lt;bash</td></tr>
+<tr><td><code>:pio-ci</code>, <code>:platformio-ci</code></td><td>Build a standalone source tree in an isolated project (<code>pio ci &lt;src&gt; -b &lt;board&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-register</code>, <code>:platformio-account-register</code></td><td>Create a new PlatformIO account (<code>pio account register</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-password</code>, <code>:platformio-account-password</code></td><td>Change the PlatformIO account password (<code>pio account password</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-update</code>, <code>:platformio-account-update</code></td><td>Update PlatformIO profile information (<code>pio account update</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-forgot</code>, <code>:platformio-account-forgot</code></td><td>Begin PlatformIO account password recovery (<code>pio account forgot</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-account-destroy</code>, <code>:platformio-account-destroy</code></td><td>Permanently destroy the PlatformIO account (<code>pio account destroy</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-org-list</code>, <code>:platformio-org-list</code></td><td>List PlatformIO organizations and their members (<code>pio org list</code>).</td></tr>
+<tr><td><code>:pio-org-create</code>, <code>:platformio-org-create</code></td><td>Create a new PlatformIO organization (<code>pio org create &lt;orgname&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-org-add</code>, <code>:platformio-org-add</code></td><td>Add an owner to a PlatformIO organization (<code>pio org add &lt;orgname&gt; &lt;username&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-org-remove</code>, <code>:platformio-org-remove</code></td><td>Remove an owner from a PlatformIO organization (<code>pio org remove &lt;orgname&gt; &lt;username&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-org-update</code>, <code>:platformio-org-update</code></td><td>Update a PlatformIO organization (<code>pio org update &lt;orgname&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-org-destroy</code>, <code>:platformio-org-destroy</code></td><td>Destroy a PlatformIO organization (<code>pio org destroy &lt;orgname&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-team-list</code>, <code>:platformio-team-list</code></td><td>List teams in a PlatformIO organization (<code>pio team list &lt;orgname&gt;</code>).</td></tr>
+<tr><td><code>:pio-team-create</code>, <code>:platformio-team-create</code></td><td>Create a team in a PlatformIO organization (<code>pio team create &lt;orgname:team&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-team-add</code>, <code>:platformio-team-add</code></td><td>Add a member to a PlatformIO team (<code>pio team add &lt;orgname:team&gt; &lt;username&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-team-remove</code>, <code>:platformio-team-remove</code></td><td>Remove a member from a PlatformIO team (<code>pio team remove &lt;orgname:team&gt; &lt;username&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-team-update</code>, <code>:platformio-team-update</code></td><td>Update a PlatformIO team (<code>pio team update &lt;orgname:team&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-team-destroy</code>, <code>:platformio-team-destroy</code></td><td>Destroy a PlatformIO team (<code>pio team destroy &lt;orgname:team&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-access-list</code>, <code>:platformio-access-list</code></td><td>List published resources and their access levels (<code>pio access list</code>).</td></tr>
+<tr><td><code>:pio-access-grant</code>, <code>:platformio-access-grant</code></td><td>Grant access to a resource (<code>pio access grant &lt;level&gt; &lt;resource&gt; &lt;team&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-access-revoke</code>, <code>:platformio-access-revoke</code></td><td>Revoke access to a resource (<code>pio access revoke &lt;resource&gt; &lt;team&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-access-public</code>, <code>:platformio-access-public</code></td><td>Make a published resource public (<code>pio access public &lt;resource&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-access-private</code>, <code>:platformio-access-private</code></td><td>Make a published resource private (<code>pio access private &lt;resource&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio</code>, <code>:platformio</code></td><td>Run an arbitrary <code>pio</code> command in a terminal panel (any subcommand/flag, including <code>pio home</code>).</td></tr>
+<tr><td><code>:arduino-cli</code>, <code>:acli</code>, <code>:arduino</code></td><td>Run an arbitrary <code>arduino-cli</code> command in a terminal panel (any subcommand/flag).</td></tr>
+<tr><td><code>:arduino-core-download</code>, <code>:arduino-download-core</code></td><td>Fetch a core without installing it (<code>arduino-cli core download &lt;package&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-lib-download</code>, <code>:arduino-download-lib</code></td><td>Fetch a library without installing it (<code>arduino-cli lib download &lt;name&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-lib-update-index</code>, <code>:arduino-lib-index</code></td><td>Refresh the arduino-cli library index (<code>arduino-cli lib update-index</code>).</td></tr>
+<tr><td><code>:arduino-board-search</code>, <code>:arduino-boards-search</code></td><td>Search the Boards Manager for a board (<code>arduino-cli board search [query]</code>).</td></tr>
+<tr><td><code>:arduino-cache-clean</code>, <code>:arduino-clean-cache</code></td><td>Delete the Boards/Library Manager download cache (<code>arduino-cli cache clean</code>).</td></tr>
+<tr><td><code>:arduino-completion</code>, <code>:arduino-cli-completion</code></td><td>Emit a shell completion script (`arduino-cli completion &lt;bash</td></tr>
+<tr><td><code>:arduino-config-get</code>, <code>:arduino-cfg-get</code></td><td>Read one arduino-cli configuration key (<code>arduino-cli config get &lt;key&gt;</code>).</td></tr>
+<tr><td><code>:arduino-config-set</code>, <code>:arduino-cfg-set</code></td><td>Set an arduino-cli configuration value (<code>arduino-cli config set &lt;key&gt; &lt;value…&gt;</code>).</td></tr>
+<tr><td><code>:arduino-config-add</code>, <code>:arduino-cfg-add</code></td><td>Append value(s) to an arduino-cli list setting (<code>arduino-cli config add &lt;key&gt; &lt;value…&gt;</code>).</td></tr>
+<tr><td><code>:arduino-config-remove</code>, <code>:arduino-cfg-remove</code></td><td>Remove value(s) from an arduino-cli list setting (<code>arduino-cli config remove &lt;key&gt; &lt;value…&gt;</code>).</td></tr>
+<tr><td><code>:arduino-config-delete</code>, <code>:arduino-cfg-delete</code></td><td>Delete an arduino-cli settings key and its sub-keys (<code>arduino-cli config delete &lt;key&gt;</code>).</td></tr>
+<tr><td><code>:arduino-config-init</code>, <code>:arduino-cfg-init</code></td><td>Write the current configuration to a config file (<code>arduino-cli config init</code>).</td></tr>
+<tr><td><code>:arduino-board-attach</code>, <code>:arduino-attach</code></td><td>Attach a sketch to a board (<code>arduino-cli board attach -p &lt;port&gt; -b &lt;fqbn&gt; [sketch]</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-profile-create</code>, <code>:arduino-profile-new</code></td><td>Create/update a build profile in the sketch project file (<code>arduino-cli profile create</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-profile-set-default</code>, <code>:arduino-profile-default</code></td><td>Set the default build profile (<code>arduino-cli profile set-default &lt;name&gt;</code>).</td></tr>
+<tr><td><code>:arduino-profile-lib-add</code>, <code>:arduino-profile-add-lib</code></td><td>Add a library to the sketch build profile (<code>arduino-cli profile lib add &lt;lib&gt;</code>).</td></tr>
+<tr><td><code>:arduino-profile-lib-remove</code>, <code>:arduino-profile-remove-lib</code></td><td>Remove a library from the sketch build profile (<code>arduino-cli profile lib remove &lt;lib&gt;</code>).</td></tr>
+<tr><td><code>:arduino-lib-install</code>, <code>:arduino-lib-add</code></td><td>Install a library by name (<code>arduino-cli lib install &lt;name&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-daemon</code>, <code>:acli-daemon</code></td><td>Run arduino-cli as a gRPC daemon (<code>arduino-cli daemon</code>), live in a terminal panel; extra args tune the server.</td></tr>
+<tr><td><code>:arduino-version</code>, <code>:acli-version</code></td><td>Show the arduino-cli version (<code>arduino-cli version</code>; add <code>--format json</code>).</td></tr>
 <tr><td><code>:next-error</code>, <code>:cnext-error</code></td><td>Visit the next compilation error’s location (emacs next-error / M-g n).</td></tr>
 <tr><td><code>:previous-error</code>, <code>:cprevious-error</code></td><td>Visit the previous compilation error’s location (emacs previous-error / M-g p).</td></tr>
 <tr><td><code>:first-error</code></td><td>Visit the first compilation error’s location (emacs first-error).</td></tr>
@@ -289,7 +550,7 @@
 <tr><td><code>:write-buffer-close!</code>, <code>:wbc!</code></td><td>Force write changes to disk creating necessary subdirectories and closes the buffer. Accepts an optional path (:write-buffer-close! some/path.txt)</td></tr>
 <tr><td><code>:new</code>, <code>:n</code></td><td>Create a new scratch buffer.</td></tr>
 <tr><td><code>:Scratch</code>, <code>:scratch</code></td><td>Open a new scratch buffer, optionally with a language (SPC b S).</td></tr>
-<tr><td><code>:RevealInFinder</code>, <code>:reveal</code></td><td>Reveal the current file in the OS file manager (JetBrains Reveal in Finder).</td></tr>
+<tr><td><code>:RevealInFinder</code>, <code>:reveal-in-finder</code></td><td>Reveal the current file in the OS file manager (JetBrains Reveal in Finder).</td></tr>
 <tr><td><code>:compose-mail</code>, <code>:mail</code>, <code>:compose</code></td><td>Open a message-mode mail draft (emacs compose-mail, C-x m). :compose-mail [to] [subject…]</td></tr>
 <tr><td><code>:compose-mail-other-window</code></td><td>Open a mail draft in a split (emacs compose-mail-other-window).</td></tr>
 <tr><td><code>:message-send</code></td><td>Assemble and queue the current mail draft (emacs message-send, C-c C-s).</td></tr>
@@ -413,6 +674,8 @@
 <tr><td><code>:filter</code>, <code>:keep-lines</code>, <code>:delete-non-matching-lines</code></td><td>Keep only the selected lines matching a regex (Emacs keep-lines; in-buffer grep).</td></tr>
 <tr><td><code>:reject</code>, <code>:remove-lines</code>, <code>:flush-lines</code>, <code>:delete-matching-lines</code></td><td>Drop the selected lines matching a regex (Emacs flush-lines; in-buffer grep -v).</td></tr>
 <tr><td><code>:count-matches</code>, <code>:count-regex</code>, <code>:how-many</code></td><td>Report how many regex matches (and matching lines) are in the selection (Emacs how-many).</td></tr>
+<tr><td><code>:copy-matching-lines</code>, <code>:copy-lines-matching</code></td><td>Copy lines matching a regex (region, or point to end) to the kill ring (Emacs copy-matching-lines).</td></tr>
+<tr><td><code>:kill-matching-lines</code>, <code>:kill-lines-matching</code></td><td>Delete lines matching a regex (region, or point to end) and save them to the kill ring (Emacs kill-matching-lines).</td></tr>
 <tr><td><code>:uniq-count</code>, <code>:frequency</code></td><td>Collapse the selected lines to <code>count line</code>, sorted by frequency (uniq -c</td></tr>
 <tr><td><code>:stats</code>, <code>:describe</code></td><td>Show count/sum/mean/min/max of the numbers in the selection (non-destructive).</td></tr>
 <tr><td><code>:seq</code>, <code>:sequence</code></td><td>Insert an integer sequence, one per line: :seq <start> <end> [step].</end></start></td></tr>
@@ -1368,6 +1631,15 @@
 <tr><td><code>up_list</code></td><td>Move forward out of the enclosing list (emacs up-list)</td><td></td></tr>
 <tr><td><code>backward_up_list</code></td><td>Move backward out of the enclosing list (emacs backward-up-list, C-M-u)</td><td></td></tr>
 <tr><td><code>kill_sexp</code></td><td>Kill the s-expression after point (emacs kill-sexp, C-M-k)</td><td></td></tr>
+<tr><td><code>mark_sexp</code></td><td>Set the region over the following s-expression (emacs mark-sexp, C-M-SPC)</td><td></td></tr>
+<tr><td><code>mark_word</code></td><td>Set the region over the next word (emacs mark-word, M-@)</td><td></td></tr>
+<tr><td><code>mark_paragraph</code></td><td>Select the paragraph around point (emacs mark-paragraph, M-h)</td><td></td></tr>
+<tr><td><code>mark_defun</code></td><td>Select the function/defun around point (emacs mark-defun, C-M-h)</td><td></td></tr>
+<tr><td><code>kill_sentence</code></td><td>Kill from point to end of sentence (emacs kill-sentence, M-k)</td><td></td></tr>
+<tr><td><code>backward_kill_sentence</code></td><td>Kill from start of sentence to point (emacs backward-kill-sentence, C-x DEL)</td><td></td></tr>
+<tr><td><code>forward_page</code></td><td>Move to the next form-feed page (emacs forward-page, C-x ])</td><td></td></tr>
+<tr><td><code>backward_page</code></td><td>Move to the previous form-feed page (emacs backward-page, C-x [)</td><td></td></tr>
+<tr><td><code>mark_page</code></td><td>Select the current form-feed page (emacs mark-page, C-x C-p)</td><td></td></tr>
 <tr><td><code>move_to_opposite_group</code></td><td>Move the current editor to the opposite split group (JetBrains)</td><td></td></tr>
 <tr><td><code>rotate_view</code></td><td>Goto next window</td><td>normal: <code>&lt;C-w&gt;p</code>, <code>&lt;C-w&gt;r</code>, <code>&lt;C-w&gt;w</code>, <code>&lt;C-x&gt;o</code>, <code>&lt;C-w&gt;.o</code>, <code>&lt;C-w&gt;.r</code>, <code>&lt;C-w&gt;.w</code>, <code>&lt;space&gt;wp</code>, <code>&lt;space&gt;wr</code>, <code>&lt;space&gt;ww</code>, <code>&lt;C-w&gt;&lt;C-p&gt;</code>, <code>&lt;C-w&gt;&lt;C-r&gt;</code>, <code>&lt;C-w&gt;&lt;C-w&gt;</code>, <code>&lt;C-w&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;b.o</code>, <code>&lt;space&gt;w.o</code>, <code>&lt;space&gt;w.r</code>, <code>&lt;space&gt;w.w</code>, <code>&lt;space&gt;w&lt;C-p&gt;</code>, <code>&lt;space&gt;w&lt;C-r&gt;</code>, <code>&lt;space&gt;w&lt;C-w&gt;</code>, <code>&lt;space&gt;w&lt;tab&gt;</code>, select: <code>&lt;C-x&gt;o</code>, <code>&lt;space&gt;wp</code>, <code>&lt;space&gt;wr</code>, <code>&lt;space&gt;ww</code>, <code>&lt;space&gt;b.o</code>, <code>&lt;space&gt;w.o</code>, <code>&lt;space&gt;w.r</code>, <code>&lt;space&gt;w.w</code>, <code>&lt;space&gt;w&lt;C-p&gt;</code>, <code>&lt;space&gt;w&lt;C-r&gt;</code>, <code>&lt;space&gt;w&lt;C-w&gt;</code>, <code>&lt;space&gt;w&lt;tab&gt;</code>, insert: <code>&lt;C-x&gt;o</code></td></tr>
 <tr><td><code>rotate_view_reverse</code></td><td>Goto previous window</td><td>normal: <code>&lt;C-w&gt;R</code>, <code>&lt;C-w&gt;W</code>, <code>&lt;C-w&gt;.R</code>, <code>&lt;space&gt;wR</code>, <code>&lt;space&gt;wW</code>, <code>&lt;space&gt;w.R</code>, select: <code>&lt;space&gt;wR</code>, <code>&lt;space&gt;wW</code>, <code>&lt;space&gt;w.R</code></td></tr>
