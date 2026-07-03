@@ -1209,6 +1209,8 @@ impl MappableCommand {
         five_by_five, "Play 5x5, the light-flipping puzzle (emacs 5x5)",
         solitaire, "Play English peg solitaire (emacs solitaire)",
         hanoi, "Watch the Towers of Hanoi solution (emacs hanoi)",
+        life, "Run Conway's Game of Life (emacs life)",
+        doctor, "Talk to the ELIZA psychotherapist (emacs doctor)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -13125,6 +13127,20 @@ fn solitaire(cx: &mut Context) {
 fn hanoi(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::hanoi::Hanoi::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `life`: open Conway's Game of Life (step generations).
+fn life(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::life::Life::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `doctor`: open the ELIZA psychotherapist.
+fn doctor(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::doctor::Doctor::new()) as Box<dyn Component>)
     });
 }
 
