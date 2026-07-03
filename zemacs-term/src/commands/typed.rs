@@ -6161,6 +6161,85 @@ fn arduino_profile_set_default(cx: &mut compositor::Context, args: Args, event: 
     Ok(())
 }
 
+/// `:arduino-lib-install <name>` — install a library by name directly
+/// (`arduino-cli lib install <name>`), live in a terminal panel (the direct
+/// counterpart to the `:arduino-lib-search` search-and-install picker).
+fn arduino_lib_install(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    if name.trim().is_empty() {
+        bail!("usage: :arduino-lib-install <name>  (e.g. \"Adafruit GFX Library\")");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let dir = embedded::load().sketch_dir();
+    embedded_spawn_terminal(cx, embedded::arduino_lib_install(name.trim()), dir);
+    Ok(())
+}
+
+/// `:arduino-profile-lib-add <lib>` — add a library to the sketch's build profile
+/// (`arduino-cli profile lib add <lib>`).
+fn arduino_profile_lib_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.is_empty() {
+        bail!("usage: :arduino-profile-lib-add <lib>[@version] [-m <profile>]");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let dir = embedded::load().sketch_dir();
+    let mut sub = vec!["add".to_string()];
+    sub.extend(tokens);
+    embedded_spawn_terminal(cx, embedded::arduino_sub("profile", "lib", &sub), dir);
+    Ok(())
+}
+
+/// `:arduino-profile-lib-remove <lib>` — remove a library from the sketch's build
+/// profile (`arduino-cli profile lib remove <lib>`).
+fn arduino_profile_lib_remove(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    if tokens.is_empty() {
+        bail!("usage: :arduino-profile-lib-remove <lib> [-m <profile>]");
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let dir = embedded::load().sketch_dir();
+    let mut sub = vec!["remove".to_string()];
+    sub.extend(tokens);
+    embedded_spawn_terminal(cx, embedded::arduino_sub("profile", "lib", &sub), dir);
+    Ok(())
+}
+
+/// `:arduino-daemon [args…]` — run arduino-cli as a gRPC daemon (IDE/tooling
+/// backend), live in a terminal panel; extra args tune the server (`--port <n>`,
+/// `--daemonize`, `--debug`).
+fn arduino_daemon(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let root = zemacs_loader::find_workspace().0;
+    embedded_spawn_terminal(cx, embedded::arduino_daemon(&tokens), root);
+    Ok(())
+}
+
+/// `:arduino-version [args…]` — the arduino-cli version (`--format json` for the
+/// machine-readable form), shown in the Run console.
+fn arduino_version(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_tool(embedded::ARDUINO_CLI)?;
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    embedded_browse(cx, embedded::arduino_version(&tokens), false);
+    Ok(())
+}
+
 /// Wrap `s` in single quotes for safe inclusion in a `/bin/sh -c` command line,
 /// escaping any embedded single quotes. Pure — unit tested.
 fn shell_single_quote(s: &str) -> String {
@@ -22970,6 +23049,61 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-profile-lib-add",
+        aliases: &["arduino-profile-add-lib"],
+        doc: "Add a library to the sketch build profile (`arduino-cli profile lib add <lib>`).",
+        fun: arduino_profile_lib_add,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-profile-lib-remove",
+        aliases: &["arduino-profile-remove-lib"],
+        doc: "Remove a library from the sketch build profile (`arduino-cli profile lib remove <lib>`).",
+        fun: arduino_profile_lib_remove,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-lib-install",
+        aliases: &["arduino-lib-add"],
+        doc: "Install a library by name (`arduino-cli lib install <name>`), live in a terminal panel.",
+        fun: arduino_lib_install,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-daemon",
+        aliases: &["acli-daemon"],
+        doc: "Run arduino-cli as a gRPC daemon (`arduino-cli daemon`), live in a terminal panel; extra args tune the server.",
+        fun: arduino_daemon,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-version",
+        aliases: &["acli-version"],
+        doc: "Show the arduino-cli version (`arduino-cli version`; add `--format json`).",
+        fun: arduino_version,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },

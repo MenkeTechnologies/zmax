@@ -552,6 +552,23 @@ pub fn arduino_passthrough(args: &[String]) -> Vec<String> {
     v
 }
 
+/// `arduino-cli daemon [args…]` — run arduino-cli as a long-running gRPC daemon
+/// (IDE/tooling backend). Extra args tune the server (`--port <n>`,
+/// `--daemonize`, `--debug`).
+pub fn arduino_daemon(args: &[String]) -> Vec<String> {
+    let mut v = vec![s(ARDUINO_CLI), s("daemon")];
+    v.extend(args.iter().cloned());
+    v
+}
+
+/// `arduino-cli version [args…]` — the arduino-cli version (add `--format json`
+/// for machine-readable output).
+pub fn arduino_version(args: &[String]) -> Vec<String> {
+    let mut v = vec![s(ARDUINO_CLI), s("version")];
+    v.extend(args.iter().cloned());
+    v
+}
+
 /// `pio <args…>` — raw passthrough so any `pio` command, flag, or future
 /// subcommand (including `home`) is reachable from inside zemacs.
 pub fn pio_passthrough(args: &[String]) -> Vec<String> {
@@ -1331,6 +1348,31 @@ mod tests {
         let argv = pio_pkg_unpublish_undo("owner/pkg@1.0.0");
         assert_eq!(argv[..4], ["pio", "pkg", "unpublish", "owner/pkg@1.0.0"]);
         assert!(argv.contains(&"--undo".to_string()));
+    }
+
+    #[test]
+    fn arduino_daemon_and_version_forward_args() {
+        assert_eq!(
+            arduino_daemon(&["--port".into(), "50051".into()]),
+            ["arduino-cli", "daemon", "--port", "50051"]
+        );
+        assert_eq!(
+            arduino_version(&["--format".into(), "json".into()]),
+            ["arduino-cli", "version", "--format", "json"]
+        );
+        assert_eq!(arduino_daemon(&[]), ["arduino-cli", "daemon"]);
+    }
+
+    #[test]
+    fn arduino_profile_lib_add_remove_via_sub() {
+        assert_eq!(
+            arduino_sub("profile", "lib", &["add".into(), "Servo".into()]),
+            ["arduino-cli", "profile", "lib", "add", "Servo"]
+        );
+        assert_eq!(
+            arduino_sub("profile", "lib", &["remove".into(), "Servo".into()]),
+            ["arduino-cli", "profile", "lib", "remove", "Servo"]
+        );
     }
 
     #[test]

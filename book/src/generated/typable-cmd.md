@@ -241,6 +241,11 @@
 | `:arduino-board-attach`, `:arduino-attach` | Attach a sketch to a board (`arduino-cli board attach -p <port> -b <fqbn> [sketch]`), live in a terminal panel. |
 | `:arduino-profile-create`, `:arduino-profile-new` | Create/update a build profile in the sketch project file (`arduino-cli profile create`), live in a terminal panel. |
 | `:arduino-profile-set-default`, `:arduino-profile-default` | Set the default build profile (`arduino-cli profile set-default <name>`). |
+| `:arduino-profile-lib-add`, `:arduino-profile-add-lib` | Add a library to the sketch build profile (`arduino-cli profile lib add <lib>`). |
+| `:arduino-profile-lib-remove`, `:arduino-profile-remove-lib` | Remove a library from the sketch build profile (`arduino-cli profile lib remove <lib>`). |
+| `:arduino-lib-install`, `:arduino-lib-add` | Install a library by name (`arduino-cli lib install <name>`), live in a terminal panel. |
+| `:arduino-daemon`, `:acli-daemon` | Run arduino-cli as a gRPC daemon (`arduino-cli daemon`), live in a terminal panel; extra args tune the server. |
+| `:arduino-version`, `:acli-version` | Show the arduino-cli version (`arduino-cli version`; add `--format json`). |
 | `:next-error`, `:cnext-error` | Visit the next compilation error's location (emacs next-error / M-g n). |
 | `:previous-error`, `:cprevious-error` | Visit the previous compilation error's location (emacs previous-error / M-g p). |
 | `:first-error` | Visit the first compilation error's location (emacs first-error). |
