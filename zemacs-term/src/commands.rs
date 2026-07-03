@@ -1101,6 +1101,8 @@ impl MappableCommand {
         outline_show_entry, "Reveal this heading's body (emacs outline-show-entry)",
         outline_hide_body, "Fold all bodies, showing only headings (emacs outline-hide-body)",
         outline_show_all, "Reveal all outline body text (emacs outline-show-all)",
+        outline_hide_sublevels, "Show only the top N levels of headings (emacs outline-hide-sublevels)",
+        outline_hide_leaves, "Fold bodies in the current subtree, keeping subheadings (emacs outline-hide-leaves)",
         fold_create, "Create a fold over the selection (zf)",
         fold_toggle, "Toggle fold under cursor (za)",
         fold_open, "Open fold under cursor (zo)",
@@ -21078,6 +21080,37 @@ fn outline_hide_body(cx: &mut Context) {
 fn outline_show_all(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     doc.folds_mut().open_all();
+    fold_snap_cursor(view, doc);
+}
+
+/// Emacs `outline-hide-sublevels` (C-x $): show only the top N levels of
+/// headings (N from the numeric prefix, default 1), hiding all bodies and any
+/// deeper headings.
+fn outline_hide_sublevels(cx: &mut Context) {
+    let levels = cx.count() as u32;
+    let (_, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    doc.folds_mut().open_all();
+    for (first, last) in zemacs_core::outline::sublevel_folds(&hs, levels, total) {
+        outline_fold_range(doc, first, last);
+    }
+    doc.folds_mut().clamp(total.saturating_sub(1));
+    fold_snap_cursor(view, doc);
+}
+
+/// Emacs `outline-hide-leaves`: in the subtree at point, fold every heading's
+/// body while keeping all subheadings visible.
+fn outline_hide_leaves(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    for (first, last) in zemacs_core::outline::subtree_leaf_bodies(&hs, line, total) {
+        outline_fold_range(doc, first, last);
+    }
+    doc.folds_mut().clamp(total.saturating_sub(1));
     fold_snap_cursor(view, doc);
 }
 

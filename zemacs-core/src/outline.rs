@@ -177,6 +177,54 @@ pub fn all_bodies(hs: &[Heading], total_lines: usize) -> Vec<(usize, usize)> {
     out
 }
 
+/// Fold ranges for `outline-hide-sublevels` (show only the top `levels` levels
+/// of headings, hiding all bodies and every deeper heading). Each range spans
+/// from just after a shallow heading (level <= `levels`) to just before the next
+/// shallow heading — so only shallow heading lines stay visible.
+pub fn sublevel_folds(hs: &[Heading], levels: u32, total_lines: usize) -> Vec<(usize, usize)> {
+    let shallow: Vec<&Heading> = hs.iter().filter(|h| h.level <= levels).collect();
+    let mut out = Vec::new();
+    for (idx, h) in shallow.iter().enumerate() {
+        let end = shallow
+            .get(idx + 1)
+            .map(|n| n.line.saturating_sub(1))
+            .unwrap_or(total_lines.saturating_sub(1));
+        if end > h.line {
+            out.push((h.line + 1, end));
+        }
+    }
+    out
+}
+
+/// Body ranges to fold for `outline-hide-leaves` (in the subtree at `line`, hide
+/// every heading's body text while keeping all subheadings visible). One
+/// `(first, last)` range per heading in the subtree that has a body.
+pub fn subtree_leaf_bodies(
+    hs: &[Heading],
+    line: usize,
+    total_lines: usize,
+) -> Vec<(usize, usize)> {
+    let Some((start, end)) = subtree_bounds(hs, line, total_lines) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for (idx, h) in hs.iter().enumerate() {
+        if h.line < start || h.line > end {
+            continue;
+        }
+        // Body ends before the next heading of any level, clamped to the subtree.
+        let body_end = hs
+            .get(idx + 1)
+            .map(|n| n.line.saturating_sub(1))
+            .unwrap_or(total_lines.saturating_sub(1))
+            .min(end);
+        if body_end > h.line {
+            out.push((h.line + 1, body_end));
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -254,5 +302,33 @@ beta body
         assert_eq!(bodies, vec![(1, 1), (3, 3), (5, 5), (7, total - 1)]);
         // entry of Alpha (line 0) is just line 1 (stops at the Alpha.1 subheading)
         assert_eq!(entry_body(&hs, 0, total), Some((1, 1)));
+    }
+
+    #[test]
+    fn hide_sublevels_keeps_only_shallow_headings() {
+        let hs = headings(DOC);
+        let total = DOC.split('\n').count();
+        // levels=1: only * Alpha and * Beta stay visible; everything between
+        // each top heading and the next is folded (bodies + ** subheadings).
+        assert_eq!(sublevel_folds(&hs, 1, total), vec![(1, 5), (7, total - 1)]);
+        // levels=2: all headings visible, only bodies folded (== hide-body).
+        assert_eq!(
+            sublevel_folds(&hs, 2, total),
+            vec![(1, 1), (3, 3), (5, 5), (7, total - 1)]
+        );
+    }
+
+    #[test]
+    fn hide_leaves_folds_bodies_within_the_subtree() {
+        let hs = headings(DOC);
+        let total = DOC.split('\n').count();
+        // Cursor on Alpha (line 0): fold the bodies of Alpha, Alpha.1, Alpha.2,
+        // but keep the ** subheadings visible. Beta's subtree is untouched.
+        assert_eq!(
+            subtree_leaf_bodies(&hs, 0, total),
+            vec![(1, 1), (3, 3), (5, 5)]
+        );
+        // Cursor on Alpha.1 (line 2): only its own body folds.
+        assert_eq!(subtree_leaf_bodies(&hs, 2, total), vec![(3, 3)]);
     }
 }
