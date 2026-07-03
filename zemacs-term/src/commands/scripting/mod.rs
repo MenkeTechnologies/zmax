@@ -542,24 +542,49 @@ pub fn repl_awk(cx: &mut compositor::Context, program: &str) -> Result<String, S
 pub fn load_init_scripts(cx: &mut compositor::Context) {
     let dir = zemacs_loader::config_dir();
 
-    let init_el = dir.join("init.el");
-    if init_el.exists() {
+    // Emacs Lisp init. zemacs's own config-dir `init.el` is always sourced; the
+    // user's PERSONAL Emacs config (`~/.emacs.d/init.el`, `~/.config/emacs/init.el`,
+    // `~/.emacs`) is sourced only when the `source-emacs-config` setting is enabled
+    // (off by default) — symmetric with `source-vimrc`. zemacs is not Emacs and
+    // must not silently run a personal init.el. Personal files are sourced first,
+    // then zemacs's own `init.el` last so a zemacs-specific override wins.
+    let mut el_candidates: Vec<std::path::PathBuf> = Vec::new();
+    if cx.editor.config().source_emacs_config {
+        if let Some(home) = std::env::var_os("HOME").map(std::path::PathBuf::from) {
+            el_candidates.push(home.join(".emacs.d/init.el"));
+            el_candidates.push(home.join(".config/emacs/init.el"));
+            el_candidates.push(home.join(".emacs"));
+        }
+    }
+    el_candidates.push(dir.join("init.el"));
+    // An arbitrary user-specified Emacs Lisp file, sourced last so it has final say.
+    if let Some(file) = cx.editor.config().source_elisp_file.clone() {
+        if !file.trim().is_empty() {
+            el_candidates.push(zemacs_stdx::path::expand_tilde(std::path::Path::new(file.trim())).into_owned());
+        }
+    }
+    let el_present: Vec<std::path::PathBuf> =
+        el_candidates.into_iter().filter(|p| p.exists()).collect();
+
+    if !el_present.is_empty() {
         let _guard = CxGuard::new(cx);
         elisp::ensure_builtins();
         elisp::ensure_editor_lisp();
         // Load via eval_str, not eval_file: eval_file resets the host (for its
         // bytecode cache), which would wipe the editor subrs / editor-lisp that
         // init.el needs. Correctness over the cache for a small config file.
-        match std::fs::read_to_string(&init_el) {
-            Ok(src) => {
-                elisprs::with_host(load_buffer_into_host);
-                if let Err(e) = elisprs::eval_str(&src) {
-                    cx.editor.set_error(format!("init.el: {e}"));
-                } else {
-                    elisprs::with_host(flush_host_into_buffer);
+        for init_el in el_present {
+            match std::fs::read_to_string(&init_el) {
+                Ok(src) => {
+                    elisprs::with_host(load_buffer_into_host);
+                    if let Err(e) = elisprs::eval_str(&src) {
+                        cx.editor.set_error(format!("{}: {e}", init_el.display()));
+                    } else {
+                        elisprs::with_host(flush_host_into_buffer);
+                    }
                 }
+                Err(e) => cx.editor.set_error(format!("{}: {e}", init_el.display())),
             }
-            Err(e) => cx.editor.set_error(format!("init.el: {e}")),
         }
     }
 
@@ -585,6 +610,12 @@ pub fn load_init_scripts(cx: &mut compositor::Context) {
             }
         }
         candidates.push(dir.join("init.vim"));
+        // An arbitrary user-specified Vimscript file, sourced last so it wins.
+        if let Some(file) = cx.editor.config().source_viml_file.clone() {
+            if !file.trim().is_empty() {
+                candidates.push(zemacs_stdx::path::expand_tilde(std::path::Path::new(file.trim())).into_owned());
+            }
+        }
 
         let mut any = false;
         for path in candidates {
