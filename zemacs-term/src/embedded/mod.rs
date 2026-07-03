@@ -1730,6 +1730,20 @@ mod tests {
     }
 
     #[test]
+    fn arduino_compile_build_property_and_output_dir_splice() {
+        let bp = arduino_compile_with(
+            &settings(),
+            &["--build-property".into(), "build.extra_flags=-DDEBUG".into()],
+        )
+        .unwrap();
+        assert!(bp.windows(2).any(|w| w == ["--build-property", "build.extra_flags=-DDEBUG"]));
+        // sketch path stays the trailing positional after the spliced flag.
+        assert!(bp.iter().position(|a| a == "--build-property").unwrap() < bp.len() - 1);
+        let od = arduino_compile_with(&settings(), &["--output-dir".into(), "build/out".into()]).unwrap();
+        assert!(od.windows(2).any(|w| w == ["--output-dir", "build/out"]));
+    }
+
+    #[test]
     fn arduino_fourth_pass_flag_builders() {
         assert_eq!(arduino_core_list_all(), ["arduino-cli", "core", "list", "--all"]);
         assert_eq!(arduino_lib_list_all(), ["arduino-cli", "lib", "list", "--all"]);

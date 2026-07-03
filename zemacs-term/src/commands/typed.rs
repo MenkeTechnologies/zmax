@@ -3749,6 +3749,33 @@ fn arduino_compile_board_options(cx: &mut compositor::Context, args: Args, event
     arduino_compile_flags(cx, &["--board-options".to_string(), opts])
 }
 
+/// `:arduino-compile-build-property <key=value>` — compile overriding a build
+/// property (`arduino-cli compile --build-property <prop>`, e.g.
+/// `build.extra_flags=-DDEBUG`). The arduino counterpart of `:pio-init-option`.
+fn arduino_compile_build_property(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let prop = args.join(" ").trim().to_string();
+    if !prop.contains('=') {
+        bail!("usage: :arduino-compile-build-property <key=value>  (e.g. build.extra_flags=-DDEBUG)");
+    }
+    arduino_compile_flags(cx, &["--build-property".to_string(), prop])
+}
+
+/// `:arduino-compile-output-dir <dir>` — compile and save the build artifacts
+/// (`.hex`/`.bin`/`.elf`) to `dir` (`arduino-cli compile --output-dir <dir>`).
+fn arduino_compile_output_dir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = args.join(" ").trim().to_string();
+    if dir.is_empty() {
+        bail!("usage: :arduino-compile-output-dir <dir>  (e.g. build/out)");
+    }
+    arduino_compile_flags(cx, &["--output-dir".to_string(), dir])
+}
+
 /// `:arduino-upload-verbose` — verbose build + flash
 /// (`arduino-cli compile --upload -v`).
 fn arduino_upload_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -21948,6 +21975,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["arduino-board-options"],
         doc: "Compile with custom board menu options (`arduino-cli compile --board-options <opts>`).",
         fun: arduino_compile_board_options,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-build-property",
+        aliases: &["arduino-build-property"],
+        doc: "Compile overriding a build property (`arduino-cli compile --build-property <key=value>`).",
+        fun: arduino_compile_build_property,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "arduino-compile-output-dir",
+        aliases: &["arduino-compile-out-dir"],
+        doc: "Compile and save build artifacts to a directory (`arduino-cli compile --output-dir <dir>`).",
+        fun: arduino_compile_output_dir,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),

@@ -71,6 +71,8 @@
 | `:arduino-compile-preprocess`, `:arduino-preprocess` | Output the preprocessed sketch (`arduino-cli compile --preprocess`). |
 | `:arduino-compile-dump-profile`, `:arduino-dump-profile` | Print a reproducible build profile for the sketch (`arduino-cli compile --dump-profile`). |
 | `:arduino-compile-board-options`, `:arduino-board-options` | Compile with custom board menu options (`arduino-cli compile --board-options <opts>`). |
+| `:arduino-compile-build-property`, `:arduino-build-property` | Compile overriding a build property (`arduino-cli compile --build-property <key=value>`). |
+| `:arduino-compile-output-dir`, `:arduino-compile-out-dir` | Compile and save build artifacts to a directory (`arduino-cli compile --output-dir <dir>`). |
 | `:arduino-upload-verbose`, `:arduino-flash-verbose` | Verbose build + flash (`arduino-cli compile --upload -v`). |
 | `:arduino-debug-info`, `:arduino-debug-config` | Print the debugger configuration without starting a session (`arduino-cli debug --info`). |
 | `:arduino-debug-programmer`, `:arduino-debug-via-programmer` | Launch the debugger through a programmer (`arduino-cli debug --programmer <id>`). |

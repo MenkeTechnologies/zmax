@@ -157,7 +157,10 @@ PlatformIO environment, monitor filters) persist to
   `:arduino-compile-warnings <none|default|more|all>`,
   `:arduino-compile-profile <name>` (build against a sketch profile),
   `:arduino-compile-debug-opt` (`--optimize-for-debug`),
-  `:arduino-compile-board-options <opts>` (custom board menu options).
+  `:arduino-compile-board-options <opts>` (custom board menu options),
+  `:arduino-compile-build-property <key=value>` (override a build property, e.g.
+  `build.extra_flags=-DDEBUG`), `:arduino-compile-output-dir <dir>` (save the
+  compiled artifacts to a directory).
   Inspect the build without flashing: `:arduino-compile-properties`
   (`--show-properties`), `:arduino-compile-preprocess` (`--preprocess`),
   `:arduino-compile-dump-profile` (`--dump-profile`). Upload options:
