@@ -14065,19 +14065,19 @@
  },
  {
   "spec_id": "emacs.command.backward_sexp",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_prev_open_paren"
+   "static:backward_sexp"
   ],
-  "note": ""
+  "note": "backward-sexp (C-M-b): move over the previous balanced s-expression"
  },
  {
   "spec_id": "emacs.command.forward_sexp",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:goto_next_close_paren"
+   "static:forward_sexp"
   ],
-  "note": ""
+  "note": "forward-sexp (C-M-f): move over the next balanced s-expression"
  },
  {
   "spec_id": "emacs.command.backward_up_list",

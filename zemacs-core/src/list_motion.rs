@@ -142,6 +142,37 @@ pub fn forward_sexp(text: &str, cursor: usize) -> Option<usize> {
     (i > start).then_some(i)
 }
 
+/// `backward-sexp` (C-M-b): move backward over the previous s-expression — a whole
+/// balanced list if the preceding non-space char closes one, otherwise a run of
+/// atom characters back to its start. The mirror of [`forward_sexp`]; `kill-sexp`
+/// and the backward paredit motions build on it.
+pub fn backward_sexp(text: &str, cursor: usize) -> Option<usize> {
+    let chars: Vec<char> = text.chars().collect();
+    let mut i = cursor.min(chars.len());
+    while i > 0 && chars[i - 1].is_whitespace() {
+        i -= 1;
+    }
+    if i == 0 {
+        return None;
+    }
+    let prev = chars[i - 1];
+    if is_close(prev) {
+        return backward_list(text, i);
+    }
+    if is_open(prev) {
+        return None; // sitting just after a stray open
+    }
+    let end = i;
+    while i > 0
+        && !chars[i - 1].is_whitespace()
+        && !is_open(chars[i - 1])
+        && !is_close(chars[i - 1])
+    {
+        i -= 1;
+    }
+    (i < end).then_some(i)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -190,5 +221,21 @@ mod tests {
         // Inner list from index 3.
         assert_eq!(forward_sexp(S, 3), Some(6));
         assert_eq!(forward_sexp("   ", 0), None);
+    }
+
+    #[test]
+    fn backward_sexp_atoms_and_lists() {
+        // Trailing atom: from end of "foo bar" (7) back over "bar" -> 4.
+        assert_eq!(backward_sexp("foo bar", 7), Some(4));
+        // Skip trailing whitespace, then the atom: "foo  " (len 5) -> 0.
+        assert_eq!(backward_sexp("foo  ", 5), Some(0));
+        // A whole list is one sexp: from end of S (9) -> its open at 0.
+        assert_eq!(backward_sexp(S, 9), Some(0));
+        // From just after the inner "(b)" (index 6) -> its open at 3.
+        assert_eq!(backward_sexp(S, 6), Some(3));
+        // Nothing before point.
+        assert_eq!(backward_sexp("   ", 3), None);
+        // Round-trips with forward_sexp over an atom.
+        assert_eq!(backward_sexp("foo bar", forward_sexp("foo bar", 4).unwrap()), Some(4));
     }
 }

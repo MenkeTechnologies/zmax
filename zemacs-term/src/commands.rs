@@ -898,6 +898,9 @@ impl MappableCommand {
         backward_up_list, "Move backward out of the enclosing list (emacs backward-up-list, C-M-u)",
         kill_sexp, "Kill the s-expression after point (emacs kill-sexp, C-M-k)",
         mark_sexp, "Set the region over the following s-expression (emacs mark-sexp, C-M-SPC)",
+        forward_sexp, "Move forward over the next s-expression (emacs forward-sexp, C-M-f)",
+        backward_sexp, "Move backward over the previous s-expression (emacs backward-sexp, C-M-b)",
+        copy_region_as_kill, "Copy the region to the kill ring without deleting (emacs copy-region-as-kill, M-w)",
         mark_word, "Set the region over the next word (emacs mark-word, M-@)",
         mark_paragraph, "Select the paragraph around point (emacs mark-paragraph, M-h)",
         mark_defun, "Select the function/defun around point (emacs mark-defun, C-M-h)",
@@ -21407,6 +21410,42 @@ fn mark_sexp(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let end = end.min(doc.text().len_chars());
     doc.set_selection(view.id, Selection::single(cursor, end));
+}
+
+/// Emacs `forward-sexp` (C-M-f): move point forward over the next balanced
+/// s-expression (a list or an atom).
+fn forward_sexp(cx: &mut Context) {
+    list_motion(cx, zemacs_core::list_motion::forward_sexp);
+}
+
+/// Emacs `backward-sexp` (C-M-b): move point backward over the previous balanced
+/// s-expression.
+fn backward_sexp(cx: &mut Context) {
+    list_motion(cx, zemacs_core::list_motion::backward_sexp);
+}
+
+/// Emacs `copy-region-as-kill` (M-w): copy the region to the kill ring without
+/// deleting it (the non-destructive companion of `kill-region`).
+fn copy_region_as_kill(cx: &mut Context) {
+    let text = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let sel = doc.selection(view.id).primary();
+        if sel.from() == sel.to() {
+            None
+        } else {
+            Some(slice.slice(sel.from()..sel.to()).to_string())
+        }
+    };
+    match text {
+        Some(t) => {
+            let n = t.chars().count();
+            crate::emacs_kill::record(t);
+            cx.editor
+                .set_status(format!("copied {n} char(s) to the kill ring"));
+        }
+        None => cx.editor.set_status("no region to copy"),
+    }
 }
 
 /// Emacs `mark-word` (M-@): set the region from point over the next word, leaving
