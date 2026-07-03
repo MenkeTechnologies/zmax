@@ -71,6 +71,7 @@ pub struct Game {
     computer: bool,
     floppy: bool,
     nomail: bool,
+    black: bool,
     jar: Vec<i16>,
 }
 
@@ -115,6 +116,7 @@ impl Game {
             computer: false,
             floppy: false,
             nomail: false,
+            black: false,
             jar: Vec::new(),
         };
         g.visited[START_ROOM] = true;
@@ -272,7 +274,7 @@ impl Game {
                 out.extend(self.enter(29));
                 out
             }
-            25 | 26 => vec!["You'd have to swim, and that isn't ported yet.".into()],
+            25 | 26 => self.swim(),
             // The street grid (rooms 58..83): in/out boards/leaves the bus; the
             // cliff and gate specials fire on ordinary moves.
             r if r > 57 && r < 84 => {
@@ -474,13 +476,75 @@ impl Game {
         out
     }
 
-    /// Treasure-room score: the points of the treasures deposited there.
+    /// Regular score (`dun-reg-score`): points of the treasures deposited in the
+    /// treasure room, out of a possible 90.
     pub fn score(&self) -> u32 {
         self.room_objects[TREASURE_ROOM]
             .iter()
             .filter(|&&o| o >= 0)
             .map(|&o| OBJ_PTS[o as usize].max(0) as u32)
             .sum()
+    }
+
+    /// Port of `dun-swim`: at the lakefront, drown without a life preserver
+    /// (object 9), otherwise cross to the other shore.
+    pub fn swim(&mut self) -> Vec<String> {
+        if self.room != 25 && self.room != 26 {
+            return vec!["I see no water!".into()];
+        }
+        if !self.inventory.contains(&9) {
+            return self.die(
+                "drowning",
+                "You dive in the water, and at first notice it is quite cold.  You then\nstart to get used to it as you realize that you never really learned how\nto swim.",
+            );
+        }
+        if self.room == 25 {
+            self.room = 26;
+        } else {
+            self.room = 25;
+        }
+        self.describe(self.room, false)
+    }
+
+    /// Port of `dun-eat`: only the food (object 3) is edible; anything else
+    /// chokes you to death.
+    pub fn eat(&mut self, word: &str) -> String {
+        let Some(num) = object_number(word) else {
+            return "I don't know what that is.".into();
+        };
+        if !self.inventory.contains(&num) {
+            return "You don't have that.".into();
+        }
+        if num != 3 {
+            self.dead = Some("choking".into());
+            let name = OBJECTS[num as usize].1.to_lowercase();
+            return format!("You forcefully shove {name} down your throat, and start choking.");
+        }
+        self.remove_from_inventory(3);
+        "That tasted horrible.".into()
+    }
+
+    /// Port of `dun-press`: press the button or the (light) switch.
+    pub fn press(&mut self, word: &str) -> String {
+        let Some(num) = object_number(word) else {
+            return "I don't see that here.".into();
+        };
+        if !self.here(num) {
+            return "I don't see that here.".into();
+        }
+        if num == OBJ_BUTTON {
+            "As you press the button, you notice a passageway open up, but\nas you release it, the passageway closes.".into()
+        } else if num == -24 {
+            // obj-switch: toggles the black-light.
+            self.black = !self.black;
+            if self.black {
+                "The button is now in the on position.".into()
+            } else {
+                "The button is now in the off position.".into()
+            }
+        } else {
+            "You can't press that.".into()
+        }
     }
 
     /// Run one typed command line, returning output lines.
@@ -536,7 +600,13 @@ impl Game {
                 Some(_) => vec!["You see nothing special.".into()],
                 None => vec!["Examine what?".into()],
             },
-            "score" => vec![format!("You have {} of a possible 250 points.", self.score())],
+            "eat" => vec![self.eat(arg)],
+            "press" | "push" => vec![self.press(arg)],
+            "swim" => self.swim(),
+            "score" => vec![format!(
+                "You have scored {} out of a possible 90 points.",
+                self.score()
+            )],
             "help" | "?" => vec![
                 "Commands: north/south/east/west/ne/se/nw/sw/up/down/in/out,".into(),
                 "look, take <obj>, drop <obj>, inventory, examine <obj>, score.".into(),
@@ -822,6 +892,43 @@ mod tests {
         assert_eq!(g.put("diamond", "jar"), "Done.");
         assert!(g.jar.contains(&7));
         assert_eq!(g.put("weight", "jar"), "That will not fit in the jar.");
+    }
+
+    #[test]
+    fn swimming_needs_a_life_preserver() {
+        let mut g = Game::new();
+        g.room = 25; // lakefront-north
+        g.swim();
+        assert!(g.dead.is_some(), "no preserver -> you drown");
+        // With the life preserver (object 9) you cross to the far shore.
+        let mut g = Game::new();
+        g.room = 25;
+        g.inventory.push(9);
+        g.swim();
+        assert_eq!(g.room, 26);
+    }
+
+    #[test]
+    fn eating_non_food_is_fatal() {
+        let mut g = Game::new();
+        g.inventory = vec![0]; // the shovel
+        assert!(g.eat("shovel").contains("choking"));
+        assert!(g.dead.is_some());
+        // Food is edible.
+        let mut g = Game::new();
+        g.inventory = vec![3];
+        assert_eq!(g.eat("food"), "That tasted horrible.");
+        assert!(!g.inventory.contains(&3));
+    }
+
+    #[test]
+    fn switch_toggles_the_black_light() {
+        let mut g = Game::new();
+        g.room_objects[g.room] = vec![-24]; // obj-switch
+        assert_eq!(g.press("switch"), "The button is now in the on position.");
+        assert!(g.black);
+        assert_eq!(g.press("switch"), "The button is now in the off position.");
+        assert!(!g.black);
     }
 
     #[test]
