@@ -892,6 +892,8 @@
 | `yank_textobject_around` | Yank around object (ya) | normal: `` ya `` |
 | `delete_find_char_forward` | Delete to next char (df) | normal: `` df `` |
 | `delete_till_char_forward` | Delete till next char (dt) | normal: `` dt `` |
+| `zap_to_char` | Kill through the next char, inclusive (emacs zap-to-char, M-z) |  |
+| `zap_up_to_char` | Kill up to the next char, exclusive (emacs zap-up-to-char) |  |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |
