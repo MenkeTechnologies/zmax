@@ -9,7 +9,7 @@
 //! Tab in a name is unsupported (names are single words); newline/tab in an
 //! expansion are escaped so the one-row-per-line store stays intact.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use zemacs_loader::config_dir;
 
@@ -91,6 +91,37 @@ pub fn define(name: &str, expansion: &str) {
 /// Look up an abbrev's expansion.
 pub fn get(name: &str) -> Option<String> {
     load().into_iter().find(|(n, _)| n == name).map(|(_, e)| e)
+}
+
+/// `write-abbrev-file`: write every abbrev to `path` in the store's
+/// `name\texpansion` format. Returns how many abbrevs were written.
+pub fn write_to(path: &Path) -> std::io::Result<usize> {
+    let rows = load();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let body: String = rows
+        .iter()
+        .map(|(n, e)| format_line(n, e))
+        .collect::<Vec<_>>()
+        .join("\n");
+    std::fs::write(path, body)?;
+    Ok(rows.len())
+}
+
+/// `read-abbrev-file`: read abbrevs from `path` and merge them into the store
+/// (a definition replaces a same-named one). Returns how many were read.
+pub fn read_from(path: &Path) -> std::io::Result<usize> {
+    let text = std::fs::read_to_string(path)?;
+    let incoming: Vec<(String, String)> = text.lines().filter_map(parse_line).collect();
+    let n = incoming.len();
+    let mut rows = load();
+    for (name, exp) in &incoming {
+        rows.retain(|(nn, _)| nn != name);
+        rows.push((name.clone(), exp.clone()));
+    }
+    save(&rows);
+    Ok(n)
 }
 
 #[cfg(test)]

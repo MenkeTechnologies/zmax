@@ -8562,6 +8562,49 @@ fn extract_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// `:write-abbrev-file <path>` — Emacs `write-abbrev-file`: write every abbrev
+/// to the named file.
+fn write_abbrev_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ");
+    let path = path.trim();
+    if path.is_empty() {
+        anyhow::bail!("usage: :write-abbrev-file <path>");
+    }
+    let n = crate::emacs_abbrev::write_to(std::path::Path::new(path))
+        .map_err(|e| anyhow!("write-abbrev-file: {e}"))?;
+    cx.editor.set_status(format!("Wrote {n} abbrev(s) to {path}"));
+    Ok(())
+}
+
+/// `:read-abbrev-file <path>` — Emacs `read-abbrev-file`: read abbrevs from the
+/// named file and merge them into the table.
+fn read_abbrev_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ");
+    let path = path.trim();
+    if path.is_empty() {
+        anyhow::bail!("usage: :read-abbrev-file <path>");
+    }
+    let n = crate::emacs_abbrev::read_from(std::path::Path::new(path))
+        .map_err(|e| anyhow!("read-abbrev-file: {e}"))?;
+    cx.editor
+        .set_status(format!("Read {n} abbrev(s) from {path}"));
+    Ok(())
+}
+
 /// `:bookmark-write <path>` — Emacs `bookmark-write`: write every current
 /// bookmark to the named file in the bookmark text format.
 fn bookmark_write(
@@ -29752,6 +29795,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
             positionals: (1, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "write-abbrev-file",
+        aliases: &[],
+        doc: "Write every abbrev to the named file (emacs write-abbrev-file).",
+        fun: write_abbrev_file,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "read-abbrev-file",
+        aliases: &[],
+        doc: "Read abbrevs from the named file, merging them into the table (emacs read-abbrev-file).",
+        fun: read_abbrev_file,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },
