@@ -895,6 +895,8 @@
 | `zap_to_char` | Kill through the next char, inclusive (emacs zap-to-char, M-z) |  |
 | `zap_up_to_char` | Kill up to the next char, exclusive (emacs zap-up-to-char) |  |
 | `five_by_five` | Play 5x5, the light-flipping puzzle (emacs 5x5) |  |
+| `solitaire` | Play English peg solitaire (emacs solitaire) |  |
+| `hanoi` | Watch the Towers of Hanoi solution (emacs hanoi) |  |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |

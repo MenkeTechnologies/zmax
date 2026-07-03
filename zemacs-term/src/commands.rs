@@ -1207,6 +1207,8 @@ impl MappableCommand {
         zap_to_char, "Kill through the next char, inclusive (emacs zap-to-char, M-z)",
         zap_up_to_char, "Kill up to the next char, exclusive (emacs zap-up-to-char)",
         five_by_five, "Play 5x5, the light-flipping puzzle (emacs 5x5)",
+        solitaire, "Play English peg solitaire (emacs solitaire)",
+        hanoi, "Watch the Towers of Hanoi solution (emacs hanoi)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -13109,6 +13111,20 @@ fn calc_dispatch(cx: &mut Context) {
 fn five_by_five(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::fivex5::FiveByFive::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `solitaire`: open English peg solitaire (jump pegs down to one).
+fn solitaire(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::solitaire::Solitaire::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `hanoi`: open the Towers of Hanoi solver (step the optimal solution).
+fn hanoi(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::hanoi::Hanoi::new()) as Box<dyn Component>)
     });
 }
 

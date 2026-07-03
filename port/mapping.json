@@ -14272,6 +14272,22 @@
   "note": "emacs 5x5 -> five_by_five: interactive light-flipping puzzle overlay (ui/fivex5.rs)"
  },
  {
+  "spec_id": "emacs.command.solitaire",
+  "status": "ported",
+  "evidence": [
+   "static:solitaire"
+  ],
+  "note": "emacs solitaire -> solitaire: English peg-solitaire overlay (ui/solitaire.rs)"
+ },
+ {
+  "spec_id": "emacs.command.hanoi",
+  "status": "ported",
+  "evidence": [
+   "static:hanoi"
+  ],
+  "note": "emacs hanoi -> hanoi: Towers of Hanoi solver overlay (ui/hanoi.rs)"
+ },
+ {
   "spec_id": "emacs.command.zap_to_char",
   "status": "ported",
   "evidence": [
