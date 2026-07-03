@@ -8562,6 +8562,41 @@ fn extract_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// `:outline-hide-by-heading-regexp <regex>` — Emacs
+/// `outline-hide-by-heading-regexp`: fold the subtree of every heading whose
+/// heading line matches the regexp.
+fn outline_hide_by_heading_regexp(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        anyhow::bail!("usage: :outline-hide-by-heading-regexp <regex>");
+    }
+    let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let (_, doc) = current!(cx.editor);
+    let text = doc.text().to_string();
+    let total = doc.text().len_lines();
+    let hs = zemacs_core::outline::headings(&text);
+    let lines: Vec<&str> = text.split('\n').collect();
+    let matches: Vec<bool> = hs
+        .iter()
+        .map(|h| lines.get(h.line).is_some_and(|l| re.is_match(l)))
+        .collect();
+    let folds = zemacs_core::outline::matching_subtree_bodies(&hs, total, |i| matches[i]);
+    for (first, last) in folds {
+        doc.folds_mut().create(first, last);
+        doc.folds_mut().close(first);
+    }
+    doc.folds_mut().clamp(total.saturating_sub(1));
+    Ok(())
+}
+
 /// Keep (or, when `keep` is false, drop) the lines of `input` that match `pattern`
 /// — the in-buffer equivalent of `grep` / `grep -v`. Pure — unit tested.
 fn filter_lines(input: &str, pattern: &str, keep: bool) -> anyhow::Result<String> {
@@ -29285,6 +29320,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
                     ..Flag::DEFAULT
                 },
             ],
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "outline-hide-by-heading-regexp",
+        aliases: &[],
+        doc: "Fold the subtree of every heading whose line matches the regexp (emacs outline-hide-by-heading-regexp).",
+        fun: outline_hide_by_heading_regexp,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },

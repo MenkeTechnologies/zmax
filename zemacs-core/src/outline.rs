@@ -260,6 +260,25 @@ pub fn subtree_child_folds(
     out
 }
 
+/// Subtree body ranges to fold for every heading whose index satisfies `pred`
+/// (`outline-hide-by-heading-regexp`, where `pred(i)` is true when heading `i`'s
+/// line matches the user's regexp). Headings with no body are skipped.
+pub fn matching_subtree_bodies(
+    hs: &[Heading],
+    total_lines: usize,
+    pred: impl Fn(usize) -> bool,
+) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    for (i, h) in hs.iter().enumerate() {
+        if pred(i) {
+            if let Some(r) = subtree_body(hs, h.line, total_lines) {
+                out.push(r);
+            }
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -379,5 +398,17 @@ beta body
         );
         // Alpha.1 (line 2) has no subheadings: its whole body folds.
         assert_eq!(subtree_child_folds(&hs, 2, 1, total), vec![(3, 3)]);
+    }
+
+    #[test]
+    fn matching_subtree_bodies_folds_selected_headings() {
+        let hs = headings(DOC);
+        let total = DOC.split('\n').count();
+        // Fold only the subtrees of the top-level headings (level 1): Alpha's
+        // whole subtree body (lines 1..=5) and Beta's body (line 7..=end).
+        let folds = matching_subtree_bodies(&hs, total, |i| hs[i].level == 1);
+        assert_eq!(folds, vec![(1, 5), (7, total - 1)]);
+        // Matching none yields no folds.
+        assert!(matching_subtree_bodies(&hs, total, |_| false).is_empty());
     }
 }
