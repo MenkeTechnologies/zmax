@@ -238,6 +238,9 @@ def parse_keymap():
     result["rmail"] = _parse_component_keymap("rmail.rs", "rmail")
     result["bufmenu"] = _parse_component_keymap("bufmenu.rs", "bufmenu")
     result["occur"] = _parse_component_keymap("occur.rs", "occur")
+    # Comint (M-x shell) is a modal subprocess Component; expose its keys so the
+    # comint-* bindings resolve.
+    result["comint"] = _parse_component_keymap("comint.rs", "comint")
     return result
 
 
