@@ -52,9 +52,14 @@ async fn vimrc_colorscheme_repaints_live_editor() -> anyhow::Result<()> {
     // to this process (own test binary).
     std::env::set_var("HOME", &home);
 
+    // The user's personal `~/.vimrc` is sourced only when `source-vimrc` is
+    // enabled (off by default); this feature test opts in.
+    let mut config = test_config();
+    config.editor.source_vimrc = true;
+
     let mut app = Application::new(
         Args::default(),
-        test_config(),
+        config,
         test_syntax_loader(None),
         WorkspaceTrust::fully_trusted(),
     )?;

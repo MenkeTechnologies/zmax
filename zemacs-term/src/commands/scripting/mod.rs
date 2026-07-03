@@ -565,18 +565,24 @@ pub fn load_init_scripts(cx: &mut compositor::Context) {
 
     #[cfg(unix)]
     {
-        // Source the user's Vim configuration so zemacs honours their `.vimrc`
-        // (options via `:set`, mappings via `:map`, and colours via
-        // `:colorscheme`/`:highlight`). Files are sourced in increasing priority
-        // — a real `~/.vimrc`/nvim `init.vim` first, then zemacs's own
-        // `init.vim`, so a zemacs-specific override wins. Each is best-effort and
-        // independent; one failing does not stop the others.
-        let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
+        // Source Vim configuration so zemacs honours `:set`/`:map`/`:colorscheme`.
+        // Files are sourced in increasing priority — the user's personal config
+        // first, then zemacs's own `init.vim`, so a zemacs-specific override wins.
+        // Each is best-effort and independent; one failing does not stop the
+        // others.
+        //
+        // The user's *personal* Vim files (`~/.vimrc` etc.) are read ONLY when the
+        // `source-vimrc` setting is enabled (off by default): zemacs is not Vim
+        // and must not silently inherit a personal `.vimrc`. zemacs's own
+        // `init.vim` in the config dir is always sourced — it is an explicit
+        // zemacs config, not the user's Vim setup.
         let mut candidates: Vec<std::path::PathBuf> = Vec::new();
-        if let Some(home) = &home {
-            candidates.push(home.join(".vimrc"));
-            candidates.push(home.join(".vim/vimrc"));
-            candidates.push(home.join(".config/nvim/init.vim"));
+        if cx.editor.config().source_vimrc {
+            if let Some(home) = std::env::var_os("HOME").map(std::path::PathBuf::from) {
+                candidates.push(home.join(".vimrc"));
+                candidates.push(home.join(".vim/vimrc"));
+                candidates.push(home.join(".config/nvim/init.vim"));
+            }
         }
         candidates.push(dir.join("init.vim"));
 

@@ -408,6 +408,12 @@ pub struct Config {
     /// When true, vim-sneak overrides `s`/`S` (jump to a two-character sequence). When false,
     /// `s`/`S` keep vim's substitute-char / substitute-line. Defaults to true.
     pub vim_sneak: bool,
+    /// When true, zemacs sources the user's personal Vim configuration
+    /// (`~/.vimrc`, `~/.vim/vimrc`, `~/.config/nvim/init.vim`) at startup,
+    /// honouring its `:set`/`:map`/`:colorscheme`. **Defaults to false** — zemacs
+    /// is not Vim and does not read your personal Vim config unless you opt in.
+    /// (zemacs's own `init.vim` in the config dir is always sourced regardless.)
+    pub source_vimrc: bool,
     pub file_picker: FilePickerConfig,
     pub file_explorer: FileExplorerConfig,
     /// Configuration of the statusline elements
@@ -1325,6 +1331,7 @@ impl Default for Config {
             which_key: true,
             fzf: FzfConfig::default(),
             vim_sneak: true,
+            source_vimrc: false,
             file_picker: FilePickerConfig::default(),
             file_explorer: FileExplorerConfig::default(),
             statusline: StatusLineConfig::default(),
