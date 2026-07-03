@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-36b4e9ac.js";
+            window.path_to_searchindex_js = "searchindex-0069860d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1802,6 +1802,11 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:arduino-board-attach</code>, <code>:arduino-attach</code></td><td>Attach a sketch to a board (<code>arduino-cli board attach -p &lt;port&gt; -b &lt;fqbn&gt; [sketch]</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:arduino-profile-create</code>, <code>:arduino-profile-new</code></td><td>Create/update a build profile in the sketch project file (<code>arduino-cli profile create</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:arduino-profile-set-default</code>, <code>:arduino-profile-default</code></td><td>Set the default build profile (<code>arduino-cli profile set-default &lt;name&gt;</code>).</td></tr>
+<tr><td><code>:arduino-profile-lib-add</code>, <code>:arduino-profile-add-lib</code></td><td>Add a library to the sketch build profile (<code>arduino-cli profile lib add &lt;lib&gt;</code>).</td></tr>
+<tr><td><code>:arduino-profile-lib-remove</code>, <code>:arduino-profile-remove-lib</code></td><td>Remove a library from the sketch build profile (<code>arduino-cli profile lib remove &lt;lib&gt;</code>).</td></tr>
+<tr><td><code>:arduino-lib-install</code>, <code>:arduino-lib-add</code></td><td>Install a library by name (<code>arduino-cli lib install &lt;name&gt;</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:arduino-daemon</code>, <code>:acli-daemon</code></td><td>Run arduino-cli as a gRPC daemon (<code>arduino-cli daemon</code>), live in a terminal panel; extra args tune the server.</td></tr>
+<tr><td><code>:arduino-version</code>, <code>:acli-version</code></td><td>Show the arduino-cli version (<code>arduino-cli version</code>; add <code>--format json</code>).</td></tr>
 <tr><td><code>:next-error</code>, <code>:cnext-error</code></td><td>Visit the next compilation error’s location (emacs next-error / M-g n).</td></tr>
 <tr><td><code>:previous-error</code>, <code>:cprevious-error</code></td><td>Visit the previous compilation error’s location (emacs previous-error / M-g p).</td></tr>
 <tr><td><code>:first-error</code></td><td>Visit the first compilation error’s location (emacs first-error).</td></tr>
@@ -6463,7 +6468,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>555</strong> (8.1%)</li>
 <li>Absent: <strong>3318</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 951 static commands, 1427 typable <code>:</code> commands, 2636 default keybindings</li>
+<li>zemacs source surface: 951 static commands, 1437 typable <code>:</code> commands, 2636 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
