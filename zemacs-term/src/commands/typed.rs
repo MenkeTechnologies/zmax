@@ -20642,6 +20642,34 @@ fn reflow(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     Ok(())
 }
 
+/// `:set-fill-column [N]` — Emacs `set-fill-column` (C-x f): set the fill width
+/// to N, or to the current cursor column when no number is given. Applies to the
+/// `text-width` config (zemacs's fill-width model, the same value `:set tw` sets)
+/// and so drives `:reflow`/hard-wrap.
+fn set_fill_column(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let col = match args.first().map(str::trim).filter(|s| !s.is_empty()) {
+        Some(n) => n
+            .parse::<usize>()
+            .map_err(|_| anyhow!("set-fill-column: expected a number, got `{n}`"))?,
+        None => {
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text().slice(..);
+            let cursor = doc.selection(view.id).primary().cursor(text);
+            cursor - text.line_to_char(text.char_to_line(cursor))
+        }
+    };
+    apply_config_value(cx, "text-width", Value::Number(col.into()))?;
+    cx.editor.set_status(format!("fill-column set to {col}"));
+    Ok(())
+}
+
 fn tree_sitter_subtree(
     cx: &mut compositor::Context,
     _args: Args,
@@ -29375,6 +29403,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-fill-column",
+        aliases: &[],
+        doc: "Set the fill width to N, or the current cursor column if omitted (emacs set-fill-column).",
+        fun: set_fill_column,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

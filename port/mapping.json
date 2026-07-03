@@ -28533,6 +28533,14 @@
   "note": "outline-mode: fold the subtree of every heading whose line matches the regexp (outline-hide-by-heading-regexp); zemacs_core::outline::matching_subtree_bodies, folding via the document fold state"
  },
  {
+  "spec_id": "emacs.command.set_fill_column",
+  "status": "ported",
+  "evidence": [
+   "typable:set-fill-column"
+  ],
+  "note": "emacs set-fill-column (C-x f) -> :set-fill-column [N]: set the fill width to N or the current cursor column; applies to the text-width config (zemacs's fill-width model, same value :set tw sets, drives :reflow)"
+ },
+ {
   "spec_id": "emacs.command.bookmark_write",
   "status": "ported",
   "evidence": [
