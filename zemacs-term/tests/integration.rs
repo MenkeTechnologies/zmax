@@ -20,6 +20,7 @@ mod test {
     mod command_line;
     mod commands;
     mod dot_repeat;
+    mod hi_lock;
     mod movement;
     mod splits;
     mod vim_motions;
