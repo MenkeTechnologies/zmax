@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-556f2100.js";
+            window.path_to_searchindex_js = "searchindex-edcf0d70.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -3304,6 +3304,24 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>yank_textobject_around</code></td><td>Yank around object (ya)</td><td>normal: <code>ya</code></td></tr>
 <tr><td><code>delete_find_char_forward</code></td><td>Delete to next char (df)</td><td>normal: <code>df</code></td></tr>
 <tr><td><code>delete_till_char_forward</code></td><td>Delete till next char (dt)</td><td>normal: <code>dt</code></td></tr>
+<tr><td><code>zap_to_char</code></td><td>Kill through the next char, inclusive (emacs zap-to-char, M-z)</td><td></td></tr>
+<tr><td><code>zap_up_to_char</code></td><td>Kill up to the next char, exclusive (emacs zap-up-to-char)</td><td></td></tr>
+<tr><td><code>five_by_five</code></td><td>Play 5x5, the light-flipping puzzle (emacs 5x5)</td><td></td></tr>
+<tr><td><code>solitaire</code></td><td>Play English peg solitaire (emacs solitaire)</td><td></td></tr>
+<tr><td><code>hanoi</code></td><td>Watch the Towers of Hanoi solution (emacs hanoi)</td><td></td></tr>
+<tr><td><code>life</code></td><td>Run Conway’s Game of Life (emacs life)</td><td></td></tr>
+<tr><td><code>doctor</code></td><td>Talk to the ELIZA psychotherapist (emacs doctor)</td><td></td></tr>
+<tr><td><code>gomoku</code></td><td>Play five-in-a-row against the computer (emacs gomoku)</td><td></td></tr>
+<tr><td><code>butterfly</code></td><td>Flip the desired bit with a butterfly (emacs butterfly, xkcd 378)</td><td></td></tr>
+<tr><td><code>mpuz</code></td><td>Play the multiplication puzzle (emacs mpuz)</td><td></td></tr>
+<tr><td><code>bubbles</code></td><td>Play the bubbles same-game (emacs bubbles)</td><td></td></tr>
+<tr><td><code>blackbox</code></td><td>Play blackbox, the ray-tracing puzzle (emacs blackbox)</td><td></td></tr>
+<tr><td><code>snake</code></td><td>Play snake (emacs snake)</td><td></td></tr>
+<tr><td><code>tetris</code></td><td>Play tetris (emacs tetris)</td><td></td></tr>
+<tr><td><code>pong</code></td><td>Play pong against the computer (emacs pong)</td><td></td></tr>
+<tr><td><code>zone</code></td><td>Run the zone screen-saver (emacs zone)</td><td></td></tr>
+<tr><td><code>decipher</code></td><td>Solve a cryptogram (emacs decipher)</td><td></td></tr>
+<tr><td><code>dunnet</code></td><td>Play the dunnet text adventure (emacs dunnet)</td><td></td></tr>
 <tr><td><code>delete_find_char_backward</code></td><td>Delete to prev char (dF)</td><td>normal: <code>dF</code></td></tr>
 <tr><td><code>delete_till_char_backward</code></td><td>Delete till prev char (dT)</td><td>normal: <code>dT</code></td></tr>
 <tr><td><code>change_find_char_forward</code></td><td>Change to next char (cf)</td><td>normal: <code>cf</code></td></tr>
@@ -6552,11 +6570,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>3007</strong> (43.9%)</li>
-<li>Partial: <strong>533</strong> (7.8%)</li>
-<li>Absent: <strong>3307</strong></li>
+<li>Ported: <strong>3041</strong> (44.4%)</li>
+<li>Partial: <strong>535</strong> (7.8%)</li>
+<li>Absent: <strong>3271</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 980 static commands, 1565 typable <code>:</code> commands, 2636 default keybindings</li>
+<li>zemacs source surface: 1013 static commands, 1572 typable <code>:</code> commands, 2636 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -6612,7 +6630,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">613</td><td style="text-align: right">165</td><td style="text-align: right">20.4%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">647</td><td style="text-align: right">167</td><td style="text-align: right">21.5%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
@@ -6633,7 +6651,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">402</td><td style="text-align: right">80</td><td style="text-align: right">21.3%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">436</td><td style="text-align: right">82</td><td style="text-align: right">23.1%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
