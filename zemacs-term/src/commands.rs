@@ -1221,6 +1221,7 @@ impl MappableCommand {
         pong, "Play pong against the computer (emacs pong)",
         zone, "Run the zone screen-saver (emacs zone)",
         decipher, "Solve a cryptogram (emacs decipher)",
+        dunnet, "Play the dunnet text adventure (emacs dunnet)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -13225,6 +13226,13 @@ fn zone(cx: &mut Context) {
 fn decipher(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::decipher::Decipher::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `dunnet`: open the text adventure (explorable core; see ui/dunnet.rs).
+fn dunnet(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::dunnet::Dunnet::new()) as Box<dyn Component>)
     });
 }
 

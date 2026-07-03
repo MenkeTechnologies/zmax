@@ -14376,6 +14376,14 @@
   "note": "emacs decipher -> decipher: cryptogram helper overlay (ui/decipher.rs)"
  },
  {
+  "spec_id": "emacs.command.dunnet",
+  "status": "partial",
+  "evidence": [
+   "static:dunnet"
+  ],
+  "note": "emacs dunnet -> dunnet: explorable core (real 105-room map/exits/objects from dunnet.el via Emacs dump); puzzles/endgame verbs not ported"
+ },
+ {
   "spec_id": "emacs.command.butterfly",
   "status": "ported",
   "evidence": [
