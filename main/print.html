@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-4dbc7df7.js";
+            window.path_to_searchindex_js = "searchindex-83099d39.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -2040,6 +2040,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:filter</code>, <code>:keep-lines</code>, <code>:delete-non-matching-lines</code></td><td>Keep only the selected lines matching a regex (Emacs keep-lines; in-buffer grep).</td></tr>
 <tr><td><code>:reject</code>, <code>:remove-lines</code>, <code>:flush-lines</code>, <code>:delete-matching-lines</code></td><td>Drop the selected lines matching a regex (Emacs flush-lines; in-buffer grep -v).</td></tr>
 <tr><td><code>:count-matches</code>, <code>:count-regex</code>, <code>:how-many</code></td><td>Report how many regex matches (and matching lines) are in the selection (Emacs how-many).</td></tr>
+<tr><td><code>:copy-matching-lines</code>, <code>:copy-lines-matching</code></td><td>Copy lines matching a regex (region, or point to end) to the kill ring (Emacs copy-matching-lines).</td></tr>
+<tr><td><code>:kill-matching-lines</code>, <code>:kill-lines-matching</code></td><td>Delete lines matching a regex (region, or point to end) and save them to the kill ring (Emacs kill-matching-lines).</td></tr>
 <tr><td><code>:uniq-count</code>, <code>:frequency</code></td><td>Collapse the selected lines to <code>count line</code>, sorted by frequency (uniq -c</td></tr>
 <tr><td><code>:stats</code>, <code>:describe</code></td><td>Show count/sum/mean/min/max of the numbers in the selection (non-destructive).</td></tr>
 <tr><td><code>:seq</code>, <code>:sequence</code></td><td>Insert an integer sequence, one per line: :seq <start> <end> [step].</end></start></td></tr>
@@ -6529,11 +6531,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>2980</strong> (43.5%)</li>
-<li>Partial: <strong>555</strong> (8.1%)</li>
-<li>Absent: <strong>3312</strong></li>
+<li>Ported: <strong>2982</strong> (43.6%)</li>
+<li>Partial: <strong>554</strong> (8.1%)</li>
+<li>Absent: <strong>3311</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 957 static commands, 1561 typable <code>:</code> commands, 2636 default keybindings</li>
+<li>zemacs source surface: 957 static commands, 1565 typable <code>:</code> commands, 2636 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -6589,7 +6591,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">586</td><td style="text-align: right">187</td><td style="text-align: right">19.5%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">588</td><td style="text-align: right">186</td><td style="text-align: right">19.5%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
@@ -6610,7 +6612,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">375</td><td style="text-align: right">102</td><td style="text-align: right">19.9%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">377</td><td style="text-align: right">101</td><td style="text-align: right">20.0%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
