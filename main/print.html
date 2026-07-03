@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-72e5456a.js";
+            window.path_to_searchindex_js = "searchindex-770265fb.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1748,7 +1748,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-remote-update</code>, <code>:platformio-remote-update</code></td><td>Update platforms/packages/libraries on remote agents (<code>pio remote update [--dry-run]</code>).</td></tr>
 <tr><td><code>:pio-account-login</code>, <code>:platformio-account-login</code></td><td>Sign in to a PlatformIO account (<code>pio account login</code>), live in a terminal panel.</td></tr>
 <tr><td><code>:pio-account-logout</code>, <code>:platformio-account-logout</code></td><td>Sign out of the PlatformIO account (<code>pio account logout</code>).</td></tr>
-<tr><td><code>:pio-account-show</code>, <code>:platformio-account-show</code></td><td>Show the current PlatformIO account information (<code>pio account show</code>).</td></tr>
+<tr><td><code>:pio-account-show</code>, <code>:platformio-account-show</code></td><td>Show the current PlatformIO account information (<code>pio account show</code>); extra args forward –offline/–json-output.</td></tr>
 <tr><td><code>:pio-account-token</code>, <code>:platformio-account-token</code></td><td>Print the account auth token (<code>pio account token [--regenerate] [--json-output] [-p &lt;password&gt;]</code>).</td></tr>
 <tr><td><code>:pio-env</code>, <code>:pio-environment</code>, <code>:platformio-env</code></td><td>Select the PlatformIO build environment (<code>[env:…]</code>); no arg picks from platformio.ini, <code>-</code> clears.</td></tr>
 <tr><td><code>:pio-list-targets</code>, <code>:platformio-list-targets</code></td><td>Enumerate the project’s build targets (<code>pio run --list-targets</code>).</td></tr>
@@ -1804,7 +1804,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:pio-upgrade-dev</code>, <code>:platformio-upgrade-dev</code></td><td>Upgrade PlatformIO Core to the development branch (<code>pio upgrade --dev</code>).</td></tr>
 <tr><td><code>:pio-remote-run-force</code>, <code>:platformio-remote-run-force</code></td><td>Force the build to run on the remote agent (<code>pio remote run -r</code>).</td></tr>
 <tr><td><code>:pio-remote-agent-start-named</code>, <code>:platformio-remote-agent-start-named</code></td><td>Start a named Remote agent (<code>pio remote agent start --name &lt;name&gt;</code>).</td></tr>
-<tr><td><code>:pio-remote-monitor</code>, <code>:platformio-remote-monitor</code></td><td>Serial monitor over a Remote agent (<code>pio remote device monitor</code>), live in a terminal panel.</td></tr>
+<tr><td><code>:pio-remote-monitor</code>, <code>:platformio-remote-monitor</code></td><td>Serial monitor over a Remote agent (<code>pio remote device monitor</code>); extra args forward -p/-b/-f/–eol/–sock etc.</td></tr>
 <tr><td><code>:pio-settings-reset</code>, <code>:platformio-settings-reset</code></td><td>Restore PlatformIO Core settings to their defaults (<code>pio settings reset</code>).</td></tr>
 <tr><td><code>:pio-system-completion</code>, <code>:platformio-system-completion</code></td><td>Emit a shell completion script (`pio system completion &lt;bash</td></tr>
 <tr><td><code>:pio-ci</code>, <code>:platformio-ci</code></td><td>Build a standalone source tree in an isolated project (<code>pio ci &lt;src&gt; -b &lt;board&gt;</code>), live in a terminal panel.</td></tr>
