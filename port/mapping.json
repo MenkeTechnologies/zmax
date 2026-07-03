@@ -29227,5 +29227,29 @@
    "static:gud_stepi"
   ],
   "note": "step one instruction"
+ },
+ {
+  "spec_id": "emacs.command.gud_tbreak",
+  "status": "ported",
+  "evidence": [
+   "static:gud_tbreak"
+  ],
+  "note": "temporary breakpoint at current line"
+ },
+ {
+  "spec_id": "emacs.command.gud_print",
+  "status": "ported",
+  "evidence": [
+   "static:gud_print"
+  ],
+  "note": "print expr at point"
+ },
+ {
+  "spec_id": "emacs.command.gud_watch",
+  "status": "ported",
+  "evidence": [
+   "static:gud_watch"
+  ],
+  "note": "watch expr at point"
  }
 ]

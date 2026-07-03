@@ -1059,6 +1059,9 @@ impl MappableCommand {
         gud_up, "Select the stack frame one level up (emacs gud-up)",
         gud_down, "Select the stack frame one level down (emacs gud-down)",
         gud_stepi, "Step one machine instruction (emacs gud-stepi)",
+        gud_tbreak, "Set a temporary breakpoint at the current line (emacs gud-tbreak)",
+        gud_print, "Print the expression at point in the debugger (emacs gud-print)",
+        gud_watch, "Watch the expression at point in the debugger (emacs gud-watch)",
         run_config_manager, "Manage run/debug configurations",
         run_active_config, "Run the active run configuration",
         clear_run_output, "Clear the Run tool window output",
@@ -20101,17 +20104,80 @@ fn gud_gdb(cx: &mut Context) {
     cx.jobs.callback(async move { Ok(call) });
 }
 
-/// Send `cmd` to the active comint buffer (the inferior debugger), for the
-/// no-argument `gud-*` stepping/frame commands.
-fn gud_send(cx: &mut Context, cmd: &'static str) {
+/// Send an owned command line to the active comint buffer (the inferior
+/// debugger). Shared by every `gud-*` driver.
+fn gud_send_owned(cx: &mut Context, cmd: String) {
     cx.callback
         .push(Box::new(move |compositor: &mut Compositor, cx| {
             if let Some(comint) = compositor.find::<crate::ui::comint::Comint>() {
-                comint.send_command(cmd);
+                comint.send_command(&cmd);
             } else {
                 cx.editor.set_error("gud: no active comint debugger buffer");
             }
         }));
+}
+
+/// Send a fixed command to the active comint buffer, for the no-argument
+/// `gud-*` stepping/frame commands.
+fn gud_send(cx: &mut Context, cmd: &'static str) {
+    gud_send_owned(cx, cmd.to_string());
+}
+
+/// The raw (non-regex-escaped) word/symbol at the cursor, for `gud-print` /
+/// `gud-watch` debugger expressions.
+fn gud_word_at_point(cx: &mut Context) -> Option<String> {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let word = if range.from() != range.to() {
+        range
+    } else {
+        textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
+    };
+    let s = text.slice(word.from()..word.to()).to_string();
+    let s = s.trim().to_string();
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
+}
+
+/// The current buffer's file path and 1-based cursor line, for `gud-*`
+/// breakpoint commands.
+fn gud_file_line(cx: &mut Context) -> Option<(String, usize)> {
+    let (view, doc) = current!(cx.editor);
+    let path = doc.path()?.to_string_lossy().to_string();
+    let text = doc.text().slice(..);
+    let line = text.char_to_line(doc.selection(view.id).primary().cursor(text)) + 1;
+    Some((path, line))
+}
+
+/// `gud-tbreak`: set a temporary breakpoint at the current source line.
+fn gud_tbreak(cx: &mut Context) {
+    let Some((file, line)) = gud_file_line(cx) else {
+        cx.editor.set_error("gud-tbreak: buffer has no file");
+        return;
+    };
+    gud_send_owned(cx, format!("tbreak {file}:{line}"));
+}
+
+/// `gud-print`: print the value of the expression at point in the debugger.
+fn gud_print(cx: &mut Context) {
+    let Some(word) = gud_word_at_point(cx) else {
+        cx.editor.set_error("gud-print: no symbol at point");
+        return;
+    };
+    gud_send_owned(cx, format!("print {word}"));
+}
+
+/// `gud-watch`: set a watch on the expression at point.
+fn gud_watch(cx: &mut Context) {
+    let Some(word) = gud_word_at_point(cx) else {
+        cx.editor.set_error("gud-watch: no symbol at point");
+        return;
+    };
+    gud_send_owned(cx, format!("watch {word}"));
 }
 
 /// `gud-up`: select the stack frame one level up (emacs `gud-up`).
