@@ -14368,6 +14368,14 @@
   "note": "emacs zone -> zone: tick-driven screen-saver overlay, any key stops (ui/zone.rs)"
  },
  {
+  "spec_id": "emacs.command.decipher",
+  "status": "ported",
+  "evidence": [
+   "static:decipher"
+  ],
+  "note": "emacs decipher -> decipher: cryptogram helper overlay (ui/decipher.rs)"
+ },
+ {
   "spec_id": "emacs.command.butterfly",
   "status": "ported",
   "evidence": [

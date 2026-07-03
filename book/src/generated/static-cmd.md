@@ -908,6 +908,7 @@
 | `tetris` | Play tetris (emacs tetris) |  |
 | `pong` | Play pong against the computer (emacs pong) |  |
 | `zone` | Run the zone screen-saver (emacs zone) |  |
+| `decipher` | Solve a cryptogram (emacs decipher) |  |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |

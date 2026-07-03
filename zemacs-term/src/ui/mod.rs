@@ -7,6 +7,7 @@ pub mod blackbox;
 pub mod bubbles;
 pub mod dashboard;
 pub mod dired;
+pub mod decipher;
 pub mod doctor;
 pub mod fivex5;
 pub mod gomoku;
