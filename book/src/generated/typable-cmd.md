@@ -479,6 +479,8 @@
 | `:filter`, `:keep-lines`, `:delete-non-matching-lines` | Keep only the selected lines matching a regex (Emacs keep-lines; in-buffer grep). |
 | `:reject`, `:remove-lines`, `:flush-lines`, `:delete-matching-lines` | Drop the selected lines matching a regex (Emacs flush-lines; in-buffer grep -v). |
 | `:count-matches`, `:count-regex`, `:how-many` | Report how many regex matches (and matching lines) are in the selection (Emacs how-many). |
+| `:copy-matching-lines`, `:copy-lines-matching` | Copy lines matching a regex (region, or point to end) to the kill ring (Emacs copy-matching-lines). |
+| `:kill-matching-lines`, `:kill-lines-matching` | Delete lines matching a regex (region, or point to end) and save them to the kill ring (Emacs kill-matching-lines). |
 | `:uniq-count`, `:frequency` | Collapse the selected lines to `count line`, sorted by frequency (uniq -c | sort -rn). |
 | `:stats`, `:describe` | Show count/sum/mean/min/max of the numbers in the selection (non-destructive). |
 | `:seq`, `:sequence` | Insert an integer sequence, one per line: :seq <start> <end> [step]. |
