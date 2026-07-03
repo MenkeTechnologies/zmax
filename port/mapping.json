@@ -29123,5 +29123,21 @@
    "typable:browse-url"
   ],
   "note": "open a URL in the OS browser"
+ },
+ {
+  "spec_id": "emacs.command.goto_line_relative",
+  "status": "ported",
+  "evidence": [
+   "typable:goto-line-relative"
+  ],
+  "note": "goto line relative to narrowed region"
+ },
+ {
+  "spec_id": "emacs.command.emacs_version",
+  "status": "ported",
+  "evidence": [
+   "typable:emacs-version"
+  ],
+  "note": "report editor version"
  }
 ]

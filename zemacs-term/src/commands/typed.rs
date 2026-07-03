@@ -8738,6 +8738,46 @@ fn list_directory(
     Ok(())
 }
 
+/// `:goto-line-relative <n>` — Emacs `goto-line-relative`: move to line N
+/// counting from the start of the accessible (narrowed) portion of the buffer.
+/// With no narrowing this is identical to `goto-line`.
+fn goto_line_relative(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: usize = args
+        .first()
+        .and_then(|s| s.parse().ok())
+        .ok_or_else(|| anyhow!("usage: :goto-line-relative <line>"))?;
+    let (view, doc) = current!(cx.editor);
+    let base_char = doc.view_narrow(view.id).map_or(0, |(start, _)| start);
+    let text = doc.text();
+    let base_line = text.char_to_line(base_char);
+    let last_line = text.len_lines().saturating_sub(1);
+    let target_line = (base_line + n.saturating_sub(1)).min(last_line);
+    let pos = text.line_to_char(target_line);
+    doc.set_selection(view.id, zemacs_core::Selection::point(pos));
+    Ok(())
+}
+
+/// `:emacs-version` — Emacs `emacs-version`: report the running editor version.
+fn emacs_version(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.editor
+        .set_status(format!("zemacs {}", env!("CARGO_PKG_VERSION")));
+    Ok(())
+}
+
 /// `:add-name-to-file <old> <new>` — Emacs `add-name-to-file`: give the file
 /// OLD an additional name NEW (a hard link).
 fn add_name_to_file(
@@ -30201,6 +30241,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "goto-line-relative",
+        aliases: &[],
+        doc: "Go to a line counting from the narrowed region start (emacs goto-line-relative).",
+        fun: goto_line_relative,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "emacs-version",
+        aliases: &[],
+        doc: "Report the running editor version (emacs emacs-version).",
+        fun: emacs_version,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
