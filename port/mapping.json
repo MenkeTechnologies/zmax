@@ -14288,6 +14288,22 @@
   "note": "emacs hanoi -> hanoi: Towers of Hanoi solver overlay (ui/hanoi.rs)"
  },
  {
+  "spec_id": "emacs.command.life",
+  "status": "ported",
+  "evidence": [
+   "static:life"
+  ],
+  "note": "emacs life -> life: Conway's Game of Life overlay, stepped (ui/life.rs)"
+ },
+ {
+  "spec_id": "emacs.command.doctor",
+  "status": "ported",
+  "evidence": [
+   "static:doctor"
+  ],
+  "note": "emacs doctor -> doctor: ELIZA psychotherapist overlay (ui/doctor.rs)"
+ },
+ {
   "spec_id": "emacs.command.zap_to_char",
   "status": "ported",
   "evidence": [

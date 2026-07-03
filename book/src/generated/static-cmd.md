@@ -897,6 +897,8 @@
 | `five_by_five` | Play 5x5, the light-flipping puzzle (emacs 5x5) |  |
 | `solitaire` | Play English peg solitaire (emacs solitaire) |  |
 | `hanoi` | Watch the Towers of Hanoi solution (emacs hanoi) |  |
+| `life` | Run Conway's Game of Life (emacs life) |  |
+| `doctor` | Talk to the ELIZA psychotherapist (emacs doctor) |  |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |
