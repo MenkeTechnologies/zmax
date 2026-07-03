@@ -156,22 +156,33 @@ impl Comint {
         })
     }
 
-    /// Echo the submitted input into the scrollback with a prompt, then write it
-    /// to the child's stdin — `comint-send-input`.
-    fn send_input(&mut self) {
-        let line = std::mem::take(&mut self.input);
-        self.caret = 0;
-        self.stash = None;
+    /// Echo `line` into the scrollback with the prompt, record it in the input
+    /// ring and write it (plus a newline) to the child's stdin.
+    fn submit(&mut self, line: &str) {
         if let Ok(mut sb) = self.scrollback.lock() {
             sb.push(format!("{} {line}", self.prompt().trim_end()));
         }
-        self.ring.add(&line);
+        self.ring.add(line);
         if let Some(stdin) = self.stdin.as_mut() {
             let _ = stdin.write_all(line.as_bytes());
             let _ = stdin.write_all(b"\n");
             let _ = stdin.flush();
         }
         self.scroll = 0;
+    }
+
+    /// Submit the current input line to the subprocess — `comint-send-input`.
+    fn send_input(&mut self) {
+        let line = std::mem::take(&mut self.input);
+        self.caret = 0;
+        self.stash = None;
+        self.submit(&line);
+    }
+
+    /// Send a caller-supplied command line to the subprocess (used by `gud-*`
+    /// to drive an inferior debugger running in this comint).
+    pub fn send_command(&mut self, cmd: &str) {
+        self.submit(cmd);
     }
 
     /// The input prompt shown at the bottom.

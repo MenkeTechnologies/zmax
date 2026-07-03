@@ -1055,6 +1055,10 @@ impl MappableCommand {
         search_in_files, "Open the project-wide Find in Files panel",
         terminal, "Open an integrated terminal (PTY shell)",
         comint_shell, "Open a comint line-oriented shell buffer (emacs M-x shell)",
+        gud_gdb, "Run gdb in a comint buffer (emacs gud-gdb)",
+        gud_up, "Select the stack frame one level up (emacs gud-up)",
+        gud_down, "Select the stack frame one level down (emacs gud-down)",
+        gud_stepi, "Step one machine instruction (emacs gud-stepi)",
         run_config_manager, "Manage run/debug configurations",
         run_active_config, "Run the active run configuration",
         clear_run_output, "Clear the Run tool window output",
@@ -20082,6 +20086,47 @@ fn comint_shell(cx: &mut Context) {
         }
     }));
     cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Run `gdb` in a comint buffer — the classic comint-driven `gud-gdb` (distinct
+/// from the DAP-backed `gdb`/`dap-launch`, which drives GDB over the Debug
+/// Adapter Protocol instead of its text CLI).
+fn gud_gdb(cx: &mut Context) {
+    let call: job::Callback = Callback::EditorCompositor(Box::new(|editor, compositor| {
+        match crate::ui::comint::Comint::with_program("gdb", &["--fullname"]) {
+            Ok(panel) => compositor.push(Box::new(panel)),
+            Err(e) => editor.set_error(format!("gud-gdb: {e}")),
+        }
+    }));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Send `cmd` to the active comint buffer (the inferior debugger), for the
+/// no-argument `gud-*` stepping/frame commands.
+fn gud_send(cx: &mut Context, cmd: &'static str) {
+    cx.callback
+        .push(Box::new(move |compositor: &mut Compositor, cx| {
+            if let Some(comint) = compositor.find::<crate::ui::comint::Comint>() {
+                comint.send_command(cmd);
+            } else {
+                cx.editor.set_error("gud: no active comint debugger buffer");
+            }
+        }));
+}
+
+/// `gud-up`: select the stack frame one level up (emacs `gud-up`).
+fn gud_up(cx: &mut Context) {
+    gud_send(cx, "up");
+}
+
+/// `gud-down`: select the stack frame one level down (emacs `gud-down`).
+fn gud_down(cx: &mut Context) {
+    gud_send(cx, "down");
+}
+
+/// `gud-stepi`: step one machine instruction (emacs `gud-stepi`).
+fn gud_stepi(cx: &mut Context) {
+    gud_send(cx, "stepi");
 }
 
 /// Open the project-wide Find in Files panel, seeded with the primary selection.
