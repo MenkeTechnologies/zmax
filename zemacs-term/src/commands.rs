@@ -1206,6 +1206,7 @@ impl MappableCommand {
         delete_till_char_forward, "Delete till next char (dt)",
         zap_to_char, "Kill through the next char, inclusive (emacs zap-to-char, M-z)",
         zap_up_to_char, "Kill up to the next char, exclusive (emacs zap-up-to-char)",
+        five_by_five, "Play 5x5, the light-flipping puzzle (emacs 5x5)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -13101,6 +13102,13 @@ fn rmail(cx: &mut Context) {
 fn calc_dispatch(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::calc::Calc::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `5x5`: open the light-flipping puzzle (light every cell of a 5x5 grid).
+fn five_by_five(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::fivex5::FiveByFive::new()) as Box<dyn Component>)
     });
 }
 

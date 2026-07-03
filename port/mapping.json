@@ -14264,6 +14264,14 @@
   "note": "transpose-paragraphs: swap the current paragraph with the previous one"
  },
  {
+  "spec_id": "emacs.command.5x5",
+  "status": "ported",
+  "evidence": [
+   "static:five_by_five"
+  ],
+  "note": "emacs 5x5 -> five_by_five: interactive light-flipping puzzle overlay (ui/fivex5.rs)"
+ },
+ {
   "spec_id": "emacs.command.zap_to_char",
   "status": "ported",
   "evidence": [

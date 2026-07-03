@@ -5,6 +5,7 @@ mod completion;
 pub mod context_menu;
 pub mod dashboard;
 pub mod dired;
+pub mod fivex5;
 mod document;
 pub(crate) mod editor;
 mod file_tree;
