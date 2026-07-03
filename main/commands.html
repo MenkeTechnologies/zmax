@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-0069860d.js";
+            window.path_to_searchindex_js = "searchindex-1b6e4da2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -243,6 +243,24 @@
 <tr><td><code>:arduino-compile</code>, <code>:averify</code>, <code>:arduino-verify</code></td><td>Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify).</td></tr>
 <tr><td><code>:arduino-upload</code>, <code>:aupload</code></td><td>Compile and flash the sketch to the connected board (arduino-cli compile –upload), live in a terminal panel.</td></tr>
 <tr><td><code>:arduino-monitor</code>, <code>:amonitor</code>, <code>:serial-monitor</code></td><td>Open the serial monitor for the selected port/baud (arduino-cli monitor).</td></tr>
+<tr><td><code>:arduino-compile-verbose</code>, <code>:arduino-verify-verbose</code></td><td>Verbose compile (<code>arduino-cli compile -v</code>); diagnostics into <em>compilation</em>.</td></tr>
+<tr><td><code>:arduino-compile-clean</code>, <code>:arduino-rebuild</code></td><td>Compile without cached build artifacts (<code>arduino-cli compile --clean</code>).</td></tr>
+<tr><td><code>:arduino-compile-jobs</code>, <code>:arduino-compile-j</code></td><td>Compile with N parallel jobs (<code>arduino-cli compile -j &lt;n&gt;</code>).</td></tr>
+<tr><td><code>:arduino-compiledb</code>, <code>:arduino-compilation-database</code></td><td>Generate compile_commands.json for the C/C++ LSP (<code>arduino-cli compile --only-compilation-database</code>).</td></tr>
+<tr><td><code>:arduino-compile-warnings</code>, <code>:arduino-warnings</code></td><td>Compile at a warning level (`arduino-cli compile –warnings &lt;none</td></tr>
+<tr><td><code>:arduino-compile-profile</code>, <code>:arduino-build-profile</code></td><td>Compile using a sketch build profile (<code>arduino-cli compile --profile &lt;name&gt;</code>).</td></tr>
+<tr><td><code>:arduino-compile-debug-opt</code>, <code>:arduino-compile-for-debug</code></td><td>Compile with debug-friendly optimization (<code>arduino-cli compile --optimize-for-debug</code>).</td></tr>
+<tr><td><code>:arduino-upload-verify</code>, <code>:arduino-upload-verified</code></td><td>Build + flash, then verify the flashed program (<code>arduino-cli compile --upload --verify</code>).</td></tr>
+<tr><td><code>:arduino-upload-programmer</code>, <code>:arduino-upload-via-programmer</code></td><td>Build + flash through a programmer (<code>arduino-cli compile --upload --programmer &lt;id&gt;</code>).</td></tr>
+<tr><td><code>:arduino-upload-dir</code>, <code>:arduino-upload-input-dir</code></td><td>Flash a pre-built binary folder without recompiling (<code>arduino-cli upload --input-dir &lt;dir&gt;</code>).</td></tr>
+<tr><td><code>:arduino-upload-file</code>, <code>:arduino-upload-input-file</code></td><td>Flash a specific pre-built binary without recompiling (<code>arduino-cli upload --input-file &lt;file&gt;</code>).</td></tr>
+<tr><td><code>:arduino-monitor-raw</code>, <code>:arduino-monitor-noraw</code></td><td>Serial monitor without output transformations (<code>arduino-cli monitor --raw</code>).</td></tr>
+<tr><td><code>:arduino-monitor-timestamp</code>, <code>:arduino-monitor-ts</code></td><td>Serial monitor prefixing each line with a timestamp (<code>arduino-cli monitor --timestamp</code>).</td></tr>
+<tr><td><code>:arduino-board-programmers</code>, <code>:arduino-list-programmers</code></td><td>List programmers the selected board supports (<code>arduino-cli board details --list-programmers</code>).</td></tr>
+<tr><td><code>:arduino-board-list-watch</code>, <code>:arduino-boards-watch</code></td><td>Watch for boards connecting/disconnecting (<code>arduino-cli board list --watch</code>), live in a panel.</td></tr>
+<tr><td><code>:arduino-lib-list-updatable</code>, <code>:arduino-libs-updatable</code></td><td>Installed libraries with a newer version available (<code>arduino-cli lib list --updatable</code>).</td></tr>
+<tr><td><code>:arduino-lib-install-git</code>, <code>:arduino-lib-install-url</code></td><td>Install a library from a git repository (<code>arduino-cli lib install --git-url &lt;url&gt;</code>).</td></tr>
+<tr><td><code>:arduino-lib-install-zip</code>, <code>:arduino-lib-install-archive</code></td><td>Install a library from a local .zip (<code>arduino-cli lib install --zip-path &lt;path&gt;</code>).</td></tr>
 <tr><td><code>:arduino-boards</code>, <code>:arduino-board</code></td><td>Pick the target board (FQBN) from installed platforms (Arduino IDE board selector).</td></tr>
 <tr><td><code>:arduino-ports</code>, <code>:arduino-port</code></td><td>Pick the serial port from connected devices (arduino-cli board list).</td></tr>
 <tr><td><code>:arduino-lib-search</code>, <code>:arduino-lib</code></td><td>Search the Arduino library index and install the pick (Arduino IDE Library Manager).</td></tr>
