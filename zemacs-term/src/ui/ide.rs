@@ -1746,16 +1746,21 @@ impl Ide {
                 // cursor (so the row handlers below act on that column's tab); a
                 // click on a vertical divider starts a resize.
                 if row > self.bottom_header_y && in_rect(&self.problems_rect, col, row) {
-                    // A click on a live divider starts a resize drag. A folded
-                    // column's divider sits at the drawer edge as a grab handle,
-                    // so dragging it back inward unfolds the column.
+                    // A click on (or within one cell of) a live divider starts a
+                    // resize drag. A folded column's divider sits at the drawer
+                    // edge as a grab handle, so the ±1 tolerance makes the edge
+                    // handle catchable and dragging it back inward unfolds.
                     let [d0, d1] = self.bottom_div_x;
-                    if d0 != 0 && col == d0 {
-                        self.resizing_div = Some(0);
-                        return IdeAction::None;
-                    }
-                    if d1 != 0 && col == d1 {
-                        self.resizing_div = Some(1);
+                    let near0 = d0 != 0 && col.abs_diff(d0) <= 1;
+                    let near1 = d1 != 0 && col.abs_diff(d1) <= 1;
+                    if near0 || near1 {
+                        // Grab whichever divider is closer to the click.
+                        let grab = if near0 && (!near1 || col.abs_diff(d0) <= col.abs_diff(d1)) {
+                            0
+                        } else {
+                            1
+                        };
+                        self.resizing_div = Some(grab);
                         return IdeAction::None;
                     }
                     // Otherwise focus the column whose body range holds the cursor.
@@ -3590,6 +3595,16 @@ impl Ide {
             for yy in full.y..full.y + full.height {
                 surface.set_stringn(dx, yy, vline, 1, dst);
             }
+        }
+        // A folded column's divider hugs the drawer edge; mark it with an inward
+        // chevron so the grab handle is visible and shows which way to drag to
+        // unfold. The grab hit-test (mouse down) also widens to ±1 cell.
+        let handle = theme.get("function");
+        if cols[0].width < 2 {
+            surface.set_stringn(d0, full.y, "\u{25B8}", 1, handle); // ▸ drag right to open
+        }
+        if cols[2].width < 2 {
+            surface.set_stringn(d1, full.y, "\u{25C2}", 1, handle); // ◂ drag left to open
         }
     }
 
