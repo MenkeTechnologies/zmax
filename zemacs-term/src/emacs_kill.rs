@@ -25,18 +25,55 @@ struct KillRing {
     /// Selection ranges (anchor, head) the last yank/yank-pop left behind.
     /// `yank-pop` only proceeds while the live selection still matches this.
     yank_sel: Vec<(usize, usize)>,
+    /// Armed by `append-next-kill` (C-M-w): the *next* kill joins the most-recent
+    /// ring entry instead of starting a new one. Consumed by the next kill.
+    append_next: bool,
 }
 
 static RING: Lazy<Mutex<KillRing>> = Lazy::new(|| Mutex::new(KillRing::default()));
 
-/// Push `text` onto the kill ring (called from every kill/copy path).
-/// Empty kills and exact-duplicate consecutive kills are ignored, matching
-/// emacs's `kill-ring` de-duplication of identical adjacent entries.
+/// Push `text` onto the kill ring for a *forward* kill (called from every
+/// kill/copy path). Empty kills and exact-duplicate consecutive kills are
+/// ignored, matching emacs's `kill-ring` de-duplication of identical adjacent
+/// entries. When `append-next-kill` is armed, the text is appended to the
+/// most-recent entry instead of starting a new one.
 pub fn record(text: String) {
+    record_join(text, true);
+}
+
+/// Like [`record`] but for a *backward* kill: when `append-next-kill` is armed,
+/// the text is prepended to the most-recent entry (emacs prepends the kill when
+/// the command kills backward). Without the arm it is identical to [`record`].
+pub fn record_prepend(text: String) {
+    record_join(text, false);
+}
+
+/// Arm emacs `append-next-kill` (C-M-w): the next kill command joins its text to
+/// the most-recent kill-ring entry rather than creating a new entry — appended
+/// for a forward kill, prepended for a backward kill.
+pub fn arm_append() {
+    RING.lock().unwrap().append_next = true;
+}
+
+/// Shared implementation for [`record`]/[`record_prepend`]. `forward` selects
+/// append-vs-prepend when the `append-next-kill` arm is consumed.
+fn record_join(text: String, forward: bool) {
     if text.is_empty() {
         return;
     }
     let mut r = RING.lock().unwrap();
+    if r.append_next {
+        r.append_next = false;
+        if let Some(top) = r.entries.first_mut() {
+            if forward {
+                top.push_str(&text);
+            } else {
+                top.insert_str(0, &text);
+            }
+            return;
+        }
+        // Ring empty: nothing to join to, fall through and insert as first entry.
+    }
     if r.entries.first().map(|s| s == &text).unwrap_or(false) {
         return;
     }
@@ -137,5 +174,72 @@ mod tests {
         record("only".into());
         begin_yank(vec![(0, 4)]);
         assert_eq!(next_entry(&[(0, 4)]), None);
+    }
+
+    #[test]
+    fn append_next_kill_joins_forward_kill_to_top_entry() {
+        let _g = TEST_GUARD.lock().unwrap_or_else(|e| e.into_inner());
+        reset();
+        record("foo".into()); // ring: [foo]
+        arm_append();
+        record("bar".into()); // forward kill joins -> [foobar], not two entries
+        let r = RING.lock().unwrap();
+        assert_eq!(r.entries, vec!["foobar"]);
+    }
+
+    #[test]
+    fn append_next_kill_prepends_backward_kill() {
+        let _g = TEST_GUARD.lock().unwrap_or_else(|e| e.into_inner());
+        reset();
+        record("world".into()); // ring: [world]
+        arm_append();
+        record_prepend("hello".into()); // backward kill prepends -> [helloworld]
+        let r = RING.lock().unwrap();
+        assert_eq!(r.entries, vec!["helloworld"]);
+    }
+
+    #[test]
+    fn arm_is_consumed_by_a_single_kill() {
+        let _g = TEST_GUARD.lock().unwrap_or_else(|e| e.into_inner());
+        reset();
+        record("a".into());
+        arm_append();
+        record("b".into()); // joins -> [ab]
+        record("c".into()); // arm already spent -> new entry
+        let r = RING.lock().unwrap();
+        assert_eq!(r.entries, vec!["c", "ab"]);
+    }
+
+    #[test]
+    fn arm_on_empty_ring_inserts_first_entry() {
+        let _g = TEST_GUARD.lock().unwrap_or_else(|e| e.into_inner());
+        reset();
+        arm_append();
+        record("solo".into()); // nothing to join to -> plain first entry
+        let r = RING.lock().unwrap();
+        assert_eq!(r.entries, vec!["solo"]);
+    }
+
+    #[test]
+    fn empty_kill_does_not_consume_the_arm() {
+        let _g = TEST_GUARD.lock().unwrap_or_else(|e| e.into_inner());
+        reset();
+        record("keep".into());
+        arm_append();
+        record(String::new()); // empty kill is a no-op, arm survives
+        record("join".into()); // this real kill consumes it -> [keepjoin]
+        let r = RING.lock().unwrap();
+        assert_eq!(r.entries, vec!["keepjoin"]);
+    }
+
+    #[test]
+    fn append_join_bypasses_adjacent_dedup() {
+        let _g = TEST_GUARD.lock().unwrap_or_else(|e| e.into_inner());
+        reset();
+        record("x".into());
+        arm_append();
+        record("x".into()); // would be a dup, but the arm joins instead -> [xx]
+        let r = RING.lock().unwrap();
+        assert_eq!(r.entries, vec!["xx"]);
     }
 }

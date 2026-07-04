@@ -29028,6 +29028,14 @@
   "note": "backward-kill-sentence (C-x DEL): kill from start of sentence to point"
  },
  {
+  "spec_id": "emacs.command.append_next_kill",
+  "status": "ported",
+  "evidence": [
+   "static:append_next_kill"
+  ],
+  "note": "append-next-kill (C-M-w): the next kill joins the last kill-ring entry instead of starting a new one (appended for a forward kill, prepended for a backward kill via record_prepend); bound at SPC r a."
+ },
+ {
   "spec_id": "emacs.command.forward_page",
   "status": "ported",
   "evidence": [

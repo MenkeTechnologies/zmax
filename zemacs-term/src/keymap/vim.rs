@@ -1618,6 +1618,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "r" => register_picker,            // SPC r r : show registers
                 "m" => marks_picker,               // SPC r m : pick a mark and jump (:Marks)
                 "y" => register_picker,            // SPC r y : kill ring
+                "a" => append_next_kill,           // SPC r a : append next kill to last (emacs C-M-w)
                 ":" => command_history_picker,     // SPC r : : command-line history (:History:)
                 "/" => search_history_picker,      // SPC r / : search history (:History/)
                 "s" => last_picker,                // SPC r s : resume last search/picker buffer
