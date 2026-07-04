@@ -28128,6 +28128,174 @@
   "note": "buffer-menu: static command pushes the Buffer Menu Component"
  },
  {
+  "spec_id": "emacs.command.buffer_menu_mark",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:m"
+  ],
+  "note": "Buffer-menu-mark -> m marks the buffer for display (> tag) and advances"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_unmark",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:u"
+  ],
+  "note": "Buffer-menu-unmark -> u clears the mark at point and advances"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_unmark_all",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:A-backspace"
+  ],
+  "note": "Buffer-menu-unmark-all -> M-DEL removes every mark of every kind"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_unmark_all_buffers",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:U"
+  ],
+  "note": "Buffer-menu-unmark-all-buffers -> U removes every mark"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_backup_unmark",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:backspace"
+  ],
+  "note": "Buffer-menu-backup-unmark -> DEL moves up one line and clears its mark"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_delete",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:d"
+  ],
+  "note": "Buffer-menu-delete -> d flags the buffer for deletion (D) and advances"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_delete_backwards",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:C-d"
+  ],
+  "note": "Buffer-menu-delete-backwards -> C-d flags for deletion (D) and moves up"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_save",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:s"
+  ],
+  "note": "Buffer-menu-save -> s flags the buffer to be saved (S) and advances"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_not_modified",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:~"
+  ],
+  "note": "Buffer-menu-not-modified -> ~ clears the buffer's modified (*) flag"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_toggle_read_only",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:%"
+  ],
+  "note": "Buffer-menu-toggle-read-only -> % toggles the buffer's read-only flag"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_execute",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:x"
+  ],
+  "note": "Buffer-menu-execute -> x saves the S-flagged buffers then kills the D-flagged ones (real editor save/close)"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_select",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:v"
+  ],
+  "note": "Buffer-menu-select -> v selects the buffer at point plus every >-marked buffer, first in this window and the rest in splits"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_this_window",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:ret"
+  ],
+  "note": "Buffer-menu-this-window -> RET/f selects the buffer at point in this window"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_other_window",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:o"
+  ],
+  "note": "buffer-menu-other-window -> o selects the buffer at point in another (split) window"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_other_window_1",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:o"
+  ],
+  "note": "Buffer-menu-other-window -> o selects the buffer at point in another (split) window"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_switch_other_window",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:C-o"
+  ],
+  "note": "Buffer-menu-switch-other-window -> C-o displays the buffer at point in another window, staying in the menu"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_1_window",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:1"
+  ],
+  "note": "Buffer-menu-1-window -> 1 selects the buffer at point filling the frame (Replace)"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_2_window",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:2"
+  ],
+  "note": "Buffer-menu-2-window -> 2 selects the buffer at point in a split (approximates the 2-window layout)"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_bury",
+  "status": "partial",
+  "evidence": [
+   "key:bufmenu:b"
+  ],
+  "note": "Buffer-menu-bury -> b sinks the buffer's row to the bottom of the menu list; zemacs has no separate global buffer-list order, so the global other-buffer effect is not reproduced"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_toggle_files_only",
+  "status": "ported",
+  "evidence": [
+   "key:bufmenu:T"
+  ],
+  "note": "Buffer-menu-toggle-files-only -> T lists only file-visiting buffers"
+ },
+ {
+  "spec_id": "emacs.command.buffer_menu_toggle_internal",
+  "status": "partial",
+  "evidence": [
+   "key:bufmenu:I"
+  ],
+  "note": "Buffer-menu-toggle-internal -> I toggles showing internal (space-prefixed / *…* special) buffers; the filter is faithful but zemacs does not create Emacs-style internal buffers, so in practice it reveals nothing"
+ },
+ {
   "spec_id": "emacs.keybinding.ret_lparenbuffer_menu_rparen",
   "status": "ported",
   "evidence": [

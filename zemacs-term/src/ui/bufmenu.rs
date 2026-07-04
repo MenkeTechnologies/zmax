@@ -16,6 +16,9 @@
 //!   1     — select it filling the frame (`Buffer-menu-1-window`)
 //!   o / 2 — select it in another (split) window (`Buffer-menu-other-window` /
 //!           `Buffer-menu-2-window`)
+//!   C-o   — display it in another window, staying in the menu
+//!           (`Buffer-menu-switch-other-window`)
+//!   b     — bury the buffer at point (`Buffer-menu-bury`)
 //!   v     — select the buffer at point plus all `>`-marked ones (`Buffer-menu-select`)
 //!   m     — mark for display/selection `>` (`Buffer-menu-mark`)
 //!   d     — flag for deletion `D` and advance (`Buffer-menu-delete`);
@@ -28,6 +31,7 @@
 //!   ~     — clear the modified flag (`Buffer-menu-not-modified`)
 //!   %     — toggle the read-only flag (`Buffer-menu-toggle-read-only`)
 //!   T     — toggle showing only file-visiting buffers (`Buffer-menu-toggle-files-only`)
+//!   I     — toggle showing internal buffers (`Buffer-menu-toggle-internal`)
 //!   g     — refresh the list (revert-buffer);  q/Esc — quit
 //! (j/k/n/p, arrows and G/Home/End move point, vim-style aliases not in the
 //! Emacs Buffer Menu map.)
@@ -46,10 +50,13 @@ use crate::{
 pub struct BufferMenu {
     /// Pure model: rows, marks, cursor.
     menu: BufferMenuModel,
-    /// Live document ids, index-aligned with `menu.rows()`.
-    docs: Vec<DocumentId>,
+    /// Live document ids keyed by [`BufferRow::key`], so a row lookup survives a
+    /// `bury` reorder (which shuffles `menu.rows()` out of enumeration order).
+    ids: std::collections::BTreeMap<u64, DocumentId>,
     /// `T` toggle: list only file-visiting buffers.
     files_only: bool,
+    /// `I` toggle: also show internal (`*…*` / space-prefixed) buffers.
+    show_internal: bool,
     scroll: usize,
     viewport: usize,
     status: String,
@@ -67,8 +74,9 @@ impl BufferMenu {
     pub fn new(editor: &Editor) -> Self {
         let mut menu = BufferMenu {
             menu: BufferMenuModel::default(),
-            docs: Vec::new(),
+            ids: std::collections::BTreeMap::new(),
             files_only: false,
+            show_internal: false,
             scroll: 0,
             viewport: 1,
             status: String::new(),
@@ -78,18 +86,27 @@ impl BufferMenu {
     }
 
     /// Rebuild the row list from the editor's documents (in `DocumentId` order,
-    /// the `BTreeMap` order), preserving marks by buffer id. Honours `files_only`.
+    /// the `BTreeMap` order), preserving marks by buffer id. Honours the
+    /// `files_only` (`T`) and `show_internal` (`I`) filters.
     fn refresh(&mut self, editor: &Editor) {
         let current = zemacs_view::current_ref!(editor).1.id();
         let mut rows = Vec::new();
-        let mut docs = Vec::new();
+        let mut ids = std::collections::BTreeMap::new();
         for doc in editor.documents() {
             if self.files_only && doc.path().is_none() {
                 continue;
             }
+            let name = doc.display_name().into_owned();
+            if !self.show_internal
+                && doc.path().is_none()
+                && zemacs_core::buffer_menu::is_internal_name(&name)
+            {
+                continue;
+            }
+            let key = doc_key(doc.id());
             rows.push(BufferRow {
-                key: doc_key(doc.id()),
-                name: doc.display_name().into_owned(),
+                key,
+                name,
                 size: doc.text().len_chars(),
                 mode: doc.language_name().unwrap_or("Fundamental").to_string(),
                 file: doc
@@ -100,24 +117,20 @@ impl BufferMenu {
                 readonly: doc.readonly,
                 modified: doc.is_modified(),
             });
-            docs.push(doc.id());
+            ids.insert(key, doc.id());
         }
-        self.docs = docs;
+        self.ids = ids;
         self.menu.set_rows(rows);
     }
 
     /// The document id under point, if any.
     fn current_doc(&self) -> Option<DocumentId> {
-        self.docs.get(self.menu.selected()).copied()
+        self.menu.current_key().and_then(|k| self.doc_for(k))
     }
 
     /// The document id for a buffer key (matching a row).
     fn doc_for(&self, key: u64) -> Option<DocumentId> {
-        self.menu
-            .rows()
-            .iter()
-            .position(|r| r.key == key)
-            .and_then(|i| self.docs.get(i).copied())
+        self.ids.get(&key).copied()
     }
 
     /// Build a callback that pops the menu and switches to the buffer at point
@@ -216,10 +229,23 @@ impl Component for BufferMenu {
                     return EventResult::Consumed(Some(cb));
                 }
             }
+            // C-o (`Buffer-menu-switch-other-window`): display the buffer at point
+            // in another (split) window but stay in the Buffer Menu.
+            ctrl!('o') => {
+                if let Some(id) = self.current_doc() {
+                    cx.editor.switch(id, Action::HorizontalSplit);
+                }
+            }
             key!('v') => {
                 if let Some(cb) = self.select_marked() {
                     return EventResult::Consumed(Some(cb));
                 }
+            }
+            // b (`Buffer-menu-bury`): sink the buffer at point to the bottom of the
+            // list. zemacs has no separate global buffer-list order, so this buries
+            // it within the menu ordering.
+            key!('b') => {
+                self.menu.bury_current();
             }
 
             // Marks.
@@ -258,6 +284,12 @@ impl Component for BufferMenu {
             // Display.
             key!('T') => {
                 self.files_only = !self.files_only;
+                self.refresh(cx.editor);
+            }
+            // I (`Buffer-menu-toggle-internal`): reveal/hide internal (`*…*` /
+            // space-prefixed) buffers.
+            key!('I') => {
+                self.show_internal = !self.show_internal;
                 self.refresh(cx.editor);
             }
             key!('g') | key!('R') => self.refresh(cx.editor),
