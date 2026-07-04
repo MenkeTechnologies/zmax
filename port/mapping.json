@@ -32943,5 +32943,14 @@
    "static:isearch_highlight_lines_matching_regexp"
   ],
   "note": "No persistent line hi-lock; lists matching lines via occur as the closest analog."
+ },
+ {
+  "spec_id": "emacs.command.default_indent_new_line",
+  "status": "ported",
+  "evidence": [
+   "static:default_indent_new_line",
+   "key:insert:A-j"
+  ],
+  "note": "default-indent-new-line (M-j): break line at point and continue the comment, aligning the continuation under the current comment (comment-indent-new-line in-comment path); newline-and-indent when not in a comment."
  }
 ]

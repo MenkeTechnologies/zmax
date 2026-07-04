@@ -987,6 +987,7 @@ impl MappableCommand {
         smart_tab, "Insert tab if all cursors have all whitespace to their left; otherwise, run a separate command.",
         insert_tab, "Insert tab char",
         insert_newline, "Insert newline char",
+        default_indent_new_line, "Break line at point and continue the comment, indenting under it (emacs default-indent-new-line, M-j)",
         insert_char_interactive, "Insert an interactively-chosen char",
         append_char_interactive, "Append an interactively-chosen char",
         delete_char_backward, "Delete previous char",
@@ -21657,6 +21658,117 @@ pub mod insert {
         doc.apply(&transaction, view.id);
     }
 
+    /// Core of `default-indent-new-line` (emacs M-j): break `line` at char offset
+    /// `col`. Trailing whitespace immediately before the break and leading
+    /// whitespace immediately after it are removed (emacs's two
+    /// `delete-horizontal-space` calls in `comment-indent-new-line`), then a
+    /// newline, the continuation `indent`, and — when the line is a comment
+    /// (`token` is `Some`) — the comment prefix are inserted.
+    ///
+    /// Returns the char range within `line` to replace (`start..end`) and the
+    /// text to put in its place; the caller offsets these by the line's start and
+    /// places point at `line_start + start + insert.chars().count()`.
+    pub(crate) fn default_indent_new_line_edit(
+        line: &[char],
+        col: usize,
+        token: Option<&str>,
+        indent: &str,
+        line_ending: &str,
+    ) -> (usize, usize, String) {
+        let col = col.min(line.len());
+        let mut start = col;
+        while start > 0 && matches!(line[start - 1], ' ' | '\t') {
+            start -= 1;
+        }
+        let mut end = col;
+        while end < line.len() && matches!(line[end], ' ' | '\t') {
+            end += 1;
+        }
+        let mut insert = String::with_capacity(line_ending.len() + indent.len() + 4);
+        insert.push_str(line_ending);
+        insert.push_str(indent);
+        if let Some(token) = token {
+            insert.push_str(token);
+            insert.push(' ');
+        }
+        (start, end, insert)
+    }
+
+    /// `default-indent-new-line` (emacs M-j): break the line at point and indent,
+    /// continuing the comment when point is inside one. In a comment this ports
+    /// `comment-indent-new-line` (align the continuation under the current comment
+    /// and reinsert the comment prefix); outside a comment it is
+    /// `newline-and-indent` (drop surrounding whitespace, break, indent as for a
+    /// fresh line). Reuses the same comment-token lookup and `indent_for_newline`
+    /// helpers as `insert_newline`.
+    pub fn default_indent_new_line(cx: &mut Context) {
+        enter_insert_mode(cx);
+        let config = cx.editor.config();
+        let loader = cx.editor.syn_loader.load();
+        let (view, doc) = current_ref!(cx.editor);
+        let view_id = view.id;
+        let text = doc.text().slice(..);
+        let line_ending = doc.line_ending.as_str().to_string();
+
+        let cursor = doc.selection(view_id).primary().cursor(text);
+        let line_num = text.char_to_line(cursor);
+        let line_start = text.line_to_char(line_num);
+        let content_end = line_end_char_index(&text, line_num);
+        let col = cursor.clamp(line_start, content_end) - line_start;
+
+        // Comment token of this line (if it begins a comment) — the same lookup as
+        // `insert_newline`'s continuation path, but unconditional: continuing the
+        // comment is the whole point of this command, not a config toggle.
+        let first_non_ws = text.line(line_num).first_non_whitespace_char();
+        let token = first_non_ws
+            .map(|c| text.char_to_byte(line_start + c))
+            .and_then(|byte| doc.language_config_at(&loader, byte))
+            .and_then(|cfg| cfg.comment_tokens.as_ref())
+            .and_then(|tokens| comment::get_comment_token(text, tokens, line_num))
+            .map(|t| t.to_string());
+
+        // Continuation indent: align under the current comment (its leading
+        // whitespace) when continuing one, else indent as for a fresh line.
+        let indent = if token.is_some() {
+            first_non_ws
+                .map(|c| text.line(line_num).slice(..c).to_string())
+                .unwrap_or_default()
+        } else {
+            indent::indent_for_newline(
+                &loader,
+                doc.syntax(),
+                &config.indent_heuristic,
+                &doc.indent_style,
+                doc.tab_width(),
+                text,
+                line_num,
+                cursor,
+                line_num,
+            )
+        };
+
+        let line_chars: Vec<char> = text
+            .line(line_num)
+            .slice(..content_end - line_start)
+            .chars()
+            .collect();
+        let (del_start, del_end, insert) =
+            default_indent_new_line_edit(&line_chars, col, token.as_deref(), &indent, &line_ending);
+
+        let from = line_start + del_start;
+        let to = line_start + del_end;
+        let new_cursor = from + insert.chars().count();
+        let transaction = Transaction::change(
+            doc.text(),
+            std::iter::once((from, to, Some(Tendril::from(insert.as_str())))),
+        );
+
+        let (view, doc) = current!(cx.editor);
+        doc.apply(&transaction, view_id);
+        doc.set_selection(view_id, Selection::point(new_cursor));
+        doc.append_changes_to_history(view);
+    }
+
     fn dedent(doc: &Document, range: &Range) -> Option<Deletion> {
         let text = doc.text().slice(..);
         let pos = range.cursor(text);
@@ -31805,6 +31917,50 @@ mod insert_generator_tests {
         assert_eq!(auto_fill_break("verylongwordnobreak", 5), None);
         // Never break at column 0 (leading whitespace).
         assert_eq!(auto_fill_break(" leadingspacetoolong", 5), None);
+    }
+
+    #[test]
+    fn default_indent_new_line_continues_line_comment() {
+        use super::insert::default_indent_new_line_edit;
+        // "    // foo bar" broken before "bar": trailing space (col-1) is dropped,
+        // the continuation gets the same leading indent + comment prefix.
+        let line: Vec<char> = "    // foo bar".chars().collect();
+        let (s, e, ins) = default_indent_new_line_edit(&line, 11, Some("//"), "    ", "\n");
+        assert_eq!((s, e), (10, 11), "one trailing space before break removed");
+        assert_eq!(ins, "\n    // ");
+    }
+
+    #[test]
+    fn default_indent_new_line_drops_leading_ws_after_break() {
+        use super::insert::default_indent_new_line_edit;
+        // "  # note   end": break after "note"; the run of spaces before "end"
+        // (leading whitespace of the continuation) is removed too.
+        let line: Vec<char> = "  # note   end".chars().collect();
+        let (s, e, ins) = default_indent_new_line_edit(&line, 8, Some("#"), "  ", "\n");
+        assert_eq!((s, e), (8, 11), "three spaces after point removed");
+        assert_eq!(ins, "\n  # ");
+    }
+
+    #[test]
+    fn default_indent_new_line_plain_line_has_no_comment_prefix() {
+        use super::insert::default_indent_new_line_edit;
+        // Not a comment (token None): whitespace on both sides of the break is
+        // dropped, newline + indent inserted, no comment prefix.
+        let line: Vec<char> = "foo  bar".chars().collect();
+        let (s, e, ins) = default_indent_new_line_edit(&line, 5, None, "", "\n");
+        assert_eq!((s, e), (3, 5), "both inter-word spaces collapsed at the break");
+        assert_eq!(ins, "\n");
+    }
+
+    #[test]
+    fn default_indent_new_line_never_deletes_the_comment_token() {
+        use super::insert::default_indent_new_line_edit;
+        // Point sits just after "// " with content following: only the single
+        // space after the token is trailing whitespace; the token itself stays.
+        let line: Vec<char> = "    // baz".chars().collect();
+        let (s, e, ins) = default_indent_new_line_edit(&line, 7, Some("//"), "    ", "\n");
+        assert_eq!((s, e), (6, 7), "start stops at the '/' of the token");
+        assert_eq!(ins, "\n    // ");
     }
 
     #[test]

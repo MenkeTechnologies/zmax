@@ -1982,6 +1982,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-q"     => insert_char_interactive, // vim i_CTRL-Q: same as CTRL-V (insert next key literally)
         "A-f"     => move_next_word_start, // M-f forward-word
         "A-b"     => move_prev_word_start, // M-b backward-word
+        "A-j"     => default_indent_new_line, // M-j break line + continue comment (default-indent-new-line)
         "A-v"     => page_up,              // M-v scroll-down
         "A-<"     => goto_file_start,      // M-< beginning of buffer
         "A->"     => goto_file_end,        // M-> end of buffer
