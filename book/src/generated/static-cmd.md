@@ -205,6 +205,11 @@
 | `toggle_modeline_position` | Toggle cursor position in the mode line (SPC t m p) | normal: `` <space>tmp ``, select: `` <space>tmp `` |
 | `toggle_modeline_vcs` | Toggle version-control info in the mode line (SPC t m v) | normal: `` <space>tmv ``, select: `` <space>tmv `` |
 | `toggle_centered_cursor` | Keep the cursor vertically centered (SPC t -) | normal: `` <space>t<minus> ``, select: `` <space>t<minus> `` |
+| `toggle_hl_line` | Highlight the current line (emacs hl-line-mode / global-hl-line-mode) |  |
+| `toggle_electric_pair` | Auto-insert matching close delimiters (emacs electric-pair-mode) |  |
+| `toggle_auto_revert` | Reload buffers when their file changes on disk (emacs auto-revert-mode) |  |
+| `set_fill_prefix` | Set the fill-prefix from line start to point (emacs set-fill-prefix) |  |
+| `set_goal_column` | Make vertical motion stick to the current column (emacs set-goal-column) |  |
 | `toggle_fill_column` | Toggle a fill-column ruler (SPC t f) | normal: `` <C-x>f ``, `` <space>tf ``, select: `` <C-x>f ``, `` <space>tf ``, insert: `` <C-x>f `` |
 | `toggle_long_line_marker` | Toggle an 80th-column ruler (SPC t 8) | normal: `` <space>t8 ``, `` <space>t<C-8> ``, select: `` <space>t8 ``, `` <space>t<C-8> `` |
 | `toggle_soft_wrap` | Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap) | normal: `` <C-x>xt ``, select: `` <C-x>xt ``, insert: `` <C-x>xt `` |
@@ -261,8 +266,8 @@
 | `copy_system_info` | Copy system info (version/OS/arch) to the clipboard (SPC h d s) | normal: `` <space>hds ``, select: `` <space>hds `` |
 | `copy_last_keys` | Copy the most recently pressed keys to the clipboard (SPC h d l) | normal: `` <space>hdl ``, select: `` <space>hdl `` |
 | `ace_window` | Jump to a window by its number, prompted (ace-window, SPC w . a) | normal: `` <C-w>.a ``, `` <space>w.a ``, select: `` <space>w.a `` |
-| `browse_news` | Browse zemacs release notes / NEWS (SPC h n) | normal: `` <space>hn ``, `` <C-h><C-n> ``, select: `` <space>hn ``, `` <C-h><C-n> ``, insert: `` <C-h><C-n> `` |
-| `browse_faq` | Browse the zemacs FAQ (SPC h f) | normal: `` <space>hf ``, `` <C-h><C-f> ``, `` <C-h><C-p> ``, select: `` <space>hf ``, `` <C-h><C-f> ``, `` <C-h><C-p> ``, insert: `` <C-h><C-f> ``, `` <C-h><C-p> `` |
+| `browse_news` | Browse zemacs release notes / NEWS (SPC h n) | normal: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, select: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, insert: `` <C-h>n ``, `` <C-h><C-n> `` |
+| `browse_faq` | Browse the zemacs FAQ (SPC h f) | normal: `` <space>hf ``, `` <C-h><C-p> ``, select: `` <space>hf ``, `` <C-h><C-p> ``, insert: `` <C-h><C-p> `` |
 | `layer_search` | Search zemacs capability areas / layers (SPC h l) | normal: `` <space>hl ``, select: `` <space>hl `` |
 | `show_environment` | Show the editor's environment variables (SPC f e e) | normal: `` <space>fee ``, select: `` <space>fee `` |
 | `reimport_shell_env` | Re-import the shell environment into the editor (SPC f e C-e) | normal: `` <space>feE ``, `` <space>fe<C-e> ``, select: `` <space>feE ``, `` <space>fe<C-e> `` |
@@ -277,6 +282,25 @@
 | `describe_language_environment` | Describe the language environment / locale (C-h L) | normal: `` <C-h>L ``, select: `` <C-h>L ``, insert: `` <C-h>L `` |
 | `describe_syntax` | Describe the buffer's syntax / tree-sitter status (C-h s) | normal: `` <C-h>s ``, select: `` <C-h>s ``, insert: `` <C-h>s `` |
 | `view_lossage` | Show the recently pressed keys (C-h l) | normal: `` <C-h>l ``, select: `` <C-h>l ``, insert: `` <C-h>l `` |
+| `describe_char` | Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =) |  |
+| `view_hello_file` | Show a multi-script greeting sample (emacs view-hello-file, C-h h) | normal: `` <C-h>h ``, select: `` <C-h>h ``, insert: `` <C-h>h `` |
+| `view_echo_area_messages` | Show the last echo-area message (emacs view-echo-area-messages, C-h e) | normal: `` <C-h>e ``, select: `` <C-h>e ``, insert: `` <C-h>e `` |
+| `describe_copying` | Show zemacs's copying license, the GPL (emacs describe-copying, C-h C-c) | normal: `` <C-h><C-c> ``, select: `` <C-h><C-c> ``, insert: `` <C-h><C-c> `` |
+| `describe_distribution` | How to get zemacs / GNU software (emacs describe-distribution, C-h C-d) | normal: `` <C-h><C-d> ``, select: `` <C-h><C-d> ``, insert: `` <C-h><C-d> `` |
+| `describe_gnu_project` | Open the GNU project page (emacs describe-gnu-project, C-h g) | normal: `` <C-h>g ``, select: `` <C-h>g ``, insert: `` <C-h>g `` |
+| `describe_no_warranty` | Show the GPL no-warranty sections (emacs describe-no-warranty, C-h C-w) | normal: `` <C-h><C-w> ``, select: `` <C-h><C-w> ``, insert: `` <C-h><C-w> `` |
+| `view_emacs_faq` | Open the GNU Emacs FAQ (emacs view-emacs-FAQ, C-h C-f) | normal: `` <C-h><C-f> ``, select: `` <C-h><C-f> ``, insert: `` <C-h><C-f> `` |
+| `view_emacs_todo` | Open the Emacs TODO list (emacs view-emacs-todo) |  |
+| `view_emacs_problems` | Open the Emacs known-problems file (emacs view-emacs-problems) |  |
+| `view_emacs_debugging` | Open the Emacs debugging manual (emacs view-emacs-debugging) |  |
+| `view_order_manuals` | Open where to get the GNU manuals (emacs view-order-manuals) |  |
+| `view_external_packages` | Open GNU ELPA / external packages (emacs view-external-packages) |  |
+| `describe_keymap` | List every binding of the current mode's keymap (emacs describe-keymap) |  |
+| `describe_prefix_bindings` | List the sub-bindings of a prefix (emacs describe-prefix-bindings) |  |
+| `describe_categories` | List the character categories zemacs recognises (emacs describe-categories) |  |
+| `list_character_sets` | List the Unicode blocks zemacs knows (emacs list-character-sets) |  |
+| `list_charset_chars` | List the printable characters of each Unicode block (emacs list-charset-chars) |  |
+| `list_coding_systems` | List the coding systems / encodings zemacs supports (emacs list-coding-systems) |  |
 | `describe_language_package` | Describe the language-support config for the buffer (SPC h d p) | normal: `` <space>hdp ``, select: `` <space>hdp `` |
 | `package_search` | Search configured language packages and describe one (SPC h p) | normal: `` <C-h>P ``, `` <C-h>p ``, `` <space>hp ``, `` <C-h><C-e> ``, select: `` <C-h>P ``, `` <C-h>p ``, `` <space>hp ``, `` <C-h><C-e> ``, insert: `` <C-h>P ``, `` <C-h>p ``, `` <C-h><C-e> `` |
 | `config_variable_search` | Search editor config variables, copy path on select (SPC h .) | normal: `` <C-h>v ``, `` <space>h. ``, select: `` <C-h>v ``, `` <space>h. ``, insert: `` <C-h>v `` |
@@ -320,6 +344,40 @@
 | `diary_insert_entry` | Add a diary entry for today (emacs diary-insert-entry) |  |
 | `diary_insert_weekly_entry` | Add a weekly diary entry for today (emacs diary-insert-weekly-entry) |  |
 | `diary_mark_entries` | Mark calendar dates that have diary entries (emacs diary-mark-entries) |  |
+| `calendar_print_other_dates` | Report today's date in all other calendars (emacs calendar-print-other-dates) |  |
+| `calendar_julian_print_date` | Today's Julian (Roman) calendar date (emacs calendar-julian-print-date) |  |
+| `calendar_iso_print_date` | Today's ISO 8601 week date (emacs calendar-iso-print-date) |  |
+| `calendar_hebrew_print_date` | Today's Hebrew calendar date (emacs calendar-hebrew-print-date) |  |
+| `calendar_islamic_print_date` | Today's Islamic calendar date (emacs calendar-islamic-print-date) |  |
+| `calendar_persian_print_date` | Today's Persian calendar date (emacs calendar-persian-print-date) |  |
+| `calendar_coptic_print_date` | Today's Coptic calendar date (emacs calendar-coptic-print-date) |  |
+| `calendar_ethiopic_print_date` | Today's Ethiopic calendar date (emacs calendar-ethiopic-print-date) |  |
+| `calendar_french_print_date` | Today's French Revolutionary date (emacs calendar-french-print-date) |  |
+| `calendar_bahai_print_date` | Today's Baha'i date, approx (emacs calendar-bahai-print-date) |  |
+| `calendar_astro_print_day_number` | Astronomical (Julian) day number (emacs calendar-astro-print-day-number) |  |
+| `calendar_mayan_print_date` | Today's Mayan date (emacs calendar-mayan-print-date) |  |
+| `calendar_day_of_year` | Day-of-year of today (emacs calendar-day-of-year) |  |
+| `calendar_goto_day_of_year` | Echo the date for a day-of-year (emacs calendar-goto-day-of-year) |  |
+| `calendar_count_days_region` | Count days between two dates (emacs calendar-count-days-region) |  |
+| `calendar_list_holidays` | List this year's holidays (emacs calendar-list-holidays) |  |
+| `holidays` | List this year's holidays (emacs holidays) |  |
+| `holiday_list` | List this year's holidays (emacs holiday-list) |  |
+| `list_holidays` | List this year's holidays (emacs list-holidays) |  |
+| `calendar_lunar_phases` | This month's moon phases, approx (emacs calendar-lunar-phases) |  |
+| `calendar_sunrise_sunset` | Sunrise/sunset today, approx (emacs calendar-sunrise-sunset) |  |
+| `calendar_other_month` | Open the Calendar at another month (emacs calendar-other-month) |  |
+| `calendar_set_date_style` | Cycle american/european/iso date style (emacs calendar-set-date-style) |  |
+| `calendar_hebrew_goto_date` | Echo Gregorian for a Hebrew date (emacs calendar-hebrew-goto-date) |  |
+| `calendar_islamic_goto_date` | Echo Gregorian for an Islamic date (emacs calendar-islamic-goto-date) |  |
+| `calendar_julian_goto_date` | Echo Gregorian for a Julian date (emacs calendar-julian-goto-date) |  |
+| `calendar_iso_goto_week` | Echo Gregorian for an ISO week date (emacs calendar-iso-goto-week) |  |
+| `calendar_persian_goto_date` | Echo Gregorian for a Persian date (emacs calendar-persian-goto-date) |  |
+| `calendar_coptic_goto_date` | Echo Gregorian for a Coptic date (emacs calendar-coptic-goto-date) |  |
+| `calendar_ethiopic_goto_date` | Echo Gregorian for an Ethiopic date (emacs calendar-ethiopic-goto-date) |  |
+| `calendar_french_goto_date` | Echo Gregorian for a French Revolutionary date (emacs calendar-french-goto-date) |  |
+| `calendar_bahai_goto_date` | Echo Gregorian for a Baha'i date (emacs calendar-bahai-goto-date) |  |
+| `calendar_astro_goto_day_number` | Echo Gregorian for an astro day number (emacs calendar-astro-goto-day-number) |  |
+| `calendar_mayan_goto_long_count` | Echo Gregorian for a Mayan long count (emacs calendar-mayan-goto-long-count) |  |
 | `calc_dispatch` | Open the RPN Calc stack calculator (emacs calc / C-x *) | normal: `` <space>ac ``, select: `` <space>ac `` |
 | `occur` | List lines matching a regexp in an *Occur* overlay (emacs occur / M-s o) |  |
 | `rmail` | Open the Rmail mail reader on ~/RMAIL (emacs rmail) | normal: `` <space>ar ``, select: `` <space>ar `` |
@@ -560,6 +618,7 @@
 | `comment_to_line` | Comment/uncomment from the cursor line to a prompted line (SPC c t) | normal: `` <space>ct ``, select: `` <space>ct `` |
 | `invert_comment_to_line` | Invert comments per line from the cursor to a prompted line (SPC c T) | normal: `` <space>cT ``, select: `` <space>cT `` |
 | `toggle_block_comments` | Block comment/uncomment selections | normal: `` <space>cb ``, select: `` <space>cb `` |
+| `comment_kill` | Kill the comment on the current line to the kill ring (emacs comment-kill; count kills that many lines) | normal: `` <space>cx ``, select: `` <space>cx `` |
 | `rotate_selections_forward` | Rotate selections forward |  |
 | `rotate_selections_backward` | Rotate selections backward |  |
 | `rotate_selection_contents_forward` | Rotate selection contents forward |  |
@@ -748,7 +807,7 @@
 | `toggle_blame_annotate` | Toggle the git-blame annotate gutter column (SPC g B) | normal: `` <space>gB ``, select: `` <space>gB `` |
 | `git_branch_picker` | Pick a git branch and check it out | normal: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs ``, select: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs ``, insert: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs `` |
 | `preferences` | Open the unified Preferences window | normal: `` <space>, ``, select: `` <space>, `` |
-| `help` | Open the inline Help browser | normal: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>e ``, `` <C-h>g ``, `` <C-h>h ``, `` <C-h>n ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-c> ``, `` <C-h><C-d> ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <C-h><C-w> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, select: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>e ``, `` <C-h>g ``, `` <C-h>h ``, `` <C-h>n ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-c> ``, `` <C-h><C-d> ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <C-h><C-w> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, insert: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>e ``, `` <C-h>g ``, `` <C-h>h ``, `` <C-h>n ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <C-h><C-c> ``, `` <C-h><C-d> ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <C-h><C-w> `` |
+| `help` | Open the inline Help browser | normal: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, select: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, insert: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> `` |
 | `dashboard` | Open the system-stats Dashboard (Preferences) | normal: `` <space>bh ``, select: `` <space>bh `` |
 | `search_in_files` | Open the project-wide Find in Files panel |  |
 | `terminal` | Open an integrated terminal (PTY shell) | normal: `` <space>p' ``, select: `` <space>p' `` |
@@ -973,6 +1032,14 @@
 | `video_poker` | Play Jacks-or-Better video poker |  |
 | `klondike` | Play Klondike solitaire |  |
 | `nonogram` | Play nonogram / picross |  |
+| `xref_find_references` | Find references to a symbol across the workspace (emacs xref-find-references) |  |
+| `project_find_file` | Find a file under the project root (emacs project-find-file) |  |
+| `diffmode` | Open the unified-diff viewer (emacs diff-mode) |  |
+| `picture` | Draw ASCII pictures on a canvas (emacs picture-mode) |  |
+| `table` | Edit a text table (emacs table.el) |  |
+| `facemenu` | Browse faces and colors (emacs list-faces-display / facemenu) |  |
+| `bookmark_bmenu_list` | List bookmarks in an overlay (emacs bookmark-bmenu-list) |  |
+| `proced` | Open the process viewer/manager (emacs proced) |  |
 | `zone` | Run the zone screen-saver (emacs zone) |  |
 | `decipher` | Solve a cryptogram (emacs decipher) |  |
 | `dunnet` | Play the dunnet text adventure (emacs dunnet) |  |
