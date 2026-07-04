@@ -937,6 +937,7 @@ impl MappableCommand {
         bookmark_delete, "Delete a bookmark via a picker (emacs bookmark-delete)",
         bookmark_rename, "Rename a bookmark via a picker (emacs bookmark-rename)",
         define_abbrev, "Define a global abbrev: <name> <expansion> (emacs C-x a g)",
+        inverse_add_global_abbrev, "Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g)",
         expand_abbrev, "Expand the abbrev before point (emacs C-x ')",
         insert_abbrevs, "Insert a description of every defined abbrev at point (emacs insert-abbrevs)",
         define_abbrevs, "Define abbrevs from the buffer text after point (emacs define-abbrevs)",
@@ -14066,6 +14067,60 @@ fn define_abbrev(cx: &mut Context) {
     );
 }
 
+/// The maximal `[A-Za-z0-9_]` run ending at `cursor` — the "word before point"
+/// shared by the emacs abbrev commands (`expand-abbrev`,
+/// `inverse-add-global-abbrev`). Returns the run's start offset and its text;
+/// the text is empty when no word char sits immediately before the cursor.
+fn abbrev_word_before(text: RopeSlice, cursor: usize) -> (usize, String) {
+    let mut start = cursor;
+    while start > 0 {
+        let ch = text.char(start - 1);
+        if ch.is_alphanumeric() || ch == '_' {
+            start -= 1;
+        } else {
+            break;
+        }
+    }
+    let word: String = text.slice(start..cursor).chars().collect();
+    (start, word)
+}
+
+/// Emacs `inverse-add-global-abbrev` (C-x a i g): take the word before point as
+/// the abbrev *name* and prompt for its *expansion*, then define it globally.
+/// This is the inverse of `add-global-abbrev`, which reads the name and uses
+/// buffer text as the expansion. Faithful to `inverse-add-abbrev` in
+/// `lisp/abbrev.el`, scoped to the single global abbrev table zemacs keeps.
+fn inverse_add_global_abbrev(cx: &mut Context) {
+    let name = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        abbrev_word_before(text, cursor).1
+    };
+    if name.is_empty() {
+        cx.editor.set_error("No word before cursor");
+        return;
+    }
+    ui::prompt(
+        cx,
+        format!("Global expansion for \"{name}\": ").into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            if input.is_empty() {
+                cx.editor.set_error("Expansion must not be empty");
+                return;
+            }
+            crate::emacs_abbrev::define(&name, input);
+            cx.editor
+                .set_status(format!("Abbrev '{name}' expands to \"{input}\""));
+        },
+    );
+}
+
 /// Emacs `expand-abbrev` (C-x '): expand the word before point if it is a
 /// defined abbrev.
 fn expand_abbrev(cx: &mut Context) {
@@ -14073,17 +14128,7 @@ fn expand_abbrev(cx: &mut Context) {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
         let cursor = doc.selection(view.id).primary().cursor(text);
-        let mut start = cursor;
-        while start > 0 {
-            let ch = text.char(start - 1);
-            if ch.is_alphanumeric() || ch == '_' {
-                start -= 1;
-            } else {
-                break;
-            }
-        }
-        let word: String = text.slice(start..cursor).chars().collect();
-        (start, word)
+        abbrev_word_before(text, cursor)
     };
     if word.is_empty() {
         cx.editor.set_error("No word before cursor");
@@ -29212,6 +29257,39 @@ mod indent_code_rigidly_tests {
         assert_eq!(code_region_first_line_start(text, 1), 4); // mid "aaa" → "bbb"
         assert_eq!(code_region_first_line_start(text, 5), 8); // mid "bbb" → "ccc"
         assert_eq!(code_region_first_line_start(text, 999), text.len_chars());
+    }
+}
+
+#[cfg(test)]
+mod abbrev_tests {
+    use super::*;
+
+    #[test]
+    fn word_before_point_matches_trailing_identifier_run() {
+        let rope = Rope::from("let foo_bar = 1");
+        let text = rope.slice(..);
+        // Cursor just after "foo_bar": the whole identifier (with `_`, digits).
+        let end = "let foo_bar".chars().count();
+        assert_eq!(abbrev_word_before(text, end), (4, "foo_bar".to_string()));
+    }
+
+    #[test]
+    fn word_before_point_is_empty_on_non_word_char() {
+        let rope = Rope::from("foo = ");
+        let text = rope.slice(..);
+        // Cursor after the trailing space → no word char immediately before it.
+        let end = text.len_chars();
+        assert_eq!(abbrev_word_before(text, end), (end, String::new()));
+        // Cursor at buffer start → empty, start unchanged.
+        assert_eq!(abbrev_word_before(text, 0), (0, String::new()));
+    }
+
+    #[test]
+    fn word_before_point_stops_at_preceding_boundary() {
+        let rope = Rope::from("a.bcd");
+        let text = rope.slice(..);
+        // Cursor after "bcd" stops at the '.', not including "a".
+        assert_eq!(abbrev_word_before(text, 5), (2, "bcd".to_string()));
     }
 }
 
