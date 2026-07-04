@@ -21019,11 +21019,11 @@
  },
  {
   "spec_id": "emacs.command.isearch_forward_symbol_at_point",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:search_selection_detect_word_boundaries"
+   "static:isearch_forward_symbol_at_point"
   ],
-  "note": "Searches for the symbol/word at point with \\b boundaries = isearch-forward-symbol-at-point."
+  "note": "Seeds the search with the symbol at point (\\b-bounded) and jumps to its next occurrence."
  },
  {
   "spec_id": "emacs.command.kill_matching_lines",
@@ -32639,5 +32639,309 @@
    "static:f90_mode"
   ],
   "note": "Enter free-form F90 mode: sets the document language to the shared fortran grammar (no separate f90 grammar) and reports status."
+ },
+ {
+  "spec_id": "emacs.command.isearch_forward_word",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_forward_word"
+  ],
+  "note": "Live incremental whole-word search (\\b-anchored word tokens); each keystroke re-searches from the start point."
+ },
+ {
+  "spec_id": "emacs.command.isearch_forward_symbol",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_forward_symbol"
+  ],
+  "note": "Live incremental whole-symbol search; approximated with regex \\b word boundaries (engine lacks Emacs \\_< \\_>), so symbol tokens include underscores."
+ },
+ {
+  "spec_id": "emacs.command.isearch_forward_thing_at_point",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_forward_thing_at_point"
+  ],
+  "note": "Seeds the search with the word/symbol at point and jumps to its next occurrence."
+ },
+ {
+  "spec_id": "emacs.command.isearch_toggle_regexp",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_toggle_regexp"
+  ],
+  "note": "Toggles regexp vs literal matching of the current isearch string and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_toggle_word",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_toggle_word"
+  ],
+  "note": "Toggles whole-word matching of the current isearch string and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_toggle_symbol",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_toggle_symbol"
+  ],
+  "note": "Toggles whole-symbol matching; over word constituents this coincides with word search (engine lacks \\_<)."
+ },
+ {
+  "spec_id": "emacs.command.isearch_toggle_case_fold",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_toggle_case_fold"
+  ],
+  "note": "Toggles case-folding (smart-case when on) of the current isearch and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_toggle_lax_whitespace",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_toggle_lax_whitespace"
+  ],
+  "note": "Toggles lax-whitespace (a space matches a whitespace run) and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_toggle_char_fold",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_toggle_char_fold"
+  ],
+  "note": "Flag toggles but zemacs has no character-folding table, so it does not change matching."
+ },
+ {
+  "spec_id": "emacs.command.isearch_toggle_invisible",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_toggle_invisible"
+  ],
+  "note": "Flag toggles but zemacs has no invisible/folded text search, so it does not change matching."
+ },
+ {
+  "spec_id": "emacs.command.isearch_toggle_input_method",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_toggle_input_method"
+  ],
+  "note": "No input methods in zemacs; the command exists but only reports that it is unsupported."
+ },
+ {
+  "spec_id": "emacs.command.isearch_yank_char",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_yank_char"
+  ],
+  "note": "Extends the search string with the next buffer character and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_yank_word_or_char",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_yank_word_or_char"
+  ],
+  "note": "Extends the search with the next word (or a char if not on a word) and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_yank_symbol_or_char",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_yank_symbol_or_char"
+  ],
+  "note": "Extends the search with the next symbol/char; reuses word-or-char (word constituents include _)."
+ },
+ {
+  "spec_id": "emacs.command.isearch_yank_word",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_yank_word"
+  ],
+  "note": "Extends the search with the next word and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_yank_symbol",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_yank_symbol"
+  ],
+  "note": "Extends the search with the next symbol; over word constituents this is the next word."
+ },
+ {
+  "spec_id": "emacs.command.isearch_yank_line",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_yank_line"
+  ],
+  "note": "Extends the search to the end of the current line and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_yank_until_char",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_yank_until_char"
+  ],
+  "note": "Prompts for a char and extends the search with buffer text up to it."
+ },
+ {
+  "spec_id": "emacs.command.isearch_yank_kill",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_yank_kill"
+  ],
+  "note": "Extends the search string with the kill-ring top (emacs kill ring) and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_yank_pop",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_yank_pop"
+  ],
+  "note": "Appends the kill-ring top like isearch-yank-kill; cycling the ring in place (true yank-pop) is not tracked."
+ },
+ {
+  "spec_id": "emacs.command.isearch_yank_x_selection",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_yank_x_selection"
+  ],
+  "note": "Extends the search with the clipboard selection (the + register) and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_del_char",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_del_char"
+  ],
+  "note": "Shortens the search string by one char and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_delete_char",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_delete_char"
+  ],
+  "note": "Alias of isearch-del-char: shortens the search string by one char."
+ },
+ {
+  "spec_id": "emacs.command.isearch_edit_string",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_edit_string"
+  ],
+  "note": "Opens a prompt prefilled with the current search string to edit, then re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_ring_advance",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_ring_advance"
+  ],
+  "note": "Cycles to an older entry of the / search-history ring and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_ring_retreat",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_ring_retreat"
+  ],
+  "note": "Cycles to a newer entry of the / search-history ring and re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_exit",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_exit"
+  ],
+  "note": "zemacs's search applies to the selection immediately; exit just ends the session (point already at the match)."
+ },
+ {
+  "spec_id": "emacs.command.isearch_abort",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_abort"
+  ],
+  "note": "Returns point to where the last isearch session started; only meaningful after an isearch-* start command."
+ },
+ {
+  "spec_id": "emacs.command.isearch_cancel",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_cancel"
+  ],
+  "note": "Alias of isearch-abort: returns point to the recorded session origin."
+ },
+ {
+  "spec_id": "emacs.command.isearch_quote_char",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_quote_char"
+  ],
+  "note": "Prompts for a character and adds it literally to the search string, then re-searches."
+ },
+ {
+  "spec_id": "emacs.command.isearch_complete",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_complete"
+  ],
+  "note": "Completes the search string from the most-recent / history entry only (no completion list)."
+ },
+ {
+  "spec_id": "emacs.command.isearch_char_by_name",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_char_by_name"
+  ],
+  "note": "Adds a character by zemacs digraph mnemonic (e.g. a: -> \u00e4); no full Unicode-name database."
+ },
+ {
+  "spec_id": "emacs.command.isearch_emoji_by_name",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_emoji_by_name"
+  ],
+  "note": "Adds a character by digraph mnemonic; zemacs has no emoji-name table."
+ },
+ {
+  "spec_id": "emacs.command.isearch_occur",
+  "status": "ported",
+  "evidence": [
+   "static:isearch_occur"
+  ],
+  "note": "Runs occur with the current search pattern, reusing the existing occur overlay."
+ },
+ {
+  "spec_id": "emacs.command.isearch_query_replace",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_query_replace"
+  ],
+  "note": "Hands the search pattern to a buffer-wide replace-all (do_substitute); not an interactive per-match y/n loop."
+ },
+ {
+  "spec_id": "emacs.command.isearch_query_replace_regexp",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_query_replace_regexp"
+  ],
+  "note": "Hands the search regexp to a buffer-wide replace-all; not an interactive per-match loop."
+ },
+ {
+  "spec_id": "emacs.command.isearch_highlight_regexp",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_highlight_regexp"
+  ],
+  "note": "No persistent hi-lock; sets the / search so matches show via search highlight and jumps to the first."
+ },
+ {
+  "spec_id": "emacs.command.isearch_highlight_lines_matching_regexp",
+  "status": "partial",
+  "evidence": [
+   "static:isearch_highlight_lines_matching_regexp"
+  ],
+  "note": "No persistent line hi-lock; lists matching lines via occur as the closest analog."
  }
 ]

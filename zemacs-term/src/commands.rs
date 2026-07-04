@@ -726,6 +726,45 @@ impl MappableCommand {
         calendar_mayan_goto_long_count, "Echo Gregorian for a Mayan long count (emacs calendar-mayan-goto-long-count)",
         calc_dispatch, "Open the RPN Calc stack calculator (emacs calc / C-x *)",
         occur, "List lines matching a regexp in an *Occur* overlay (emacs occur / M-s o)",
+        isearch_forward_word, "Incremental whole-word search forward (emacs isearch-forward-word)",
+        isearch_forward_symbol, "Incremental whole-symbol search forward (emacs isearch-forward-symbol)",
+        isearch_forward_thing_at_point, "Search for the symbol/word at point (emacs isearch-forward-thing-at-point)",
+        isearch_forward_symbol_at_point, "Search for the symbol at point (emacs isearch-forward-symbol-at-point)",
+        isearch_toggle_regexp, "Toggle regexp matching for the current search (emacs isearch-toggle-regexp)",
+        isearch_toggle_word, "Toggle whole-word matching for the current search (emacs isearch-toggle-word)",
+        isearch_toggle_symbol, "Toggle whole-symbol matching for the current search (emacs isearch-toggle-symbol)",
+        isearch_toggle_case_fold, "Toggle case-folding for the current search (emacs isearch-toggle-case-fold)",
+        isearch_toggle_lax_whitespace, "Toggle lax-whitespace matching for the current search (emacs isearch-toggle-lax-whitespace)",
+        isearch_toggle_char_fold, "Toggle character folding (inert: no fold table) (emacs isearch-toggle-char-fold)",
+        isearch_toggle_invisible, "Toggle invisible-text matching (inert) (emacs isearch-toggle-invisible)",
+        isearch_toggle_input_method, "Input-method toggle (unsupported in zemacs) (emacs isearch-toggle-input-method)",
+        isearch_yank_char, "Extend the search with the next buffer char (emacs isearch-yank-char)",
+        isearch_yank_word_or_char, "Extend the search with the next word or char (emacs isearch-yank-word-or-char)",
+        isearch_yank_symbol_or_char, "Extend the search with the next symbol or char (emacs isearch-yank-symbol-or-char)",
+        isearch_yank_word, "Extend the search with the next word (emacs isearch-yank-word)",
+        isearch_yank_symbol, "Extend the search with the next symbol (emacs isearch-yank-symbol)",
+        isearch_yank_line, "Extend the search to end of line (emacs isearch-yank-line)",
+        isearch_yank_until_char, "Extend the search up to a given char (emacs isearch-yank-until-char)",
+        isearch_yank_kill, "Extend the search with the kill-ring top (emacs isearch-yank-kill)",
+        isearch_yank_pop, "Extend the search with a kill-ring entry (emacs isearch-yank-pop)",
+        isearch_yank_x_selection, "Extend the search with the clipboard selection (emacs isearch-yank-x-selection)",
+        isearch_del_char, "Shorten the search string by one char (emacs isearch-del-char)",
+        isearch_delete_char, "Shorten the search string by one char (emacs isearch-delete-char)",
+        isearch_edit_string, "Edit the search string in a prompt (emacs isearch-edit-string)",
+        isearch_ring_advance, "Cycle to an older search-ring entry (emacs isearch-ring-advance)",
+        isearch_ring_retreat, "Cycle to a newer search-ring entry (emacs isearch-ring-retreat)",
+        isearch_exit, "End the current incremental search (emacs isearch-exit)",
+        isearch_abort, "Abort the search, return to origin (emacs isearch-abort)",
+        isearch_cancel, "Cancel the search, return to origin (emacs isearch-cancel)",
+        isearch_quote_char, "Add a literal char to the search string (emacs isearch-quote-char)",
+        isearch_complete, "Complete the search string from history (emacs isearch-complete)",
+        isearch_char_by_name, "Add a char by digraph mnemonic to the search (emacs isearch-char-by-name)",
+        isearch_emoji_by_name, "Add a char by digraph mnemonic to the search (emacs isearch-emoji-by-name)",
+        isearch_occur, "Run occur with the current search pattern (emacs isearch-occur)",
+        isearch_query_replace, "Query-replace the current search pattern (emacs isearch-query-replace)",
+        isearch_query_replace_regexp, "Query-replace the current search regexp (emacs isearch-query-replace-regexp)",
+        isearch_highlight_regexp, "Highlight matches of the current search (emacs isearch-highlight-regexp)",
+        isearch_highlight_lines_matching_regexp, "List/highlight lines matching the search (emacs isearch-highlight-lines-matching-regexp)",
         rmail, "Open the Rmail mail reader on ~/RMAIL (emacs rmail)",
         dired, "Open the Dired directory editor (emacs C-x d)",
         dired_jump, "Open Dired on the current buffer's directory (emacs C-x C-j)",
@@ -7938,6 +7977,721 @@ fn make_search_word_bounded(cx: &mut Context) {
         }
         Err(err) => cx.editor.set_error(err.to_string()),
     }
+}
+
+// ===========================================================================
+// Emacs isearch (incremental search)
+//
+// zemacs's live `/` search keeps its pattern in the `/` register and matches it
+// with the `rope::Regex` engine. We model an incremental search as a persistent
+// "session": the raw typed string plus the toggle flags (word/symbol/regexp/
+// case-fold/lax-whitespace). The pure `zemacs_core::search::IsearchFlags` turns
+// (raw, flags) into the regex pushed to `/`; helpers there grab the buffer text
+// that the `isearch-yank-*` commands pull into the search string.
+//
+// A fully live overlay (re-searching the buffer on every keystroke of a modal
+// mini-buffer) is heavier than zemacs's one-shot prompt, so the search-editing
+// commands (yank/del/toggle/ring) operate on this session after a search has
+// been started and re-run the search, rather than while a prompt is open. This
+// is noted honestly in the port mapping.
+// ===========================================================================
+
+/// Persistent state of the current incremental search.
+#[derive(Clone)]
+struct IsearchSession {
+    /// The raw typed search string (before flags turn it into a regex).
+    raw: String,
+    /// Active toggle flags.
+    flags: search::IsearchFlags,
+    /// Search direction.
+    forward: bool,
+    /// Char index where the search began, for `isearch-abort`/`isearch-cancel`.
+    origin: usize,
+    /// Cursor into the `/` history ring for ring-advance/retreat.
+    ring_index: usize,
+}
+
+impl Default for IsearchSession {
+    fn default() -> Self {
+        IsearchSession {
+            raw: String::new(),
+            flags: search::IsearchFlags::default(),
+            forward: true,
+            origin: 0,
+            ring_index: 0,
+        }
+    }
+}
+
+thread_local! {
+    static ISEARCH: std::cell::RefCell<IsearchSession> =
+        std::cell::RefCell::new(IsearchSession::default());
+}
+
+/// Read/mutate the current isearch session.
+fn isearch_with<R>(f: impl FnOnce(&mut IsearchSession) -> R) -> R {
+    ISEARCH.with(|s| f(&mut s.borrow_mut()))
+}
+
+/// Compile the session's raw string + flags into the regex to push to `/`, then
+/// run one forward/backward search. When `anchor_at_match_start` is set the
+/// primary cursor is first collapsed to the current match's start, so an
+/// extended pattern re-anchors on (and can grow) the current match.
+fn isearch_apply(editor: &mut Editor, anchor_at_match_start: bool) {
+    let (pattern, insensitive, forward) = isearch_with(|s| {
+        (
+            s.flags.build_regex(&s.raw),
+            s.flags.is_case_insensitive(&s.raw),
+            s.forward,
+        )
+    });
+    if pattern.is_empty() {
+        return;
+    }
+    let _ = editor.registers.push('/', pattern.clone());
+    editor.registers.last_search_register = '/';
+
+    let is_crlf = doc!(editor).line_ending == LineEnding::Crlf;
+    let regex = match rope::RegexBuilder::new()
+        .syntax(
+            rope::Config::new()
+                .case_insensitive(insensitive)
+                .multi_line(true)
+                .crlf(is_crlf),
+        )
+        .build(&pattern)
+    {
+        Ok(r) => r,
+        Err(e) => {
+            editor.set_error(format!("I-search: invalid pattern: {e}"));
+            return;
+        }
+    };
+
+    if anchor_at_match_start {
+        let (view, doc) = current!(editor);
+        let start = doc.selection(view.id).primary().from();
+        doc.set_selection(view.id, Selection::point(start));
+    }
+
+    let config = editor.config();
+    let scrolloff = config.scrolloff;
+    let wrap = config.search.wrap_around;
+    let dir = if forward {
+        Direction::Forward
+    } else {
+        Direction::Backward
+    };
+    search_impl(editor, &regex, Movement::Move, dir, scrolloff, wrap, true);
+}
+
+/// The current cursor char index.
+fn isearch_cursor(cx: &Context) -> usize {
+    let (view, doc) = current_ref!(cx.editor);
+    doc.selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..))
+}
+
+/// Start a fresh incremental search with a live mini-prompt: each keystroke
+/// re-searches from the starting point, so the match grows as you type. Used by
+/// the word/symbol variants.
+fn isearch_prompt(
+    cx: &mut Context,
+    label: &'static str,
+    flags: search::IsearchFlags,
+    forward: bool,
+) {
+    let origin = isearch_cursor(cx);
+    isearch_with(|s| {
+        s.flags = flags;
+        s.forward = forward;
+        s.origin = origin;
+        s.raw.clear();
+        s.ring_index = 0;
+    });
+    ui::prompt(
+        cx,
+        label.into(),
+        None,
+        |_editor: &Editor, _input: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Update && event != PromptEvent::Validate {
+                return;
+            }
+            // Re-search from the origin so typing grows the match incrementally.
+            {
+                let (view, doc) = current!(cx.editor);
+                doc.set_selection(view.id, Selection::point(origin));
+            }
+            isearch_with(|s| s.raw = input.to_string());
+            if input.is_empty() {
+                return;
+            }
+            isearch_apply(cx.editor, false);
+        },
+    );
+}
+
+fn isearch_forward_word(cx: &mut Context) {
+    let flags = search::IsearchFlags {
+        word: true,
+        ..Default::default()
+    };
+    isearch_prompt(cx, "Word I-search: ", flags, true);
+}
+
+fn isearch_forward_symbol(cx: &mut Context) {
+    let flags = search::IsearchFlags {
+        symbol: true,
+        ..Default::default()
+    };
+    isearch_prompt(cx, "Symbol I-search: ", flags, true);
+}
+
+/// The word/symbol text at point, unescaped (empty selection grabs the word
+/// object; a real selection wins).
+fn isearch_thing_at_point(cx: &mut Context) -> Option<String> {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let word = if range.from() != range.to() {
+        range
+    } else {
+        textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
+    };
+    let s: String = text.slice(word.from()..word.to()).to_string();
+    let s = s.trim();
+    if s.is_empty() {
+        None
+    } else {
+        Some(s.to_string())
+    }
+}
+
+/// Seed an isearch with the word/symbol at point and jump to its next
+/// occurrence (Emacs `isearch-forward-thing-at-point` /
+/// `isearch-forward-symbol-at-point`).
+fn isearch_thing_at_point_impl(cx: &mut Context, symbol: bool, forward: bool) {
+    let Some(raw) = isearch_thing_at_point(cx) else {
+        cx.editor.set_error("No symbol/word at point");
+        return;
+    };
+    let origin = isearch_cursor(cx);
+    let flags = search::IsearchFlags {
+        word: !symbol,
+        symbol,
+        ..Default::default()
+    };
+    isearch_with(|s| {
+        s.flags = flags;
+        s.forward = forward;
+        s.origin = origin;
+        s.raw = raw.clone();
+        s.ring_index = 0;
+    });
+    isearch_apply(cx.editor, false);
+    cx.editor.set_status(format!("I-search: {raw}"));
+}
+
+fn isearch_forward_thing_at_point(cx: &mut Context) {
+    isearch_thing_at_point_impl(cx, true, true);
+}
+
+fn isearch_forward_symbol_at_point(cx: &mut Context) {
+    isearch_thing_at_point_impl(cx, true, true);
+}
+
+/// Ensure there is a search string to edit: if the session is empty (e.g. after
+/// a plain `/` search), seed it from the `/` register (as a regexp). Returns
+/// false if there is no search pattern anywhere.
+fn isearch_ensure_session(cx: &mut Context) -> bool {
+    if isearch_with(|s| !s.raw.is_empty()) {
+        return true;
+    }
+    let origin = isearch_cursor(cx);
+    if let Some(q) = cx.editor.registers.first('/', cx.editor) {
+        let q = q.to_string();
+        if q.is_empty() {
+            return false;
+        }
+        isearch_with(|s| {
+            *s = IsearchSession::default();
+            s.flags.regexp = true;
+            s.raw = q;
+            s.origin = origin;
+        });
+        true
+    } else {
+        false
+    }
+}
+
+/// Re-run the search after the session's string/flags changed, keeping the
+/// current match anchored so a longer pattern extends it.
+fn isearch_reapply(editor: &mut Editor) {
+    if isearch_with(|s| s.raw.is_empty()) {
+        return;
+    }
+    isearch_apply(editor, true);
+}
+
+/// Append `addition` to the current search string, quoting it when the string is
+/// being interpreted as a regexp, then re-search.
+fn isearch_append(editor: &mut Editor, addition: &str) {
+    if addition.is_empty() {
+        return;
+    }
+    isearch_with(|s| {
+        if s.flags.regexp {
+            s.raw.push_str(&regex::escape(addition));
+        } else {
+            s.raw.push_str(addition);
+        }
+    });
+    isearch_reapply(editor);
+}
+
+/// What an `isearch-yank-*` command grabs from the buffer.
+enum IsearchYank {
+    Char,
+    WordOrChar,
+    Word,
+    Line,
+}
+
+fn isearch_yank_impl(cx: &mut Context, kind: IsearchYank) {
+    if !isearch_ensure_session(cx) {
+        cx.editor.set_error("No current search to extend");
+        return;
+    }
+    let addition = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        // Grab from the end of the current match (Emacs extends past the match).
+        let pos = doc.selection(view.id).primary().to();
+        match kind {
+            IsearchYank::Char => search::grab_char(text, pos).unwrap_or_default(),
+            IsearchYank::WordOrChar => search::grab_word_or_char(text, pos),
+            IsearchYank::Word => search::grab_word(text, pos),
+            IsearchYank::Line => search::grab_line(text, pos),
+        }
+    };
+    isearch_append(cx.editor, &addition);
+}
+
+fn isearch_yank_char(cx: &mut Context) {
+    isearch_yank_impl(cx, IsearchYank::Char);
+}
+
+fn isearch_yank_word_or_char(cx: &mut Context) {
+    isearch_yank_impl(cx, IsearchYank::WordOrChar);
+}
+
+fn isearch_yank_symbol_or_char(cx: &mut Context) {
+    // Word and symbol constituents coincide (`char_is_word` includes `_`), so
+    // this reuses word-or-char.
+    isearch_yank_impl(cx, IsearchYank::WordOrChar);
+}
+
+fn isearch_yank_word(cx: &mut Context) {
+    isearch_yank_impl(cx, IsearchYank::Word);
+}
+
+fn isearch_yank_symbol(cx: &mut Context) {
+    isearch_yank_impl(cx, IsearchYank::Word);
+}
+
+fn isearch_yank_line(cx: &mut Context) {
+    isearch_yank_impl(cx, IsearchYank::Line);
+}
+
+fn isearch_yank_kill(cx: &mut Context) {
+    if !isearch_ensure_session(cx) {
+        cx.editor.set_error("No current search to extend");
+        return;
+    }
+    let Some(top) = crate::emacs_kill::top() else {
+        cx.editor.set_error("Kill ring is empty");
+        return;
+    };
+    isearch_append(cx.editor, &top);
+}
+
+fn isearch_yank_pop(cx: &mut Context) {
+    // Partial: appends the kill-ring top like isearch-yank-kill; cycling the ring
+    // in-place (true M-y behavior) is not tracked here.
+    isearch_yank_kill(cx);
+}
+
+fn isearch_yank_x_selection(cx: &mut Context) {
+    if !isearch_ensure_session(cx) {
+        cx.editor.set_error("No current search to extend");
+        return;
+    }
+    let sel = cx
+        .editor
+        .registers
+        .read('+', cx.editor)
+        .and_then(|mut it| it.next())
+        .map(|v| v.to_string());
+    match sel {
+        Some(text) if !text.is_empty() => isearch_append(cx.editor, &text),
+        _ => cx.editor.set_error("Clipboard is empty"),
+    }
+}
+
+fn isearch_yank_until_char(cx: &mut Context) {
+    if !isearch_ensure_session(cx) {
+        cx.editor.set_error("No current search to extend");
+        return;
+    }
+    prompt_then(cx, "Yank until char: ", |cx, input| {
+        let Some(target) = input.chars().next() else {
+            return;
+        };
+        let addition = {
+            let (view, doc) = current_ref!(cx.editor);
+            let text = doc.text().slice(..);
+            let pos = doc.selection(view.id).primary().to();
+            search::grab_until_char(text, pos, target)
+        };
+        isearch_with(|s| {
+            if s.flags.regexp {
+                s.raw.push_str(&regex::escape(&addition));
+            } else {
+                s.raw.push_str(&addition);
+            }
+        });
+        if !isearch_with(|s| s.raw.is_empty()) {
+            isearch_apply(cx.editor, true);
+        }
+    });
+}
+
+fn isearch_del_char(cx: &mut Context) {
+    if !isearch_ensure_session(cx) {
+        return;
+    }
+    let empty = isearch_with(|s| {
+        s.raw.pop();
+        s.raw.is_empty()
+    });
+    if empty {
+        cx.editor.set_status("I-search: (empty)");
+    } else {
+        isearch_reapply(cx.editor);
+    }
+}
+
+fn isearch_delete_char(cx: &mut Context) {
+    isearch_del_char(cx);
+}
+
+/// Toggle a flag, report its new state, and re-run the search.
+fn isearch_toggle(
+    cx: &mut Context,
+    name: &str,
+    toggle: impl FnOnce(&mut search::IsearchFlags) -> bool,
+) {
+    let on = isearch_with(|s| toggle(&mut s.flags));
+    cx.editor.set_status(format!(
+        "{name} I-search: {}",
+        if on { "on" } else { "off" }
+    ));
+    isearch_reapply(cx.editor);
+}
+
+fn isearch_toggle_regexp(cx: &mut Context) {
+    isearch_toggle(cx, "Regexp", |f| {
+        f.regexp = !f.regexp;
+        if f.regexp {
+            f.word = false;
+            f.symbol = false;
+        }
+        f.regexp
+    });
+}
+
+fn isearch_toggle_word(cx: &mut Context) {
+    isearch_toggle(cx, "Word", |f| {
+        f.word = !f.word;
+        if f.word {
+            f.regexp = false;
+            f.symbol = false;
+        }
+        f.word
+    });
+}
+
+fn isearch_toggle_symbol(cx: &mut Context) {
+    isearch_toggle(cx, "Symbol", |f| {
+        f.symbol = !f.symbol;
+        if f.symbol {
+            f.regexp = false;
+            f.word = false;
+        }
+        f.symbol
+    });
+}
+
+fn isearch_toggle_case_fold(cx: &mut Context) {
+    isearch_toggle(cx, "Case-fold", |f| {
+        f.case_fold = !f.case_fold;
+        f.case_fold
+    });
+}
+
+fn isearch_toggle_lax_whitespace(cx: &mut Context) {
+    isearch_toggle(cx, "Lax-whitespace", |f| {
+        f.lax_whitespace = !f.lax_whitespace;
+        f.lax_whitespace
+    });
+}
+
+fn isearch_toggle_char_fold(cx: &mut Context) {
+    // Partial: the flag toggles but zemacs has no character-folding table, so it
+    // has no effect on matching.
+    let on = isearch_with(|s| {
+        s.flags.char_fold = !s.flags.char_fold;
+        s.flags.char_fold
+    });
+    cx.editor.set_status(format!(
+        "Char-fold I-search: {} (no matching effect)",
+        if on { "on" } else { "off" }
+    ));
+}
+
+fn isearch_toggle_invisible(cx: &mut Context) {
+    // Partial: no invisible/folded-text search in zemacs; the flag is inert.
+    let on = isearch_with(|s| {
+        s.flags.invisible = !s.flags.invisible;
+        s.flags.invisible
+    });
+    cx.editor.set_status(format!(
+        "Invisible-match I-search: {} (no matching effect)",
+        if on { "on" } else { "off" }
+    ));
+}
+
+fn isearch_toggle_input_method(cx: &mut Context) {
+    cx.editor
+        .set_error("isearch-toggle-input-method: no input methods in zemacs");
+}
+
+/// Cycle the `/` search-history ring into the current search.
+fn isearch_ring_move(cx: &mut Context, older: bool) {
+    let entries: Vec<String> = cx
+        .editor
+        .registers
+        .read('/', cx.editor)
+        .map(|it| it.map(|c| c.to_string()).collect())
+        .unwrap_or_default();
+    if entries.is_empty() {
+        cx.editor.set_error("Search ring is empty");
+        return;
+    }
+    let n = entries.len();
+    let idx = isearch_with(|s| {
+        s.ring_index = if older {
+            (s.ring_index + 1) % n
+        } else {
+            (s.ring_index + n - 1) % n
+        };
+        s.ring_index
+    });
+    let entry = entries[idx].clone();
+    isearch_with(|s| {
+        s.flags = search::IsearchFlags {
+            regexp: true,
+            ..Default::default()
+        };
+        s.raw = entry.clone();
+    });
+    isearch_apply(cx.editor, false);
+    cx.editor.set_status(format!("I-search ring: {entry}"));
+}
+
+fn isearch_ring_advance(cx: &mut Context) {
+    isearch_ring_move(cx, true);
+}
+
+fn isearch_ring_retreat(cx: &mut Context) {
+    isearch_ring_move(cx, false);
+}
+
+fn isearch_edit_string(cx: &mut Context) {
+    isearch_ensure_session(cx);
+    let cur = isearch_with(|s| s.raw.clone());
+    ui::prompt_with_input(
+        cx,
+        "Edit I-search: ".into(),
+        cur,
+        None,
+        |_editor: &Editor, _input: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            isearch_with(|s| s.raw = input.to_string());
+            if !isearch_with(|s| s.raw.is_empty()) {
+                isearch_apply(cx.editor, false);
+            }
+        },
+    );
+}
+
+fn isearch_exit(cx: &mut Context) {
+    // Our search is already applied to the buffer selection; "exit" just ends the
+    // conceptual session, leaving point at the match.
+    cx.editor.set_status("I-search exited");
+}
+
+fn isearch_abort(cx: &mut Context) {
+    let origin = isearch_with(|s| s.origin);
+    let (view, doc) = current!(cx.editor);
+    doc.set_selection(view.id, Selection::point(origin));
+    cx.editor.set_status("I-search aborted");
+}
+
+fn isearch_cancel(cx: &mut Context) {
+    isearch_abort(cx);
+}
+
+fn isearch_quote_char(cx: &mut Context) {
+    if !isearch_ensure_session(cx) {
+        cx.editor.set_error("No current search");
+        return;
+    }
+    prompt_then(cx, "Quote char into search: ", |cx, input| {
+        let Some(ch) = input.chars().next() else {
+            return;
+        };
+        isearch_append(cx.editor, &ch.to_string());
+    });
+}
+
+fn isearch_complete(cx: &mut Context) {
+    // Partial: complete the search string from the most-recent history entry.
+    let Some(entry) = cx
+        .editor
+        .registers
+        .first('/', cx.editor)
+        .map(|c| c.to_string())
+    else {
+        cx.editor.set_error("Search ring is empty");
+        return;
+    };
+    isearch_with(|s| {
+        s.flags = search::IsearchFlags {
+            regexp: true,
+            ..Default::default()
+        };
+        s.raw = entry.clone();
+    });
+    isearch_apply(cx.editor, false);
+    cx.editor.set_status(format!("I-search completed: {entry}"));
+}
+
+/// Insert a character into the search string by its digraph mnemonic (a two-key
+/// code). Partial: reuses zemacs's digraph table rather than a full Unicode-name
+/// database, so it takes a mnemonic (e.g. `a:` → `ä`) not a full name.
+fn isearch_char_by_name(cx: &mut Context) {
+    if !isearch_ensure_session(cx) {
+        cx.editor.set_error("No current search");
+        return;
+    }
+    prompt_then(cx, "Char by digraph mnemonic: ", |cx, input| {
+        let mut chars = input.chars();
+        let (Some(a), Some(b)) = (chars.next(), chars.next()) else {
+            cx.editor
+                .set_error("Enter a two-character digraph mnemonic");
+            return;
+        };
+        match digraph_lookup(a, b) {
+            Some(ch) => isearch_append(cx.editor, &ch.to_string()),
+            None => cx.editor.set_error(format!("No digraph for '{a}{b}'")),
+        }
+    });
+}
+
+fn isearch_emoji_by_name(cx: &mut Context) {
+    isearch_char_by_name(cx);
+}
+
+/// The current search pattern (built from the session, else the `/` register).
+fn isearch_current_pattern(cx: &mut Context) -> Option<String> {
+    let p = isearch_with(|s| s.flags.build_regex(&s.raw));
+    if !p.is_empty() {
+        return Some(p);
+    }
+    cx.editor
+        .registers
+        .first('/', cx.editor)
+        .map(|c| c.to_string())
+        .filter(|s| !s.is_empty())
+}
+
+fn isearch_occur(cx: &mut Context) {
+    let Some(pattern) = isearch_current_pattern(cx) else {
+        cx.editor.set_error("No search pattern for occur");
+        return;
+    };
+    let (doc_id, view_id) = {
+        let (view, doc) = current_ref!(cx.editor);
+        (doc.id(), view.id)
+    };
+    occur_run(cx.editor, cx.jobs, doc_id, view_id, &pattern);
+}
+
+/// Hand the current search pattern to a buffer-wide query-replace. Partial:
+/// performs a replace-all (global substitute), not an interactive per-match
+/// y/n/query loop.
+fn isearch_query_replace_impl(cx: &mut Context, _regexp: bool) {
+    let Some(pattern) = isearch_current_pattern(cx) else {
+        cx.editor.set_error("No search pattern for query-replace");
+        return;
+    };
+    prompt_then(cx, "Query replace with: ", move |cx, to| {
+        if let Err(e) = crate::commands::typed::do_substitute(cx.editor, true, &pattern, to, "g") {
+            cx.editor.set_error(e.to_string());
+        }
+    });
+}
+
+fn isearch_query_replace(cx: &mut Context) {
+    isearch_query_replace_impl(cx, false);
+}
+
+fn isearch_query_replace_regexp(cx: &mut Context) {
+    isearch_query_replace_impl(cx, true);
+}
+
+fn isearch_highlight_regexp(cx: &mut Context) {
+    // Partial: no persistent hi-lock; we set the `/` search so matches are shown
+    // by the ordinary search highlight, and jump to the first one.
+    let Some(pattern) = isearch_current_pattern(cx) else {
+        cx.editor.set_error("No search pattern to highlight");
+        return;
+    };
+    let _ = cx.editor.registers.push('/', pattern.clone());
+    cx.editor.registers.last_search_register = '/';
+    isearch_with(|s| {
+        s.flags = search::IsearchFlags {
+            regexp: true,
+            ..Default::default()
+        };
+        s.raw = pattern.clone();
+    });
+    isearch_apply(cx.editor, false);
+    cx.editor
+        .set_status("Matches highlighted via search (no persistent hi-lock)");
+}
+
+fn isearch_highlight_lines_matching_regexp(cx: &mut Context) {
+    // Partial: no persistent line hi-lock; the closest analog is occur, which
+    // lists the matching lines.
+    isearch_occur(cx);
 }
 
 // ---------------------------------------------------------------------------
@@ -16114,6 +16868,51 @@ fn calendar_mayan_goto_long_count(cx: &mut Context) {
 /// buffer that matches it in an `*Occur*` overlay whose entries jump back to the
 /// source line. The regexp is read in the minibuffer; matching, jumping and the
 /// `occur-mode` keys live in [`crate::ui::occur::Occur`].
+/// Run occur for `input` against the document `doc_id`/`view_id`, pushing the
+/// results overlay. Shared by the interactive `occur` prompt and `isearch_occur`
+/// (which supplies the current search pattern directly). Takes `editor`/`jobs`
+/// rather than a `Context` so it is callable from both a static command and a
+/// prompt callback (which see different `Context` types).
+fn occur_run(
+    editor: &mut Editor,
+    jobs: &mut Jobs,
+    doc_id: DocumentId,
+    view_id: ViewId,
+    input: &str,
+) {
+    if input.is_empty() {
+        return;
+    }
+    let re = match regex::Regex::new(input) {
+        Ok(re) => re,
+        Err(e) => {
+            editor.set_error(format!("occur: invalid regexp: {e}"));
+            return;
+        }
+    };
+    let Some(text) = editor
+        .documents()
+        .find(|d| d.id() == doc_id)
+        .map(|d| d.text().to_string())
+    else {
+        return;
+    };
+    let matches = zemacs_core::occur::occur(&text, |line| {
+        re.find(line).map(|hit| line[..hit.start()].chars().count())
+    });
+    if matches.is_empty() {
+        editor.set_status(format!("occur: no matches for {input}"));
+        return;
+    }
+    let overlay = crate::ui::occur::Occur::new(doc_id, view_id, input.to_string(), matches);
+    let call = crate::job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
+            compositor.push(Box::new(overlay));
+        },
+    ));
+    jobs.callback(async move { Ok(call) });
+}
+
 fn occur(cx: &mut Context) {
     let (view, doc) = current_ref!(cx.editor);
     let doc_id = doc.id();
@@ -16124,39 +16923,10 @@ fn occur(cx: &mut Context) {
         Some('/'),
         |_editor: &Editor, _input: &str| Vec::new(),
         move |cx, input, event| {
-            if event != PromptEvent::Validate || input.is_empty() {
+            if event != PromptEvent::Validate {
                 return;
             }
-            let re = match regex::Regex::new(input) {
-                Ok(re) => re,
-                Err(e) => {
-                    cx.editor.set_error(format!("occur: invalid regexp: {e}"));
-                    return;
-                }
-            };
-            let Some(text) = cx
-                .editor
-                .documents()
-                .find(|d| d.id() == doc_id)
-                .map(|d| d.text().to_string())
-            else {
-                return;
-            };
-            let matches = zemacs_core::occur::occur(&text, |line| {
-                re.find(line).map(|hit| line[..hit.start()].chars().count())
-            });
-            if matches.is_empty() {
-                cx.editor
-                    .set_status(format!("occur: no matches for {input}"));
-                return;
-            }
-            let overlay = crate::ui::occur::Occur::new(doc_id, view_id, input.to_string(), matches);
-            let call = crate::job::Callback::EditorCompositor(Box::new(
-                move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
-                    compositor.push(Box::new(overlay));
-                },
-            ));
-            cx.jobs.callback(async move { Ok(call) });
+            occur_run(cx.editor, cx.jobs, doc_id, view_id, input);
         },
     );
 }
