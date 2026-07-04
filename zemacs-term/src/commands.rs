@@ -990,6 +990,7 @@ impl MappableCommand {
         mark_defun, "Select the function/defun around point (emacs mark-defun, C-M-h)",
         kill_sentence, "Kill from point to end of sentence (emacs kill-sentence, M-k)",
         backward_kill_sentence, "Kill from start of sentence to point (emacs backward-kill-sentence, C-x DEL)",
+        append_next_kill, "Make the next kill append to the last kill-ring entry (emacs append-next-kill, C-M-w)",
         forward_page, "Move to the next form-feed page (emacs forward-page, C-x ])",
         backward_page, "Move to the previous form-feed page (emacs backward-page, C-x [)",
         mark_page, "Select the current form-feed page (emacs mark-page, C-x C-p)",
@@ -24459,11 +24460,22 @@ fn backward_kill_sentence(cx: &mut Context) {
         cx.editor.set_status("beginning of buffer");
         return;
     }
-    crate::emacs_kill::record(killed);
+    // Backward kill: `append-next-kill` prepends this text to the previous entry.
+    crate::emacs_kill::record_prepend(killed);
     let (view, doc) = current!(cx.editor);
     let tx = Transaction::change(doc.text(), [(from, to, None)].into_iter());
     doc.apply(&tx, view.id);
     doc.append_changes_to_history(view);
+}
+
+/// Emacs `append-next-kill` (C-M-w): tell the following command, if it is a kill
+/// command, to treat its kill as part of the sequence of previous kills — the
+/// text is appended to the most-recent kill-ring entry for a forward kill and
+/// prepended for a backward kill, so several separated pieces yank back as one.
+fn append_next_kill(cx: &mut Context) {
+    crate::emacs_kill::arm_append();
+    cx.editor
+        .set_status("if the next command is a kill, it will be appended to the last kill");
 }
 
 /// Move point to a page boundary computed by a pure `zemacs_core::page` function
