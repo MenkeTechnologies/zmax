@@ -46,6 +46,209 @@ impl Msg {
     pub fn from(&self) -> &str {
         self.header("From").unwrap_or(&self.envelope)
     }
+
+    /// The mbox envelope date (the tail of the `From ` line after the sender
+    /// address), used as a fallback when there is no `Date:` header.
+    fn envelope_date(&self) -> &str {
+        // "alice@example.com Mon Jan  1 00:00:00 2026" -> "Mon Jan  1 ..."
+        match self.envelope.split_once(char::is_whitespace) {
+            Some((_addr, rest)) => rest.trim_start(),
+            None => "",
+        }
+    }
+
+    /// Sort key for `rmail-sort-by-date`: the `Date:` header (or the envelope
+    /// date) normalised to a lexically comparable `YYYYMMDDhhmmss` string via
+    /// [`sortable_date`].
+    pub fn date_key(&self) -> String {
+        let raw = self.header("Date").unwrap_or_else(|| self.envelope_date());
+        sortable_date(raw)
+    }
+
+    /// Sort key for `rmail-sort-by-subject`: the subject with any `Re:`/`Fwd:`
+    /// prefix chain stripped, lower-cased (so replies sort next to their root).
+    pub fn subject_key(&self) -> String {
+        normalize_subject(self.subject()).to_lowercase()
+    }
+
+    /// Sort key for `rmail-sort-by-author`: the first address of the `From:`
+    /// header with any display name/comment stripped (Emacs
+    /// `mail-strip-quoted-names`), lower-cased.
+    pub fn author_key(&self) -> String {
+        first_address(self.header("From").unwrap_or(""))
+    }
+
+    /// Sort key for `rmail-sort-by-recipient`: the first stripped address of the
+    /// `To:` header, lower-cased.
+    pub fn recipient_key(&self) -> String {
+        first_address(self.header("To").unwrap_or(""))
+    }
+
+    /// Sort key for `rmail-sort-by-correspondent`: the first stripped address
+    /// among `From:`, `To:`, then `Cc:`.
+    ///
+    /// Real Emacs skips addresses matching the user's own
+    /// `rmail-user-mail-address-regexp` so the key is the *other* party; zemacs
+    /// has no configured user identity, so this approximates it with the first
+    /// non-empty of From/To/Cc.
+    pub fn correspondent_key(&self) -> String {
+        for field in ["From", "To", "Cc"] {
+            if let Some(v) = self.header(field) {
+                let a = first_address(v);
+                if !a.is_empty() {
+                    return a;
+                }
+            }
+        }
+        String::new()
+    }
+
+    /// Sort key for `rmail-sort-by-lines`: the number of body lines.
+    pub fn line_count(&self) -> usize {
+        if self.body.is_empty() {
+            0
+        } else {
+            self.body.split('\n').count()
+        }
+    }
+
+    /// Sort key for `rmail-sort-by-labels`: the message's labels sorted and
+    /// joined, lower-cased (Emacs sorts by the keyword/label string).
+    pub fn labels_key(&self) -> String {
+        let mut ls: Vec<String> = self.labels.iter().map(|l| l.to_lowercase()).collect();
+        ls.sort();
+        ls.join(",")
+    }
+}
+
+/// The first RFC 5322 address of a header value with its display name/comment
+/// stripped (`mail-strip-quoted-names`), lower-cased. `"Alice <a@b.com>, …"`
+/// and `"a@b.com (Alice)"` both yield `"a@b.com"`; an empty/nameless value is
+/// returned verbatim, lower-cased.
+fn first_address(value: &str) -> String {
+    email::parse_addresses(value)
+        .into_iter()
+        .next()
+        .unwrap_or_default()
+        .to_lowercase()
+}
+
+/// Normalise a mail `Date:` header (or an mbox asctime envelope date) into a
+/// lexically comparable `YYYYMMDDhhmmss` string, so a plain string sort orders
+/// messages chronologically (Emacs `rmail-sortable-date-string`).
+///
+/// Handles both RFC 5322 (`"Mon, 2 Jan 2026 15:04:05 +0000"`) and asctime
+/// (`"Mon Jan  2 15:04:05 2026"`) forms by scanning tokens for a month name, a
+/// 4-digit year, a day number, and an `hh:mm[:ss]` time. The zone offset is
+/// ignored (times are compared as written). Anything unparseable yields all
+/// zeros, so undated messages sort first.
+pub fn sortable_date(raw: &str) -> String {
+    let mut year = 0u32;
+    let mut month = 0u32;
+    let mut day = 0u32;
+    let (mut hh, mut mm, mut ss) = (0u32, 0u32, 0u32);
+
+    for tok in raw.split(|c: char| c.is_whitespace() || c == ',') {
+        let tok = tok.trim();
+        if tok.is_empty() {
+            continue;
+        }
+        if let Some(m) = month_number(tok) {
+            month = m;
+        } else if tok.contains(':') {
+            // hh:mm[:ss]
+            let mut parts = tok.split(':');
+            hh = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
+            mm = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
+            ss = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
+        } else if let Ok(n) = tok.parse::<u32>() {
+            if tok.len() == 4 && (1000..=9999).contains(&n) {
+                year = n;
+            } else if (1..=31).contains(&n) && day == 0 {
+                day = n;
+            }
+        }
+    }
+    format!("{year:04}{month:02}{day:02}{hh:02}{mm:02}{ss:02}")
+}
+
+/// Month name (any case, at least the 3-letter abbreviation) -> 1..=12.
+fn month_number(tok: &str) -> Option<u32> {
+    const MONTHS: [&str; 12] = [
+        "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
+    ];
+    let low = tok.to_ascii_lowercase();
+    if low.len() < 3 {
+        return None;
+    }
+    MONTHS
+        .iter()
+        .position(|m| low.starts_with(m))
+        .map(|i| i as u32 + 1)
+}
+
+/// Build a case-insensitive matcher from a user pattern, treating it as a
+/// regexp but falling back to a literal search if it does not compile (so a
+/// plain substring typed at the summary prompt always works).
+fn build_matcher(pattern: &str) -> regex::Regex {
+    regex::Regex::new(&format!("(?i){pattern}"))
+        .unwrap_or_else(|_| regex::Regex::new(&format!("(?i){}", regex::escape(pattern))).unwrap())
+}
+
+/// Whether any of `fields` on `msg` matches `re`.
+fn any_field_matches(msg: &Msg, fields: &[&str], re: &regex::Regex) -> bool {
+    fields
+        .iter()
+        .any(|f| msg.header(f).is_some_and(|v| re.is_match(v)))
+}
+
+/// Indices of messages whose `To`, `From`, or `Cc` matches `pattern`
+/// (`rmail-summary-by-recipients`).
+pub fn filter_by_recipients(msgs: &[Msg], pattern: &str) -> Vec<usize> {
+    let re = build_matcher(pattern);
+    msgs.iter()
+        .enumerate()
+        .filter(|(_, m)| any_field_matches(m, &["To", "From", "Cc"], &re))
+        .map(|(i, _)| i)
+        .collect()
+}
+
+/// Indices of messages whose `From` matches `pattern`
+/// (`rmail-summary-by-senders`).
+pub fn filter_by_senders(msgs: &[Msg], pattern: &str) -> Vec<usize> {
+    let re = build_matcher(pattern);
+    msgs.iter()
+        .enumerate()
+        .filter(|(_, m)| any_field_matches(m, &["From"], &re))
+        .map(|(i, _)| i)
+        .collect()
+}
+
+/// Indices of messages whose `Subject` matches `pattern`
+/// (`rmail-summary-by-topic` / `rmail-summary-by-subject`).
+pub fn filter_by_topic(msgs: &[Msg], pattern: &str) -> Vec<usize> {
+    let re = build_matcher(pattern);
+    msgs.iter()
+        .enumerate()
+        .filter(|(_, m)| any_field_matches(m, &["Subject"], &re))
+        .map(|(i, _)| i)
+        .collect()
+}
+
+/// Indices of messages whose whole text (all headers plus body) matches
+/// `pattern` (`rmail-summary-by-regexp`).
+pub fn filter_by_regexp(msgs: &[Msg], pattern: &str) -> Vec<usize> {
+    let re = build_matcher(pattern);
+    msgs.iter()
+        .enumerate()
+        .filter(|(_, m)| {
+            re.is_match(&m.body)
+                || m.headers
+                    .iter()
+                    .any(|(k, v)| re.is_match(k) || re.is_match(v))
+        })
+        .map(|(i, _)| i)
+        .collect()
 }
 
 /// A parsed mailbox with a current-message cursor.
@@ -288,6 +491,73 @@ impl Mailbox {
         }
     }
 
+    /// Stably reorder the message list by `key`, keeping the cursor on the same
+    /// message it was on (its identity survives the move). The shared engine
+    /// behind every `rmail-sort-by-*` command.
+    fn sort_by_key<K: Ord>(&mut self, key: impl Fn(&Msg) -> K) {
+        if self.msgs.len() < 2 {
+            return;
+        }
+        let cur = self.current;
+        let mut order: Vec<usize> = (0..self.msgs.len()).collect();
+        // sort_by_key is stable, so equal keys keep their original order.
+        order.sort_by_key(|&i| key(&self.msgs[i]));
+        self.current = order.iter().position(|&i| i == cur).unwrap_or(cur);
+        let mut slots: Vec<Option<Msg>> = std::mem::take(&mut self.msgs)
+            .into_iter()
+            .map(Some)
+            .collect();
+        self.msgs = order.iter().map(|&i| slots[i].take().unwrap()).collect();
+    }
+
+    /// `rmail-sort-by-date` — order messages by their `Date:` header.
+    pub fn sort_by_date(&mut self) {
+        self.sort_by_key(|m| m.date_key());
+    }
+
+    /// `rmail-sort-by-subject` — order by normalised subject.
+    pub fn sort_by_subject(&mut self) {
+        self.sort_by_key(|m| m.subject_key());
+    }
+
+    /// `rmail-sort-by-author` — order by the `From:` address.
+    pub fn sort_by_author(&mut self) {
+        self.sort_by_key(|m| m.author_key());
+    }
+
+    /// `rmail-sort-by-recipient` — order by the `To:` address.
+    pub fn sort_by_recipient(&mut self) {
+        self.sort_by_key(|m| m.recipient_key());
+    }
+
+    /// `rmail-sort-by-correspondent` — order by the correspondent address.
+    pub fn sort_by_correspondent(&mut self) {
+        self.sort_by_key(|m| m.correspondent_key());
+    }
+
+    /// `rmail-sort-by-lines` — order by body line count.
+    pub fn sort_by_lines(&mut self) {
+        self.sort_by_key(|m| m.line_count());
+    }
+
+    /// `rmail-sort-by-labels` — order by the message's labels.
+    pub fn sort_by_labels(&mut self) {
+        self.sort_by_key(|m| m.labels_key());
+    }
+
+    /// `rmail-summary-undelete-many` (no arg): clear the Deleted flag on every
+    /// deleted message. Returns how many were undeleted.
+    pub fn undelete_all(&mut self) -> usize {
+        let mut n = 0;
+        for m in &mut self.msgs {
+            if m.deleted {
+                m.deleted = false;
+                n += 1;
+            }
+        }
+        n
+    }
+
     /// `M-s` (`rmail-search`): forward to the next message whose headers or body
     /// contain `needle` (case-insensitive), wrapping is not performed.
     pub fn search(&mut self, needle: &str) -> bool {
@@ -378,6 +648,28 @@ pub fn reply_fields(msg: &Msg) -> (String, String, String) {
     let subject = format!("Re: {}", normalize_subject(msg.subject()));
     let cited = cite_body(msg);
     (to, subject, cited)
+}
+
+/// `rmail-resend` fields: a bounce/resend draft. No recipient yet (the user
+/// types the resend-to addresses), the original subject unchanged, and the
+/// **verbatim** original message (its headers and body) as the draft body so
+/// the recipient receives the message as-is.
+///
+/// This is a partial port: it hands message-mode an editable resend draft but
+/// does not synthesise the `Resent-From`/`Resent-To` headers real Emacs adds,
+/// because zemacs has no send transport beyond queuing to a local outbox.
+pub fn resend_fields(msg: &Msg) -> (String, String, String) {
+    let subject = msg.subject().to_string();
+    let mut body = String::new();
+    for (k, v) in &msg.headers {
+        body.push_str(k);
+        body.push_str(": ");
+        body.push_str(v);
+        body.push('\n');
+    }
+    body.push('\n');
+    body.push_str(&msg.body);
+    (String::new(), subject, body)
 }
 
 /// `f` (`rmail-forward`) fields: no recipient yet, `Fwd:` subject, quoted body.
@@ -542,6 +834,160 @@ Third.
         let (fto, fsubj, _) = forward_fields(mb.current().unwrap());
         assert_eq!(fto, "");
         assert_eq!(fsubj, "Fwd: Hello");
+    }
+
+    // A mailbox whose messages are deliberately out of every natural order, so
+    // each sort visibly rearranges them.
+    const SORTBOX: &str = "\
+From carol@example.com Wed Jan  3 09:00:00 2026
+From: Carol <carol@z.example>
+To: team@example.com
+Cc: ops@example.com
+Date: Wed, 3 Jan 2026 09:00:00 +0000
+Subject: Zeta report
+
+one line only.
+
+From alice@example.com Mon Jan  1 08:00:00 2026
+From: Alice <alice@a.example>
+To: bob@example.com
+Date: Mon, 1 Jan 2026 08:00:00 +0000
+Subject: Re: Alpha plan
+
+body line 1
+body line 2
+body line 3
+
+From bob@example.com Tue Feb 10 07:00:00 2026
+From: Bob <bob@m.example>
+To: carol@example.com
+Date: Tue, 10 Feb 2026 07:00:00 +0000
+Subject: alpha plan
+
+two
+lines
+";
+
+    fn subjects(mb: &Mailbox) -> Vec<String> {
+        mb.msgs.iter().map(|m| m.subject().to_string()).collect()
+    }
+
+    #[test]
+    fn sortable_date_parses_rfc_and_asctime() {
+        assert_eq!(
+            sortable_date("Wed, 3 Jan 2026 09:04:05 +0000"),
+            "20260103090405"
+        );
+        // asctime (mbox envelope) form, single-digit day is space-padded.
+        assert_eq!(sortable_date("Mon Jan  1 08:00:00 2026"), "20260101080000");
+        assert_eq!(
+            sortable_date("Tue, 10 Feb 2026 07:00:00 GMT"),
+            "20260210070000"
+        );
+        // Unparseable -> all zeros so it sorts first.
+        assert_eq!(sortable_date("not a date"), "00000000000000");
+    }
+
+    #[test]
+    fn sort_by_date_orders_chronologically() {
+        let mut mb = Mailbox::from_mbox(SORTBOX);
+        // Start on Alice (Jan 1) and confirm the cursor follows her after sorting.
+        mb.show(2);
+        assert_eq!(
+            mb.current().unwrap().header("From"),
+            Some("Alice <alice@a.example>")
+        );
+        mb.sort_by_date();
+        assert_eq!(
+            subjects(&mb),
+            vec!["Re: Alpha plan", "Zeta report", "alpha plan"]
+        );
+        assert_eq!(
+            mb.current().unwrap().header("From"),
+            Some("Alice <alice@a.example>")
+        );
+        assert_eq!(mb.current, 0);
+    }
+
+    #[test]
+    fn sort_by_subject_groups_replies_with_root() {
+        let mut mb = Mailbox::from_mbox(SORTBOX);
+        mb.sort_by_subject();
+        // "Re: Alpha plan" and "alpha plan" normalise to "alpha plan" and sort
+        // before "Zeta report"; the two alphas keep source order (stable).
+        assert_eq!(
+            subjects(&mb),
+            vec!["Re: Alpha plan", "alpha plan", "Zeta report"]
+        );
+    }
+
+    #[test]
+    fn sort_by_author_recipient_correspondent() {
+        let mut mb = Mailbox::from_mbox(SORTBOX);
+        mb.sort_by_author();
+        // From addresses: alice@a, bob@m, carol@z.
+        assert_eq!(
+            subjects(&mb),
+            vec!["Re: Alpha plan", "alpha plan", "Zeta report"]
+        );
+        let mut mb = Mailbox::from_mbox(SORTBOX);
+        mb.sort_by_recipient();
+        // To addresses: bob@ (Alice), carol@ (Bob), team@ (Carol).
+        assert_eq!(
+            subjects(&mb),
+            vec!["Re: Alpha plan", "alpha plan", "Zeta report"]
+        );
+        let mut mb = Mailbox::from_mbox(SORTBOX);
+        mb.sort_by_correspondent();
+        // Correspondent = From here: alice@a, bob@m, carol@z.
+        assert_eq!(mb.msgs[0].header("From"), Some("Alice <alice@a.example>"));
+    }
+
+    #[test]
+    fn sort_by_lines_and_labels() {
+        let mut mb = Mailbox::from_mbox(SORTBOX);
+        mb.sort_by_lines();
+        // Body line counts: Carol=1, Bob=2, Alice=3.
+        assert_eq!(
+            subjects(&mb),
+            vec!["Zeta report", "alpha plan", "Re: Alpha plan"]
+        );
+
+        let mut mb = Mailbox::from_mbox(SORTBOX);
+        mb.msgs[0].labels = vec!["work".into()]; // Carol
+        mb.msgs[2].labels = vec!["home".into()]; // Bob
+        mb.sort_by_labels();
+        // Keys: Alice="", Bob="home", Carol="work" -> "" sorts first.
+        assert_eq!(
+            subjects(&mb),
+            vec!["Re: Alpha plan", "alpha plan", "Zeta report"]
+        );
+    }
+
+    #[test]
+    fn summary_filters_select_matching_messages() {
+        let mb = Mailbox::from_mbox(SORTBOX);
+        // Senders.
+        assert_eq!(filter_by_senders(&mb.msgs, "alice"), vec![1]);
+        // Recipients: matches To/From/Cc — "ops" only in Carol's Cc.
+        assert_eq!(filter_by_recipients(&mb.msgs, "ops@example"), vec![0]);
+        // "bob" appears in Alice's To and Bob's From.
+        assert_eq!(filter_by_recipients(&mb.msgs, "bob"), vec![1, 2]);
+        // Topic: subject regexp, case-insensitive.
+        assert_eq!(filter_by_topic(&mb.msgs, "alpha"), vec![1, 2]);
+        // Whole-message regexp: body text.
+        assert_eq!(filter_by_regexp(&mb.msgs, "one line only"), vec![0]);
+        assert_eq!(filter_by_regexp(&mb.msgs, "zeta"), vec![0]);
+    }
+
+    #[test]
+    fn undelete_all_clears_every_deletion() {
+        let mut mb = Mailbox::from_mbox(SORTBOX);
+        mb.msgs[0].deleted = true;
+        mb.msgs[2].deleted = true;
+        assert_eq!(mb.undelete_all(), 2);
+        assert!(mb.msgs.iter().all(|m| !m.deleted));
+        assert_eq!(mb.undelete_all(), 0);
     }
 
     #[test]
