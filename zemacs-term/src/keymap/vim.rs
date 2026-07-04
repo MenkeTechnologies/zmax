@@ -956,6 +956,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "j" => [extend_line_below, indent],
             "k" => [extend_line_up, indent],
             "G" => [extend_to_last_line, indent],
+            "r" => indent_code_rigidly,                 // = r : shift region lines by [count] cols, skip string-interior lines (emacs indent-code-rigidly)
         },
 
         // --- increment / decrement -----------------------------------------

@@ -1494,6 +1494,7 @@ impl MappableCommand {
         studlify_buffer, "StudlyCaps the whole buffer (emacs studlify-buffer)",
         studlify_word, "StudlyCaps the word after point (emacs studlify-word)",
         indent_relative, "Indent to under the next indent point in the previous line (emacs indent-relative)",
+        indent_code_rigidly, "Shift region lines by [count] columns, skipping lines that start in a string (emacs indent-code-rigidly, = r)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -21717,6 +21718,125 @@ fn comment_kill(cx: &mut Context) {
     doc.append_changes_to_history(view);
 }
 
+/// Tab-expanded indentation column of a line plus the char offset of its first
+/// non-whitespace char (emacs `current-indentation` + `skip-chars-forward
+/// " \t"`). If the line is blank, the returned offset equals `line_end`.
+fn code_indent_leading(
+    text: RopeSlice,
+    line_start: usize,
+    line_end: usize,
+    tab_width: usize,
+) -> (usize, usize) {
+    let mut col = 0usize;
+    let mut idx = line_start;
+    while idx < line_end {
+        match text.char(idx) {
+            ' ' => col += 1,
+            '\t' => col += tab_width - (col % tab_width),
+            _ => break,
+        }
+        idx += 1;
+    }
+    (col, idx)
+}
+
+/// Build whitespace reaching column `col`, honoring the buffer's indent style
+/// (emacs `indent-to`): tabs (then a spaces remainder) when `indent-tabs-mode`,
+/// otherwise all spaces.
+fn code_indent_string(col: usize, style: IndentStyle, tab_width: usize) -> String {
+    match style {
+        IndentStyle::Tabs if tab_width > 0 => {
+            let tabs = col / tab_width;
+            let spaces = col % tab_width;
+            let mut s = String::with_capacity(tabs + spaces);
+            s.push_str(&"\t".repeat(tabs));
+            s.push_str(&" ".repeat(spaces));
+            s
+        }
+        _ => " ".repeat(col),
+    }
+}
+
+/// The first line-start at/after `top` that a region-of-lines command touches:
+/// a `top` mid-line skips that partial first line (emacs `(or (bolp)
+/// (forward-line 1))`).
+fn code_region_first_line_start(text: RopeSlice, top: usize) -> usize {
+    let top = top.min(text.len_chars());
+    let line = text.char_to_line(top);
+    let bol = text.line_to_char(line);
+    if top == bol {
+        top
+    } else {
+        let next = line + 1;
+        if next < text.len_lines() {
+            text.line_to_char(next)
+        } else {
+            text.len_chars()
+        }
+    }
+}
+
+/// Emacs `indent-code-rigidly` (`= r`): shift every line whose start lies in the
+/// region sideways by `arg` columns, leaving lines that *begin* inside a string
+/// untouched (its distinction from plain `indent-rigidly`). The in-string test
+/// reuses the tree-sitter node at the line start, exactly as `line_comment_span`
+/// classifies comment nodes. Blank lines lose their leading whitespace and are
+/// not re-indented, matching the `(or (eolp) (indent-to …))` guard in indent.el.
+fn indent_code_rigidly(cx: &mut Context) {
+    let arg = cx.count() as isize; // columns to shift right (prefix arg)
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let tab_width = doc.tab_width();
+    let style = doc.indent_style;
+    let sel = doc.selection(view.id).primary();
+    let (top, end) = (sel.from(), sel.to());
+    let start = code_region_first_line_start(text, top);
+    if start >= end {
+        return;
+    }
+    let start_line = text.char_to_line(start);
+    // `end` may fall mid-line; a line is processed when its start is < end.
+    let last_line = text.char_to_line(end.saturating_sub(1));
+
+    let mut changes: Vec<(usize, usize, Option<Tendril>)> = Vec::new();
+    for line in start_line..=last_line.min(text.len_lines().saturating_sub(1)) {
+        let line_start = text.line_to_char(line);
+        if line_start >= end {
+            break;
+        }
+        // Skip lines that begin inside a string literal (tree-sitter node kind).
+        if let Some(syntax) = doc.syntax() {
+            let byte = text.char_to_byte(line_start) as u32;
+            if let Some(node) = syntax.descendant_for_byte_range(byte, byte) {
+                if node.kind().contains("string") {
+                    continue;
+                }
+            }
+        }
+        let line_end = line_end_char_index(&text, line);
+        let (col, first_non_ws) = code_indent_leading(text, line_start, line_end, tab_width);
+        // Blank line: strip leading whitespace, do not re-indent.
+        let new_indent = if first_non_ws >= line_end {
+            String::new()
+        } else {
+            code_indent_string((col as isize + arg).max(0) as usize, style, tab_width)
+        };
+        let old_text = text.slice(line_start..first_non_ws).to_string();
+        if old_text == new_indent {
+            continue;
+        }
+        let replacement = (!new_indent.is_empty()).then(|| Tendril::from(new_indent));
+        changes.push((line_start, first_non_ws, replacement));
+    }
+
+    if changes.is_empty() {
+        return;
+    }
+    let tx = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
 fn rotate_selections(cx: &mut Context, direction: Direction) {
     let count = cx.count();
     let (view, doc) = current!(cx.editor);
@@ -29036,6 +29156,65 @@ mod comment_kill_tests {
         let line = "éb #x";
         assert_eq!(comment_start_in_line(line, &["#"]), Some(4));
         assert_eq!(&line[4..], "#x");
+    }
+}
+
+#[cfg(test)]
+mod indent_code_rigidly_tests {
+    use super::{
+        code_indent_leading, code_indent_string, code_region_first_line_start, IndentStyle, Rope,
+    };
+
+    #[test]
+    fn leading_indent_measures_tab_expanded_column() {
+        let rope = Rope::from("    x\n\t y\n\t\tz\nnone\n   \n");
+        let text = rope.slice(..);
+        let le = |ls: usize, line: usize| {
+            let end = super::line_end_char_index(&text, line);
+            code_indent_leading(text, ls, end, 4)
+        };
+        // 4 spaces → column 4, first non-ws at offset 4.
+        assert_eq!(le(0, 0), (4, 4));
+        // "\t y": tab to col 4, then a space → col 5; first non-ws after 2 chars.
+        let l1 = text.line_to_char(1);
+        assert_eq!(le(l1, 1), (5, l1 + 2));
+        // "\t\tz": two tabs → col 8.
+        let l2 = text.line_to_char(2);
+        assert_eq!(le(l2, 2), (8, l2 + 2));
+        // "none": no leading ws → col 0, first non-ws at line start.
+        let l3 = text.line_to_char(3);
+        assert_eq!(le(l3, 3), (0, l3));
+        // "   " (blank, all spaces): col 3, first-non-ws offset == line_end.
+        let l4 = text.line_to_char(4);
+        let end4 = super::line_end_char_index(&text, 4);
+        assert_eq!(le(l4, 4), (3, end4));
+    }
+
+    #[test]
+    fn indent_string_honors_style() {
+        // Spaces mode: all spaces.
+        assert_eq!(code_indent_string(5, IndentStyle::Spaces(4), 4), "     ");
+        assert_eq!(code_indent_string(0, IndentStyle::Spaces(2), 8), "");
+        // Tabs mode, width 4: col 9 → 2 tabs + 1 space.
+        assert_eq!(code_indent_string(9, IndentStyle::Tabs, 4), "\t\t ");
+        // Tabs mode, exact multiple: col 8 → 2 tabs, no spaces.
+        assert_eq!(code_indent_string(8, IndentStyle::Tabs, 4), "\t\t");
+        // Tabs mode, sub-tab: col 3 → all spaces.
+        assert_eq!(code_indent_string(3, IndentStyle::Tabs, 4), "   ");
+    }
+
+    #[test]
+    fn region_first_line_start_skips_partial_line() {
+        let rope = Rope::from("aaa\nbbb\nccc\n");
+        let text = rope.slice(..);
+        assert_eq!(code_region_first_line_start(text, 0), 0); // at bol → same
+        assert_eq!(code_region_first_line_start(text, 4), 4); // at bol of "bbb"
+        assert_eq!(code_region_first_line_start(text, 1), 4); // mid "aaa" → "bbb"
+        assert_eq!(code_region_first_line_start(text, 5), 8); // mid "bbb" → "ccc"
+        assert_eq!(
+            code_region_first_line_start(text, 999),
+            text.len_chars()
+        );
     }
 }
 

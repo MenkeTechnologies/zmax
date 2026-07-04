@@ -31868,5 +31868,14 @@
    "static:xref_find_references_and_replace"
   ],
   "note": "whole-project ripgrep replace of the symbol (word-bounded), not the semantic LSP reference set."
+ },
+ {
+  "spec_id": "emacs.command.indent_code_rigidly",
+  "status": "ported",
+  "evidence": [
+   "key:normal:= r",
+   "static:indent_code_rigidly"
+  ],
+  "note": "indent-code-rigidly (= r): shift each region line by [count] columns, skipping lines that begin inside a string (tree-sitter string node), faithful to indent.el (in-string guard, blank lines emptied)."
  }
 ]
