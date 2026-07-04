@@ -28,6 +28,7 @@ pub mod picture;
 pub mod proced;
 pub mod project;
 pub mod table;
+pub mod vc;
 pub mod xref;
 pub mod doc_formatter;
 pub mod editor_config;
