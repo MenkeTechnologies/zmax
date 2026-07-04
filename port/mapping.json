@@ -29868,6 +29868,206 @@
   "note": "emacs dired-goto-file -> zemacs dired overlay"
  },
  {
+  "spec_id": "emacs.command.dired_change_marks",
+  "status": "ported",
+  "evidence": [
+   "key:dired:c"
+  ],
+  "note": "emacs dired-change-marks -> Dired `c`: reads OLD NEW, moves every entry from one mark set to the other"
+ },
+ {
+  "spec_id": "emacs.command.dired_mark_subdir_files",
+  "status": "ported",
+  "evidence": [
+   "key:dired:P"
+  ],
+  "note": "emacs dired-mark-subdir-files -> Dired `P`: marks every non-directory entry in the listing (single-dir buffer)"
+ },
+ {
+  "spec_id": "emacs.command.dired_mark_files_containing_regexp",
+  "status": "ported",
+  "evidence": [
+   "key:dired:y"
+  ],
+  "note": "emacs dired-mark-files-containing-regexp -> Dired `y`: reads each regular file and marks those whose contents match the regexp"
+ },
+ {
+  "spec_id": "emacs.command.dired_clean_directory",
+  "status": "ported",
+  "evidence": [
+   "key:dired:,"
+  ],
+  "note": "emacs dired-clean-directory -> Dired `,`: flags excess numbered backups (file.~N~), keeping the 2 newest per base (dired-kept-versions)"
+ },
+ {
+  "spec_id": "emacs.command.dired_undo",
+  "status": "partial",
+  "evidence": [
+   "key:dired:_"
+  ],
+  "note": "emacs dired-undo -> Dired `_`: restores the listing rows from the last kill-lines/clean-directory edit; single-level, listing-only (no full buffer undo history)"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_rename_regexp",
+  "status": "ported",
+  "evidence": [
+   "key:dired:e"
+  ],
+  "note": "emacs dired-do-rename-regexp -> Dired `e`: reads regexp then replacement, renames each matching target via regexp_replace_name (Emacs backslash syntax)"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_copy_regexp",
+  "status": "ported",
+  "evidence": [
+   "key:dired:B"
+  ],
+  "note": "emacs dired-do-copy-regexp -> Dired `B`: regexp->replacement name transform, copies each matching target to the new name"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_hardlink_regexp",
+  "status": "ported",
+  "evidence": [
+   "key:dired:F"
+  ],
+  "note": "emacs dired-do-hardlink-regexp -> Dired `F`: regexp->replacement name transform, hardlinks each matching target to the new name"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_symlink_regexp",
+  "status": "ported",
+  "evidence": [
+   "key:dired:I"
+  ],
+  "note": "emacs dired-do-symlink-regexp -> Dired `I`: regexp->replacement name transform, absolute-symlinks each matching target to the new name"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_relsymlink_regexp",
+  "status": "ported",
+  "evidence": [
+   "key:dired:L"
+  ],
+  "note": "emacs dired-do-relsymlink-regexp -> Dired `L`: regexp->replacement name transform, relative-symlinks each matching target to the new name"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_relsymlink",
+  "status": "ported",
+  "evidence": [
+   "key:dired:Y"
+  ],
+  "note": "emacs dired-do-relsymlink -> Dired `Y`: makes a relative symlink of the targets into the given dir (relative_path)"
+ },
+ {
+  "spec_id": "emacs.command.dired_diff",
+  "status": "ported",
+  "evidence": [
+   "key:dired:="
+  ],
+  "note": "emacs dired-diff -> Dired `=`: runs `diff -u OTHER FILE` and shows the unified diff in a scratch buffer"
+ },
+ {
+  "spec_id": "emacs.command.dired_compare_directories",
+  "status": "ported",
+  "evidence": [
+   "key:dired:@"
+  ],
+  "note": "emacs dired-compare-directories -> Dired `@`: reads a second dir and marks entries missing there or differing in size/kind (dirs_differ)"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_chown",
+  "status": "ported",
+  "evidence": [
+   "key:dired:O"
+  ],
+  "note": "emacs dired-do-chown -> Dired `O`: shells out to the real `chown` on the marked targets"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_chgrp",
+  "status": "ported",
+  "evidence": [
+   "key:dired:W"
+  ],
+  "note": "emacs dired-do-chgrp -> Dired `W`: shells out to the real `chgrp` on the marked targets"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_compress",
+  "status": "ported",
+  "evidence": [
+   "key:dired:X"
+  ],
+  "note": "emacs dired-do-compress -> Dired `X`: gzip each target, or gunzip when already .gz (toggle)"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_compress_to",
+  "status": "ported",
+  "evidence": [
+   "key:dired:Q"
+  ],
+  "note": "emacs dired-do-compress-to -> Dired `Q`: tar+gzip the marked targets into a named archive"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_shell_command",
+  "status": "ported",
+  "evidence": [
+   "key:dired:!"
+  ],
+  "note": "emacs dired-do-shell-command -> Dired `!`: runs a shell command with the shell-quoted target names appended"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_open",
+  "status": "ported",
+  "evidence": [
+   "key:dired:V"
+  ],
+  "note": "emacs dired-do-open -> Dired `V`: hands each target to the OS opener (`open`/`xdg-open`)"
+ },
+ {
+  "spec_id": "emacs.command.dired_do_find_regexp",
+  "status": "ported",
+  "evidence": [
+   "key:dired:a"
+  ],
+  "note": "emacs dired-do-find-regexp -> Dired `a`: `grep -rnH` the targets for a regexp and show the hits in a scratch buffer"
+ },
+ {
+  "spec_id": "emacs.command.dired_isearch_filenames",
+  "status": "ported",
+  "evidence": [
+   "key:dired:i"
+  ],
+  "note": "emacs dired-isearch-filenames -> Dired `i`: literal filename search, moves point to the next entry whose name contains the string (wraps)"
+ },
+ {
+  "spec_id": "emacs.command.dired_isearch_filenames_regexp",
+  "status": "ported",
+  "evidence": [
+   "key:dired:h"
+  ],
+  "note": "emacs dired-isearch-filenames-regexp -> Dired `h`: regexp filename search over entry names (wraps)"
+ },
+ {
+  "spec_id": "emacs.command.dired_other_window",
+  "status": "partial",
+  "evidence": [
+   "static:dired_other_window"
+  ],
+  "note": "emacs dired-other-window -> zemacs Dired is a full-screen modal overlay, so there is no side window; opens the same overlay"
+ },
+ {
+  "spec_id": "emacs.command.dired_jump_other_window",
+  "status": "partial",
+  "evidence": [
+   "static:dired_jump_other_window"
+  ],
+  "note": "emacs dired-jump-other-window -> same overlay as dired-jump (no split possible for a modal overlay)"
+ },
+ {
+  "spec_id": "emacs.command.dired_at_point",
+  "status": "ported",
+  "evidence": [
+   "static:dired_at_point"
+  ],
+  "note": "emacs dired-at-point -> reads the filename token around point (filename_at_point) and opens Dired on it, or its parent when it names a file"
+ },
+ {
   "spec_id": "emacs.command.xref_next_line",
   "status": "ported",
   "evidence": [
