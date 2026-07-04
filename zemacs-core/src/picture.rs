@@ -40,6 +40,20 @@ impl Dir {
         }
     }
 
+    /// The opposite direction — used by `picture-motion-reverse`.
+    pub fn reverse(self) -> Dir {
+        match self {
+            Dir::N => Dir::S,
+            Dir::S => Dir::N,
+            Dir::E => Dir::W,
+            Dir::W => Dir::E,
+            Dir::NE => Dir::SW,
+            Dir::NW => Dir::SE,
+            Dir::SE => Dir::NW,
+            Dir::SW => Dir::NE,
+        }
+    }
+
     /// A short label for the header/indicator (`→`, `↖`, …).
     pub fn arrow(self) -> &'static str {
         match self {
@@ -192,9 +206,149 @@ impl Canvas {
     }
 }
 
+/// Advance a buffer `(row, col)` position `n` steps in `dir`, the geometry
+/// behind picture-mode's overwrite self-insert and `picture-motion` /
+/// `picture-motion-reverse`. Unlike [`Canvas`], a text buffer has no fixed
+/// bounds — Emacs pads with spaces past the ends — so this only saturates at 0
+/// (the top-left quadrant Emacs calls the "quarter-plane").
+pub fn advance(row: usize, col: usize, dir: Dir, n: usize) -> (usize, usize) {
+    let (dr, dc) = dir.delta();
+    let n = n as isize;
+    let r = (row as isize + dr * n).max(0) as usize;
+    let c = (col as isize + dc * n).max(0) as usize;
+    (r, c)
+}
+
+/// `picture-set-tab-stops`: derive tab-stop columns from the current line, one
+/// at the start of every whitespace-delimited word *after* the first. Mirrors
+/// picture.el's `"[^ \t][ \t]+"` scan: a stop sits at each column that begins a
+/// non-blank run and is preceded by a blank. The word in column 0 (if any) is
+/// intentionally omitted, matching Emacs.
+pub fn set_tab_stops(line: &str) -> Vec<usize> {
+    let chars: Vec<char> = line.chars().collect();
+    let mut stops = Vec::new();
+    for c in 1..chars.len() {
+        let here_blank = chars[c] == ' ' || chars[c] == '\t';
+        let prev_blank = chars[c - 1] == ' ' || chars[c - 1] == '\t';
+        if !here_blank && prev_blank {
+            stops.push(c);
+        }
+    }
+    stops
+}
+
+/// `picture-tab`: the first tab stop strictly to the right of `col`, or `None`
+/// if `col` is at/after the last stop.
+pub fn next_tab_stop(col: usize, stops: &[usize]) -> Option<usize> {
+    stops.iter().copied().find(|&s| s > col)
+}
+
+/// `picture-clear-column`: overwrite `n` cells of `line` starting at `col` with
+/// spaces, in place (following text keeps its column). Short lines are padded
+/// with spaces out to `col + n` first, exactly as Emacs's
+/// `move-to-column`/`indent-to` dance leaves them. Point does not move, so the
+/// caller keeps its column.
+pub fn clear_columns(line: &str, col: usize, n: usize) -> String {
+    let mut chars: Vec<char> = line.chars().collect();
+    let end = col + n;
+    if chars.len() < end {
+        chars.resize(end, ' ');
+    }
+    for cell in chars.iter_mut().take(end).skip(col) {
+        *cell = ' ';
+    }
+    chars.into_iter().collect()
+}
+
+/// `picture-yank-rectangle`: overlay `rect` onto `lines` with its top-left
+/// corner at `(line, col)`, *overwriting* the cells it covers (unlike the
+/// insert-and-shift [`crate` rectangle yank](crate)). Rows past the buffer's end
+/// are appended; lines shorter than the target column are padded with spaces.
+pub fn overlay_rectangle(lines: &[String], line: usize, col: usize, rect: &[String]) -> Vec<String> {
+    let mut out: Vec<String> = lines.to_vec();
+    for (i, piece) in rect.iter().enumerate() {
+        let target = line + i;
+        if target >= out.len() {
+            out.resize(target + 1, String::new());
+        }
+        let mut chars: Vec<char> = out[target].chars().collect();
+        let piece_chars: Vec<char> = piece.chars().collect();
+        let needed = col + piece_chars.len();
+        if chars.len() < needed {
+            chars.resize(needed, ' ');
+        }
+        for (j, ch) in piece_chars.into_iter().enumerate() {
+            chars[col + j] = ch;
+        }
+        out[target] = chars.into_iter().collect();
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn advance_saturates_at_the_origin() {
+        assert_eq!(advance(2, 3, Dir::E, 1), (2, 4), "east adds a column");
+        assert_eq!(advance(2, 3, Dir::W, 2), (2, 1), "west subtracts columns");
+        assert_eq!(advance(0, 0, Dir::NW, 1), (0, 0), "clamped at the corner");
+        assert_eq!(advance(1, 1, Dir::SE, 3), (4, 4), "diagonal steps scale by n");
+        assert_eq!(advance(0, 5, Dir::N, 4), (0, 5), "north clamps the row at 0");
+    }
+
+    #[test]
+    fn reverse_flips_each_direction() {
+        assert_eq!(Dir::E.reverse(), Dir::W);
+        assert_eq!(Dir::N.reverse(), Dir::S);
+        assert_eq!(Dir::NE.reverse(), Dir::SW);
+        assert_eq!(Dir::SE.reverse(), Dir::NW);
+        // Reversing twice is the identity.
+        for d in [Dir::N, Dir::S, Dir::E, Dir::W, Dir::NE, Dir::NW, Dir::SE, Dir::SW] {
+            assert_eq!(d.reverse().reverse(), d);
+        }
+    }
+
+    #[test]
+    fn set_tab_stops_marks_word_starts_after_the_first() {
+        // "  foo   bar baz": foo@2, bar@8, baz@12; the leading run has no word at 0.
+        assert_eq!(set_tab_stops("  foo   bar baz"), vec![2, 8, 12]);
+        // A word in column 0 is omitted; only later words become stops.
+        assert_eq!(set_tab_stops("foo bar"), vec![4]);
+        assert_eq!(set_tab_stops(""), Vec::<usize>::new());
+        assert_eq!(set_tab_stops("solid"), Vec::<usize>::new());
+    }
+
+    #[test]
+    fn next_tab_stop_finds_the_first_to_the_right() {
+        let stops = [2usize, 8, 12];
+        assert_eq!(next_tab_stop(0, &stops), Some(2));
+        assert_eq!(next_tab_stop(2, &stops), Some(8), "strictly to the right");
+        assert_eq!(next_tab_stop(11, &stops), Some(12));
+        assert_eq!(next_tab_stop(12, &stops), None);
+    }
+
+    #[test]
+    fn clear_columns_overwrites_in_place() {
+        assert_eq!(clear_columns("abcdef", 1, 2), "a  def", "b,c become spaces");
+        assert_eq!(clear_columns("ab", 1, 2), "a  ", "short line padded then blanked");
+        assert_eq!(clear_columns("xyz", 0, 1), " yz");
+    }
+
+    #[test]
+    fn overlay_rectangle_overwrites_not_inserts() {
+        let lines = vec!["abcdef".to_string()];
+        assert_eq!(overlay_rectangle(&lines, 0, 2, &["XX".to_string()]), vec!["abXXef"]);
+
+        // Multi-row, padding a short second line and appending a third.
+        let lines = vec!["abcdef".to_string(), "gh".to_string()];
+        let rect = vec!["11".to_string(), "22".to_string(), "33".to_string()];
+        assert_eq!(
+            overlay_rectangle(&lines, 0, 3, &rect),
+            vec!["abc11f", "gh 22", "   33"],
+        );
+    }
 
     #[test]
     fn put_char_advances_east_by_default() {
