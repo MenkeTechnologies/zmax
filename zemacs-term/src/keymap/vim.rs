@@ -137,6 +137,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t h h", "Toggles", ":toggle cursorline"),                    // highlight line
     ("space t w",   "Toggles", ":toggle whitespace.render all none"),    // whitespace
     ("space t c",   "Toggles", "toggle_subword"),                        // SPC t c : sub-word motion
+    ("space t C",   "Toggles", "toggle_superword"),                      // SPC t C : super-word motion (emacs superword-mode)
     ("space t F",   "Toggles", "toggle_auto_fill"),                      // SPC t F : auto-fill mode
     ("space x d w", "Text",    ":delete-trailing-whitespace"),           // SPC x d w
     ("space x l d", "Text",    ":duplicate-line"),                       // SPC x l d

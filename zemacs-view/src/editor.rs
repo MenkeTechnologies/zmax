@@ -1574,6 +1574,11 @@ pub struct Editor {
     /// motions (and the operators built on them) move by sub-word, splitting
     /// CamelCase / snake_case identifiers. A persistent toggle.
     pub subword: bool,
+    /// Emacs superword-mode (`SPC t C`): when set, the `w`/`b`/`e` word motions
+    /// treat symbol-syntax characters (`_`, `-`, etc.) as part of a word, so a
+    /// whole `snake_case_symbol` moves as one word (the inverse of subword-mode).
+    /// Mutually exclusive with [`subword`](Self::subword). A persistent toggle.
+    pub superword: bool,
     /// Spacemacs auto-fill-mode (`SPC t F`): when set, typing past `text_width`
     /// breaks the line at the last whitespace (Emacs auto-fill). A persistent
     /// toggle; only applies with a single cursor.
@@ -1873,6 +1878,7 @@ impl Editor {
             overwrite: false,
             block: None,
             subword: false,
+            superword: false,
             auto_fill: false,
             picture_mode: false,
             picture_dir: zemacs_core::picture::Dir::E,
