@@ -888,6 +888,93 @@ pub fn iso_string(d: Date) -> String {
     format!("Day {dow} of week {w} of {y}")
 }
 
+/// The Gregorian date for an ISO week date `(iso_year, week, weekday)` where
+/// weekday is 1=Monday..=7=Sunday (inverse of [`iso_week`];
+/// `calendar-iso-goto-week`/`calendar-iso-goto-date`).
+pub fn date_from_iso(iso_year: i32, week: u32, weekday: u32) -> Date {
+    let jan4 = Date::new(iso_year, 1, 4);
+    // ISO weekday of Jan 4 (1=Mon..7=Sun); the Monday of ISO week 1.
+    let jan4_iso = ((weekday_of(jan4) + 6) % 7) + 1;
+    let week1_monday = to_serial(jan4) - (jan4_iso as i64 - 1);
+    from_serial(week1_monday + (week as i64 - 1) * 7 + (weekday as i64 - 1))
+}
+
+// Small alias so `date_from_iso` reads clearly next to `weekday`.
+fn weekday_of(d: Date) -> u32 {
+    weekday(d)
+}
+
+// --- Lunar phases (mean-lunation approximation; cal-dst/lunar.el) ----------
+// NOTE: GNU Emacs computes moon phases with a full periodic (Meeus) series,
+// accurate to a minute. This is a mean-synodic-month approximation off a known
+// new-moon epoch: phase *dates* are usually right but can slip a day near a
+// phase boundary. Marked PARTIAL.
+
+/// The four principal moon phases occurring within `(year, month)`, each as
+/// `(date, phase-name)`, using the mean synodic month. Approximate.
+pub fn lunar_phases_in_month(year: i32, month: u32) -> Vec<(Date, &'static str)> {
+    const SYNODIC: f64 = 29.530_588_861;
+    // R.D. (UTC) of a known new moon: 2000-01-06 18:14 UTC.
+    const NEW_MOON_REF: f64 = 730_125.0 + (18.0 * 60.0 + 14.0) / 1440.0;
+    const NAMES: [&str; 4] = ["New Moon", "First Quarter", "Full Moon", "Last Quarter"];
+    let start = rd(Date::new(year, month, 1)) as f64;
+    let end = start + days_in_month(year, month) as f64;
+    let k0 = ((start - NEW_MOON_REF) / SYNODIC).floor() as i64 - 1;
+    let mut out: Vec<(f64, Date, &'static str)> = Vec::new();
+    for k in k0..=k0 + 3 {
+        for (i, frac) in [0.0f64, 0.25, 0.5, 0.75].iter().enumerate() {
+            let t = NEW_MOON_REF + SYNODIC * (k as f64 + frac);
+            if t >= start && t < end {
+                out.push((t, from_rd(t.floor() as i64), NAMES[i]));
+            }
+        }
+    }
+    out.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+    out.into_iter().map(|(_, d, n)| (d, n)).collect()
+}
+
+// --- Sunrise / sunset (Wikipedia "sunrise equation"; cal-dst.el / solar.el) -
+// NOTE: Emacs's solar.el uses a fuller model and the user's configured
+// `calendar-latitude`/`calendar-longitude`/`calendar-time-zone`. This is the
+// standard low-precision sunrise equation; times can differ from Emacs by a few
+// minutes and it needs a location. Marked PARTIAL.
+
+/// Sunrise and sunset for date `d` at `lat_deg`/`lon_deg` (east positive), as
+/// fractional hours in UTC. Returns `None` on polar day/night (sun never
+/// crosses the horizon that day). Approximate.
+pub fn sunrise_sunset_utc(d: Date, lat_deg: f64, lon_deg: f64) -> Option<(f64, f64)> {
+    let rad = std::f64::consts::PI / 180.0;
+    // Julian day at the given date (noon), then current Julian date.
+    let jd = julian_day(d) as f64;
+    let n = (jd - 2451545.0 + 0.0008).ceil();
+    let j_star = n - lon_deg / 360.0;
+    let m = (357.5291 + 0.98560028 * j_star).rem_euclid(360.0);
+    let c = 1.9148 * (m * rad).sin() + 0.02 * (2.0 * m * rad).sin() + 0.0003 * (3.0 * m * rad).sin();
+    let lambda = (m + c + 180.0 + 102.9372).rem_euclid(360.0);
+    let j_transit =
+        2451545.0 + j_star + 0.0053 * (m * rad).sin() - 0.0069 * (2.0 * lambda * rad).sin();
+    let sin_decl = (lambda * rad).sin() * (23.44 * rad).sin();
+    let decl = sin_decl.asin();
+    let cos_omega =
+        ((-0.833 * rad).sin() - (lat_deg * rad).sin() * sin_decl) / ((lat_deg * rad).cos() * decl.cos());
+    if !(-1.0..=1.0).contains(&cos_omega) {
+        return None; // polar day or night
+    }
+    let omega = cos_omega.acos() / rad; // degrees
+    let j_rise = j_transit - omega / 360.0;
+    let j_set = j_transit + omega / 360.0;
+    // Convert a Julian date to UTC fractional hours.
+    let to_hours = |j: f64| ((j + 0.5).fract() * 24.0).rem_euclid(24.0);
+    Some((to_hours(j_rise), to_hours(j_set)))
+}
+
+/// Format fractional `hours` (0..24) as `"HH:MM"`.
+pub fn format_hm(hours: f64) -> String {
+    let total = (hours * 60.0).round() as i64;
+    let (h, m) = (total.div_euclid(60).rem_euclid(24), total.rem_euclid(60));
+    format!("{h:02}:{m:02}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1173,5 +1260,44 @@ mod other_calendar_tests {
         assert_eq!(astro_day_number(Date::new(2000, 1, 1)), 2451545);
         // 1999-12-31 (Friday) is ISO Day 5 of week 52 of 1999.
         assert_eq!(iso_string(Date::new(1999, 12, 31)), "Day 5 of week 52 of 1999");
+    }
+
+    #[test]
+    fn iso_reverse() {
+        assert_eq!(date_from_iso(1999, 52, 5), Date::new(1999, 12, 31));
+        assert_eq!(date_from_iso(2020, 53, 5), Date::new(2021, 1, 1));
+        assert_eq!(date_from_iso(2025, 1, 1), Date::new(2024, 12, 30));
+        // Round-trip against iso_week over a range.
+        for f in 729000..730100 {
+            let d = from_rd(f);
+            let (y, w, dow) = iso_week(d);
+            assert_eq!(date_from_iso(y, w, dow), d);
+        }
+    }
+
+    #[test]
+    fn lunar_phases_approx() {
+        // There was a new moon on 2000-01-06; the mean approximation must place
+        // a New Moon in January 2000 on the 6th (its reference epoch).
+        let jan = lunar_phases_in_month(2000, 1);
+        assert!(jan
+            .iter()
+            .any(|&(d, name)| name == "New Moon" && d == Date::new(2000, 1, 6)));
+        // A month yields at most four principal phases, all within the month.
+        assert!(jan.len() <= 4);
+        assert!(jan.iter().all(|&(d, _)| d.year == 2000 && d.month == 1));
+    }
+
+    #[test]
+    fn sunrise_sunset_plausible() {
+        // New York City on 2000-01-01: sunrise ~07:20 EST (12:20 UTC),
+        // sunset ~16:39 EST (21:39 UTC).
+        let (rise, set) = sunrise_sunset_utc(Date::new(2000, 1, 1), 40.7128, -74.0060).unwrap();
+        assert!(rise < set);
+        assert!((12.0..12.7).contains(&rise), "sunrise UTC was {rise}");
+        assert!((21.3..22.0).contains(&set), "sunset UTC was {set}");
+        assert_eq!(format_hm(12.5), "12:30");
+        // The poles have no sunrise at the solstice.
+        assert!(sunrise_sunset_utc(Date::new(2000, 12, 21), 85.0, 0.0).is_none());
     }
 }
