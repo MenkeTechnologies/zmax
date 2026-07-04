@@ -32215,5 +32215,165 @@
    "static:appt_activate"
   ],
   "note": "appt-activate: toggles the appt-checking flag and reports the next appointment; zemacs has no idle timer, so no timed pop-up reminder is delivered"
+ },
+ {
+  "spec_id": "emacs.command.fortran_next_statement",
+  "status": "ported",
+  "evidence": [
+   "static:fortran_next_statement"
+  ],
+  "note": "Move to the next fixed-form statement, skipping continuation/comment lines; pure logic in zemacs_core::fortran, unit tested."
+ },
+ {
+  "spec_id": "emacs.command.fortran_previous_statement",
+  "status": "ported",
+  "evidence": [
+   "static:fortran_previous_statement"
+  ],
+  "note": "Move to the previous fixed-form statement; pure column-aware motion, unit tested."
+ },
+ {
+  "spec_id": "emacs.command.fortran_beginning_of_block",
+  "status": "ported",
+  "evidence": [
+   "static:fortran_beginning_of_block"
+  ],
+  "note": "Backward-match DO/IF-THEN/SUBROUTINE/... to the enclosing block opener; depth counter over statement lines, unit tested."
+ },
+ {
+  "spec_id": "emacs.command.fortran_end_of_block",
+  "status": "ported",
+  "evidence": [
+   "static:fortran_end_of_block"
+  ],
+  "note": "Forward-match the block END for the enclosing fixed-form block; unit tested."
+ },
+ {
+  "spec_id": "emacs.command.f90_next_statement",
+  "status": "ported",
+  "evidence": [
+   "static:f90_next_statement"
+  ],
+  "note": "Free-form next statement honouring '&' continuation, skipping blank/comment lines; unit tested."
+ },
+ {
+  "spec_id": "emacs.command.f90_previous_statement",
+  "status": "ported",
+  "evidence": [
+   "static:f90_previous_statement"
+  ],
+  "note": "Free-form previous statement, walking back over '&' continuation chains; unit tested."
+ },
+ {
+  "spec_id": "emacs.command.f90_next_block",
+  "status": "ported",
+  "evidence": [
+   "static:f90_next_block"
+  ],
+  "note": "Move to the next free-form block opening; unit tested."
+ },
+ {
+  "spec_id": "emacs.command.f90_previous_block",
+  "status": "ported",
+  "evidence": [
+   "static:f90_previous_block"
+  ],
+  "note": "Move to the previous free-form block opening; unit tested."
+ },
+ {
+  "spec_id": "emacs.command.f90_beginning_of_block",
+  "status": "ported",
+  "evidence": [
+   "static:f90_beginning_of_block"
+  ],
+  "note": "Backward-match the enclosing free-form block opener; unit tested."
+ },
+ {
+  "spec_id": "emacs.command.f90_end_of_block",
+  "status": "ported",
+  "evidence": [
+   "static:f90_end_of_block"
+  ],
+  "note": "Forward-match the enclosing free-form block end; unit tested."
+ },
+ {
+  "spec_id": "emacs.command.fortran_split_line",
+  "status": "ported",
+  "evidence": [
+   "static:fortran_split_line"
+  ],
+  "note": "Break the line at point onto a continuation line with the marker in column 6; pure split_line, unit tested, applied as a transaction."
+ },
+ {
+  "spec_id": "emacs.command.fortran_join_line",
+  "status": "ported",
+  "evidence": [
+   "static:fortran_join_line"
+  ],
+  "note": "Join with the following continuation line, dropping the label/marker columns; pure join_continuation, unit tested."
+ },
+ {
+  "spec_id": "emacs.command.fortran_comment_region",
+  "status": "ported",
+  "evidence": [
+   "static:fortran_comment_region"
+  ],
+  "note": "Toggle a leading 'C' comment on the selected fixed-form lines; pure comment/uncomment helpers, unit tested."
+ },
+ {
+  "spec_id": "emacs.command.fortran_indent_subprogram",
+  "status": "partial",
+  "evidence": [
+   "static:fortran_indent_subprogram"
+  ],
+  "note": "Re-indents the buffer by fixed-form block nesting (code at col 7, 3 cols/level); faithful to the block-nesting core of fortran-indent-line but not its every corner case (continuation indent, exotic labels)."
+ },
+ {
+  "spec_id": "emacs.command.fortran_strip_sequence_nos",
+  "status": "ported",
+  "evidence": [
+   "static:fortran_strip_sequence_nos"
+  ],
+  "note": "Delete the sequence-number field (columns 73+) on every line; pure strip_sequence_nos, unit tested."
+ },
+ {
+  "spec_id": "emacs.command.fortran_column_ruler",
+  "status": "ported",
+  "evidence": [
+   "static:fortran_column_ruler"
+  ],
+  "note": "Show the fixed-form column ruler (label 1-5 / cont 6 / code 7-72 / seq 73+) in the echo area."
+ },
+ {
+  "spec_id": "emacs.command.fortran_window_create",
+  "status": "partial",
+  "evidence": [
+   "static:fortran_window_create"
+  ],
+  "note": "zemacs terminal windows cannot clip to a fixed column, so this reports the column-72 boundary instead of narrowing the window to columns 1-72."
+ },
+ {
+  "spec_id": "emacs.command.fortran_window_create_momentarily",
+  "status": "partial",
+  "evidence": [
+   "static:fortran_window_create_momentarily"
+  ],
+  "note": "As fortran-window-create; column clipping is unavailable in the terminal window model, so it only reports the column-72 boundary."
+ },
+ {
+  "spec_id": "emacs.command.fortran_mode",
+  "status": "ported",
+  "evidence": [
+   "static:fortran_mode"
+  ],
+  "note": "Enter fixed-form Fortran mode: set the document language to fortran and report status."
+ },
+ {
+  "spec_id": "emacs.command.f90_mode",
+  "status": "ported",
+  "evidence": [
+   "static:f90_mode"
+  ],
+  "note": "Enter free-form F90 mode: sets the document language to the shared fortran grammar (no separate f90 grammar) and reports status."
  }
 ]
