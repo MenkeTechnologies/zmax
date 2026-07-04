@@ -63,6 +63,39 @@ pub fn what_cursor_position(
     }
 }
 
+/// Build the Emacs `describe-char` (`C-u C-x =`) report for the character after
+/// point. Fuller than [`what_cursor_position`]: adds the Unicode block and the
+/// general category. zemacs has no in-tree Unicode *name* database, so the
+/// per-character NAME line Emacs shows is omitted (see the module note) — the
+/// codepoint, block and category are exact.
+///
+/// * `char_at_point` — the character after point, or `None` at end of buffer.
+/// * `point`, `total`, `column` — as in [`what_cursor_position`].
+pub fn describe_char(
+    char_at_point: Option<char>,
+    point: usize,
+    total: usize,
+    column: usize,
+) -> String {
+    match char_at_point {
+        None => format!("point={point} of {total} (EOB) column={column}\n\nEnd of buffer — no character to describe."),
+        Some(ch) => {
+            let code = ch as u32;
+            let (cat, cat_name) = crate::chars::general_category_name(ch);
+            let block = crate::chars::unicode_block(ch);
+            format!(
+                "Char: {desc} ({code}, #o{code:o}, #x{code:x})\n\
+                 \n\
+                 codepoint:        U+{code:04X}\n\
+                 general-category: {cat} ({cat_name})\n\
+                 Unicode block:    {block}\n\
+                 position:         point={point} of {total} column={column}",
+                desc = key_description(ch),
+            )
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,5 +159,40 @@ mod tests {
             what_cursor_position(None, 1, 0, 0),
             "point=1 of 0 (EOB) column=0"
         );
+    }
+
+    #[test]
+    fn describe_char_ascii_letter() {
+        // 'A' = U+0041, general-category Lu, block Basic Latin.
+        let s = describe_char(Some('A'), 1, 3, 0);
+        assert!(s.starts_with("Char: A (65, #o101, #x41)"), "{s}");
+        assert!(s.contains("codepoint:        U+0041"), "{s}");
+        assert!(s.contains("general-category: Lu (Letter, Uppercase)"), "{s}");
+        assert!(s.contains("Unicode block:    Basic Latin"), "{s}");
+        assert!(s.contains("point=1 of 3 column=0"), "{s}");
+    }
+
+    #[test]
+    fn describe_char_non_ascii() {
+        // 'λ' = U+03BB, Ll, Greek and Coptic.
+        let s = describe_char(Some('λ'), 2, 5, 3);
+        assert!(s.starts_with("Char: λ (955, #o1673, #x3bb)"), "{s}");
+        assert!(s.contains("codepoint:        U+03BB"), "{s}");
+        assert!(s.contains("general-category: Ll (Letter, Lowercase)"), "{s}");
+        assert!(s.contains("Unicode block:    Greek and Coptic"), "{s}");
+    }
+
+    #[test]
+    fn describe_char_control_uses_key_description() {
+        // TAB = U+0009, Cc.
+        let s = describe_char(Some('\t'), 1, 2, 0);
+        assert!(s.starts_with("Char: TAB (9, #o11, #x9)"), "{s}");
+        assert!(s.contains("general-category: Cc (Other, Control)"), "{s}");
+    }
+
+    #[test]
+    fn describe_char_eob() {
+        let s = describe_char(None, 4, 3, 3);
+        assert!(s.starts_with("point=4 of 3 (EOB) column=3"), "{s}");
     }
 }
