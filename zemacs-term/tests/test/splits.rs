@@ -359,3 +359,121 @@ async fn test_split_buffer_navigation() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Emacs `recenter-other-window` (C-M-S-l; zemacs `C-w z`): recenter point in
+/// the *other* window while focus stays on the current one. Verifies the
+/// single-window guard, that the other view actually re-centers (its viewport
+/// offset moves off the extreme it was parked at), and that focus is preserved.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_recenter_other_window() -> anyhow::Result<()> {
+    use std::cell::Cell;
+
+    // Top-of-viewport line of the single non-focused view (the "other window").
+    // The scroll position lives in `ViewPosition::anchor` (a char index), not in
+    // `vertical_offset`, which is the soft-wrap sub-row and stays 0 here.
+    fn other_top_line(app: &Application) -> usize {
+        let (id, doc) = app
+            .editor
+            .tree
+            .views()
+            .find(|(_, focused)| !focused)
+            .map(|(v, _)| (v.id, v.doc))
+            .expect("a second, non-focused view");
+        let doc = app
+            .editor
+            .document(doc)
+            .expect("document backing the other view");
+        doc.text().char_to_line(doc.view_offset(id).anchor)
+    }
+
+    // A document far taller than the 150-row test viewport so both split views
+    // have room to scroll in either direction. The leading `#[|]#` places the
+    // cursor at the top of the buffer.
+    let content: String = format!(
+        "#[|]#{}",
+        (0..300)
+            .map(|i| format!("line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+
+    // Opt into the vim keymap so `C-w z` (recenter-other-window) resolves.
+    let mut config = helpers::test_config();
+    config.keys = zemacs_term::keymap::vim::default();
+
+    let mut app = helpers::AppBuilder::new()
+        .with_input_text(&content)
+        .with_config(config)
+        .build()?;
+
+    // Carried between steps: the other view's offset once it is parked
+    // off-center, and the focused view id at that moment.
+    let parked_offset = Cell::new(0usize);
+    let focus_before = Cell::new(app.editor.tree.focus);
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            // 1. One window: recenter-other-window has no target and says so
+            //    without touching the layout.
+            (
+                Some("<C-w>z"),
+                Some(&|app| {
+                    let (msg, _) = app.editor.get_status().expect("a status message");
+                    assert_eq!(msg.as_ref(), "no other window to recenter");
+                    assert_eq!(1, app.editor.tree.views().count(), "still one window");
+                }),
+            ),
+            // 2. Split into two windows (this render lays out both view areas so
+            //    the subsequent `zt` scroll has a real viewport to align to).
+            (
+                Some("<C-w>s"),
+                Some(&|app| {
+                    assert_eq!(2, app.editor.tree.views().count(), "split opened");
+                }),
+            ),
+            // 3. In the focused view jump to a mid-document line and top-align it
+            //    (`zt`), parking it with its cursor at the top of the viewport.
+            (Some("150Gzt"), None),
+            // 4. Move focus to the other window: the parked view is now the
+            //    non-focused one, its viewport top near line 149.
+            (
+                Some("<C-w>w"),
+                Some(&|app| {
+                    let top = other_top_line(app);
+                    assert!(
+                        top > 100,
+                        "the parked (non-focused) view should be scrolled well down, got top line {top}"
+                    );
+                    parked_offset.set(top);
+                    focus_before.set(app.editor.tree.focus);
+                }),
+            ),
+            // 5. Recenter the other window: its viewport top must move up toward
+            //    centering its cursor, and focus must remain on the current window.
+            (
+                Some("<C-w>z"),
+                Some(&|app| {
+                    helpers::assert_status_not_error(&app.editor);
+                    assert_eq!(
+                        focus_before.get(),
+                        app.editor.tree.focus,
+                        "focus must stay on the current window"
+                    );
+                    let top = other_top_line(app);
+                    assert!(
+                        top < parked_offset.get(),
+                        "other view should recenter (top line {top} should be above parked {})",
+                        parked_offset.get()
+                    );
+                }),
+            ),
+            // Close both windows so the app exits cleanly for the harness.
+            (Some(":qa!<ret>"), None),
+        ],
+        true,
+    )
+    .await?;
+
+    Ok(())
+}
