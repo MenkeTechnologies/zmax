@@ -1357,6 +1357,34 @@ impl MappableCommand {
         project_find_file, "Find a file under the project root (emacs project-find-file)",
         diffmode, "Open the unified-diff viewer (emacs diff-mode)",
         picture, "Draw ASCII pictures on a canvas (emacs picture-mode)",
+        picture_mode, "Toggle picture-mode overwrite drawing on the buffer (emacs picture-mode)",
+        edit_picture, "Enter picture-mode on the current buffer (emacs edit-picture)",
+        picture_movement_right, "Picture-mode: draw toward the right (emacs picture-movement-right)",
+        picture_movement_left, "Picture-mode: draw toward the left (emacs picture-movement-left)",
+        picture_movement_up, "Picture-mode: draw upward (emacs picture-movement-up)",
+        picture_movement_down, "Picture-mode: draw downward (emacs picture-movement-down)",
+        picture_movement_nw, "Picture-mode: draw up-and-left (emacs picture-movement-nw)",
+        picture_movement_ne, "Picture-mode: draw up-and-right (emacs picture-movement-ne)",
+        picture_movement_sw, "Picture-mode: draw down-and-left (emacs picture-movement-sw)",
+        picture_movement_se, "Picture-mode: draw down-and-right (emacs picture-movement-se)",
+        picture_motion, "Picture-mode: move point in the drawing direction (emacs picture-motion)",
+        picture_motion_reverse, "Picture-mode: move point opposite the drawing direction (emacs picture-motion-reverse)",
+        picture_set_tab_stops, "Picture-mode: set tab stops from this line (emacs picture-set-tab-stops)",
+        picture_tab, "Picture-mode: move to the next tab stop (emacs picture-tab)",
+        picture_tab_search, "Picture-mode: move under next word-start above (emacs picture-tab-search)",
+        picture_open_line, "Picture-mode: split the line at point (emacs picture-open-line)",
+        picture_clear_line, "Picture-mode: clear to end of line (emacs picture-clear-line)",
+        picture_clear_column, "Picture-mode: blank columns after point (emacs picture-clear-column)",
+        picture_backward_clear_column, "Picture-mode: blank columns before point (emacs picture-backward-clear-column)",
+        picture_clear_rectangle_to_register, "Picture-mode: clear rectangle into a register (emacs picture-clear-rectangle-to-register)",
+        picture_yank_rectangle, "Picture-mode: overlay the killed rectangle (emacs picture-yank-rectangle)",
+        picture_yank_rectangle_from_register, "Picture-mode: overlay a register's rectangle (emacs picture-yank-rectangle-from-register)",
+        twocol_two_columns, "Two-column: create a side-by-side partner buffer (emacs 2C-two-columns)",
+        twocol_associate_buffer, "Two-column: associate the other window's buffer (emacs 2C-associate-buffer)",
+        twocol_split, "Two-column: split the buffer at point into two columns (emacs 2C-split)",
+        twocol_merge, "Two-column: merge the partner column back in (emacs 2C-merge)",
+        twocol_dissociate, "Two-column: break the association (emacs 2C-dissociate)",
+        twocol_newline, "Two-column: newline in both columns (emacs 2C-newline)",
         table, "Edit a text table (emacs table.el)",
         table_recognize, "Recognize the ASCII table at point and report its dimensions (emacs table-recognize)",
         table_recognize_region, "Recognize the table in the selection and report its dimensions (emacs table-recognize-region)",
@@ -13114,6 +13142,604 @@ fn delete_whitespace_rectangle(cx: &mut Context) {
     rectangle_op(cx, RectOp::DeleteWhitespace);
 }
 
+// ---------------------------------------------------------------------------
+// Emacs picture-mode (`edit-picture`): quarter-plane overwrite editing on the
+// real text buffer. `cx.editor.picture_mode` gates the behaviour; the pure
+// geometry lives in `zemacs_core::picture`. Reaching a cell past a line/buffer
+// end pads with spaces (Emacs's `move-to-column t` / quarter-plane), so these
+// commands rewrite the buffer through `picture_apply`.
+// ---------------------------------------------------------------------------
+
+/// The primary cursor as a `(row, col)` character position.
+fn picture_row_col(cx: &Context) -> (usize, usize) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    let row = text.char_to_line(cursor);
+    (row, cursor - text.line_to_char(row))
+}
+
+/// Replace the whole buffer with `lines` (space-padded so `(row, col)` exists)
+/// and leave point at `(row, col)`. Rewriting the document as one transaction
+/// mirrors the emacs rectangle commands and keeps the quarter-plane padding
+/// simple; picture-mode drawings are small, so the cost is a non-issue.
+fn picture_apply(cx: &mut Context, mut lines: Vec<String>, row: usize, col: usize) {
+    while lines.len() <= row {
+        lines.push(String::new());
+    }
+    let cur_len = lines[row].chars().count();
+    if cur_len < col {
+        let pad: String = std::iter::repeat(' ').take(col - cur_len).collect();
+        lines[row].push_str(&pad);
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().clone();
+    let le = doc.line_ending.as_str();
+    let new_text = lines.join(le);
+    let old_len = text.len_chars();
+    let transaction = Transaction::change(
+        &text,
+        std::iter::once((0, old_len, Some(Tendril::from(new_text.as_str())))),
+    );
+    doc.apply(&transaction, view.id);
+    let ntext = doc.text();
+    let line_start = ntext.line_to_char(row.min(ntext.len_lines().saturating_sub(1)));
+    let caret = (line_start + col).min(ntext.len_chars());
+    doc.set_selection(view.id, Selection::point(caret));
+    doc.append_changes_to_history(view);
+}
+
+/// Picture-mode self-insert: overwrite the cell under point with `c`, then
+/// advance one step in the current drawing direction (Emacs
+/// `picture-self-insert`). Called from `insert::insert_char` when the flag is
+/// set.
+pub(crate) fn picture_self_insert(cx: &mut Context, c: char) {
+    let dir = cx.editor.picture_dir;
+    let (row, col) = picture_row_col(cx);
+    let mut lines = {
+        let (_view, doc) = current_ref!(cx.editor);
+        doc_lines(doc.text())
+    };
+    while lines.len() <= row {
+        lines.push(String::new());
+    }
+    let mut chars: Vec<char> = lines[row].chars().collect();
+    if chars.len() <= col {
+        chars.resize(col + 1, ' ');
+    }
+    chars[col] = c;
+    lines[row] = chars.into_iter().collect();
+    let (nr, nc) = zemacs_core::picture::advance(row, col, dir, 1);
+    picture_apply(cx, lines, nr, nc);
+}
+
+/// Toggle Emacs picture-mode / `edit-picture` on the current buffer.
+fn picture_mode(cx: &mut Context) {
+    let dir = cx.editor.picture_dir;
+    cx.editor.picture_mode = !cx.editor.picture_mode;
+    let msg = if cx.editor.picture_mode {
+        format!("Picture mode enabled (drawing {})", dir.arrow())
+    } else {
+        "Picture mode disabled".to_string()
+    };
+    cx.editor.set_status(msg);
+}
+
+/// `edit-picture` — an alias for `picture-mode`.
+fn edit_picture(cx: &mut Context) {
+    picture_mode(cx);
+}
+
+/// Set the picture-mode drawing direction (the `picture-movement-*` family).
+fn picture_set_dir(cx: &mut Context, dir: zemacs_core::picture::Dir, name: &str) {
+    cx.editor.picture_dir = dir;
+    let arrow = dir.arrow();
+    cx.editor
+        .set_status(format!("Picture drawing direction: {name} ({arrow})"));
+}
+
+fn picture_movement_right(cx: &mut Context) {
+    picture_set_dir(cx, zemacs_core::picture::Dir::E, "right");
+}
+fn picture_movement_left(cx: &mut Context) {
+    picture_set_dir(cx, zemacs_core::picture::Dir::W, "left");
+}
+fn picture_movement_up(cx: &mut Context) {
+    picture_set_dir(cx, zemacs_core::picture::Dir::N, "up");
+}
+fn picture_movement_down(cx: &mut Context) {
+    picture_set_dir(cx, zemacs_core::picture::Dir::S, "down");
+}
+fn picture_movement_nw(cx: &mut Context) {
+    picture_set_dir(cx, zemacs_core::picture::Dir::NW, "up-left");
+}
+fn picture_movement_ne(cx: &mut Context) {
+    picture_set_dir(cx, zemacs_core::picture::Dir::NE, "up-right");
+}
+fn picture_movement_sw(cx: &mut Context) {
+    picture_set_dir(cx, zemacs_core::picture::Dir::SW, "down-left");
+}
+fn picture_movement_se(cx: &mut Context) {
+    picture_set_dir(cx, zemacs_core::picture::Dir::SE, "down-right");
+}
+
+/// Move point `count` steps in `dir`, padding past line/buffer ends.
+fn picture_move_n(cx: &mut Context, dir: zemacs_core::picture::Dir, count: usize) {
+    let (row, col) = picture_row_col(cx);
+    let (nr, nc) = zemacs_core::picture::advance(row, col, dir, count.max(1));
+    let lines = {
+        let (_view, doc) = current_ref!(cx.editor);
+        doc_lines(doc.text())
+    };
+    picture_apply(cx, lines, nr, nc);
+}
+
+/// `picture-motion`: move point in the current drawing direction (like drawing
+/// a character without changing the text).
+fn picture_motion(cx: &mut Context) {
+    let dir = cx.editor.picture_dir;
+    let count = cx.count();
+    picture_move_n(cx, dir, count);
+}
+
+/// `picture-motion-reverse`: move point opposite the current drawing direction.
+fn picture_motion_reverse(cx: &mut Context) {
+    let dir = cx.editor.picture_dir.reverse();
+    let count = cx.count();
+    picture_move_n(cx, dir, count);
+}
+
+/// `picture-set-tab-stops` (C-c TAB): set tab stops at the start of each
+/// whitespace-delimited word on the current line.
+fn picture_set_tab_stops(cx: &mut Context) {
+    let (row, _) = picture_row_col(cx);
+    let line = {
+        let (_view, doc) = current_ref!(cx.editor);
+        doc_lines(doc.text()).get(row).cloned().unwrap_or_default()
+    };
+    let stops = zemacs_core::picture::set_tab_stops(&line);
+    let msg = if stops.is_empty() {
+        "Picture tab stops cleared (none on this line)".to_string()
+    } else {
+        format!("Picture tab stops set at columns {stops:?}")
+    };
+    cx.editor.picture_tab_stops = stops;
+    cx.editor.set_status(msg);
+}
+
+/// `picture-tab`: move point to the next picture tab stop (or the next
+/// `tab-width` multiple if none is set), padding as needed. Point does not draw.
+fn picture_tab(cx: &mut Context) {
+    let stops = cx.editor.picture_tab_stops.clone();
+    let (row, col) = picture_row_col(cx);
+    let tw = {
+        let (_view, doc) = current_ref!(cx.editor);
+        doc.tab_width()
+    };
+    let dest = zemacs_core::picture::next_tab_stop(col, &stops)
+        .unwrap_or_else(|| ((col / tw) + 1) * tw);
+    let lines = {
+        let (_view, doc) = current_ref!(cx.editor);
+        doc_lines(doc.text())
+    };
+    picture_apply(cx, lines, row, dest);
+}
+
+/// `picture-tab-search` (M-TAB): move to the column beneath the next word-start
+/// in the nearest non-blank line above point. Falls back to `picture-tab` when
+/// there is no such line/column.
+fn picture_tab_search(cx: &mut Context) {
+    let (row, col) = picture_row_col(cx);
+    let lines = {
+        let (_view, doc) = current_ref!(cx.editor);
+        doc_lines(doc.text())
+    };
+    let mut dest = None;
+    let mut r = row;
+    while r > 0 {
+        r -= 1;
+        if lines[r].trim().is_empty() {
+            continue;
+        }
+        let stops = zemacs_core::picture::set_tab_stops(&lines[r]);
+        dest = zemacs_core::picture::next_tab_stop(col, &stops);
+        break;
+    }
+    match dest {
+        Some(dest) => picture_apply(cx, lines, row, dest),
+        None => picture_tab(cx),
+    }
+}
+
+/// `picture-open-line` (C-o): split the line at point (insert `count` newlines)
+/// without moving point.
+fn picture_open_line(cx: &mut Context) {
+    let count = cx.count().max(1);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().clone();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    let ins: String = doc.line_ending.as_str().repeat(count);
+    let transaction = Transaction::change(
+        &text,
+        std::iter::once((cursor, cursor, Some(Tendril::from(ins.as_str())))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::point(cursor));
+    doc.append_changes_to_history(view);
+}
+
+/// `picture-clear-line` (C-c C-k): blank the rest of the current line from point
+/// to end of line, leaving point in place.
+fn picture_clear_line(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().clone();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    let line = text.char_to_line(cursor);
+    let end = line_end_char_index(&text.slice(..), line);
+    if end > cursor {
+        let transaction =
+            Transaction::change(&text, std::iter::once((cursor, end, None)));
+        doc.apply(&transaction, view.id);
+        doc.set_selection(view.id, Selection::point(cursor));
+        doc.append_changes_to_history(view);
+    }
+}
+
+/// `picture-clear-column` (C-d): overwrite `count` cells after point with
+/// spaces, without moving point.
+fn picture_clear_column(cx: &mut Context) {
+    let count = cx.count().max(1);
+    let (row, col) = picture_row_col(cx);
+    let mut lines = {
+        let (_view, doc) = current_ref!(cx.editor);
+        doc_lines(doc.text())
+    };
+    while lines.len() <= row {
+        lines.push(String::new());
+    }
+    lines[row] = zemacs_core::picture::clear_columns(&lines[row], col, count);
+    picture_apply(cx, lines, row, col);
+}
+
+/// `picture-backward-clear-column` (DEL): move back `count` columns and blank
+/// them (picture-mode's backspace).
+fn picture_backward_clear_column(cx: &mut Context) {
+    let count = cx.count().max(1);
+    let (row, col) = picture_row_col(cx);
+    let n = count.min(col);
+    if n == 0 {
+        return;
+    }
+    let newcol = col - n;
+    let mut lines = {
+        let (_view, doc) = current_ref!(cx.editor);
+        doc_lines(doc.text())
+    };
+    while lines.len() <= row {
+        lines.push(String::new());
+    }
+    lines[row] = zemacs_core::picture::clear_columns(&lines[row], newcol, n);
+    picture_apply(cx, lines, row, newcol);
+}
+
+/// `picture-clear-rectangle-to-register` (C-c C-w): save the selected rectangle
+/// into a register, then blank it in place (keeping column widths).
+fn picture_clear_rectangle_to_register(cx: &mut Context) {
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        if let Some(ch) = event.char() {
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text().clone();
+            let sel = doc.selection(view.id).primary();
+            let (p0, p1) = (sel.from(), sel.to());
+            let l0 = text.char_to_line(p0);
+            let l1 = text.char_to_line(p1.max(p0).saturating_sub(1).max(p0));
+            let col_of = |pos: usize| pos - text.line_to_char(text.char_to_line(pos));
+            let (c0, c1) = (col_of(p0), col_of(p1));
+            let lines = doc_lines(&text);
+            let rect = crate::emacs_rect::extract(&lines, l0, l1, c0, c1);
+            crate::emacs_register::set_rect(ch, rect);
+            let new_lines = crate::emacs_rect::clear(&lines, l0, l1, c0, c1);
+            let le = doc.line_ending.as_str();
+            let new_text = new_lines.join(le);
+            let old_len = text.len_chars();
+            let transaction = Transaction::change(
+                &text,
+                std::iter::once((0, old_len, Some(Tendril::from(new_text.as_str())))),
+            );
+            doc.apply(&transaction, view.id);
+            let caret = p0.min(doc.text().len_chars());
+            doc.set_selection(view.id, Selection::point(caret));
+            doc.append_changes_to_history(view);
+            cx.editor
+                .set_status(format!("Rectangle cleared to register {ch}"));
+        }
+    });
+    cx.editor.autoinfo = Some(Info::new(
+        "Clear rectangle to register",
+        &[("char", "register name")],
+    ));
+}
+
+/// `picture-yank-rectangle` (C-c C-y): overlay the most recently killed
+/// rectangle at point, overwriting the cells it covers.
+fn picture_yank_rectangle(cx: &mut Context) {
+    let rect = crate::emacs_rect::saved();
+    if rect.is_empty() {
+        cx.editor.set_error("No rectangle to yank");
+        return;
+    }
+    let (row, col) = picture_row_col(cx);
+    let lines = {
+        let (_view, doc) = current_ref!(cx.editor);
+        doc_lines(doc.text())
+    };
+    let new_lines = zemacs_core::picture::overlay_rectangle(&lines, row, col, &rect);
+    picture_apply(cx, new_lines, row, col);
+}
+
+/// `picture-yank-rectangle-from-register` (C-c C-x): overlay the rectangle held
+/// in a register at point, overwriting the cells it covers.
+fn picture_yank_rectangle_from_register(cx: &mut Context) {
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        if let Some(ch) = event.char() {
+            let Some(rect) = crate::emacs_register::get_rect(ch) else {
+                cx.editor
+                    .set_error(format!("Register {ch} does not hold a rectangle"));
+                return;
+            };
+            let (row, col) = picture_row_col(cx);
+            let lines = {
+                let (_view, doc) = current_ref!(cx.editor);
+                doc_lines(doc.text())
+            };
+            let new_lines =
+                zemacs_core::picture::overlay_rectangle(&lines, row, col, &rect);
+            picture_apply(cx, new_lines, row, col);
+        }
+    });
+    cx.editor.autoinfo = Some(Info::new(
+        "Yank rectangle from register",
+        &[("char", "register name")],
+    ));
+}
+
+// ---------------------------------------------------------------------------
+// Emacs two-column (`2C`) mode: two side-by-side buffers edited as the left and
+// right columns of one wide document. The reversible split/merge text geometry
+// lives (unit-tested) in `zemacs_core::two_column`; here we drive it against the
+// real buffers and track the left<->right association. The *live* linkage
+// (synchronized scrolling / point) that a GUI Emacs offers is not modeled, so
+// the association-only commands are honestly `partial`.
+// ---------------------------------------------------------------------------
+
+/// left/right buffer association: `doc -> (partner, separator column)`. A
+/// separator of 0 means "compute from the widest left line at merge time".
+static TWO_COLUMN: Lazy<std::sync::Mutex<HashMap<DocumentId, (DocumentId, usize)>>> =
+    Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
+
+fn twocol_associate(a: DocumentId, b: DocumentId, sep: usize) {
+    let mut m = TWO_COLUMN.lock().unwrap();
+    m.insert(a, (b, sep));
+    m.insert(b, (a, sep));
+}
+
+fn twocol_partner(a: DocumentId) -> Option<(DocumentId, usize)> {
+    TWO_COLUMN.lock().unwrap().get(&a).copied()
+}
+
+fn twocol_dissociate_ids(a: DocumentId) {
+    let mut m = TWO_COLUMN.lock().unwrap();
+    if let Some((b, _)) = m.remove(&a) {
+        m.remove(&b);
+    }
+}
+
+/// Replace document `doc_id`'s entire text (used for the non-current partner
+/// buffer, so it does not go through `current!`).
+fn twocol_set_doc_text(editor: &mut Editor, doc_id: DocumentId, new_text: &str) {
+    let view_id = editor
+        .tree
+        .traverse()
+        .find(|(_, v)| v.doc == doc_id)
+        .map(|(id, _)| id);
+    let Some(view_id) = view_id else {
+        return;
+    };
+    let Some(doc) = editor.document_mut(doc_id) else {
+        return;
+    };
+    doc.ensure_view_init(view_id);
+    let old = doc.text().len_chars();
+    let tx = Transaction::change(doc.text(), std::iter::once((0, old, Some(new_text.into()))))
+        .with_selection(Selection::point(0));
+    doc.apply(&tx, view_id);
+}
+
+/// `2C-split`: cut the buffer from point's line down at point's column, leaving
+/// the left column in place and moving the right column into a new buffer opened
+/// in a vertical split.
+fn twocol_split(cx: &mut Context) {
+    let (row, col) = picture_row_col(cx);
+    let (cur_id, lines, le) = {
+        let (_v, doc) = current_ref!(cx.editor);
+        (
+            doc.id(),
+            doc_lines(doc.text()),
+            doc.line_ending.as_str().to_string(),
+        )
+    };
+    let (left, right) = zemacs_core::two_column::split_columns(&lines, row, col);
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().clone();
+        let new_text = left.join(&le);
+        let old = text.len_chars();
+        let tx = Transaction::change(
+            &text,
+            std::iter::once((0, old, Some(Tendril::from(new_text.as_str())))),
+        );
+        doc.apply(&tx, view.id);
+        doc.set_selection(view.id, Selection::point(0));
+        doc.append_changes_to_history(view);
+    }
+    let partner = cx.editor.new_file(Action::VerticalSplit);
+    let right_text = right.join(&le);
+    twocol_set_doc_text(cx.editor, partner, &right_text);
+    twocol_associate(cur_id, partner, col);
+    cx.editor
+        .set_status(format!("2C-split at column {col}; right column moved to a new buffer"));
+}
+
+/// `2C-two-columns`: create an empty partner buffer side-by-side and associate
+/// it. Partial: the buffers are linked for `2C-merge`/`2C-newline`, but there is
+/// no live scroll/point synchronization.
+fn twocol_two_columns(cx: &mut Context) {
+    let cur_id = {
+        let (_v, doc) = current_ref!(cx.editor);
+        doc.id()
+    };
+    if let Some((p, _)) = twocol_partner(cur_id) {
+        if cx.editor.document(p).is_some() {
+            cx.editor
+                .set_status("2C: this buffer already has a two-column partner");
+            return;
+        }
+    }
+    let partner = cx.editor.new_file(Action::VerticalSplit);
+    twocol_associate(cur_id, partner, 0);
+    cx.editor
+        .set_status("2C-two-columns: created a side-by-side partner buffer (no live sync)");
+}
+
+/// `2C-associate-buffer`: associate the buffer shown in another window with this
+/// one. Partial: association only, no live synchronization.
+fn twocol_associate_buffer(cx: &mut Context) {
+    let cur_id = {
+        let (_v, doc) = current_ref!(cx.editor);
+        doc.id()
+    };
+    let other = cx
+        .editor
+        .tree
+        .traverse()
+        .map(|(_, v)| v.doc)
+        .find(|&d| d != cur_id);
+    match other {
+        Some(o) => {
+            twocol_associate(cur_id, o, 0);
+            cx.editor
+                .set_status("2C-associate-buffer: linked the other window's buffer");
+        }
+        None => cx
+            .editor
+            .set_error("2C-associate-buffer: no other window/buffer to associate"),
+    }
+}
+
+/// `2C-merge`: merge the associated (right-column) buffer back into this one,
+/// padding each left line to the separator column and appending the right line.
+fn twocol_merge(cx: &mut Context) {
+    let (cur_id, left, le) = {
+        let (_v, doc) = current_ref!(cx.editor);
+        (
+            doc.id(),
+            doc_lines(doc.text()),
+            doc.line_ending.as_str().to_string(),
+        )
+    };
+    let Some((partner, sep)) = twocol_partner(cur_id) else {
+        cx.editor
+            .set_error("2C-merge: this buffer has no two-column partner");
+        return;
+    };
+    let Some(right) = cx.editor.document(partner).map(|d| doc_lines(d.text())) else {
+        cx.editor.set_error("2C-merge: the partner buffer is gone");
+        return;
+    };
+    let sep_col = if sep == 0 {
+        left.iter().map(|l| l.chars().count()).max().unwrap_or(0) + 1
+    } else {
+        sep
+    };
+    let merged = zemacs_core::two_column::merge_columns(&left, &right, sep_col);
+    let new_text = merged.join(&le);
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().clone();
+        let old = text.len_chars();
+        let tx = Transaction::change(
+            &text,
+            std::iter::once((0, old, Some(Tendril::from(new_text.as_str())))),
+        );
+        doc.apply(&tx, view.id);
+        doc.set_selection(view.id, Selection::point(0));
+        doc.append_changes_to_history(view);
+    }
+    twocol_dissociate_ids(cur_id);
+    cx.editor
+        .set_status(format!("2C-merge: merged the partner at column {sep_col}"));
+}
+
+/// `2C-dissociate`: break the two-column association without merging.
+fn twocol_dissociate(cx: &mut Context) {
+    let cur_id = {
+        let (_v, doc) = current_ref!(cx.editor);
+        doc.id()
+    };
+    if twocol_partner(cur_id).is_some() {
+        twocol_dissociate_ids(cur_id);
+        cx.editor
+            .set_status("2C-dissociate: broke the two-column association");
+    } else {
+        cx.editor
+            .set_status("2C-dissociate: this buffer had no partner");
+    }
+}
+
+/// `2C-newline`: insert a newline in this column and, if associated, in the
+/// partner at that buffer's point. Partial: no live point tracking, so the
+/// partner splits at wherever its own point currently sits.
+fn twocol_newline(cx: &mut Context) {
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().clone();
+        let point = doc.selection(view.id).primary().cursor(text.slice(..));
+        let le = doc.line_ending.as_str().to_string();
+        let tx = Transaction::change(&text, std::iter::once((point, point, Some(le.as_str().into()))))
+            .with_selection(Selection::point(point + le.chars().count()));
+        doc.apply(&tx, view.id);
+        doc.append_changes_to_history(view);
+    }
+    let cur_id = {
+        let (_v, doc) = current_ref!(cx.editor);
+        doc.id()
+    };
+    if let Some((partner, _)) = twocol_partner(cur_id) {
+        let view_id = cx
+            .editor
+            .tree
+            .traverse()
+            .find(|(_, v)| v.doc == partner)
+            .map(|(id, _)| id);
+        if let Some(view_id) = view_id {
+            if let Some(doc) = cx.editor.document_mut(partner) {
+                doc.ensure_view_init(view_id);
+                let text = doc.text().clone();
+                let point = doc.selection(view_id).primary().cursor(text.slice(..));
+                let le = doc.line_ending.as_str().to_string();
+                let tx = Transaction::change(
+                    &text,
+                    std::iter::once((point, point, Some(le.as_str().into()))),
+                )
+                .with_selection(Selection::point(point + le.chars().count()));
+                doc.apply(&tx, view_id);
+            }
+        }
+    }
+}
+
 /// The current buffer's file plus the cursor's 0-based `(line, column)`.
 fn bookmark_location(cx: &mut Context) -> Option<(String, usize, usize)> {
     let (view, doc) = current!(cx.editor);
@@ -18465,6 +19091,11 @@ pub mod insert {
     }
 
     pub fn insert_char(cx: &mut Context, c: char) {
+        // Emacs picture-mode: overwrite the cell under point and advance in the
+        // current drawing direction, padding past line/buffer ends with spaces.
+        if cx.editor.picture_mode {
+            return super::picture_self_insert(cx, c);
+        }
         // vim Replace mode (`R`): overtype the character under the cursor rather
         // than inserting, unless the cursor sits at the end of the line (where
         // vim appends). Auto-pairs are bypassed while overtyping.

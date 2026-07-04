@@ -1578,6 +1578,18 @@ pub struct Editor {
     /// breaks the line at the last whitespace (Emacs auto-fill). A persistent
     /// toggle; only applies with a single cursor.
     pub auto_fill: bool,
+    /// Emacs picture-mode / `edit-picture`: when set, self-inserting a character
+    /// overwrites the cell under point and then advances point one step in
+    /// [`picture_dir`](Self::picture_dir) (quarter-plane overwrite editing),
+    /// padding lines/columns with spaces past their ends. A persistent toggle.
+    pub picture_mode: bool,
+    /// The picture-mode drawing direction — which way point advances after a
+    /// character is drawn (`picture-movement-*`). Only meaningful while
+    /// [`picture_mode`](Self::picture_mode) is set.
+    pub picture_dir: zemacs_core::picture::Dir,
+    /// Picture-mode tab stops (columns), set by `picture-set-tab-stops` and used
+    /// by `picture-tab`.
+    pub picture_tab_stops: Vec<usize>,
     /// Spacemacs follow-mode (`SPC w f`): when set, windows showing the same
     /// document scroll as one continuous view — sibling windows are re-anchored
     /// to pick up where the focused window ends. A persistent toggle.
@@ -1862,6 +1874,9 @@ impl Editor {
             block: None,
             subword: false,
             auto_fill: false,
+            picture_mode: false,
+            picture_dir: zemacs_core::picture::Dir::E,
+            picture_tab_stops: Vec::new(),
             follow: false,
             fill_prefix: None,
             goal_column: None,
