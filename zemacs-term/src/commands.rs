@@ -1628,6 +1628,27 @@ impl MappableCommand {
         indent_code_rigidly, "Shift region lines by [count] columns, skipping lines that start in a string (emacs indent-code-rigidly, = r)",
         c_hungry_delete_forward, "Delete all whitespace after point, else one char (emacs c-hungry-delete-forward, SPC x d f)",
         c_hungry_delete_backwards, "Delete all whitespace before point, else one char (emacs c-hungry-delete-backwards, SPC x d b)",
+        c_beginning_of_defun, "Move to the start of the function at point (emacs c-beginning-of-defun)",
+        c_end_of_defun, "Move to the end of the function at point (emacs c-end-of-defun)",
+        c_mark_function, "Select the whole function around point (emacs c-mark-function)",
+        c_beginning_of_statement, "Move to the start of the C statement at point (emacs c-beginning-of-statement)",
+        c_end_of_statement, "Move to the end of the C statement at point (emacs c-end-of-statement)",
+        c_forward_conditional, "Move forward across a preprocessor conditional (emacs c-forward-conditional)",
+        c_backward_conditional, "Move backward across a preprocessor conditional (emacs c-backward-conditional)",
+        c_up_conditional, "Move up out of the containing preprocessor conditional (emacs c-up-conditional)",
+        c_indent_line_or_region, "Re-indent the current line or the selected lines (emacs c-indent-line-or-region)",
+        c_indent_defun, "Re-indent the whole function at point (emacs c-indent-defun)",
+        c_ts_mode_indent_defun, "Re-indent the whole function at point via tree-sitter (emacs c-ts-mode-indent-defun)",
+        c_indent_exp, "Re-indent the balanced expression after point (emacs c-indent-exp)",
+        c_fill_paragraph, "Fill the C comment block around point (emacs c-fill-paragraph, M-q)",
+        c_backslash_region, "Align trailing backslash continuations in the region (emacs c-backslash-region)",
+        c_context_line_break, "Break the line, continuing a comment or macro (emacs c-context-line-break)",
+        c_toggle_auto_newline, "Toggle auto-newline insertion in C mode (emacs c-toggle-auto-newline)",
+        c_toggle_hungry_state, "Toggle hungry-delete state in C mode (emacs c-toggle-hungry-state)",
+        c_toggle_electric_state, "Toggle electric behavior in C mode (emacs c-toggle-electric-state)",
+        c_show_syntactic_information, "Report the tree-sitter node kind at point (emacs c-show-syntactic-information)",
+        c_macro_expand, "Expand C preprocessor macros in the region via cpp (emacs c-macro-expand)",
+        c_set_style, "Report the C indentation style (emacs c-set-style)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -23958,6 +23979,564 @@ fn c_hungry_delete_backwards(cx: &mut Context) {
     doc.apply(&transaction, view.id);
     doc.set_selection(view.id, Selection::point(from));
     doc.append_changes_to_history(view);
+}
+
+// ---------------------------------------------------------------------------
+// C-mode (cc-mode) motion / indent / fill commands. Pure preprocessor-
+// conditional matching, comment fill, backslash alignment and statement motion
+// live in `zemacs_core::cmode`; these wrappers apply them to the buffer, plus
+// tree-sitter defun motion and reindentation.
+// ---------------------------------------------------------------------------
+
+/// The tree-sitter "function" text object around the primary selection, as
+/// `(view_id, from, to)`, or `None` when there is no parsed function at point.
+fn c_function_object(cx: &mut Context) -> Option<(ViewId, usize, usize)> {
+    let count = cx.count();
+    let loader = cx.editor.syn_loader.load();
+    let (view, doc) = current_ref!(cx.editor);
+    let slice = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    doc.syntax().and_then(|syntax| {
+        let obj = textobject::textobject_treesitter(
+            slice,
+            range,
+            textobject::TextObject::Around,
+            "function",
+            syntax,
+            &loader,
+            count,
+        );
+        (obj.from() != obj.to()).then_some((view.id, obj.from(), obj.to()))
+    })
+}
+
+/// Emacs `c-beginning-of-defun`: move point to the start of the function at
+/// point, using the tree-sitter `function` text object.
+fn c_beginning_of_defun(cx: &mut Context) {
+    match c_function_object(cx) {
+        Some((vid, from, _to)) => {
+            let (_view, doc) = current!(cx.editor);
+            let len = doc.text().len_chars();
+            doc.set_selection(vid, Selection::point(from.min(len)));
+        }
+        None => cx
+            .editor
+            .set_status("c-beginning-of-defun: no function at point (needs a parsed syntax tree)"),
+    }
+}
+
+/// Emacs `c-end-of-defun`: move point to the end of the function at point.
+fn c_end_of_defun(cx: &mut Context) {
+    match c_function_object(cx) {
+        Some((vid, _from, to)) => {
+            let (_view, doc) = current!(cx.editor);
+            let len = doc.text().len_chars();
+            doc.set_selection(vid, Selection::point(to.min(len)));
+        }
+        None => cx
+            .editor
+            .set_status("c-end-of-defun: no function at point (needs a parsed syntax tree)"),
+    }
+}
+
+/// Emacs `c-mark-function`: select the whole function around point.
+fn c_mark_function(cx: &mut Context) {
+    match c_function_object(cx) {
+        Some((vid, from, to)) => {
+            let (_view, doc) = current!(cx.editor);
+            let len = doc.text().len_chars();
+            doc.set_selection(vid, Selection::single(to.min(len), from.min(len)));
+        }
+        None => cx
+            .editor
+            .set_status("c-mark-function: no function at point (needs a parsed syntax tree)"),
+    }
+}
+
+/// Emacs `c-beginning-of-statement`: move to the start of the C statement at
+/// point (brace/`;`-delimited; see `zemacs_core::cmode::beginning_of_statement`).
+fn c_beginning_of_statement(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let s = text.to_string();
+    let pos = zemacs_core::cmode::beginning_of_statement(&s, cursor);
+    doc.set_selection(view.id, Selection::point(pos.min(text.len_chars())));
+}
+
+/// Emacs `c-end-of-statement`: move just past the end of the C statement at
+/// point.
+fn c_end_of_statement(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let s = text.to_string();
+    let pos = zemacs_core::cmode::end_of_statement(&s, cursor);
+    doc.set_selection(view.id, Selection::point(pos.min(text.len_chars())));
+}
+
+/// Move point to the line chosen by a `zemacs_core::cmode` conditional motion,
+/// then to the first non-whitespace character of that line (or report `what`).
+fn c_conditional_motion(cx: &mut Context, f: impl Fn(&[&str], usize) -> Option<usize>, what: &str) {
+    let target = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let cur_line = slice.char_to_line(cursor);
+        let content = text.to_string();
+        let lines: Vec<&str> = content.lines().collect();
+        f(&lines, cur_line)
+    };
+    match target {
+        Some(line) => {
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text();
+            let line = line.min(text.len_lines().saturating_sub(1));
+            let start = text.line_to_char(line);
+            let first = text
+                .line(line)
+                .first_non_whitespace_char()
+                .map(|c| start + c)
+                .unwrap_or(start);
+            doc.set_selection(view.id, Selection::point(first.min(text.len_chars())));
+        }
+        None => cx.editor.set_status(format!("No {what}")),
+    }
+}
+
+/// Emacs `c-forward-conditional` (C-c C-n): move forward across the following
+/// preprocessor conditional.
+fn c_forward_conditional(cx: &mut Context) {
+    c_conditional_motion(
+        cx,
+        zemacs_core::cmode::forward_conditional,
+        "following conditional",
+    );
+}
+
+/// Emacs `c-backward-conditional` (C-c C-p): move backward across the preceding
+/// preprocessor conditional.
+fn c_backward_conditional(cx: &mut Context) {
+    c_conditional_motion(
+        cx,
+        zemacs_core::cmode::backward_conditional,
+        "preceding conditional",
+    );
+}
+
+/// Emacs `c-up-conditional` (C-c C-u): move up out of the containing
+/// preprocessor conditional. Honours a numeric prefix for the number of levels.
+fn c_up_conditional(cx: &mut Context) {
+    let count = cx.count();
+    c_conditional_motion(
+        cx,
+        move |lines, cur| zemacs_core::cmode::up_conditional(lines, cur, count),
+        "containing conditional",
+    );
+}
+
+/// Re-indent the buffer lines in `[start_line, end_line]` to their tree-sitter
+/// indentation, rewriting each line's leading whitespace. Returns the number of
+/// lines changed. A no-op when there is no syntax tree / indent query.
+fn c_reindent_lines(cx: &mut Context, start_line: usize, end_line: usize) -> usize {
+    let config = cx.editor.config();
+    let loader = cx.editor.syn_loader.load();
+    let (view, doc) = current!(cx.editor);
+    if doc.syntax().is_none() {
+        return 0;
+    }
+    let text = doc.text().clone();
+    let slice = text.slice(..);
+    let tab_width = doc.tab_width();
+    let end_line = end_line.min(text.len_lines().saturating_sub(1));
+    let mut changes: Vec<(usize, usize, Option<Tendril>)> = Vec::new();
+    for line in start_line..=end_line {
+        let line_start = text.line_to_char(line);
+        let first = slice.line(line).first_non_whitespace_char();
+        // Skip blank lines (nothing to align).
+        let Some(first) = first else { continue };
+        let line_before = line.saturating_sub(1);
+        let before_end = line_end_char_index(&slice, line_before);
+        let indent = zemacs_core::indent::indent_for_newline(
+            &loader,
+            doc.syntax(),
+            &config.indent_heuristic,
+            &doc.indent_style,
+            tab_width,
+            slice,
+            line_before,
+            before_end,
+            line,
+        );
+        let old = slice.slice(line_start..line_start + first).to_string();
+        if old != indent {
+            changes.push((
+                line_start,
+                line_start + first,
+                Some(Tendril::from(indent.as_str())),
+            ));
+        }
+    }
+    let n = changes.len();
+    if n > 0 {
+        let tx = Transaction::change(doc.text(), changes.into_iter());
+        doc.apply(&tx, view.id);
+        doc.append_changes_to_history(view);
+    }
+    n
+}
+
+/// Emacs `c-indent-line-or-region`: re-indent the current line, or every line
+/// touched by the selection when it spans more than one line.
+fn c_indent_line_or_region(cx: &mut Context) {
+    let (start_line, end_line) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        doc.selection(view.id).primary().line_range(slice)
+    };
+    c_reindent_lines(cx, start_line, end_line);
+}
+
+/// Emacs `c-indent-defun`: re-indent every line of the function at point.
+fn c_indent_defun(cx: &mut Context) {
+    let range = c_function_object(cx).map(|(_v, from, to)| {
+        let (_view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        (
+            text.char_to_line(from),
+            text.char_to_line(to.saturating_sub(1).max(from)),
+        )
+    });
+    match range {
+        Some((start, end)) => {
+            c_reindent_lines(cx, start, end);
+        }
+        None => cx
+            .editor
+            .set_status("c-indent-defun: no function at point (needs a parsed syntax tree)"),
+    }
+}
+
+/// Emacs `c-ts-mode-indent-defun`: re-indent the whole function at point using
+/// the tree-sitter indent query (the `c-ts-mode` equivalent of
+/// [`c_indent_defun`]).
+fn c_ts_mode_indent_defun(cx: &mut Context) {
+    c_indent_defun(cx);
+}
+
+/// Emacs `c-indent-exp`: re-indent the balanced brace expression starting at
+/// point (the lines from the opening `{` through its matching `}`).
+fn c_indent_exp(cx: &mut Context) {
+    let range = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        // Find the next opening brace at/after point, then its match.
+        let s = text.to_string();
+        let chars: Vec<char> = s.chars().collect();
+        let mut open = cursor;
+        while open < chars.len() && chars[open] != '{' {
+            open += 1;
+        }
+        if open >= chars.len() {
+            None
+        } else {
+            let mut depth = 0i32;
+            let mut close = open;
+            for (i, c) in chars.iter().enumerate().skip(open) {
+                match c {
+                    '{' => depth += 1,
+                    '}' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            close = i;
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            Some((text.char_to_line(open), text.char_to_line(close)))
+        }
+    };
+    match range {
+        Some((start, end)) => {
+            c_reindent_lines(cx, start, end);
+        }
+        None => cx
+            .editor
+            .set_status("c-indent-exp: no brace expression at point"),
+    }
+}
+
+/// The contiguous run of comment lines around `line` sharing its comment style
+/// (`//` line comments, or block-comment body lines beginning with `*`).
+/// Returns the inclusive `(start_line, end_line)` range, or `None` when `line`
+/// is not a fillable comment line.
+fn c_comment_block_range(text: &Rope, line: usize) -> Option<(usize, usize)> {
+    let is_fillable = |l: usize| -> bool {
+        let s = text.line(l).to_string();
+        let t = s.trim_start();
+        t.starts_with("//") || t.starts_with('*')
+    };
+    if !is_fillable(line) {
+        return None;
+    }
+    let mut start = line;
+    while start > 0 && is_fillable(start - 1) {
+        start -= 1;
+    }
+    let mut end = line;
+    while end + 1 < text.len_lines() && is_fillable(end + 1) {
+        end += 1;
+    }
+    Some((start, end))
+}
+
+/// Emacs `c-fill-paragraph` (M-q): fill the comment block around point,
+/// rewrapping its text to `text-width` and reusing the block's `//` or `*`
+/// prefix. Only fills comment blocks; outside a comment it does nothing.
+fn c_fill_paragraph(cx: &mut Context) {
+    let width = {
+        let w = cx.editor.config().text_width;
+        if w == 0 {
+            70
+        } else {
+            w
+        }
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let cur_line = slice.char_to_line(cursor);
+    let Some((start, end)) = c_comment_block_range(text, cur_line) else {
+        cx.editor.set_status("c-fill-paragraph: not in a comment");
+        return;
+    };
+    let region_start = text.line_to_char(start);
+    let region_end = text.line_to_char((end + 1).min(text.len_lines()));
+    let region = text.slice(region_start..region_end).to_string();
+    let had_trailing_nl = region.ends_with('\n');
+    let lines: Vec<&str> = region.lines().collect();
+    let out = zemacs_core::cmode::fill_c_comment(&lines, width);
+    let le = doc.line_ending.as_str();
+    let mut replacement = out.join(le);
+    if had_trailing_nl {
+        replacement.push_str(le);
+    }
+    if replacement == region {
+        return;
+    }
+    let tx = Transaction::change(
+        text,
+        std::iter::once((region_start, region_end, Some(replacement.into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Emacs `c-backslash-region`: align the trailing `\` line continuations in the
+/// selected lines to a common column. With a numeric prefix (count > 1) the
+/// backslashes are removed instead.
+fn c_backslash_region(cx: &mut Context) {
+    let remove = cx.count() > 1;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let (start_line, end_line) = doc.selection(view.id).primary().line_range(slice);
+    let region_start = text.line_to_char(start_line);
+    let region_end = text.line_to_char((end_line + 1).min(text.len_lines()));
+    let region = text.slice(region_start..region_end).to_string();
+    let had_trailing_nl = region.ends_with('\n');
+    let lines: Vec<&str> = region.lines().collect();
+    let out = if remove {
+        zemacs_core::cmode::remove_backslashes(&lines)
+    } else {
+        let col = zemacs_core::cmode::backslash_column(&lines);
+        zemacs_core::cmode::align_backslashes(&lines, col)
+    };
+    let le = doc.line_ending.as_str();
+    let mut replacement = out.join(le);
+    if had_trailing_nl {
+        replacement.push_str(le);
+    }
+    if replacement == region {
+        return;
+    }
+    let tx = Transaction::change(
+        text,
+        std::iter::once((region_start, region_end, Some(replacement.into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Emacs `c-context-line-break`: break the line at point. Inside a `//` or `*`
+/// comment it continues the comment prefix; inside a multi-line macro it appends
+/// a `\` continuation to the current line before the break; otherwise it is a
+/// plain newline that keeps the current indentation.
+fn c_context_line_break(cx: &mut Context) {
+    enter_insert_mode(cx);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let line = slice.char_to_line(cursor);
+    let line_start = text.line_to_char(line);
+    let line_str = text.line(line).to_string();
+    let le = doc.line_ending.as_str().to_string();
+
+    let content = text.to_string();
+    let all_lines: Vec<&str> = content.lines().collect();
+    let in_macro = zemacs_core::cmode::in_cpp_macro(&all_lines, line);
+
+    // Comment continuation prefix, if any.
+    let comment_prefix = zemacs_core::cmode::comment_continuation_prefix(&line_str);
+
+    let mut insert = String::new();
+    if in_macro {
+        // Pad to a single space and append the backslash continuation before
+        // breaking, matching cc-mode's macro line-break.
+        insert.push_str(" \\");
+    }
+    insert.push_str(&le);
+    if let Some(prefix) = comment_prefix {
+        insert.push_str(&prefix);
+    } else {
+        // Keep the current line's indentation.
+        let indent_end = text.line(line).first_non_whitespace_char().unwrap_or(0);
+        insert.push_str(&text.slice(line_start..line_start + indent_end).to_string());
+    }
+    let new_cursor = cursor + insert.chars().count();
+    let tx = Transaction::change(text, std::iter::once((cursor, cursor, Some(insert.into()))));
+    doc.apply(&tx, view.id);
+    doc.set_selection(
+        view.id,
+        Selection::point(new_cursor.min(doc.text().len_chars())),
+    );
+    doc.append_changes_to_history(view);
+}
+
+/// Toggle flags for the C-mode electric/auto-newline/hungry states. zemacs has
+/// no live cc-mode electric machinery, so these track the flag and report it
+/// (partial), mirroring `nroff-electric-mode`.
+static C_AUTO_NEWLINE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Tracks the C-mode hungry-delete state toggle (flag only).
+static C_HUNGRY_STATE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Tracks the C-mode electric state toggle (flag only).
+static C_ELECTRIC_STATE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+/// Emacs `c-toggle-auto-newline` (partial): toggle the auto-newline flag. There
+/// is no live electric insertion, so this only records and reports the state.
+fn c_toggle_auto_newline(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let on = !C_AUTO_NEWLINE.fetch_xor(true, Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "c-toggle-auto-newline: {} (flag only)",
+        if on { "on" } else { "off" }
+    ));
+}
+
+/// Emacs `c-toggle-hungry-state` (partial): toggle the hungry-delete flag. The
+/// `c-hungry-delete-*` commands work explicitly regardless of this flag.
+fn c_toggle_hungry_state(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let on = !C_HUNGRY_STATE.fetch_xor(true, Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "c-toggle-hungry-state: {} (flag only)",
+        if on { "on" } else { "off" }
+    ));
+}
+
+/// Emacs `c-toggle-electric-state` (partial): toggle the electric flag.
+fn c_toggle_electric_state(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let on = !C_ELECTRIC_STATE.fetch_xor(true, Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "c-toggle-electric-state: {} (flag only)",
+        if on { "on" } else { "off" }
+    ));
+}
+
+/// Emacs `c-show-syntactic-information` (C-c C-s): report the tree-sitter node
+/// kind at point and the enclosing node stack, in lieu of cc-mode's syntactic
+/// analysis symbols.
+fn c_show_syntactic_information(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let scopes = zemacs_core::indent::get_scopes(doc.syntax(), slice, cursor);
+    if scopes.is_empty() {
+        cx.editor
+            .set_status("c-show-syntactic-information: no syntax tree at point");
+        return;
+    }
+    let innermost = scopes.last().copied().unwrap_or("?");
+    cx.editor
+        .set_status(format!("syntactic: {innermost}  [{}]", scopes.join(" > ")));
+}
+
+/// Emacs `c-macro-expand` (partial): expand the preprocessor over the selected
+/// region by shelling out to `cpp`, showing the result in a scratch buffer.
+/// Requires a `cpp` on PATH; there is no in-process preprocessor.
+fn c_macro_expand(cx: &mut Context) {
+    let region = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let sel = doc.selection(view.id).primary();
+        let (from, to) = (sel.from(), sel.to());
+        if from == to {
+            text.to_string()
+        } else {
+            slice.slice(from..to).to_string()
+        }
+    };
+    let mut child = match std::process::Command::new("cpp")
+        .arg("-P")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(_) => {
+            cx.editor
+                .set_error("c-macro-expand: `cpp` not found on PATH");
+            return;
+        }
+    };
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        let _ = stdin.write_all(region.as_bytes());
+    }
+    match child.wait_with_output() {
+        Ok(out) if out.status.success() => {
+            let content = String::from_utf8_lossy(&out.stdout).into_owned();
+            show_text_in_scratch(cx.editor, &content);
+            cx.editor.set_status("c-macro-expand: expanded via cpp");
+        }
+        _ => cx.editor.set_error("c-macro-expand: cpp failed"),
+    }
+}
+
+/// Emacs `c-set-style` (partial): zemacs has no cc-mode style engine, so this
+/// reports the current tree-sitter indentation style/width instead of selecting
+/// a named cc-mode style.
+fn c_set_style(cx: &mut Context) {
+    let (_view, doc) = current_ref!(cx.editor);
+    let style = doc.indent_style.as_str();
+    let width = doc.indent_width();
+    let kind = if style == "\t" { "tabs" } else { "spaces" };
+    cx.editor.set_status(format!(
+        "c-set-style: indent = {kind}, width {width} (no cc-mode style engine)"
+    ));
 }
 
 fn rotate_selections(cx: &mut Context, direction: Direction) {
