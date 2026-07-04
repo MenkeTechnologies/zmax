@@ -711,6 +711,7 @@
 | `mark_defun` | Select the function/defun around point (emacs mark-defun, C-M-h) |  |
 | `kill_sentence` | Kill from point to end of sentence (emacs kill-sentence, M-k) |  |
 | `backward_kill_sentence` | Kill from start of sentence to point (emacs backward-kill-sentence, C-x DEL) |  |
+| `append_next_kill` | Make the next kill append to the last kill-ring entry (emacs append-next-kill, C-M-w) | normal: `` <space>ra ``, select: `` <space>ra `` |
 | `forward_page` | Move to the next form-feed page (emacs forward-page, C-x ]) |  |
 | `backward_page` | Move to the previous form-feed page (emacs backward-page, C-x [) |  |
 | `mark_page` | Select the current form-feed page (emacs mark-page, C-x C-p) |  |
