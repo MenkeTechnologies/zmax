@@ -29292,6 +29292,222 @@
   "note": "watch expr at point"
  },
  {
+  "spec_id": "emacs.command.comint_kill_input",
+  "status": "ported",
+  "evidence": [
+   "static:comint_kill_input"
+  ],
+  "note": "comint-kill-input (C-c C-u): clears the pending input line via Comint::kill_input"
+ },
+ {
+  "spec_id": "emacs.command.comint_bol_or_process_mark",
+  "status": "ported",
+  "evidence": [
+   "static:comint_bol_or_process_mark"
+  ],
+  "note": "comint-bol-or-process-mark (C-a): move to process mark / bol, via unit-tested bol_or_process_mark_target"
+ },
+ {
+  "spec_id": "emacs.command.comint_delchar_or_maybe_eof",
+  "status": "ported",
+  "evidence": [
+   "static:comint_delchar_or_maybe_eof"
+  ],
+  "note": "comint-delchar-or-maybe-eof (C-d): delete char, or close child stdin (EOF) on empty input"
+ },
+ {
+  "spec_id": "emacs.command.comint_magic_space",
+  "status": "ported",
+  "evidence": [
+   "static:comint_magic_space"
+  ],
+  "note": "comint-magic-space: expand !!/!$/!*/!-N/!str history designators (unit-tested expand_history) then insert a space"
+ },
+ {
+  "spec_id": "emacs.command.comint_insert_previous_argument",
+  "status": "ported",
+  "evidence": [
+   "static:comint_insert_previous_argument"
+  ],
+  "note": "comint-insert-previous-argument (M-.): insert last arg (!$) of previous command via unit-tested last_argument"
+ },
+ {
+  "spec_id": "emacs.command.comint_get_next_from_history",
+  "status": "partial",
+  "evidence": [
+   "static:comint_get_next_from_history"
+  ],
+  "note": "comint-get-next-from-history: yanks the next-forward input-ring entry (approximates the post-yank M-n step)"
+ },
+ {
+  "spec_id": "emacs.command.comint_next_prompt",
+  "status": "partial",
+  "evidence": [
+   "static:comint_next_prompt"
+  ],
+  "note": "comint-next-prompt (C-c C-n): scrolls to the next prompt line; comint scrollback has no separate point so this is a viewport move"
+ },
+ {
+  "spec_id": "emacs.command.comint_previous_prompt",
+  "status": "partial",
+  "evidence": [
+   "static:comint_previous_prompt"
+  ],
+  "note": "comint-previous-prompt (C-c C-p): scrolls to the previous prompt line (viewport move; no buffer point)"
+ },
+ {
+  "spec_id": "emacs.command.comint_show_output",
+  "status": "ported",
+  "evidence": [
+   "static:comint_show_output"
+  ],
+  "note": "comint-show-output (C-c C-r): scrolls the start of the last command's output to the top, via unit-tested last_prompt_line"
+ },
+ {
+  "spec_id": "emacs.command.comint_show_maximum_output",
+  "status": "ported",
+  "evidence": [
+   "static:comint_show_maximum_output"
+  ],
+  "note": "comint-show-maximum-output (C-c C-e): scrolls newest output to the bottom"
+ },
+ {
+  "spec_id": "emacs.command.comint_delete_output",
+  "status": "ported",
+  "evidence": [
+   "static:comint_delete_output"
+  ],
+  "note": "comint-delete-output (C-c C-o): deletes the last command's output lines via unit-tested last_output_range"
+ },
+ {
+  "spec_id": "emacs.command.comint_write_output",
+  "status": "ported",
+  "evidence": [
+   "static:comint_write_output"
+  ],
+  "note": "comint-write-output: writes the last command's output (last_output_range) to a prompted file"
+ },
+ {
+  "spec_id": "emacs.command.comint_copy_old_input",
+  "status": "partial",
+  "evidence": [
+   "static:comint_copy_old_input"
+  ],
+  "note": "comint-copy-old-input (C-c RET): copies the most recent submitted input onto the input line (comint has no buffer point to pick an arbitrary old input)"
+ },
+ {
+  "spec_id": "emacs.command.comint_truncate_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:comint_truncate_buffer"
+  ],
+  "note": "comint-truncate-buffer: trims scrollback to comint-buffer-maximum-size (1024) keeping the newest lines"
+ },
+ {
+  "spec_id": "emacs.command.comint_strip_ctrl_m",
+  "status": "ported",
+  "evidence": [
+   "static:comint_strip_ctrl_m"
+  ],
+  "note": "comint-strip-ctrl-m: strips ^M (\\r) from scrollback lines via unit-tested strip_ctrl_m"
+ },
+ {
+  "spec_id": "emacs.command.comint_interrupt_subjob",
+  "status": "ported",
+  "evidence": [
+   "static:comint_interrupt_subjob"
+  ],
+  "note": "comint-interrupt-subjob (C-c C-c): sends real SIGINT to the child via libc::kill(child.id()) on unix; single direct child (no PTY process group)"
+ },
+ {
+  "spec_id": "emacs.command.comint_stop_subjob",
+  "status": "ported",
+  "evidence": [
+   "static:comint_stop_subjob"
+  ],
+  "note": "comint-stop-subjob (C-c C-z): sends real SIGTSTP to the child via libc::kill on unix"
+ },
+ {
+  "spec_id": "emacs.command.comint_continue_subjob",
+  "status": "ported",
+  "evidence": [
+   "static:comint_continue_subjob"
+  ],
+  "note": "comint-continue-subjob: sends real SIGCONT to the child via libc::kill on unix"
+ },
+ {
+  "spec_id": "emacs.command.comint_quit_subjob",
+  "status": "ported",
+  "evidence": [
+   "static:comint_quit_subjob"
+  ],
+  "note": "comint-quit-subjob: sends real SIGQUIT to the child via libc::kill on unix"
+ },
+ {
+  "spec_id": "emacs.command.comint_kill_subjob",
+  "status": "ported",
+  "evidence": [
+   "static:comint_kill_subjob"
+  ],
+  "note": "comint-kill-subjob: sends real SIGKILL to the child via libc::kill on unix"
+ },
+ {
+  "spec_id": "emacs.command.comint_dynamic_list_input_ring",
+  "status": "ported",
+  "evidence": [
+   "static:comint_dynamic_list_input_ring"
+  ],
+  "note": "comint-dynamic-list-input-ring: lists the input-ring history inline in the buffer (Emacs pops a *Input History* buffer)"
+ },
+ {
+  "spec_id": "emacs.command.comint_history_isearch_backward_regexp",
+  "status": "partial",
+  "evidence": [
+   "static:comint_history_isearch_backward_regexp"
+  ],
+  "note": "comint-history-isearch-backward-regexp: one-shot substring search of the input ring (previous_matching) rather than incremental regexp isearch"
+ },
+ {
+  "spec_id": "emacs.command.comint_run",
+  "status": "ported",
+  "evidence": [
+   "static:comint_run"
+  ],
+  "note": "comint-run: prompts for a program+args and opens it in a new comint buffer (Comint::with_program)"
+ },
+ {
+  "spec_id": "emacs.command.shell_forward_command",
+  "status": "ported",
+  "evidence": [
+   "static:shell_forward_command"
+  ],
+  "note": "shell-forward-command (M-f): move point forward over a ;|& -separated shell command on the input line, via unit-tested forward_command"
+ },
+ {
+  "spec_id": "emacs.command.shell_backward_command",
+  "status": "ported",
+  "evidence": [
+   "static:shell_backward_command"
+  ],
+  "note": "shell-backward-command (M-b): move point backward to the start of the shell command, via unit-tested backward_command"
+ },
+ {
+  "spec_id": "emacs.command.gud_jump",
+  "status": "ported",
+  "evidence": [
+   "static:gud_jump"
+  ],
+  "note": "gud-jump: sends 'jump FILE:LINE' to the inferior debugger running in the comint buffer"
+ },
+ {
+  "spec_id": "emacs.command.gud_refresh",
+  "status": "partial",
+  "evidence": [
+   "static:gud_refresh"
+  ],
+  "note": "gud-refresh (C-l): requests a redraw and scrolls the debugger output to newest (approximates recenter/redisplay)"
+ },
+ {
   "spec_id": "emacs.command.dired_flag_backup_files",
   "status": "ported",
   "evidence": [
