@@ -14187,9 +14187,9 @@
   "spec_id": "emacs.command.describe_char",
   "status": "ported",
   "evidence": [
-   "typable:character-info"
+   "static:describe_char"
   ],
-  "note": ""
+  "note": "describe-char (C-u C-x =): char glyph + dec/oct/hex code, U+ codepoint, Unicode general-category and block, buffer position; pure builder in zemacs-core::cursor_info, unit tested"
  },
  {
   "spec_id": "emacs.command.universal_argument",
@@ -30272,5 +30272,205 @@
    "key:calendar:h"
   ],
   "note": "emacs calendar-mark-holidays -> zemacs calendar overlay"
+ },
+ {
+  "spec_id": "emacs.command.view_hello_file",
+  "status": "ported",
+  "evidence": [
+   "static:view_hello_file"
+  ],
+  "note": "view-hello-file: bundled multi-script greeting sample (Arabic..Vietnamese + emoji) shown in a scratch buffer"
+ },
+ {
+  "spec_id": "emacs.command.describe_copying",
+  "status": "ported",
+  "evidence": [
+   "static:describe_copying"
+  ],
+  "note": "describe-copying: shows zemacs's bundled GPL license text in a scratch buffer"
+ },
+ {
+  "spec_id": "emacs.command.describe_distribution",
+  "status": "ported",
+  "evidence": [
+   "static:describe_distribution"
+  ],
+  "note": "describe-distribution: opens gnu.org/order in the OS browser (terminal analogue of the info page)"
+ },
+ {
+  "spec_id": "emacs.command.describe_gnu_project",
+  "status": "ported",
+  "evidence": [
+   "static:describe_gnu_project"
+  ],
+  "note": "describe-gnu-project: opens the GNU project page in the OS browser"
+ },
+ {
+  "spec_id": "emacs.command.describe_no_warranty",
+  "status": "ported",
+  "evidence": [
+   "static:describe_no_warranty"
+  ],
+  "note": "describe-no-warranty: opens the GPL no-warranty sections in the OS browser"
+ },
+ {
+  "spec_id": "emacs.command.view_emacs_faq",
+  "status": "ported",
+  "evidence": [
+   "static:view_emacs_faq"
+  ],
+  "note": "view-emacs-FAQ: opens the GNU Emacs FAQ in the OS browser"
+ },
+ {
+  "spec_id": "emacs.command.view_emacs_news",
+  "status": "ported",
+  "evidence": [
+   "static:browse_news"
+  ],
+  "note": "view-emacs-news: shows zemacs release notes / NEWS (CHANGELOG) in a scratch buffer"
+ },
+ {
+  "spec_id": "emacs.command.view_emacs_todo",
+  "status": "ported",
+  "evidence": [
+   "static:view_emacs_todo"
+  ],
+  "note": "view-emacs-todo: opens the Emacs TODO file in the OS browser"
+ },
+ {
+  "spec_id": "emacs.command.view_emacs_problems",
+  "status": "ported",
+  "evidence": [
+   "static:view_emacs_problems"
+  ],
+  "note": "view-emacs-problems: opens the Emacs PROBLEMS file in the OS browser"
+ },
+ {
+  "spec_id": "emacs.command.view_emacs_debugging",
+  "status": "ported",
+  "evidence": [
+   "static:view_emacs_debugging"
+  ],
+  "note": "view-emacs-debugging: opens the Emacs debugging manual in the OS browser"
+ },
+ {
+  "spec_id": "emacs.command.view_order_manuals",
+  "status": "ported",
+  "evidence": [
+   "static:view_order_manuals"
+  ],
+  "note": "view-order-manuals: opens the GNU documentation/ordering page in the OS browser"
+ },
+ {
+  "spec_id": "emacs.command.view_external_packages",
+  "status": "ported",
+  "evidence": [
+   "static:view_external_packages"
+  ],
+  "note": "view-external-packages: opens GNU ELPA in the OS browser"
+ },
+ {
+  "spec_id": "emacs.command.help_for_help",
+  "status": "ported",
+  "evidence": [
+   "static:help"
+  ],
+  "note": "help-for-help: opens the searchable inline Help browser (every command/key/topic)"
+ },
+ {
+  "spec_id": "emacs.command.view_echo_area_messages",
+  "status": "partial",
+  "evidence": [
+   "static:view_echo_area_messages"
+  ],
+  "note": "partial: zemacs keeps only the current echo-area message, not a persistent *Messages* ring; shows that message (use view-lossage for recent keys)"
+ },
+ {
+  "spec_id": "emacs.command.describe_keymap",
+  "status": "partial",
+  "evidence": [
+   "static:describe_keymap"
+  ],
+  "note": "partial: zemacs keymaps are per-mode (Normal/Select/Insert), not named Emacs keymap variables; describes the current mode's keymap in full"
+ },
+ {
+  "spec_id": "emacs.command.describe_prefix_bindings",
+  "status": "partial",
+  "evidence": [
+   "static:describe_prefix_bindings"
+  ],
+  "note": "partial: zemacs cannot introspect the pending prefix from a command; lists the current mode's full keymap (sorted by chord) to scan"
+ },
+ {
+  "spec_id": "emacs.command.describe_categories",
+  "status": "partial",
+  "evidence": [
+   "static:describe_categories"
+  ],
+  "note": "partial: zemacs uses a small fixed CharCategory set, not Emacs's per-buffer syntax-category table; lists that set (Unicode general-category is in describe-char)"
+ },
+ {
+  "spec_id": "emacs.command.describe_symbol",
+  "status": "partial",
+  "evidence": [
+   "static:describe_command"
+  ],
+  "note": "partial: zemacs has no Lisp symbol/docstring introspection; describes command symbols (doc + bindings) via the command picker"
+ },
+ {
+  "spec_id": "emacs.command.list_character_sets",
+  "status": "partial",
+  "evidence": [
+   "static:list_character_sets"
+  ],
+  "note": "partial: zemacs is UTF-8 with no legacy charset registry; lists the Unicode blocks it knows with codepoint ranges"
+ },
+ {
+  "spec_id": "emacs.command.list_charset_chars",
+  "status": "partial",
+  "evidence": [
+   "static:list_charset_chars"
+  ],
+  "note": "partial: lists the printable characters of each named Unicode block (reduced analogue of Emacs per-charset listing)"
+ },
+ {
+  "spec_id": "emacs.command.list_coding_systems",
+  "status": "partial",
+  "evidence": [
+   "static:list_coding_systems"
+  ],
+  "note": "partial: lists the encodings zemacs decodes (encoding_rs) + its line-ending options; Emacs's per-system coding model is richer"
+ },
+ {
+  "spec_id": "emacs.command.help_quick",
+  "status": "partial",
+  "evidence": [
+   "static:help"
+  ],
+  "note": "partial: opens the inline Help browser (no separate quick-help toggle overlay)"
+ },
+ {
+  "spec_id": "emacs.command.help_quick_toggle",
+  "status": "partial",
+  "evidence": [
+   "static:help"
+  ],
+  "note": "partial: opens the inline Help browser (zemacs has no persistent quick-help overlay to toggle)"
+ },
+ {
+  "spec_id": "emacs.command.apropos_local_variable",
+  "status": "partial",
+  "evidence": [
+   "static:config_variable_search"
+  ],
+  "note": "partial: zemacs config variables are global, not buffer-local; apropos over the editor config variables"
+ },
+ {
+  "spec_id": "emacs.command.apropos_local_value",
+  "status": "partial",
+  "evidence": [
+   "static:config_variable_search"
+  ],
+  "note": "partial: zemacs config variables are global, not buffer-local; apropos over the editor config variables"
  }
 ]
