@@ -279,8 +279,8 @@ impl Component for Nonogram {
 
         // Clue gutters: rows need up to N/2 numbers on the left (2 cols each),
         // columns need up to N/2 rows of clues above. Cells are two columns wide.
-        let row_clue_cols: usize = 2 * ((N + 1) / 2);
-        let col_clue_rows: usize = (N + 1) / 2;
+        let row_clue_cols: usize = 2 * N.div_ceil(2);
+        let col_clue_rows: usize = N.div_ceil(2);
         let need_w = (row_clue_cols + N * 2 + 4) as u16;
         let need_h = (col_clue_rows + N + 4) as u16;
         if area.width < need_w || area.height < need_h {

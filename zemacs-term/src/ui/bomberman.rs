@@ -86,7 +86,7 @@ impl Game {
     }
 
     fn in_bounds(&self, r: i16, c: i16) -> bool {
-        r >= 0 && r < H && c >= 0 && c < W
+        (0..H).contains(&r) && (0..W).contains(&c)
     }
 
     fn at(&self, r: i16, c: i16) -> Cell {
@@ -242,7 +242,7 @@ impl Game {
     }
 
     fn check_contact(&mut self) {
-        if self.enemies.iter().any(|&e| e == self.player) {
+        if self.enemies.contains(&self.player) {
             self.lose_life();
         }
     }
@@ -264,7 +264,7 @@ impl Game {
                 continue;
             }
             // Now and then home in on the player; otherwise wander at random.
-            let choice = if self.rand() % 3 == 0 {
+            let choice = if self.rand().is_multiple_of(3) {
                 *opts
                     .iter()
                     .min_by_key(|&&(rr, cc)| (rr - player.0).abs() + (cc - player.1).abs())

@@ -42,10 +42,7 @@ fn find_word_col(line: &str, symbol: &str) -> Option<usize> {
             .chars()
             .next_back()
             .is_none_or(|c| !is_word_char(c));
-        let after_ok = line[end..]
-            .chars()
-            .next()
-            .is_none_or(|c| !is_word_char(c));
+        let after_ok = line[end..].chars().next().is_none_or(|c| !is_word_char(c));
         if before_ok && after_ok {
             return Some(line[..i].chars().count());
         }
@@ -114,10 +111,7 @@ pub fn looks_like_definition(line: &str, symbol: &str) -> bool {
                 .chars()
                 .next_back()
                 .is_none_or(|c| !is_word_char(c));
-            let after_ok = line[end..]
-                .chars()
-                .next()
-                .is_none_or(|c| !is_word_char(c));
+            let after_ok = line[end..].chars().next().is_none_or(|c| !is_word_char(c));
             if before_ok && after_ok {
                 return true;
             }

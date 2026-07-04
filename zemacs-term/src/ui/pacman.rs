@@ -211,7 +211,7 @@ impl Game {
             if cands.is_empty() {
                 continue;
             }
-            let pick = if fright && self.rand() % 3 == 0 {
+            let pick = if fright && self.rand().is_multiple_of(3) {
                 let k = (self.rand() as usize) % cands.len();
                 cands[k]
             } else {
@@ -417,14 +417,14 @@ impl Component for Pacman {
         };
         for gh in &self.game.ghosts {
             let (r, c) = gh.pos;
-            if r >= 0 && r < H && c >= 0 && c < W {
+            if (0..H).contains(&r) && (0..W).contains(&c) {
                 surface.set_string(ox + c as u16, oy + r as u16, "▲", ghost_style);
             }
         }
 
         // Pac.
         let (pr, pc) = self.game.pac;
-        if pr >= 0 && pr < H && pc >= 0 && pc < W {
+        if (0..H).contains(&pr) && (0..W).contains(&pc) {
             surface.set_string(ox + pc as u16, oy + pr as u16, "C", pac_style);
         }
 

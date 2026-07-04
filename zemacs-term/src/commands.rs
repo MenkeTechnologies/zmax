@@ -13248,7 +13248,7 @@ fn picture_apply(cx: &mut Context, mut lines: Vec<String>, row: usize, col: usiz
     }
     let cur_len = lines[row].chars().count();
     if cur_len < col {
-        let pad: String = std::iter::repeat(' ').take(col - cur_len).collect();
+        let pad: String = std::iter::repeat_n(' ', col - cur_len).collect();
         lines[row].push_str(&pad);
     }
     let (view, doc) = current!(cx.editor);
@@ -28984,7 +28984,10 @@ mod comment_kill_tests {
 
     #[test]
     fn ignores_token_inside_double_quoted_string() {
-        assert_eq!(comment_start_in_line(r#"puts "http://x" # real"#, &["#"]), Some(16));
+        assert_eq!(
+            comment_start_in_line(r#"puts "http://x" # real"#, &["#"]),
+            Some(16)
+        );
         assert_eq!(comment_start_in_line(r#"s = "a // b""#, &["//"]), None);
     }
 

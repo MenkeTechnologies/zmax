@@ -105,7 +105,9 @@ impl Game {
     /// Whether the given cells collide with a wall, the floor, or a locked cell.
     fn collides(&self, cells: &[(i16, i16); 4]) -> bool {
         cells.iter().any(|&(r, c)| {
-            c < 0 || c >= W || r >= H || (r >= 0 && self.board[r as usize][c as usize].is_some())
+            !(0..W).contains(&c)
+                || r >= H
+                || (r >= 0 && self.board[r as usize][c as usize].is_some())
         })
     }
 
@@ -142,7 +144,7 @@ impl Game {
     fn lock_and_next(&mut self) {
         let color = self.shape as u8 + 1;
         for &(r, c) in &self.current() {
-            if r >= 0 && r < H && c >= 0 && c < W {
+            if (0..H).contains(&r) && (0..W).contains(&c) {
                 self.board[r as usize][c as usize] = Some(color);
             }
         }
@@ -319,7 +321,7 @@ impl Component for Tetris {
         let mut cells = self.game.board;
         if self.game.alive {
             for &(r, c) in &piece_cells(self.game.shape, self.game.rot, self.game.pos) {
-                if r >= 0 && r < H && c >= 0 && c < W {
+                if (0..H).contains(&r) && (0..W).contains(&c) {
                     cells[r as usize][c as usize] = Some(self.game.shape as u8 + 1);
                 }
             }

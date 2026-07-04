@@ -57,7 +57,7 @@ pub enum Outcome {
 fn card_value(rank: u8) -> u8 {
     match rank {
         14 => 11,
-        11 | 12 | 13 => 10,
+        11..=13 => 10,
         r => r,
     }
 }

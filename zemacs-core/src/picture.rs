@@ -198,7 +198,6 @@ impl Canvas {
             }
         }
     }
-
 }
 
 /// The grid as text: rows joined by newlines, each row's trailing blanks

@@ -381,19 +381,19 @@ impl Component for Asteroids {
         // skipped if its grid coords fall outside the board.
         for a in &self.game.asteroids {
             let (r, c) = a.pos;
-            if r >= 0 && r < H && c >= 0 && c < W {
+            if (0..H).contains(&r) && (0..W).contains(&c) {
                 let glyph = if a.size >= 2 { "◯" } else { "●" };
                 surface.set_string(ox + c as u16, oy + r as u16, glyph, asteroid_style);
             }
         }
         for b in &self.game.bullets {
             let (r, c) = b.pos;
-            if r >= 0 && r < H && c >= 0 && c < W {
+            if (0..H).contains(&r) && (0..W).contains(&c) {
                 surface.set_string(ox + c as u16, oy + r as u16, "·", bullet_style);
             }
         }
         let (sr, sc) = self.game.ship_pos;
-        if sr >= 0 && sr < H && sc >= 0 && sc < W {
+        if (0..H).contains(&sr) && (0..W).contains(&sc) {
             surface.set_string(
                 ox + sc as u16,
                 oy + sr as u16,

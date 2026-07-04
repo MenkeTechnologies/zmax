@@ -121,7 +121,7 @@ impl Game {
 
         // Horizontal: bounce off the side walls, otherwise advance.
         let nc = self.ball.1 + self.vel.1;
-        if nc < 0 || nc >= W {
+        if !(0..W).contains(&nc) {
             self.vel.1 = -self.vel.1;
         } else {
             self.ball.1 = nc;

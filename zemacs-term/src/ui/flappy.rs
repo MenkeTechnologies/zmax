@@ -237,7 +237,7 @@ impl Component for Flappy {
         let cell = |r: i16, c: i16| (ox + c as u16, oy + r as u16);
         // Pipes: solid walls except the open gap.
         for &(col, gap_top) in self.game.pipes.iter() {
-            if col < 0 || col >= W {
+            if !(0..W).contains(&col) {
                 continue;
             }
             for r in 0..H {

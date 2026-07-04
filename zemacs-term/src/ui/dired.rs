@@ -34,11 +34,11 @@
 //!   Z   — downcase name(s) on disk       (dired-downcase)
 //!   K   — kill (hide) lines from listing (dired-do-kill-lines)
 //!   > / < — next / previous dirline      (dired-next/prev-dirline)
-//!   v   — view file at point read-only   (dired-view-file)
-//!   o   — open file in other window      (dired-find-file-other-window)
-//!   C-o — display file in a split        (dired-display-file)
-//!   T   — touch (mtime = now)            (dired-do-touch)
-//! Commands that read a line in the in-mode minibuffer (Enter runs, Esc aborts):
+//! > v   — view file at point read-only   (dired-view-file)
+//! > o   — open file in other window      (dired-find-file-other-window)
+//! > C-o — display file in a split        (dired-display-file)
+//! > T   — touch (mtime = now)            (dired-do-touch)
+//! > Commands that read a line in the in-mode minibuffer (Enter runs, Esc aborts):
 //!   +   — create directory               (dired-create-directory)
 //!   E   — create empty file              (dired-create-empty-file)
 //!   C   — copy target(s)                 (dired-do-copy)
@@ -52,6 +52,11 @@
 //!
 //! Deferred to a later slice: chown/chgrp (need uid/gid resolution), wdired
 //! (editable listing), subdirectory insertion.
+
+// The module doc above is an ASCII key-binding table where a leading `>` is a
+// literal Dired key, not a Markdown blockquote — so lazy-continuation doesn't
+// apply.
+#![allow(clippy::doc_lazy_continuation)]
 
 use std::collections::HashSet;
 use std::os::unix::fs::PermissionsExt;

@@ -27,7 +27,7 @@ const SCORE_POP: u32 = 100;
 const START_LIVES: u32 = 3;
 
 fn in_bounds((r, c): (i16, i16)) -> bool {
-    r >= 0 && r < H && c >= 0 && c < W
+    (0..H).contains(&r) && (0..W).contains(&c)
 }
 
 /// The pure Dig Dug field. No I/O, no timing — unit-tested.
@@ -214,7 +214,7 @@ impl Game {
     }
 
     fn resolve_contact(&mut self) {
-        if self.enemies.iter().any(|&e| e == self.digger) {
+        if self.enemies.contains(&self.digger) {
             self.enemies.retain(|&e| e != self.digger);
             self.lives = self.lives.saturating_sub(1);
             if self.lives == 0 {

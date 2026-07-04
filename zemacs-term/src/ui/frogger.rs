@@ -91,7 +91,7 @@ impl Game {
         let mut idx = 0u16;
         let mut row = 2;
         while row <= H - 3 {
-            let dir = if idx % 2 == 0 { 1 } else { -1 };
+            let dir = if idx.is_multiple_of(2) { 1 } else { -1 };
             let speed = 1 + (self.rand() % 3) as u32; // 1..=3
             let spacing = 4 + (self.rand() % 4) as i16; // 4..=7
             let offset = (self.rand() % spacing as u64) as i16;
@@ -128,7 +128,7 @@ impl Game {
         }
         self.ticks = self.ticks.wrapping_add(1);
         for lane in &mut self.lanes {
-            if self.ticks % lane.speed as u64 == 0 {
+            if self.ticks.is_multiple_of(lane.speed as u64) {
                 lane.offset += lane.dir;
             }
         }

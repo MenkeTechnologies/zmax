@@ -137,7 +137,7 @@ impl Game {
     fn sway(&mut self) {
         if self.sway_counter == 0 {
             let next = self.sway_x + self.sway_dir;
-            if next > SWAY_MAX || next < -SWAY_MAX {
+            if !(-SWAY_MAX..=SWAY_MAX).contains(&next) {
                 self.sway_dir = -self.sway_dir;
             } else {
                 self.sway_x = next;
@@ -151,7 +151,7 @@ impl Game {
     /// With `1/DIVE_CHANCE` odds, peel a random formation enemy off into a dive
     /// aimed at the ship's column.
     fn maybe_spawn_diver(&mut self) {
-        if self.rand() % DIVE_CHANCE != 0 {
+        if !self.rand().is_multiple_of(DIVE_CHANCE) {
             return;
         }
         let mut alive = Vec::new();
@@ -184,7 +184,7 @@ impl Game {
             } else if d.pos.1 > d.target_x {
                 d.pos.1 -= 1;
             }
-            if self.rand() % DIVE_BOMB_CHANCE == 0 {
+            if self.rand().is_multiple_of(DIVE_BOMB_CHANCE) {
                 self.enemy_bullets.push((d.pos.0 + 1, d.pos.1));
             }
             if d.pos.0 >= H {
@@ -410,7 +410,7 @@ impl Component for Galaga {
             surface.set_string(ox + c as u16, oy + H as u16, "─", wall_style);
         }
         let cell = |r: i16, c: i16| (ox + c as u16, oy + r as u16);
-        let on_board = |r: i16, c: i16| r >= 0 && r < H && c >= 0 && c < W;
+        let on_board = |r: i16, c: i16| (0..H).contains(&r) && (0..W).contains(&c);
 
         // The swaying formation.
         for row in 0..ROWS {

@@ -91,7 +91,7 @@ const QUEEN: [(i32, i32); 8] = [
 ];
 
 fn on_board(r: i32, c: i32) -> bool {
-    r >= 0 && r < 8 && c >= 0 && c < 8
+    (0..8).contains(&r) && (0..8).contains(&c)
 }
 
 /// The pure chess position. No I/O, no timing — unit-tested. `Game::new(seed)`
@@ -407,14 +407,12 @@ impl Game {
     fn evaluate(&self) -> i32 {
         let mut score = 0;
         for row in &self.board {
-            for cell in row {
-                if let Some(p) = cell {
-                    let v = value(p.kind);
-                    if p.white {
-                        score -= v;
-                    } else {
-                        score += v;
-                    }
+            for p in row.iter().flatten() {
+                let v = value(p.kind);
+                if p.white {
+                    score -= v;
+                } else {
+                    score += v;
                 }
             }
         }
