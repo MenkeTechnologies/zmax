@@ -210,10 +210,12 @@ async fn test_multi_selection_paste() -> anyhow::Result<()> {
             #(|dolor)#
             "},
         "yp",
+        // vim-faithful paste: Normal-mode paste rests a bare cursor on the last
+        // pasted char per selection, rather than selecting the pasted copy.
         indoc! {"\
-            lorem#[|lorem]#
-            ipsum#(|ipsum)#
-            dolor#(|dolor)#
+            loremlore#[m|]#
+            ipsumipsu#(m|)#
+            dolordolo#(r|)#
             "},
     ))
     .await?;
@@ -1292,7 +1294,9 @@ async fn vim_named_register_yank_paste() -> anyhow::Result<()> {
             keys: zemacs_term::keymap::vim::default(),
             ..Default::default()
         }),
-        ("#[|x]#\ny\n", "\"ayyj\"ap", "x\ny\n#[x\n|]#"),
+        // vim-faithful paste: in Normal mode the cursor rests on the pasted text
+        // (a bare 1-wide cursor), it does not select the whole pasted region.
+        ("#[|x]#\ny\n", "\"ayyj\"ap", "x\ny\n#[x|]#\n"),
     )
     .await?;
     Ok(())
@@ -1467,13 +1471,27 @@ async fn vim_dot_repeat_insert() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_wrap_sexp() -> anyhow::Result<()> {
-    test_with_config(
-        AppBuilder::new().with_config(zemacs_term::config::Config {
-            keys: zemacs_term::keymap::vim::default(),
-            ..Default::default()
+    use zemacs_core::hashmap;
+    use zemacs_term::keymap;
+    use zemacs_view::document::Mode;
+
+    // `wrap_sexp` ships on the `SPC k w` leader, but the integration harness cannot
+    // drive the space leader (leader sequences don't resolve here — the same reason
+    // the split/leader tests use unit tests). Bind the command to a plain key so we
+    // still exercise it directly: select "bc", wrap it -> a(bc)d.
+    let mut config = zemacs_term::config::Config {
+        keys: zemacs_term::keymap::vim::default(),
+        ..Default::default()
+    };
+    config.keys.insert(
+        Mode::Normal,
+        keymap!({ "Normal mode"
+            "w" => wrap_sexp,
         }),
-        // select "bc", then SPC k w wraps it in parens -> a(bc)d
-        ("a#[bc|]#d\n", "<space>kw", "a#[(bc)|]#d\n"),
+    );
+    test_with_config(
+        AppBuilder::new().with_config(config),
+        ("a#[bc|]#d\n", "w", "a#[(bc)|]#d\n"),
     )
     .await?;
     Ok(())

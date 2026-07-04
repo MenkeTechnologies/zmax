@@ -106,13 +106,12 @@ async fn indent_operator_with_motion() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn comma_repeats_find_reversed() -> anyhow::Result<()> {
-    // fx jumps forward to 2nd-no, to first 'x'; ; would go forward again, but
-    // , reverses. Here: at 'a', fx -> first x (idx2); fx again -> idx4; , -> back to idx2.
-    test_with_config(vim(), ("#[a|]#xbxcx", "fxfx,", "a#[x|]#bxcx")).await?;
-    Ok(())
-}
+// NOTE: the classic vim `f`/`t`/`F`/`T` character-find (and therefore the `;`/`,`
+// find-repeat this test exercised) was intentionally replaced by EasyMotion-style
+// label jumps in `feat(easymotion): label-jump for f/t/F/T`. `fx` no longer walks
+// to the next `x`; it prompts for a target and labels every match. The old
+// `comma_repeats_find_reversed` case tested behavior that no longer exists, so it
+// was removed rather than left asserting a dead code path.
 
 #[tokio::test(flavor = "multi_thread")]
 async fn bracket_next_lowercase_mark() -> anyhow::Result<()> {
