@@ -23539,6 +23539,216 @@ fn set_fill_column(
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Emacs Customize: `customize-*` open the unified Preferences window, mapping the
+// customization buffer onto zemacs's real Settings and Color Scheme tabs (where
+// options and theme faces can actually be edited and persisted). `set-face-*`
+// override a theme face's colour live. All push their panel through a job callback
+// (the prompt context drops `push_layer`).
+// ---------------------------------------------------------------------------
+
+/// Push a `PreferencesPanel` (built by `make`) onto the compositor from a typable
+/// command context.
+fn open_prefs_panel(
+    cx: &mut compositor::Context,
+    make: impl FnOnce() -> crate::ui::preferences::PreferencesPanel + Send + 'static,
+) {
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(make()));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// First positional argument, trimmed, if non-empty.
+fn first_nonempty(args: &Args) -> Option<String> {
+    args.first()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+}
+
+/// `:customize` / `:customize-browse` — open Preferences on the Settings tab.
+fn customize(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    open_prefs_panel(cx, || crate::ui::preferences::PreferencesPanel::new(0));
+    Ok(())
+}
+
+/// `:customize-variable` / `:customize-option` / `:customize-group` /
+/// `:customize-apropos [regexp]` — open the Settings tab, pre-filtered to the
+/// given name/regexp when one is supplied.
+fn customize_filtered(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let filter = first_nonempty(&args);
+    open_prefs_panel(cx, move || match filter {
+        Some(f) => crate::ui::preferences::PreferencesPanel::new_settings_filtered(f),
+        None => crate::ui::preferences::PreferencesPanel::new(0),
+    });
+    Ok(())
+}
+
+/// `:customize-unsaved` / `:customize-changed` / `:customize-saved` — open the
+/// Settings tab showing only settings changed from their compiled default.
+fn customize_modified(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    open_prefs_panel(
+        cx,
+        crate::ui::preferences::PreferencesPanel::new_settings_modified,
+    );
+    Ok(())
+}
+
+/// `:customize-face` / `:customize-themes` / `:customize-create-theme` — open the
+/// Color Scheme (theme/face editor) tab.
+fn customize_face(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    open_prefs_panel(cx, || crate::ui::preferences::PreferencesPanel::new(2));
+    Ok(())
+}
+
+/// Resolve a face colour: a `#rrggbb`/`#rgb` hex, or an Emacs/X11 colour name from
+/// the built-in table.
+fn parse_face_color(s: &str) -> anyhow::Result<zemacs_view::theme::Color> {
+    use zemacs_view::theme::Color;
+    if let Ok(c) = Color::from_hex(s) {
+        return Ok(c);
+    }
+    if let Some((r, g, b)) = zemacs_core::facemenu::find_color(s) {
+        return Ok(Color::Rgb(r, g, b));
+    }
+    Err(anyhow!(
+        "unknown color `{s}` (use #rrggbb or a named color)"
+    ))
+}
+
+/// Shared body for `:set-face-foreground` / `:set-face-background` — override one
+/// theme face's foreground or background colour live.
+fn set_face_color(cx: &mut compositor::Context, args: &Args, is_bg: bool) -> anyhow::Result<()> {
+    let scope = args
+        .first()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| anyhow!("need a face/scope name"))?
+        .to_string();
+    let color_str = args
+        .get(1)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| anyhow!("need a color"))?;
+    let color = parse_face_color(color_str)?;
+    let mut theme = cx.editor.theme.clone();
+    let mut style = theme.get(&scope);
+    if is_bg {
+        style.bg = Some(color);
+    } else {
+        style.fg = Some(color);
+    }
+    theme.set_style(scope.clone(), style);
+    cx.editor.set_theme(theme)?;
+    cx.editor.set_status(format!(
+        "set {} of `{scope}` to {color_str}",
+        if is_bg { "background" } else { "foreground" }
+    ));
+    Ok(())
+}
+
+/// `:set-face-foreground <face> <color>` — Emacs `set-face-foreground`.
+fn set_face_foreground(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    set_face_color(cx, &args, false)
+}
+
+/// `:set-face-background <face> <color>` — Emacs `set-face-background`.
+fn set_face_background(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    set_face_color(cx, &args, true)
+}
+
+/// `:set-fringe-style [none|default]` — Emacs `set-fringe-style`. zemacs has no
+/// pixel fringe; the closest analogue is the left gutter, so `none` clears the
+/// gutter layout and any other value restores the default layout.
+fn set_fringe_style(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let style = first_nonempty(&args).unwrap_or_else(|| "default".to_string());
+    let layout = match style.to_lowercase().as_str() {
+        "none" | "no-fringes" | "0" | "off" => serde_json::json!([]),
+        _ => serde_json::json!([
+            "blame",
+            "diagnostics",
+            "marks",
+            "spacer",
+            "line-numbers",
+            "spacer",
+            "diff"
+        ]),
+    };
+    apply_config_value(cx, "gutters.layout", layout)?;
+    cx.editor
+        .set_status(format!("fringe/gutter style: {style}"));
+    Ok(())
+}
+
+/// `:set-right-margin [n]` — Emacs `set-right-margin`: zemacs has no persistent
+/// right-margin text property, so this re-fills the region to `n` columns narrower
+/// than `text-width` (the observable effect of a right margin on refill).
+fn set_right_margin(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let margin = args
+        .first()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(0);
+    let width = doc!(cx.editor).text_width().saturating_sub(margin).max(1);
+    apply_left_margin(cx, move |block| {
+        zemacs_core::text_engine::fill_paragraph(block, width, "")
+    })
+}
+
 /// The Emacs "region" for a whole-buffer/selection command: the primary
 /// selection's text, or the entire buffer when nothing is selected (the primary
 /// range is an empty point). Shared by `:write-region` and `:append-to-file`.
@@ -32614,6 +32824,116 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Set the fill width to N, or the current cursor column if omitted (emacs set-fill-column).",
         fun: set_fill_column,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "customize",
+        aliases: &["customize-browse"],
+        doc: "Open Preferences on the Settings tab (emacs customize / customize-browse).",
+        fun: customize,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "customize-variable",
+        aliases: &["customize-option"],
+        doc: "Open Settings pre-filtered to a variable name (emacs customize-variable).",
+        fun: customize_filtered,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "customize-group",
+        aliases: &[],
+        doc: "Open Settings pre-filtered to a group name (emacs customize-group).",
+        fun: customize_filtered,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "customize-apropos",
+        aliases: &[],
+        doc: "Open Settings pre-filtered to a regexp/substring (emacs customize-apropos).",
+        fun: customize_filtered,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "customize-unsaved",
+        aliases: &["customize-changed", "customize-saved"],
+        doc: "Open Settings showing only options changed from their default (emacs customize-unsaved).",
+        fun: customize_modified,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "customize-face",
+        aliases: &["customize-themes", "customize-create-theme"],
+        doc: "Open the Color Scheme (theme/face editor) tab (emacs customize-face / customize-themes).",
+        fun: customize_face,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-face-foreground",
+        aliases: &[],
+        doc: "Set a theme face's foreground color: :set-face-foreground <face> <color> (emacs set-face-foreground).",
+        fun: set_face_foreground,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-face-background",
+        aliases: &[],
+        doc: "Set a theme face's background color: :set-face-background <face> <color> (emacs set-face-background).",
+        fun: set_face_background,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-fringe-style",
+        aliases: &[],
+        doc: "Set the gutter (fringe) style: none clears it, default restores it (emacs set-fringe-style).",
+        fun: set_fringe_style,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "set-right-margin",
+        aliases: &[],
+        doc: "Re-fill the region to N columns narrower than text-width (emacs set-right-margin).",
+        fun: set_right_margin,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
