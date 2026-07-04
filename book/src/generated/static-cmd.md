@@ -1342,6 +1342,15 @@
 | `c_show_syntactic_information` | Report the tree-sitter node kind at point (emacs c-show-syntactic-information) |  |
 | `c_macro_expand` | Expand C preprocessor macros in the region via cpp (emacs c-macro-expand) |  |
 | `c_set_style` | Report the C indentation style (emacs c-set-style) |  |
+| `ps_print_buffer` | Print the buffer as PostScript via lpr (emacs ps-print-buffer) |  |
+| `ps_print_region` | Print the region as PostScript via lpr (emacs ps-print-region) |  |
+| `ps_print_buffer_with_faces` | Print the buffer as PostScript (plain, no faces) (emacs ps-print-buffer-with-faces) |  |
+| `ps_print_region_with_faces` | Print the region as PostScript (plain, no faces) (emacs ps-print-region-with-faces) |  |
+| `ps_spool_buffer` | Spool the buffer as PostScript for later printing (emacs ps-spool-buffer) |  |
+| `ps_spool_region` | Spool the region as PostScript for later printing (emacs ps-spool-region) |  |
+| `ps_spool_buffer_with_faces` | Spool the buffer as PostScript (plain, no faces) (emacs ps-spool-buffer-with-faces) |  |
+| `ps_spool_region_with_faces` | Spool the region as PostScript (plain, no faces) (emacs ps-spool-region-with-faces) |  |
+| `ps_despool` | Print the accumulated PostScript spool via lpr (emacs ps-despool) |  |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |

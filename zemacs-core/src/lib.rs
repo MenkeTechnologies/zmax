@@ -53,6 +53,7 @@ mod position;
 pub mod power_edit;
 pub mod proced;
 pub mod project;
+pub mod ps_print;
 pub mod quickfix;
 pub mod region_ops;
 pub mod rmail;
