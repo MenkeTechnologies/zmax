@@ -414,6 +414,45 @@
 | `calendar_mayan_goto_long_count` | Echo Gregorian for a Mayan long count (emacs calendar-mayan-goto-long-count) |  |
 | `calc_dispatch` | Open the RPN Calc stack calculator (emacs calc / C-x *) | normal: `` <space>ac ``, select: `` <space>ac `` |
 | `occur` | List lines matching a regexp in an *Occur* overlay (emacs occur / M-s o) |  |
+| `isearch_forward_word` | Incremental whole-word search forward (emacs isearch-forward-word) |  |
+| `isearch_forward_symbol` | Incremental whole-symbol search forward (emacs isearch-forward-symbol) |  |
+| `isearch_forward_thing_at_point` | Search for the symbol/word at point (emacs isearch-forward-thing-at-point) |  |
+| `isearch_forward_symbol_at_point` | Search for the symbol at point (emacs isearch-forward-symbol-at-point) |  |
+| `isearch_toggle_regexp` | Toggle regexp matching for the current search (emacs isearch-toggle-regexp) |  |
+| `isearch_toggle_word` | Toggle whole-word matching for the current search (emacs isearch-toggle-word) |  |
+| `isearch_toggle_symbol` | Toggle whole-symbol matching for the current search (emacs isearch-toggle-symbol) |  |
+| `isearch_toggle_case_fold` | Toggle case-folding for the current search (emacs isearch-toggle-case-fold) |  |
+| `isearch_toggle_lax_whitespace` | Toggle lax-whitespace matching for the current search (emacs isearch-toggle-lax-whitespace) |  |
+| `isearch_toggle_char_fold` | Toggle character folding (inert: no fold table) (emacs isearch-toggle-char-fold) |  |
+| `isearch_toggle_invisible` | Toggle invisible-text matching (inert) (emacs isearch-toggle-invisible) |  |
+| `isearch_toggle_input_method` | Input-method toggle (unsupported in zemacs) (emacs isearch-toggle-input-method) |  |
+| `isearch_yank_char` | Extend the search with the next buffer char (emacs isearch-yank-char) |  |
+| `isearch_yank_word_or_char` | Extend the search with the next word or char (emacs isearch-yank-word-or-char) |  |
+| `isearch_yank_symbol_or_char` | Extend the search with the next symbol or char (emacs isearch-yank-symbol-or-char) |  |
+| `isearch_yank_word` | Extend the search with the next word (emacs isearch-yank-word) |  |
+| `isearch_yank_symbol` | Extend the search with the next symbol (emacs isearch-yank-symbol) |  |
+| `isearch_yank_line` | Extend the search to end of line (emacs isearch-yank-line) |  |
+| `isearch_yank_until_char` | Extend the search up to a given char (emacs isearch-yank-until-char) |  |
+| `isearch_yank_kill` | Extend the search with the kill-ring top (emacs isearch-yank-kill) |  |
+| `isearch_yank_pop` | Extend the search with a kill-ring entry (emacs isearch-yank-pop) |  |
+| `isearch_yank_x_selection` | Extend the search with the clipboard selection (emacs isearch-yank-x-selection) |  |
+| `isearch_del_char` | Shorten the search string by one char (emacs isearch-del-char) |  |
+| `isearch_delete_char` | Shorten the search string by one char (emacs isearch-delete-char) |  |
+| `isearch_edit_string` | Edit the search string in a prompt (emacs isearch-edit-string) |  |
+| `isearch_ring_advance` | Cycle to an older search-ring entry (emacs isearch-ring-advance) |  |
+| `isearch_ring_retreat` | Cycle to a newer search-ring entry (emacs isearch-ring-retreat) |  |
+| `isearch_exit` | End the current incremental search (emacs isearch-exit) |  |
+| `isearch_abort` | Abort the search, return to origin (emacs isearch-abort) |  |
+| `isearch_cancel` | Cancel the search, return to origin (emacs isearch-cancel) |  |
+| `isearch_quote_char` | Add a literal char to the search string (emacs isearch-quote-char) |  |
+| `isearch_complete` | Complete the search string from history (emacs isearch-complete) |  |
+| `isearch_char_by_name` | Add a char by digraph mnemonic to the search (emacs isearch-char-by-name) |  |
+| `isearch_emoji_by_name` | Add a char by digraph mnemonic to the search (emacs isearch-emoji-by-name) |  |
+| `isearch_occur` | Run occur with the current search pattern (emacs isearch-occur) |  |
+| `isearch_query_replace` | Query-replace the current search pattern (emacs isearch-query-replace) |  |
+| `isearch_query_replace_regexp` | Query-replace the current search regexp (emacs isearch-query-replace-regexp) |  |
+| `isearch_highlight_regexp` | Highlight matches of the current search (emacs isearch-highlight-regexp) |  |
+| `isearch_highlight_lines_matching_regexp` | List/highlight lines matching the search (emacs isearch-highlight-lines-matching-regexp) |  |
 | `rmail` | Open the Rmail mail reader on ~/RMAIL (emacs rmail) | normal: `` <space>ar ``, select: `` <space>ar `` |
 | `dired` | Open the Dired directory editor (emacs C-x d) |  |
 | `dired_jump` | Open Dired on the current buffer's directory (emacs C-x C-j) |  |
@@ -423,6 +462,37 @@
 | `latex_insert_block` | LaTeX: insert a \begin{}..\end{} block (emacs latex-insert-block) |  |
 | `latex_close_block` | LaTeX: close the innermost open environment (emacs latex-close-block) |  |
 | `tex_validate` | TeX: check {}/$/begin-end balance (emacs tex-validate-region) |  |
+| `tex_mode` | TeX: enter TeX editing mode (emacs tex-mode) |  |
+| `latex_mode` | LaTeX: enter LaTeX editing mode (emacs latex-mode) |  |
+| `latex_electric_env_pair_mode` | LaTeX: toggle electric \begin/\end pairing (emacs latex-electric-env-pair-mode) |  |
+| `tex_file` | TeX: run LaTeX on the current file (emacs tex-file) |  |
+| `tex_buffer` | TeX: compile the current buffer (emacs tex-buffer) |  |
+| `tex_region` | TeX: compile the current file (emacs tex-region) |  |
+| `tex_compile` | TeX: run LaTeX on the current file (emacs tex-compile) |  |
+| `tex_bibtex_file` | TeX: run BibTeX on the current file (emacs tex-bibtex-file) |  |
+| `tex_view` | TeX: open the compiled PDF (emacs tex-view) |  |
+| `tex_print` | TeX: print the compiled PDF via lpr (emacs tex-print) |  |
+| `tex_kill_job` | TeX: kill the running TeX job (emacs tex-kill-job) |  |
+| `tex_recenter_output_buffer` | TeX: recenter the TeX output (emacs tex-recenter-output-buffer) |  |
+| `sgml_tag` | SGML: wrap region/point in a <tag>..</tag> (emacs sgml-tag) |  |
+| `sgml_close_tag` | SGML: close the innermost open element (emacs sgml-close-tag) |  |
+| `sgml_delete_tag` | SGML: delete the enclosing tag pair, keeping content (emacs sgml-delete-tag) |  |
+| `sgml_skip_tag_forward` | SGML: move past a balanced tag group (emacs sgml-skip-tag-forward) |  |
+| `sgml_skip_tag_backward` | SGML: move back over a balanced tag group (emacs sgml-skip-tag-backward) |  |
+| `sgml_name_char` | SGML: insert a &entity; for a character (emacs sgml-name-char) |  |
+| `sgml_tag_help` | SGML: describe an HTML element (emacs sgml-tag-help) |  |
+| `sgml_attributes` | SGML: insert attributes at point (emacs sgml-attributes) |  |
+| `sgml_tags_invisible` | SGML: toggle tag invisibility flag (emacs sgml-tags-invisible) |  |
+| `sgml_name_8bit_mode` | SGML: toggle 8-bit entity name display (emacs sgml-name-8bit-mode) |  |
+| `sgml_validate` | SGML: validate the file with onsgmls/nsgmls (emacs sgml-validate) |  |
+| `sgml_mode` | SGML: enter SGML editing mode (emacs sgml-mode) |  |
+| `html_mode` | HTML: enter HTML editing mode (emacs html-mode) |  |
+| `htmlfontify_buffer` | HTML: export the buffer as highlighted HTML (emacs htmlfontify-buffer) |  |
+| `nroff_forward_text_line` | nroff: forward one text line, skip requests (emacs nroff-forward-text-line) |  |
+| `nroff_backward_text_line` | nroff: backward one text line, skip requests (emacs nroff-backward-text-line) |  |
+| `nroff_count_text_lines` | nroff: count text lines in region (emacs nroff-count-text-lines) |  |
+| `nroff_mode` | nroff: enter nroff editing mode (emacs nroff-mode) |  |
+| `nroff_electric_mode` | nroff: toggle electric request closing (emacs nroff-electric-mode) |  |
 | `code_action` | Perform code action | normal: `` <space>la ``, select: `` <space>la `` |
 | `extract_refactor` | Extract refactoring (method/variable/constant) via LSP (IntelliJ Extract) |  |
 | `extract_function` | Extract Method/Function via LSP (IntelliJ Extract Method) |  |
@@ -1206,6 +1276,26 @@
 | `table_capture` | Capture the selected plain text into a table (emacs table-capture) |  |
 | `table_release` | Release the table at point back to plain text (emacs table-release) |  |
 | `table_fixed_width_mode` | Toggle table fixed-width mode (emacs table-fixed-width-mode) |  |
+| `fortran_next_statement` | Move to the next fixed-form Fortran statement (emacs fortran-next-statement) |  |
+| `fortran_previous_statement` | Move to the previous fixed-form Fortran statement (emacs fortran-previous-statement) |  |
+| `fortran_beginning_of_block` | Move to the opening of the Fortran block at point (emacs fortran-beginning-of-block) |  |
+| `fortran_end_of_block` | Move to the END of the Fortran block at point (emacs fortran-end-of-block) |  |
+| `f90_next_statement` | Move to the next free-form F90 statement (emacs f90-next-statement) |  |
+| `f90_previous_statement` | Move to the previous free-form F90 statement (emacs f90-previous-statement) |  |
+| `f90_next_block` | Move to the next F90 block opening (emacs f90-next-block) |  |
+| `f90_previous_block` | Move to the previous F90 block opening (emacs f90-previous-block) |  |
+| `f90_beginning_of_block` | Move to the opening of the F90 block at point (emacs f90-beginning-of-block) |  |
+| `f90_end_of_block` | Move to the end of the F90 block at point (emacs f90-end-of-block) |  |
+| `fortran_split_line` | Break the line at point onto a Fortran continuation line (emacs fortran-split-line) |  |
+| `fortran_join_line` | Join the current line with the following Fortran continuation line (emacs fortran-join-line) |  |
+| `fortran_comment_region` | Comment (or uncomment) the selected lines as Fortran comments (emacs fortran-comment-region) |  |
+| `fortran_indent_subprogram` | Re-indent the buffer by fixed-form Fortran block nesting (emacs fortran-indent-subprogram) |  |
+| `fortran_strip_sequence_nos` | Delete sequence numbers in columns 73+ on every line (emacs fortran-strip-sequence-nos) |  |
+| `fortran_column_ruler` | Show the fixed-form Fortran column ruler in the echo area (emacs fortran-column-ruler) |  |
+| `fortran_window_create` | Report the fixed-form column-72 boundary (emacs fortran-window-create) |  |
+| `fortran_window_create_momentarily` | Report the fixed-form column-72 boundary momentarily (emacs fortran-window-create-momentarily) |  |
+| `fortran_mode` | Enter fixed-form Fortran mode (emacs fortran-mode) |  |
+| `f90_mode` | Enter free-form Fortran/F90 mode (emacs f90-mode) |  |
 | `facemenu` | Browse faces and colors (emacs list-faces-display / facemenu) |  |
 | `bookmark_bmenu_list` | List bookmarks in an overlay (emacs bookmark-bmenu-list) |  |
 | `proced` | Open the process viewer/manager (emacs proced) |  |
@@ -1220,6 +1310,8 @@
 | `studlify_word` | StudlyCaps the word after point (emacs studlify-word) |  |
 | `indent_relative` | Indent to under the next indent point in the previous line (emacs indent-relative) |  |
 | `indent_code_rigidly` | Shift region lines by [count] columns, skipping lines that start in a string (emacs indent-code-rigidly, = r) | normal: `` =r `` |
+| `c_hungry_delete_forward` | Delete all whitespace after point, else one char (emacs c-hungry-delete-forward, SPC x d f) | normal: `` <space>xdf ``, select: `` <space>xdf `` |
+| `c_hungry_delete_backwards` | Delete all whitespace before point, else one char (emacs c-hungry-delete-backwards, SPC x d b) | normal: `` <space>xdb ``, select: `` <space>xdb `` |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |
