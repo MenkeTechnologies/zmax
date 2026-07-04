@@ -456,6 +456,9 @@
 | `rmail` | Open the Rmail mail reader on ~/RMAIL (emacs rmail) | normal: `` <space>ar ``, select: `` <space>ar `` |
 | `dired` | Open the Dired directory editor (emacs C-x d) |  |
 | `dired_jump` | Open Dired on the current buffer's directory (emacs C-x C-j) |  |
+| `dired_other_window` | Open Dired (overlay; emacs dired-other-window C-x 4 d) |  |
+| `dired_jump_other_window` | Open Dired on the buffer's dir (overlay; emacs dired-jump-other-window) |  |
+| `dired_at_point` | Open Dired on the file name at point (emacs dired-at-point) |  |
 | `tex_insert_braces` | TeX: insert a {} brace pair (emacs tex-insert-braces) |  |
 | `tex_insert_quote` | TeX: insert `` or '' smart quotes (emacs tex-insert-quote) |  |
 | `tex_terminate_paragraph` | TeX: end the paragraph (emacs tex-terminate-paragraph) |  |
@@ -675,6 +678,7 @@
 | `smart_tab` | Insert tab if all cursors have all whitespace to their left; otherwise, run a separate command. |  |
 | `insert_tab` | Insert tab char |  |
 | `insert_newline` | Insert newline char | normal: `` <C-x>6<ret> ``, select: `` <C-x>6<ret> ``, insert: `` <C-j> ``, `` <ret> ``, `` <C-x>6<ret> `` |
+| `default_indent_new_line` | Break line at point and continue the comment, indenting under it (emacs default-indent-new-line, M-j) | insert: `` <A-j> `` |
 | `insert_char_interactive` | Insert an interactively-chosen char | insert: `` <C-q> ``, `` <C-v> `` |
 | `append_char_interactive` | Append an interactively-chosen char |  |
 | `delete_char_backward` | Delete previous char | insert: `` <backspace> `` |
