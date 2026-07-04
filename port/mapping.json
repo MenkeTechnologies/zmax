@@ -27736,6 +27736,174 @@
   "note": "rmail-output-body-to-file -> Rmail w (prompt, write body to a file)"
  },
  {
+  "spec_id": "emacs.command.rmail_output_as_seen",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:O"
+  ],
+  "note": "rmail-output-as-seen -> Rmail O (append the message exactly as shown -- currently visible headers plus body -- to an mbox file)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_sort_by_date",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-d"
+  ],
+  "note": "rmail-sort-by-date -> Rmail M-d; stable-sorts the mailbox by a YYYYMMDDhhmmss key parsed from each Date header (pure zemacs_core::rmail::sortable_date), cursor follows the current message"
+ },
+ {
+  "spec_id": "emacs.command.rmail_sort_by_subject",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-j"
+  ],
+  "note": "rmail-sort-by-subject -> Rmail M-j; sorts by subject with Re:/Fwd: stripped so replies group with their root (Msg::subject_key)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_sort_by_author",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-a"
+  ],
+  "note": "rmail-sort-by-author -> Rmail M-a; sorts by the From address with the display name stripped (mail-strip-quoted-names equivalent, Msg::author_key)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_sort_by_recipient",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-r"
+  ],
+  "note": "rmail-sort-by-recipient -> Rmail M-r; sorts by the first stripped To address (Msg::recipient_key)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_sort_by_correspondent",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-e"
+  ],
+  "note": "rmail-sort-by-correspondent -> Rmail M-e; sorts by the correspondent address. zemacs has no configured user identity, so it approximates Emacs (which skips self) with the first non-empty of From/To/Cc"
+ },
+ {
+  "spec_id": "emacs.command.rmail_sort_by_lines",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-l"
+  ],
+  "note": "rmail-sort-by-lines -> Rmail M-l; sorts by body line count (Msg::line_count)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_sort_by_labels",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-b"
+  ],
+  "note": "rmail-sort-by-labels -> Rmail M-b; sorts by the message's sorted label string (Msg::labels_key)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_summary_by_senders",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:S"
+  ],
+  "note": "rmail-summary-by-senders -> Rmail S; prompts for a regexp and opens a summary of the messages whose From matches (zemacs_core::rmail::filter_by_senders)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_summary_by_recipients",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:T"
+  ],
+  "note": "rmail-summary-by-recipients -> Rmail T; opens a summary of messages whose To/From/Cc matches the given regexp (filter_by_recipients)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_summary_by_topic",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:B"
+  ],
+  "note": "rmail-summary-by-topic -> Rmail B; opens a summary of messages whose Subject matches the given regexp (filter_by_topic)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_summary_by_regexp",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:G"
+  ],
+  "note": "rmail-summary-by-regexp -> Rmail G; opens a summary of messages whose whole text (all headers plus body) matches the regexp (filter_by_regexp)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_next_labeled_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:C-n"
+  ],
+  "note": "rmail-next-labeled-message -> Rmail C-n; prompts for a label and moves forward to the next message carrying it (Mailbox::next_labeled)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_previous_labeled_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:C-p"
+  ],
+  "note": "rmail-previous-labeled-message -> Rmail C-p; moves back to the previous message carrying the given label (Mailbox::prev_labeled)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_summary_undelete_many",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:U"
+  ],
+  "note": "rmail-summary-undelete-many -> Rmail U; clears the Deleted flag on every deleted message (Mailbox::undelete_all). The optional numeric-prefix variant is not implemented"
+ },
+ {
+  "spec_id": "emacs.command.rmail_edit_current_message",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:e"
+  ],
+  "note": "rmail-edit-current-message -> Rmail e; enters an inline edit mode over the current message body"
+ },
+ {
+  "spec_id": "emacs.command.rmail_cease_edit",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-c"
+  ],
+  "note": "rmail-cease-edit -> Rmail M-c while editing; commits the edited body back to the message"
+ },
+ {
+  "spec_id": "emacs.command.rmail_abort_edit",
+  "status": "ported",
+  "evidence": [
+   "key:rmail:A-k"
+  ],
+  "note": "rmail-abort-edit -> Rmail M-k (or Esc) while editing; discards the edit and restores the stored body"
+ },
+ {
+  "spec_id": "emacs.command.rmail_bury",
+  "status": "partial",
+  "evidence": [
+   "key:rmail:z"
+  ],
+  "note": "rmail-bury -> Rmail z; zemacs has no background buffer stack, so burying just closes the reader overlay (the mailbox is not kept alive behind other buffers)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_summary_bury",
+  "status": "partial",
+  "evidence": [
+   "key:rmail:z"
+  ],
+  "note": "rmail-summary-bury -> Rmail z; like rmail-bury, closes the reader (no persistent summary/message buffers to bury)"
+ },
+ {
+  "spec_id": "emacs.command.rmail_resend",
+  "status": "partial",
+  "evidence": [
+   "key:rmail:R"
+  ],
+  "note": "rmail-resend -> Rmail R; opens a message-mode resend/bounce draft containing the verbatim original (resend_fields). Partial: does not synthesise Resent-From/Resent-To headers and zemacs has no SMTP (message-send only queues to a local outbox)"
+ },
+ {
   "spec_id": "emacs.keybinding.a_lparenrmail_rparen",
   "status": "ported",
   "evidence": [
