@@ -1311,6 +1311,12 @@ impl MappableCommand {
         picture_clear_rectangle_to_register, "Picture-mode: clear rectangle into a register (emacs picture-clear-rectangle-to-register)",
         picture_yank_rectangle, "Picture-mode: overlay the killed rectangle (emacs picture-yank-rectangle)",
         picture_yank_rectangle_from_register, "Picture-mode: overlay a register's rectangle (emacs picture-yank-rectangle-from-register)",
+        twocol_two_columns, "Two-column: create a side-by-side partner buffer (emacs 2C-two-columns)",
+        twocol_associate_buffer, "Two-column: associate the other window's buffer (emacs 2C-associate-buffer)",
+        twocol_split, "Two-column: split the buffer at point into two columns (emacs 2C-split)",
+        twocol_merge, "Two-column: merge the partner column back in (emacs 2C-merge)",
+        twocol_dissociate, "Two-column: break the association (emacs 2C-dissociate)",
+        twocol_newline, "Two-column: newline in both columns (emacs 2C-newline)",
         table, "Edit a text table (emacs table.el)",
         facemenu, "Browse faces and colors (emacs list-faces-display / facemenu)",
         bookmark_bmenu_list, "List bookmarks in an overlay (emacs bookmark-bmenu-list)",
@@ -13283,6 +13289,241 @@ fn picture_yank_rectangle_from_register(cx: &mut Context) {
         "Yank rectangle from register",
         &[("char", "register name")],
     ));
+}
+
+// ---------------------------------------------------------------------------
+// Emacs two-column (`2C`) mode: two side-by-side buffers edited as the left and
+// right columns of one wide document. The reversible split/merge text geometry
+// lives (unit-tested) in `zemacs_core::two_column`; here we drive it against the
+// real buffers and track the left<->right association. The *live* linkage
+// (synchronized scrolling / point) that a GUI Emacs offers is not modeled, so
+// the association-only commands are honestly `partial`.
+// ---------------------------------------------------------------------------
+
+/// left/right buffer association: `doc -> (partner, separator column)`. A
+/// separator of 0 means "compute from the widest left line at merge time".
+static TWO_COLUMN: Lazy<std::sync::Mutex<HashMap<DocumentId, (DocumentId, usize)>>> =
+    Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
+
+fn twocol_associate(a: DocumentId, b: DocumentId, sep: usize) {
+    let mut m = TWO_COLUMN.lock().unwrap();
+    m.insert(a, (b, sep));
+    m.insert(b, (a, sep));
+}
+
+fn twocol_partner(a: DocumentId) -> Option<(DocumentId, usize)> {
+    TWO_COLUMN.lock().unwrap().get(&a).copied()
+}
+
+fn twocol_dissociate_ids(a: DocumentId) {
+    let mut m = TWO_COLUMN.lock().unwrap();
+    if let Some((b, _)) = m.remove(&a) {
+        m.remove(&b);
+    }
+}
+
+/// Replace document `doc_id`'s entire text (used for the non-current partner
+/// buffer, so it does not go through `current!`).
+fn twocol_set_doc_text(editor: &mut Editor, doc_id: DocumentId, new_text: &str) {
+    let view_id = editor
+        .tree
+        .traverse()
+        .find(|(_, v)| v.doc == doc_id)
+        .map(|(id, _)| id);
+    let Some(view_id) = view_id else {
+        return;
+    };
+    let Some(doc) = editor.document_mut(doc_id) else {
+        return;
+    };
+    doc.ensure_view_init(view_id);
+    let old = doc.text().len_chars();
+    let tx = Transaction::change(doc.text(), std::iter::once((0, old, Some(new_text.into()))))
+        .with_selection(Selection::point(0));
+    doc.apply(&tx, view_id);
+}
+
+/// `2C-split`: cut the buffer from point's line down at point's column, leaving
+/// the left column in place and moving the right column into a new buffer opened
+/// in a vertical split.
+fn twocol_split(cx: &mut Context) {
+    let (row, col) = picture_row_col(cx);
+    let (cur_id, lines, le) = {
+        let (_v, doc) = current_ref!(cx.editor);
+        (
+            doc.id(),
+            doc_lines(doc.text()),
+            doc.line_ending.as_str().to_string(),
+        )
+    };
+    let (left, right) = zemacs_core::two_column::split_columns(&lines, row, col);
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().clone();
+        let new_text = left.join(&le);
+        let old = text.len_chars();
+        let tx = Transaction::change(
+            &text,
+            std::iter::once((0, old, Some(Tendril::from(new_text.as_str())))),
+        );
+        doc.apply(&tx, view.id);
+        doc.set_selection(view.id, Selection::point(0));
+        doc.append_changes_to_history(view);
+    }
+    let partner = cx.editor.new_file(Action::VerticalSplit);
+    let right_text = right.join(&le);
+    twocol_set_doc_text(cx.editor, partner, &right_text);
+    twocol_associate(cur_id, partner, col);
+    cx.editor
+        .set_status(format!("2C-split at column {col}; right column moved to a new buffer"));
+}
+
+/// `2C-two-columns`: create an empty partner buffer side-by-side and associate
+/// it. Partial: the buffers are linked for `2C-merge`/`2C-newline`, but there is
+/// no live scroll/point synchronization.
+fn twocol_two_columns(cx: &mut Context) {
+    let cur_id = {
+        let (_v, doc) = current_ref!(cx.editor);
+        doc.id()
+    };
+    if let Some((p, _)) = twocol_partner(cur_id) {
+        if cx.editor.document(p).is_some() {
+            cx.editor
+                .set_status("2C: this buffer already has a two-column partner");
+            return;
+        }
+    }
+    let partner = cx.editor.new_file(Action::VerticalSplit);
+    twocol_associate(cur_id, partner, 0);
+    cx.editor
+        .set_status("2C-two-columns: created a side-by-side partner buffer (no live sync)");
+}
+
+/// `2C-associate-buffer`: associate the buffer shown in another window with this
+/// one. Partial: association only, no live synchronization.
+fn twocol_associate_buffer(cx: &mut Context) {
+    let cur_id = {
+        let (_v, doc) = current_ref!(cx.editor);
+        doc.id()
+    };
+    let other = cx
+        .editor
+        .tree
+        .traverse()
+        .map(|(_, v)| v.doc)
+        .find(|&d| d != cur_id);
+    match other {
+        Some(o) => {
+            twocol_associate(cur_id, o, 0);
+            cx.editor
+                .set_status("2C-associate-buffer: linked the other window's buffer");
+        }
+        None => cx
+            .editor
+            .set_error("2C-associate-buffer: no other window/buffer to associate"),
+    }
+}
+
+/// `2C-merge`: merge the associated (right-column) buffer back into this one,
+/// padding each left line to the separator column and appending the right line.
+fn twocol_merge(cx: &mut Context) {
+    let (cur_id, left, le) = {
+        let (_v, doc) = current_ref!(cx.editor);
+        (
+            doc.id(),
+            doc_lines(doc.text()),
+            doc.line_ending.as_str().to_string(),
+        )
+    };
+    let Some((partner, sep)) = twocol_partner(cur_id) else {
+        cx.editor
+            .set_error("2C-merge: this buffer has no two-column partner");
+        return;
+    };
+    let Some(right) = cx.editor.document(partner).map(|d| doc_lines(d.text())) else {
+        cx.editor.set_error("2C-merge: the partner buffer is gone");
+        return;
+    };
+    let sep_col = if sep == 0 {
+        left.iter().map(|l| l.chars().count()).max().unwrap_or(0) + 1
+    } else {
+        sep
+    };
+    let merged = zemacs_core::two_column::merge_columns(&left, &right, sep_col);
+    let new_text = merged.join(&le);
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().clone();
+        let old = text.len_chars();
+        let tx = Transaction::change(
+            &text,
+            std::iter::once((0, old, Some(Tendril::from(new_text.as_str())))),
+        );
+        doc.apply(&tx, view.id);
+        doc.set_selection(view.id, Selection::point(0));
+        doc.append_changes_to_history(view);
+    }
+    twocol_dissociate_ids(cur_id);
+    cx.editor
+        .set_status(format!("2C-merge: merged the partner at column {sep_col}"));
+}
+
+/// `2C-dissociate`: break the two-column association without merging.
+fn twocol_dissociate(cx: &mut Context) {
+    let cur_id = {
+        let (_v, doc) = current_ref!(cx.editor);
+        doc.id()
+    };
+    if twocol_partner(cur_id).is_some() {
+        twocol_dissociate_ids(cur_id);
+        cx.editor
+            .set_status("2C-dissociate: broke the two-column association");
+    } else {
+        cx.editor
+            .set_status("2C-dissociate: this buffer had no partner");
+    }
+}
+
+/// `2C-newline`: insert a newline in this column and, if associated, in the
+/// partner at that buffer's point. Partial: no live point tracking, so the
+/// partner splits at wherever its own point currently sits.
+fn twocol_newline(cx: &mut Context) {
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().clone();
+        let point = doc.selection(view.id).primary().cursor(text.slice(..));
+        let le = doc.line_ending.as_str().to_string();
+        let tx = Transaction::change(&text, std::iter::once((point, point, Some(le.as_str().into()))))
+            .with_selection(Selection::point(point + le.chars().count()));
+        doc.apply(&tx, view.id);
+        doc.append_changes_to_history(view);
+    }
+    let cur_id = {
+        let (_v, doc) = current_ref!(cx.editor);
+        doc.id()
+    };
+    if let Some((partner, _)) = twocol_partner(cur_id) {
+        let view_id = cx
+            .editor
+            .tree
+            .traverse()
+            .find(|(_, v)| v.doc == partner)
+            .map(|(id, _)| id);
+        if let Some(view_id) = view_id {
+            if let Some(doc) = cx.editor.document_mut(partner) {
+                doc.ensure_view_init(view_id);
+                let text = doc.text().clone();
+                let point = doc.selection(view_id).primary().cursor(text.slice(..));
+                let le = doc.line_ending.as_str().to_string();
+                let tx = Transaction::change(
+                    &text,
+                    std::iter::once((point, point, Some(le.as_str().into()))),
+                )
+                .with_selection(Selection::point(point + le.chars().count()));
+                doc.apply(&tx, view_id);
+            }
+        }
+    }
 }
 
 /// The current buffer's file plus the cursor's 0-based `(line, column)`.
