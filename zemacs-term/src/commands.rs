@@ -1163,6 +1163,33 @@ impl MappableCommand {
         gud_tbreak, "Set a temporary breakpoint at the current line (emacs gud-tbreak)",
         gud_print, "Print the expression at point in the debugger (emacs gud-print)",
         gud_watch, "Watch the expression at point in the debugger (emacs gud-watch)",
+        gud_jump, "Set the debugger execution point to the current line (emacs gud-jump)",
+        gud_refresh, "Redisplay the debugger buffer (emacs gud-refresh)",
+        comint_kill_input, "Discard the pending comint input line (emacs comint-kill-input)",
+        comint_bol_or_process_mark, "Move to the process mark or beginning of line (emacs comint-bol-or-process-mark)",
+        comint_delchar_or_maybe_eof, "Delete char or send EOF on empty input (emacs comint-delchar-or-maybe-eof)",
+        comint_magic_space, "Expand history designators then insert a space (emacs comint-magic-space)",
+        comint_insert_previous_argument, "Insert the last argument of the previous command (emacs comint-insert-previous-argument)",
+        comint_get_next_from_history, "Yank the next history entry onto the input (emacs comint-get-next-from-history)",
+        comint_next_prompt, "Move to the next command prompt (emacs comint-next-prompt)",
+        comint_previous_prompt, "Move to the previous command prompt (emacs comint-previous-prompt)",
+        comint_show_output, "Scroll the last command's output to the top (emacs comint-show-output)",
+        comint_show_maximum_output, "Scroll the newest output to the bottom (emacs comint-show-maximum-output)",
+        comint_delete_output, "Delete the last command's output (emacs comint-delete-output)",
+        comint_write_output, "Write the last command's output to a file (emacs comint-write-output)",
+        comint_copy_old_input, "Copy the most recent input onto the input line (emacs comint-copy-old-input)",
+        comint_truncate_buffer, "Trim the comint scrollback to the maximum size (emacs comint-truncate-buffer)",
+        comint_strip_ctrl_m, "Strip carriage returns from the scrollback (emacs comint-strip-ctrl-m)",
+        comint_interrupt_subjob, "Send SIGINT to the comint child (emacs comint-interrupt-subjob)",
+        comint_stop_subjob, "Suspend the comint child with SIGTSTP (emacs comint-stop-subjob)",
+        comint_continue_subjob, "Resume the comint child with SIGCONT (emacs comint-continue-subjob)",
+        comint_quit_subjob, "Send SIGQUIT to the comint child (emacs comint-quit-subjob)",
+        comint_kill_subjob, "Send SIGKILL to the comint child (emacs comint-kill-subjob)",
+        comint_dynamic_list_input_ring, "List the comint input history (emacs comint-dynamic-list-input-ring)",
+        comint_history_isearch_backward_regexp, "Search the comint input history backward (emacs comint-history-isearch-backward-regexp)",
+        comint_run, "Run a program in a new comint buffer (emacs comint-run)",
+        shell_forward_command, "Move forward over a shell command on the input line (emacs shell-forward-command)",
+        shell_backward_command, "Move backward over a shell command on the input line (emacs shell-backward-command)",
         run_config_manager, "Manage run/debug configurations",
         run_active_config, "Run the active run configuration",
         clear_run_output, "Clear the Run tool window output",
@@ -23207,6 +23234,343 @@ fn gud_down(cx: &mut Context) {
 /// `gud-stepi`: step one machine instruction (emacs `gud-stepi`).
 fn gud_stepi(cx: &mut Context) {
     gud_send(cx, "stepi");
+}
+
+/// `gud-jump`: set the debugger's execution point to the current source line
+/// (emacs `gud-jump`) by sending `jump FILE:LINE` to the inferior debugger.
+fn gud_jump(cx: &mut Context) {
+    let Some((file, line)) = gud_file_line(cx) else {
+        cx.editor.set_error("gud-jump: buffer has no file");
+        return;
+    };
+    gud_send_owned(cx, format!("jump {file}:{line}"));
+}
+
+/// `gud-refresh` (C-l): redisplay the debugger buffer / recenter output. zemacs
+/// requests a redraw and scrolls the comint to the newest output.
+fn gud_refresh(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        comint.show_maximum_output();
+        cx.editor.set_status("gud-refresh: redisplayed");
+    });
+    zemacs_event::request_redraw();
+}
+
+// --------------------------------------------------------------------------
+// comint editing / job-control / navigation commands.
+//
+// Each acts on the active `Comint` overlay found in the compositor (the buffer
+// opened by `M-x shell` / `gud-gdb`). The job-control commands deliver real Unix
+// signals to the child process; the editing/navigation commands drive the
+// comint input line and scrollback via unit-tested helpers in
+// `zemacs_core::comint`.
+// --------------------------------------------------------------------------
+
+/// Find the active comint overlay and run `f` against it; error if none is open.
+fn comint_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::comint::Comint, &mut crate::compositor::Context) + Send + 'static,
+{
+    cx.callback
+        .push(Box::new(move |compositor: &mut Compositor, cx| {
+            if let Some(comint) = compositor.find::<crate::ui::comint::Comint>() {
+                f(comint, cx);
+            } else {
+                cx.editor
+                    .set_error("comint: no active shell/comint buffer");
+            }
+        }));
+}
+
+/// `comint-kill-input` (C-c C-u): discard the pending (unsubmitted) input line.
+fn comint_kill_input(cx: &mut Context) {
+    comint_action(cx, |comint, _| comint.kill_input());
+}
+
+/// `comint-bol-or-process-mark` (C-a): move to the process mark, or the true
+/// beginning of line when already there.
+fn comint_bol_or_process_mark(cx: &mut Context) {
+    comint_action(cx, |comint, _| comint.bol_or_process_mark());
+}
+
+/// `comint-delchar-or-maybe-eof` (C-d): delete the char after point, or send EOF
+/// (close the child's stdin) when the input line is empty.
+fn comint_delchar_or_maybe_eof(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        if comint.delchar_or_maybe_eof() {
+            cx.editor.set_status("comint: sent EOF");
+        }
+    });
+}
+
+/// `comint-magic-space`: expand history designators (`!!`, `!$`, …) then insert
+/// a space on the input line.
+fn comint_magic_space(cx: &mut Context) {
+    comint_action(cx, |comint, _| comint.magic_space());
+}
+
+/// `comint-insert-previous-argument` (M-.): insert the last argument (`!$`) of
+/// the previous command.
+fn comint_insert_previous_argument(cx: &mut Context) {
+    comint_action(cx, |comint, _| comint.insert_previous_argument());
+}
+
+/// `comint-get-next-from-history`: yank the next-forward history entry onto the
+/// input line.
+fn comint_get_next_from_history(cx: &mut Context) {
+    comint_action(cx, |comint, _| comint.get_next_from_history());
+}
+
+/// `comint-next-prompt` (C-c C-n): move to the next command prompt below.
+fn comint_next_prompt(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        if !comint.next_prompt() {
+            cx.editor.set_status("comint: no next prompt");
+        }
+    });
+}
+
+/// `comint-previous-prompt` (C-c C-p): move to the previous command prompt above.
+fn comint_previous_prompt(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        if !comint.previous_prompt() {
+            cx.editor.set_status("comint: no previous prompt");
+        }
+    });
+}
+
+/// `comint-show-output` (C-c C-r): scroll the beginning of the last command's
+/// output to the top of the window.
+fn comint_show_output(cx: &mut Context) {
+    comint_action(cx, |comint, _| {
+        comint.show_output();
+    });
+}
+
+/// `comint-show-maximum-output` (C-c C-e): scroll so the newest output is at the
+/// bottom of the window.
+fn comint_show_maximum_output(cx: &mut Context) {
+    comint_action(cx, |comint, _| comint.show_maximum_output());
+}
+
+/// `comint-delete-output` (C-c C-o): delete the last command's output lines.
+fn comint_delete_output(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        let n = comint.delete_output();
+        cx.editor
+            .set_status(format!("comint-delete-output: removed {n} line(s)"));
+    });
+}
+
+/// Expand a leading `~` / `~/` to `$HOME` for a filesystem path argument.
+fn expand_tilde_path(input: &str) -> std::path::PathBuf {
+    if let Some(rest) = input.strip_prefix("~/") {
+        if let Some(home) = std::env::var_os("HOME") {
+            return std::path::Path::new(&home).join(rest);
+        }
+    } else if input == "~" {
+        if let Some(home) = std::env::var_os("HOME") {
+            return std::path::PathBuf::from(home);
+        }
+    }
+    std::path::PathBuf::from(input)
+}
+
+/// `comint-write-output`: write the last command's output to a file.
+fn comint_write_output(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Write output to file:".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let path = expand_tilde_path(input);
+            let call: job::Callback = Callback::EditorCompositor(Box::new(
+                move |editor: &mut Editor, compositor: &mut Compositor| {
+                    if let Some(comint) = compositor.find::<crate::ui::comint::Comint>() {
+                        match comint.write_output(&path) {
+                            Ok(n) => editor.set_status(format!(
+                                "comint-write-output: wrote {n} line(s) to {}",
+                                path.display()
+                            )),
+                            Err(e) => editor.set_error(format!("comint-write-output: {e}")),
+                        }
+                    } else {
+                        editor.set_error("comint: no active shell/comint buffer");
+                    }
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// `comint-copy-old-input` (C-c RET): copy the most recent submitted input onto
+/// the input line.
+fn comint_copy_old_input(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        if !comint.copy_old_input() {
+            cx.editor.set_status("comint: no previous input");
+        }
+    });
+}
+
+/// `comint-truncate-buffer`: trim the scrollback to `comint-buffer-maximum-size`
+/// lines, keeping the newest.
+fn comint_truncate_buffer(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        // Emacs default `comint-buffer-maximum-size` is 1024 lines.
+        let n = comint.truncate_buffer(1024);
+        cx.editor
+            .set_status(format!("comint-truncate-buffer: removed {n} line(s)"));
+    });
+}
+
+/// `comint-strip-ctrl-m`: strip carriage returns (^M) from the scrollback.
+fn comint_strip_ctrl_m(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        let n = comint.strip_ctrl_m();
+        cx.editor
+            .set_status(format!("comint-strip-ctrl-m: cleaned {n} line(s)"));
+    });
+}
+
+/// `comint-interrupt-subjob` (C-c C-c): send SIGINT to the child process.
+fn comint_interrupt_subjob(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        if comint.interrupt_subjob() {
+            cx.editor.set_status("comint: sent SIGINT");
+        } else {
+            cx.editor.set_error("comint: could not signal (no live child)");
+        }
+    });
+}
+
+/// `comint-stop-subjob` (C-c C-z): suspend the child with SIGTSTP.
+fn comint_stop_subjob(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        if comint.stop_subjob() {
+            cx.editor.set_status("comint: sent SIGTSTP (stop)");
+        } else {
+            cx.editor.set_error("comint: could not signal (no live child)");
+        }
+    });
+}
+
+/// `comint-continue-subjob`: resume a stopped child with SIGCONT.
+fn comint_continue_subjob(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        if comint.continue_subjob() {
+            cx.editor.set_status("comint: sent SIGCONT (continue)");
+        } else {
+            cx.editor.set_error("comint: could not signal (no live child)");
+        }
+    });
+}
+
+/// `comint-quit-subjob`: send SIGQUIT to the child.
+fn comint_quit_subjob(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        if comint.quit_subjob() {
+            cx.editor.set_status("comint: sent SIGQUIT");
+        } else {
+            cx.editor.set_error("comint: could not signal (no live child)");
+        }
+    });
+}
+
+/// `comint-kill-subjob`: send SIGKILL to the child.
+fn comint_kill_subjob(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        if comint.kill_subjob() {
+            cx.editor.set_status("comint: sent SIGKILL");
+        } else {
+            cx.editor.set_error("comint: could not signal (no live child)");
+        }
+    });
+}
+
+/// `comint-dynamic-list-input-ring`: list the input history in the buffer.
+fn comint_dynamic_list_input_ring(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        let n = comint.list_input_ring();
+        cx.editor
+            .set_status(format!("comint: {n} history entries"));
+    });
+}
+
+/// `comint-history-isearch-backward-regexp`: search the input history backward
+/// and yank the first older match onto the input line. (zemacs runs a one-shot
+/// substring search rather than an incremental regexp isearch.)
+fn comint_history_isearch_backward_regexp(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "History search backward:".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let needle = input.to_string();
+            let call: job::Callback = Callback::EditorCompositor(Box::new(
+                move |editor: &mut Editor, compositor: &mut Compositor| {
+                    if let Some(comint) = compositor.find::<crate::ui::comint::Comint>() {
+                        match comint.history_search_backward(&needle) {
+                            Some(m) => editor.set_status(format!("comint history: {m}")),
+                            None => editor.set_status("comint history: no match"),
+                        }
+                    } else {
+                        editor.set_error("comint: no active shell/comint buffer");
+                    }
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// `shell-forward-command` (M-f): move point forward over the next shell command
+/// on the comint input line.
+fn shell_forward_command(cx: &mut Context) {
+    comint_action(cx, |comint, _| comint.forward_command());
+}
+
+/// `shell-backward-command` (M-b): move point backward to the start of the shell
+/// command on the comint input line.
+fn shell_backward_command(cx: &mut Context) {
+    comint_action(cx, |comint, _| comint.backward_command());
+}
+
+/// `comint-run`: run a program in a new comint buffer (prompts for the command).
+fn comint_run(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Run program:".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let mut parts = input.split_whitespace();
+            let Some(program) = parts.next().map(str::to_string) else {
+                cx.editor.set_error("comint-run: no program given");
+                return;
+            };
+            let args: Vec<String> = parts.map(str::to_string).collect();
+            let call: job::Callback = Callback::EditorCompositor(Box::new(move |editor, compositor| {
+                match crate::ui::comint::Comint::with_program(&program, &args) {
+                    Ok(panel) => compositor.push(Box::new(panel)),
+                    Err(e) => editor.set_error(format!("comint-run: {e}")),
+                }
+            }));
+            cx.jobs.callback(async move { Ok(call) });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 /// Open the project-wide Find in Files panel, seeded with the primary selection.
