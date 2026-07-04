@@ -10,24 +10,26 @@ use zemacs_view::info::Info;
 /// When a map has more entries than fit (cols × this), the popup becomes
 /// vertically scrollable (PgDn/PgUp or the mouse wheel; see `Info::scroll`).
 const MAX_ROWS: usize = 16;
-/// Widest a single `KEY : description` column is allowed to grow. Entries past
-/// this are CUT OFF (like Spacemacs' `which-key-max-description-length`) so one
-/// long entry cannot dominate the grid and collapse the column count — the grid
-/// stays packed into several width-driven columns. Normal which-key descriptions
-/// are under this, so they are shown in full.
+/// Width used when DECIDING the column count: a column is treated as at most this
+/// wide (like Spacemacs' `which-key-max-description-length`) so one long entry
+/// cannot dominate the grid and collapse the column count — the grid stays packed
+/// into several width-driven columns. It is only a count-selection cap: once the
+/// count is chosen, columns grow past it toward their natural width to fill the
+/// bar (see `grid`), so leftover space shows more text rather than truncating.
 const COL_CAP: usize = 34;
 /// Max columns the which-key grid fills across the width (Spacemacs uses up to 8).
 const MAX_COLS: usize = 8;
 /// Spaces between columns.
 const SEP: usize = 3;
 
-/// Lay `lines` (each `"key : desc"`) into a full-width, column-major grid (like
-/// Emacs' `describe-bindings`) and return the visible slice starting at `scroll`
-/// rows down. The columns are **distributed across the whole width** so the grid
-/// always fills the bar with no right-edge dead space; the column count (1..=8)
-/// is driven by the screen width — as many columns as fit at each column's
-/// content width, with entries past `COL_CAP` cut off so a long one can't
-/// collapse the count. Returns `(text, body_width, body_height, rows_total,
+/// Lay `lines` (each `"key : desc"`) into a column-major grid (like Emacs'
+/// `describe-bindings`) and return the visible slice starting at `scroll` rows
+/// down. The column count (1..=8) is driven by the screen width — as many columns
+/// as fit at each column's `COL_CAP`-capped content width, so one long entry can't
+/// collapse the count. Leftover width is then spread into the COLUMN WIDTHS (each
+/// grows toward its natural, untruncated width), keeping the gaps fixed at `SEP` —
+/// so the extra space shows more description text instead of inflating a single
+/// gap into a mid-bar chasm. Returns `(text, body_width, body_height, rows_total,
 /// cols)`; `body_width` is the full inner width the grid spans.
 fn grid(
     lines: &[&str],
@@ -42,45 +44,56 @@ fn grid(
     }
     let max_cols = MAX_COLS.min(n).max(1);
 
-    // Each column is sized to ITS OWN content (variable widths), column-major —
-    // so short entries let many columns fit (like Spacemacs' which-key), not the
-    // few that the single widest entry would allow.
-    let col_widths = |cols: usize| -> Vec<usize> {
+    // Width of column `c` under a given column count, either capped at `COL_CAP`
+    // (for count selection: a long entry can't widen its column and collapse the
+    // count) or at its natural, untruncated content width (for display).
+    let col_width = |cols: usize, c: usize, cap: usize| -> usize {
         let rows = n.div_ceil(cols);
-        (0..cols)
-            .map(|c| {
-                let s = (c * rows).min(n);
-                let e = ((c + 1) * rows).min(n);
-                lines[s..e]
-                    .iter()
-                    .map(|l| l.chars().count())
-                    .max()
-                    .unwrap_or(0)
-                    .min(COL_CAP)
-            })
-            .collect()
+        let s = (c * rows).min(n);
+        let e = ((c + 1) * rows).min(n);
+        lines[s..e]
+            .iter()
+            .map(|l| l.chars().count())
+            .max()
+            .unwrap_or(0)
+            .min(cap)
     };
-    // The MOST columns whose natural (untruncated) widths fit the bar, leaving no
-    // empty trailing column. Falls back to a single budget-bounded column.
-    let (cols, cw) = (1..=max_cols)
+    // The MOST columns whose COL_CAP-capped widths fit the bar, leaving no empty
+    // trailing column. Falls back to a single budget-bounded column.
+    let capped = |cols: usize| -> Vec<usize> { (0..cols).map(|c| col_width(cols, c, COL_CAP)).collect() };
+    let (cols, mut cw) = (1..=max_cols)
         .rev()
         .filter(|&c| (c - 1) * n.div_ceil(c) < n)
-        .map(|c| (c, col_widths(c)))
+        .map(|c| (c, capped(c)))
         .find(|(_, w)| w.iter().sum::<usize>() + SEP * w.len().saturating_sub(1) <= budget)
-        .unwrap_or_else(|| (1, vec![col_widths(1)[0].min(budget)]));
+        .unwrap_or_else(|| (1, vec![capped(1)[0].min(budget)]));
 
     let rows_total = n.div_ceil(cols);
     let visible = rows_total.min(max_rows);
     let scroll = scroll.min(rows_total.saturating_sub(visible));
 
-    // Spread the leftover width evenly into the inter-column gaps so the grid
-    // fills the whole bar and the last column reaches the right edge — no dead
-    // space. (With one column there is no gap; short content then trails.)
-    let content: usize = cw.iter().sum();
+    // Spread the leftover width into the COLUMN WIDTHS (round-robin, each grows
+    // toward its natural width) rather than the gaps, keeping the gaps fixed at
+    // `SEP`. The extra space shows more description text instead of collapsing
+    // into a single mid-bar chasm (the failure mode when a 2-column menu dumps all
+    // leftover into its one gap).
     let gaps = cols.saturating_sub(1);
-    let leftover = budget.saturating_sub(content + SEP * gaps);
-    let gap_base = leftover.checked_div(gaps).map_or(0, |q| SEP + q);
-    let gap_extra = if gaps > 0 { leftover % gaps } else { 0 };
+    let natural: Vec<usize> = (0..cols).map(|c| col_width(cols, c, usize::MAX)).collect();
+    let mut leftover = budget.saturating_sub(cw.iter().sum::<usize>() + SEP * gaps);
+    let mut growing = true;
+    while leftover > 0 && growing {
+        growing = false;
+        for c in 0..cols {
+            if leftover == 0 {
+                break;
+            }
+            if cw[c] < natural[c] {
+                cw[c] += 1;
+                leftover -= 1;
+                growing = true;
+            }
+        }
+    }
 
     let mut out = String::new();
     for r in scroll..scroll + visible {
@@ -95,7 +108,7 @@ fn grid(
             };
             line.push_str(&format!("{cell:<w$}"));
             if c + 1 < cols {
-                line.push_str(&" ".repeat(gap_base + usize::from(c < gap_extra)));
+                line.push_str(&" ".repeat(SEP));
             }
         }
         out.push_str(line.trim_end());
@@ -127,8 +140,9 @@ impl Component for Info {
 
         // Borderless, full editor width, anchored at the bottom (above the
         // statusline) — Spacemacs' which-key bar has no box, the content sits
-        // flush against the modeline. The grid itself (`body_w`) is distributed
-        // to fill the width, so there is no dead space inside the bar.
+        // flush against the modeline. `clear_with` paints the whole bar in the
+        // popup background, so width past the grid is uniform bg, not a gap; the
+        // grid grows its columns (not its gaps) so it never leaves a mid-bar chasm.
         let _ = body_w;
         let height = body_h as u16;
         let area = viewport.intersection(Rect::new(
@@ -165,20 +179,48 @@ mod tests {
     use super::*;
 
     #[test]
-    fn long_entries_are_cut_off_at_col_cap() {
-        // Descriptions past COL_CAP are cut off (Spacemacs caps the description
-        // length) so one long entry can't widen its column and collapse the count.
+    fn col_cap_governs_count_not_display_width() {
+        // COL_CAP caps the width used to CHOOSE the column count so a long entry
+        // can't collapse the grid to one column — but once the count is chosen the
+        // columns grow toward their natural width, so with room to spare the long
+        // description is shown in full (no gratuitous truncation) and every row
+        // still fits the bar.
         let a = "i : Ask the AI provider about the selection/buffer text"; // > COL_CAP
         let b = "k : Generate a shell command from natural language help";
         let lines = vec![a, b];
-        let (text, width, _h, _rows, _cols) = grid(&lines, 0, 16, 220);
-        assert!(
-            !text.contains("selection/buffer text"),
-            "not cut off: {text:?}"
-        );
+        let (text, width, _h, _rows, cols) = grid(&lines, 0, 16, 220);
+        // A wide bar keeps two columns (the long entry didn't collapse the count)...
+        assert_eq!(cols, 2, "long entry collapsed the column count: {text:?}");
+        // ...and there is room, so the full description is shown, not cut off.
+        assert!(text.contains("selection/buffer text"), "cut off: {text:?}");
         // Every rendered row still fits the bar.
         for line in text.lines() {
             assert!(line.chars().count() <= width, "row overruns bar: {line:?}");
+        }
+    }
+
+    #[test]
+    fn leftover_grows_columns_instead_of_a_mid_bar_gap() {
+        // The regression this fixes: a 2-column menu of long descriptions on a
+        // narrower bar used to dump all leftover width into its single inter-column
+        // gap, opening a chasm down the middle. The leftover must go into the
+        // column widths (kept at SEP gaps), so no row contains a run of spaces
+        // wider than a normal alignment pad.
+        let lines: Vec<String> = (0..24)
+            .map(|i| format!("{i:>2} : open the thing and do a fairly long action"))
+            .collect();
+        let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+        let (text, _w, _h, _r, cols) = grid(&refs, 0, 16, 92);
+        assert_eq!(cols, 2, "expected the 2-column layout that used to chasm");
+        // No inter-column run of spaces wider than SEP + a short label pad. The old
+        // code produced ~20-space gaps here; the fix keeps them at SEP.
+        for line in text.lines() {
+            let max_run = line
+                .split(|c| c != ' ')
+                .map(str::len)
+                .max()
+                .unwrap_or(0);
+            assert!(max_run <= SEP + 2, "mid-bar gap of {max_run} spaces: {line:?}");
         }
     }
 
@@ -219,10 +261,11 @@ mod tests {
     }
 
     #[test]
-    fn grid_always_spans_the_full_width_with_no_dead_space() {
-        // Whatever the entry lengths or column count, the grid fills the whole
-        // inner width (body_width == budget) so the full-width bar has no dead
-        // space, and the column count stays within 1..=8.
+    fn grid_reports_the_full_inner_width_and_bounded_cols() {
+        // Whatever the entry lengths or column count, the reported body width is
+        // the full inner span (body_width == budget) — the bar is cleared to that
+        // width in the popup bg, so unused right-edge space is uniform, not a gap —
+        // and the column count stays within 1..=8.
         for &(w, count, desc_len) in &[(200usize, 20usize, 24usize), (90, 16, 78), (300, 40, 12)] {
             let lines: Vec<String> = (0..count)
                 .map(|i| format!("{i} : {}", "x".repeat(desc_len)))
