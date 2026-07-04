@@ -1217,6 +1217,16 @@ impl MappableCommand {
         kmacro_insert_counter, "Insert the macro counter value, then increment (SPC K c c)",
         kmacro_set_counter, "Set the keyboard-macro counter to [count] (emacs kmacro-set-counter)",
         kmacro_set_format, "Set the macro-counter insert format, e.g. %03d (emacs kmacro-set-format)",
+        kmacro_name_last_macro, "Name the last kbd macro and register it as an invokable command (emacs kmacro-name-last-macro)",
+        insert_kbd_macro, "Insert a textual definition of the last kbd macro (emacs insert-kbd-macro)",
+        apply_macro_to_region_lines, "Run the last kbd macro at the start of each line in the region (emacs apply-macro-to-region-lines)",
+        kmacro_end_or_call_macro, "End recording, or call the last kbd macro (emacs kmacro-end-or-call-macro, F4)",
+        kmacro_end_or_call_macro_repeat, "Repeat-variant of end-or-call macro (emacs kmacro-end-or-call-macro-repeat)",
+        kmacro_edit_macro, "Edit the last kbd macro's keys as text (emacs edit-kbd-macro / kmacro-edit-macro)",
+        kmacro_step_edit_macro, "Edit the whole last kbd macro (emacs kmacro-step-edit-macro; no per-key stepping)",
+        kmacro_edit_lossage, "Edit the recently pressed keys as a macro (emacs kmacro-edit-lossage)",
+        kmacro_bind_to_key, "Report the config binding for the last kbd macro (emacs kmacro-bind-to-key)",
+        kmacro_redisplay, "Refresh display during macro execution (emacs kmacro-redisplay)",
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
         toggle_window_dedication, "Toggle window dedication (spacemacs SPC w t)",
         toggle_subword, "Toggle sub-word w/b/e motions (spacemacs SPC t c)",
@@ -1531,6 +1541,18 @@ impl std::str::FromStr for MappableCommand {
                 .iter()
                 .find(|cmd| cmd.name() == s)
                 .cloned()
+                .or_else(|| {
+                    // A macro named via `kmacro-name-last-macro` resolves as an
+                    // invokable command, so its name can be bound to a key.
+                    zemacs_core::kmacro::macro_named(s).and_then(|keys_str| {
+                        zemacs_view::input::parse_macro(&keys_str)
+                            .ok()
+                            .map(|keys| Self::Macro {
+                                name: s.to_string(),
+                                keys,
+                            })
+                    })
+                })
                 .ok_or_else(|| anyhow!("No command named '{}'", s))
         }
     }
@@ -24001,6 +24023,11 @@ fn macro_ring_push(s: String) {
     }
 }
 
+/// The most recently recorded macro key-string (the "last kbd macro"), if any.
+fn macro_ring_head() -> Option<String> {
+    MACRO_RING.lock().ok().and_then(|r| r.first().cloned())
+}
+
 fn macro_ring_preview(s: &str) -> String {
     if s.chars().count() > 40 {
         format!("{}…", s.chars().take(40).collect::<String>())
@@ -24142,6 +24169,259 @@ fn kmacro_set_format(cx: &mut Context) {
             cx.editor.set_status(format!("macro counter format: {fmt}"));
         },
     );
+}
+
+// --- named / callable keyboard macros (Emacs kmacro standalone commands) -----
+
+/// Replay the given macro key-string `count` times by feeding its keys back
+/// through the compositor, guarding against recursion via the `@` replay slot.
+/// This is the one path that actually re-runs a macro: it defers onto
+/// `cx.callback`, which the main key loop drains with the compositor in hand.
+fn replay_macro_string(cx: &mut Context, macro_str: &str, count: usize) {
+    let keys = match zemacs_view::input::parse_macro(macro_str) {
+        Ok(k) => k,
+        Err(err) => {
+            cx.editor.set_error(format!("Invalid macro: {err}"));
+            return;
+        }
+    };
+    if cx.editor.macro_replaying.contains(&'@') {
+        cx.editor.set_error(
+            "Cannot execute macro because the [@] register is already playing a macro",
+        );
+        return;
+    }
+    cx.editor.macro_replaying.push('@');
+    cx.callback.push(Box::new(move |compositor, cx| {
+        for _ in 0..count {
+            for &key in keys.iter() {
+                compositor.handle_event(&compositor::Event::Key(key), cx);
+            }
+        }
+        cx.editor.macro_replaying.pop();
+    }));
+}
+
+/// Emacs `kmacro-name-last-macro` (C-x C-k n): give the last keyboard macro a
+/// name and register it so the name resolves as an invokable command.
+fn kmacro_name_last_macro(cx: &mut Context) {
+    let Some(macro_str) = macro_ring_head() else {
+        cx.editor.set_status("no keyboard macro defined yet");
+        return;
+    };
+    ui::prompt(
+        cx,
+        "Name for last kbd macro: ".into(),
+        None,
+        |_editor, _input| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            if !zemacs_core::kmacro::valid_macro_name(name) {
+                cx.editor
+                    .set_error("Invalid macro name (must be non-empty, no whitespace)");
+                return;
+            }
+            if zemacs_view::input::parse_macro(&macro_str).is_err() {
+                cx.editor.set_error("last macro is not replayable");
+                return;
+            }
+            zemacs_core::kmacro::name_macro(name, &macro_str);
+            cx.editor.set_status(format!(
+                "Named macro '{name}' — bind a key to it (config: <key> = \"{name}\") to run it"
+            ));
+        },
+    );
+}
+
+/// Emacs `insert-kbd-macro` (C-x C-k i): insert a textual, re-loadable
+/// definition of the last keyboard macro into the buffer at point.
+fn insert_kbd_macro(cx: &mut Context) {
+    let Some(keys) = macro_ring_head() else {
+        cx.editor.set_status("no keyboard macro defined yet");
+        return;
+    };
+    let text = zemacs_core::kmacro::format_kbd_macro_definition("last-kbd-macro", &keys);
+    insert_generated(cx, &text);
+    cx.editor
+        .set_status("Inserted kbd-macro definition for last-kbd-macro");
+}
+
+/// Emacs `apply-macro-to-region-lines` (C-x C-k r): run the last keyboard macro
+/// once at the beginning of each line in the selected region.
+fn apply_macro_to_region_lines(cx: &mut Context) {
+    let Some(macro_str) = macro_ring_head() else {
+        cx.editor.set_status("no keyboard macro defined yet");
+        return;
+    };
+    let keys = match zemacs_view::input::parse_macro(&macro_str) {
+        Ok(k) => k,
+        Err(err) => {
+            cx.editor.set_error(format!("Invalid macro: {err}"));
+            return;
+        }
+    };
+    // Line span of the primary selection. A selection ending exactly at a line
+    // start does not include that trailing line (matching Emacs).
+    let (start_line, end_line) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        let a = text.char_to_line(range.from());
+        let b = if range.to() > range.from() {
+            text.char_to_line(range.to() - 1)
+        } else {
+            a
+        };
+        (a, b)
+    };
+    if cx.editor.macro_replaying.contains(&'@') {
+        cx.editor.set_error(
+            "Cannot execute macro because the [@] register is already playing a macro",
+        );
+        return;
+    }
+    cx.editor.macro_replaying.push('@');
+    let nlines = end_line.saturating_sub(start_line) + 1;
+    cx.callback.push(Box::new(move |compositor, cx| {
+        for i in 0..nlines {
+            let line = start_line + i;
+            {
+                let (view, doc) = current!(cx.editor);
+                let text = doc.text();
+                if line >= text.len_lines() {
+                    break;
+                }
+                let pos = text.line_to_char(line);
+                doc.set_selection(view.id, Selection::point(pos));
+            }
+            for &key in keys.iter() {
+                compositor.handle_event(&compositor::Event::Key(key), cx);
+            }
+        }
+        cx.editor.macro_replaying.pop();
+    }));
+}
+
+/// Emacs `kmacro-end-or-call-macro` (F4): if a macro is being recorded, end the
+/// recording; otherwise call (replay) the last keyboard macro.
+fn kmacro_end_or_call_macro(cx: &mut Context) {
+    if cx.editor.macro_recording.is_some() {
+        record_macro(cx); // toggles recording off
+    } else if let Some(macro_str) = macro_ring_head() {
+        let count = cx.count();
+        replay_macro_string(cx, &macro_str, count);
+    } else {
+        cx.editor.set_status("no keyboard macro defined yet");
+    }
+}
+
+/// Emacs `kmacro-end-or-call-macro-repeat`: the repeat-friendly F4 variant.
+/// Same end-or-call behaviour; the sticky "press the last key again to repeat"
+/// loop is not wired, so this is functionally the non-repeat command.
+fn kmacro_end_or_call_macro_repeat(cx: &mut Context) {
+    kmacro_end_or_call_macro(cx);
+}
+
+/// Shared macro editor: open the given macro key-string in a prompt, and on
+/// accept re-parse it and store it back as the last macro (ring head + `@`).
+fn edit_macro_prompt(cx: &mut Context, title: std::borrow::Cow<'static, str>, initial: String) {
+    ui::prompt_with_input(
+        cx,
+        title,
+        initial,
+        None,
+        |_editor, _input| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            match zemacs_view::input::parse_macro(input) {
+                Ok(_) => {
+                    let s = input.to_string();
+                    macro_ring_push(s.clone());
+                    let _ = cx.editor.registers.write('@', vec![s]);
+                    cx.editor.set_status("Keyboard macro updated");
+                }
+                Err(err) => cx.editor.set_error(format!("Invalid macro: {err}")),
+            }
+        },
+    );
+}
+
+/// Emacs `edit-kbd-macro` / `kmacro-edit-macro` (C-x C-k C-e): edit the last
+/// keyboard macro's keys as text; on accept the edited keys become the last
+/// macro. (zemacs edits the whole key-string in the minibuffer rather than in a
+/// dedicated *Edit Macro* buffer.)
+fn kmacro_edit_macro(cx: &mut Context) {
+    let Some(macro_str) = macro_ring_head() else {
+        cx.editor.set_status("no keyboard macro defined yet");
+        return;
+    };
+    edit_macro_prompt(cx, "Edit macro: ".into(), macro_str);
+}
+
+/// Emacs `kmacro-step-edit-macro`: step-editing is not implemented; this opens
+/// the whole macro for editing like `kmacro-edit-macro`, without per-key
+/// stepping/prompting.
+fn kmacro_step_edit_macro(cx: &mut Context) {
+    let Some(macro_str) = macro_ring_head() else {
+        cx.editor.set_status("no keyboard macro defined yet");
+        return;
+    };
+    edit_macro_prompt(cx, "Step-edit macro (whole): ".into(), macro_str);
+}
+
+/// Emacs `kmacro-edit-lossage` (C-x C-k l): edit the recently pressed keys
+/// (lossage) as a keyboard macro. Builds a key-string from the recent-key ring
+/// (dropping the key that invoked this command) and opens it in the macro
+/// editor.
+fn kmacro_edit_lossage(cx: &mut Context) {
+    let mut keys: Vec<KeyEvent> = cx.editor.last_keys.iter().copied().collect();
+    keys.pop(); // drop the invoking key
+    if keys.is_empty() {
+        cx.editor.set_status("no recent keys recorded yet");
+        return;
+    }
+    let s = keys
+        .into_iter()
+        .map(|key| {
+            let k = key.to_string();
+            if k.chars().count() == 1 {
+                k
+            } else {
+                format!("<{k}>")
+            }
+        })
+        .collect::<String>();
+    edit_macro_prompt(cx, "Edit lossage as macro: ".into(), s);
+}
+
+/// Emacs `kmacro-bind-to-key` (C-x C-k b): bind the last keyboard macro to a
+/// key. zemacs cannot mutate the live keymap at runtime, so this reports the
+/// exact config line to add instead of installing the binding.
+fn kmacro_bind_to_key(cx: &mut Context) {
+    let Some(macro_str) = macro_ring_head() else {
+        cx.editor.set_status("no keyboard macro defined yet");
+        return;
+    };
+    cx.editor
+        .set_status("Bind last macro to key: press the key to bind");
+    cx.on_next_key(move |cx, event| {
+        let key = event.to_string();
+        cx.editor.set_status(format!(
+            "Add to config [keys.normal]: \"{key}\" = \"@{macro_str}\""
+        ));
+    });
+}
+
+/// Emacs `kmacro-redisplay`: force a redisplay mid-macro. zemacs redraws every
+/// frame, so this is a no-op that simply reports itself.
+fn kmacro_redisplay(cx: &mut Context) {
+    cx.editor
+        .set_status("kmacro-redisplay (no-op: zemacs redraws every frame)");
 }
 
 // --- paredit-style structural editing (spacemacs SPC k) ----------------------
