@@ -32231,5 +32231,253 @@
    "static:c_hungry_delete_backwards"
   ],
   "note": "c-hungry-delete-backwards (SPC x d b): skip whitespace before point (spaces/tabs/newlines) and delete the whole run, or one character if none precedes, faithful to cc-cmds.el (c-skip-ws-backward then delete-region, else c-backspace-function 1)."
+ },
+ {
+  "spec_id": "emacs.command.sgml_tag",
+  "status": "ported",
+  "evidence": [
+   "static:sgml_tag"
+  ],
+  "note": "emacs sgml-tag -> wrap region/point in <tag>..</tag> (prompts for tag)"
+ },
+ {
+  "spec_id": "emacs.command.sgml_close_tag",
+  "status": "ported",
+  "evidence": [
+   "static:sgml_close_tag"
+  ],
+  "note": "emacs sgml-close-tag -> insert </tag> for innermost open element"
+ },
+ {
+  "spec_id": "emacs.command.sgml_delete_tag",
+  "status": "ported",
+  "evidence": [
+   "static:sgml_delete_tag"
+  ],
+  "note": "emacs sgml-delete-tag -> delete enclosing tag pair, keep content"
+ },
+ {
+  "spec_id": "emacs.command.sgml_skip_tag_forward",
+  "status": "ported",
+  "evidence": [
+   "static:sgml_skip_tag_forward"
+  ],
+  "note": "emacs sgml-skip-tag-forward -> move past a balanced tag group"
+ },
+ {
+  "spec_id": "emacs.command.sgml_skip_tag_backward",
+  "status": "ported",
+  "evidence": [
+   "static:sgml_skip_tag_backward"
+  ],
+  "note": "emacs sgml-skip-tag-backward -> move back over a balanced tag group"
+ },
+ {
+  "spec_id": "emacs.command.sgml_name_char",
+  "status": "ported",
+  "evidence": [
+   "static:sgml_name_char"
+  ],
+  "note": "emacs sgml-name-char -> insert &entity; for a character (numeric fallback)"
+ },
+ {
+  "spec_id": "emacs.command.sgml_tag_help",
+  "status": "ported",
+  "evidence": [
+   "static:sgml_tag_help"
+  ],
+  "note": "emacs sgml-tag-help -> describe an HTML element (curated static table)"
+ },
+ {
+  "spec_id": "emacs.command.sgml_attributes",
+  "status": "partial",
+  "evidence": [
+   "static:sgml_attributes"
+  ],
+  "note": "emacs sgml-attributes -> insert attributes at point (no DTD-driven completion)"
+ },
+ {
+  "spec_id": "emacs.command.sgml_tags_invisible",
+  "status": "partial",
+  "evidence": [
+   "static:sgml_tags_invisible"
+  ],
+  "note": "emacs sgml-tags-invisible -> flag toggle only (no visual tag hiding)"
+ },
+ {
+  "spec_id": "emacs.command.sgml_name_8bit_mode",
+  "status": "partial",
+  "evidence": [
+   "static:sgml_name_8bit_mode"
+  ],
+  "note": "emacs sgml-name-8bit-mode -> flag toggle only (no live re-render)"
+ },
+ {
+  "spec_id": "emacs.command.sgml_validate",
+  "status": "partial",
+  "evidence": [
+   "static:sgml_validate"
+  ],
+  "note": "emacs sgml-validate -> shells out to onsgmls/nsgmls (external, not bundled)"
+ },
+ {
+  "spec_id": "emacs.command.sgml_mode",
+  "status": "partial",
+  "evidence": [
+   "static:sgml_mode"
+  ],
+  "note": "emacs sgml-mode -> enter SGML mode (uses HTML grammar)"
+ },
+ {
+  "spec_id": "emacs.command.html_mode",
+  "status": "ported",
+  "evidence": [
+   "static:html_mode"
+  ],
+  "note": "emacs html-mode -> enter HTML mode (HTML grammar + tag commands)"
+ },
+ {
+  "spec_id": "emacs.command.htmlfontify_buffer",
+  "status": "partial",
+  "evidence": [
+   "static:htmlfontify_buffer"
+  ],
+  "note": "emacs htmlfontify-buffer -> export buffer as <pre> HTML (pure builder supports face spans; wrapper emits escaped text only)"
+ },
+ {
+  "spec_id": "emacs.command.nroff_forward_text_line",
+  "status": "ported",
+  "evidence": [
+   "static:nroff_forward_text_line"
+  ],
+  "note": "emacs nroff-forward-text-line -> forward one text line, skip .'/request lines"
+ },
+ {
+  "spec_id": "emacs.command.nroff_backward_text_line",
+  "status": "ported",
+  "evidence": [
+   "static:nroff_backward_text_line"
+  ],
+  "note": "emacs nroff-backward-text-line -> backward one text line, skip request lines"
+ },
+ {
+  "spec_id": "emacs.command.nroff_count_text_lines",
+  "status": "ported",
+  "evidence": [
+   "static:nroff_count_text_lines"
+  ],
+  "note": "emacs nroff-count-text-lines -> count non-request lines in region/buffer"
+ },
+ {
+  "spec_id": "emacs.command.nroff_mode",
+  "status": "partial",
+  "evidence": [
+   "static:nroff_mode"
+  ],
+  "note": "emacs nroff-mode -> enter nroff mode (text-line motions; no tree-sitter grammar)"
+ },
+ {
+  "spec_id": "emacs.command.nroff_electric_mode",
+  "status": "partial",
+  "evidence": [
+   "static:nroff_electric_mode"
+  ],
+  "note": "emacs nroff-electric-mode -> flag toggle only (no live electric closing)"
+ },
+ {
+  "spec_id": "emacs.command.tex_mode",
+  "status": "partial",
+  "evidence": [
+   "static:tex_mode"
+  ],
+  "note": "emacs tex-mode -> enter TeX mode (uses LaTeX grammar; plain-TeX not distinguished)"
+ },
+ {
+  "spec_id": "emacs.command.latex_mode",
+  "status": "ported",
+  "evidence": [
+   "static:latex_mode"
+  ],
+  "note": "emacs latex-mode -> enter LaTeX mode (LaTeX grammar + tex commands)"
+ },
+ {
+  "spec_id": "emacs.command.latex_electric_env_pair_mode",
+  "status": "partial",
+  "evidence": [
+   "static:latex_electric_env_pair_mode"
+  ],
+  "note": "emacs latex-electric-env-pair-mode -> flag toggle only (no live \\end auto-insert)"
+ },
+ {
+  "spec_id": "emacs.command.tex_region",
+  "status": "partial",
+  "evidence": [
+   "static:tex_region"
+  ],
+  "note": "emacs tex-region -> compiles the whole file (no temp-file region extraction)"
+ },
+ {
+  "spec_id": "emacs.command.tex_file",
+  "status": "partial",
+  "evidence": [
+   "static:tex_file"
+  ],
+  "note": "emacs tex-file -> spawns pdflatex synchronously to a scratch buffer (no async *tex-shell*)"
+ },
+ {
+  "spec_id": "emacs.command.tex_buffer",
+  "status": "partial",
+  "evidence": [
+   "static:tex_buffer"
+  ],
+  "note": "emacs tex-buffer -> spawns pdflatex on the buffer's file (no async *tex-shell*)"
+ },
+ {
+  "spec_id": "emacs.command.tex_compile",
+  "status": "partial",
+  "evidence": [
+   "static:tex_compile"
+  ],
+  "note": "emacs tex-compile -> spawns pdflatex on the current file (no async *tex-shell*)"
+ },
+ {
+  "spec_id": "emacs.command.tex_bibtex_file",
+  "status": "partial",
+  "evidence": [
+   "static:tex_bibtex_file"
+  ],
+  "note": "emacs tex-bibtex-file -> spawns bibtex on the file base name"
+ },
+ {
+  "spec_id": "emacs.command.tex_view",
+  "status": "partial",
+  "evidence": [
+   "static:tex_view"
+  ],
+  "note": "emacs tex-view -> opens the compiled PDF in the OS viewer"
+ },
+ {
+  "spec_id": "emacs.command.tex_print",
+  "status": "partial",
+  "evidence": [
+   "static:tex_print"
+  ],
+  "note": "emacs tex-print -> prints the compiled PDF via lpr"
+ },
+ {
+  "spec_id": "emacs.command.tex_kill_job",
+  "status": "partial",
+  "evidence": [
+   "static:tex_kill_job"
+  ],
+  "note": "emacs tex-kill-job -> no persistent async job to kill (compiles run synchronously)"
+ },
+ {
+  "spec_id": "emacs.command.tex_recenter_output_buffer",
+  "status": "partial",
+  "evidence": [
+   "static:tex_recenter_output_buffer"
+  ],
+  "note": "emacs tex-recenter-output-buffer -> output shown in scratch at compile time"
  }
 ]

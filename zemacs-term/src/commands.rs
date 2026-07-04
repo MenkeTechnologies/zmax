@@ -735,6 +735,37 @@ impl MappableCommand {
         latex_insert_block, "LaTeX: insert a \\begin{}..\\end{} block (emacs latex-insert-block)",
         latex_close_block, "LaTeX: close the innermost open environment (emacs latex-close-block)",
         tex_validate, "TeX: check {}/$/begin-end balance (emacs tex-validate-region)",
+        tex_mode, "TeX: enter TeX editing mode (emacs tex-mode)",
+        latex_mode, "LaTeX: enter LaTeX editing mode (emacs latex-mode)",
+        latex_electric_env_pair_mode, "LaTeX: toggle electric \\begin/\\end pairing (emacs latex-electric-env-pair-mode)",
+        tex_file, "TeX: run LaTeX on the current file (emacs tex-file)",
+        tex_buffer, "TeX: compile the current buffer (emacs tex-buffer)",
+        tex_region, "TeX: compile the current file (emacs tex-region)",
+        tex_compile, "TeX: run LaTeX on the current file (emacs tex-compile)",
+        tex_bibtex_file, "TeX: run BibTeX on the current file (emacs tex-bibtex-file)",
+        tex_view, "TeX: open the compiled PDF (emacs tex-view)",
+        tex_print, "TeX: print the compiled PDF via lpr (emacs tex-print)",
+        tex_kill_job, "TeX: kill the running TeX job (emacs tex-kill-job)",
+        tex_recenter_output_buffer, "TeX: recenter the TeX output (emacs tex-recenter-output-buffer)",
+        sgml_tag, "SGML: wrap region/point in a <tag>..</tag> (emacs sgml-tag)",
+        sgml_close_tag, "SGML: close the innermost open element (emacs sgml-close-tag)",
+        sgml_delete_tag, "SGML: delete the enclosing tag pair, keeping content (emacs sgml-delete-tag)",
+        sgml_skip_tag_forward, "SGML: move past a balanced tag group (emacs sgml-skip-tag-forward)",
+        sgml_skip_tag_backward, "SGML: move back over a balanced tag group (emacs sgml-skip-tag-backward)",
+        sgml_name_char, "SGML: insert a &entity; for a character (emacs sgml-name-char)",
+        sgml_tag_help, "SGML: describe an HTML element (emacs sgml-tag-help)",
+        sgml_attributes, "SGML: insert attributes at point (emacs sgml-attributes)",
+        sgml_tags_invisible, "SGML: toggle tag invisibility flag (emacs sgml-tags-invisible)",
+        sgml_name_8bit_mode, "SGML: toggle 8-bit entity name display (emacs sgml-name-8bit-mode)",
+        sgml_validate, "SGML: validate the file with onsgmls/nsgmls (emacs sgml-validate)",
+        sgml_mode, "SGML: enter SGML editing mode (emacs sgml-mode)",
+        html_mode, "HTML: enter HTML editing mode (emacs html-mode)",
+        htmlfontify_buffer, "HTML: export the buffer as highlighted HTML (emacs htmlfontify-buffer)",
+        nroff_forward_text_line, "nroff: forward one text line, skip requests (emacs nroff-forward-text-line)",
+        nroff_backward_text_line, "nroff: backward one text line, skip requests (emacs nroff-backward-text-line)",
+        nroff_count_text_lines, "nroff: count text lines in region (emacs nroff-count-text-lines)",
+        nroff_mode, "nroff: enter nroff editing mode (emacs nroff-mode)",
+        nroff_electric_mode, "nroff: toggle electric request closing (emacs nroff-electric-mode)",
         code_action, "Perform code action",
         extract_refactor, "Extract refactoring (method/variable/constant) via LSP (IntelliJ Extract)",
         extract_function, "Extract Method/Function via LSP (IntelliJ Extract Method)",
@@ -25897,6 +25928,530 @@ fn tex_validate(cx: &mut Context) {
             cx.editor.set_error(msg);
         }
     }
+}
+
+// --------------------------------------------------------------------------
+// SGML / HTML editing substrate (emacs sgml-mode / html-mode). Buffer tag ops
+// over the pure, unit-tested `zemacs_core::sgml` engine.
+// --------------------------------------------------------------------------
+
+/// Insert `text` at every selection's cursor (works from a compositor callback
+/// where only `Editor` is available, unlike `insert_generated`).
+fn insert_at_cursors(editor: &mut Editor, text: &str) {
+    let (view, doc) = current!(editor);
+    let sel = doc.selection(view.id);
+    let t = Tendril::from(text);
+    let transaction = Transaction::change_by_selection(doc.text(), sel, |range| {
+        let pos = range.cursor(doc.text().slice(..));
+        (pos, pos, Some(t.clone()))
+    });
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Read the whole buffer text and the primary cursor's char offset.
+fn buffer_text_and_point(cx: &mut Context) -> (String, usize) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let point = doc.selection(view.id).primary().cursor(text.slice(..));
+    (text.to_string(), point)
+}
+
+/// Replace the whole buffer with `new` and place point at `caret` (clamped).
+fn replace_whole_buffer(cx: &mut Context, new: &str, caret: usize) {
+    let (view, doc) = current!(cx.editor);
+    let len = doc.text().len_chars();
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((0, len, Some(Tendril::from(new)))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    let caret = caret.min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::point(caret));
+}
+
+/// Set the current document's language (entering an editing "mode"), reporting
+/// success or a missing-grammar message. Shared by the `*-mode` commands.
+fn enter_language_mode(cx: &mut Context, lang: &str, label: &str) {
+    let loader = cx.editor.syn_loader.load();
+    let (_view, doc) = current!(cx.editor);
+    match doc.set_language_by_language_id(lang, &loader) {
+        Ok(()) => cx.editor.set_status(format!("{label} mode")),
+        Err(_) => cx
+            .editor
+            .set_status(format!("{label} mode (no `{lang}` grammar available)")),
+    }
+}
+
+/// Emacs `sgml-tag` (C-c C-t): wrap the region (or point) in `<TAG>…</TAG>`.
+/// Prompts for the tag name; the selection becomes the element content.
+fn sgml_tag(cx: &mut Context) {
+    let (from, to, content) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let sel = doc.selection(view.id).primary();
+        (
+            sel.from(),
+            sel.to(),
+            text.slice(sel.from()..sel.to()).to_string(),
+        )
+    };
+    prompt_then(cx, "Tag: ", move |cx, tag| {
+        let wrapped = zemacs_core::sgml::wrap_tag(tag, None, &content);
+        let caret = from + wrapped.chars().count();
+        let (view, doc) = current!(cx.editor);
+        let tx = Transaction::change(
+            doc.text(),
+            std::iter::once((from, to, Some(Tendril::from(wrapped.as_str())))),
+        );
+        doc.apply(&tx, view.id);
+        doc.append_changes_to_history(view);
+        let caret = caret.min(doc.text().len_chars());
+        doc.set_selection(view.id, Selection::point(caret));
+    });
+}
+
+/// Emacs `sgml-close-tag` (C-c /): insert the end tag for the innermost element
+/// still open before point.
+fn sgml_close_tag(cx: &mut Context) {
+    let before = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        text.slice(..cursor).to_string()
+    };
+    match zemacs_core::sgml::unclosed_tag(&before) {
+        Some(name) => insert_generated(cx, &format!("</{name}>")),
+        None => cx.editor.set_status("sgml: no open tag to close"),
+    }
+}
+
+/// Emacs `sgml-delete-tag` (C-c DEL): delete the tag on/after point and its
+/// matching partner, keeping the enclosed content.
+fn sgml_delete_tag(cx: &mut Context) {
+    let (full, point) = buffer_text_and_point(cx);
+    match zemacs_core::sgml::delete_tag(&full, point) {
+        Some(new) => {
+            let caret = point.min(new.chars().count());
+            replace_whole_buffer(cx, &new, caret);
+            cx.editor.set_status("sgml: deleted tag pair");
+        }
+        None => cx.editor.set_error("sgml: no tag to delete at point"),
+    }
+}
+
+/// Emacs `sgml-skip-tag-forward` (C-c C-f): move point past the balanced tag
+/// group starting at/after point.
+fn sgml_skip_tag_forward(cx: &mut Context) {
+    let (full, point) = buffer_text_and_point(cx);
+    match zemacs_core::sgml::skip_tag_forward(&full, point) {
+        Some(dest) => {
+            let (view, doc) = current!(cx.editor);
+            let dest = dest.min(doc.text().len_chars());
+            doc.set_selection(view.id, Selection::point(dest));
+        }
+        None => cx.editor.set_status("sgml: no tag to skip forward"),
+    }
+}
+
+/// Emacs `sgml-skip-tag-backward` (C-c C-b): move point to the start of the
+/// balanced tag group ending at/before point.
+fn sgml_skip_tag_backward(cx: &mut Context) {
+    let (full, point) = buffer_text_and_point(cx);
+    match zemacs_core::sgml::skip_tag_backward(&full, point) {
+        Some(dest) => {
+            let (view, doc) = current!(cx.editor);
+            doc.set_selection(view.id, Selection::point(dest));
+        }
+        None => cx.editor.set_status("sgml: no tag to skip backward"),
+    }
+}
+
+/// Emacs `sgml-name-char` (C-c C-n): insert the `&entity;` reference for a
+/// character (prompts for the character; falls back to a numeric reference).
+fn sgml_name_char(cx: &mut Context) {
+    prompt_then(cx, "Insert entity for character: ", move |cx, input| {
+        let Some(c) = input.chars().next() else {
+            return;
+        };
+        insert_at_cursors(cx.editor, &zemacs_core::sgml::entity_ref(c));
+    });
+}
+
+/// Emacs `sgml-tag-help` (C-c C-h): describe an HTML element (prompts for a tag
+/// name; reports its purpose in the echo area).
+fn sgml_tag_help(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "Tag help: ",
+        move |cx, tag| match zemacs_core::sgml::tag_help(tag) {
+            Some(desc) => cx.editor.set_status(format!("<{tag}>: {desc}")),
+            None => cx
+                .editor
+                .set_status(format!("<{tag}>: (no help available)")),
+        },
+    );
+}
+
+/// Emacs `sgml-attributes` (partial): prompt for an attribute string and insert
+/// it at point. The DTD-driven attribute completion of the original is absent.
+fn sgml_attributes(cx: &mut Context) {
+    prompt_then(cx, "Attributes: ", move |cx, attrs| {
+        let attrs = attrs.trim();
+        if !attrs.is_empty() {
+            insert_at_cursors(cx.editor, &format!(" {attrs}"));
+        }
+    });
+}
+
+/// Toggle state for `sgml-tags-invisible` (no visual hiding yet — status only).
+static SGML_TAGS_INVISIBLE: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+/// Toggle state for `sgml-name-8bit-mode`.
+static SGML_NAME_8BIT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Emacs `sgml-tags-invisible` (partial): toggle the flag. Faithful visual
+/// hiding of tag text is not implemented, so this only tracks/report the state.
+fn sgml_tags_invisible(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let on = !SGML_TAGS_INVISIBLE.fetch_xor(true, Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "sgml-tags-invisible: {} (visual hiding not implemented)",
+        if on { "on" } else { "off" }
+    ));
+}
+
+/// Emacs `sgml-name-8bit-mode` (partial): toggle whether 8-bit characters are
+/// shown as entity names. Tracked as a flag only (no live re-rendering).
+fn sgml_name_8bit_mode(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let on = !SGML_NAME_8BIT.fetch_xor(true, Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "sgml-name-8bit-mode: {}",
+        if on { "on" } else { "off" }
+    ));
+}
+
+/// Emacs `sgml-validate` (partial): run an external SGML parser (`onsgmls`/
+/// `nsgmls`) on the current file and report. Absent parser => honest error.
+fn sgml_validate(cx: &mut Context) {
+    let path = {
+        let doc = doc!(cx.editor);
+        doc.path().map(|p| p.to_path_buf())
+    };
+    let Some(path) = path else {
+        cx.editor
+            .set_error("sgml-validate: buffer is not visiting a file");
+        return;
+    };
+    let mut ran = None;
+    for prog in ["onsgmls", "nsgmls"] {
+        match std::process::Command::new(prog)
+            .arg("-s")
+            .arg(&path)
+            .output()
+        {
+            Ok(out) => {
+                ran = Some((prog, out));
+                break;
+            }
+            Err(_) => continue,
+        }
+    }
+    match ran {
+        Some((prog, out)) => {
+            let report = String::from_utf8_lossy(&out.stderr);
+            if report.trim().is_empty() {
+                cx.editor
+                    .set_status(format!("sgml-validate: {prog}: no errors"));
+            } else {
+                show_text_in_scratch(cx.editor, &report);
+                cx.editor
+                    .set_status(format!("sgml-validate: {prog} reported issues"));
+            }
+        }
+        None => cx
+            .editor
+            .set_error("sgml-validate: no SGML parser (onsgmls/nsgmls) found"),
+    }
+}
+
+/// Emacs `sgml-mode`: enter a generic SGML editing mode (uses the HTML grammar).
+fn sgml_mode(cx: &mut Context) {
+    enter_language_mode(cx, "html", "SGML");
+}
+
+/// Emacs `html-mode`: enter HTML editing mode (HTML grammar + tag commands).
+fn html_mode(cx: &mut Context) {
+    enter_language_mode(cx, "html", "HTML");
+}
+
+/// Emacs `htmlfontify-buffer` (partial): export the current buffer as an HTML
+/// `<pre>` block (HTML-escaped) into a scratch buffer. The pure builder in
+/// `zemacs_core::sgml::htmlfontify` supports per-face `<span style>` spans; this
+/// wrapper currently emits plain escaped text (face/colour extraction is TODO).
+fn htmlfontify_buffer(cx: &mut Context) {
+    let text = {
+        let doc = doc!(cx.editor);
+        doc.text().to_string()
+    };
+    let html = zemacs_core::sgml::htmlfontify::fontify(&text, &[]);
+    let doc_wrapped = format!(
+        "<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"></head>\n<body>\n{html}\n</body>\n</html>\n"
+    );
+    show_text_in_scratch(cx.editor, &doc_wrapped);
+    cx.editor
+        .set_status("htmlfontify-buffer: exported to scratch (no faces yet)");
+}
+
+// --------------------------------------------------------------------------
+// nroff-mode: motion over text lines (skipping `.`/`'` request lines).
+// --------------------------------------------------------------------------
+
+/// Move by nroff text lines (skipping request lines) by `cnt` and place point at
+/// the destination line's start. Shared by the forward/backward commands.
+fn nroff_move_text_line(cx: &mut Context, cnt: isize) {
+    let (line_start_char, dest) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let full = text.to_string();
+        let lines: Vec<&str> = full.split('\n').collect();
+        let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+        let cur_line = text.char_to_line(cursor);
+        let dest = zemacs_core::sgml::nroff::forward_text_line(&lines, cur_line, cnt);
+        let dest_char = if dest >= text.len_lines() {
+            text.len_chars()
+        } else {
+            text.line_to_char(dest)
+        };
+        (dest_char, dest)
+    };
+    let _ = dest;
+    let (view, doc) = current!(cx.editor);
+    doc.set_selection(view.id, Selection::point(line_start_char));
+}
+
+/// Emacs `nroff-forward-text-line` (M-n): move forward one text line, skipping
+/// nroff request lines (those starting with `.` or `'`).
+fn nroff_forward_text_line(cx: &mut Context) {
+    nroff_move_text_line(cx, 1);
+}
+
+/// Emacs `nroff-backward-text-line` (M-p): move backward one text line, skipping
+/// nroff request lines.
+fn nroff_backward_text_line(cx: &mut Context) {
+    nroff_move_text_line(cx, -1);
+}
+
+/// Emacs `nroff-count-text-lines`: count the text (non-request) lines in the
+/// region, or the whole buffer when there is no selection.
+fn nroff_count_text_lines(cx: &mut Context) {
+    let n = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let sel = doc.selection(view.id).primary();
+        let slice = if sel.from() != sel.to() {
+            text.slice(sel.from()..sel.to())
+        } else {
+            text.slice(..)
+        };
+        let s = slice.to_string();
+        let lines: Vec<&str> = s.split('\n').collect();
+        zemacs_core::sgml::nroff::count_text_lines(&lines)
+    };
+    cx.editor.set_status(format!(
+        "nroff: {n} text line{}",
+        if n == 1 { "" } else { "s" }
+    ));
+}
+
+/// Toggle state for `nroff-electric-mode`.
+static NROFF_ELECTRIC: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Emacs `nroff-mode` (partial): enter nroff editing mode. There is no nroff
+/// tree-sitter grammar, so this sets the mode flag and reports it.
+fn nroff_mode(cx: &mut Context) {
+    cx.editor
+        .set_status("nroff mode (text-line motions active; no grammar)");
+}
+
+/// Emacs `nroff-electric-mode` (partial): toggle electric close-request
+/// insertion. Tracked as a flag only (no live electric behaviour).
+fn nroff_electric_mode(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let on = !NROFF_ELECTRIC.fetch_xor(true, Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "nroff-electric-mode: {}",
+        if on { "on" } else { "off" }
+    ));
+}
+
+// --------------------------------------------------------------------------
+// TeX mode entry + external-tool driver family (emacs tex-mode / latex-mode).
+// The print/compile/view/bibtex commands spawn the real tools synchronously and
+// dump their output to a scratch buffer (partial: no async *tex-shell* comint).
+// --------------------------------------------------------------------------
+
+/// Emacs `tex-mode` (partial): enter TeX editing mode. zemacs ships only a
+/// LaTeX grammar, so plain-TeX uses it too.
+fn tex_mode(cx: &mut Context) {
+    enter_language_mode(cx, "latex", "TeX");
+}
+
+/// Emacs `latex-mode`: enter LaTeX editing mode (LaTeX grammar + tex commands).
+fn latex_mode(cx: &mut Context) {
+    enter_language_mode(cx, "latex", "LaTeX");
+}
+
+/// Toggle state for `latex-electric-env-pair-mode`.
+static LATEX_ELECTRIC_ENV: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Emacs `latex-electric-env-pair-mode` (partial): toggle auto-insertion of a
+/// matching `\end{}` when typing `\begin{}`. Tracked as a flag; the live
+/// electric insertion hook is not wired.
+fn latex_electric_env_pair_mode(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let on = !LATEX_ELECTRIC_ENV.fetch_xor(true, Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "latex-electric-env-pair-mode: {}",
+        if on { "on" } else { "off" }
+    ));
+}
+
+/// Save the buffer (if needed) and run `program` with `args` in the file's
+/// directory, dumping combined output into a scratch buffer. Returns the base
+/// path (without extension) for follow-up commands, or reports an error.
+fn tex_run_tool(cx: &mut Context, program: &str, args: &[&str], want_stem: bool) {
+    let path = {
+        let doc = doc!(cx.editor);
+        doc.path().map(|p| p.to_path_buf())
+    };
+    let Some(path) = path else {
+        cx.editor
+            .set_error(format!("{program}: buffer is not visiting a file"));
+        return;
+    };
+    let dir = path.parent().map(|p| p.to_path_buf());
+    let arg = if want_stem {
+        path.file_stem().map(std::ffi::OsString::from)
+    } else {
+        path.file_name().map(std::ffi::OsString::from)
+    };
+    let Some(arg) = arg else {
+        cx.editor.set_error(format!("{program}: bad file name"));
+        return;
+    };
+    let mut cmd = std::process::Command::new(program);
+    cmd.args(args).arg(&arg);
+    if let Some(d) = &dir {
+        cmd.current_dir(d);
+    }
+    match cmd.output() {
+        Ok(out) => {
+            let mut report = String::from_utf8_lossy(&out.stdout).into_owned();
+            report.push_str(&String::from_utf8_lossy(&out.stderr));
+            if report.trim().is_empty() {
+                report = format!("{program} finished (exit {:?})", out.status.code());
+            }
+            show_text_in_scratch(cx.editor, &report);
+            cx.editor.set_status(format!(
+                "{program}: exit {}",
+                out.status.code().unwrap_or(-1)
+            ));
+        }
+        Err(_) => cx
+            .editor
+            .set_error(format!("{program}: not found (install a TeX distribution)")),
+    }
+}
+
+/// Emacs `tex-file` (partial): run LaTeX on the current file, output to scratch.
+fn tex_file(cx: &mut Context) {
+    tex_run_tool(cx, "pdflatex", &["-interaction=nonstopmode"], false);
+}
+
+/// Emacs `tex-buffer` (partial): compile the current buffer's file with LaTeX.
+fn tex_buffer(cx: &mut Context) {
+    tex_run_tool(cx, "pdflatex", &["-interaction=nonstopmode"], false);
+}
+
+/// Emacs `tex-region` (partial): LaTeX only compiles whole files here, so this
+/// compiles the current file (no temp-file region extraction).
+fn tex_region(cx: &mut Context) {
+    tex_run_tool(cx, "pdflatex", &["-interaction=nonstopmode"], false);
+}
+
+/// Emacs `tex-compile` (partial): run LaTeX on the current file.
+fn tex_compile(cx: &mut Context) {
+    tex_run_tool(cx, "pdflatex", &["-interaction=nonstopmode"], false);
+}
+
+/// Emacs `tex-bibtex-file` (partial): run BibTeX on the current file's base name.
+fn tex_bibtex_file(cx: &mut Context) {
+    tex_run_tool(cx, "bibtex", &[], true);
+}
+
+/// Emacs `tex-view` (partial): open the compiled PDF in the OS default viewer.
+fn tex_view(cx: &mut Context) {
+    let pdf = {
+        let doc = doc!(cx.editor);
+        doc.path().map(|p| p.with_extension("pdf"))
+    };
+    match pdf {
+        Some(p) if p.exists() => match open_in_browser(&p.to_string_lossy()) {
+            Ok(()) => cx
+                .editor
+                .set_status(format!("tex-view: opening {}", p.display())),
+            Err(e) => cx.editor.set_error(format!("tex-view: {e}")),
+        },
+        Some(p) => cx.editor.set_error(format!(
+            "tex-view: {} not found (compile first)",
+            p.display()
+        )),
+        None => cx
+            .editor
+            .set_error("tex-view: buffer is not visiting a file"),
+    }
+}
+
+/// Emacs `tex-print` (partial): send the compiled PDF to the printer via `lpr`.
+fn tex_print(cx: &mut Context) {
+    let pdf = {
+        let doc = doc!(cx.editor);
+        doc.path().map(|p| p.with_extension("pdf"))
+    };
+    match pdf {
+        Some(p) if p.exists() => match std::process::Command::new("lpr").arg(&p).spawn() {
+            Ok(_) => cx
+                .editor
+                .set_status(format!("tex-print: printing {}", p.display())),
+            Err(_) => cx.editor.set_error("tex-print: `lpr` not found"),
+        },
+        Some(p) => cx.editor.set_error(format!(
+            "tex-print: {} not found (compile first)",
+            p.display()
+        )),
+        None => cx
+            .editor
+            .set_error("tex-print: buffer is not visiting a file"),
+    }
+}
+
+/// Emacs `tex-kill-job` (partial): zemacs runs TeX synchronously (no persistent
+/// `*tex-shell*` job), so there is never a background job to kill.
+fn tex_kill_job(cx: &mut Context) {
+    cx.editor
+        .set_status("tex-kill-job: no running TeX job (compiles run synchronously)");
+}
+
+/// Emacs `tex-recenter-output-buffer` (partial): the TeX output is shown in a
+/// scratch buffer at compile time; there is no separate persistent shell to
+/// recenter, so this reports that.
+fn tex_recenter_output_buffer(cx: &mut Context) {
+    cx.editor
+        .set_status("tex-recenter-output-buffer: output shown in scratch at compile time");
 }
 
 /// 16 random bytes formatted `8-4-4-4-12`, with the given version nibble and the
