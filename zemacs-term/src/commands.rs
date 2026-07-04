@@ -517,6 +517,11 @@ impl MappableCommand {
         toggle_modeline_position, "Toggle cursor position in the mode line (SPC t m p)",
         toggle_modeline_vcs, "Toggle version-control info in the mode line (SPC t m v)",
         toggle_centered_cursor, "Keep the cursor vertically centered (SPC t -)",
+        toggle_hl_line, "Highlight the current line (emacs hl-line-mode / global-hl-line-mode)",
+        toggle_electric_pair, "Auto-insert matching close delimiters (emacs electric-pair-mode)",
+        toggle_auto_revert, "Reload buffers when their file changes on disk (emacs auto-revert-mode)",
+        set_fill_prefix, "Set the fill-prefix from line start to point (emacs set-fill-prefix)",
+        set_goal_column, "Make vertical motion stick to the current column (emacs set-goal-column)",
         toggle_fill_column, "Toggle a fill-column ruler (SPC t f)",
         toggle_long_line_marker, "Toggle an 80th-column ruler (SPC t 8)",
         toggle_soft_wrap, "Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap)",
@@ -1584,11 +1589,32 @@ fn move_char_right(cx: &mut Context) {
 }
 
 fn move_line_up(cx: &mut Context) {
-    move_impl(cx, move_vertically, Direction::Backward, Movement::Move)
+    move_impl(cx, move_vertically, Direction::Backward, Movement::Move);
+    snap_to_goal_column(cx);
 }
 
 fn move_line_down(cx: &mut Context) {
-    move_impl(cx, move_vertically, Direction::Forward, Movement::Move)
+    move_impl(cx, move_vertically, Direction::Forward, Movement::Move);
+    snap_to_goal_column(cx);
+}
+
+/// Emacs `set-goal-column`: after a `next-line`/`previous-line`, if a goal column
+/// is set, land the cursor on that column (clamped to the line's length) instead
+/// of the remembered horizontal position. No-op when `goal_column` is `None`.
+fn snap_to_goal_column(cx: &mut Context) {
+    let Some(goal) = cx.editor.goal_column else {
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let line = slice.char_to_line(range.cursor(slice));
+        let line_start = slice.line_to_char(line);
+        let line_len = line_end_char_index(&slice, line) - line_start;
+        let pos = line_start + goal.min(line_len);
+        Range::point(pos)
+    });
+    doc.set_selection(view.id, selection);
 }
 
 /// Reorder two adjacent lines: line A (with its trailing newline) and the next
@@ -8901,6 +8927,96 @@ fn toggle_centered_cursor(cx: &mut Context) {
         "centered-cursor: {}",
         if on { "on" } else { "off" }
     ));
+}
+
+/// Emacs `hl-line-mode` / `global-hl-line-mode`: highlight the line the cursor
+/// is on. zemacs renders `cursorline` (see `ui/editor.rs`), so this genuinely
+/// toggles the current-line highlight. zemacs' cursorline is editor-global, so
+/// the buffer-local and global Emacs commands map to the same toggle here.
+fn toggle_hl_line(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        c.cursorline = !c.cursorline;
+        on = c.cursorline;
+    });
+    cx.editor
+        .set_status(format!("hl-line: {}", if on { "on" } else { "off" }));
+}
+
+/// Emacs `electric-pair-mode`: automatically insert the matching close delimiter
+/// when an open delimiter is typed. zemacs backs this with `auto_pairs`
+/// (`insert_char` calls `auto_pairs::hook_insert`); flipping the config toggles
+/// the live `Editor::auto_pairs` via `refresh_config`.
+fn toggle_electric_pair(cx: &mut Context) {
+    use zemacs_core::syntax::config::AutoPairConfig;
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        let enabled = !matches!(c.auto_pairs, AutoPairConfig::Enable(false));
+        on = !enabled;
+        c.auto_pairs = AutoPairConfig::Enable(on);
+    });
+    cx.editor
+        .set_status(format!("electric-pair: {}", if on { "on" } else { "off" }));
+}
+
+/// Emacs `auto-revert-mode` / `global-auto-revert-mode`: re-read a buffer from
+/// disk when its file changes outside the editor. zemacs backs this with
+/// `auto_reload` (vim `autoread`), which reloads unmodified buffers on external
+/// change. The buffer-local and global Emacs commands map to the same
+/// editor-wide toggle here.
+fn toggle_auto_revert(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        c.auto_reload = !c.auto_reload;
+        on = c.auto_reload;
+    });
+    cx.editor
+        .set_status(format!("auto-revert: {}", if on { "on" } else { "off" }));
+}
+
+/// Emacs `set-fill-prefix` (`C-x .`): store the text between the start of the
+/// current line and point as the `fill-prefix`, inserted at the front of each
+/// new line produced by auto-fill. With point at the line start the prefix is
+/// cleared (matching Emacs).
+fn set_fill_prefix(cx: &mut Context) {
+    let prefix = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let line = slice.char_to_line(cursor);
+        let line_start = slice.line_to_char(line);
+        slice.slice(line_start..cursor).to_string()
+    };
+    if prefix.is_empty() {
+        cx.editor.fill_prefix = None;
+        cx.editor.set_status("fill-prefix cancelled");
+    } else {
+        cx.editor
+            .set_status(format!("fill-prefix: \"{prefix}\""));
+        cx.editor.fill_prefix = Some(prefix);
+    }
+}
+
+/// Emacs `set-goal-column` (`C-x C-n`): make vertical line motion
+/// (`next-line`/`previous-line`) stick to the current column. Called with a
+/// prefix arg it clears the goal column (here: if a goal column is already set,
+/// this toggles it off, matching the "unset" behavior).
+fn set_goal_column(cx: &mut Context) {
+    if cx.editor.goal_column.is_some() {
+        cx.editor.goal_column = None;
+        cx.editor.set_status("goal-column cancelled");
+        return;
+    }
+    let col = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let line = slice.char_to_line(cursor);
+        cursor - slice.line_to_char(line)
+    };
+    cx.editor.goal_column = Some(col);
+    cx.editor
+        .set_status(format!("goal-column set to {col}"));
 }
 
 /// SPC t f: toggle a fill-column ruler at `text-width` (default 80).
@@ -17874,11 +17990,16 @@ pub mod insert {
                 None => return,
             }
         };
+        // Emacs `fill-prefix`: prepend it to the wrapped continuation line.
+        let mut newline = String::from("\n");
+        if let Some(prefix) = &cx.editor.fill_prefix {
+            newline.push_str(prefix);
+        }
         let doc = doc_mut!(cx.editor, &doc_id);
         let text = doc.text();
         let transaction = Transaction::change(
             text,
-            std::iter::once((ws_at, ws_at + 1, Some(Tendril::from("\n")))),
+            std::iter::once((ws_at, ws_at + 1, Some(Tendril::from(newline.as_str())))),
         );
         doc.apply(&transaction, view_id);
     }
