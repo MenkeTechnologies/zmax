@@ -29211,10 +29211,7 @@ mod indent_code_rigidly_tests {
         assert_eq!(code_region_first_line_start(text, 4), 4); // at bol of "bbb"
         assert_eq!(code_region_first_line_start(text, 1), 4); // mid "aaa" → "bbb"
         assert_eq!(code_region_first_line_start(text, 5), 8); // mid "bbb" → "ccc"
-        assert_eq!(
-            code_region_first_line_start(text, 999),
-            text.len_chars()
-        );
+        assert_eq!(code_region_first_line_start(text, 999), text.len_chars());
     }
 }
 
