@@ -20515,11 +20515,11 @@
  },
  {
   "spec_id": "emacs.command.customize",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:preferences"
+   "typable:customize"
   ],
-  "note": "emacs customize -> preferences (opens the settings/preferences UI)"
+  "note": "customize -> :customize: open the unified Preferences window on the Settings tab, where editor options can be changed and persisted (config.toml)."
  },
  {
   "spec_id": "emacs.command.delete_backward_char",
@@ -24158,11 +24158,11 @@
  },
  {
   "spec_id": "emacs.command.customize_themes",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:theme_picker"
+   "typable:customize-themes"
   ],
-  "note": "emacs customize-themes -> theme_picker (choose/enable a theme)"
+  "note": "customize-themes -> :customize-themes: open the Color Scheme tab's theme list to choose/apply a theme (alias of :customize-face)."
  },
  {
   "spec_id": "emacs.command.ffap",
@@ -33809,5 +33809,149 @@
    "static:gud_gdb_complete_command"
   ],
   "note": "Sends gdb's own `complete WORD` to the inferior in the gud comint buffer; candidates print there. No in-place command-line completion like Emacs."
+ },
+ {
+  "spec_id": "emacs.command.customize_option",
+  "status": "ported",
+  "evidence": [
+   "typable:customize-option"
+  ],
+  "note": "customize-option -> :customize-option [name]: open Settings pre-filtered to the named option (alias of :customize-variable)."
+ },
+ {
+  "spec_id": "emacs.command.customize_variable",
+  "status": "ported",
+  "evidence": [
+   "typable:customize-variable"
+  ],
+  "note": "customize-variable -> :customize-variable [name]: open Settings pre-filtered to the named option, where its value can be edited and persisted."
+ },
+ {
+  "spec_id": "emacs.command.customize_browse",
+  "status": "ported",
+  "evidence": [
+   "typable:customize-browse"
+  ],
+  "note": "customize-browse -> :customize-browse: open the Settings tab to browse all editor options (alias of :customize)."
+ },
+ {
+  "spec_id": "emacs.command.customize_face",
+  "status": "ported",
+  "evidence": [
+   "typable:customize-face"
+  ],
+  "note": "customize-face -> :customize-face: open the Color Scheme tab (theme/face editor) where face fg/bg/modifiers are edited live and saved."
+ },
+ {
+  "spec_id": "emacs.command.customize_create_theme",
+  "status": "ported",
+  "evidence": [
+   "typable:customize-create-theme"
+  ],
+  "note": "customize-create-theme -> :customize-create-theme: open the Color Scheme tab, which builds and saves a custom theme from per-scope colors (alias of :customize-face)."
+ },
+ {
+  "spec_id": "emacs.command.set_selective_display",
+  "status": "ported",
+  "evidence": [
+   "static:set_selective_display"
+  ],
+  "note": "set-selective-display (C-x $) -> hide lines indented past the numeric prefix column (only lines with < N columns of indentation stay visible), implemented over the fold model; no prefix disables it. Pure geometry in zemacs_core::selective_display (unit-tested)."
+ },
+ {
+  "spec_id": "emacs.command.set_face_foreground",
+  "status": "ported",
+  "evidence": [
+   "typable:set-face-foreground"
+  ],
+  "note": "set-face-foreground -> :set-face-foreground <face> <color>: override a theme face's foreground live (hex or named color), applied via Theme::set_style + set_theme; affects UI chrome and syntax scopes."
+ },
+ {
+  "spec_id": "emacs.command.set_face_background",
+  "status": "ported",
+  "evidence": [
+   "typable:set-face-background"
+  ],
+  "note": "set-face-background -> :set-face-background <face> <color>: override a theme face's background live, applied via Theme::set_style + set_theme."
+ },
+ {
+  "spec_id": "emacs.command.global_whitespace_toggle_options",
+  "status": "ported",
+  "evidence": [
+   "static:global_whitespace_toggle_options"
+  ],
+  "note": "global-whitespace-toggle-options -> toggle rendering of whitespace characters (whitespace.render All<->None) live in every buffer."
+ },
+ {
+  "spec_id": "emacs.command.global_tab_line_mode",
+  "status": "ported",
+  "evidence": [
+   "static:global_tab_line_mode"
+  ],
+  "note": "global-tab-line-mode -> toggle the buffer tab line (zemacs bufferline Always<->Never) live."
+ },
+ {
+  "spec_id": "emacs.command.customize_group",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-group"
+  ],
+  "note": "customize-group -> :customize-group [name]: opens Settings pre-filtered to the name; zemacs has no Customize group tree, so this is a name/substring filter over the flat option list."
+ },
+ {
+  "spec_id": "emacs.command.customize_apropos",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-apropos"
+  ],
+  "note": "customize-apropos -> :customize-apropos [text]: opens Settings pre-filtered; the filter is a case-insensitive substring match, not a full Emacs regexp."
+ },
+ {
+  "spec_id": "emacs.command.customize_unsaved",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-unsaved"
+  ],
+  "note": "customize-unsaved -> :customize-unsaved: opens Settings showing only options changed from the compiled default; zemacs does not track a separate set-vs-saved state, so this approximates 'unsaved' as 'differs from default'."
+ },
+ {
+  "spec_id": "emacs.command.customize_changed",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-changed"
+  ],
+  "note": "customize-changed -> :customize-changed: opens Settings filtered to options changed from default; zemacs has no per-version change tracking, so it shows all modified settings (alias of :customize-unsaved)."
+ },
+ {
+  "spec_id": "emacs.command.customize_saved",
+  "status": "partial",
+  "evidence": [
+   "typable:customize-saved"
+  ],
+  "note": "customize-saved -> :customize-saved: opens Settings filtered to modified options; zemacs cannot distinguish saved from merely-set, so both appear (alias of :customize-unsaved)."
+ },
+ {
+  "spec_id": "emacs.command.set_right_margin",
+  "status": "partial",
+  "evidence": [
+   "typable:set-right-margin"
+  ],
+  "note": "set-right-margin -> :set-right-margin [n]: zemacs has no persistent right-margin text property, so it re-fills the region to n columns narrower than text-width (the observable effect of a right margin on refill), reusing fill_paragraph."
+ },
+ {
+  "spec_id": "emacs.command.set_fringe_style",
+  "status": "partial",
+  "evidence": [
+   "typable:set-fringe-style"
+  ],
+  "note": "set-fringe-style -> :set-fringe-style [none|default]: the TUI has no pixel fringe; maps to the left gutter, clearing (none) or restoring (default) the gutter layout via config."
+ },
+ {
+  "spec_id": "emacs.command.global_visual_wrap_prefix_mode",
+  "status": "partial",
+  "evidence": [
+   "static:global_visual_wrap_prefix_mode"
+  ],
+  "note": "global-visual-wrap-prefix-mode -> toggle soft-wrap with indentation carry-over (max-indent-retain); zemacs has no prefix-only mode, so continuation lines keep indentation only when soft-wrap is on."
  }
 ]
