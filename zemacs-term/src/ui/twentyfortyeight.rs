@@ -90,7 +90,7 @@ impl Game {
         let pick = (self.rand() % empties.len() as u64) as usize;
         let (r, c) = empties[pick];
         // ~90% twos, ~10% fours.
-        self.board[r][c] = if self.rand() % 10 == 0 { 4 } else { 2 };
+        self.board[r][c] = if self.rand().is_multiple_of(10) { 4 } else { 2 };
         true
     }
 

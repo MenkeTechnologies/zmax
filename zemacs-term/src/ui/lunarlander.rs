@@ -341,7 +341,7 @@ impl Component for LunarLander {
         // The lander (skip if somehow off-board).
         let lcol = (self.game.x / 10).clamp(0, W as i32 - 1) as i16;
         let lrow = (self.game.y / 10) as i16;
-        if lrow >= 0 && lrow < H && lcol >= 0 && lcol < W {
+        if (0..H).contains(&lrow) && (0..W).contains(&lcol) {
             let (lx, ly) = cell(lrow, lcol);
             let glyph = if self.game.outcome == Outcome::Crashed || self.game.tilt.abs() > 1 {
                 "A"
@@ -356,7 +356,7 @@ impl Component for LunarLander {
             if self.game.side_t > 0 {
                 // Exhaust puffs opposite the push direction.
                 let fc = lcol - self.game.side_dir;
-                if fc >= 0 && fc < W {
+                if (0..W).contains(&fc) {
                     let (fx, fy) = cell(lrow, fc);
                     let puff = if self.game.side_dir > 0 { "<" } else { ">" };
                     surface.set_string(fx, fy, puff, flame_style);

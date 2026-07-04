@@ -179,7 +179,7 @@ impl Game {
             let (hr, hc) = self.chains[ci].segs[0];
             let dir = self.chains[ci].dir;
             let nc = hc + dir;
-            let blocked = nc < 0 || nc >= W || self.mushrooms.contains(&(hr, nc));
+            let blocked = !(0..W).contains(&nc) || self.mushrooms.contains(&(hr, nc));
             let (new_head, new_dir) = if blocked {
                 let mut nr = hr + 1;
                 if nr >= H {
@@ -352,7 +352,7 @@ impl Component for Centipede {
             surface.set_string(ox + c as u16, oy + H as u16, "─", mush_style);
         }
 
-        let on_board = |r: i16, c: i16| r >= 0 && r < H && c >= 0 && c < W;
+        let on_board = |r: i16, c: i16| (0..H).contains(&r) && (0..W).contains(&c);
         for &(r, c) in &self.game.mushrooms {
             if on_board(r, c) {
                 surface.set_string(ox + c as u16, oy + r as u16, "♣", mush_style);

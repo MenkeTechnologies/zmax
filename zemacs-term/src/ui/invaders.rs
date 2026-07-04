@@ -188,7 +188,7 @@ impl Game {
     /// With `1/BOMB_CHANCE` odds, drop a bomb from the bottom alien of a random
     /// column.
     fn maybe_drop_bomb(&mut self) {
-        if self.rand() % BOMB_CHANCE != 0 {
+        if !self.rand().is_multiple_of(BOMB_CHANCE) {
             return;
         }
         let col = (self.rand() % COLS as u64) as usize;

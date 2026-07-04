@@ -126,7 +126,7 @@ impl Game {
         let mut ids = vec![-1i32; W * H];
         for (sid, &len) in FLEET.iter().enumerate() {
             loop {
-                let horiz = self.rand() % 2 == 0;
+                let horiz = self.rand().is_multiple_of(2);
                 let (span_r, span_c) = if horiz {
                     (H, W - len + 1)
                 } else {

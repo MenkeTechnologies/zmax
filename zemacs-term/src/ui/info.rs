@@ -79,7 +79,7 @@ fn grid(
     let content: usize = cw.iter().sum();
     let gaps = cols.saturating_sub(1);
     let leftover = budget.saturating_sub(content + SEP * gaps);
-    let gap_base = if gaps > 0 { SEP + leftover / gaps } else { 0 };
+    let gap_base = leftover.checked_div(gaps).map_or(0, |q| SEP + q);
     let gap_extra = if gaps > 0 { leftover % gaps } else { 0 };
 
     let mut out = String::new();
@@ -104,6 +104,60 @@ fn grid(
     // The grid spans the full inner width.
     let width = budget;
     (out, width, visible, rows_total, cols)
+}
+
+impl Component for Info {
+    fn render(&mut self, viewport: Rect, surface: &mut Surface, cx: &mut Context) {
+        let text_style = cx.editor.theme.get("ui.text.info");
+        let popup_style = cx.editor.theme.get("ui.popup.info");
+
+        // Cap body height at ~the frame minus chrome, and never taller than
+        // MAX_ROWS (Spacemacs-style short grid); overflow scrolls.
+        let avail = (viewport.height as usize).saturating_sub(6);
+        let cap = avail.clamp(1, MAX_ROWS);
+
+        let lines: Vec<&str> = self.text.lines().collect();
+        let (text, body_w, body_h, rows_total, _cols) =
+            grid(&lines, self.scroll as usize, cap, viewport.width as usize);
+
+        // Clamp the stored scroll so PgDn past the end / a shrunk map is corrected.
+        let scrollable = rows_total > body_h;
+        let max_scroll = rows_total.saturating_sub(body_h);
+        self.scroll = (self.scroll as usize).min(max_scroll) as u16;
+
+        // Borderless, full editor width, anchored at the bottom (above the
+        // statusline) — Spacemacs' which-key bar has no box, the content sits
+        // flush against the modeline. The grid itself (`body_w`) is distributed
+        // to fill the width, so there is no dead space inside the bar.
+        let _ = body_w;
+        let height = body_h as u16;
+        let area = viewport.intersection(Rect::new(
+            viewport.x,
+            viewport.y + viewport.height.saturating_sub(height + 1),
+            viewport.width,
+            height,
+        ));
+        surface.clear_with(area, popup_style);
+
+        // One column of horizontal padding so content isn't jammed on the edge.
+        let inner = area.inner(Margin::horizontal(1));
+        Paragraph::new(&Text::from(text.as_str()))
+            .style(text_style)
+            .render(inner, surface);
+
+        // With no title bar to host it, surface a compact scroll indicator at the
+        // top-right only when the map overflows (PgDn/PgUp / wheel still scroll).
+        if scrollable && area.height > 0 {
+            let pct = (self.scroll as usize * 100)
+                .checked_div(max_scroll)
+                .unwrap_or(0);
+            let ind = format!(" {pct}%  PgDn/PgUp ");
+            let w = ind.chars().count() as u16;
+            if area.width > w {
+                surface.set_string(area.x + area.width - w, area.y, &ind, popup_style);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -181,60 +235,6 @@ mod tests {
                 "grid must span the full inner width for w={w}"
             );
             assert!((1..=8).contains(&cols), "cols out of 1..=8: {cols}");
-        }
-    }
-}
-
-impl Component for Info {
-    fn render(&mut self, viewport: Rect, surface: &mut Surface, cx: &mut Context) {
-        let text_style = cx.editor.theme.get("ui.text.info");
-        let popup_style = cx.editor.theme.get("ui.popup.info");
-
-        // Cap body height at ~the frame minus chrome, and never taller than
-        // MAX_ROWS (Spacemacs-style short grid); overflow scrolls.
-        let avail = (viewport.height as usize).saturating_sub(6);
-        let cap = avail.clamp(1, MAX_ROWS);
-
-        let lines: Vec<&str> = self.text.lines().collect();
-        let (text, body_w, body_h, rows_total, _cols) =
-            grid(&lines, self.scroll as usize, cap, viewport.width as usize);
-
-        // Clamp the stored scroll so PgDn past the end / a shrunk map is corrected.
-        let scrollable = rows_total > body_h;
-        let max_scroll = rows_total.saturating_sub(body_h);
-        self.scroll = (self.scroll as usize).min(max_scroll) as u16;
-
-        // Borderless, full editor width, anchored at the bottom (above the
-        // statusline) — Spacemacs' which-key bar has no box, the content sits
-        // flush against the modeline. The grid itself (`body_w`) is distributed
-        // to fill the width, so there is no dead space inside the bar.
-        let _ = body_w;
-        let height = body_h as u16;
-        let area = viewport.intersection(Rect::new(
-            viewport.x,
-            viewport.y + viewport.height.saturating_sub(height + 1),
-            viewport.width,
-            height,
-        ));
-        surface.clear_with(area, popup_style);
-
-        // One column of horizontal padding so content isn't jammed on the edge.
-        let inner = area.inner(Margin::horizontal(1));
-        Paragraph::new(&Text::from(text.as_str()))
-            .style(text_style)
-            .render(inner, surface);
-
-        // With no title bar to host it, surface a compact scroll indicator at the
-        // top-right only when the map overflows (PgDn/PgUp / wheel still scroll).
-        if scrollable && area.height > 0 {
-            let pct = (self.scroll as usize * 100)
-                .checked_div(max_scroll)
-                .unwrap_or(0);
-            let ind = format!(" {pct}%  PgDn/PgUp ");
-            let w = ind.chars().count() as u16;
-            if area.width > w {
-                surface.set_string(area.x + area.width - w, area.y, &ind, popup_style);
-            }
         }
     }
 }

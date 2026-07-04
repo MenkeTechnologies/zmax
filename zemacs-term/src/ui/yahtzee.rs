@@ -110,8 +110,8 @@ pub fn score_category(dice: &[u8; 5], cat: Category) -> u32 {
             }
         }
         Category::FullHouse => {
-            let has3 = counts.iter().any(|&c| c == 3);
-            let has2 = counts.iter().any(|&c| c == 2);
+            let has3 = counts.contains(&3);
+            let has2 = counts.contains(&2);
             if has3 && has2 {
                 25
             } else {
@@ -138,7 +138,7 @@ pub fn score_category(dice: &[u8; 5], cat: Category) -> u32 {
             }
         }
         Category::Yahtzee => {
-            if counts.iter().any(|&c| c == 5) {
+            if counts.contains(&5) {
                 50
             } else {
                 0

@@ -124,7 +124,7 @@ impl Game {
         if self.state != State::Playing {
             return;
         }
-        if color < 1 || color > COLORS {
+        if !(1..=COLORS).contains(&color) {
             return;
         }
         if self.current.len() < PEGS {

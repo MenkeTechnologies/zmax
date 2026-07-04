@@ -36,7 +36,7 @@ impl Rain {
         // Stagger initial drops so the field fills in over the first frames.
         for c in 0..cols {
             let v = r.rand();
-            if v % 3 == 0 {
+            if v.is_multiple_of(3) {
                 r.heads[c] = Some(-((v % rows.max(1) as u64) as i16));
                 r.trail[c] = 3 + (v % 6) as i16;
             }
@@ -66,7 +66,7 @@ impl Rain {
                     }
                 }
                 None => {
-                    if self.rand() % 8 == 0 {
+                    if self.rand().is_multiple_of(8) {
                         self.heads[c] = Some(0);
                         self.trail[c] = 3 + (self.rand() % 8) as i16;
                     }

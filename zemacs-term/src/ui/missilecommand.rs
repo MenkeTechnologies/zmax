@@ -28,7 +28,7 @@ const WAVE_BONUS: u32 = 25;
 const CITY_COLS: [i16; 6] = [4, 10, 16, 32, 38, 44];
 
 fn on_board(r: i16, c: i16) -> bool {
-    r >= 0 && r < H && c >= 0 && c < W
+    (0..H).contains(&r) && (0..W).contains(&c)
 }
 
 /// A defended city sitting along the bottom row.

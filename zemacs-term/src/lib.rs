@@ -3,6 +3,10 @@
 // be "broken" in a public-docs build this binary crate never produces. Genuinely
 // unresolved links (`broken_intra_doc_links`) remain denied.
 #![allow(rustdoc::private_intra_doc_links)]
+// The bundled games (`ui/*`) are grid-based and index their boards by row/column
+// on purpose; `for i in 0..N { board[i] }` reads clearer there than an iterator
+// adapter, so the range-loop style lint is allowed crate-wide.
+#![allow(clippy::needless_range_loop)]
 
 #[macro_use]
 extern crate zemacs_view;
