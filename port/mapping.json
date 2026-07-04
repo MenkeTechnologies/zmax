@@ -30013,73 +30013,73 @@
   "spec_id": "emacs.command.picture_mode",
   "status": "ported",
   "evidence": [
-   "static:picture"
+   "static:picture_mode"
   ],
-  "note": "emacs picture-mode -> zemacs picture overlay"
+  "note": "emacs picture-mode -> zemacs picture_mode: Editor.picture_mode flag; self-insert overwrites+advances"
  },
  {
   "spec_id": "emacs.command.picture_movement_right",
   "status": "ported",
   "evidence": [
-   "key:picture:A->"
+   "static:picture_movement_right"
   ],
-  "note": "emacs picture-movement-right -> zemacs picture overlay"
+  "note": "emacs picture-movement-right -> zemacs picture_movement_right: sets Editor.picture_dir"
  },
  {
   "spec_id": "emacs.command.picture_movement_left",
   "status": "ported",
   "evidence": [
-   "key:picture:A-<"
+   "static:picture_movement_left"
   ],
-  "note": "emacs picture-movement-left -> zemacs picture overlay"
+  "note": "emacs picture-movement-left -> zemacs picture_movement_left: sets Editor.picture_dir"
  },
  {
   "spec_id": "emacs.command.picture_movement_up",
   "status": "ported",
   "evidence": [
-   "key:picture:A-^"
+   "static:picture_movement_up"
   ],
-  "note": "emacs picture-movement-up -> zemacs picture overlay"
+  "note": "emacs picture-movement-up -> zemacs picture_movement_up: sets Editor.picture_dir"
  },
  {
   "spec_id": "emacs.command.picture_movement_down",
   "status": "ported",
   "evidence": [
-   "key:picture:A-v"
+   "static:picture_movement_down"
   ],
-  "note": "emacs picture-movement-down -> zemacs picture overlay"
+  "note": "emacs picture-movement-down -> zemacs picture_movement_down: sets Editor.picture_dir"
  },
  {
   "spec_id": "emacs.command.picture_movement_nw",
   "status": "ported",
   "evidence": [
-   "key:picture:A-7"
+   "static:picture_movement_nw"
   ],
-  "note": "emacs picture-movement-nw -> zemacs picture overlay"
+  "note": "emacs picture-movement-nw -> zemacs picture_movement_nw: sets Editor.picture_dir"
  },
  {
   "spec_id": "emacs.command.picture_movement_ne",
   "status": "ported",
   "evidence": [
-   "key:picture:A-9"
+   "static:picture_movement_ne"
   ],
-  "note": "emacs picture-movement-ne -> zemacs picture overlay"
+  "note": "emacs picture-movement-ne -> zemacs picture_movement_ne: sets Editor.picture_dir"
  },
  {
   "spec_id": "emacs.command.picture_movement_sw",
   "status": "ported",
   "evidence": [
-   "key:picture:A-1"
+   "static:picture_movement_sw"
   ],
-  "note": "emacs picture-movement-sw -> zemacs picture overlay"
+  "note": "emacs picture-movement-sw -> zemacs picture_movement_sw: sets Editor.picture_dir"
  },
  {
   "spec_id": "emacs.command.picture_movement_se",
   "status": "ported",
   "evidence": [
-   "key:picture:A-3"
+   "static:picture_movement_se"
   ],
-  "note": "emacs picture-movement-se -> zemacs picture overlay"
+  "note": "emacs picture-movement-se -> zemacs picture_movement_se: sets Editor.picture_dir"
  },
  {
   "spec_id": "emacs.command.picture_clear_rectangle",
@@ -30272,5 +30272,101 @@
    "key:calendar:h"
   ],
   "note": "emacs calendar-mark-holidays -> zemacs calendar overlay"
+ },
+ {
+  "spec_id": "emacs.command.picture_motion",
+  "status": "ported",
+  "evidence": [
+   "static:picture_motion"
+  ],
+  "note": "emacs picture-motion -> zemacs picture_motion: move point in drawing dir, padding"
+ },
+ {
+  "spec_id": "emacs.command.picture_motion_reverse",
+  "status": "ported",
+  "evidence": [
+   "static:picture_motion_reverse"
+  ],
+  "note": "emacs picture-motion-reverse -> zemacs picture_motion_reverse: move opposite drawing dir"
+ },
+ {
+  "spec_id": "emacs.command.picture_set_tab_stops",
+  "status": "ported",
+  "evidence": [
+   "static:picture_set_tab_stops"
+  ],
+  "note": "emacs picture-set-tab-stops -> zemacs picture_set_tab_stops: stops at word starts (picture::set_tab_stops)"
+ },
+ {
+  "spec_id": "emacs.command.picture_tab",
+  "status": "ported",
+  "evidence": [
+   "static:picture_tab"
+  ],
+  "note": "emacs picture-tab -> zemacs picture_tab: move to next tab stop, padding"
+ },
+ {
+  "spec_id": "emacs.command.picture_tab_search",
+  "status": "partial",
+  "evidence": [
+   "static:picture_tab_search"
+  ],
+  "note": "emacs picture-tab-search -> zemacs picture_tab_search: moves under next word-start in nearest non-blank line above; 'interesting char' heuristic is word-start only"
+ },
+ {
+  "spec_id": "emacs.command.picture_open_line",
+  "status": "ported",
+  "evidence": [
+   "static:picture_open_line"
+  ],
+  "note": "emacs picture-open-line -> zemacs picture_open_line: split line at point, keep point"
+ },
+ {
+  "spec_id": "emacs.command.picture_clear_line",
+  "status": "ported",
+  "evidence": [
+   "static:picture_clear_line"
+  ],
+  "note": "emacs picture-clear-line -> zemacs picture_clear_line: clear to end of line (no-arg form)"
+ },
+ {
+  "spec_id": "emacs.command.picture_clear_column",
+  "status": "ported",
+  "evidence": [
+   "static:picture_clear_column"
+  ],
+  "note": "emacs picture-clear-column -> zemacs picture_clear_column: overwrite N cells after point with spaces (picture::clear_columns)"
+ },
+ {
+  "spec_id": "emacs.command.picture_backward_clear_column",
+  "status": "ported",
+  "evidence": [
+   "static:picture_backward_clear_column"
+  ],
+  "note": "emacs picture-backward-clear-column -> zemacs picture_backward_clear_column: move back N cols and blank them"
+ },
+ {
+  "spec_id": "emacs.command.picture_clear_rectangle_to_register",
+  "status": "ported",
+  "evidence": [
+   "static:picture_clear_rectangle_to_register"
+  ],
+  "note": "emacs picture-clear-rectangle-to-register -> zemacs picture_clear_rectangle_to_register: saves rectangle to register (emacs_register::set_rect) then blanks it"
+ },
+ {
+  "spec_id": "emacs.command.picture_yank_rectangle",
+  "status": "ported",
+  "evidence": [
+   "static:picture_yank_rectangle"
+  ],
+  "note": "emacs picture-yank-rectangle -> zemacs picture_yank_rectangle: overlay killed rectangle overwriting cells (picture::overlay_rectangle)"
+ },
+ {
+  "spec_id": "emacs.command.picture_yank_rectangle_from_register",
+  "status": "ported",
+  "evidence": [
+   "static:picture_yank_rectangle_from_register"
+  ],
+  "note": "emacs picture-yank-rectangle-from-register -> zemacs picture_yank_rectangle_from_register: overlay a register's rectangle overwriting cells"
  }
 ]
