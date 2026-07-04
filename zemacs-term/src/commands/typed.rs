@@ -9462,6 +9462,104 @@ fn unhighlight_regexp(
     Ok(())
 }
 
+/// `:highlight-symbol-at-point` — Emacs `highlight-symbol-at-point` (`M-s h .`):
+/// add a persistent Hi-Lock highlight for every whole-word occurrence of the
+/// symbol under the primary cursor.
+fn highlight_symbol_at_point(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let symbol = word_under_cursor(cx.editor);
+    let Some(pattern) = crate::hi_lock::symbol_regexp(&symbol) else {
+        anyhow::bail!("no symbol at point");
+    };
+    crate::hi_lock::add(&pattern, false).map_err(|e| anyhow!("highlight-symbol-at-point: {e}"))?;
+    cx.editor.set_status(format!("Highlighting /{pattern}/"));
+    Ok(())
+}
+
+/// `:hi-lock-write-interactive-patterns` — Emacs
+/// `hi-lock-write-interactive-patterns`: insert the active Hi-Lock patterns at
+/// point as commented `Hi-lock:` lines so they persist in the file and can be
+/// re-loaded with `hi-lock-find-patterns`.
+fn hi_lock_write_interactive_patterns(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let sources = crate::hi_lock::sources();
+    if sources.is_empty() {
+        anyhow::bail!("there are no interactive patterns");
+    }
+    let loader = cx.editor.syn_loader.load();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    // Comment the inserted lines with the buffer's line comment token (Emacs
+    // `comment-region`); default to `#` when the language has none.
+    let byte = text.char_to_byte(cursor);
+    let comment = doc
+        .language_config_at(&loader, byte)
+        .and_then(|config| config.comment_tokens.as_ref())
+        .and_then(|tokens| tokens.first())
+        .map(String::as_str)
+        .unwrap_or(zemacs_core::comment::DEFAULT_COMMENT_TOKEN);
+    let mut block = String::new();
+    for line in crate::hi_lock::write_patterns_lines(&sources) {
+        block.push_str(comment);
+        block.push(' ');
+        block.push_str(&line);
+        block.push_str(doc.line_ending.as_str());
+    }
+    let insert = Transaction::insert(text, doc.selection(view.id), block.as_str().into());
+    doc.apply(&insert, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor
+        .set_status(format!("Wrote {} Hi-Lock pattern(s)", sources.len()));
+    Ok(())
+}
+
+/// `:hi-lock-find-patterns` — Emacs `hi-lock-find-patterns`: scan the head of
+/// the buffer for commented `Hi-lock:` pattern lines and activate their
+/// highlights.
+fn hi_lock_find_patterns(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (_view, doc) = current_ref!(cx.editor);
+    // Only the first `hi_lock::FILE_PATTERNS_RANGE` bytes are scanned; take a head
+    // slice so a large buffer is not fully stringified.
+    let text = doc.text();
+    let end = text
+        .byte_to_char(crate::hi_lock::FILE_PATTERNS_RANGE.min(text.len_bytes()));
+    let head = text.slice(..end).to_string();
+    let patterns = crate::hi_lock::find_patterns(&head, crate::hi_lock::FILE_PATTERNS_RANGE);
+    if patterns.is_empty() {
+        cx.editor.set_status("No Hi-Lock patterns found");
+        return Ok(());
+    }
+    let mut added = 0usize;
+    for pat in &patterns {
+        if crate::hi_lock::add(pat, false).is_ok() {
+            added += 1;
+        }
+    }
+    cx.editor
+        .set_status(format!("Hi-Lock added {added} pattern(s)"));
+    Ok(())
+}
+
 /// `:outline-show-by-heading-regexp <regex>` — Emacs
 /// `outline-show-by-heading-regexp`: reveal the subtree of every heading whose
 /// line matches the regexp, opening any folds that were hiding it.
@@ -31167,6 +31265,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "highlight-symbol-at-point",
+        aliases: &["hi-lock-face-symbol-at-point"],
+        doc: "Highlight every whole-word occurrence of the symbol under the cursor (emacs highlight-symbol-at-point).",
+        fun: highlight_symbol_at_point,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "hi-lock-write-interactive-patterns",
+        aliases: &[],
+        doc: "Insert the active Hi-Lock patterns at point as commented Hi-lock: lines (emacs hi-lock-write-interactive-patterns).",
+        fun: hi_lock_write_interactive_patterns,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "hi-lock-find-patterns",
+        aliases: &[],
+        doc: "Activate Hi-Lock highlights from commented Hi-lock: lines at the top of the buffer (emacs hi-lock-find-patterns).",
+        fun: hi_lock_find_patterns,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

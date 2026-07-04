@@ -808,6 +808,9 @@
 | `:highlight-phrase` | Highlight the phrase, matching across whitespace/line breaks (emacs highlight-phrase). |
 | `:highlight-lines-matching-regexp` | Highlight whole lines matching the regexp (emacs highlight-lines-matching-regexp). |
 | `:unhighlight-regexp` | Remove the highlight for the regexp, or all highlights if none given (emacs unhighlight-regexp). |
+| `:highlight-symbol-at-point`, `:hi-lock-face-symbol-at-point` | Highlight every whole-word occurrence of the symbol under the cursor (emacs highlight-symbol-at-point). |
+| `:hi-lock-write-interactive-patterns` | Insert the active Hi-Lock patterns at point as commented Hi-lock: lines (emacs hi-lock-write-interactive-patterns). |
+| `:hi-lock-find-patterns` | Activate Hi-Lock highlights from commented Hi-lock: lines at the top of the buffer (emacs hi-lock-find-patterns). |
 | `:outline-hide-by-heading-regexp` | Fold the subtree of every heading whose line matches the regexp (emacs outline-hide-by-heading-regexp). |
 | `:outline-show-by-heading-regexp` | Reveal the subtree of every heading whose line matches the regexp (emacs outline-show-by-heading-regexp). |
 | `:set-fill-column` | Set the fill width to N, or the current cursor column if omitted (emacs set-fill-column). |

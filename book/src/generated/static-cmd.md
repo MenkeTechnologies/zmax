@@ -932,6 +932,12 @@
 | `snake` | Play snake (emacs snake) |  |
 | `tetris` | Play tetris (emacs tetris) |  |
 | `pong` | Play pong against the computer (emacs pong) |  |
+| `space_invaders` | Play Space Invaders |  |
+| `breakout` | Play Breakout, the brick-breaker |  |
+| `asteroids` | Play Asteroids |  |
+| `frogger` | Play Frogger, cross the traffic |  |
+| `twenty_forty_eight` | Play 2048, the sliding-tile puzzle |  |
+| `minesweeper` | Play Minesweeper |  |
 | `zone` | Run the zone screen-saver (emacs zone) |  |
 | `decipher` | Solve a cryptogram (emacs decipher) |  |
 | `dunnet` | Play the dunnet text adventure (emacs dunnet) |  |

@@ -28589,6 +28589,30 @@
   "note": "emacs unhighlight-regexp -> :unhighlight-regexp [<regex>]: remove one Hi-Lock highlight, or all when no argument is given"
  },
  {
+  "spec_id": "emacs.command.highlight_symbol_at_point",
+  "status": "ported",
+  "evidence": [
+   "typable:highlight-symbol-at-point"
+  ],
+  "note": "emacs highlight-symbol-at-point (M-s h .) -> :highlight-symbol-at-point: Hi-Lock the symbol under the cursor as a whole-word regexp (crate::hi_lock::symbol_regexp + add)"
+ },
+ {
+  "spec_id": "emacs.command.hi_lock_write_interactive_patterns",
+  "status": "ported",
+  "evidence": [
+   "typable:hi-lock-write-interactive-patterns"
+  ],
+  "note": "emacs hi-lock-write-interactive-patterns -> :hi-lock-write-interactive-patterns: insert active Hi-Lock patterns at point as commented Hi-lock: font-lock-keyword lines"
+ },
+ {
+  "spec_id": "emacs.command.hi_lock_find_patterns",
+  "status": "ported",
+  "evidence": [
+   "typable:hi-lock-find-patterns"
+  ],
+  "note": "emacs hi-lock-find-patterns -> :hi-lock-find-patterns: scan the first 10000 bytes for commented Hi-lock: lines and activate their highlights"
+ },
+ {
   "spec_id": "emacs.command.outline_hide_by_heading_regexp",
   "status": "ported",
   "evidence": [

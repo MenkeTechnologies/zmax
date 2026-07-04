@@ -98,6 +98,111 @@ pub fn viewport_matches(text: &str, patterns: &[Pattern]) -> Vec<(usize, usize, 
     out
 }
 
+/// Default byte limit for scanning a buffer for file-local `Hi-lock:` patterns,
+/// mirroring Emacs `hi-lock-file-patterns-range` (10000).
+pub const FILE_PATTERNS_RANGE: usize = 10000;
+
+/// The tag Emacs writes/reads for file-local Hi-Lock patterns
+/// (`hi-lock-file-patterns-prefix`), always followed by a colon.
+pub const FILE_PATTERNS_PREFIX: &str = "Hi-lock";
+
+/// Emacs `highlight-symbol-at-point`: build the regexp that highlights every
+/// occurrence of `symbol` as a whole word. Emacs uses
+/// `find-tag-default-as-symbol-regexp`, which wraps the regexp-quoted symbol in
+/// symbol boundaries (`\_<`…`\_>`); the Rust `regex` crate has no symbol-boundary
+/// escape, so the faithful equivalent is a word boundary (`\b`) on each side.
+/// Returns `None` for an empty/blank symbol.
+pub fn symbol_regexp(symbol: &str) -> Option<String> {
+    let symbol = symbol.trim();
+    if symbol.is_empty() {
+        return None;
+    }
+    Some(format!(r"\b{}\b", regex::escape(symbol)))
+}
+
+/// Emacs `hi-lock-write-interactive-patterns`: serialize each active pattern
+/// `src` to a `Hi-lock:` line in the font-lock-keyword form Emacs writes, e.g.
+/// `Hi-lock: (("foo" (0 (quote hi-yellow) t)))`. The caller comments the lines
+/// with the buffer's comment token before inserting them; [`find_patterns`]
+/// reads them back. Faces are fixed to `hi-yellow` because zemacs assigns each
+/// highlight a colour by index rather than by a stored face.
+pub fn write_patterns_lines(sources: &[String]) -> Vec<String> {
+    sources
+        .iter()
+        .map(|src| {
+            // prin1 escapes backslashes and double quotes inside the string.
+            let escaped = src.replace('\\', r"\\").replace('"', r#"\""#);
+            format!("{FILE_PATTERNS_PREFIX}: ((\"{escaped}\" (0 (quote hi-yellow) t)))")
+        })
+        .collect()
+}
+
+/// Extract the first double-quoted string that follows a `Hi-lock:` tag on a
+/// line (the regexp inside the font-lock keyword), un-escaping `\"` and `\\`.
+fn read_quoted_regexp(after_tag: &str) -> Option<String> {
+    let bytes = after_tag.as_bytes();
+    let start = after_tag.find('"')? + 1;
+    let mut out = String::new();
+    let mut i = start;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\\' if i + 1 < bytes.len() => {
+                // Preserve the escape for regex metacharacters, but collapse the
+                // prin1 escapes for a literal quote / backslash.
+                let next = bytes[i + 1];
+                if next == b'"' || next == b'\\' {
+                    out.push(next as char);
+                } else {
+                    out.push('\\');
+                    out.push(next as char);
+                }
+                i += 2;
+            }
+            b'"' => return Some(out),
+            _ => {
+                // Copy the whole UTF-8 char starting at i.
+                let ch = after_tag[i..].chars().next().unwrap();
+                out.push(ch);
+                i += ch.len_utf8();
+            }
+        }
+    }
+    None
+}
+
+/// Emacs `hi-lock-find-patterns`: scan the head of `text` for file-local
+/// `Hi-lock:` pattern lines and return the regexps they carry. Faithful to the
+/// Emacs reader: the first `Hi-lock:` tag must begin within `range` bytes of the
+/// buffer start; each subsequent tag must begin within 100 bytes of the previous
+/// one; scanning stops at a `Hi-lock:` tag whose remainder is `end`.
+pub fn find_patterns(text: &str, range: usize) -> Vec<String> {
+    let tag = format!("{FILE_PATTERNS_PREFIX}:");
+    let mut out = Vec::new();
+    let Some(mut pos) = text.find(&tag) else {
+        return out;
+    };
+    if pos >= range {
+        return out;
+    }
+    loop {
+        let after = &text[pos + tag.len()..];
+        // `looking-at "\\s-*end"`: the region after the colon is the terminator.
+        if after.trim_start().starts_with("end") {
+            break;
+        }
+        if let Some(rx) = read_quoted_regexp(after) {
+            out.push(rx);
+        }
+        // Next tag must appear within 100 bytes of this one (Emacs `(+ (point) 100)`).
+        let search_from = pos + tag.len();
+        match text[search_from..].find(&tag) {
+            Some(rel) if rel <= 100 => pos = search_from + rel,
+            _ => break,
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -135,5 +240,47 @@ mod tests {
         let pats = [pat("cat", false), pat("dog", false)];
         let m = viewport_matches(text, &pats);
         assert_eq!(m, vec![(0, 3, 0), (4, 7, 1)]);
+    }
+
+    #[test]
+    fn symbol_regexp_word_bounds_and_escapes() {
+        assert_eq!(symbol_regexp("foo").as_deref(), Some(r"\bfoo\b"));
+        // Regex metacharacters in the symbol are quoted.
+        assert_eq!(symbol_regexp("a.b+").as_deref(), Some(r"\ba\.b\+\b"));
+        assert_eq!(symbol_regexp("   ").as_deref(), None);
+        assert_eq!(symbol_regexp("").as_deref(), None);
+    }
+
+    #[test]
+    fn write_then_find_round_trips() {
+        let srcs = vec![r"\bTODO\b".to_string(), "foo".to_string()];
+        let lines = write_patterns_lines(&srcs);
+        assert_eq!(
+            lines[0],
+            r#"Hi-lock: (("\\bTODO\\b" (0 (quote hi-yellow) t)))"#
+        );
+        // The written lines, read back, recover the original regexps.
+        let doc = lines.join("\n");
+        assert_eq!(find_patterns(&doc, FILE_PATTERNS_RANGE), srcs);
+    }
+
+    #[test]
+    fn find_patterns_stops_at_end_and_honours_range() {
+        let text = "// Hi-lock: ((\"aaa\" (0 (quote hi-yellow) t)))\n\
+                    // Hi-lock: ((\"bbb\" (0 (quote hi-yellow) t)))\n\
+                    // Hi-lock: end\n\
+                    // Hi-lock: ((\"ccc\" (0 (quote hi-yellow) t)))\n";
+        assert_eq!(
+            find_patterns(text, FILE_PATTERNS_RANGE),
+            vec!["aaa".to_string(), "bbb".to_string()]
+        );
+        // First tag past the range is ignored entirely.
+        assert!(find_patterns(text, 1).is_empty());
+    }
+
+    #[test]
+    fn find_patterns_unescapes_quotes_and_backslashes() {
+        let line = r#"; Hi-lock: (("a\"b\\c" (0 (quote hi-yellow) t)))"#;
+        assert_eq!(find_patterns(line, FILE_PATTERNS_RANGE), vec![r#"a"b\c"#]);
     }
 }
