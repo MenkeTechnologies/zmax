@@ -30170,6 +30170,190 @@
   "note": "emacs table-insert-column -> zemacs table overlay"
  },
  {
+  "spec_id": "emacs.command.table_recognize",
+  "status": "ported",
+  "evidence": [
+   "static:table_recognize"
+  ],
+  "note": "parses the ASCII table at point into zemacs_core::table (recognize) and reports its dimensions; buffer tables are plain text so this is a re-parse, not a persistent activation"
+ },
+ {
+  "spec_id": "emacs.command.table_recognize_region",
+  "status": "ported",
+  "evidence": [
+   "static:table_recognize_region"
+  ],
+  "note": "recognizes the table grid inside the current selection and reports its dimensions"
+ },
+ {
+  "spec_id": "emacs.command.table_recognize_table",
+  "status": "ported",
+  "evidence": [
+   "static:table_recognize_table"
+  ],
+  "note": "recognizes the whole table at point (same parser as table-recognize)"
+ },
+ {
+  "spec_id": "emacs.command.table_recognize_cell",
+  "status": "ported",
+  "evidence": [
+   "static:table_recognize_cell"
+  ],
+  "note": "reports the contents and WxH of the cell the caret sits in"
+ },
+ {
+  "spec_id": "emacs.command.table_unrecognize",
+  "status": "partial",
+  "evidence": [
+   "static:table_unrecognize"
+  ],
+  "note": "zemacs buffer tables are plain text with no persistent recognition state (unlike Emacs text properties), so there is nothing to deactivate; command reports that"
+ },
+ {
+  "spec_id": "emacs.command.table_unrecognize_region",
+  "status": "partial",
+  "evidence": [
+   "static:table_unrecognize_region"
+  ],
+  "note": "no persistent recognition state to clear (buffer tables are plain text)"
+ },
+ {
+  "spec_id": "emacs.command.table_unrecognize_table",
+  "status": "partial",
+  "evidence": [
+   "static:table_unrecognize_table"
+  ],
+  "note": "no persistent recognition state to clear (buffer tables are plain text)"
+ },
+ {
+  "spec_id": "emacs.command.table_unrecognize_cell",
+  "status": "partial",
+  "evidence": [
+   "static:table_unrecognize_cell"
+  ],
+  "note": "no persistent recognition state to clear (buffer tables are plain text)"
+ },
+ {
+  "spec_id": "emacs.command.table_query_dimension",
+  "status": "ported",
+  "evidence": [
+   "static:table_query_dimension"
+  ],
+  "note": "reports current cell size, whole-table size, grid dimension and total cell count for the table at point"
+ },
+ {
+  "spec_id": "emacs.command.table_justify",
+  "status": "ported",
+  "evidence": [
+   "static:table_justify"
+  ],
+  "note": "cycles the current column's justification left->center->right->full (Justify + justify_line, unit tested); dense grid stores justification only at render time so only the most-recently-justified column keeps its alignment"
+ },
+ {
+  "spec_id": "emacs.command.table_widen_cell",
+  "status": "ported",
+  "evidence": [
+   "static:table_widen_cell"
+  ],
+  "note": "raises the current column's minimum width by 1 (Table::widen_cell, unit tested); operates on the whole column since a dense grid shares one width per column"
+ },
+ {
+  "spec_id": "emacs.command.table_narrow_cell",
+  "status": "ported",
+  "evidence": [
+   "static:table_narrow_cell"
+  ],
+  "note": "lowers the current column's minimum width by 1, never below the content width (Table::narrow_cell, unit tested)"
+ },
+ {
+  "spec_id": "emacs.command.table_heighten_cell",
+  "status": "ported",
+  "evidence": [
+   "static:table_heighten_cell"
+  ],
+  "note": "raises the current row's minimum height by 1 line (Table::heighten_cell, unit tested); operates on the whole row (dense grid)"
+ },
+ {
+  "spec_id": "emacs.command.table_shorten_cell",
+  "status": "ported",
+  "evidence": [
+   "static:table_shorten_cell"
+  ],
+  "note": "lowers the current row's minimum height by 1 line, never below 1 (Table::shorten_cell, unit tested)"
+ },
+ {
+  "spec_id": "emacs.command.table_span_cell",
+  "status": "partial",
+  "evidence": [
+   "static:table_span_cell"
+  ],
+  "note": "merges the current cell's text with its right neighbour (span_cell_right, unit tested); a dense grid cannot draw a true multi-column spanned cell, only the text is merged"
+ },
+ {
+  "spec_id": "emacs.command.table_split_cell",
+  "status": "partial",
+  "evidence": [
+   "static:table_split_cell"
+  ],
+  "note": "splits the current cell vertically at its middle (split_cell_vertically, unit tested); the new row is inserted across every column because the grid is dense"
+ },
+ {
+  "spec_id": "emacs.command.table_split_cell_horizontally",
+  "status": "partial",
+  "evidence": [
+   "static:table_split_cell_horizontally"
+  ],
+  "note": "splits the current cell into two columns at its middle (split_cell_horizontally, unit tested); the new column is inserted across every row (dense grid)"
+ },
+ {
+  "spec_id": "emacs.command.table_split_cell_vertically",
+  "status": "partial",
+  "evidence": [
+   "static:table_split_cell_vertically"
+  ],
+  "note": "splits the current cell into two rows at its middle (split_cell_vertically, unit tested); the new row is inserted across every column (dense grid)"
+ },
+ {
+  "spec_id": "emacs.command.table_insert_sequence",
+  "status": "ported",
+  "evidence": [
+   "static:table_insert_sequence"
+  ],
+  "note": "fills cells from point to the end of the table with an incrementing sequence (Table::insert_sequence, unit tested)"
+ },
+ {
+  "spec_id": "emacs.command.table_generate_source",
+  "status": "ported",
+  "evidence": [
+   "static:table_generate_source"
+  ],
+  "note": "emits HTML source for the table at point below it; the pure Table::generate_source also produces LaTeX and CALS (all unit tested)"
+ },
+ {
+  "spec_id": "emacs.command.table_capture",
+  "status": "ported",
+  "evidence": [
+   "static:table_capture"
+  ],
+  "note": "captures the selected plain text into a table (rows on newlines, cells on whitespace) via zemacs_core::table::capture (unit tested) and replaces the selection with the grid"
+ },
+ {
+  "spec_id": "emacs.command.table_release",
+  "status": "ported",
+  "evidence": [
+   "static:table_release"
+  ],
+  "note": "converts the table at point back to plain text (Table::release, unit tested)"
+ },
+ {
+  "spec_id": "emacs.command.table_fixed_width_mode",
+  "status": "partial",
+  "evidence": [
+   "static:table_fixed_width_mode"
+  ],
+  "note": "toggles and reports fixed-width mode; zemacs has no live in-buffer cell editor that reflows on typing, so the toggle has no reflow behaviour to gate"
+ },
+ {
   "spec_id": "emacs.command.facemenu_set_face",
   "status": "ported",
   "evidence": [

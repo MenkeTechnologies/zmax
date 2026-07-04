@@ -1290,6 +1290,29 @@ impl MappableCommand {
         diffmode, "Open the unified-diff viewer (emacs diff-mode)",
         picture, "Draw ASCII pictures on a canvas (emacs picture-mode)",
         table, "Edit a text table (emacs table.el)",
+        table_recognize, "Recognize the ASCII table at point and report its dimensions (emacs table-recognize)",
+        table_recognize_region, "Recognize the table in the selection and report its dimensions (emacs table-recognize-region)",
+        table_recognize_table, "Recognize the whole table at point (emacs table-recognize-table)",
+        table_recognize_cell, "Report the table cell at point (emacs table-recognize-cell)",
+        table_unrecognize, "Deactivate table recognition at point (emacs table-unrecognize)",
+        table_unrecognize_region, "Deactivate table recognition in the selection (emacs table-unrecognize-region)",
+        table_unrecognize_table, "Deactivate recognition of the table at point (emacs table-unrecognize-table)",
+        table_unrecognize_cell, "Deactivate recognition of the cell at point (emacs table-unrecognize-cell)",
+        table_query_dimension, "Report the size of the table cell and table at point (emacs table-query-dimension)",
+        table_justify, "Cycle the justification of the current table column (emacs table-justify)",
+        table_widen_cell, "Widen the current table column by one column (emacs table-widen-cell)",
+        table_narrow_cell, "Narrow the current table column by one column (emacs table-narrow-cell)",
+        table_heighten_cell, "Heighten the current table row by one line (emacs table-heighten-cell)",
+        table_shorten_cell, "Shorten the current table row by one line (emacs table-shorten-cell)",
+        table_span_cell, "Merge the current table cell with the one to its right (emacs table-span-cell)",
+        table_split_cell, "Split the current table cell vertically at its middle (emacs table-split-cell)",
+        table_split_cell_horizontally, "Split the current table cell into two columns (emacs table-split-cell-horizontally)",
+        table_split_cell_vertically, "Split the current table cell into two rows (emacs table-split-cell-vertically)",
+        table_insert_sequence, "Fill table cells from point with an incrementing sequence (emacs table-insert-sequence)",
+        table_generate_source, "Emit HTML source for the table at point (emacs table-generate-source)",
+        table_capture, "Capture the selected plain text into a table (emacs table-capture)",
+        table_release, "Release the table at point back to plain text (emacs table-release)",
+        table_fixed_width_mode, "Toggle table fixed-width mode (emacs table-fixed-width-mode)",
         facemenu, "Browse faces and colors (emacs list-faces-display / facemenu)",
         bookmark_bmenu_list, "List bookmarks in an overlay (emacs bookmark-bmenu-list)",
         proced, "Open the process viewer/manager (emacs proced)",
@@ -13999,6 +14022,421 @@ fn table(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::table::TableEditor::new()) as Box<dyn Component>)
     });
+}
+
+/// The ASCII table found around point: its char range in the buffer, the parsed
+/// [`Table`](zemacs_core::table::Table), and the `(row, col)` of the cell the
+/// caret sits in. Backs the `table-*` commands that operate on the table at
+/// point (recognize/justify/split/widen/…).
+struct TableCtx {
+    start: usize,
+    end: usize,
+    table: zemacs_core::table::Table,
+    row: usize,
+    col: usize,
+}
+
+/// Find the contiguous run of ASCII-table lines (each trimmed line starting with
+/// `+` or `|`) containing `cursor`, parse it, and locate the caret's cell.
+fn table_at_point(text: &Rope, cursor: usize) -> Option<TableCtx> {
+    use zemacs_core::table::{cell_at_position, recognize};
+    let slice = text.slice(..);
+    let n_lines = slice.len_lines();
+    let cursor_line = slice.char_to_line(cursor);
+    let is_tbl = |line: usize| -> bool {
+        if line >= n_lines {
+            return false;
+        }
+        let s: String = slice.line(line).chars().collect();
+        let t = s.trim_start();
+        t.starts_with('+') || t.starts_with('|')
+    };
+    if !is_tbl(cursor_line) {
+        return None;
+    }
+    let mut first = cursor_line;
+    while first > 0 && is_tbl(first - 1) {
+        first -= 1;
+    }
+    let mut last = cursor_line;
+    while last + 1 < n_lines && is_tbl(last + 1) {
+        last += 1;
+    }
+    let start = slice.line_to_char(first);
+    let end = if last + 1 < n_lines {
+        slice.line_to_char(last + 1)
+    } else {
+        slice.len_chars()
+    };
+    let block: String = slice.slice(start..end).chars().collect();
+    let table = recognize(&block)?;
+    let line_in_block = cursor_line - first;
+    let col_in_line = cursor - slice.line_to_char(cursor_line);
+    let (row, col) = cell_at_position(&block, line_in_block, col_in_line).unwrap_or((0, 0));
+    Some(TableCtx {
+        start,
+        end,
+        table,
+        row,
+        col,
+    })
+}
+
+/// [`table_at_point`] for the primary caret of the current view.
+fn table_at_cursor(cx: &mut Context) -> Option<TableCtx> {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    table_at_point(text, cursor)
+}
+
+/// Replace the buffer range `[start, end)` with `table`'s freshly rendered grid.
+fn replace_table_region(
+    cx: &mut Context,
+    start: usize,
+    end: usize,
+    table: &zemacs_core::table::Table,
+) {
+    let (view, doc) = current!(cx.editor);
+    let rendered = table.render();
+    let tx = Transaction::change(doc.text(), std::iter::once((start, end, Some(rendered.into()))));
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Shared "not on a table" error for the `table-*` at-point commands.
+fn not_on_table(cx: &mut Context) {
+    cx.editor
+        .set_error("point is not inside a text table (start a line with + or |)");
+}
+
+/// Emacs `table-recognize` / `table-recognize-table`: parse the ASCII table at
+/// point into the internal model and report its dimensions. (zemacs buffer
+/// tables are plain text, so "recognition" is a re-parse rather than a
+/// persistent activation.)
+fn table_recognize(cx: &mut Context) {
+    match table_at_cursor(cx) {
+        Some(tc) => cx.editor.set_status(format!(
+            "Recognized table: {} row(s) x {} column(s)",
+            tc.table.rows(),
+            tc.table.cols()
+        )),
+        None => not_on_table(cx),
+    }
+}
+
+fn table_recognize_table(cx: &mut Context) {
+    table_recognize(cx);
+}
+
+/// Emacs `table-recognize-region`: recognize the table spanning the selection.
+fn table_recognize_region(cx: &mut Context) {
+    let block = {
+        let (view, doc) = current_ref!(cx.editor);
+        let range = doc.selection(view.id).primary();
+        let slice = doc.text().slice(..);
+        if range.from() == range.to() {
+            None
+        } else {
+            Some(slice.slice(range.from()..range.to()).chars().collect::<String>())
+        }
+    };
+    let parsed = block.as_deref().and_then(zemacs_core::table::recognize);
+    match parsed {
+        Some(t) => cx.editor.set_status(format!(
+            "Recognized region table: {} row(s) x {} column(s)",
+            t.rows(),
+            t.cols()
+        )),
+        None => cx
+            .editor
+            .set_error("no table grid found in the selected region"),
+    }
+}
+
+/// Emacs `table-recognize-cell`: report the contents and size of the cell at
+/// point within the table at point.
+fn table_recognize_cell(cx: &mut Context) {
+    match table_at_cursor(cx) {
+        Some(tc) => {
+            let content = tc.table.get(tc.row, tc.col).unwrap_or("");
+            cx.editor.set_status(format!(
+                "Cell ({}, {}): {:?} — {}w x {}h",
+                tc.row + 1,
+                tc.col + 1,
+                content,
+                tc.table.col_width(tc.col),
+                tc.table.row_height(tc.row)
+            ));
+        }
+        None => not_on_table(cx),
+    }
+}
+
+/// Emacs `table-unrecognize` and its region/table/cell variants. zemacs buffer
+/// tables carry no persistent recognition state (unlike Emacs text properties),
+/// so there is nothing to deactivate — this reports that fact.
+fn table_unrecognize(cx: &mut Context) {
+    cx.editor.set_status(
+        "table-unrecognize: zemacs buffer tables are plain text; nothing to deactivate",
+    );
+}
+
+fn table_unrecognize_region(cx: &mut Context) {
+    table_unrecognize(cx);
+}
+
+fn table_unrecognize_table(cx: &mut Context) {
+    table_unrecognize(cx);
+}
+
+fn table_unrecognize_cell(cx: &mut Context) {
+    table_unrecognize(cx);
+}
+
+/// Emacs `table-query-dimension`: report the size of the current cell, the whole
+/// table, its grid dimension and total cell count.
+fn table_query_dimension(cx: &mut Context) {
+    match table_at_cursor(cx) {
+        Some(tc) => cx.editor.set_status(tc.table.query_dimension(tc.row, tc.col)),
+        None => not_on_table(cx),
+    }
+}
+
+thread_local! {
+    /// Justification cycle phase for [`table_justify`] (left → center → right → full).
+    static TABLE_JUSTIFY_CYCLE: std::cell::Cell<u8> = const { std::cell::Cell::new(0) };
+}
+
+/// Emacs `table-justify`: cycle the justification of the current column
+/// (left → center → right → full) and re-render. A dense-grid table stores
+/// justification only at render time, so only the most-recently-justified
+/// column keeps its alignment across re-recognition.
+fn table_justify(cx: &mut Context) {
+    use zemacs_core::table::Justify;
+    let Some(mut tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    let order = [Justify::Left, Justify::Center, Justify::Right, Justify::Full];
+    let phase = TABLE_JUSTIFY_CYCLE.with(|p| {
+        let v = p.get();
+        p.set((v + 1) % order.len() as u8);
+        v as usize
+    });
+    let j = order[phase];
+    tc.table.justify_column(tc.col, j);
+    replace_table_region(cx, tc.start, tc.end, &tc.table);
+    cx.editor
+        .set_status(format!("Column {} justified {:?}", tc.col + 1, j));
+}
+
+/// Emacs `table-widen-cell`: widen the current column by one character.
+fn table_widen_cell(cx: &mut Context) {
+    let Some(mut tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    tc.table.widen_cell(tc.col, 1);
+    replace_table_region(cx, tc.start, tc.end, &tc.table);
+    cx.editor
+        .set_status(format!("Widened column {} by 1", tc.col + 1));
+}
+
+/// Emacs `table-narrow-cell`: narrow the current column by one character.
+fn table_narrow_cell(cx: &mut Context) {
+    let Some(mut tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    tc.table.narrow_cell(tc.col, 1);
+    replace_table_region(cx, tc.start, tc.end, &tc.table);
+    cx.editor
+        .set_status(format!("Narrowed column {} by 1", tc.col + 1));
+}
+
+/// Emacs `table-heighten-cell`: make the current row one line taller.
+fn table_heighten_cell(cx: &mut Context) {
+    let Some(mut tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    tc.table.heighten_cell(tc.row, 1);
+    replace_table_region(cx, tc.start, tc.end, &tc.table);
+    cx.editor
+        .set_status(format!("Heightened row {} by 1", tc.row + 1));
+}
+
+/// Emacs `table-shorten-cell`: make the current row one line shorter.
+fn table_shorten_cell(cx: &mut Context) {
+    let Some(mut tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    tc.table.shorten_cell(tc.row, 1);
+    replace_table_region(cx, tc.start, tc.end, &tc.table);
+    cx.editor
+        .set_status(format!("Shortened row {} by 1", tc.row + 1));
+}
+
+/// Emacs `table-span-cell` (rightward): merge the current cell with its right
+/// neighbour. On a dense grid only the text is merged — no true multi-column
+/// spanned cell is drawn.
+fn table_span_cell(cx: &mut Context) {
+    let Some(mut tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    if tc.col + 1 >= tc.table.cols() {
+        cx.editor.set_error("no cell to the right to span into");
+        return;
+    }
+    tc.table.span_cell_right(tc.row, tc.col);
+    replace_table_region(cx, tc.start, tc.end, &tc.table);
+    cx.editor.set_status("Merged cell with the one to its right");
+}
+
+/// Emacs `table-split-cell-horizontally`: split the current cell into two
+/// columns at the middle of its content. Because the grid is dense the new
+/// column is inserted across every row.
+fn table_split_cell_horizontally(cx: &mut Context) {
+    let Some(mut tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    let mid = tc.table.get(tc.row, tc.col).unwrap_or("").chars().count() / 2;
+    tc.table.split_cell_horizontally(tc.row, tc.col, mid);
+    replace_table_region(cx, tc.start, tc.end, &tc.table);
+    cx.editor.set_status("Split cell into two columns");
+}
+
+/// Emacs `table-split-cell-vertically`: split the current cell into two rows at
+/// the middle of its content. The new row is inserted across every column.
+fn table_split_cell_vertically(cx: &mut Context) {
+    let Some(mut tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    let mid = tc.table.get(tc.row, tc.col).unwrap_or("").chars().count() / 2;
+    tc.table.split_cell_vertically(tc.row, tc.col, mid);
+    replace_table_region(cx, tc.start, tc.end, &tc.table);
+    cx.editor.set_status("Split cell into two rows");
+}
+
+/// Emacs `table-split-cell`: split the current cell (defaults to a vertical
+/// split, as `table.el` does when no direction is chosen).
+fn table_split_cell(cx: &mut Context) {
+    table_split_cell_vertically(cx);
+}
+
+/// Emacs `table-insert-sequence`: fill cells, from the one at point to the end
+/// of the table, with an incrementing sequence starting at 1.
+fn table_insert_sequence(cx: &mut Context) {
+    let Some(mut tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    let total = tc.table.rows() * tc.table.cols();
+    let linear = tc.row * tc.table.cols() + tc.col;
+    let count = total.saturating_sub(linear);
+    tc.table.insert_sequence((tc.row, tc.col), "1", count, 1, 1);
+    replace_table_region(cx, tc.start, tc.end, &tc.table);
+    cx.editor
+        .set_status(format!("Inserted sequence into {count} cell(s)"));
+}
+
+/// Emacs `table-generate-source`: emit HTML source for the table at point,
+/// inserting it just below the table. (The pure API also produces LaTeX and
+/// CALS via `Table::generate_source`.)
+fn table_generate_source(cx: &mut Context) {
+    use zemacs_core::table::SourceLang;
+    let Some(tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    let source = tc.table.generate_source(SourceLang::Html);
+    let insert = format!("\n{source}");
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((tc.end, tc.end, Some(insert.into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status("Generated HTML source below the table");
+}
+
+/// Emacs `table-capture`: turn the selected plain text into a table (rows split
+/// on newlines, cells on whitespace) and replace the selection with the grid.
+fn table_capture(cx: &mut Context) {
+    let region = {
+        let (view, doc) = current_ref!(cx.editor);
+        let range = doc.selection(view.id).primary();
+        if range.from() == range.to() {
+            None
+        } else {
+            let slice = doc.text().slice(..);
+            Some((
+                range.from(),
+                range.to(),
+                slice.slice(range.from()..range.to()).chars().collect::<String>(),
+            ))
+        }
+    };
+    let Some((from, to, text)) = region else {
+        cx.editor
+            .set_error("select the text to capture into a table first");
+        return;
+    };
+    let table = zemacs_core::table::capture(&text, None, None);
+    let rendered = table.render();
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(doc.text(), std::iter::once((from, to, Some(rendered.into()))));
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!(
+        "Captured {} row(s) x {} column(s) into a table",
+        table.rows(),
+        table.cols()
+    ));
+}
+
+/// Emacs `table-release`: convert the table at point back into plain text
+/// (space-joined cells, one row per line).
+fn table_release(cx: &mut Context) {
+    let Some(tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    let text = tc.table.release();
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((tc.start, tc.end, Some(text.into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status("Released the table back to plain text");
+}
+
+thread_local! {
+    /// Toggle state for [`table_fixed_width_mode`].
+    static TABLE_FIXED_WIDTH: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Emacs `table-fixed-width-mode`: toggle fixed-width mode. zemacs has no live
+/// in-buffer cell editor that reflows on typing, so this only records and
+/// reports the toggle.
+fn table_fixed_width_mode(cx: &mut Context) {
+    let on = TABLE_FIXED_WIDTH.with(|f| {
+        let v = !f.get();
+        f.set(v);
+        v
+    });
+    cx.editor.set_status(format!(
+        "Table fixed-width mode {}",
+        if on { "enabled" } else { "disabled" }
+    ));
 }
 
 /// Emacs `list-faces-display` / `facemenu`: browse faces and colors.
