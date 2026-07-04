@@ -9,9 +9,7 @@
 //! It performs no I/O — the command layer reads/writes the file and drives the
 //! Calendar. Date arithmetic reuses [`crate::calendar`].
 
-use crate::calendar::{
-    days_in_month, from_serial, is_leap, to_serial, weekday, Date, MONTH_NAMES,
-};
+use crate::calendar::{days_in_month, from_serial, is_leap, to_serial, weekday, Date, MONTH_NAMES};
 
 /// A parsed diary date specification (the faithful default `diary-date-forms`
 /// plus the `%%(diary-...)` sexp entries).
@@ -382,7 +380,13 @@ fn nth_named_day_serial(n: i32, dayname: u32, month: u32, year: i32, day: Option
 /// `diary-float MONTH DAYNAME N [DAY]`: the Nth (from start if `n>0`, from end
 /// if `n<0`) `dayname` weekday of a month. `months = None` means "any month"
 /// (Emacs `t`); otherwise `on`'s month must be listed. `dayname`: 0 = Sunday.
-pub fn float_match(months: Option<&[u32]>, dayname: u32, n: i32, day: Option<u32>, on: Date) -> bool {
+pub fn float_match(
+    months: Option<&[u32]>,
+    dayname: u32,
+    n: i32,
+    day: Option<u32>,
+    on: Date,
+) -> bool {
     if n == 0 {
         return false;
     }
@@ -398,9 +402,9 @@ pub fn float_match(months: Option<&[u32]>, dayname: u32, n: i32, day: Option<u32
 /// specific value or `None` (Emacs `t`, "any"). Matches when every specified
 /// component agrees with `on`.
 pub fn date_wildcard(month: Option<u32>, day: Option<u32>, year: Option<i32>, on: Date) -> bool {
-    month.map_or(true, |m| m == on.month)
-        && day.map_or(true, |d| d == on.day)
-        && year.map_or(true, |y| y == on.year)
+    month.is_none_or(|m| m == on.month)
+        && day.is_none_or(|d| d == on.day)
+        && year.is_none_or(|y| y == on.year)
 }
 
 /// The day-of-year string Emacs `diary-day-of-year` / `calendar-day-of-year-string`
@@ -619,7 +623,7 @@ pub struct Appt {
 /// Insert `appt` keeping the list sorted by time (Emacs `appt-add`). Duplicates
 /// (same time and message) are ignored, matching `appt.el`.
 pub fn appt_add(list: &mut Vec<Appt>, appt: Appt) -> bool {
-    if list.iter().any(|a| *a == appt) {
+    if list.contains(&appt) {
         return false;
     }
     let pos = list.partition_point(|a| a.minutes <= appt.minutes);
@@ -802,15 +806,39 @@ mod tests {
     #[test]
     fn float_nth_weekday() {
         // 3rd Thursday (dayname 4) of November 2024 is the 21st.
-        assert!(float_match(Some(&[11]), 4, 3, None, Date::new(2024, 11, 21)));
-        assert!(!float_match(Some(&[11]), 4, 3, None, Date::new(2024, 11, 14)));
+        assert!(float_match(
+            Some(&[11]),
+            4,
+            3,
+            None,
+            Date::new(2024, 11, 21)
+        ));
+        assert!(!float_match(
+            Some(&[11]),
+            4,
+            3,
+            None,
+            Date::new(2024, 11, 14)
+        ));
         // Wrong month is rejected by the month filter.
-        assert!(!float_match(Some(&[11]), 4, 3, None, Date::new(2024, 10, 17)));
+        assert!(!float_match(
+            Some(&[11]),
+            4,
+            3,
+            None,
+            Date::new(2024, 10, 17)
+        ));
         // "any month" (t): 3rd Thursday of October 2024 is the 17th.
         assert!(float_match(None, 4, 3, None, Date::new(2024, 10, 17)));
         // Last Monday (dayname 1) of May 2024 (Memorial Day) is the 27th.
         assert!(float_match(Some(&[5]), 1, -1, None, Date::new(2024, 5, 27)));
-        assert!(!float_match(Some(&[5]), 1, -1, None, Date::new(2024, 5, 20)));
+        assert!(!float_match(
+            Some(&[5]),
+            1,
+            -1,
+            None,
+            Date::new(2024, 5, 20)
+        ));
         // 1st Monday of September 2024 (Labor Day) is the 2nd.
         assert!(float_match(Some(&[9]), 1, 1, None, Date::new(2024, 9, 2)));
     }
@@ -854,11 +882,11 @@ mod tests {
             format_block_sexp(Date::new(2024, 6, 1), Date::new(2024, 6, 10)),
             "%%(diary-block 6 1 2024 6 10 2024) "
         );
+        assert_eq!(format_cyclic_sexp(7, d), "%%(diary-cyclic 7 12 25 2024) ");
         assert_eq!(
-            format_cyclic_sexp(7, d),
-            "%%(diary-cyclic 7 12 25 2024) "
+            format_other_entry('H', "Tishri 5, 5785"),
+            "HTishri 5, 5785 "
         );
-        assert_eq!(format_other_entry('H', "Tishri 5, 5785"), "HTishri 5, 5785 ");
         assert_eq!(format_other_yearly('H', "Tishri", 5), "HTishri 5 ");
         assert_eq!(format_other_monthly('I', 12), "I* 12 ");
         assert_eq!(
@@ -949,9 +977,8 @@ mod tests {
         assert!(!spec.matches(Date::new(2024, 3, 16)));
 
         // A whole file with a mix of plain and sexp entries.
-        let entries = parse_file(
-            "10/31 Halloween\n%%(diary-cyclic 7 1 1 2024) Weekly\nnot an entry\n",
-        );
+        let entries =
+            parse_file("10/31 Halloween\n%%(diary-cyclic 7 1 1 2024) Weekly\nnot an entry\n");
         assert_eq!(entries.len(), 2);
         assert!(has_entry(&entries, Date::new(2024, 1, 8))); // +7 days
     }
