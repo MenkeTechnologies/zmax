@@ -274,6 +274,574 @@ pub fn prev_hunk_line(lines_flat: &[LineKind], from: usize) -> Option<usize> {
         .map(|(i, _)| i)
 }
 
+// ===========================================================================
+// diff-mode text transforms (the pure logic behind the interactive commands).
+//
+// These all take the RAW diff text (never the parsed model), because the
+// interactive commands must preserve every byte the parser drops — `index …`
+// lines, mode-change lines, arbitrary chrome — when they kill, split, reverse
+// or convert a hunk. They operate on a line vector and reconstruct the text,
+// preserving the trailing-newline state of the input.
+// ===========================================================================
+
+/// Split `text` into owned lines plus whether it ended with a newline (so the
+/// reconstruction round-trips exactly).
+fn to_lines(text: &str) -> (Vec<String>, bool) {
+    (
+        text.lines().map(|s| s.to_string()).collect(),
+        text.ends_with('\n'),
+    )
+}
+
+/// Rejoin lines produced by [`to_lines`], restoring the trailing newline.
+fn from_lines(lines: &[String], trailing_nl: bool) -> String {
+    if lines.is_empty() {
+        return String::new();
+    }
+    let mut s = lines.join("\n");
+    if trailing_nl {
+        s.push('\n');
+    }
+    s
+}
+
+/// Line indices at which a new file section begins. A section starts at a
+/// `diff --git`/`Index:` banner, or at a bare `--- `/`+++ ` header pair not
+/// already introduced by such a banner.
+fn file_start_lines(lines: &[String]) -> Vec<usize> {
+    let mut starts = Vec::new();
+    let mut header_pending = false;
+    let n = lines.len();
+    for i in 0..n {
+        let l = lines[i].as_str();
+        if l.starts_with("diff --git ") || l.starts_with("Index: ") {
+            starts.push(i);
+            header_pending = true;
+        } else if l.starts_with("--- ") && i + 1 < n && lines[i + 1].starts_with("+++ ") {
+            if !header_pending {
+                starts.push(i);
+            }
+            header_pending = false;
+        } else if l.starts_with("@@") {
+            header_pending = false;
+        }
+    }
+    starts
+}
+
+/// The `[start, end)` line range of the file section containing line `at`.
+fn file_bounds_at(lines: &[String], starts: &[usize], at: usize) -> (usize, usize) {
+    if starts.is_empty() {
+        return (0, lines.len());
+    }
+    let idx = starts.iter().rposition(|&s| s <= at).unwrap_or(0);
+    let start = starts[idx];
+    let end = starts.get(idx + 1).copied().unwrap_or(lines.len());
+    (start, end)
+}
+
+/// The `[start, end)` line range of the file section containing `at_line`, or
+/// `None` if the buffer holds no file section. Used by `diff-restrict-view`
+/// with a prefix argument.
+pub fn file_line_bounds(text: &str, at_line: usize) -> Option<(usize, usize)> {
+    let (lines, _) = to_lines(text);
+    if lines.is_empty() {
+        return None;
+    }
+    let at = at_line.min(lines.len() - 1);
+    let starts = file_start_lines(&lines);
+    if starts.is_empty() {
+        return None;
+    }
+    Some(file_bounds_at(&lines, &starts, at))
+}
+
+/// The `[start, end)` line range of the hunk containing `at_line` (its `@@`
+/// header through the last body line), or `None` if there is no hunk. Used by
+/// `diff-restrict-view` and `diff-split-hunk`.
+pub fn hunk_line_bounds(text: &str, at_line: usize) -> Option<(usize, usize)> {
+    let (lines, _) = to_lines(text);
+    if lines.is_empty() {
+        return None;
+    }
+    let at = at_line.min(lines.len() - 1);
+    let starts = file_start_lines(&lines);
+    let (fs, fe) = file_bounds_at(&lines, &starts, at);
+    let hunk_starts: Vec<usize> = (fs..fe).filter(|&i| lines[i].starts_with("@@")).collect();
+    if hunk_starts.is_empty() {
+        return None;
+    }
+    let idx = hunk_starts.iter().rposition(|&s| s <= at).unwrap_or(0);
+    let start = hunk_starts[idx];
+    let end = hunk_starts.get(idx + 1).copied().unwrap_or(fe);
+    Some((start, end))
+}
+
+/// `diff-hunk-kill`: delete the hunk at `at_line`. If it is the only hunk of
+/// its file the whole file section (headers included) is removed too, matching
+/// GNU Emacs `diff-remove-hunk`. Returns the new diff text, or `None` if point
+/// is not in any hunk.
+pub fn diff_hunk_kill(text: &str, at_line: usize) -> Option<String> {
+    let (lines, nl) = to_lines(text);
+    if lines.is_empty() {
+        return None;
+    }
+    let at = at_line.min(lines.len() - 1);
+    let starts = file_start_lines(&lines);
+    let (fs, fe) = file_bounds_at(&lines, &starts, at);
+    let hunk_starts: Vec<usize> = (fs..fe).filter(|&i| lines[i].starts_with("@@")).collect();
+    if hunk_starts.is_empty() {
+        return None;
+    }
+    let (rs, re) = if hunk_starts.len() == 1 {
+        (fs, fe)
+    } else {
+        let idx = hunk_starts.iter().rposition(|&s| s <= at).unwrap_or(0);
+        (
+            hunk_starts[idx],
+            hunk_starts.get(idx + 1).copied().unwrap_or(fe),
+        )
+    };
+    let mut out = lines;
+    out.drain(rs..re);
+    Some(from_lines(&out, nl))
+}
+
+/// `diff-file-kill`: delete the whole file section (banner, `---`/`+++` headers
+/// and every hunk) containing `at_line`. Returns `None` if there is no file
+/// section.
+pub fn diff_file_kill(text: &str, at_line: usize) -> Option<String> {
+    let (lines, nl) = to_lines(text);
+    if lines.is_empty() {
+        return None;
+    }
+    let at = at_line.min(lines.len() - 1);
+    let starts = file_start_lines(&lines);
+    if starts.is_empty() {
+        return None;
+    }
+    let (fs, fe) = file_bounds_at(&lines, &starts, at);
+    let mut out = lines;
+    out.drain(fs..fe);
+    Some(from_lines(&out, nl))
+}
+
+/// Count `(old, new)` lines in a unified-hunk body slice: a context line counts
+/// on both sides, a `-` line only old, a `+` line only new, a `\ No newline`
+/// marker on neither.
+fn count_old_new(body: &[String]) -> (usize, usize) {
+    let mut old = 0;
+    let mut new = 0;
+    for l in body {
+        match l.as_bytes().first() {
+            Some(b'+') => new += 1,
+            Some(b'-') => old += 1,
+            Some(b'\\') => {}
+            _ => {
+                old += 1;
+                new += 1;
+            }
+        }
+    }
+    (old, new)
+}
+
+/// `diff-split-hunk`: split the unified hunk containing `at_line` into two, with
+/// the boundary at `at_line`. Both resulting `@@` headers get correct start and
+/// length numbers (zemacs recomputes both halves; stock Emacs leaves the second
+/// header's lengths as a `,1` placeholder to be fixed up by hand). Returns
+/// `None` unless point is on a body line strictly inside a unified hunk.
+pub fn diff_split_hunk(text: &str, at_line: usize) -> Option<String> {
+    let (lines, nl) = to_lines(text);
+    if lines.is_empty() {
+        return None;
+    }
+    let at = at_line.min(lines.len() - 1);
+    let (hs, he) = hunk_line_bounds(text, at)?;
+    if !lines[hs].starts_with("@@") {
+        return None;
+    }
+    if at <= hs || at >= he {
+        return None;
+    }
+    let (o_s, _o_l, n_s, _n_l) = parse_hunk_header(&lines[hs]);
+    let first: Vec<String> = lines[hs + 1..at].to_vec();
+    let second: Vec<String> = lines[at..he].to_vec();
+    if first.is_empty() || second.is_empty() {
+        return None;
+    }
+    let (fo, fnn) = count_old_new(&first);
+    let (so, sn) = count_old_new(&second);
+    let h1 = format!("@@ -{},{} +{},{} @@", o_s, fo, n_s, fnn);
+    let h2 = format!("@@ -{},{} +{},{} @@", o_s + fo, so, n_s + fnn, sn);
+    let mut out: Vec<String> = Vec::with_capacity(lines.len() + 1);
+    out.extend_from_slice(&lines[..hs]);
+    out.push(h1);
+    out.extend(first);
+    out.push(h2);
+    out.extend(second);
+    out.extend_from_slice(&lines[he..]);
+    Some(from_lines(&out, nl))
+}
+
+/// Parse a `@@ -OLD +NEW @@SUFFIX` header into the raw `OLD`/`NEW` range strings
+/// (e.g. `"1,3"`, `"10"`) and the trailing text after the closing `@@`,
+/// preserving the exact number format so a reverse round-trips byte-for-byte.
+fn split_hunk_header_raw(l: &str) -> Option<(String, String, String)> {
+    let after = l.strip_prefix("@@")?;
+    let close = after.find("@@")?;
+    let mid = &after[..close];
+    let suffix = after[close + 2..].to_string();
+    let mut old = None;
+    let mut new = None;
+    for tok in mid.split_whitespace() {
+        if let Some(r) = tok.strip_prefix('-') {
+            old = Some(r.to_string());
+        } else if let Some(r) = tok.strip_prefix('+') {
+            new = Some(r.to_string());
+        }
+    }
+    Some((old?, new?, suffix))
+}
+
+/// `diff-reverse-direction`: swap the diff's direction so the patch applies in
+/// reverse. `---`/`+++` file paths swap, each `@@` header's two ranges swap, and
+/// every `+` body line becomes `-` and vice versa. Reversing twice restores the
+/// original text exactly.
+pub fn diff_reverse_direction(text: &str) -> String {
+    let (lines, nl) = to_lines(text);
+    let n = lines.len();
+    let mut out: Vec<String> = Vec::with_capacity(n);
+    let mut i = 0;
+    while i < n {
+        let l = &lines[i];
+        if l.starts_with("--- ") && i + 1 < n && lines[i + 1].starts_with("+++ ") {
+            out.push(format!("--- {}", &lines[i + 1][4..]));
+            out.push(format!("+++ {}", &l[4..]));
+            i += 2;
+            continue;
+        }
+        if let Some((old_raw, new_raw, suffix)) = split_hunk_header_raw(l) {
+            out.push(format!("@@ -{} +{} @@{}", new_raw, old_raw, suffix));
+            i += 1;
+            continue;
+        }
+        match l.as_bytes().first() {
+            Some(b'+') => out.push(format!("-{}", &l[1..])),
+            Some(b'-') => out.push(format!("+{}", &l[1..])),
+            _ => out.push(l.clone()),
+        }
+        i += 1;
+    }
+    from_lines(&out, nl)
+}
+
+/// Format a context-diff range `start,end` (1-based inclusive) from a unified
+/// `start,len`, using GNU diff's `end,0` empty form for a zero-length side.
+fn ctx_range(start: usize, len: usize) -> String {
+    if len == 0 {
+        format!("{},0", start.saturating_sub(1))
+    } else {
+        format!("{},{}", start, start + len - 1)
+    }
+}
+
+/// Rewrite a unified body line as a context-diff body line: the one-char prefix
+/// (` `, `-` or `+`) gains a trailing space (` x` → `  x`, `-x` → `- x`).
+fn ctxify(l: &str) -> String {
+    let mut ch = l.chars();
+    match ch.next() {
+        Some(c) => format!("{} {}", c, ch.as_str()),
+        None => "  ".to_string(),
+    }
+}
+
+/// `diff-unified->context`: convert a unified diff to a context diff, mirroring
+/// GNU Emacs `diff-unified->context` — `---`/`+++` headers become `***`/`---`,
+/// and each `@@` hunk becomes a `***************` / `*** o ****` / `--- n ----`
+/// block whose old side keeps context and `-` lines (as `- `) and whose new side
+/// keeps context and `+` lines (as `+ `). A side with no changes is emitted with
+/// only its range header (no body lines).
+pub fn diff_unified_to_context(text: &str) -> String {
+    let (lines, nl) = to_lines(text);
+    let n = lines.len();
+    let mut out: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < n {
+        let l = &lines[i];
+        if l.starts_with("--- ") && i + 1 < n && lines[i + 1].starts_with("+++ ") {
+            out.push(format!("*** {}", &l[4..]));
+            out.push(format!("--- {}", &lines[i + 1][4..]));
+            i += 2;
+            continue;
+        }
+        if l.starts_with("@@") {
+            let (o_s, o_l, n_s, n_l) = parse_hunk_header(l);
+            let mut j = i + 1;
+            while j < n
+                && !lines[j].starts_with("@@")
+                && !(lines[j].starts_with("--- ")
+                    && j + 1 < n
+                    && lines[j + 1].starts_with("+++ "))
+                && !lines[j].starts_with("diff --git ")
+                && !lines[j].starts_with("Index: ")
+            {
+                j += 1;
+            }
+            let body = &lines[i + 1..j];
+            out.push("***************".to_string());
+            out.push(format!("*** {} ****", ctx_range(o_s, o_l)));
+            if body.iter().any(|b| b.starts_with('-')) {
+                for b in body {
+                    match b.as_bytes().first() {
+                        Some(b'+') => {}
+                        Some(b'\\') => out.push(b.clone()),
+                        _ => out.push(ctxify(b)),
+                    }
+                }
+            }
+            out.push(format!("--- {} ----", ctx_range(n_s, n_l)));
+            if body.iter().any(|b| b.starts_with('+')) {
+                for b in body {
+                    match b.as_bytes().first() {
+                        Some(b'-') => {}
+                        Some(b'\\') => out.push(b.clone()),
+                        _ => out.push(ctxify(b)),
+                    }
+                }
+            }
+            i = j;
+            continue;
+        }
+        out.push(l.clone());
+        i += 1;
+    }
+    from_lines(&out, nl)
+}
+
+/// True for a `***************` hunk separator (a run of 5+ asterisks).
+fn is_asterisk_sep(l: &str) -> bool {
+    l.len() >= 5 && l.bytes().all(|b| b == b'*')
+}
+
+/// Parse a context range token like `1,4` / `5` / `4,0` (ignoring any trailing
+/// `****`/`----`) into `(start, end)`; a missing end defaults to `start`.
+fn parse_ctx_range(s: &str) -> (usize, usize) {
+    let tok = s.split_whitespace().next().unwrap_or("");
+    let mut it = tok.split(',');
+    let a = it.next().and_then(|x| x.parse().ok()).unwrap_or(0);
+    let b = it.next().and_then(|x| x.parse().ok()).unwrap_or(a);
+    (a, b)
+}
+
+/// Convert a context range `(start, end)` back to a unified `(start, len)`,
+/// undoing the `end,0` empty form.
+fn unified_from_ctx_range((a, b): (usize, usize)) -> (usize, usize) {
+    if b >= a {
+        (a, b - a + 1)
+    } else {
+        (a + 1, 0)
+    }
+}
+
+/// Classify a context-diff body line into a `(kind, content)` pair; `kind` is
+/// the leading byte (` `, `-`, `+`, `!`) and `content` is the text after its
+/// two-char prefix.
+fn ctx_entry(l: &str) -> (u8, String) {
+    let content = if l.len() >= 2 {
+        l[2..].to_string()
+    } else {
+        String::new()
+    };
+    let kind = match l.as_bytes().first() {
+        Some(b'-') => b'-',
+        Some(b'+') => b'+',
+        Some(b'!') => b'!',
+        _ => b' ',
+    };
+    (kind, content)
+}
+
+/// Interleave a context diff's old and new side entries into unified body lines:
+/// shared context lines emit once as ` x`, a change block emits its removed run
+/// (`-x`, from `-`/`!` old entries) then its added run (`+x`, from `+`/`!` new
+/// entries).
+fn merge_context_sides(old: &[(u8, String)], new: &[(u8, String)], out: &mut Vec<String>) {
+    let is_ctx = |e: &(u8, String)| e.0 == b' ';
+    let mut i = 0;
+    let mut j = 0;
+    while i < old.len() || j < new.len() {
+        let o_ctx = old.get(i).is_some_and(is_ctx);
+        let n_ctx = new.get(j).is_some_and(is_ctx);
+        if o_ctx && (j >= new.len() || n_ctx) {
+            out.push(format!(" {}", old[i].1));
+            i += 1;
+            if n_ctx {
+                j += 1;
+            }
+        } else if n_ctx && i >= old.len() {
+            out.push(format!(" {}", new[j].1));
+            j += 1;
+        } else {
+            let mut progressed = false;
+            while i < old.len() && !is_ctx(&old[i]) {
+                out.push(format!("-{}", old[i].1));
+                i += 1;
+                progressed = true;
+            }
+            while j < new.len() && !is_ctx(&new[j]) {
+                out.push(format!("+{}", new[j].1));
+                j += 1;
+                progressed = true;
+            }
+            if !progressed {
+                break;
+            }
+        }
+    }
+}
+
+/// `diff-context->unified`: convert a context diff back to a unified diff,
+/// mirroring GNU Emacs `diff-context->unified`. `***`/`---` file headers become
+/// `---`/`+++`, and each `*** o ****` / `--- n ----` block becomes one `@@` hunk
+/// whose body interleaves the two sides (change lines marked `!` are read as
+/// removed on the old side and added on the new side).
+pub fn diff_context_to_unified(text: &str) -> String {
+    let (lines, nl) = to_lines(text);
+    let n = lines.len();
+    let mut out: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < n {
+        let l = &lines[i];
+        // File header pair: `*** path` / `--- path` (neither is a range header).
+        if l.starts_with("*** ")
+            && !l.trim_end().ends_with("****")
+            && i + 1 < n
+            && lines[i + 1].starts_with("--- ")
+            && !lines[i + 1].trim_end().ends_with("----")
+        {
+            out.push(format!("--- {}", &l[4..]));
+            out.push(format!("+++ {}", &lines[i + 1][4..]));
+            i += 2;
+            continue;
+        }
+        if is_asterisk_sep(l) {
+            i += 1;
+            continue;
+        }
+        // Old range header `*** start,end ****`.
+        if l.starts_with("*** ") && l.trim_end().ends_with("****") {
+            let old_r = parse_ctx_range(&l[4..]);
+            let mut j = i + 1;
+            let mut old_side: Vec<(u8, String)> = Vec::new();
+            while j < n && !(lines[j].starts_with("--- ") && lines[j].trim_end().ends_with("----"))
+            {
+                old_side.push(ctx_entry(&lines[j]));
+                j += 1;
+            }
+            let new_r = if j < n {
+                parse_ctx_range(&lines[j][4..])
+            } else {
+                (0, 0)
+            };
+            let mut k = j + 1;
+            let mut new_side: Vec<(u8, String)> = Vec::new();
+            while k < n
+                && !is_asterisk_sep(&lines[k])
+                && !lines[k].starts_with("*** ")
+                && !lines[k].starts_with("diff --git ")
+                && !lines[k].starts_with("Index: ")
+            {
+                new_side.push(ctx_entry(&lines[k]));
+                k += 1;
+            }
+            let (us1, ul1) = unified_from_ctx_range(old_r);
+            let (us3, ul3) = unified_from_ctx_range(new_r);
+            out.push(format!("@@ -{},{} +{},{} @@", us1, ul1, us3, ul3));
+            merge_context_sides(&old_side, &new_side, &mut out);
+            i = k;
+            continue;
+        }
+        out.push(l.clone());
+        i += 1;
+    }
+    from_lines(&out, nl)
+}
+
+/// `diff-delete-trailing-whitespace` (in-buffer variant): strip trailing spaces
+/// and tabs from the content of every added (`+`) line, leaving the `+++` header
+/// alone. Stock Emacs edits the *patched source files* on disk; zemacs only
+/// rewrites the added lines within the diff buffer, hence this is a partial port.
+pub fn diff_delete_trailing_whitespace(text: &str) -> String {
+    let (lines, nl) = to_lines(text);
+    let out: Vec<String> = lines
+        .iter()
+        .map(|l| {
+            if l.starts_with('+') && !l.starts_with("+++") {
+                format!("+{}", l[1..].trim_end_matches([' ', '\t']))
+            } else {
+                l.clone()
+            }
+        })
+        .collect();
+    from_lines(&out, nl)
+}
+
+/// Apply a single unified [`Hunk`] to `target` (the pre-image file text),
+/// returning the patched text. The hunk's old image (context + removed lines) is
+/// located at `old_start` (falling back to a scan of the whole file), then
+/// replaced by the new image (context + added lines). `Err` if the context does
+/// not match anywhere.
+pub fn apply_hunk(target: &str, hunk: &Hunk) -> Result<String, String> {
+    let (mut tlines, nl) = to_lines(target);
+    let mut old_img: Vec<String> = Vec::new();
+    let mut new_img: Vec<String> = Vec::new();
+    for dl in &hunk.lines {
+        if dl.text.starts_with('\\') {
+            continue; // "\ No newline at end of file"
+        }
+        let content = dl.text.get(1..).unwrap_or("").to_string();
+        match dl.kind {
+            LineKind::Context => {
+                old_img.push(content.clone());
+                new_img.push(content);
+            }
+            LineKind::Removed => old_img.push(content),
+            LineKind::Added => new_img.push(content),
+            _ => {}
+        }
+    }
+
+    if old_img.is_empty() {
+        let pos = hunk.old_start.min(tlines.len());
+        tlines.splice(pos..pos, new_img);
+        return Ok(from_lines(&tlines, nl));
+    }
+
+    let matches_at = |lines: &[String], p: usize| -> bool {
+        p + old_img.len() <= lines.len() && lines[p..p + old_img.len()] == old_img[..]
+    };
+    let want = hunk.old_start.saturating_sub(1);
+    let pos = if matches_at(&tlines, want) {
+        Some(want)
+    } else {
+        (0..=tlines.len().saturating_sub(old_img.len())).find(|&p| matches_at(&tlines, p))
+    };
+    let pos = pos.ok_or_else(|| "hunk does not apply (context mismatch)".to_string())?;
+    tlines.splice(pos..pos + old_img.len(), new_img);
+    Ok(from_lines(&tlines, nl))
+}
+
+/// Apply every hunk of a [`FileDiff`] to `target`, from the last hunk to the
+/// first so earlier hunks' line numbers stay valid. `Err` if any hunk fails.
+pub fn apply_file_diff(target: &str, file: &FileDiff) -> Result<String, String> {
+    let mut cur = target.to_string();
+    for hunk in file.hunks.iter().rev() {
+        cur = apply_hunk(&cur, hunk)?;
+    }
+    Ok(cur)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -389,5 +957,242 @@ diff --git a/README.md b/README.md
         assert_eq!(d.files[0].new_path, "new.txt");
         assert_eq!(hunk_count(&d), 1);
         assert_eq!(stats(&d), (1, 1));
+    }
+
+    // A one-file unified diff with two changed lines, used by the transform tests.
+    const UNIFIED: &str = "\
+--- a/f.txt
++++ b/f.txt
+@@ -1,4 +1,4 @@
+ line1
+-line2
++line2new
+ line3
+-line4
++line4new
+";
+
+    // Its exact `diff -c` equivalent as produced by `diff-unified->context`.
+    const CONTEXT: &str = "\
+*** a/f.txt
+--- b/f.txt
+***************
+*** 1,4 ****
+  line1
+- line2
+  line3
+- line4
+--- 1,4 ----
+  line1
++ line2new
+  line3
++ line4new
+";
+
+    #[test]
+    fn hunk_kill_removes_only_the_targeted_hunk() {
+        // Point inside the SECOND hunk of foo.rs (the "-gone" line).
+        let flat_line = TWO_FILE.lines().position(|l| l == "-gone").unwrap();
+        let out = diff_hunk_kill(TWO_FILE, flat_line).expect("killed");
+        // The second hunk is gone; the first hunk and the README file remain.
+        assert!(!out.contains("@@ -10,2 +11,2 @@"));
+        assert!(out.contains("@@ -1,3 +1,4 @@"));
+        assert!(out.contains("README.md"));
+        assert_eq!(hunk_count(&parse(&out)), 2);
+    }
+
+    #[test]
+    fn hunk_kill_of_lone_hunk_removes_the_file_header() {
+        // README.md has a single hunk; killing it removes the whole file section.
+        let line = TWO_FILE.lines().position(|l| l == "-# Title").unwrap();
+        let out = diff_hunk_kill(TWO_FILE, line).expect("killed");
+        assert!(!out.contains("README.md"), "file header removed with lone hunk");
+        assert!(out.contains("src/foo.rs"));
+        assert_eq!(parse(&out).files.len(), 1);
+    }
+
+    #[test]
+    fn file_kill_removes_the_whole_file_section() {
+        let line = TWO_FILE.lines().position(|l| l == "-    old();").unwrap();
+        let out = diff_file_kill(TWO_FILE, line).expect("killed");
+        assert!(!out.contains("src/foo.rs"));
+        assert!(out.contains("README.md"));
+        let d = parse(&out);
+        assert_eq!(d.files.len(), 1);
+        assert_eq!(d.files[0].new_path, "README.md");
+    }
+
+    #[test]
+    fn split_hunk_produces_two_valid_hunks() {
+        // Split the first foo.rs hunk at the "+    new();" line.
+        let at = TWO_FILE.lines().position(|l| l == "+    new();").unwrap();
+        let out = diff_split_hunk(TWO_FILE, at).expect("split");
+        assert!(out.contains("@@ -1,2 +1,1 @@"));
+        assert!(out.contains("@@ -3,1 +2,3 @@"));
+        // Now three hunks in foo.rs plus README's one.
+        assert_eq!(hunk_count(&parse(&out)), 4);
+        // Reparsing keeps the body intact.
+        assert!(out.contains("+    extra();"));
+    }
+
+    #[test]
+    fn split_hunk_rejects_the_header_line() {
+        let hdr = TWO_FILE.lines().position(|l| l.starts_with("@@ -1,3")).unwrap();
+        assert_eq!(diff_split_hunk(TWO_FILE, hdr), None);
+    }
+
+    #[test]
+    fn reverse_direction_swaps_headers_and_signs() {
+        let out = diff_reverse_direction(UNIFIED);
+        let expected = "\
+--- b/f.txt
++++ a/f.txt
+@@ -1,4 +1,4 @@
+ line1
++line2
+-line2new
+ line3
++line4
+-line4new
+";
+        assert_eq!(out, expected);
+    }
+
+    #[test]
+    fn reverse_direction_round_trips() {
+        assert_eq!(diff_reverse_direction(&diff_reverse_direction(TWO_FILE)), TWO_FILE);
+        assert_eq!(diff_reverse_direction(&diff_reverse_direction(UNIFIED)), UNIFIED);
+    }
+
+    #[test]
+    fn reverse_preserves_omitted_hunk_lengths() {
+        let src = "@@ -10 +11 @@\n context\n";
+        assert_eq!(diff_reverse_direction(src), "@@ -11 +10 @@\n context\n");
+    }
+
+    #[test]
+    fn unified_to_context_matches_diff_c() {
+        assert_eq!(diff_unified_to_context(UNIFIED), CONTEXT);
+    }
+
+    #[test]
+    fn context_to_unified_inverts() {
+        assert_eq!(diff_context_to_unified(CONTEXT), UNIFIED);
+    }
+
+    #[test]
+    fn unified_context_round_trips() {
+        assert_eq!(diff_context_to_unified(&diff_unified_to_context(UNIFIED)), UNIFIED);
+    }
+
+    #[test]
+    fn unified_to_context_pure_insertion_omits_old_body() {
+        let ins = "\
+--- a/f.txt
++++ b/f.txt
+@@ -5,0 +6,3 @@
++alpha
++beta
++gamma
+";
+        let out = diff_unified_to_context(ins);
+        let expected = "\
+*** a/f.txt
+--- b/f.txt
+***************
+*** 4,0 ****
+--- 6,8 ----
++ alpha
++ beta
++ gamma
+";
+        assert_eq!(out, expected);
+        // And it converts straight back.
+        assert_eq!(diff_context_to_unified(&out), ins);
+    }
+
+    #[test]
+    fn context_to_unified_reads_bang_change_lines() {
+        // Real `diff -c` output marks a change block with `!` on both sides.
+        let ctx = "\
+*** a/f.txt
+--- b/f.txt
+***************
+*** 1,3 ****
+  keep
+! old
+  tail
+--- 1,3 ----
+  keep
+! new
+  tail
+";
+        let out = diff_context_to_unified(ctx);
+        let expected = "\
+--- a/f.txt
++++ b/f.txt
+@@ -1,3 +1,3 @@
+ keep
+-old
++new
+ tail
+";
+        assert_eq!(out, expected);
+    }
+
+    #[test]
+    fn delete_trailing_whitespace_strips_added_lines_only() {
+        let src = "@@ -1,2 +1,2 @@\n context  \n+added   \n-removed\t\n";
+        let out = diff_delete_trailing_whitespace(src);
+        // The added line loses its trailing spaces; context/removed untouched.
+        assert_eq!(out, "@@ -1,2 +1,2 @@\n context  \n+added\n-removed\t\n");
+    }
+
+    #[test]
+    fn apply_hunk_patches_the_target() {
+        let target = "line1\nline2\nline3\nline4\n";
+        let d = parse(UNIFIED);
+        let hunk = &d.files[0].hunks[0];
+        let out = apply_hunk(target, hunk).expect("applies");
+        assert_eq!(out, "line1\nline2new\nline3\nline4new\n");
+    }
+
+    #[test]
+    fn apply_hunk_scans_when_line_number_is_off() {
+        // Same change but the file has an extra leading line, so old_start is wrong.
+        let target = "header\nline1\nline2\nline3\nline4\n";
+        let hunk = &parse(UNIFIED).files[0].hunks[0];
+        let out = apply_hunk(target, hunk).expect("applies via scan");
+        assert_eq!(out, "header\nline1\nline2new\nline3\nline4new\n");
+    }
+
+    #[test]
+    fn apply_hunk_rejects_mismatched_context() {
+        let target = "totally\ndifferent\ncontent\n";
+        let hunk = &parse(UNIFIED).files[0].hunks[0];
+        assert!(apply_hunk(target, hunk).is_err());
+    }
+
+    #[test]
+    fn apply_file_diff_applies_every_hunk() {
+        // foo.rs old file reconstructed from the two hunks' old images.
+        let target = "fn foo() {\n    old();\n}\n\n\n\n\n\n\ntail\ngone\n";
+        let file = &parse(TWO_FILE).files[0];
+        let out = apply_file_diff(target, file).expect("applies");
+        assert!(out.contains("    new();"));
+        assert!(out.contains("    extra();"));
+        assert!(out.contains("kept"));
+        assert!(!out.contains("gone"));
+        assert!(!out.contains("old();"));
+    }
+
+    #[test]
+    fn restrict_bounds_cover_the_hunk() {
+        let (hs, he) = hunk_line_bounds(TWO_FILE, 6).expect("a hunk");
+        assert!(TWO_FILE.lines().nth(hs).unwrap().starts_with("@@"));
+        assert!(he > hs);
+        let (fs, fe) = file_line_bounds(TWO_FILE, 6).expect("a file");
+        assert!(TWO_FILE.lines().nth(fs).unwrap().starts_with("diff --git"));
+        assert!(fe > fs && fs <= hs);
     }
 }

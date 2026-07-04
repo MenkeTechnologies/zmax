@@ -1356,6 +1356,16 @@ impl MappableCommand {
         xref_find_references, "Find references to a symbol across the workspace (emacs xref-find-references)",
         project_find_file, "Find a file under the project root (emacs project-find-file)",
         diffmode, "Open the unified-diff viewer (emacs diff-mode)",
+        diff_hunk_kill, "Kill the diff hunk at point (emacs diff-hunk-kill)",
+        diff_file_kill, "Kill the whole file section at point (emacs diff-file-kill)",
+        diff_split_hunk, "Split the diff hunk at point into two (emacs diff-split-hunk)",
+        diff_reverse_direction, "Reverse the direction of the diff (emacs diff-reverse-direction)",
+        diff_context_to_unified, "Convert a context diff to a unified diff (emacs diff-context->unified)",
+        diff_unified_to_context, "Convert a unified diff to a context diff (emacs diff-unified->context)",
+        diff_delete_trailing_whitespace, "Strip trailing whitespace from added lines (emacs diff-delete-trailing-whitespace)",
+        diff_restrict_view, "Narrow the diff buffer to the hunk at point (emacs diff-restrict-view)",
+        diff_apply_hunk, "Apply the diff hunk at point to its target file (emacs diff-apply-hunk)",
+        diff_apply_buffer, "Apply every hunk in the diff buffer to its target files (emacs diff-apply-buffer)",
         picture, "Draw ASCII pictures on a canvas (emacs picture-mode)",
         picture_mode, "Toggle picture-mode overwrite drawing on the buffer (emacs picture-mode)",
         edit_picture, "Enter picture-mode on the current buffer (emacs edit-picture)",
@@ -15367,6 +15377,237 @@ fn diffmode(cx: &mut Context) {
     open_overlay(cx, move |_editor| {
         Ok(Box::new(crate::ui::diffmode::DiffMode::new(diff_text)) as Box<dyn Component>)
     });
+}
+
+/// Line index of point in the current document (0-based).
+fn diff_point_line(cx: &mut Context) -> (usize, String) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    (slice.char_to_line(cursor), text.to_string())
+}
+
+/// Replace the whole current document with `new_text` via one transaction.
+fn diff_replace_buffer(cx: &mut Context, new_text: String) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let len = text.len_chars();
+    let tx = Transaction::change(text, std::iter::once((0, len, Some(new_text.into()))));
+    doc.apply(&tx, view.id);
+}
+
+/// Emacs `diff-hunk-kill` (M-k): delete the hunk at point (and its file header
+/// if it was the file's only hunk).
+fn diff_hunk_kill(cx: &mut Context) {
+    let (line, full) = diff_point_line(cx);
+    match zemacs_core::diffmode::diff_hunk_kill(&full, line) {
+        Some(new) => {
+            diff_replace_buffer(cx, new);
+            cx.editor.set_status("Killed hunk");
+        }
+        None => cx.editor.set_status("diff-hunk-kill: point is not in a hunk"),
+    }
+}
+
+/// Emacs `diff-file-kill` (M-K): delete the whole file section at point.
+fn diff_file_kill(cx: &mut Context) {
+    let (line, full) = diff_point_line(cx);
+    match zemacs_core::diffmode::diff_file_kill(&full, line) {
+        Some(new) => {
+            diff_replace_buffer(cx, new);
+            cx.editor.set_status("Killed file section");
+        }
+        None => cx.editor.set_status("diff-file-kill: point is not in a file section"),
+    }
+}
+
+/// Emacs `diff-split-hunk` (C-c C-s): split the unified hunk at point into two.
+fn diff_split_hunk(cx: &mut Context) {
+    let (line, full) = diff_point_line(cx);
+    match zemacs_core::diffmode::diff_split_hunk(&full, line) {
+        Some(new) => {
+            diff_replace_buffer(cx, new);
+            cx.editor.set_status("Split hunk");
+        }
+        None => cx
+            .editor
+            .set_status("diff-split-hunk: point must be on a body line inside a unified hunk"),
+    }
+}
+
+/// Emacs `diff-reverse-direction` (C-c C-r): swap the direction of the diff.
+fn diff_reverse_direction(cx: &mut Context) {
+    let (_line, full) = diff_point_line(cx);
+    let new = zemacs_core::diffmode::diff_reverse_direction(&full);
+    diff_replace_buffer(cx, new);
+    cx.editor.set_status("Reversed diff direction");
+}
+
+/// Emacs `diff-context->unified` (C-c C-u): convert a context diff to unified.
+fn diff_context_to_unified(cx: &mut Context) {
+    let (_line, full) = diff_point_line(cx);
+    let new = zemacs_core::diffmode::diff_context_to_unified(&full);
+    diff_replace_buffer(cx, new);
+    cx.editor.set_status("Converted context diff to unified");
+}
+
+/// Emacs `diff-unified->context` (C-c C-w — inverse of the above).
+fn diff_unified_to_context(cx: &mut Context) {
+    let (_line, full) = diff_point_line(cx);
+    let new = zemacs_core::diffmode::diff_unified_to_context(&full);
+    diff_replace_buffer(cx, new);
+    cx.editor.set_status("Converted unified diff to context");
+}
+
+/// Emacs `diff-delete-trailing-whitespace`: strip trailing whitespace from the
+/// added lines in the buffer (in-buffer only; does not edit source files).
+fn diff_delete_trailing_whitespace(cx: &mut Context) {
+    let (_line, full) = diff_point_line(cx);
+    let new = zemacs_core::diffmode::diff_delete_trailing_whitespace(&full);
+    diff_replace_buffer(cx, new);
+    cx.editor
+        .set_status("Deleted trailing whitespace from added lines");
+}
+
+/// Emacs `diff-restrict-view` (C-c C-n): narrow the buffer to the hunk at point.
+fn diff_restrict_view(cx: &mut Context) {
+    let (line, full) = diff_point_line(cx);
+    match zemacs_core::diffmode::hunk_line_bounds(&full, line) {
+        Some((start, end)) => {
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text();
+            let slice = text.slice(..);
+            let cstart = slice.line_to_char(start.min(slice.len_lines()));
+            let cend = if end >= slice.len_lines() {
+                text.len_chars()
+            } else {
+                slice.line_to_char(end)
+            };
+            doc.narrow_to(cstart, cend);
+            let _ = view;
+            cx.editor.set_status("Restricted view to hunk (widen to undo)");
+        }
+        None => cx.editor.set_status("diff-restrict-view: point is not in a hunk"),
+    }
+}
+
+/// Resolve a diff-relative path against the cwd, then the diff buffer's dir.
+fn diff_resolve_target(cx: &mut Context, rel: &str) -> Option<std::path::PathBuf> {
+    let cwd = std::env::current_dir().ok();
+    if let Some(base) = &cwd {
+        let p = base.join(rel);
+        if p.exists() {
+            return Some(p);
+        }
+    }
+    let (_view, doc) = current_ref!(cx.editor);
+    if let Some(dir) = doc.path().and_then(|p| p.parent()) {
+        let p = dir.join(rel);
+        if p.exists() {
+            return Some(p);
+        }
+    }
+    cwd.map(|b| b.join(rel))
+}
+
+/// Emacs `diff-apply-hunk` (C-c C-a): apply the hunk at point to its target file.
+fn diff_apply_hunk(cx: &mut Context) {
+    use zemacs_core::diffmode::{
+        apply_hunk, file_line_bounds, hunk_line_bounds, parse,
+    };
+    let (line, full) = diff_point_line(cx);
+    let (Some((fs, fe)), Some((hs, he))) =
+        (file_line_bounds(&full, line), hunk_line_bounds(&full, line))
+    else {
+        cx.editor.set_status("diff-apply-hunk: point is not in a hunk");
+        return;
+    };
+    let all: Vec<&str> = full.lines().collect();
+    let first_hunk = (fs..fe).find(|&i| all[i].starts_with("@@")).unwrap_or(hs);
+    let mut snippet = String::new();
+    for &idx in all.iter().take(first_hunk).skip(fs) {
+        snippet.push_str(idx);
+        snippet.push('\n');
+    }
+    for &idx in all.iter().take(he).skip(hs) {
+        snippet.push_str(idx);
+        snippet.push('\n');
+    }
+    let d = parse(&snippet);
+    let Some(file) = d.files.first() else {
+        cx.editor.set_status("diff-apply-hunk: could not parse the hunk");
+        return;
+    };
+    let Some(hunk) = file.hunks.first() else {
+        cx.editor.set_status("diff-apply-hunk: no hunk at point");
+        return;
+    };
+    let rel = if file.new_path.is_empty() {
+        file.old_path.clone()
+    } else {
+        file.new_path.clone()
+    };
+    let Some(target) = diff_resolve_target(cx, &rel) else {
+        cx.editor
+            .set_status(format!("diff-apply-hunk: cannot locate target {rel}"));
+        return;
+    };
+    let Ok(content) = std::fs::read_to_string(&target) else {
+        cx.editor
+            .set_status(format!("diff-apply-hunk: cannot read {}", target.display()));
+        return;
+    };
+    match apply_hunk(&content, hunk) {
+        Ok(patched) => match std::fs::write(&target, patched) {
+            Ok(()) => cx
+                .editor
+                .set_status(format!("Applied hunk to {}", target.display())),
+            Err(e) => cx.editor.set_status(format!("diff-apply-hunk: write failed: {e}")),
+        },
+        Err(e) => cx.editor.set_status(format!("diff-apply-hunk: {e}")),
+    }
+}
+
+/// Emacs `diff-apply-buffer`: apply every hunk in the diff buffer to its files.
+fn diff_apply_buffer(cx: &mut Context) {
+    use zemacs_core::diffmode::{apply_file_diff, parse};
+    let (_line, full) = diff_point_line(cx);
+    let d = parse(&full);
+    if d.files.is_empty() {
+        cx.editor.set_status("diff-apply-buffer: no diff in buffer");
+        return;
+    }
+    let mut applied = 0usize;
+    let mut failed: Vec<String> = Vec::new();
+    for file in &d.files {
+        let rel = if file.new_path.is_empty() {
+            file.old_path.clone()
+        } else {
+            file.new_path.clone()
+        };
+        let Some(target) = diff_resolve_target(cx, &rel) else {
+            failed.push(rel);
+            continue;
+        };
+        let Ok(content) = std::fs::read_to_string(&target) else {
+            failed.push(target.display().to_string());
+            continue;
+        };
+        match apply_file_diff(&content, file) {
+            Ok(patched) if std::fs::write(&target, &patched).is_ok() => applied += 1,
+            _ => failed.push(target.display().to_string()),
+        }
+    }
+    if failed.is_empty() {
+        cx.editor
+            .set_status(format!("Applied all hunks to {applied} file(s)"));
+    } else {
+        cx.editor.set_status(format!(
+            "Applied {applied} file(s); failed: {}",
+            failed.join(", ")
+        ));
+    }
 }
 
 /// Emacs `picture-mode`: draw ASCII pictures on a 2-D canvas.
