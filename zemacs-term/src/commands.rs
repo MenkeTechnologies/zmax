@@ -1264,6 +1264,10 @@ impl MappableCommand {
         toggle_blame_annotate, "Toggle the git-blame annotate gutter column (SPC g B)",
         git_branch_picker, "Pick a git branch and check it out",
         preferences, "Open the unified Preferences window",
+        set_selective_display, "Hide lines indented past the prefix-arg column; no arg turns it off (emacs set-selective-display, C-x $)",
+        global_whitespace_toggle_options, "Toggle rendering of whitespace characters (emacs global-whitespace-toggle-options)",
+        global_tab_line_mode, "Toggle the buffer tab line (emacs global-tab-line-mode)",
+        global_visual_wrap_prefix_mode, "Toggle soft-wrap with indentation carry-over (emacs global-visual-wrap-prefix-mode)",
         help, "Open the inline Help browser",
         dashboard, "Open the system-stats Dashboard (Preferences)",
         search_in_files, "Open the project-wide Find in Files panel",
@@ -25517,6 +25521,100 @@ fn preferences(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::preferences::PreferencesPanel::new(0)) as Box<dyn Component>)
     });
+}
+
+/// Emacs `set-selective-display` (`C-x $`): with a numeric prefix N, hide every
+/// line indented N columns or more (only lines starting with fewer than N columns
+/// of indentation stay visible); with no prefix, turn selective display off.
+///
+/// Implemented over the fold model — each run of over-indented lines is collapsed
+/// under the nearest preceding visible line. Because it reuses folds, invoking it
+/// first clears any existing folds in the buffer.
+fn set_selective_display(cx: &mut Context) {
+    let column = cx.count.map(|n| n.get()).unwrap_or(0);
+    let (_view, doc) = current!(cx.editor);
+    doc.folds_mut().clear();
+    let msg = if column == 0 {
+        "selective display disabled".to_string()
+    } else {
+        let tab_width = doc.tab_width();
+        let text = doc.text();
+        let slice = text.slice(..);
+        let last = slice.len_lines().saturating_sub(1);
+        let indents: Vec<usize> = (0..slice.len_lines())
+            .map(|l| {
+                let ws: String = slice
+                    .line(l)
+                    .chars()
+                    .take_while(|c| *c == ' ' || *c == '\t')
+                    .collect();
+                zemacs_core::selective_display::leading_indent_columns(&ws, tab_width)
+            })
+            .collect();
+        let ranges = zemacs_core::selective_display::selective_display_folds(&indents, column);
+        let n = ranges.len();
+        for (start, end) in ranges {
+            doc.folds_mut().create(start, end);
+        }
+        doc.folds_mut().clamp(last);
+        format!("selective display: hiding lines indented past column {column} ({n} region(s))")
+    };
+    cx.editor.set_status(msg);
+}
+
+/// Emacs `global-whitespace-toggle-options` / whitespace-mode: toggle rendering of
+/// whitespace characters (spaces, tabs, newlines) in every buffer.
+fn global_whitespace_toggle_options(cx: &mut Context) {
+    use zemacs_view::editor::{WhitespaceRender, WhitespaceRenderValue};
+    let on = matches!(
+        cx.editor.config().whitespace.render.space(),
+        WhitespaceRenderValue::All
+    );
+    let new = if on {
+        WhitespaceRenderValue::None
+    } else {
+        WhitespaceRenderValue::All
+    };
+    edit_live_config(cx, move |c| {
+        c.whitespace.render = WhitespaceRender::Basic(new);
+    });
+    cx.editor.set_status(format!(
+        "whitespace display {}",
+        if on { "off" } else { "on" }
+    ));
+}
+
+/// Emacs `global-tab-line-mode`: toggle the per-window buffer tab line (zemacs's
+/// bufferline) between always-on and off.
+fn global_tab_line_mode(cx: &mut Context) {
+    use zemacs_view::editor::BufferLine;
+    let on = !matches!(cx.editor.config().bufferline, BufferLine::Never);
+    let new = if on {
+        BufferLine::Never
+    } else {
+        BufferLine::Always
+    };
+    edit_live_config(cx, move |c| c.bufferline = new);
+    cx.editor
+        .set_status(format!("tab-line {}", if on { "off" } else { "on" }));
+}
+
+/// Emacs `global-visual-wrap-prefix-mode`: continuation lines of a wrapped line
+/// keep the original line's indentation as a prefix. zemacs has no prefix-only
+/// mode, so this toggles soft-wrap with indentation carry-over (`max-indent-retain`).
+fn global_visual_wrap_prefix_mode(cx: &mut Context) {
+    let on = cx.editor.config().soft_wrap.enable.unwrap_or(false);
+    let new = !on;
+    edit_live_config(cx, move |c| {
+        c.soft_wrap.enable = Some(new);
+        if new && c.soft_wrap.max_indent_retain.is_none() {
+            c.soft_wrap.max_indent_retain = Some(40);
+        }
+    });
+    cx.editor.set_status(format!(
+        "visual wrap prefix (soft-wrap with indent) {}",
+        if new { "on" } else { "off" }
+    ));
 }
 
 /// Open the configuration page on the Help tab (searchable: commands, keybindings, topics).
