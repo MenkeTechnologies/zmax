@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-44f4dfb1.js";
+            window.path_to_searchindex_js = "searchindex-2cb45beb.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -2214,6 +2214,7 @@
 <tr><td><code>toggle_readonly</code></td><td>Toggle the buffer’s read-only (writable) state (SPC b w)</td><td>normal: <code>&lt;space&gt;bw</code>, <code>&lt;C-x&gt;&lt;C-q&gt;</code>, select: <code>&lt;space&gt;bw</code>, <code>&lt;C-x&gt;&lt;C-q&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-q&gt;</code></td></tr>
 <tr><td><code>toggle_window_dedication</code></td><td>Toggle window dedication (spacemacs SPC w t)</td><td>normal: <code>&lt;C-w&gt;t</code>, <code>&lt;space&gt;wt</code>, select: <code>&lt;space&gt;wt</code></td></tr>
 <tr><td><code>toggle_subword</code></td><td>Toggle sub-word w/b/e motions (spacemacs SPC t c)</td><td>normal: <code>&lt;space&gt;tc</code>, select: <code>&lt;space&gt;tc</code></td></tr>
+<tr><td><code>toggle_superword</code></td><td>Toggle super-word w/b/e motions: symbols join words (emacs superword-mode, SPC t C)</td><td>normal: <code>&lt;space&gt;tC</code>, select: <code>&lt;space&gt;tC</code></td></tr>
 <tr><td><code>toggle_auto_fill</code></td><td>Toggle auto-fill: wrap at text-width while typing (spacemacs SPC t F)</td><td>normal: <code>&lt;space&gt;tF</code>, select: <code>&lt;space&gt;tF</code></td></tr>
 <tr><td><code>toggle_follow_mode</code></td><td>Toggle follow mode: windows on the same doc scroll together (spacemacs SPC w f)</td><td>normal: <code>&lt;C-w&gt;f</code>, <code>&lt;space&gt;wf</code>, select: <code>&lt;space&gt;wf</code></td></tr>
 <tr><td><code>subword_w</code></td><td>Next word start, sub-word aware (w)</td><td>normal: <code>w</code></td></tr>
@@ -2460,6 +2461,15 @@
 <tr><td><code>c_show_syntactic_information</code></td><td>Report the tree-sitter node kind at point (emacs c-show-syntactic-information)</td><td></td></tr>
 <tr><td><code>c_macro_expand</code></td><td>Expand C preprocessor macros in the region via cpp (emacs c-macro-expand)</td><td></td></tr>
 <tr><td><code>c_set_style</code></td><td>Report the C indentation style (emacs c-set-style)</td><td></td></tr>
+<tr><td><code>ps_print_buffer</code></td><td>Print the buffer as PostScript via lpr (emacs ps-print-buffer)</td><td></td></tr>
+<tr><td><code>ps_print_region</code></td><td>Print the region as PostScript via lpr (emacs ps-print-region)</td><td></td></tr>
+<tr><td><code>ps_print_buffer_with_faces</code></td><td>Print the buffer as PostScript (plain, no faces) (emacs ps-print-buffer-with-faces)</td><td></td></tr>
+<tr><td><code>ps_print_region_with_faces</code></td><td>Print the region as PostScript (plain, no faces) (emacs ps-print-region-with-faces)</td><td></td></tr>
+<tr><td><code>ps_spool_buffer</code></td><td>Spool the buffer as PostScript for later printing (emacs ps-spool-buffer)</td><td></td></tr>
+<tr><td><code>ps_spool_region</code></td><td>Spool the region as PostScript for later printing (emacs ps-spool-region)</td><td></td></tr>
+<tr><td><code>ps_spool_buffer_with_faces</code></td><td>Spool the buffer as PostScript (plain, no faces) (emacs ps-spool-buffer-with-faces)</td><td></td></tr>
+<tr><td><code>ps_spool_region_with_faces</code></td><td>Spool the region as PostScript (plain, no faces) (emacs ps-spool-region-with-faces)</td><td></td></tr>
+<tr><td><code>ps_despool</code></td><td>Print the accumulated PostScript spool via lpr (emacs ps-despool)</td><td></td></tr>
 <tr><td><code>delete_find_char_backward</code></td><td>Delete to prev char (dF)</td><td>normal: <code>dF</code></td></tr>
 <tr><td><code>delete_till_char_backward</code></td><td>Delete till prev char (dT)</td><td>normal: <code>dT</code></td></tr>
 <tr><td><code>change_find_char_forward</code></td><td>Change to next char (cf)</td><td>normal: <code>cf</code></td></tr>
