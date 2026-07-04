@@ -28908,6 +28908,14 @@
   "note": "kmacro-set-format: set the printf format the counter is inserted with (%d, %03d, 0x%x)"
  },
  {
+  "spec_id": "emacs.command.kmacro_end_or_call_macro",
+  "status": "ported",
+  "evidence": [
+   "static:kmacro_end_or_call_macro"
+  ],
+  "note": "kmacro-end-or-call-macro (C-x e / F4): ends the macro if recording, else replays the last macro; bound to F4."
+ },
+ {
   "spec_id": "emacs.command.flyspell_auto_correct_word",
   "status": "ported",
   "evidence": [

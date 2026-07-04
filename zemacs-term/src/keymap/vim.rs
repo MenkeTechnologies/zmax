@@ -977,6 +977,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // expressible in the keymap macro and remain tracked as absent.
         "," => repeat_find_char_reverse,   // vim , : repeat last f/t/F/T reversed
         // Run / Debug function keys (IDE-style)
+        "F4" => kmacro_end_or_call_macro,      // F4      : end macro if recording, else call last macro (emacs kmacro-end-or-call-macro)
         "F5" => run_active_config,             // F5      : run the active configuration
         "S-F5" => dap_launch,                  // Shift-F5: start debugging
         "F9" => dap_toggle_breakpoint,         // F9      : toggle breakpoint

@@ -1219,6 +1219,7 @@ impl MappableCommand {
         kmacro_insert_counter, "Insert the macro counter value, then increment (SPC K c c)",
         kmacro_set_counter, "Set the keyboard-macro counter to [count] (emacs kmacro-set-counter)",
         kmacro_set_format, "Set the macro-counter insert format, e.g. %03d (emacs kmacro-set-format)",
+        kmacro_end_or_call_macro, "End the macro if recording, else call the last macro (emacs kmacro-end-or-call-macro, F4)",
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
         toggle_window_dedication, "Toggle window dedication (spacemacs SPC w t)",
         toggle_subword, "Toggle sub-word w/b/e motions (spacemacs SPC t c)",
@@ -23839,6 +23840,53 @@ fn kmacro_set_format(cx: &mut Context) {
     );
 }
 
+/// What `kmacro-end-or-call-macro` should do this invocation. Emacs makes a
+/// single key (C-x e / F4) finish a macro that is being defined, or otherwise
+/// replay the last one — so the whole behaviour is this branch.
+#[derive(Debug, PartialEq)]
+enum KmacroEndOrCall {
+    /// A macro is being recorded → end the definition.
+    EndRecording,
+    /// Not recording → replay this macro string (the ring head = last macro).
+    Call(String),
+    /// Not recording and the ring is empty → nothing to call.
+    NoMacro,
+}
+
+fn kmacro_end_or_call_decision(
+    is_recording: bool,
+    ring_head: Option<String>,
+) -> KmacroEndOrCall {
+    if is_recording {
+        KmacroEndOrCall::EndRecording
+    } else {
+        match ring_head {
+            Some(s) => KmacroEndOrCall::Call(s),
+            None => KmacroEndOrCall::NoMacro,
+        }
+    }
+}
+
+/// Emacs `kmacro-end-or-call-macro` (`C-x e` / `F4`): if a keyboard macro is
+/// being recorded, end the definition; otherwise execute the last keyboard
+/// macro (the head of the macro ring) `count` times. Bound to a single key so
+/// the end path leaves exactly one trailing key for `record_macro` to strip,
+/// exactly as vim's `q` stop does.
+fn kmacro_end_or_call_macro(cx: &mut Context) {
+    let ring_head = MACRO_RING.lock().ok().and_then(|r| r.first().cloned());
+    match kmacro_end_or_call_decision(cx.editor.macro_recording.is_some(), ring_head) {
+        KmacroEndOrCall::EndRecording => record_macro(cx),
+        KmacroEndOrCall::Call(s) => {
+            // Sync the last macro into register `@` (as SPC K r does) and replay;
+            // replay_macro honours cx.count() for the repeat count.
+            let _ = cx.editor.registers.write('@', vec![s]);
+            cx.register = Some('@');
+            replay_macro(cx);
+        }
+        KmacroEndOrCall::NoMacro => cx.editor.set_error("No keyboard macro defined"),
+    }
+}
+
 // --- paredit-style structural editing (spacemacs SPC k) ----------------------
 // Pure s-expression transforms over a char buffer + cursor, applied with a
 // minimal prefix/suffix diff so undo/marks stay tight. An "s-expression" is a
@@ -26847,6 +26895,29 @@ mod insert_generator_tests {
         assert_eq!(kmacro_counter_add(1), 43);
         kmacro_counter_reset();
         assert_eq!(kmacro_counter_value(), 0);
+    }
+
+    #[test]
+    fn kmacro_end_or_call_decision_branches() {
+        // Recording in progress → end the definition, regardless of the ring.
+        assert_eq!(
+            kmacro_end_or_call_decision(true, Some("iabc<esc>".into())),
+            KmacroEndOrCall::EndRecording
+        );
+        assert_eq!(
+            kmacro_end_or_call_decision(true, None),
+            KmacroEndOrCall::EndRecording
+        );
+        // Not recording, ring has a macro → call the ring head verbatim.
+        assert_eq!(
+            kmacro_end_or_call_decision(false, Some("iabc<esc>".into())),
+            KmacroEndOrCall::Call("iabc<esc>".into())
+        );
+        // Not recording, empty ring → nothing to call.
+        assert_eq!(
+            kmacro_end_or_call_decision(false, None),
+            KmacroEndOrCall::NoMacro
+        );
     }
 
     #[test]
