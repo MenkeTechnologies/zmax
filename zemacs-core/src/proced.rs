@@ -100,7 +100,7 @@ pub fn parse_ps(output: &str) -> Vec<Proc> {
 /// Sort `procs` in place by `by` (see [`Sort`] for direction per key).
 pub fn sort_procs(procs: &mut [Proc], by: Sort) {
     match by {
-        Sort::Pid => procs.sort_by(|a, b| a.pid.cmp(&b.pid)),
+        Sort::Pid => procs.sort_by_key(|a| a.pid),
         Sort::Cpu => procs.sort_by(|a, b| b.cpu.partial_cmp(&a.cpu).unwrap_or(Ordering::Equal)),
         Sort::Mem => procs.sort_by(|a, b| b.mem.partial_cmp(&a.mem).unwrap_or(Ordering::Equal)),
         Sort::User => procs.sort_by(|a, b| a.user.cmp(&b.user)),

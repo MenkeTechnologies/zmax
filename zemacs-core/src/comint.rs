@@ -108,7 +108,7 @@ impl InputRing {
 
     /// `comint-next-input`: step to a newer entry. Stepping past the newest entry
     /// stops navigation and returns `None` (the caller restores the fresh input).
-    pub fn next(&mut self) -> Option<&str> {
+    pub fn next_input(&mut self) -> Option<&str> {
         match self.index {
             None | Some(0) => {
                 self.index = None;
@@ -420,10 +420,10 @@ mod tests {
         assert_eq!(r.previous(), Some("b"));
         assert_eq!(r.previous(), Some("a"));
         assert_eq!(r.previous(), Some("a")); // clamp at oldest
-        assert_eq!(r.next(), Some("b"));
-        assert_eq!(r.next(), Some("c"));
+        assert_eq!(r.next_input(), Some("b"));
+        assert_eq!(r.next_input(), Some("c"));
         assert!(r.navigating());
-        assert_eq!(r.next(), None); // past newest -> fresh line
+        assert_eq!(r.next_input(), None); // past newest -> fresh line
         assert!(!r.navigating());
     }
 

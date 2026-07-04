@@ -239,7 +239,7 @@ impl Comint {
     }
 
     fn history_next(&mut self) {
-        match self.ring.next().map(str::to_string) {
+        match self.ring.next_input().map(str::to_string) {
             Some(next) => self.set_input(&next),
             None => {
                 // Stepped past the newest entry: restore the stashed input.

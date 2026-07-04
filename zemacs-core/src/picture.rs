@@ -199,17 +199,22 @@ impl Canvas {
         }
     }
 
-    /// The grid as text: rows joined by newlines, each row's trailing blanks
-    /// trimmed.
-    pub fn to_string(&self) -> String {
-        self.grid
+}
+
+/// The grid as text: rows joined by newlines, each row's trailing blanks
+/// trimmed.
+impl std::fmt::Display for Canvas {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = self
+            .grid
             .iter()
             .map(|row| {
                 let s: String = row.iter().collect();
                 s.trim_end().to_string()
             })
             .collect::<Vec<_>>()
-            .join("\n")
+            .join("\n");
+        f.write_str(&text)
     }
 }
 

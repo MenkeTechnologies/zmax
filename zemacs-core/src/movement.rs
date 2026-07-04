@@ -2419,8 +2419,10 @@ mod test {
         // first visual row and "dddd" word-wraps to the second (char 15).
         let long = Rope::from("aaaa bbbb cccc dddd eeee");
         let ls = long.slice(..);
-        let mut tf2 = TextFormat::default();
-        tf2.soft_wrap = true;
+        let tf2 = TextFormat {
+            soft_wrap: true,
+            ..Default::default()
+        };
         // A cursor inside "cccc" (char 12) snaps to the visual row's start (0) or
         // end (14, the space before the wrap) — NOT the logical line boundaries.
         assert_eq!(
