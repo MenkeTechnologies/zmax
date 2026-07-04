@@ -250,7 +250,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x ;", "C-x ;", "command_palette"),
     ("C-x <", "C-x <", "scroll_half_column_right"),
     ("C-x >", "C-x >", "scroll_half_column_left"),
-    ("C-x a i g", "Abbrev", "define_abbrev"),
+    ("C-x a i g", "Abbrev", "inverse_add_global_abbrev"),
     ("C-x a i l", "Abbrev", "define_abbrev"),
     ("C-x a l", "Abbrev", "define_abbrev"),
     ("C-x C-+", "C-x C-+", "command_palette"),
