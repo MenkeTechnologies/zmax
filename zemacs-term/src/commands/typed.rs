@@ -8910,6 +8910,209 @@ fn apropos_command(
     Ok(())
 }
 
+/// Flatten a JSON config object into `dotted.key -> value` leaf pairs. Nested
+/// objects extend the dotted prefix; every non-object value becomes one leaf.
+fn apropos_flatten_config(prefix: &str, val: &serde_json::Value, out: &mut Vec<(String, String)>) {
+    match val {
+        serde_json::Value::Object(map) => {
+            for (k, v) in map {
+                let key = if prefix.is_empty() {
+                    k.clone()
+                } else {
+                    format!("{prefix}.{k}")
+                };
+                apropos_flatten_config(&key, v, out);
+            }
+        }
+        other => out.push((prefix.to_string(), other.to_string())),
+    }
+}
+
+/// Sorted-unique `key = value` lines for config leaves whose key (`by_value`
+/// false) or value (`by_value` true) matches `re`.
+fn apropos_config_lines(
+    config: &serde_json::Value,
+    re: &regex::Regex,
+    by_value: bool,
+) -> Vec<String> {
+    let mut leaves: Vec<(String, String)> = Vec::new();
+    apropos_flatten_config("", config, &mut leaves);
+    let mut out: Vec<String> = leaves
+        .into_iter()
+        .filter(|(k, v)| {
+            if by_value {
+                re.is_match(v)
+            } else {
+                re.is_match(k)
+            }
+        })
+        .map(|(k, v)| format!("{k} = {v}"))
+        .collect();
+    out.sort_unstable();
+    out.dedup();
+    out
+}
+
+/// Sorted-unique command lines for `(name, doc)` pairs matched by `re` over the
+/// name (`match_name`) and/or the doc (`match_doc`); rendered `name — doc` when
+/// `show_doc`, else `name`.
+fn apropos_command_lines(
+    cmds: &[(&str, &str)],
+    re: &regex::Regex,
+    match_name: bool,
+    match_doc: bool,
+    show_doc: bool,
+) -> Vec<String> {
+    let mut out: Vec<String> = cmds
+        .iter()
+        .filter(|(n, d)| (match_name && re.is_match(n)) || (match_doc && re.is_match(d)))
+        .map(|(n, d)| {
+            if show_doc {
+                format!("{n} — {d}")
+            } else {
+                (*n).to_string()
+            }
+        })
+        .collect();
+    out.sort_unstable();
+    out.dedup();
+    out
+}
+
+/// Every command name paired with its doc string (typable + key-bindable).
+fn apropos_all_commands() -> Vec<(&'static str, &'static str)> {
+    TYPABLE_COMMAND_LIST
+        .iter()
+        .map(|c| (c.name, c.doc))
+        .chain(
+            crate::commands::MappableCommand::STATIC_COMMAND_LIST
+                .iter()
+                .map(|c| (c.name(), c.doc())),
+        )
+        .collect()
+}
+
+/// Dump an apropos listing into a fresh scratch buffer under `header`.
+fn apropos_scratch(cx: &mut compositor::Context, header: String, lines: &[String]) {
+    let mut body = header;
+    body.push_str("\n\n");
+    for line in lines {
+        body.push_str("  ");
+        body.push_str(line);
+        body.push('\n');
+    }
+    cx.editor.new_file(Action::Replace);
+    let (view, doc) = current!(cx.editor);
+    let insert = Transaction::insert(
+        doc.text(),
+        &zemacs_core::Selection::point(0),
+        body.as_str().into(),
+    );
+    doc.apply(&insert, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Compile the joined args as the apropos regexp, or bail with `usage`.
+fn apropos_regexp(args: &Args, usage: &str) -> anyhow::Result<(String, regex::Regex)> {
+    let pattern = args.join(" ");
+    let pattern = pattern.trim().to_string();
+    if pattern.is_empty() {
+        anyhow::bail!("{usage}");
+    }
+    let re = regex::Regex::new(&pattern).map_err(|e| anyhow!("apropos: {e}"))?;
+    Ok((pattern, re))
+}
+
+/// `:apropos <regexp>` — Emacs `apropos`: list every command (by name or doc)
+/// and every config variable (by name) matching REGEXP in a scratch buffer.
+fn apropos(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (pattern, re) = apropos_regexp(&args, "usage: :apropos <regexp>")?;
+    let cmds = apropos_all_commands();
+    let mut lines = apropos_command_lines(&cmds, &re, true, true, true);
+    let config = serde_json::json!(cx.editor.config().deref());
+    lines.extend(apropos_config_lines(&config, &re, false));
+    lines.sort_unstable();
+    lines.dedup();
+    let header = format!("Apropos \"{pattern}\" ({} found):", lines.len());
+    apropos_scratch(cx, header, &lines);
+    Ok(())
+}
+
+/// `:apropos-documentation <regexp>` — Emacs `apropos-documentation`: list
+/// commands whose documentation matches REGEXP.
+fn apropos_documentation(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (pattern, re) = apropos_regexp(&args, "usage: :apropos-documentation <regexp>")?;
+    let cmds = apropos_all_commands();
+    let lines = apropos_command_lines(&cmds, &re, false, true, true);
+    let header = format!(
+        "Commands whose documentation matches \"{pattern}\" ({} found):",
+        lines.len()
+    );
+    apropos_scratch(cx, header, &lines);
+    Ok(())
+}
+
+/// Shared body for the config-variable apropos commands: list config leaves by
+/// key (`by_value` false) or value (`by_value` true), under `label`.
+fn apropos_config_command(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    by_value: bool,
+    label: &str,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (pattern, re) = apropos_regexp(&args, "usage: :apropos-variable <regexp>")?;
+    let config = serde_json::json!(cx.editor.config().deref());
+    let lines = apropos_config_lines(&config, &re, by_value);
+    let header = format!("{label} matching \"{pattern}\" ({} found):", lines.len());
+    apropos_scratch(cx, header, &lines);
+    Ok(())
+}
+
+/// `:apropos-variable <regexp>` — Emacs `apropos-variable`: list config
+/// variables whose name matches REGEXP, with their current value.
+fn apropos_variable(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    apropos_config_command(cx, args, event, false, "Config variables")
+}
+
+/// `:apropos-user-option <regexp>` — Emacs `apropos-user-option`: list
+/// user-customizable options by name. In zemacs the whole runtime config is
+/// user-facing, so this enumerates the same config surface as apropos-variable.
+fn apropos_user_option(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    apropos_config_command(cx, args, event, false, "User options")
+}
+
+/// `:apropos-value <regexp>` — Emacs `apropos-value`: list config variables
+/// whose current value matches REGEXP.
+fn apropos_value(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    apropos_config_command(cx, args, event, true, "Config values")
+}
+
 /// `:goto-line-relative <n>` — Emacs `goto-line-relative`: move to line N
 /// counting from the start of the accessible (narrowed) portion of the buffer.
 /// With no narrowing this is identical to `goto-line`.
@@ -31122,6 +31325,61 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "apropos",
+        aliases: &[],
+        doc: "List commands (by name or doc) and config variables matching a regexp (emacs apropos).",
+        fun: apropos,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "apropos-documentation",
+        aliases: &[],
+        doc: "List commands whose documentation matches a regexp (emacs apropos-documentation).",
+        fun: apropos_documentation,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "apropos-variable",
+        aliases: &[],
+        doc: "List config variables whose name matches a regexp (emacs apropos-variable).",
+        fun: apropos_variable,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "apropos-user-option",
+        aliases: &[],
+        doc: "List user-customizable options whose name matches a regexp (emacs apropos-user-option).",
+        fun: apropos_user_option,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "apropos-value",
+        aliases: &[],
+        doc: "List config variables whose value matches a regexp (emacs apropos-value).",
+        fun: apropos_value,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "goto-line-relative",
         aliases: &[],
         doc: "Go to a line counting from the narrowed region start (emacs goto-line-relative).",
@@ -32504,6 +32762,91 @@ mod vim_set_tests {
         assert_eq!(got, want);
         // invalid JSON errors rather than panicking
         assert!(json_flatten("nope").is_err());
+    }
+
+    #[test]
+    fn apropos_flatten_config_leaves() {
+        use super::apropos_flatten_config;
+        let cfg = serde_json::json!({
+            "line-number": "absolute",
+            "soft-wrap": {"enable": true, "max-wrap": 20},
+            "scrolloff": 5
+        });
+        let mut got: Vec<(String, String)> = Vec::new();
+        apropos_flatten_config("", &cfg, &mut got);
+        got.sort();
+        assert_eq!(
+            got,
+            vec![
+                ("line-number".to_string(), "\"absolute\"".to_string()),
+                ("scrolloff".to_string(), "5".to_string()),
+                ("soft-wrap.enable".to_string(), "true".to_string()),
+                ("soft-wrap.max-wrap".to_string(), "20".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn apropos_config_lines_by_key_and_value() {
+        use super::apropos_config_lines;
+        let cfg = serde_json::json!({
+            "soft-wrap": {"enable": true},
+            "search": {"smart-case": true, "wrap-around": false},
+            "scrolloff": 5
+        });
+        // key match: only the two `search.*` leaves, sorted, with values.
+        let re = regex::Regex::new("^search").unwrap();
+        assert_eq!(
+            apropos_config_lines(&cfg, &re, false),
+            vec![
+                "search.smart-case = true".to_string(),
+                "search.wrap-around = false".to_string(),
+            ]
+        );
+        // value match: leaves whose value is `true` (three of them), sorted.
+        let re = regex::Regex::new("^true$").unwrap();
+        assert_eq!(
+            apropos_config_lines(&cfg, &re, true),
+            vec![
+                "search.smart-case = true".to_string(),
+                "soft-wrap.enable = true".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn apropos_command_lines_name_and_doc() {
+        use super::apropos_command_lines;
+        let cmds = [
+            ("write", "Write the current buffer to disk"),
+            ("quit", "Close the current view"),
+            ("write-quit", "Write then close"),
+        ];
+        // name-only, no doc column: sorted-unique names containing "write".
+        let re = regex::Regex::new("write").unwrap();
+        assert_eq!(
+            apropos_command_lines(&cmds, &re, true, false, false),
+            vec!["write".to_string(), "write-quit".to_string()]
+        );
+        // doc-only match (case-sensitive regex) with doc column "name — doc".
+        let re = regex::Regex::new("[Cc]lose").unwrap();
+        assert_eq!(
+            apropos_command_lines(&cmds, &re, false, true, true),
+            vec![
+                "quit — Close the current view".to_string(),
+                "write-quit — Write then close".to_string(),
+            ]
+        );
+        // name-or-doc union matches the "disk" doc and the "quit" names.
+        let re = regex::Regex::new("disk|quit").unwrap();
+        assert_eq!(
+            apropos_command_lines(&cmds, &re, true, true, false),
+            vec![
+                "quit".to_string(),
+                "write".to_string(),
+                "write-quit".to_string()
+            ]
+        );
     }
 
     #[test]

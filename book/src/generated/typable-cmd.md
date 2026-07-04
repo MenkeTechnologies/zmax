@@ -497,7 +497,7 @@
 | `:rev`, `:reverse-each-line` | Reverse the characters of each selected line independently (Unix rev). |
 | `:json-table`, `:json-tbl` | Render the selected JSON array of objects as an aligned plain-text table. |
 | `:hexdump`, `:xxd` | Render the selection as an xxd-style hex dump (offset, hex bytes, ASCII). |
-| `:dedup`, `:unique-lines` | Remove all duplicate lines globally, keeping first occurrence and order. |
+| `:dedup`, `:unique-lines`, `:delete-duplicate-lines` | Remove all duplicate lines globally, keeping first occurrence and order. Emacs delete-duplicate-lines. |
 | `:caesar`, `:shift-letters` | Caesar-shift the selection's letters by N (e.g. :caesar 13 = ROT13; N may be negative). |
 | `:base32-encode`, `:base32` | Base32-encode the selection (RFC 4648). |
 | `:base32-decode`, `:unbase32` | Base32-decode the selection (RFC 4648). |
@@ -770,7 +770,7 @@
 | `:untabify` | Expand tabs in the region to spaces at the buffer tab width (emacs untabify). |
 | `:delete-blank-lines` | Collapse consecutive blank lines down to a single blank line. |
 | `:uniquify-lines`, `:uniq` | Delete duplicate lines, keeping the first occurrence. |
-| `:reverse`, `:reverse-lines`, `:tac` | Reverse the order of the selected lines (or the whole buffer). |
+| `:reverse`, `:reverse-lines`, `:reverse-region`, `:tac` | Reverse the order of the selected lines (or the whole buffer). Emacs reverse-region. |
 | `:uuid`, `:guid` | Insert a random UUID v4 at each cursor (replaces any selection). |
 | `:goto-offset`, `:goto-char` | Move the cursor to an absolute character offset. |
 | `:pad-numbers`, `:zero-pad` | Zero-pad every integer in the selection to <width> digits. |
@@ -794,7 +794,60 @@
 | `:sort-numeric-fields`, `:sortnf` | Sort the selected lines by the numeric value of their Nth whitespace field (default 1). |
 | `:sort-columns`, `:sortc` | Sort the selected lines alphabetically by the character-column range [beg, end). |
 | `:sort-paragraphs`, `:sortp` | Sort the paragraphs (blank-line separated blocks) of the selection alphabetically. |
+| `:fill-individual-paragraphs` | Fill each paragraph of the selection separately, splitting on indentation changes and using each paragraph's indentation as its fill prefix (emacs fill-individual-paragraphs). |
+| `:fill-nonuniform-paragraphs` | Fill each paragraph of the selection separately, splitting only on blank lines and using the smallest indentation of each paragraph as its fill prefix (emacs fill-nonuniform-paragraphs). |
+| `:sort-pages` | Sort the ^L-delimited pages in the selection (or buffer) alphabetically (emacs sort-pages). |
 | `:sort-lines`, `:sortl` | Sort the selected lines (or the whole buffer) — vim-style line sort. |
+| `:highlight-regexp`, `:hi-lock` | Add a persistent highlight for the regexp (emacs highlight-regexp). |
+| `:highlight-phrase` | Highlight the phrase, matching across whitespace/line breaks (emacs highlight-phrase). |
+| `:highlight-lines-matching-regexp` | Highlight whole lines matching the regexp (emacs highlight-lines-matching-regexp). |
+| `:unhighlight-regexp` | Remove the highlight for the regexp, or all highlights if none given (emacs unhighlight-regexp). |
+| `:outline-hide-by-heading-regexp` | Fold the subtree of every heading whose line matches the regexp (emacs outline-hide-by-heading-regexp). |
+| `:outline-show-by-heading-regexp` | Reveal the subtree of every heading whose line matches the regexp (emacs outline-show-by-heading-regexp). |
+| `:set-fill-column` | Set the fill width to N, or the current cursor column if omitted (emacs set-fill-column). |
+| `:write-region` | Write the region (or whole buffer) to a file, overwriting it (emacs write-region). |
+| `:append-to-file` | Append the region (or whole buffer) to the end of a file (emacs append-to-file). |
+| `:set-justification-left` | Flush the region's lines to the left margin (emacs set-justification-left). |
+| `:set-justification-right` | Right-justify the region's lines to the fill width (emacs set-justification-right). |
+| `:set-justification-center` | Centre the region's lines within the fill width (emacs set-justification-center). |
+| `:set-justification-full` | Justify the region's lines to both margins (emacs set-justification-full). |
+| `:set-justification-none` | Turn justification off for the region (emacs set-justification-none). |
+| `:set-left-margin` | Set the region's left margin to a column of spaces (emacs set-left-margin). |
+| `:increase-left-margin` | Indent the region by standard-indent columns (emacs increase-left-margin). |
+| `:decrease-left-margin` | Outdent the region by standard-indent columns (emacs decrease-left-margin). |
+| `:append-to-buffer` | Insert the region at the end of another open buffer (emacs append-to-buffer). |
+| `:prepend-to-buffer` | Insert the region at the start of another open buffer (emacs prepend-to-buffer). |
+| `:copy-to-buffer` | Replace another open buffer's contents with the region (emacs copy-to-buffer). |
+| `:rename-buffer` | Give the current buffer an explicit display name (emacs rename-buffer). |
+| `:rename-uniquely` | Rename the current buffer to a unique name with a numeric suffix (emacs rename-uniquely). |
+| `:desktop-save` | Save file-visiting buffers and point to a desktop file (emacs desktop-save). |
+| `:desktop-read` | Reopen the buffers recorded in a desktop file (emacs desktop-read). |
+| `:desktop-change-dir` | Switch to the desktop saved in another directory (emacs desktop-change-dir). |
+| `:desktop-revert` | Re-read the last loaded desktop (emacs desktop-revert). |
+| `:desktop-clear` | Close all buffers and erase the desktop file (emacs desktop-clear). |
+| `:expand-region-abbrevs` | Expand every abbrev found in the region (emacs expand-region-abbrevs). |
+| `:getenv` | Report the value of an environment variable (emacs getenv). |
+| `:setenv` | Set (or, with no value, unset) an environment variable (emacs setenv). |
+| `:apropos-command` | List commands whose name matches a regexp (emacs apropos-command). |
+| `:apropos` | List commands (by name or doc) and config variables matching a regexp (emacs apropos). |
+| `:apropos-documentation` | List commands whose documentation matches a regexp (emacs apropos-documentation). |
+| `:apropos-variable` | List config variables whose name matches a regexp (emacs apropos-variable). |
+| `:apropos-user-option` | List user-customizable options whose name matches a regexp (emacs apropos-user-option). |
+| `:apropos-value` | List config variables whose value matches a regexp (emacs apropos-value). |
+| `:goto-line-relative` | Go to a line counting from the narrowed region start (emacs goto-line-relative). |
+| `:emacs-version` | Report the running editor version (emacs emacs-version). |
+| `:add-name-to-file` | Hard-link the current buffer's file to a new name (emacs add-name-to-file). |
+| `:browse-url` | Open a URL in the OS default browser (emacs browse-url). |
+| `:set-visited-file-name` | Change the file the current buffer is visiting (emacs set-visited-file-name). |
+| `:make-symbolic-link` | Create a symbolic link (emacs make-symbolic-link): <target> <linkname>, or <linkname> for the current file. |
+| `:set-file-modes` | Set the mode bits of a file, chmod-style, MODE as octal (emacs set-file-modes). |
+| `:copy-directory` | Recursively copy a directory to a destination (emacs copy-directory). |
+| `:insert-file-literally` | Insert the raw contents of a file at point (emacs insert-file-literally). |
+| `:list-directory` | Show a listing of a directory in a scratch buffer (emacs list-directory). |
+| `:write-abbrev-file` | Write every abbrev to the named file (emacs write-abbrev-file). |
+| `:read-abbrev-file` | Read abbrevs from the named file, merging them into the table (emacs read-abbrev-file). |
+| `:bookmark-write` | Write every bookmark to the named file (emacs bookmark-write). |
+| `:bookmark-load` | Load bookmarks from the named file, merging them into the store (emacs bookmark-load). |
 | `:transpose-words` | Transpose the word before the cursor with the word after it. |
 | `:transpose-chars` | Transpose the two characters around the cursor. |
 | `:duplicate-line`, `:dup` | Duplicate the current line below. |

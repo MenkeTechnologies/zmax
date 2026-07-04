@@ -415,6 +415,7 @@
 | `type_hierarchy_subtypes` | Type hierarchy: subtypes of the symbol |  |
 | `goto_window_top` | Goto window top | normal: `` H `` |
 | `what_line` | Report the line number of point (emacs what-line) |  |
+| `what_page` | Report the page number and line within the page (emacs what-page) |  |
 | `count_lines_page` | Report lines on the current page, before + after point (emacs count-lines-page, C-x l) |  |
 | `move_to_window_line_top_bottom` | Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r) |  |
 | `goto_window_center` | Goto window center | normal: `` M `` |
@@ -507,7 +508,8 @@
 | `jump_to_register` | Jump to the position in a register (emacs C-x r j) | normal: `` <C-x>rj ``, select: `` <C-x>rj ``, insert: `` <C-x>rj `` |
 | `number_to_register` | Store the prefix count in a register (emacs C-x r n) | normal: `` <C-x>rn ``, select: `` <C-x>rn ``, insert: `` <C-x>rn `` |
 | `increment_register` | Add the prefix count to a number register (emacs C-x r +) | normal: `` <C-x>r+ ``, select: `` <C-x>r+ ``, insert: `` <C-x>r+ `` |
-| `emacs_insert_register` | Insert a number register's value as text (emacs C-x r i) | normal: `` <C-x>ri ``, select: `` <C-x>ri ``, insert: `` <C-x>ri `` |
+| `emacs_insert_register` | Insert a number or rectangle register's value at point (emacs C-x r i) | normal: `` <C-x>ri ``, select: `` <C-x>ri ``, insert: `` <C-x>ri `` |
+| `copy_rectangle_to_register` | Copy the selected rectangle into a register (emacs C-x r r) |  |
 | `kill_rectangle` | Kill (cut) the rectangle, saving it for yank (emacs C-x r k) | normal: `` <C-x>rk ``, select: `` <C-x>rk ``, insert: `` <C-x>rk `` |
 | `delete_rectangle` | Delete the rectangle without saving (emacs C-x r d) | normal: `` <C-x>rd ``, select: `` <C-x>rd ``, insert: `` <C-x>rd `` |
 | `clear_rectangle` | Blank the rectangle with spaces (emacs C-x r c) | normal: `` <C-x>rc ``, `` <C-x>ro ``, `` <C-x>rt ``, select: `` <C-x>rc ``, `` <C-x>ro ``, `` <C-x>rt ``, insert: `` <C-x>rc ``, `` <C-x>ro ``, `` <C-x>rt `` |
@@ -519,10 +521,14 @@
 | `bookmark_set_no_overwrite` | Set a bookmark, refusing to overwrite an existing name (emacs C-x r M) | normal: `` <C-x>rM ``, select: `` <C-x>rM ``, insert: `` <C-x>rM `` |
 | `bookmark_jump` | Jump to a bookmark via a picker (emacs C-x r b) | normal: `` <C-x>rb ``, `` <space>rj ``, select: `` <C-x>rb ``, `` <space>rj ``, insert: `` <C-x>rb `` |
 | `list_bookmarks` | List bookmarks in a picker; select to jump (emacs C-x r l / list-bookmarks) | normal: `` <C-x>rl ``, select: `` <C-x>rl ``, insert: `` <C-x>rl `` |
+| `bookmark_insert_location` | Insert a bookmark's file path at point (emacs bookmark-insert-location, C-x r I) |  |
+| `bookmark_insert` | Insert the contents of a bookmark's file at point (emacs bookmark-insert) |  |
 | `bookmark_delete` | Delete a bookmark via a picker (emacs bookmark-delete) |  |
 | `bookmark_rename` | Rename a bookmark via a picker (emacs bookmark-rename) |  |
 | `define_abbrev` | Define a global abbrev: <name> <expansion> (emacs C-x a g) | normal: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>aig ``, `` <C-x>ail ``, select: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>aig ``, `` <C-x>ail ``, insert: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>aig ``, `` <C-x>ail `` |
 | `expand_abbrev` | Expand the abbrev before point (emacs C-x ') | normal: `` <C-x>' ``, select: `` <C-x>' ``, insert: `` <C-x>' `` |
+| `insert_abbrevs` | Insert a description of every defined abbrev at point (emacs insert-abbrevs) |  |
+| `define_abbrevs` | Define abbrevs from the buffer text after point (emacs define-abbrevs) |  |
 | `paste_clipboard_after` | Paste clipboard after selections |  |
 | `paste_clipboard_before` | Paste clipboard before selections |  |
 | `paste_primary_clipboard_after` | Paste primary clipboard after selections |  |
@@ -736,6 +742,14 @@
 | `dashboard` | Open the system-stats Dashboard (Preferences) | normal: `` <space>bh ``, select: `` <space>bh `` |
 | `search_in_files` | Open the project-wide Find in Files panel |  |
 | `terminal` | Open an integrated terminal (PTY shell) | normal: `` <space>p' ``, select: `` <space>p' `` |
+| `comint_shell` | Open a comint line-oriented shell buffer (emacs M-x shell) |  |
+| `gud_gdb` | Run gdb in a comint buffer (emacs gud-gdb) |  |
+| `gud_up` | Select the stack frame one level up (emacs gud-up) |  |
+| `gud_down` | Select the stack frame one level down (emacs gud-down) |  |
+| `gud_stepi` | Step one machine instruction (emacs gud-stepi) |  |
+| `gud_tbreak` | Set a temporary breakpoint at the current line (emacs gud-tbreak) |  |
+| `gud_print` | Print the expression at point in the debugger (emacs gud-print) |  |
+| `gud_watch` | Watch the expression at point in the debugger (emacs gud-watch) |  |
 | `run_config_manager` | Manage run/debug configurations | normal: `` <space>Rc ``, `` <space>Re ``, `` <space>cm ``, `` <space>pi ``, select: `` <space>Rc ``, `` <space>Re ``, `` <space>cm ``, `` <space>pi `` |
 | `run_active_config` | Run the active run configuration | normal: `` <F5> ``, `` <space>Rr ``, `` <space>cC ``, `` <space>pc ``, `` <space>pu ``, `` <C-c><C-c> ``, select: `` <space>Rr ``, `` <space>cC ``, `` <space>pc ``, `` <space>pu ``, `` <C-c><C-c> ``, insert: `` <C-c><C-c> `` |
 | `clear_run_output` | Clear the Run tool window output | normal: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck ``, select: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck `` |
@@ -788,6 +802,12 @@
 | `outline_show_entry` | Reveal this heading's body (emacs outline-show-entry) |  |
 | `outline_hide_body` | Fold all bodies, showing only headings (emacs outline-hide-body) |  |
 | `outline_show_all` | Reveal all outline body text (emacs outline-show-all) |  |
+| `outline_hide_sublevels` | Show only the top N levels of headings (emacs outline-hide-sublevels) |  |
+| `outline_hide_leaves` | Fold bodies in the current subtree, keeping subheadings (emacs outline-hide-leaves) |  |
+| `outline_show_children` | Reveal the immediate subheadings of the heading at point (emacs outline-show-children) |  |
+| `outline_show_branches` | Reveal every subheading in the subtree at point (emacs outline-show-branches) |  |
+| `outline_cycle` | Cycle the heading at point folded -> children -> subtree (emacs outline-cycle) |  |
+| `outline_cycle_buffer` | Cycle the whole buffer show-all -> overview -> contents (emacs outline-cycle-buffer) |  |
 | `fold_create` | Create a fold over the selection (zf) |  |
 | `fold_toggle` | Toggle fold under cursor (za) | normal: `` zA ``, `` za ``, `` zi ``, `` <C-c>@<C-c> ``, select: `` <C-c>@<C-c> ``, insert: `` <C-c>@<C-c> `` |
 | `fold_open` | Open fold under cursor (zo) | normal: `` zO ``, `` zo ``, `` zv ``, `` zx ``, `` <C-c><C-z> ``, `` <C-c>@<C-r> ``, `` <C-c>@<C-s> ``, select: `` <C-c><C-z> ``, `` <C-c>@<C-r> ``, `` <C-c>@<C-s> ``, insert: `` <C-c><C-z> ``, `` <C-c>@<C-r> ``, `` <C-c>@<C-s> `` |
@@ -910,6 +930,13 @@
 | `zone` | Run the zone screen-saver (emacs zone) |  |
 | `decipher` | Solve a cryptogram (emacs decipher) |  |
 | `dunnet` | Play the dunnet text adventure (emacs dunnet) |  |
+| `animate_birthday_present` | Animate a birthday-present message (emacs animate-birthday-present) |  |
+| `dissociated_press` | Scramble the buffer with the travesty generator (emacs dissociated-press) |  |
+| `spook` | Insert random NSA-bait phrases (emacs spook) |  |
+| `studlify_region` | StudlyCaps the selected region (emacs studlify-region) |  |
+| `studlify_buffer` | StudlyCaps the whole buffer (emacs studlify-buffer) |  |
+| `studlify_word` | StudlyCaps the word after point (emacs studlify-word) |  |
+| `indent_relative` | Indent to under the next indent point in the previous line (emacs indent-relative) |  |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |

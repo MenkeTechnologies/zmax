@@ -29499,5 +29499,45 @@
    "typable:desktop-clear"
   ],
   "note": "desktop-clear -> :desktop-clear: close every open buffer and erase the desktop file in the active directory (modified buffers block the close and are reported)"
+ },
+ {
+  "spec_id": "emacs.command.apropos",
+  "status": "ported",
+  "evidence": [
+   "typable:apropos"
+  ],
+  "note": "apropos -> :apropos: list commands (by name or doc) and config variables matching a regexp"
+ },
+ {
+  "spec_id": "emacs.command.apropos_documentation",
+  "status": "ported",
+  "evidence": [
+   "typable:apropos-documentation"
+  ],
+  "note": "apropos-documentation -> :apropos-documentation: list commands whose doc string matches a regexp"
+ },
+ {
+  "spec_id": "emacs.command.apropos_variable",
+  "status": "ported",
+  "evidence": [
+   "typable:apropos-variable"
+  ],
+  "note": "apropos-variable -> :apropos-variable: list config variables by name with their current value"
+ },
+ {
+  "spec_id": "emacs.command.apropos_user_option",
+  "status": "ported",
+  "evidence": [
+   "typable:apropos-user-option"
+  ],
+  "note": "apropos-user-option -> :apropos-user-option: list user-customizable options (zemacs config is all user-facing)"
+ },
+ {
+  "spec_id": "emacs.command.apropos_value",
+  "status": "ported",
+  "evidence": [
+   "typable:apropos-value"
+  ],
+  "note": "apropos-value -> :apropos-value: list config variables whose current value matches a regexp"
  }
 ]
