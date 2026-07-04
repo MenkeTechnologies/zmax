@@ -1582,6 +1582,15 @@ pub struct Editor {
     /// document scroll as one continuous view — sibling windows are re-anchored
     /// to pick up where the focused window ends. A persistent toggle.
     pub follow: bool,
+    /// Emacs `fill-prefix` (`C-x .` = `set-fill-prefix`): a string automatically
+    /// inserted at the start of each new line produced by auto-fill (and other
+    /// fill commands). `None` means no prefix. Set from the text between the
+    /// line start and point by `set-fill-prefix`.
+    pub fill_prefix: Option<String>,
+    /// Emacs `goal-column` (`C-x C-n` = `set-goal-column`): a sticky column that
+    /// vertical line motion (`next-line`/`previous-line`) tries to land on,
+    /// overriding the "remembered" column. `None` means normal behavior.
+    pub goal_column: Option<usize>,
     pub tree: Tree,
     pub next_document_id: DocumentId,
     pub documents: BTreeMap<DocumentId, Document>,
@@ -1854,6 +1863,8 @@ impl Editor {
             subword: false,
             auto_fill: false,
             follow: false,
+            fill_prefix: None,
+            goal_column: None,
             tree: Tree::new(area),
             next_document_id: DocumentId::default(),
             documents: BTreeMap::new(),

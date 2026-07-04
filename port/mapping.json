@@ -30740,5 +30740,141 @@
    "static:config_variable_search"
   ],
   "note": "partial: zemacs config variables are global, not buffer-local; apropos over the editor config variables"
+ },
+ {
+  "spec_id": "emacs.command.hl_line_mode",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_hl_line"
+  ],
+  "note": "emacs hl-line-mode -> toggle_hl_line: flips config.cursorline, which the renderer (ui/editor.rs) uses to highlight the current line. zemacs cursorline is editor-global."
+ },
+ {
+  "spec_id": "emacs.command.global_hl_line_mode",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_hl_line"
+  ],
+  "note": "emacs global-hl-line-mode -> toggle_hl_line: same editor-global cursorline highlight as hl-line-mode (zemacs has no per-buffer/global split)."
+ },
+ {
+  "spec_id": "emacs.command.electric_pair_mode",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_electric_pair"
+  ],
+  "note": "emacs electric-pair-mode -> toggle_electric_pair: flips config.auto_pairs Enable(true/false); refresh_config rebuilds live Editor.auto_pairs so insert_char auto-inserts matching delimiters."
+ },
+ {
+  "spec_id": "emacs.command.auto_revert_mode",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_auto_revert"
+  ],
+  "note": "emacs auto-revert-mode -> toggle_auto_revert: flips config.auto_reload (vim autoread), which re-reads unmodified buffers when the file changes on disk. Editor-global."
+ },
+ {
+  "spec_id": "emacs.command.global_auto_revert_mode",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_auto_revert"
+  ],
+  "note": "emacs global-auto-revert-mode -> toggle_auto_revert: same editor-global auto_reload toggle as auto-revert-mode."
+ },
+ {
+  "spec_id": "emacs.command.global_whitespace_mode",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_whitespace_render"
+  ],
+  "note": "emacs global-whitespace-mode -> toggle_whitespace_render: renders whitespace glyphs (spaces/tabs) via config.whitespace.render. zemacs render is editor-global."
+ },
+ {
+  "spec_id": "emacs.command.set_fill_prefix",
+  "status": "ported",
+  "evidence": [
+   "static:set_fill_prefix"
+  ],
+  "note": "emacs set-fill-prefix (C-x .) -> set_fill_prefix: stores text from line start to point in Editor.fill_prefix; auto_fill_after_insert prepends it to each wrapped continuation line. Empty prefix clears it."
+ },
+ {
+  "spec_id": "emacs.command.set_goal_column",
+  "status": "ported",
+  "evidence": [
+   "static:set_goal_column"
+  ],
+  "note": "emacs set-goal-column (C-x C-n) -> set_goal_column: stores current column in Editor.goal_column; move_line_up/down then snap the cursor to that column (clamped to line length). Re-invoking clears it."
+ },
+ {
+  "spec_id": "emacs.command.global_display_fill_column_indicator_mode",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_fill_column"
+  ],
+  "note": "emacs global-display-fill-column-indicator-mode -> toggle_fill_column: ruler at fill/text width via config.rulers. Partial: zemacs ruler is a global config toggle, not a per-buffer minor mode."
+ },
+ {
+  "spec_id": "emacs.command.global_eldoc_mode",
+  "status": "partial",
+  "evidence": [
+   "static:signature_help"
+  ],
+  "note": "emacs global-eldoc-mode -> signature_help: zemacs shows LSP signature help on demand only; it has no automatic idle echo-area documentation, so this is on-demand-equivalent (partial)."
+ },
+ {
+  "spec_id": "emacs.command.windmove_left",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_left"
+  ],
+  "note": "emacs windmove-left -> jump_view_left: focus_direction(Left) moves focus to the geometric left window in the split tree."
+ },
+ {
+  "spec_id": "emacs.command.windmove_up",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_up"
+  ],
+  "note": "emacs windmove-up -> jump_view_up: focus_direction(Up) moves focus to the window above."
+ },
+ {
+  "spec_id": "emacs.command.windmove_down",
+  "status": "ported",
+  "evidence": [
+   "static:jump_view_down"
+  ],
+  "note": "emacs windmove-down -> jump_view_down: focus_direction(Down) moves focus to the window below."
+ },
+ {
+  "spec_id": "emacs.command.windmove_swap_states_left",
+  "status": "ported",
+  "evidence": [
+   "static:swap_view_left"
+  ],
+  "note": "emacs windmove-swap-states-left -> swap_view_left: swap_split_in_direction(Left) swaps the current and left windows."
+ },
+ {
+  "spec_id": "emacs.command.windmove_swap_states_right",
+  "status": "ported",
+  "evidence": [
+   "static:swap_view_right"
+  ],
+  "note": "emacs windmove-swap-states-right -> swap_view_right: swap_split_in_direction(Right)."
+ },
+ {
+  "spec_id": "emacs.command.windmove_swap_states_up",
+  "status": "ported",
+  "evidence": [
+   "static:swap_view_up"
+  ],
+  "note": "emacs windmove-swap-states-up -> swap_view_up: swap_split_in_direction(Up)."
+ },
+ {
+  "spec_id": "emacs.command.windmove_swap_states_down",
+  "status": "ported",
+  "evidence": [
+   "static:swap_view_down"
+  ],
+  "note": "emacs windmove-swap-states-down -> swap_view_down: swap_split_in_direction(Down)."
  }
 ]
