@@ -417,6 +417,7 @@
 | `what_line` | Report the line number of point (emacs what-line) |  |
 | `what_page` | Report the page number and line within the page (emacs what-page) |  |
 | `count_lines_page` | Report lines on the current page, before + after point (emacs count-lines-page, C-x l) |  |
+| `what_cursor_position` | Report the character at point, its code, position, percentage and column (emacs what-cursor-position, C-x =) | normal: `` <C-x>= ``, select: `` <C-x>= ``, insert: `` <C-x>= `` |
 | `move_to_window_line_top_bottom` | Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r) |  |
 | `goto_window_center` | Goto window center | normal: `` M `` |
 | `goto_window_bottom` | Goto window bottom | normal: `` L `` |
@@ -735,7 +736,7 @@
 | `randomize_words_in_region` | Randomize words in the selection (SPC x w r) | normal: `` <space>xwr ``, select: `` <space>xwr `` |
 | `copy_char_below` | Insert the character below the cursor (i_CTRL-E) | insert: `` <C-e> `` |
 | `copy_char_above` | Insert the character above the cursor (i_CTRL-Y) | insert: `` <C-y> `` |
-| `file_info` | Show file name and cursor position (CTRL-G) | normal: `` <C-g> ``, `` <C-x>= ``, select: `` <C-x>= ``, insert: `` <C-x>= `` |
+| `file_info` | Show file name and cursor position (CTRL-G) | normal: `` <C-g> `` |
 | `document_stats` | Show document line/word/char counts (g CTRL-G) | normal: `` <C-x>l ``, `` g<C-g> ``, select: `` <C-x>l ``, `` g<C-g> ``, insert: `` <C-x>l `` |
 | `git_blame_line` | Show git blame for the current line (g b) | normal: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb ``, select: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb ``, insert: `` <C-x>vg `` |
 | `toggle_inline_blame` | Toggle GitLens-style inline blame on the current line | normal: `` <space>gI ``, select: `` <space>gI `` |

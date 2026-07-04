@@ -729,6 +729,7 @@ impl MappableCommand {
         what_line, "Report the line number of point (emacs what-line)",
         what_page, "Report the page number and line within the page (emacs what-page)",
         count_lines_page, "Report lines on the current page, before + after point (emacs count-lines-page, C-x l)",
+        what_cursor_position, "Report the character at point, its code, position, percentage and column (emacs what-cursor-position, C-x =)",
         move_to_window_line_top_bottom, "Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r)",
         goto_window_center, "Goto window center",
         goto_window_bottom, "Goto window bottom",
@@ -2519,6 +2520,30 @@ fn count_lines_page(cx: &mut Context) {
     let after = total.saturating_sub(before + 1);
     cx.editor
         .set_status(format!("Page has {total} lines ({before} + {after})"));
+}
+
+/// Emacs `what-cursor-position` (C-x =): report the character after point, its
+/// decimal/octal/hex code, point's char position within the buffer, the buffer
+/// size, the position as a percentage, and the (tab-expanded) column — mirroring
+/// GNU Emacs on the un-narrowed buffer. The pure message builder lives in
+/// `zemacs_core::cursor_info`.
+// `visual_coords_at_pos` gives the tab-expanded column that matches Emacs
+// `current-column`; the same deprecated helper is used by `align_selections`.
+#[allow(deprecated)]
+fn what_cursor_position(cx: &mut Context) {
+    use zemacs_core::visual_coords_at_pos;
+
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let total = text.len_chars();
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    // Emacs `point` is 1-based; `current-column` is tab-expanded and 0-based.
+    let point = cursor + 1;
+    let column = visual_coords_at_pos(slice, cursor, doc.tab_width()).col;
+    let char_at_point = (cursor < total).then(|| text.char(cursor));
+    let msg = zemacs_core::cursor_info::what_cursor_position(char_at_point, point, total, column);
+    cx.editor.set_status(msg);
 }
 
 thread_local! {

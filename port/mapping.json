@@ -12451,9 +12451,17 @@
   "spec_id": "emacs.command.what_cursor_position",
   "status": "ported",
   "evidence": [
-   "typable:character-info"
+   "static:what_cursor_position"
   ],
-  "note": ""
+  "note": "what-cursor-position (C-x =): char at point + decimal/octal/hex code, point=N of M, percentage, column (zemacs_core::cursor_info::what_cursor_position)"
+ },
+ {
+  "spec_id": "emacs.command.what_cursor_position_comma_and_international_characters",
+  "status": "ported",
+  "evidence": [
+   "static:what_cursor_position"
+  ],
+  "note": "what-cursor-position reports the character code alongside its position/percentage/column"
  },
  {
   "spec_id": "emacs.command.just_one_space",
