@@ -1408,6 +1408,7 @@ impl MappableCommand {
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
         toggle_window_dedication, "Toggle window dedication (spacemacs SPC w t)",
         toggle_subword, "Toggle sub-word w/b/e motions (spacemacs SPC t c)",
+        toggle_superword, "Toggle super-word w/b/e motions: symbols join words (emacs superword-mode, SPC t C)",
         toggle_auto_fill, "Toggle auto-fill: wrap at text-width while typing (spacemacs SPC t F)",
         toggle_follow_mode, "Toggle follow mode: windows on the same doc scroll together (spacemacs SPC w f)",
         subword_w, "Next word start, sub-word aware (w)",
@@ -30660,11 +30661,34 @@ fn toggle_window_dedication(cx: &mut Context) {
 }
 
 /// Spacemacs subword-mode (`SPC t c`): toggle sub-word `w`/`b`/`e` motions.
+/// Mutually exclusive with superword-mode, which it disables when turned on
+/// (Emacs `subword-mode` runs `(superword-mode -1)` on activation).
 fn toggle_subword(cx: &mut Context) {
     cx.editor.subword = !cx.editor.subword;
     let on = cx.editor.subword;
+    if on {
+        cx.editor.superword = false;
+    }
     cx.editor
         .set_status(format!("subword motion: {}", if on { "on" } else { "off" }));
+}
+
+/// Emacs superword-mode (`SPC t C`): toggle super-word `w`/`b`/`e` motions —
+/// symbol-syntax characters (`_`, `-`, etc.) count as part of a word, so a whole
+/// `snake_case_symbol` moves as one word. Faithful to lisp/progmodes/subword.el,
+/// whose `superword-mode` installs `forward-symbol` motion (symbol chars join
+/// words, whitespace still delimits); zemacs reuses the long-word / WORD motion,
+/// whose boundary rule is exactly "alnum+punctuation runs, split on whitespace".
+/// Mutually exclusive with subword-mode, which it disables when turned on (Emacs
+/// `superword-mode` runs `(subword-mode -1)` on activation).
+fn toggle_superword(cx: &mut Context) {
+    cx.editor.superword = !cx.editor.superword;
+    let on = cx.editor.superword;
+    if on {
+        cx.editor.subword = false;
+    }
+    cx.editor
+        .set_status(format!("superword motion: {}", if on { "on" } else { "off" }));
 }
 
 /// Spacemacs follow-mode (`SPC w f`): toggle synchronized scrolling of windows
@@ -30690,12 +30714,16 @@ fn toggle_auto_fill(cx: &mut Context) {
     ));
 }
 
-// Subword-aware word-motion dispatchers: when subword-mode is on, the `w`/`b`/`e`
-// motions (and every operator built on the `extend_*` variants) move by sub-word
-// instead of word. When off they call the original command, so behavior is
-// identical. This keeps the core motion fns untouched.
+// Subword/superword-aware word-motion dispatchers: when subword-mode is on the
+// `w`/`b`/`e` motions (and every operator built on the `extend_*` variants) move
+// by sub-word; when superword-mode is on they move by super-word (the long-word /
+// WORD motion, symbols joined). The two modes are mutually exclusive, so at most
+// one branch is ever taken; when both are off they call the original word command
+// and behavior is identical. This keeps the core motion fns untouched.
 fn subword_w(cx: &mut Context) {
-    if cx.editor.subword {
+    if cx.editor.superword {
+        move_word_vim_impl(cx, movement::move_next_long_word_start, false)
+    } else if cx.editor.subword {
         // vim-faithful landing (ON the next sub-word start), like vim_move_*.
         move_word_vim_impl(cx, movement::move_next_sub_word_start, false)
     } else {
@@ -30703,35 +30731,45 @@ fn subword_w(cx: &mut Context) {
     }
 }
 fn subword_b(cx: &mut Context) {
-    if cx.editor.subword {
+    if cx.editor.superword {
+        move_word_vim_impl(cx, movement::move_prev_long_word_start, false)
+    } else if cx.editor.subword {
         move_word_vim_impl(cx, movement::move_prev_sub_word_start, false)
     } else {
         vim_move_prev_word_start(cx)
     }
 }
 fn subword_e(cx: &mut Context) {
-    if cx.editor.subword {
+    if cx.editor.superword {
+        move_word_vim_impl(cx, movement::move_next_long_word_end, true)
+    } else if cx.editor.subword {
         move_word_vim_impl(cx, movement::move_next_sub_word_end, true)
     } else {
         vim_move_next_word_end(cx)
     }
 }
 fn subword_extend_w(cx: &mut Context) {
-    if cx.editor.subword {
+    if cx.editor.superword {
+        extend_next_long_word_start(cx)
+    } else if cx.editor.subword {
         extend_next_sub_word_start(cx)
     } else {
         extend_next_word_start(cx)
     }
 }
 fn subword_extend_b(cx: &mut Context) {
-    if cx.editor.subword {
+    if cx.editor.superword {
+        extend_prev_long_word_start(cx)
+    } else if cx.editor.subword {
         extend_prev_sub_word_start(cx)
     } else {
         extend_prev_word_start(cx)
     }
 }
 fn subword_extend_e(cx: &mut Context) {
-    if cx.editor.subword {
+    if cx.editor.superword {
+        extend_next_long_word_end(cx)
+    } else if cx.editor.subword {
         extend_next_sub_word_end(cx)
     } else {
         extend_next_word_end(cx)

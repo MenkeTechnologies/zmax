@@ -255,6 +255,82 @@ async fn subword_dw_deletes_one_subword() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Emacs superword-mode (SPC t C): `w` moves over a whole symbol, so the
+/// punctuation-joined `foo-bar` is one word. Without superword, vim `w` would
+/// stop on the `-` (index 3, a separate punctuation category); with superword on
+/// it skips to the next super-word `baz` (index 8).
+#[tokio::test(flavor = "multi_thread")]
+async fn superword_w_moves_over_hyphenated_word() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "foo-bar baz")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+    app.editor.superword = true; // as if SPC t C had been pressed
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("w"),
+            Some(&|app| {
+                let view = app.editor.tree.get(app.editor.tree.focus);
+                let doc = app.editor.documents().next().unwrap();
+                let pos = doc
+                    .selection(view.id)
+                    .primary()
+                    .cursor(doc.text().slice(..));
+                assert_eq!(8, pos, "superword `w` should skip `foo-bar` and land on 'b' of baz (col 8)");
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// With superword-mode on, `dw` deletes the whole punctuation-joined symbol
+/// (`foo-bar` plus its trailing space), leaving `baz`. Without superword, vim
+/// `dw` would delete only `foo` up to the `-`.
+#[tokio::test(flavor = "multi_thread")]
+async fn superword_dw_deletes_whole_symbol() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "foo-bar baz")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+    app.editor.superword = true;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("dw"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "baz",
+                    doc.text().to_string(),
+                    "superword `dw` deletes the whole `foo-bar ` symbol"
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
 /// Spacemacs auto-fill (SPC t F): typing past text_width wraps the line at the
 /// last whitespace.
 #[tokio::test(flavor = "multi_thread")]
