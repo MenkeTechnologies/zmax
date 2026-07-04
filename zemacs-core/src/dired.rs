@@ -241,6 +241,158 @@ pub fn next_dir_index(entries: &[DiredEntry], from: usize, forward: bool) -> Opt
     }
 }
 
+/// Apply an Emacs Dired regexp name transform (`% R`/`% C`/`% H`/`% S`) to
+/// `name`: rewrite the first match of `re` using `replacement`, where the
+/// replacement uses Emacs backslash syntax — `\&` = whole match, `\1`..`\9` =
+/// capture group N, `\\` = a literal backslash. Text before and after the match
+/// is preserved (the regexp need not anchor the whole name). Returns `None` when
+/// `re` does not match `name`, mirroring Emacs, which only acts on matching files.
+pub fn regexp_replace_name(name: &str, re: &regex::Regex, replacement: &str) -> Option<String> {
+    let caps = re.captures(name)?;
+    let whole = caps.get(0)?;
+    let mut out = String::with_capacity(name.len());
+    out.push_str(&name[..whole.start()]);
+    let mut chars = replacement.chars();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some('&') => out.push_str(whole.as_str()),
+                Some(d @ '0'..='9') => {
+                    let idx = d as usize - '0' as usize;
+                    if let Some(g) = caps.get(idx) {
+                        out.push_str(g.as_str());
+                    }
+                }
+                Some('\\') => out.push('\\'),
+                Some(other) => out.push(other),
+                None => out.push('\\'),
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out.push_str(&name[whole.end()..]);
+    Some(out)
+}
+
+/// Parse a GNU-style *numbered* backup name `base.~N~` into its base and version
+/// number, backing Emacs `dired-clean-directory`. A plain `foo~` (unnumbered) is
+/// not a numbered backup and returns `None`.
+pub fn parse_numbered_backup(name: &str) -> Option<(&str, u32)> {
+    let inner = name.strip_suffix('~')?;
+    let sep = inner.rfind(".~")?;
+    let digits = &inner[sep + 2..];
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let version: u32 = digits.parse().ok()?;
+    Some((&name[..sep], version))
+}
+
+/// Emacs `dired-clean-directory`: given a set of file names, return the numbered
+/// backups that should be flagged for deletion — for each base name, all but the
+/// `keep` highest-numbered versions (Emacs `dired-kept-versions`, default 2). The
+/// result is the excess backup file names (order unspecified by Emacs; we return
+/// them base-grouped, oldest-first within a base).
+pub fn backups_to_clean(names: &[String], keep: usize) -> Vec<String> {
+    use std::collections::BTreeMap;
+    let mut groups: BTreeMap<&str, Vec<(u32, &str)>> = BTreeMap::new();
+    for n in names {
+        if let Some((base, version)) = parse_numbered_backup(n) {
+            groups.entry(base).or_default().push((version, n.as_str()));
+        }
+    }
+    let mut out = Vec::new();
+    for versions in groups.values_mut() {
+        // Highest version first; the `keep` newest survive, the rest are flagged.
+        versions.sort_by_key(|v| std::cmp::Reverse(v.0));
+        for (_, name) in versions.iter().skip(keep) {
+            out.push((*name).to_string());
+        }
+    }
+    out
+}
+
+/// Emacs `dired-compare-directories` default: the names in `here` that differ
+/// from directory `there` — present here but missing there, or present in both
+/// with a different size or file-vs-directory kind. (Emacs' default predicate
+/// also weighs mtime; size+kind+presence is the portable, copy-stable subset.)
+pub fn dirs_differ(here: &[DiredEntry], there: &[DiredEntry]) -> Vec<String> {
+    here.iter()
+        .filter(|a| match there.iter().find(|b| b.name == a.name) {
+            None => true,
+            Some(b) => b.size != a.size || b.is_dir != a.is_dir,
+        })
+        .map(|a| a.name.clone())
+        .collect()
+}
+
+/// Extract the file-name token surrounding byte offset `pos` in `text`, backing
+/// Emacs `dired-at-point` / ffap. A token is a maximal run of non-whitespace
+/// characters excluding the shell/markup delimiters `"'`()<>[]{},;:` — enough to
+/// pick a path out of surrounding prose or brackets. Returns `None` when point is
+/// not on such a token.
+pub fn filename_at_point(text: &str, pos: usize) -> Option<String> {
+    let bytes = text.as_bytes();
+    let is_fname = |b: u8| {
+        !b.is_ascii_whitespace()
+            && !matches!(
+                b,
+                b'"' | b'\''
+                    | b'`'
+                    | b'('
+                    | b')'
+                    | b'<'
+                    | b'>'
+                    | b'['
+                    | b']'
+                    | b'{'
+                    | b'}'
+                    | b','
+                    | b';'
+                    | b':'
+            )
+    };
+    let pos = pos.min(bytes.len());
+    let mut start = pos;
+    while start > 0 && is_fname(bytes[start - 1]) {
+        start -= 1;
+    }
+    let mut end = pos;
+    while end < bytes.len() && is_fname(bytes[end]) {
+        end += 1;
+    }
+    if start == end {
+        None
+    } else {
+        Some(text[start..end].to_string())
+    }
+}
+
+/// Compute the relative path from directory `from_dir` to `target` (both taken as
+/// already-absolute, normalized paths), for Emacs `dired-do-relsymlink` — the
+/// symlink stores `../foo` style targets rather than absolute ones. Falls back to
+/// `.` when the two are identical.
+pub fn relative_path(from_dir: &Path, target: &Path) -> PathBuf {
+    let from: Vec<_> = from_dir.components().collect();
+    let to: Vec<_> = target.components().collect();
+    let mut common = 0;
+    while common < from.len() && common < to.len() && from[common] == to[common] {
+        common += 1;
+    }
+    let mut result = PathBuf::new();
+    for _ in common..from.len() {
+        result.push("..");
+    }
+    for c in &to[common..] {
+        result.push(c.as_os_str());
+    }
+    if result.as_os_str().is_empty() {
+        result.push(".");
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -444,5 +596,128 @@ mod tests {
         assert_eq!(next_dir_index(&v, 4, false), Some(2));
         assert_eq!(next_dir_index(&v, 2, false), Some(0));
         assert_eq!(next_dir_index(&v, 0, false), None); // nothing before the first dir
+    }
+
+    #[test]
+    fn regexp_rename_first_match_and_backrefs() {
+        let re = regex::Regex::new(r"\.jpeg$").unwrap();
+        assert_eq!(
+            regexp_replace_name("img.jpeg", &re, ".jpg").as_deref(),
+            Some("img.jpg")
+        );
+        // No match -> None (Emacs skips non-matching files).
+        assert_eq!(regexp_replace_name("img.png", &re, ".jpg"), None);
+
+        // \& whole match and \1 capture group.
+        let re = regex::Regex::new(r"^(\d+)-").unwrap();
+        assert_eq!(
+            regexp_replace_name("07-song.mp3", &re, "track\\1_").as_deref(),
+            Some("track07_song.mp3")
+        );
+        let re = regex::Regex::new(r"foo").unwrap();
+        assert_eq!(
+            regexp_replace_name("foobar", &re, "[\\&]").as_deref(),
+            Some("[foo]bar")
+        );
+        // \\ is a literal backslash.
+        let re = regex::Regex::new(r"a").unwrap();
+        assert_eq!(regexp_replace_name("a", &re, "\\\\").as_deref(), Some("\\"));
+    }
+
+    #[test]
+    fn numbered_backup_parsing() {
+        assert_eq!(parse_numbered_backup("foo.~3~"), Some(("foo", 3)));
+        assert_eq!(parse_numbered_backup("foo.c.~12~"), Some(("foo.c", 12)));
+        assert_eq!(parse_numbered_backup("foo~"), None); // unnumbered backup
+        assert_eq!(parse_numbered_backup("foo.~x~"), None); // non-numeric
+        assert_eq!(parse_numbered_backup("foo.txt"), None);
+    }
+
+    #[test]
+    fn clean_directory_keeps_newest_versions() {
+        let names: Vec<String> = [
+            "foo.~1~", "foo.~2~", "foo.~3~", "foo.~4~", "bar.~1~", "bar.txt", "keep.rs",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        // Keep the 2 newest per base: foo.~4~,foo.~3~ survive; foo.~2~,foo.~1~ flagged.
+        // bar has only one backup (<=2) so nothing flagged there.
+        let mut flagged = backups_to_clean(&names, 2);
+        flagged.sort();
+        assert_eq!(flagged, vec!["foo.~1~".to_string(), "foo.~2~".to_string()]);
+        // keep=0 flags every numbered backup.
+        let mut all = backups_to_clean(&names, 0);
+        all.sort();
+        assert_eq!(
+            all,
+            vec![
+                "bar.~1~".to_string(),
+                "foo.~1~".to_string(),
+                "foo.~2~".to_string(),
+                "foo.~3~".to_string(),
+                "foo.~4~".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn compare_directories_flags_missing_and_changed() {
+        let here = vec![
+            e("same.txt", false, 100, 1),
+            e("changed.txt", false, 200, 1),
+            e("only-here.txt", false, 5, 1),
+            e("d", true, 0, 1),
+        ];
+        let there = vec![
+            e("same.txt", false, 100, 9),    // same size -> not flagged
+            e("changed.txt", false, 250, 9), // different size -> flagged
+            e("d", false, 0, 9),             // was dir here, file there -> flagged
+        ];
+        let mut diff = dirs_differ(&here, &there);
+        diff.sort();
+        assert_eq!(
+            diff,
+            vec![
+                "changed.txt".to_string(),
+                "d".to_string(),
+                "only-here.txt".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn filename_token_at_point() {
+        let text = "see /etc/hosts for details";
+        // pos inside the path
+        assert_eq!(filename_at_point(text, 6).as_deref(), Some("/etc/hosts"));
+        // brackets and quotes bound the token
+        assert_eq!(
+            filename_at_point("open (src/main.rs)", 8).as_deref(),
+            Some("src/main.rs")
+        );
+        // surrounded by whitespace on both sides -> no token
+        assert_eq!(filename_at_point("a  b", 2), None);
+        assert_eq!(filename_at_point("", 0), None);
+    }
+
+    #[test]
+    fn relative_paths() {
+        assert_eq!(
+            relative_path(Path::new("/a/b/c"), Path::new("/a/b/target")),
+            PathBuf::from("../target")
+        );
+        assert_eq!(
+            relative_path(Path::new("/a/b"), Path::new("/a/b/sub/f")),
+            PathBuf::from("sub/f")
+        );
+        assert_eq!(
+            relative_path(Path::new("/a/x"), Path::new("/a/y/f")),
+            PathBuf::from("../y/f")
+        );
+        assert_eq!(
+            relative_path(Path::new("/a/b"), Path::new("/a/b")),
+            PathBuf::from(".")
+        );
     }
 }
