@@ -256,6 +256,638 @@ pub const MONTH_NAMES: [&str; 12] = [
 
 pub const WEEKDAY_ABBR: [&str; 7] = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
+// ===========================================================================
+// "Other calendars" — the zemacs port of GNU Emacs cal-julian / cal-hebrew /
+// cal-islam / cal-persia / cal-coptic / cal-french / cal-bahai / cal-mayan.
+//
+// Emacs works in "absolute" dates = R.D. (Rata Die) fixed day numbers, the
+// count of days since the imaginary Gregorian date Sunday, December 31, 1 BC
+// (so R.D. 1 = Gregorian 0001-01-01). Our [`to_serial`] is days-since-Unix;
+// [`rd`]/[`from_rd`] shift that to R.D. so these algorithms match Emacs
+// verbatim. All conversion algorithms below are transcribed from GNU Emacs 30's
+// calendar library (arithmetic rules), unit-tested against known dates.
+// ===========================================================================
+
+/// R.D. (absolute) fixed day number of `d`. `rd(0001-01-01) == 1`,
+/// `rd(1970-01-01) == 719163`.
+pub fn rd(d: Date) -> i64 {
+    to_serial(d) - to_serial(Date::new(1, 1, 1)) + 1
+}
+
+/// Inverse of [`rd`]: the proleptic-Gregorian date for R.D. day number `f`.
+pub fn from_rd(f: i64) -> Date {
+    from_serial(f + to_serial(Date::new(1, 1, 1)) - 1)
+}
+
+// --- Julian (Roman) calendar (cal-julian.el) -------------------------------
+
+const JULIAN_EPOCH: i64 = -1; // R.D. of Julian 0001-01-01.
+
+/// True if `year` is a Julian leap year (every 4th year; BCE offset by one).
+pub fn julian_leap(year: i32) -> bool {
+    (year as i64).rem_euclid(4) == if year > 0 { 0 } else { 3 }
+}
+
+/// R.D. of a Julian date `(year, month, day)` (Dershowitz–Reingold).
+pub fn fixed_from_julian(year: i32, month: u32, day: u32) -> i64 {
+    let y = if year < 0 { year as i64 + 1 } else { year as i64 };
+    let m = month as i64;
+    JULIAN_EPOCH - 1
+        + 365 * (y - 1)
+        + (y - 1).div_euclid(4)
+        + (367 * m - 362).div_euclid(12)
+        + if m <= 2 {
+            0
+        } else if julian_leap(year) {
+            -1
+        } else {
+            -2
+        }
+        + day as i64
+}
+
+/// Julian `(year, month, day)` for R.D. `f`.
+pub fn julian_from_fixed(f: i64) -> (i32, u32, u32) {
+    let approx = (4 * (f - JULIAN_EPOCH) + 1464).div_euclid(1461);
+    let year = if approx <= 0 {
+        (approx - 1) as i32
+    } else {
+        approx as i32
+    };
+    let prior_days = f - fixed_from_julian(year, 1, 1);
+    let correction = if f < fixed_from_julian(year, 3, 1) {
+        0
+    } else if julian_leap(year) {
+        1
+    } else {
+        2
+    };
+    let month = ((12 * (prior_days + correction) + 373).div_euclid(367)) as u32;
+    let day = (f - fixed_from_julian(year, month, 1) + 1) as u32;
+    (year, month, day)
+}
+
+/// Julian date of a Gregorian date, e.g. `"December 19, 1999"`.
+pub fn julian_string(d: Date) -> String {
+    let (y, m, day) = julian_from_fixed(rd(d));
+    format!("{} {}, {}", MONTH_NAMES[(m - 1) as usize], day, y)
+}
+
+// --- Coptic and Ethiopic calendars (cal-coptic.el) -------------------------
+
+const COPTIC_EPOCH: i64 = 103605; // R.D. of Coptic 0001-01-01.
+const ETHIOPIC_EPOCH: i64 = 2796; // R.D. of Ethiopic 0001-01-01.
+
+pub const COPTIC_MONTH_NAMES: [&str; 13] = [
+    "Tut", "Babah", "Hatur", "Kiyahk", "Tubah", "Amshir", "Baramhat", "Baramundah", "Bashans",
+    "Baunah", "Abib", "Misra", "Nasi",
+];
+pub const ETHIOPIC_MONTH_NAMES: [&str; 13] = [
+    "Maskaram", "Teqemt", "Khedar", "Takhsas", "Ter", "Yakatit", "Magabit", "Miyazya", "Genbot",
+    "Sanni", "Hamli", "Nahasi", "Paguemen",
+];
+
+fn coptic_like_to_fixed(epoch: i64, year: i32, month: u32, day: u32) -> i64 {
+    epoch - 1
+        + 365 * (year as i64 - 1)
+        + (year as i64).div_euclid(4)
+        + 30 * (month as i64 - 1)
+        + day as i64
+}
+
+fn coptic_like_from_fixed(epoch: i64, f: i64) -> (i32, u32, u32) {
+    let year = ((4 * (f - epoch) + 1463).div_euclid(1461)) as i32;
+    let month = (1 + (f - coptic_like_to_fixed(epoch, year, 1, 1)).div_euclid(30)) as u32;
+    let day = (f + 1 - coptic_like_to_fixed(epoch, year, month, 1)) as u32;
+    (year, month, day)
+}
+
+pub fn coptic_from_fixed(f: i64) -> (i32, u32, u32) {
+    coptic_like_from_fixed(COPTIC_EPOCH, f)
+}
+pub fn fixed_from_coptic(year: i32, month: u32, day: u32) -> i64 {
+    coptic_like_to_fixed(COPTIC_EPOCH, year, month, day)
+}
+pub fn ethiopic_from_fixed(f: i64) -> (i32, u32, u32) {
+    coptic_like_from_fixed(ETHIOPIC_EPOCH, f)
+}
+pub fn fixed_from_ethiopic(year: i32, month: u32, day: u32) -> i64 {
+    coptic_like_to_fixed(ETHIOPIC_EPOCH, year, month, day)
+}
+
+pub fn coptic_string(d: Date) -> String {
+    let (y, m, day) = coptic_from_fixed(rd(d));
+    format!("{} {}, {}", COPTIC_MONTH_NAMES[(m - 1) as usize], day, y)
+}
+pub fn ethiopic_string(d: Date) -> String {
+    let (y, m, day) = ethiopic_from_fixed(rd(d));
+    format!("{} {}, {}", ETHIOPIC_MONTH_NAMES[(m - 1) as usize], day, y)
+}
+
+// --- Hebrew calendar (cal-hebrew.el) ---------------------------------------
+
+pub const HEBREW_MONTH_NAMES_COMMON: [&str; 12] = [
+    "Nisan", "Iyar", "Sivan", "Tammuz", "Av", "Elul", "Tishri", "Heshvan", "Kislev", "Teveth",
+    "Shevat", "Adar",
+];
+pub const HEBREW_MONTH_NAMES_LEAP: [&str; 13] = [
+    "Nisan", "Iyar", "Sivan", "Tammuz", "Av", "Elul", "Tishri", "Heshvan", "Kislev", "Teveth",
+    "Shevat", "Adar I", "Adar II",
+];
+
+pub fn hebrew_leap(year: i64) -> bool {
+    (7 * year + 1).rem_euclid(19) < 7
+}
+pub fn hebrew_last_month_of_year(year: i64) -> u32 {
+    if hebrew_leap(year) {
+        13
+    } else {
+        12
+    }
+}
+
+/// Days from the Hebrew epoch to the New Year (1 Tishri) of `year`
+/// (`calendar-hebrew-elapsed-days`).
+fn hebrew_elapsed_days(year: i64) -> i64 {
+    let cy = year - 1;
+    let months_elapsed = 235 * (cy / 19) + 12 * (cy % 19) + (7 * (cy % 19) + 1) / 19;
+    let parts_elapsed = 204 + 793 * (months_elapsed % 1080);
+    let hours_elapsed =
+        5 + 12 * months_elapsed + 793 * (months_elapsed / 1080) + parts_elapsed / 1080;
+    let day = 1 + 29 * months_elapsed + hours_elapsed / 24;
+    let parts = 1080 * (hours_elapsed % 24) + parts_elapsed % 1080;
+    let day = if parts >= 19440 {
+        day + 1
+    } else if day % 7 == 2 && parts >= 9924 && !hebrew_leap(year) {
+        day + 1
+    } else if day % 7 == 1 && parts >= 16789 && hebrew_leap(year - 1) {
+        day + 1
+    } else {
+        day
+    };
+    if matches!(day % 7, 0 | 3 | 5) {
+        day + 1
+    } else {
+        day
+    }
+}
+
+fn hebrew_days_in_year(year: i64) -> i64 {
+    hebrew_elapsed_days(year + 1) - hebrew_elapsed_days(year)
+}
+fn hebrew_long_heshvan(year: i64) -> bool {
+    hebrew_days_in_year(year) % 10 == 5
+}
+fn hebrew_short_kislev(year: i64) -> bool {
+    hebrew_days_in_year(year) % 10 == 3
+}
+
+pub fn hebrew_last_day_of_month(month: u32, year: i64) -> u32 {
+    if matches!(month, 2 | 4 | 6 | 10 | 13)
+        || (month == 8 && !hebrew_long_heshvan(year))
+        || (month == 9 && hebrew_short_kislev(year))
+        || (month == 12 && !hebrew_leap(year))
+    {
+        29
+    } else {
+        30
+    }
+}
+
+/// R.D. of a Hebrew date (`calendar-hebrew-to-absolute`).
+pub fn fixed_from_hebrew(year: i64, month: u32, day: u32) -> i64 {
+    let mut total = day as i64;
+    if month < 7 {
+        for m in 7..=hebrew_last_month_of_year(year) {
+            total += hebrew_last_day_of_month(m, year) as i64;
+        }
+        for m in 1..month {
+            total += hebrew_last_day_of_month(m, year) as i64;
+        }
+    } else {
+        for m in 7..month {
+            total += hebrew_last_day_of_month(m, year) as i64;
+        }
+    }
+    total + hebrew_elapsed_days(year) - 1373429
+}
+
+/// Hebrew `(year, month, day)` for R.D. `f` (`calendar-hebrew-from-absolute`).
+pub fn hebrew_from_fixed(f: i64) -> (i64, u32, u32) {
+    let approx = (f + 1373429).div_euclid(366);
+    let mut year = approx;
+    while f >= fixed_from_hebrew(year + 1, 7, 1) {
+        year += 1;
+    }
+    let start = if f < fixed_from_hebrew(year, 1, 1) { 7 } else { 1 };
+    let mut month = start;
+    while f > fixed_from_hebrew(year, month, hebrew_last_day_of_month(month, year)) {
+        month += 1;
+    }
+    let day = (f - fixed_from_hebrew(year, month, 1) + 1) as u32;
+    (year, month, day)
+}
+
+pub fn hebrew_string(d: Date) -> String {
+    let (y, m, day) = hebrew_from_fixed(rd(d));
+    let name = if hebrew_last_month_of_year(y) == 12 {
+        HEBREW_MONTH_NAMES_COMMON[(m - 1) as usize]
+    } else {
+        HEBREW_MONTH_NAMES_LEAP[(m - 1) as usize]
+    };
+    format!("{} {}, {}", name, day, y)
+}
+
+// --- Islamic calendar (arithmetic/civil; cal-islam.el) ---------------------
+
+pub const ISLAMIC_MONTH_NAMES: [&str; 12] = [
+    "Muharram", "Safar", "Rabi I", "Rabi II", "Jumada I", "Jumada II", "Rajab", "Sha'ban",
+    "Ramadan", "Shawwal", "Dhu al-Qada", "Dhu al-Hijjah",
+];
+
+/// R.D. of the Islamic epoch (Julian 16 July 622).
+fn islamic_epoch() -> i64 {
+    fixed_from_julian(622, 7, 16)
+}
+
+pub fn islamic_leap(year: i64) -> bool {
+    matches!(year.rem_euclid(30), 2 | 5 | 7 | 10 | 13 | 16 | 18 | 21 | 24 | 26 | 29)
+}
+pub fn islamic_last_day_of_month(month: u32, year: i64) -> u32 {
+    if month % 2 == 1 {
+        30
+    } else if month == 12 && islamic_leap(year) {
+        30
+    } else {
+        29
+    }
+}
+fn islamic_day_number(month: u32, day: u32) -> i64 {
+    29 * (month as i64 - 1) + (month as i64) / 2 + day as i64
+}
+
+/// R.D. of an Islamic date (`calendar-islamic-to-absolute`).
+pub fn fixed_from_islamic(year: i64, month: u32, day: u32) -> i64 {
+    islamic_day_number(month, day) + (year - 1) * 354 + (3 + 11 * year) / 30 + islamic_epoch() - 1
+}
+
+/// Islamic `(year, month, day)` for R.D. `f`, or `None` before the epoch.
+pub fn islamic_from_fixed(f: i64) -> Option<(i64, u32, u32)> {
+    if f < islamic_epoch() {
+        return None;
+    }
+    let approx = (f - islamic_epoch()).div_euclid(355);
+    let mut year = approx;
+    while f >= fixed_from_islamic(year + 1, 1, 1) {
+        year += 1;
+    }
+    let mut month = 1u32;
+    while f > fixed_from_islamic(year, month, islamic_last_day_of_month(month, year)) {
+        month += 1;
+    }
+    let day = (f - fixed_from_islamic(year, month, 1) + 1) as u32;
+    Some((year, month, day))
+}
+
+pub fn islamic_string(d: Date) -> Option<String> {
+    let (y, m, day) = islamic_from_fixed(rd(d))?;
+    Some(format!(
+        "{} {}, {}",
+        ISLAMIC_MONTH_NAMES[(m - 1) as usize],
+        day,
+        y
+    ))
+}
+
+// --- Persian calendar (arithmetic 2820-year; cal-persia.el) ----------------
+
+pub const PERSIAN_MONTH_NAMES: [&str; 12] = [
+    "Farvardin",
+    "Ordibehesht",
+    "Khordad",
+    "Tir",
+    "Mordad",
+    "Shahrivar",
+    "Mehr",
+    "Aban",
+    "Azar",
+    "Dey",
+    "Bahman",
+    "Esfand",
+];
+
+fn persian_epoch() -> i64 {
+    fixed_from_julian(622, 3, 19)
+}
+
+pub fn persian_leap(year: i64) -> bool {
+    let a = if year >= 0 { year + 2346 } else { year + 2347 };
+    let inner = (a.rem_euclid(2820)).rem_euclid(768);
+    (inner * 683).rem_euclid(2820) < 683
+}
+pub fn persian_last_day_of_month(month: u32, year: i64) -> u32 {
+    if month < 7 {
+        31
+    } else if month < 12 {
+        30
+    } else if persian_leap(year) {
+        30
+    } else {
+        29
+    }
+}
+
+/// R.D. of a Persian date (`calendar-persian-to-absolute`).
+pub fn fixed_from_persian(year: i64, month: u32, day: u32) -> i64 {
+    if year < 0 {
+        return fixed_from_persian(1 + year.rem_euclid(2820), month, day)
+            + 1029983 * year.div_euclid(2820);
+    }
+    let mut prior = 0i64;
+    for m in 1..month {
+        prior += persian_last_day_of_month(m, year) as i64;
+    }
+    persian_epoch() - 1
+        + 365 * (year - 1)
+        + 683 * (year + 2345).div_euclid(2820)
+        + 186 * ((year + 2345).rem_euclid(2820)).div_euclid(768)
+        + (683 * ((year + 2345).rem_euclid(2820)).rem_euclid(768)).div_euclid(2820)
+        - 568
+        + prior
+        + day as i64
+}
+
+fn persian_year_from_fixed(f: i64) -> i64 {
+    let d0 = f - fixed_from_persian(-2345, 1, 1);
+    let n2820 = d0.div_euclid(1029983);
+    let d1 = d0.rem_euclid(1029983);
+    let n768 = d1.div_euclid(280506);
+    let d2 = d1.rem_euclid(280506);
+    let n1 = (2820 * (d2 + 366)).div_euclid(1029983);
+    let year = 2820 * n2820 + 768 * n768 + if d1 == 1029617 { n1 - 1 } else { n1 } - 2345;
+    if year < 1 {
+        year - 1
+    } else {
+        year
+    }
+}
+
+/// Persian `(year, month, day)` for R.D. `f` (`calendar-persian-from-absolute`).
+pub fn persian_from_fixed(f: i64) -> (i64, u32, u32) {
+    let year = persian_year_from_fixed(f);
+    let mut month = 1u32;
+    while f > fixed_from_persian(year, month, persian_last_day_of_month(month, year)) {
+        month += 1;
+    }
+    let day = (f - fixed_from_persian(year, month, 1) + 1) as u32;
+    (year, month, day)
+}
+
+pub fn persian_string(d: Date) -> String {
+    let (y, m, day) = persian_from_fixed(rd(d));
+    format!("{} {}, {}", PERSIAN_MONTH_NAMES[(m - 1) as usize], day, y)
+}
+
+// --- French Revolutionary calendar (Romme arithmetic; cal-french.el) -------
+
+pub const FRENCH_MONTH_NAMES: [&str; 12] = [
+    "Vendemiaire",
+    "Brumaire",
+    "Frimaire",
+    "Nivose",
+    "Pluviose",
+    "Ventose",
+    "Germinal",
+    "Floreal",
+    "Prairial",
+    "Messidor",
+    "Thermidor",
+    "Fructidor",
+];
+pub const FRENCH_SANSCULOTTIDES: [&str; 6] = [
+    "Jour de la Vertu",
+    "Jour du Genie",
+    "Jour du Travail",
+    "Jour de la Raison",
+    "Jour de la Recompense",
+    "Jour de la Revolution",
+];
+
+fn french_epoch() -> i64 {
+    rd(Date::new(1792, 9, 22))
+}
+
+pub fn french_leap(year: i64) -> bool {
+    matches!(year, 3 | 7 | 11 | 15 | 20)
+        || (year > 20
+            && year % 4 == 0
+            && !matches!(year % 400, 100 | 200 | 300)
+            && year % 4000 != 0)
+}
+pub fn french_last_day_of_month(month: u32, year: i64) -> u32 {
+    if month < 13 {
+        30
+    } else if french_leap(year) {
+        6
+    } else {
+        5
+    }
+}
+
+/// R.D. of a French Revolutionary date (`calendar-french-to-absolute`).
+pub fn fixed_from_french(year: i64, month: u32, day: u32) -> i64 {
+    365 * (year - 1)
+        + if year < 20 {
+            year / 4
+        } else {
+            (year - 1) / 4 - (year - 1) / 100 + (year - 1) / 400 - (year - 1) / 4000
+        }
+        + 30 * (month as i64 - 1)
+        + day as i64
+        + french_epoch()
+        - 1
+}
+
+/// French Revolutionary `(year, month, day)` for R.D. `f`, or `None` before the
+/// epoch. Month 13 is the 5/6 `sansculottides` at year's end.
+pub fn french_from_fixed(f: i64) -> Option<(i64, u32, u32)> {
+    if f < french_epoch() {
+        return None;
+    }
+    let approx = (f - french_epoch()).div_euclid(366);
+    let mut year = approx;
+    while f >= fixed_from_french(year + 1, 1, 1) {
+        year += 1;
+    }
+    let mut month = 1u32;
+    while f > fixed_from_french(year, month, french_last_day_of_month(month, year)) {
+        month += 1;
+    }
+    let day = (f - fixed_from_french(year, month, 1) + 1) as u32;
+    Some((year, month, day))
+}
+
+pub fn french_string(d: Date) -> Option<String> {
+    let (y, m, day) = french_from_fixed(rd(d))?;
+    if m == 13 {
+        Some(format!(
+            "{} de l'Annee {} de la Revolution",
+            FRENCH_SANSCULOTTIDES[(day - 1) as usize],
+            y
+        ))
+    } else {
+        Some(format!(
+            "{} {} an {} de la Revolution",
+            day,
+            FRENCH_MONTH_NAMES[(m - 1) as usize],
+            y
+        ))
+    }
+}
+
+// --- Baha'i calendar (arithmetic; approximation of cal-bahai.el) -----------
+// NOTE: modern GNU Emacs computes Naw-Ruz astronomically (sunset at the vernal
+// equinox in Tehran) for Baha'i years >= 172 (Gregorian >= 2015). This port
+// fixes Naw-Ruz at Gregorian March 21, matching Emacs's older arithmetic rule
+// for pre-2015 dates; for later years it can differ by a day. Marked PARTIAL.
+
+pub const BAHAI_MONTH_NAMES: [&str; 19] = [
+    "Baha", "Jalal", "Jamal", "'Azamat", "Nur", "Rahmat", "Kalimat", "Kamal", "Asma'", "'Izzat",
+    "Mashiyyat", "'Ilm", "Qudrat", "Qawl", "Masa'il", "Sharaf", "Sultan", "Mulk", "'Ala'",
+];
+
+/// R.D. of Naw-Ruz beginning Baha'i `year` (fixed at Gregorian March 21).
+fn bahai_nawruz(year: i64) -> i64 {
+    rd(Date::new((1843 + year) as i32, 3, 21))
+}
+
+/// Number of Ayyam-i-Ha (intercalary) days in Baha'i `year` (4 or 5).
+fn bahai_ayyam(year: i64) -> i64 {
+    bahai_nawruz(year + 1) - bahai_nawruz(year) - 361
+}
+
+/// Baha'i `(year, month, day)` for R.D. `f`. `month == 0` denotes the
+/// Ayyam-i-Ha intercalary days; `month == 19` is the final month (`'Ala'`).
+pub fn bahai_from_fixed(f: i64) -> (i64, u32, u32) {
+    // Estimate the Baha'i year, then correct.
+    let mut year = f - rd(Date::new(1844, 3, 21)) - 1;
+    year = year.div_euclid(366) + 1;
+    while f >= bahai_nawruz(year + 1) {
+        year += 1;
+    }
+    while f < bahai_nawruz(year) {
+        year -= 1;
+    }
+    let doy = f - bahai_nawruz(year); // 0-based day of Baha'i year
+    let ayyam = bahai_ayyam(year);
+    if doy < 342 {
+        ((year), (doy / 19 + 1) as u32, (doy % 19 + 1) as u32)
+    } else if doy < 342 + ayyam {
+        (year, 0, (doy - 342 + 1) as u32)
+    } else {
+        (year, 19, (doy - 342 - ayyam + 1) as u32)
+    }
+}
+
+/// R.D. of a Baha'i date. `month == 0` = Ayyam-i-Ha; `month == 19` = `'Ala'`.
+pub fn fixed_from_bahai(year: i64, month: u32, day: u32) -> i64 {
+    let base = bahai_nawruz(year);
+    let ayyam = bahai_ayyam(year);
+    let off = match month {
+        0 => 342 + (day as i64 - 1),
+        19 => 342 + ayyam + (day as i64 - 1),
+        _ => (month as i64 - 1) * 19 + (day as i64 - 1),
+    };
+    base + off
+}
+
+pub fn bahai_string(d: Date) -> String {
+    let (y, m, day) = bahai_from_fixed(rd(d));
+    let name = if m == 0 {
+        "Ayyam-i-Ha".to_string()
+    } else {
+        BAHAI_MONTH_NAMES[(m - 1) as usize].to_string()
+    };
+    format!("{} {}, {}", name, day, y)
+}
+
+// --- Mayan calendar (cal-mayan.el) -----------------------------------------
+
+const MAYAN_DAYS_BEFORE_ABSOLUTE_ZERO: i64 = 1137142; // GMT correlation 584283.
+
+pub const MAYAN_HAAB_MONTHS: [&str; 19] = [
+    "Pop", "Uo", "Zip", "Zotz", "Tzec", "Xul", "Yaxkin", "Mol", "Chen", "Yax", "Zac", "Ceh", "Mac",
+    "Kankin", "Muan", "Pax", "Kayab", "Cumku", "Uayeb",
+];
+pub const MAYAN_TZOLKIN_NAMES: [&str; 20] = [
+    "Imix", "Ik", "Akbal", "Kan", "Chicchan", "Cimi", "Manik", "Lamat", "Muluc", "Oc", "Chuen",
+    "Eb", "Ben", "Ix", "Men", "Cib", "Caban", "Etznab", "Cauac", "Ahau",
+];
+
+/// Mayan long count `(baktun, katun, tun, uinal, kin)` for R.D. `f`.
+pub fn mayan_long_count_from_fixed(f: i64) -> (i64, i64, i64, i64, i64) {
+    let lc = f + MAYAN_DAYS_BEFORE_ABSOLUTE_ZERO;
+    let baktun = lc.div_euclid(144000);
+    let day_of_baktun = lc.rem_euclid(144000);
+    let katun = day_of_baktun.div_euclid(7200);
+    let day_of_katun = day_of_baktun.rem_euclid(7200);
+    let tun = day_of_katun.div_euclid(360);
+    let day_of_tun = day_of_katun.rem_euclid(360);
+    let uinal = day_of_tun.div_euclid(20);
+    let kin = day_of_tun.rem_euclid(20);
+    (baktun, katun, tun, uinal, kin)
+}
+
+/// R.D. of a Mayan long count.
+pub fn fixed_from_mayan_long_count(baktun: i64, katun: i64, tun: i64, uinal: i64, kin: i64) -> i64 {
+    baktun * 144000 + katun * 7200 + tun * 360 + uinal * 20 + kin
+        - MAYAN_DAYS_BEFORE_ABSOLUTE_ZERO
+}
+
+/// Mayan haab `(day, month_index_1based)` for R.D. `f`.
+pub fn mayan_haab_from_fixed(f: i64) -> (i64, u32) {
+    let lc = f + MAYAN_DAYS_BEFORE_ABSOLUTE_ZERO;
+    // Haab at epoch = day 8 of month 18 (Cumku) -> day number 8 + 20*(18-1).
+    let day_of_haab = (lc + 8 + 20 * (18 - 1)).rem_euclid(365);
+    let day = day_of_haab.rem_euclid(20);
+    let month = (day_of_haab.div_euclid(20) + 1) as u32;
+    (day, month)
+}
+
+/// Mayan tzolkin `(number 1..=13, name_index 1..=20)` for R.D. `f`.
+pub fn mayan_tzolkin_from_fixed(f: i64) -> (i64, u32) {
+    let lc = f + MAYAN_DAYS_BEFORE_ABSOLUTE_ZERO;
+    let number = (lc + 4 - 1).rem_euclid(13) + 1; // tzolkin count at epoch = 4
+    let name = ((lc + 20 - 1).rem_euclid(20) + 1) as u32; // tzolkin name at epoch = 20
+    (number, name)
+}
+
+pub fn mayan_string(d: Date) -> String {
+    let f = rd(d);
+    let (b, k, t, u, kin) = mayan_long_count_from_fixed(f);
+    let (tz_num, tz_name) = mayan_tzolkin_from_fixed(f);
+    let (h_day, h_month) = mayan_haab_from_fixed(f);
+    format!(
+        "Long count = {b}.{k}.{t}.{u}.{kin}; tzolkin = {tz_num} {}; haab = {h_day} {}",
+        MAYAN_TZOLKIN_NAMES[(tz_name - 1) as usize],
+        MAYAN_HAAB_MONTHS[(h_month - 1) as usize],
+    )
+}
+
+// --- Astronomical (Julian) day number --------------------------------------
+
+/// Astronomical (Julian) day number at noon UTC for `d` — the integer Julian
+/// Day Number (Emacs `calendar-astro-print-day-number`). Same as [`julian_day`].
+pub fn astro_day_number(d: Date) -> i64 {
+    julian_day(d)
+}
+
+/// The ISO 8601 date string in Emacs's phrasing: `"Day 6 of week 52 of 1999"`.
+pub fn iso_string(d: Date) -> String {
+    let (y, w, dow) = iso_week(d);
+    format!("Day {dow} of week {w} of {y}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -416,5 +1048,130 @@ mod tests {
         assert_eq!(iso_week(Date::new(2024, 12, 30)), (2025, 1, 1));
         // A mid-year date: 2023-01-02 is ISO 2023-W01-1 (Monday).
         assert_eq!(iso_week(Date::new(2023, 1, 2)), (2023, 1, 1));
+    }
+}
+
+#[cfg(test)]
+mod other_calendar_tests {
+    use super::*;
+
+    #[test]
+    fn rd_epoch_offsets() {
+        assert_eq!(rd(Date::new(1, 1, 1)), 1);
+        assert_eq!(rd(Date::new(1970, 1, 1)), 719163);
+        assert_eq!(rd(Date::new(2000, 1, 1)), 730120);
+        assert_eq!(from_rd(730120), Date::new(2000, 1, 1));
+        assert_eq!(islamic_epoch(), 227015);
+        assert_eq!(persian_epoch(), 226896);
+        assert_eq!(french_epoch(), 654415);
+        assert_eq!(fixed_from_julian(1, 1, 1), -1); // Julian epoch
+    }
+
+    #[test]
+    fn julian_known() {
+        // 2000-01-01 Gregorian = 1999-12-19 Julian (13 days behind).
+        assert_eq!(julian_from_fixed(rd(Date::new(2000, 1, 1))), (1999, 12, 19));
+        assert_eq!(julian_string(Date::new(2000, 1, 1)), "December 19, 1999");
+        // Round-trip across a range.
+        for f in 700000..700400 {
+            let (y, m, d) = julian_from_fixed(f);
+            assert_eq!(fixed_from_julian(y, m, d), f);
+        }
+    }
+
+    #[test]
+    fn hebrew_known() {
+        // 2000-01-01 Gregorian = 23 Teveth 5760.
+        assert_eq!(hebrew_from_fixed(rd(Date::new(2000, 1, 1))), (5760, 10, 23));
+        assert_eq!(hebrew_string(Date::new(2000, 1, 1)), "Teveth 23, 5760");
+        for f in 725000..725730 {
+            let (y, m, d) = hebrew_from_fixed(f);
+            assert_eq!(fixed_from_hebrew(y, m, d), f);
+        }
+    }
+
+    #[test]
+    fn islamic_known() {
+        // 2000-01-01 Gregorian = 24 Ramadan 1420.
+        assert_eq!(
+            islamic_from_fixed(rd(Date::new(2000, 1, 1))),
+            Some((1420, 9, 24))
+        );
+        assert_eq!(
+            islamic_string(Date::new(2000, 1, 1)).as_deref(),
+            Some("Ramadan 24, 1420")
+        );
+        for f in 730000..730700 {
+            let (y, m, d) = islamic_from_fixed(f).unwrap();
+            assert_eq!(fixed_from_islamic(y, m, d), f);
+        }
+    }
+
+    #[test]
+    fn persian_known() {
+        // 2000-01-01 Gregorian = 11 Dey 1378.
+        assert_eq!(persian_from_fixed(rd(Date::new(2000, 1, 1))), (1378, 10, 11));
+        assert_eq!(persian_string(Date::new(2000, 1, 1)), "Dey 11, 1378");
+        for f in 725000..725730 {
+            let (y, m, d) = persian_from_fixed(f);
+            assert_eq!(fixed_from_persian(y, m, d), f);
+        }
+    }
+
+    #[test]
+    fn coptic_ethiopic_roundtrip() {
+        // 2000-01-01 Gregorian = 22 Kiyahk 1716 (Coptic).
+        assert_eq!(coptic_from_fixed(rd(Date::new(2000, 1, 1))), (1716, 4, 22));
+        assert_eq!(coptic_string(Date::new(2000, 1, 1)), "Kiyahk 22, 1716");
+        for f in 725000..725730 {
+            let (y, m, d) = coptic_from_fixed(f);
+            assert_eq!(fixed_from_coptic(y, m, d), f);
+            let (y, m, d) = ethiopic_from_fixed(f);
+            assert_eq!(fixed_from_ethiopic(y, m, d), f);
+        }
+    }
+
+    #[test]
+    fn french_roundtrip() {
+        // 2000-01-01 Gregorian falls in year 208 of the Revolution.
+        let (y, _m, _d) = french_from_fixed(rd(Date::new(2000, 1, 1))).unwrap();
+        assert_eq!(y, 208);
+        for f in (french_epoch() + 1)..(french_epoch() + 4000) {
+            let (y, m, d) = french_from_fixed(f).unwrap();
+            assert_eq!(fixed_from_french(y, m, d), f);
+        }
+        assert_eq!(french_from_fixed(french_epoch() - 1), None);
+    }
+
+    #[test]
+    fn bahai_roundtrip() {
+        for f in 725000..725730 {
+            let (y, m, d) = bahai_from_fixed(f);
+            assert_eq!(fixed_from_bahai(y, m, d), f, "bahai roundtrip at {f}");
+        }
+    }
+
+    #[test]
+    fn mayan_known() {
+        // The famous "end of the 13th baktun": 2012-12-21 = 13.0.0.0.0,
+        // 4 Ahau 3 Kankin (Goodman-Martinez-Thompson correlation 584283).
+        let f = rd(Date::new(2012, 12, 21));
+        assert_eq!(mayan_long_count_from_fixed(f), (13, 0, 0, 0, 0));
+        assert_eq!(mayan_tzolkin_from_fixed(f), (4, 20)); // 4 Ahau
+        assert_eq!(mayan_haab_from_fixed(f), (3, 14)); // 3 Kankin
+        assert_eq!(MAYAN_TZOLKIN_NAMES[19], "Ahau");
+        assert_eq!(MAYAN_HAAB_MONTHS[13], "Kankin");
+        // Long-count round-trip.
+        for f in 725000..725400 {
+            let (b, k, t, u, kin) = mayan_long_count_from_fixed(f);
+            assert_eq!(fixed_from_mayan_long_count(b, k, t, u, kin), f);
+        }
+    }
+
+    #[test]
+    fn astro_and_iso_strings() {
+        assert_eq!(astro_day_number(Date::new(2000, 1, 1)), 2451545);
+        // 1999-12-31 (Friday) is ISO Day 5 of week 52 of 1999.
+        assert_eq!(iso_string(Date::new(1999, 12, 31)), "Day 5 of week 52 of 1999");
     }
 }
