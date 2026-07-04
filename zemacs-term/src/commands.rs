@@ -1244,6 +1244,12 @@ impl MappableCommand {
         snake, "Play snake (emacs snake)",
         tetris, "Play tetris (emacs tetris)",
         pong, "Play pong against the computer (emacs pong)",
+        space_invaders, "Play Space Invaders",
+        breakout, "Play Breakout, the brick-breaker",
+        asteroids, "Play Asteroids",
+        frogger, "Play Frogger, cross the traffic",
+        twenty_forty_eight, "Play 2048, the sliding-tile puzzle",
+        minesweeper, "Play Minesweeper",
         zone, "Run the zone screen-saver (emacs zone)",
         decipher, "Solve a cryptogram (emacs decipher)",
         dunnet, "Play the dunnet text adventure (emacs dunnet)",
@@ -2441,22 +2447,34 @@ fn goto_window(cx: &mut Context, align: Align) {
 
     let last_visual_line = view.last_visual_line(doc);
 
+    // Vim (`H`/`L`) only keeps the `scrolloff` gap when there is off-screen text to
+    // scroll past: at the very top of the buffer `H` reaches the first line, and at
+    // the bottom `L` reaches the last line, regardless of `scrolloff`. Helix applied
+    // the gap unconditionally, leaving H/L an offset short of the true top/bottom, so
+    // suppress it at whichever document edge is currently on screen.
+    let text = doc.text().slice(..);
+    let last_doc_line = text.len_lines().saturating_sub(1);
+    let at_doc_top = view_offset.vertical_offset == 0;
+    let at_doc_bottom = view
+        .pos_at_visual_coords(doc, last_visual_line as u16, 0, false)
+        .is_some_and(|pos| text.char_to_line(pos) >= last_doc_line);
+    let top_scrolloff = if at_doc_top { 0 } else { scrolloff };
+    let bottom_scrolloff = if at_doc_bottom { 0 } else { scrolloff };
+
     let visual_line = match align {
-        Align::Top => view_offset.vertical_offset + scrolloff + count,
+        Align::Top => view_offset.vertical_offset + top_scrolloff + count,
         Align::Center => view_offset.vertical_offset + (last_visual_line / 2),
         Align::Bottom => {
-            view_offset.vertical_offset + last_visual_line.saturating_sub(scrolloff + count)
+            view_offset.vertical_offset + last_visual_line.saturating_sub(bottom_scrolloff + count)
         }
     };
     let visual_line = visual_line
-        .max(view_offset.vertical_offset + scrolloff)
-        .min(view_offset.vertical_offset + last_visual_line.saturating_sub(scrolloff));
+        .max(view_offset.vertical_offset + top_scrolloff)
+        .min(view_offset.vertical_offset + last_visual_line.saturating_sub(bottom_scrolloff));
 
     let pos = view
         .pos_at_visual_coords(doc, visual_line as u16, 0, false)
         .expect("visual_line was constrained to the view area");
-
-    let text = doc.text().slice(..);
     let selection = doc
         .selection(view.id)
         .clone()
@@ -13621,6 +13639,48 @@ fn tetris(cx: &mut Context) {
 fn pong(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::pong::Pong::new()) as Box<dyn Component>)
+    });
+}
+
+/// `space-invaders`: play Space Invaders (self-animating overlay).
+fn space_invaders(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::invaders::Invaders::new()) as Box<dyn Component>)
+    });
+}
+
+/// `breakout`: play Breakout, the brick-breaker (self-animating overlay).
+fn breakout(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::breakout::Breakout::new()) as Box<dyn Component>)
+    });
+}
+
+/// `asteroids`: play Asteroids (self-animating overlay).
+fn asteroids(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::asteroids::Asteroids::new()) as Box<dyn Component>)
+    });
+}
+
+/// `frogger`: cross the traffic lanes (self-animating overlay).
+fn frogger(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::frogger::Frogger::new()) as Box<dyn Component>)
+    });
+}
+
+/// `2048`: play the 2048 sliding-tile puzzle (turn-based overlay).
+fn twenty_forty_eight(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::twentyfortyeight::Game2048::new()) as Box<dyn Component>)
+    });
+}
+
+/// `minesweeper`: play Minesweeper (turn-based overlay).
+fn minesweeper(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::minesweeper::Minesweeper::new()) as Box<dyn Component>)
     });
 }
 

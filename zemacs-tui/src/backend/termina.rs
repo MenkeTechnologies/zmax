@@ -47,6 +47,34 @@ fn vte_version() -> Option<usize> {
     std::env::var("VTE_VERSION").ok()?.parse().ok()
 }
 
+/// Detect truecolor support from the environment (COLORTERM / WSL / terminfo)
+/// without querying the terminal. Mirrors `zemacs_term::true_color`, but lives
+/// here so the backend can decide *before* emitting any escape sequences.
+///
+/// This matters because the DECRQSS-based truecolor probe (`DCS $ q m ST`) is
+/// misparsed as a 1x1 sixel image by terminals that dispatch DCS control strings
+/// on the final `q` byte alone (ignoring the `$` intermediate that distinguishes
+/// DECRQSS from sixel). When the environment already advertises truecolor we can
+/// skip that probe entirely and avoid printing a stray sixel image on startup.
+fn env_true_color() -> bool {
+    use std::env::var_os;
+
+    if var_os("COLORTERM").is_some_and(|v| v == "truecolor" || v == "24bit")
+        || var_os("WSL_DISTRO_NAME").is_some()
+    {
+        return true;
+    }
+
+    match termini::TermInfo::from_env() {
+        Ok(t) => {
+            t.extended_cap("RGB").is_some()
+                || t.extended_cap("Tc").is_some()
+                || (t.extended_cap("setrgbf").is_some() && t.extended_cap("setrgbb").is_some())
+        }
+        Err(_) => false,
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 struct Capabilities {
     kitty_keyboard: KittyKeyboardSupport,
@@ -113,6 +141,12 @@ impl TerminaBackend {
             }
         };
 
+        // If the environment already advertises truecolor, take it and skip the DECRQSS SGR
+        // probe below. That probe (`DCS $ q m ST`) is rendered as a stray 1x1 sixel image by
+        // terminals that dispatch DCS on the final `q` byte, so we only emit it when we can't
+        // otherwise determine truecolor support.
+        capabilities.true_color = env_true_color();
+
         // Many terminal extensions can be detected by querying the terminal for the state of the
         // extension and then sending a request for the primary device attributes (which is
         // consistently supported by all terminals). If we receive the status of the feature (for
@@ -120,19 +154,29 @@ impl TerminaBackend {
         // If we only receive the device attributes then we know it is not.
         write!(
             terminal,
-            "{}{}{}{}{}{}{}{}",
+            "{}{}",
             // Synchronized output
             Csi::Mode(csi::Mode::QueryDecPrivateMode(csi::DecPrivateMode::Code(
                 csi::DecPrivateModeCode::SynchronizedOutput
             ))),
             // Mode 2031 theme updates. Query the current theme.
             Csi::Mode(csi::Mode::QueryTheme),
+        )?;
+        if !capabilities.true_color {
             // True color and while we're at it, extended underlines:
             // <https://github.com/termstandard/colors?tab=readme-ov-file#querying-the-terminal>
-            Csi::Sgr(csi::Sgr::Background(TEST_COLOR.into())),
-            Csi::Sgr(csi::Sgr::UnderlineColor(TEST_COLOR.into())),
-            Dcs::Request(dcs::DcsRequest::GraphicRendition),
-            Csi::Sgr(csi::Sgr::Reset),
+            write!(
+                terminal,
+                "{}{}{}{}",
+                Csi::Sgr(csi::Sgr::Background(TEST_COLOR.into())),
+                Csi::Sgr(csi::Sgr::UnderlineColor(TEST_COLOR.into())),
+                Dcs::Request(dcs::DcsRequest::GraphicRendition),
+                Csi::Sgr(csi::Sgr::Reset),
+            )?;
+        }
+        write!(
+            terminal,
+            "{}{}",
             Osc::ChangeDynamicColors(
                 osc::DynamicColorNumber::TextBackgroundColor,
                 vec![osc::ColorOrQuery::Query]
@@ -177,7 +221,7 @@ impl TerminaBackend {
                         value: dcs::DcsResponse::GraphicRendition(sgrs),
                         ..
                     }) => {
-                        capabilities.true_color =
+                        capabilities.true_color |=
                             sgrs.contains(&csi::Sgr::Background(TEST_COLOR.into()));
                         capabilities.extended_underlines =
                             sgrs.contains(&csi::Sgr::UnderlineColor(TEST_COLOR.into()));
