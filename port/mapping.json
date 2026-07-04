@@ -33953,5 +33953,93 @@
    "static:global_visual_wrap_prefix_mode"
   ],
   "note": "global-visual-wrap-prefix-mode -> toggle soft-wrap with indentation carry-over (max-indent-retain); zemacs has no prefix-only mode, so continuation lines keep indentation only when soft-wrap is on."
+ },
+ {
+  "spec_id": "emacs.command.ps_despool",
+  "status": "ported",
+  "evidence": [
+   "static:ps_despool"
+  ],
+  "note": "ps-despool: print the accumulated PostScript spool via lpr"
+ },
+ {
+  "spec_id": "emacs.command.ps_print_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:ps_print_buffer"
+  ],
+  "note": "ps-print-buffer: buffer -> PostScript -> lpr"
+ },
+ {
+  "spec_id": "emacs.command.ps_print_buffer_lparenms_dos_rparen",
+  "status": "ported",
+  "evidence": [
+   "static:ps_print_buffer"
+  ],
+  "note": "ps-print-buffer (same command; zemacs prints via lpr, not the MS-DOS path)"
+ },
+ {
+  "spec_id": "emacs.command.ps_print_buffer_with_faces",
+  "status": "partial",
+  "evidence": [
+   "static:ps_print_buffer_with_faces"
+  ],
+  "note": "plain monospace PostScript; face colours are not reproduced"
+ },
+ {
+  "spec_id": "emacs.command.ps_print_region",
+  "status": "ported",
+  "evidence": [
+   "static:ps_print_region"
+  ],
+  "note": "ps-print-region: region -> PostScript -> lpr"
+ },
+ {
+  "spec_id": "emacs.command.ps_print_region_with_faces",
+  "status": "partial",
+  "evidence": [
+   "static:ps_print_region_with_faces"
+  ],
+  "note": "plain monospace PostScript; face colours are not reproduced"
+ },
+ {
+  "spec_id": "emacs.command.ps_spool_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:ps_spool_buffer"
+  ],
+  "note": "ps-spool-buffer: buffer -> PostScript into the spool"
+ },
+ {
+  "spec_id": "emacs.command.ps_spool_buffer_lparenms_dos_rparen",
+  "status": "ported",
+  "evidence": [
+   "static:ps_spool_buffer"
+  ],
+  "note": "ps-spool-buffer (same command; zemacs spools then prints via lpr)"
+ },
+ {
+  "spec_id": "emacs.command.ps_spool_buffer_with_faces",
+  "status": "partial",
+  "evidence": [
+   "static:ps_spool_buffer_with_faces"
+  ],
+  "note": "plain monospace PostScript; face colours are not reproduced"
+ },
+ {
+  "spec_id": "emacs.command.ps_spool_region",
+  "status": "ported",
+  "evidence": [
+   "static:ps_spool_region"
+  ],
+  "note": "ps-spool-region: region -> PostScript into the spool"
+ },
+ {
+  "spec_id": "emacs.command.ps_spool_region_with_faces",
+  "status": "partial",
+  "evidence": [
+   "static:ps_spool_region_with_faces"
+  ],
+  "note": "plain monospace PostScript; face colours are not reproduced"
  }
 ]

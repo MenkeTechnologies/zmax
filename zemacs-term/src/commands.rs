@@ -1654,6 +1654,15 @@ impl MappableCommand {
         c_show_syntactic_information, "Report the tree-sitter node kind at point (emacs c-show-syntactic-information)",
         c_macro_expand, "Expand C preprocessor macros in the region via cpp (emacs c-macro-expand)",
         c_set_style, "Report the C indentation style (emacs c-set-style)",
+        ps_print_buffer, "Print the buffer as PostScript via lpr (emacs ps-print-buffer)",
+        ps_print_region, "Print the region as PostScript via lpr (emacs ps-print-region)",
+        ps_print_buffer_with_faces, "Print the buffer as PostScript (plain, no faces) (emacs ps-print-buffer-with-faces)",
+        ps_print_region_with_faces, "Print the region as PostScript (plain, no faces) (emacs ps-print-region-with-faces)",
+        ps_spool_buffer, "Spool the buffer as PostScript for later printing (emacs ps-spool-buffer)",
+        ps_spool_region, "Spool the region as PostScript for later printing (emacs ps-spool-region)",
+        ps_spool_buffer_with_faces, "Spool the buffer as PostScript (plain, no faces) (emacs ps-spool-buffer-with-faces)",
+        ps_spool_region_with_faces, "Spool the region as PostScript (plain, no faces) (emacs ps-spool-region-with-faces)",
+        ps_despool, "Print the accumulated PostScript spool via lpr (emacs ps-despool)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -24543,6 +24552,125 @@ fn c_macro_expand(cx: &mut Context) {
         }
         _ => cx.editor.set_error("c-macro-expand: cpp failed"),
     }
+}
+
+thread_local! {
+    /// Accumulated PostScript from `ps-spool-*`, printed and emptied by
+    /// `ps-despool` — the port of Emacs's `*PostScript*` spool buffer.
+    static PS_SPOOL: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+}
+
+/// Build a PostScript rendering of the current buffer, or just the primary
+/// selection when `region_only` (an empty selection falls back to the whole
+/// buffer). Shared by every `ps-*` command; colours/faces are not reproduced, so
+/// the `*-with-faces` variants call this too and are mapped as partial.
+fn ps_build(cx: &mut Context, region_only: bool) -> String {
+    use zemacs_core::ps_print::{to_postscript, PsOptions};
+    let (view, doc) = current_ref!(cx.editor);
+    let slice = doc.text().slice(..);
+    let title = doc.display_name().into_owned();
+    let text = if region_only {
+        let range = doc.selection(view.id).primary();
+        if range.from() == range.to() {
+            slice.to_string()
+        } else {
+            slice.slice(range.from()..range.to()).to_string()
+        }
+    } else {
+        slice.to_string()
+    };
+    to_postscript(
+        &text,
+        &PsOptions {
+            title,
+            ..Default::default()
+        },
+    )
+}
+
+/// Pipe a PostScript document to the `lpr` printer spooler.
+fn ps_lpr(editor: &mut Editor, ps: &str) {
+    let mut child = match std::process::Command::new("lpr")
+        .stdin(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(_) => {
+            editor.set_error("ps-print: `lpr` not found on PATH");
+            return;
+        }
+    };
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        let _ = stdin.write_all(ps.as_bytes());
+    }
+    match child.wait() {
+        Ok(s) if s.success() => editor.set_status("ps-print: sent to lpr"),
+        _ => editor.set_error("ps-print: lpr failed"),
+    }
+}
+
+fn ps_spool(cx: &mut Context, region_only: bool) {
+    let ps = ps_build(cx, region_only);
+    PS_SPOOL.with(|s| s.borrow_mut().push_str(&ps));
+    let spool = PS_SPOOL.with(|s| s.borrow().clone());
+    let n = spool.len();
+    show_text_in_scratch(cx.editor, &spool);
+    cx.editor.set_status(format!(
+        "ps-spool: {n} bytes in the PostScript spool; ps-despool to print"
+    ));
+}
+
+/// Emacs `ps-print-buffer` (C-c C-p in some modes): render the whole buffer to
+/// PostScript and send it to the printer via `lpr`.
+fn ps_print_buffer(cx: &mut Context) {
+    let ps = ps_build(cx, false);
+    ps_lpr(cx.editor, &ps);
+}
+/// Emacs `ps-print-region`: like `ps-print-buffer` for the selected region.
+fn ps_print_region(cx: &mut Context) {
+    let ps = ps_build(cx, true);
+    ps_lpr(cx.editor, &ps);
+}
+/// Emacs `ps-print-buffer-with-faces` (partial): zemacs's PostScript is plain
+/// monospace with no face colours, so this matches `ps-print-buffer`.
+fn ps_print_buffer_with_faces(cx: &mut Context) {
+    let ps = ps_build(cx, false);
+    ps_lpr(cx.editor, &ps);
+}
+/// Emacs `ps-print-region-with-faces` (partial): plain PostScript, no faces.
+fn ps_print_region_with_faces(cx: &mut Context) {
+    let ps = ps_build(cx, true);
+    ps_lpr(cx.editor, &ps);
+}
+/// Emacs `ps-spool-buffer`: render the buffer to PostScript and append it to the
+/// spool (shown in a scratch buffer); print later with `ps-despool`.
+fn ps_spool_buffer(cx: &mut Context) {
+    ps_spool(cx, false);
+}
+/// Emacs `ps-spool-region`: spool the selected region as PostScript.
+fn ps_spool_region(cx: &mut Context) {
+    ps_spool(cx, true);
+}
+/// Emacs `ps-spool-buffer-with-faces` (partial): plain PostScript, no faces.
+fn ps_spool_buffer_with_faces(cx: &mut Context) {
+    ps_spool(cx, false);
+}
+/// Emacs `ps-spool-region-with-faces` (partial): plain PostScript, no faces.
+fn ps_spool_region_with_faces(cx: &mut Context) {
+    ps_spool(cx, true);
+}
+/// Emacs `ps-despool`: send everything accumulated by `ps-spool-*` to `lpr`,
+/// then empty the spool.
+fn ps_despool(cx: &mut Context) {
+    let spooled = PS_SPOOL.with(|s| std::mem::take(&mut *s.borrow_mut()));
+    if spooled.is_empty() {
+        cx.editor
+            .set_status("ps-despool: the PostScript spool is empty");
+        return;
+    }
+    ps_lpr(cx.editor, &spooled);
 }
 
 /// Emacs `c-set-style` (partial): zemacs has no cc-mode style engine, so this
