@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-10290337.js";
+            window.path_to_searchindex_js = "searchindex-77eb7a7b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1186,7 +1186,8 @@
 <tr><td><code>repeat_last_motion</code></td><td>Repeat last motion</td><td>normal: <code>;</code>, <code>&lt;C-x&gt;z</code>, select: <code>;</code>, <code>&lt;C-x&gt;z</code>, insert: <code>&lt;C-x&gt;z</code></td></tr>
 <tr><td><code>repeat_find_char_reverse</code></td><td>Repeat last find in opposite direction (,)</td><td>normal: <code>,</code>, select: <code>,</code></td></tr>
 <tr><td><code>replace</code></td><td>Replace with new char</td><td>normal: <code>r</code>, select: <code>r</code></td></tr>
-<tr><td><code>switch_case</code></td><td>Switch (toggle) case</td><td>normal: <code>~</code>, select: <code>~</code></td></tr>
+<tr><td><code>switch_case</code></td><td>Switch (toggle) case</td><td>select: <code>~</code></td></tr>
+<tr><td><code>switch_case_forward</code></td><td>Toggle case and advance cursor (vim ~)</td><td>normal: <code>~</code></td></tr>
 <tr><td><code>switch_to_uppercase</code></td><td>Switch to uppercase</td><td>normal: <code>&lt;space&gt;xU</code>, <code>&lt;C-x&gt;&lt;C-u&gt;</code>, select: <code>&lt;space&gt;xU</code>, <code>&lt;C-x&gt;&lt;C-u&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-u&gt;</code></td></tr>
 <tr><td><code>switch_to_lowercase</code></td><td>Switch to lowercase</td><td>normal: <code>&lt;space&gt;xu</code>, <code>&lt;C-x&gt;&lt;C-l&gt;</code>, select: <code>&lt;space&gt;xu</code>, <code>&lt;C-x&gt;&lt;C-l&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-l&gt;</code></td></tr>
 <tr><td><code>upcase_word</code></td><td>Upper-case the word after point (emacs upcase-word, M-u)</td><td></td></tr>
@@ -1401,7 +1402,7 @@
 <tr><td><code>select_line_below</code></td><td>Select current line, if already selected, extend or shrink line below based on the anchor</td><td></td></tr>
 <tr><td><code>extend_to_line_bounds</code></td><td>Extend selection to line bounds</td><td>select: <code>V</code></td></tr>
 <tr><td><code>shrink_to_line_bounds</code></td><td>Shrink selection to line bounds</td><td></td></tr>
-<tr><td><code>delete_selection</code></td><td>Delete selection</td><td>normal: <code>x</code>, <code>&lt;del&gt;</code></td></tr>
+<tr><td><code>delete_selection</code></td><td>Delete selection</td><td></td></tr>
 <tr><td><code>delete_selection_noyank</code></td><td>Delete selection without yanking</td><td></td></tr>
 <tr><td><code>change_selection</code></td><td>Change selection</td><td>select: <code>c</code>, <code>s</code></td></tr>
 <tr><td><code>change_selection_noyank</code></td><td>Change selection without yanking</td><td></td></tr>
@@ -1589,8 +1590,10 @@
 <tr><td><code>insert_newline</code></td><td>Insert newline char</td><td>normal: <code>&lt;C-x&gt;6&lt;ret&gt;</code>, select: <code>&lt;C-x&gt;6&lt;ret&gt;</code>, insert: <code>&lt;C-j&gt;</code>, <code>&lt;ret&gt;</code>, <code>&lt;C-x&gt;6&lt;ret&gt;</code></td></tr>
 <tr><td><code>insert_char_interactive</code></td><td>Insert an interactively-chosen char</td><td>insert: <code>&lt;C-q&gt;</code>, <code>&lt;C-v&gt;</code></td></tr>
 <tr><td><code>append_char_interactive</code></td><td>Append an interactively-chosen char</td><td></td></tr>
-<tr><td><code>delete_char_backward</code></td><td>Delete previous char</td><td>normal: <code>X</code>, insert: <code>&lt;backspace&gt;</code></td></tr>
+<tr><td><code>delete_char_backward</code></td><td>Delete previous char</td><td>insert: <code>&lt;backspace&gt;</code></td></tr>
 <tr><td><code>delete_char_forward</code></td><td>Delete next char</td><td>insert: <code>&lt;del&gt;</code></td></tr>
+<tr><td><code>delete_chars_forward_vim</code></td><td>Delete char(s) under cursor, line-bounded (vim x)</td><td>normal: <code>x</code>, <code>&lt;del&gt;</code></td></tr>
+<tr><td><code>delete_chars_backward_vim</code></td><td>Delete char(s) before cursor, no line join (vim X)</td><td>normal: <code>X</code></td></tr>
 <tr><td><code>delete_word_backward</code></td><td>Delete previous word</td><td>normal: <code>&lt;C-x&gt;&lt;backspace&gt;</code>, select: <code>&lt;C-x&gt;&lt;backspace&gt;</code>, insert: <code>&lt;C-w&gt;</code>, <code>&lt;A-backspace&gt;</code>, <code>&lt;C-x&gt;&lt;backspace&gt;</code></td></tr>
 <tr><td><code>delete_word_forward</code></td><td>Delete next word</td><td>normal: <code>&lt;A-d&gt;</code>, insert: <code>&lt;A-d&gt;</code></td></tr>
 <tr><td><code>kill_to_line_start</code></td><td>Delete till start of line</td><td>insert: <code>&lt;C-u&gt;</code></td></tr>
@@ -1646,11 +1649,13 @@
 <tr><td><code>paste_clipboard_before</code></td><td>Paste clipboard before selections</td><td></td></tr>
 <tr><td><code>paste_primary_clipboard_after</code></td><td>Paste primary clipboard after selections</td><td></td></tr>
 <tr><td><code>paste_primary_clipboard_before</code></td><td>Paste primary clipboard before selections</td><td></td></tr>
-<tr><td><code>indent</code></td><td>Indent selection</td><td>normal: <code>==</code>, <code>&lt;gt&gt;&lt;gt&gt;</code>, <code>&lt;C-x&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, select: <code>&lt;C-x&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, insert: <code>&lt;C-t&gt;</code>, <code>&lt;C-x&gt;&lt;tab&gt;</code></td></tr>
-<tr><td><code>unindent</code></td><td>Unindent selection</td><td>normal: <code>&lt;lt&gt;&lt;lt&gt;</code>, insert: <code>&lt;C-d&gt;</code></td></tr>
+<tr><td><code>indent</code></td><td>Indent selection</td><td>normal: <code>==</code>, <code>&lt;C-x&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, select: <code>&lt;C-x&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, insert: <code>&lt;C-t&gt;</code>, <code>&lt;C-x&gt;&lt;tab&gt;</code></td></tr>
+<tr><td><code>unindent</code></td><td>Unindent selection</td><td>insert: <code>&lt;C-d&gt;</code></td></tr>
 <tr><td><code>format_selections</code></td><td>Format selection</td><td>normal: <code>&lt;A-q&gt;</code>, <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code>, select: <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code></td></tr>
-<tr><td><code>join_selections</code></td><td>Join lines inside selection</td><td>normal: <code>J</code>, <code>&lt;A-^&gt;</code>, <code>&lt;space&gt;kJ</code>, select: <code>&lt;space&gt;kJ</code></td></tr>
+<tr><td><code>join_selections</code></td><td>Join lines inside selection</td><td>normal: <code>&lt;A-^&gt;</code>, <code>&lt;space&gt;kJ</code>, select: <code>&lt;space&gt;kJ</code></td></tr>
 <tr><td><code>join_selections_space</code></td><td>Join lines inside selection and select spaces</td><td></td></tr>
+<tr><td><code>join_lines_vim</code></td><td>Join line(s) with a space, cursor at join (vim J)</td><td>normal: <code>J</code></td></tr>
+<tr><td><code>join_lines_vim_nospace</code></td><td>Join line(s) without a space (vim gJ)</td><td></td></tr>
 <tr><td><code>keep_selections</code></td><td>Keep selections matching regex</td><td></td></tr>
 <tr><td><code>remove_selections</code></td><td>Remove selections matching regex</td><td></td></tr>
 <tr><td><code>align_selections</code></td><td>Align selections in column</td><td>normal: <code>&lt;space&gt;xaa</code>, select: <code>&lt;space&gt;xaa</code></td></tr>
@@ -2046,6 +2051,36 @@
 <tr><td><code>frogger</code></td><td>Play Frogger, cross the traffic</td><td></td></tr>
 <tr><td><code>twenty_forty_eight</code></td><td>Play 2048, the sliding-tile puzzle</td><td></td></tr>
 <tr><td><code>minesweeper</code></td><td>Play Minesweeper</td><td></td></tr>
+<tr><td><code>tic_tac_toe</code></td><td>Play Tic-Tac-Toe against the computer</td><td></td></tr>
+<tr><td><code>connect_four</code></td><td>Play Connect Four against the computer</td><td></td></tr>
+<tr><td><code>reversi</code></td><td>Play Reversi / Othello against the computer</td><td></td></tr>
+<tr><td><code>sokoban</code></td><td>Play Sokoban, push the boxes onto the goals</td><td></td></tr>
+<tr><td><code>sudoku</code></td><td>Play Sudoku</td><td></td></tr>
+<tr><td><code>fifteen</code></td><td>Play the 15-puzzle sliding tiles</td><td></td></tr>
+<tr><td><code>hangman</code></td><td>Play Hangman, guess the word</td><td></td></tr>
+<tr><td><code>wordle</code></td><td>Play Wordle, guess the five-letter word</td><td></td></tr>
+<tr><td><code>mastermind</code></td><td>Play Mastermind, crack the code</td><td></td></tr>
+<tr><td><code>pacman</code></td><td>Play Pac-Man</td><td></td></tr>
+<tr><td><code>landmark</code></td><td>Play landmark, find the hidden tree (emacs landmark)</td><td></td></tr>
+<tr><td><code>centipede</code></td><td>Play Centipede</td><td></td></tr>
+<tr><td><code>missile_command</code></td><td>Play Missile Command, defend the cities</td><td></td></tr>
+<tr><td><code>tron</code></td><td>Play Tron light-cycles against the computer</td><td></td></tr>
+<tr><td><code>flappy</code></td><td>Play Flappy, flap through the pipes</td><td></td></tr>
+<tr><td><code>checkers</code></td><td>Play Checkers / draughts against the computer</td><td></td></tr>
+<tr><td><code>battleship</code></td><td>Play Battleship against the computer</td><td></td></tr>
+<tr><td><code>blackjack</code></td><td>Play Blackjack against the dealer</td><td></td></tr>
+<tr><td><code>yahtzee</code></td><td>Play Yahtzee</td><td></td></tr>
+<tr><td><code>simon</code></td><td>Play Simon, the memory game</td><td></td></tr>
+<tr><td><code>galaga</code></td><td>Play Galaga</td><td></td></tr>
+<tr><td><code>dig_dug</code></td><td>Play Dig Dug</td><td></td></tr>
+<tr><td><code>donkey_kong</code></td><td>Play Donkey Kong</td><td></td></tr>
+<tr><td><code>bomberman</code></td><td>Play Bomberman</td><td></td></tr>
+<tr><td><code>lunar_lander</code></td><td>Play Lunar Lander</td><td></td></tr>
+<tr><td><code>chess</code></td><td>Play chess against the computer</td><td></td></tr>
+<tr><td><code>mancala</code></td><td>Play Mancala / Kalah against the computer</td><td></td></tr>
+<tr><td><code>video_poker</code></td><td>Play Jacks-or-Better video poker</td><td></td></tr>
+<tr><td><code>klondike</code></td><td>Play Klondike solitaire</td><td></td></tr>
+<tr><td><code>nonogram</code></td><td>Play nonogram / picross</td><td></td></tr>
 <tr><td><code>zone</code></td><td>Run the zone screen-saver (emacs zone)</td><td></td></tr>
 <tr><td><code>decipher</code></td><td>Solve a cryptogram (emacs decipher)</td><td></td></tr>
 <tr><td><code>dunnet</code></td><td>Play the dunnet text adventure (emacs dunnet)</td><td></td></tr>
