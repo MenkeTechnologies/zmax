@@ -20229,6 +20229,210 @@ fn rename_uniquely(cx: &mut compositor::Context, _args: Args, event: PromptEvent
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Session persistence (Emacs `desktop` family). The on-disk desktop-file format
+// lives in `zemacs_core::desktop`; these commands enumerate open buffers to save
+// and drive `editor.open` to restore. `DESKTOP_DIR` remembers the last directory
+// a desktop was saved to or read from, so `:desktop-revert` can re-read it.
+// ---------------------------------------------------------------------------
+
+thread_local! {
+    static DESKTOP_DIR: std::cell::RefCell<Option<PathBuf>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Resolve the desktop directory from an optional first argument, else the last
+/// remembered directory, else the home directory (Emacs' default of `~`).
+fn desktop_dir(args: &Args) -> anyhow::Result<PathBuf> {
+    if let Some(a) = args
+        .first()
+        .map(AsRef::as_ref)
+        .filter(|s: &&str| !s.trim().is_empty())
+    {
+        return Ok(zemacs_stdx::path::expand_tilde(Path::new(a.trim())).into_owned());
+    }
+    if let Some(dir) = DESKTOP_DIR.with(|d| d.borrow().clone()) {
+        return Ok(dir);
+    }
+    Ok(home_dir()?)
+}
+
+/// `:desktop-save [DIR]` — Emacs `desktop-save`: record every file-visiting
+/// buffer and its point into `DIR/.zemacs.desktop` (DIR defaults to the last
+/// remembered directory, else `~`). The current buffer is flagged so
+/// `:desktop-read` restores focus to it.
+fn desktop_save(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = desktop_dir(&args)?;
+    let current_id = doc!(cx.editor).id();
+    let mut entries = Vec::new();
+    for doc in cx.editor.documents() {
+        let Some(path) = doc.path() else { continue };
+        let text = doc.text();
+        // Point comes from any recorded selection (the primary cursor of the
+        // buffer's first view); a buffer never displayed defaults to `0,0`.
+        let (line, column) = doc
+            .selections()
+            .values()
+            .next()
+            .map(|sel| {
+                let cursor = sel.primary().cursor(text.slice(..));
+                let l = text.char_to_line(cursor);
+                (l, cursor - text.line_to_char(l))
+            })
+            .unwrap_or((0, 0));
+        entries.push(zemacs_core::desktop::DesktopEntry {
+            current: doc.id() == current_id,
+            line,
+            column,
+            path: path.to_string_lossy().into_owned(),
+        });
+    }
+    if entries.is_empty() {
+        bail!("desktop-save: no file-visiting buffers");
+    }
+    std::fs::create_dir_all(&dir)?;
+    let file = dir.join(zemacs_core::desktop::FILE_NAME);
+    std::fs::write(&file, zemacs_core::desktop::serialize(&entries))?;
+    DESKTOP_DIR.with(|d| *d.borrow_mut() = Some(dir));
+    cx.editor.set_status(format!(
+        "desktop saved: {} buffer(s) → {}",
+        entries.len(),
+        file.display()
+    ));
+    Ok(())
+}
+
+/// Shared body of `:desktop-read` / `:desktop-revert` / `:desktop-change-dir`:
+/// open every file listed in `dir/.zemacs.desktop`, restoring focus and point to
+/// the buffer flagged current. Files that no longer exist are skipped.
+fn desktop_read_dir(cx: &mut compositor::Context, dir: &Path) -> anyhow::Result<()> {
+    let file = dir.join(zemacs_core::desktop::FILE_NAME);
+    let contents = std::fs::read_to_string(&file)
+        .map_err(|e| anyhow!("desktop-read: cannot read {}: {e}", file.display()))?;
+    let entries = zemacs_core::desktop::parse(&contents);
+    if entries.is_empty() {
+        bail!("desktop-read: {} lists no buffers", file.display());
+    }
+    let current = zemacs_core::desktop::current_index(&entries).unwrap_or(entries.len() - 1);
+    let mut opened = 0usize;
+    // Open the non-current buffers in the background first, then the current one
+    // with Replace so both focus and point land on it.
+    for (i, e) in entries.iter().enumerate() {
+        if i == current {
+            continue;
+        }
+        let path = zemacs_stdx::path::expand_tilde(Path::new(&e.path));
+        if cx.editor.open(&path, Action::Load).is_ok() {
+            opened += 1;
+        }
+    }
+    let cur = &entries[current];
+    let path = zemacs_stdx::path::expand_tilde(Path::new(&cur.path));
+    if cx.editor.open(&path, Action::Replace).is_ok() {
+        opened += 1;
+        let (view, doc) = current!(cx.editor);
+        let pos = pos_at_coords(
+            doc.text().slice(..),
+            Position::new(cur.line, cur.column),
+            true,
+        );
+        doc.set_selection(view.id, Selection::point(pos));
+        align_view(doc, view, Align::Center);
+    }
+    if opened == 0 {
+        bail!(
+            "desktop-read: none of the {} listed file(s) could be opened",
+            entries.len()
+        );
+    }
+    DESKTOP_DIR.with(|d| *d.borrow_mut() = Some(dir.to_path_buf()));
+    cx.editor.set_status(format!(
+        "desktop restored: {opened} buffer(s) from {}",
+        file.display()
+    ));
+    Ok(())
+}
+
+/// `:desktop-read [DIR]` — Emacs `desktop-read`: open every file listed in
+/// `DIR/.zemacs.desktop` (DIR defaults to the last saved/read directory, else
+/// `~`), restoring focus and point to the buffer flagged current.
+fn desktop_read(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = desktop_dir(&args)?;
+    desktop_read_dir(cx, &dir)
+}
+
+/// `:desktop-change-dir DIR` — Emacs `desktop-change-dir`: switch to the desktop
+/// saved in DIR, reading its buffer set. DIR is required.
+fn desktop_change_dir(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = match args
+        .first()
+        .map(AsRef::as_ref)
+        .filter(|s: &&str| !s.trim().is_empty())
+    {
+        Some(a) => zemacs_stdx::path::expand_tilde(Path::new(a.trim())).into_owned(),
+        None => bail!("usage: :desktop-change-dir <directory>"),
+    };
+    desktop_read_dir(cx, &dir)
+}
+
+/// `:desktop-revert` — Emacs `desktop-revert`: re-read the last loaded desktop,
+/// discarding edits to the recorded buffer set.
+fn desktop_revert(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = DESKTOP_DIR
+        .with(|d| d.borrow().clone())
+        .ok_or_else(|| anyhow!("desktop-revert: no desktop has been read this session"))?;
+    desktop_read_dir(cx, &dir)
+}
+
+/// `:desktop-clear` — Emacs `desktop-clear`: close every open buffer and erase
+/// the desktop file in the active directory. Modified buffers block the close
+/// and are reported, so no unsaved work is discarded silently.
+fn desktop_clear(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let ids = buffer_gather_all_impl(cx.editor);
+    buffer_close_by_ids_impl(cx, &ids, false)?;
+    if let Some(dir) = DESKTOP_DIR.with(|d| d.borrow().clone()) {
+        let _ = std::fs::remove_file(dir.join(zemacs_core::desktop::FILE_NAME));
+    }
+    DESKTOP_DIR.with(|d| *d.borrow_mut() = None);
+    cx.editor.set_status("desktop cleared");
+    Ok(())
+}
+
 /// Join the lines of `block` with `sep` into a single line, preserving a trailing
 /// newline if the block had one. Pure — unit tested.
 fn join_lines_with(block: &str, sep: &str) -> String {
@@ -30812,6 +31016,61 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Rename the current buffer to a unique name with a numeric suffix (emacs rename-uniquely).",
         fun: rename_uniquely,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "desktop-save",
+        aliases: &[],
+        doc: "Save file-visiting buffers and point to a desktop file (emacs desktop-save).",
+        fun: desktop_save,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "desktop-read",
+        aliases: &[],
+        doc: "Reopen the buffers recorded in a desktop file (emacs desktop-read).",
+        fun: desktop_read,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "desktop-change-dir",
+        aliases: &[],
+        doc: "Switch to the desktop saved in another directory (emacs desktop-change-dir).",
+        fun: desktop_change_dir,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "desktop-revert",
+        aliases: &[],
+        doc: "Re-read the last loaded desktop (emacs desktop-revert).",
+        fun: desktop_revert,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "desktop-clear",
+        aliases: &[],
+        doc: "Close all buffers and erase the desktop file (emacs desktop-clear).",
+        fun: desktop_clear,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
