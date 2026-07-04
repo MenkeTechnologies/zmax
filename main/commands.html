@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-6452b1e3.js";
+            window.path_to_searchindex_js = "searchindex-8dcfdb2b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1522,6 +1522,45 @@
 <tr><td><code>calendar_mayan_goto_long_count</code></td><td>Echo Gregorian for a Mayan long count (emacs calendar-mayan-goto-long-count)</td><td></td></tr>
 <tr><td><code>calc_dispatch</code></td><td>Open the RPN Calc stack calculator (emacs calc / C-x *)</td><td>normal: <code>&lt;space&gt;ac</code>, select: <code>&lt;space&gt;ac</code></td></tr>
 <tr><td><code>occur</code></td><td>List lines matching a regexp in an <em>Occur</em> overlay (emacs occur / M-s o)</td><td></td></tr>
+<tr><td><code>isearch_forward_word</code></td><td>Incremental whole-word search forward (emacs isearch-forward-word)</td><td></td></tr>
+<tr><td><code>isearch_forward_symbol</code></td><td>Incremental whole-symbol search forward (emacs isearch-forward-symbol)</td><td></td></tr>
+<tr><td><code>isearch_forward_thing_at_point</code></td><td>Search for the symbol/word at point (emacs isearch-forward-thing-at-point)</td><td></td></tr>
+<tr><td><code>isearch_forward_symbol_at_point</code></td><td>Search for the symbol at point (emacs isearch-forward-symbol-at-point)</td><td></td></tr>
+<tr><td><code>isearch_toggle_regexp</code></td><td>Toggle regexp matching for the current search (emacs isearch-toggle-regexp)</td><td></td></tr>
+<tr><td><code>isearch_toggle_word</code></td><td>Toggle whole-word matching for the current search (emacs isearch-toggle-word)</td><td></td></tr>
+<tr><td><code>isearch_toggle_symbol</code></td><td>Toggle whole-symbol matching for the current search (emacs isearch-toggle-symbol)</td><td></td></tr>
+<tr><td><code>isearch_toggle_case_fold</code></td><td>Toggle case-folding for the current search (emacs isearch-toggle-case-fold)</td><td></td></tr>
+<tr><td><code>isearch_toggle_lax_whitespace</code></td><td>Toggle lax-whitespace matching for the current search (emacs isearch-toggle-lax-whitespace)</td><td></td></tr>
+<tr><td><code>isearch_toggle_char_fold</code></td><td>Toggle character folding (inert: no fold table) (emacs isearch-toggle-char-fold)</td><td></td></tr>
+<tr><td><code>isearch_toggle_invisible</code></td><td>Toggle invisible-text matching (inert) (emacs isearch-toggle-invisible)</td><td></td></tr>
+<tr><td><code>isearch_toggle_input_method</code></td><td>Input-method toggle (unsupported in zemacs) (emacs isearch-toggle-input-method)</td><td></td></tr>
+<tr><td><code>isearch_yank_char</code></td><td>Extend the search with the next buffer char (emacs isearch-yank-char)</td><td></td></tr>
+<tr><td><code>isearch_yank_word_or_char</code></td><td>Extend the search with the next word or char (emacs isearch-yank-word-or-char)</td><td></td></tr>
+<tr><td><code>isearch_yank_symbol_or_char</code></td><td>Extend the search with the next symbol or char (emacs isearch-yank-symbol-or-char)</td><td></td></tr>
+<tr><td><code>isearch_yank_word</code></td><td>Extend the search with the next word (emacs isearch-yank-word)</td><td></td></tr>
+<tr><td><code>isearch_yank_symbol</code></td><td>Extend the search with the next symbol (emacs isearch-yank-symbol)</td><td></td></tr>
+<tr><td><code>isearch_yank_line</code></td><td>Extend the search to end of line (emacs isearch-yank-line)</td><td></td></tr>
+<tr><td><code>isearch_yank_until_char</code></td><td>Extend the search up to a given char (emacs isearch-yank-until-char)</td><td></td></tr>
+<tr><td><code>isearch_yank_kill</code></td><td>Extend the search with the kill-ring top (emacs isearch-yank-kill)</td><td></td></tr>
+<tr><td><code>isearch_yank_pop</code></td><td>Extend the search with a kill-ring entry (emacs isearch-yank-pop)</td><td></td></tr>
+<tr><td><code>isearch_yank_x_selection</code></td><td>Extend the search with the clipboard selection (emacs isearch-yank-x-selection)</td><td></td></tr>
+<tr><td><code>isearch_del_char</code></td><td>Shorten the search string by one char (emacs isearch-del-char)</td><td></td></tr>
+<tr><td><code>isearch_delete_char</code></td><td>Shorten the search string by one char (emacs isearch-delete-char)</td><td></td></tr>
+<tr><td><code>isearch_edit_string</code></td><td>Edit the search string in a prompt (emacs isearch-edit-string)</td><td></td></tr>
+<tr><td><code>isearch_ring_advance</code></td><td>Cycle to an older search-ring entry (emacs isearch-ring-advance)</td><td></td></tr>
+<tr><td><code>isearch_ring_retreat</code></td><td>Cycle to a newer search-ring entry (emacs isearch-ring-retreat)</td><td></td></tr>
+<tr><td><code>isearch_exit</code></td><td>End the current incremental search (emacs isearch-exit)</td><td></td></tr>
+<tr><td><code>isearch_abort</code></td><td>Abort the search, return to origin (emacs isearch-abort)</td><td></td></tr>
+<tr><td><code>isearch_cancel</code></td><td>Cancel the search, return to origin (emacs isearch-cancel)</td><td></td></tr>
+<tr><td><code>isearch_quote_char</code></td><td>Add a literal char to the search string (emacs isearch-quote-char)</td><td></td></tr>
+<tr><td><code>isearch_complete</code></td><td>Complete the search string from history (emacs isearch-complete)</td><td></td></tr>
+<tr><td><code>isearch_char_by_name</code></td><td>Add a char by digraph mnemonic to the search (emacs isearch-char-by-name)</td><td></td></tr>
+<tr><td><code>isearch_emoji_by_name</code></td><td>Add a char by digraph mnemonic to the search (emacs isearch-emoji-by-name)</td><td></td></tr>
+<tr><td><code>isearch_occur</code></td><td>Run occur with the current search pattern (emacs isearch-occur)</td><td></td></tr>
+<tr><td><code>isearch_query_replace</code></td><td>Query-replace the current search pattern (emacs isearch-query-replace)</td><td></td></tr>
+<tr><td><code>isearch_query_replace_regexp</code></td><td>Query-replace the current search regexp (emacs isearch-query-replace-regexp)</td><td></td></tr>
+<tr><td><code>isearch_highlight_regexp</code></td><td>Highlight matches of the current search (emacs isearch-highlight-regexp)</td><td></td></tr>
+<tr><td><code>isearch_highlight_lines_matching_regexp</code></td><td>List/highlight lines matching the search (emacs isearch-highlight-lines-matching-regexp)</td><td></td></tr>
 <tr><td><code>rmail</code></td><td>Open the Rmail mail reader on ~/RMAIL (emacs rmail)</td><td>normal: <code>&lt;space&gt;ar</code>, select: <code>&lt;space&gt;ar</code></td></tr>
 <tr><td><code>dired</code></td><td>Open the Dired directory editor (emacs C-x d)</td><td></td></tr>
 <tr><td><code>dired_jump</code></td><td>Open Dired on the current buffer’s directory (emacs C-x C-j)</td><td></td></tr>
@@ -1531,6 +1570,37 @@
 <tr><td><code>latex_insert_block</code></td><td>LaTeX: insert a \begin{}..\end{} block (emacs latex-insert-block)</td><td></td></tr>
 <tr><td><code>latex_close_block</code></td><td>LaTeX: close the innermost open environment (emacs latex-close-block)</td><td></td></tr>
 <tr><td><code>tex_validate</code></td><td>TeX: check {}/$/begin-end balance (emacs tex-validate-region)</td><td></td></tr>
+<tr><td><code>tex_mode</code></td><td>TeX: enter TeX editing mode (emacs tex-mode)</td><td></td></tr>
+<tr><td><code>latex_mode</code></td><td>LaTeX: enter LaTeX editing mode (emacs latex-mode)</td><td></td></tr>
+<tr><td><code>latex_electric_env_pair_mode</code></td><td>LaTeX: toggle electric \begin/\end pairing (emacs latex-electric-env-pair-mode)</td><td></td></tr>
+<tr><td><code>tex_file</code></td><td>TeX: run LaTeX on the current file (emacs tex-file)</td><td></td></tr>
+<tr><td><code>tex_buffer</code></td><td>TeX: compile the current buffer (emacs tex-buffer)</td><td></td></tr>
+<tr><td><code>tex_region</code></td><td>TeX: compile the current file (emacs tex-region)</td><td></td></tr>
+<tr><td><code>tex_compile</code></td><td>TeX: run LaTeX on the current file (emacs tex-compile)</td><td></td></tr>
+<tr><td><code>tex_bibtex_file</code></td><td>TeX: run BibTeX on the current file (emacs tex-bibtex-file)</td><td></td></tr>
+<tr><td><code>tex_view</code></td><td>TeX: open the compiled PDF (emacs tex-view)</td><td></td></tr>
+<tr><td><code>tex_print</code></td><td>TeX: print the compiled PDF via lpr (emacs tex-print)</td><td></td></tr>
+<tr><td><code>tex_kill_job</code></td><td>TeX: kill the running TeX job (emacs tex-kill-job)</td><td></td></tr>
+<tr><td><code>tex_recenter_output_buffer</code></td><td>TeX: recenter the TeX output (emacs tex-recenter-output-buffer)</td><td></td></tr>
+<tr><td><code>sgml_tag</code></td><td>SGML: wrap region/point in a <tag>..</tag> (emacs sgml-tag)</td><td></td></tr>
+<tr><td><code>sgml_close_tag</code></td><td>SGML: close the innermost open element (emacs sgml-close-tag)</td><td></td></tr>
+<tr><td><code>sgml_delete_tag</code></td><td>SGML: delete the enclosing tag pair, keeping content (emacs sgml-delete-tag)</td><td></td></tr>
+<tr><td><code>sgml_skip_tag_forward</code></td><td>SGML: move past a balanced tag group (emacs sgml-skip-tag-forward)</td><td></td></tr>
+<tr><td><code>sgml_skip_tag_backward</code></td><td>SGML: move back over a balanced tag group (emacs sgml-skip-tag-backward)</td><td></td></tr>
+<tr><td><code>sgml_name_char</code></td><td>SGML: insert a &amp;entity; for a character (emacs sgml-name-char)</td><td></td></tr>
+<tr><td><code>sgml_tag_help</code></td><td>SGML: describe an HTML element (emacs sgml-tag-help)</td><td></td></tr>
+<tr><td><code>sgml_attributes</code></td><td>SGML: insert attributes at point (emacs sgml-attributes)</td><td></td></tr>
+<tr><td><code>sgml_tags_invisible</code></td><td>SGML: toggle tag invisibility flag (emacs sgml-tags-invisible)</td><td></td></tr>
+<tr><td><code>sgml_name_8bit_mode</code></td><td>SGML: toggle 8-bit entity name display (emacs sgml-name-8bit-mode)</td><td></td></tr>
+<tr><td><code>sgml_validate</code></td><td>SGML: validate the file with onsgmls/nsgmls (emacs sgml-validate)</td><td></td></tr>
+<tr><td><code>sgml_mode</code></td><td>SGML: enter SGML editing mode (emacs sgml-mode)</td><td></td></tr>
+<tr><td><code>html_mode</code></td><td>HTML: enter HTML editing mode (emacs html-mode)</td><td></td></tr>
+<tr><td><code>htmlfontify_buffer</code></td><td>HTML: export the buffer as highlighted HTML (emacs htmlfontify-buffer)</td><td></td></tr>
+<tr><td><code>nroff_forward_text_line</code></td><td>nroff: forward one text line, skip requests (emacs nroff-forward-text-line)</td><td></td></tr>
+<tr><td><code>nroff_backward_text_line</code></td><td>nroff: backward one text line, skip requests (emacs nroff-backward-text-line)</td><td></td></tr>
+<tr><td><code>nroff_count_text_lines</code></td><td>nroff: count text lines in region (emacs nroff-count-text-lines)</td><td></td></tr>
+<tr><td><code>nroff_mode</code></td><td>nroff: enter nroff editing mode (emacs nroff-mode)</td><td></td></tr>
+<tr><td><code>nroff_electric_mode</code></td><td>nroff: toggle electric request closing (emacs nroff-electric-mode)</td><td></td></tr>
 <tr><td><code>code_action</code></td><td>Perform code action</td><td>normal: <code>&lt;space&gt;la</code>, select: <code>&lt;space&gt;la</code></td></tr>
 <tr><td><code>extract_refactor</code></td><td>Extract refactoring (method/variable/constant) via LSP (IntelliJ Extract)</td><td></td></tr>
 <tr><td><code>extract_function</code></td><td>Extract Method/Function via LSP (IntelliJ Extract Method)</td><td></td></tr>
@@ -2314,6 +2384,26 @@
 <tr><td><code>table_capture</code></td><td>Capture the selected plain text into a table (emacs table-capture)</td><td></td></tr>
 <tr><td><code>table_release</code></td><td>Release the table at point back to plain text (emacs table-release)</td><td></td></tr>
 <tr><td><code>table_fixed_width_mode</code></td><td>Toggle table fixed-width mode (emacs table-fixed-width-mode)</td><td></td></tr>
+<tr><td><code>fortran_next_statement</code></td><td>Move to the next fixed-form Fortran statement (emacs fortran-next-statement)</td><td></td></tr>
+<tr><td><code>fortran_previous_statement</code></td><td>Move to the previous fixed-form Fortran statement (emacs fortran-previous-statement)</td><td></td></tr>
+<tr><td><code>fortran_beginning_of_block</code></td><td>Move to the opening of the Fortran block at point (emacs fortran-beginning-of-block)</td><td></td></tr>
+<tr><td><code>fortran_end_of_block</code></td><td>Move to the END of the Fortran block at point (emacs fortran-end-of-block)</td><td></td></tr>
+<tr><td><code>f90_next_statement</code></td><td>Move to the next free-form F90 statement (emacs f90-next-statement)</td><td></td></tr>
+<tr><td><code>f90_previous_statement</code></td><td>Move to the previous free-form F90 statement (emacs f90-previous-statement)</td><td></td></tr>
+<tr><td><code>f90_next_block</code></td><td>Move to the next F90 block opening (emacs f90-next-block)</td><td></td></tr>
+<tr><td><code>f90_previous_block</code></td><td>Move to the previous F90 block opening (emacs f90-previous-block)</td><td></td></tr>
+<tr><td><code>f90_beginning_of_block</code></td><td>Move to the opening of the F90 block at point (emacs f90-beginning-of-block)</td><td></td></tr>
+<tr><td><code>f90_end_of_block</code></td><td>Move to the end of the F90 block at point (emacs f90-end-of-block)</td><td></td></tr>
+<tr><td><code>fortran_split_line</code></td><td>Break the line at point onto a Fortran continuation line (emacs fortran-split-line)</td><td></td></tr>
+<tr><td><code>fortran_join_line</code></td><td>Join the current line with the following Fortran continuation line (emacs fortran-join-line)</td><td></td></tr>
+<tr><td><code>fortran_comment_region</code></td><td>Comment (or uncomment) the selected lines as Fortran comments (emacs fortran-comment-region)</td><td></td></tr>
+<tr><td><code>fortran_indent_subprogram</code></td><td>Re-indent the buffer by fixed-form Fortran block nesting (emacs fortran-indent-subprogram)</td><td></td></tr>
+<tr><td><code>fortran_strip_sequence_nos</code></td><td>Delete sequence numbers in columns 73+ on every line (emacs fortran-strip-sequence-nos)</td><td></td></tr>
+<tr><td><code>fortran_column_ruler</code></td><td>Show the fixed-form Fortran column ruler in the echo area (emacs fortran-column-ruler)</td><td></td></tr>
+<tr><td><code>fortran_window_create</code></td><td>Report the fixed-form column-72 boundary (emacs fortran-window-create)</td><td></td></tr>
+<tr><td><code>fortran_window_create_momentarily</code></td><td>Report the fixed-form column-72 boundary momentarily (emacs fortran-window-create-momentarily)</td><td></td></tr>
+<tr><td><code>fortran_mode</code></td><td>Enter fixed-form Fortran mode (emacs fortran-mode)</td><td></td></tr>
+<tr><td><code>f90_mode</code></td><td>Enter free-form Fortran/F90 mode (emacs f90-mode)</td><td></td></tr>
 <tr><td><code>facemenu</code></td><td>Browse faces and colors (emacs list-faces-display / facemenu)</td><td></td></tr>
 <tr><td><code>bookmark_bmenu_list</code></td><td>List bookmarks in an overlay (emacs bookmark-bmenu-list)</td><td></td></tr>
 <tr><td><code>proced</code></td><td>Open the process viewer/manager (emacs proced)</td><td></td></tr>
@@ -2328,6 +2418,8 @@
 <tr><td><code>studlify_word</code></td><td>StudlyCaps the word after point (emacs studlify-word)</td><td></td></tr>
 <tr><td><code>indent_relative</code></td><td>Indent to under the next indent point in the previous line (emacs indent-relative)</td><td></td></tr>
 <tr><td><code>indent_code_rigidly</code></td><td>Shift region lines by [count] columns, skipping lines that start in a string (emacs indent-code-rigidly, = r)</td><td>normal: <code>=r</code></td></tr>
+<tr><td><code>c_hungry_delete_forward</code></td><td>Delete all whitespace after point, else one char (emacs c-hungry-delete-forward, SPC x d f)</td><td>normal: <code>&lt;space&gt;xdf</code>, select: <code>&lt;space&gt;xdf</code></td></tr>
+<tr><td><code>c_hungry_delete_backwards</code></td><td>Delete all whitespace before point, else one char (emacs c-hungry-delete-backwards, SPC x d b)</td><td>normal: <code>&lt;space&gt;xdb</code>, select: <code>&lt;space&gt;xdb</code></td></tr>
 <tr><td><code>delete_find_char_backward</code></td><td>Delete to prev char (dF)</td><td>normal: <code>dF</code></td></tr>
 <tr><td><code>delete_till_char_backward</code></td><td>Delete till prev char (dT)</td><td>normal: <code>dT</code></td></tr>
 <tr><td><code>change_find_char_forward</code></td><td>Change to next char (cf)</td><td>normal: <code>cf</code></td></tr>
