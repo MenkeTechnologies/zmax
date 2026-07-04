@@ -14765,7 +14765,8 @@ fn diary_fancy_display(cx: &mut Context) {
     let entries = diary_entries();
     let hits = zemacs_core::diary::entries_for(&entries, today);
     if hits.is_empty() {
-        cx.editor.set_status("Diary: no entries for today".to_string());
+        cx.editor
+            .set_status("Diary: no entries for today".to_string());
         return;
     }
     let header = zemacs_core::diary::format_daily(today);
@@ -14809,16 +14810,24 @@ fn diary_hebrew_date(cx: &mut Context) {
 /// Emacs `diary-islamic-date`: today's date on the Islamic calendar.
 fn diary_islamic_date(cx: &mut Context) {
     match zemacs_core::calendar::islamic_string(diary_today()) {
-        Some(s) => cx.editor.set_status(format!("Islamic date (until sunset): {s}")),
-        None => cx.editor.set_status("Islamic date: before the Islamic epoch".to_string()),
+        Some(s) => cx
+            .editor
+            .set_status(format!("Islamic date (until sunset): {s}")),
+        None => cx
+            .editor
+            .set_status("Islamic date: before the Islamic epoch".to_string()),
     }
 }
 
 /// Emacs `diary-french-date`: today's date on the French Revolutionary calendar.
 fn diary_french_date(cx: &mut Context) {
     match zemacs_core::calendar::french_string(diary_today()) {
-        Some(s) => cx.editor.set_status(format!("French Revolutionary date: {s}")),
-        None => cx.editor.set_status("French Revolutionary date: out of range".to_string()),
+        Some(s) => cx
+            .editor
+            .set_status(format!("French Revolutionary date: {s}")),
+        None => cx
+            .editor
+            .set_status("French Revolutionary date: out of range".to_string()),
     }
 }
 
@@ -14891,7 +14900,10 @@ fn diary_hebrew_birthday(cx: &mut Context) {
 /// Emacs `diary-insert-monthly-entry`: an entry on today's day-of-month, every
 /// month.
 fn diary_insert_monthly_entry(cx: &mut Context) {
-    diary_insert(cx.editor, zemacs_core::diary::format_monthly(diary_today().day));
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_monthly(diary_today().day),
+    );
 }
 
 /// Emacs `diary-insert-yearly-entry`: an entry on today's month/day, every year.
@@ -14902,7 +14914,10 @@ fn diary_insert_yearly_entry(cx: &mut Context) {
 /// Emacs `diary-insert-anniversary-entry`: a `%%(diary-anniversary ...)` entry
 /// for today's date.
 fn diary_insert_anniversary_entry(cx: &mut Context) {
-    diary_insert(cx.editor, zemacs_core::diary::format_anniversary_sexp(diary_today()));
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_anniversary_sexp(diary_today()),
+    );
 }
 
 /// Emacs `diary-insert-block-entry`: a `%%(diary-block ...)` entry. Emacs uses
@@ -14925,9 +14940,10 @@ fn diary_insert_cyclic_entry(cx: &mut Context) {
                 return;
             }
             match input.trim().parse::<i64>() {
-                Ok(n) if n > 0 => {
-                    diary_insert(cx.editor, zemacs_core::diary::format_cyclic_sexp(n, diary_today()))
-                }
+                Ok(n) if n > 0 => diary_insert(
+                    cx.editor,
+                    zemacs_core::diary::format_cyclic_sexp(n, diary_today()),
+                ),
                 _ => cx.editor.set_error("diary-cyclic: need a positive integer"),
             }
         },
@@ -14939,7 +14955,8 @@ fn diary_insert_cyclic_entry(cx: &mut Context) {
 
 /// Today's Hebrew `(month, day, year, month-name)`.
 fn hebrew_today() -> (u32, u32, i64, &'static str) {
-    let (y, m, d) = zemacs_core::calendar::hebrew_from_fixed(zemacs_core::calendar::rd(diary_today()));
+    let (y, m, d) =
+        zemacs_core::calendar::hebrew_from_fixed(zemacs_core::calendar::rd(diary_today()));
     let name = if zemacs_core::calendar::hebrew_last_month_of_year(y) == 12 {
         zemacs_core::calendar::HEBREW_MONTH_NAMES_COMMON[(m - 1) as usize]
     } else {
@@ -14951,7 +14968,10 @@ fn hebrew_today() -> (u32, u32, i64, &'static str) {
 fn diary_hebrew_insert_entry(cx: &mut Context) {
     diary_insert(
         cx.editor,
-        zemacs_core::diary::format_other_entry('H', &zemacs_core::calendar::hebrew_string(diary_today())),
+        zemacs_core::diary::format_other_entry(
+            'H',
+            &zemacs_core::calendar::hebrew_string(diary_today()),
+        ),
     );
 }
 fn diary_hebrew_insert_monthly_entry(cx: &mut Context) {
@@ -14960,7 +14980,10 @@ fn diary_hebrew_insert_monthly_entry(cx: &mut Context) {
 }
 fn diary_hebrew_insert_yearly_entry(cx: &mut Context) {
     let (_, d, _, name) = hebrew_today();
-    diary_insert(cx.editor, zemacs_core::diary::format_other_yearly('H', name, d));
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_other_yearly('H', name, d),
+    );
 }
 fn diary_hebrew_insert_anniversary_entry(cx: &mut Context) {
     let (m, d, y, _) = hebrew_today();
@@ -14974,27 +14997,41 @@ fn diary_hebrew_insert_anniversary_entry(cx: &mut Context) {
 fn islamic_today() -> Option<(u32, u32, i64, &'static str)> {
     let (y, m, d) =
         zemacs_core::calendar::islamic_from_fixed(zemacs_core::calendar::rd(diary_today()))?;
-    Some((m, d, y, zemacs_core::calendar::ISLAMIC_MONTH_NAMES[(m - 1) as usize]))
+    Some((
+        m,
+        d,
+        y,
+        zemacs_core::calendar::ISLAMIC_MONTH_NAMES[(m - 1) as usize],
+    ))
 }
 
 fn diary_islamic_insert_entry(cx: &mut Context) {
     match zemacs_core::calendar::islamic_string(diary_today()) {
         Some(s) => diary_insert(cx.editor, zemacs_core::diary::format_other_entry('I', &s)),
-        None => cx.editor.set_error("diary-islamic: before the Islamic epoch"),
+        None => cx
+            .editor
+            .set_error("diary-islamic: before the Islamic epoch"),
     }
 }
 fn diary_islamic_insert_monthly_entry(cx: &mut Context) {
     match islamic_today() {
-        Some((_, d, _, _)) => diary_insert(cx.editor, zemacs_core::diary::format_other_monthly('I', d)),
-        None => cx.editor.set_error("diary-islamic: before the Islamic epoch"),
+        Some((_, d, _, _)) => {
+            diary_insert(cx.editor, zemacs_core::diary::format_other_monthly('I', d))
+        }
+        None => cx
+            .editor
+            .set_error("diary-islamic: before the Islamic epoch"),
     }
 }
 fn diary_islamic_insert_yearly_entry(cx: &mut Context) {
     match islamic_today() {
-        Some((_, d, _, name)) => {
-            diary_insert(cx.editor, zemacs_core::diary::format_other_yearly('I', name, d))
-        }
-        None => cx.editor.set_error("diary-islamic: before the Islamic epoch"),
+        Some((_, d, _, name)) => diary_insert(
+            cx.editor,
+            zemacs_core::diary::format_other_yearly('I', name, d),
+        ),
+        None => cx
+            .editor
+            .set_error("diary-islamic: before the Islamic epoch"),
     }
 }
 fn diary_islamic_insert_anniversary_entry(cx: &mut Context) {
@@ -15003,13 +15040,16 @@ fn diary_islamic_insert_anniversary_entry(cx: &mut Context) {
             cx.editor,
             zemacs_core::diary::format_other_anniversary_sexp("islamic", m, d, y),
         ),
-        None => cx.editor.set_error("diary-islamic: before the Islamic epoch"),
+        None => cx
+            .editor
+            .set_error("diary-islamic: before the Islamic epoch"),
     }
 }
 
 /// Today's Baha'i `(month, day, year, month-name)`.
 fn bahai_today() -> (u32, u32, i64, String) {
-    let (y, m, d) = zemacs_core::calendar::bahai_from_fixed(zemacs_core::calendar::rd(diary_today()));
+    let (y, m, d) =
+        zemacs_core::calendar::bahai_from_fixed(zemacs_core::calendar::rd(diary_today()));
     let name = if m == 0 {
         "Ayyam-i-Ha".to_string()
     } else {
@@ -15021,7 +15061,10 @@ fn bahai_today() -> (u32, u32, i64, String) {
 fn diary_bahai_insert_entry(cx: &mut Context) {
     diary_insert(
         cx.editor,
-        zemacs_core::diary::format_other_entry('B', &zemacs_core::calendar::bahai_string(diary_today())),
+        zemacs_core::diary::format_other_entry(
+            'B',
+            &zemacs_core::calendar::bahai_string(diary_today()),
+        ),
     );
 }
 fn diary_bahai_insert_monthly_entry(cx: &mut Context) {
@@ -15030,7 +15073,10 @@ fn diary_bahai_insert_monthly_entry(cx: &mut Context) {
 }
 fn diary_bahai_insert_yearly_entry(cx: &mut Context) {
     let (_, d, _, name) = bahai_today();
-    diary_insert(cx.editor, zemacs_core::diary::format_other_yearly('B', &name, d));
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_other_yearly('B', &name, d),
+    );
 }
 fn diary_bahai_insert_anniversary_entry(cx: &mut Context) {
     let (m, d, y, _) = bahai_today();
@@ -15043,8 +15089,7 @@ fn diary_bahai_insert_anniversary_entry(cx: &mut Context) {
 // --- appt (appointment reminders) -------------------------------------------
 
 /// The live appointment list (appt.el `appt-time-msg-list`).
-static APPTS: std::sync::Mutex<Vec<zemacs_core::diary::Appt>> =
-    std::sync::Mutex::new(Vec::new());
+static APPTS: std::sync::Mutex<Vec<zemacs_core::diary::Appt>> = std::sync::Mutex::new(Vec::new());
 /// Whether appt checking is active (appt.el `appt-timer`).
 static APPT_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
@@ -15058,9 +15103,13 @@ fn appt_add(cx: &mut Context) {
             if event != PromptEvent::Validate || input.trim().is_empty() {
                 return;
             }
-            let (time_str, msg) = input.trim().split_once(char::is_whitespace).unwrap_or((input.trim(), ""));
+            let (time_str, msg) = input
+                .trim()
+                .split_once(char::is_whitespace)
+                .unwrap_or((input.trim(), ""));
             let Some(minutes) = zemacs_core::diary::parse_appt_time(time_str) else {
-                cx.editor.set_error("appt-add: could not parse the time (use HH:MM)");
+                cx.editor
+                    .set_error("appt-add: could not parse the time (use HH:MM)");
                 return;
             };
             let appt = zemacs_core::diary::Appt {
@@ -15075,7 +15124,8 @@ fn appt_add(cx: &mut Context) {
                     list.len()
                 ));
             } else {
-                cx.editor.set_status("appt-add: that appointment already exists".to_string());
+                cx.editor
+                    .set_status("appt-add: that appointment already exists".to_string());
             }
         },
     );
@@ -15119,7 +15169,8 @@ fn appt_activate(cx: &mut Context) {
     let active = !APPT_ACTIVE.load(Ordering::Relaxed);
     APPT_ACTIVE.store(active, Ordering::Relaxed);
     if !active {
-        cx.editor.set_status("Appointment checking disabled".to_string());
+        cx.editor
+            .set_status("Appointment checking disabled".to_string());
         return;
     }
     let list = APPTS.lock().unwrap();
@@ -15131,7 +15182,8 @@ fn appt_activate(cx: &mut Context) {
             a.message
         )),
         None => cx.editor.set_status(
-            "Appointment checking enabled (no timer popups); no more appointments today".to_string(),
+            "Appointment checking enabled (no timer popups); no more appointments today"
+                .to_string(),
         ),
     }
 }
