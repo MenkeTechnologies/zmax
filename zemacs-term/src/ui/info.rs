@@ -60,7 +60,8 @@ fn grid(
     };
     // The MOST columns whose COL_CAP-capped widths fit the bar, leaving no empty
     // trailing column. Falls back to a single budget-bounded column.
-    let capped = |cols: usize| -> Vec<usize> { (0..cols).map(|c| col_width(cols, c, COL_CAP)).collect() };
+    let capped =
+        |cols: usize| -> Vec<usize> { (0..cols).map(|c| col_width(cols, c, COL_CAP)).collect() };
     let (cols, mut cw) = (1..=max_cols)
         .rev()
         .filter(|&c| (c - 1) * n.div_ceil(c) < n)
@@ -215,12 +216,11 @@ mod tests {
         // No inter-column run of spaces wider than SEP + a short label pad. The old
         // code produced ~20-space gaps here; the fix keeps them at SEP.
         for line in text.lines() {
-            let max_run = line
-                .split(|c| c != ' ')
-                .map(str::len)
-                .max()
-                .unwrap_or(0);
-            assert!(max_run <= SEP + 2, "mid-bar gap of {max_run} spaces: {line:?}");
+            let max_run = line.split(|c| c != ' ').map(str::len).max().unwrap_or(0);
+            assert!(
+                max_run <= SEP + 2,
+                "mid-bar gap of {max_run} spaces: {line:?}"
+            );
         }
     }
 
