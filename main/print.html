@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-b0642027.js";
+            window.path_to_searchindex_js = "searchindex-10290337.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -2375,6 +2375,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:highlight-phrase</code></td><td>Highlight the phrase, matching across whitespace/line breaks (emacs highlight-phrase).</td></tr>
 <tr><td><code>:highlight-lines-matching-regexp</code></td><td>Highlight whole lines matching the regexp (emacs highlight-lines-matching-regexp).</td></tr>
 <tr><td><code>:unhighlight-regexp</code></td><td>Remove the highlight for the regexp, or all highlights if none given (emacs unhighlight-regexp).</td></tr>
+<tr><td><code>:highlight-symbol-at-point</code>, <code>:hi-lock-face-symbol-at-point</code></td><td>Highlight every whole-word occurrence of the symbol under the cursor (emacs highlight-symbol-at-point).</td></tr>
+<tr><td><code>:hi-lock-write-interactive-patterns</code></td><td>Insert the active Hi-Lock patterns at point as commented Hi-lock: lines (emacs hi-lock-write-interactive-patterns).</td></tr>
+<tr><td><code>:hi-lock-find-patterns</code></td><td>Activate Hi-Lock highlights from commented Hi-lock: lines at the top of the buffer (emacs hi-lock-find-patterns).</td></tr>
 <tr><td><code>:outline-hide-by-heading-regexp</code></td><td>Fold the subtree of every heading whose line matches the regexp (emacs outline-hide-by-heading-regexp).</td></tr>
 <tr><td><code>:outline-show-by-heading-regexp</code></td><td>Reveal the subtree of every heading whose line matches the regexp (emacs outline-show-by-heading-regexp).</td></tr>
 <tr><td><code>:set-fill-column</code></td><td>Set the fill width to N, or the current cursor column if omitted (emacs set-fill-column).</td></tr>
@@ -3403,6 +3406,12 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>snake</code></td><td>Play snake (emacs snake)</td><td></td></tr>
 <tr><td><code>tetris</code></td><td>Play tetris (emacs tetris)</td><td></td></tr>
 <tr><td><code>pong</code></td><td>Play pong against the computer (emacs pong)</td><td></td></tr>
+<tr><td><code>space_invaders</code></td><td>Play Space Invaders</td><td></td></tr>
+<tr><td><code>breakout</code></td><td>Play Breakout, the brick-breaker</td><td></td></tr>
+<tr><td><code>asteroids</code></td><td>Play Asteroids</td><td></td></tr>
+<tr><td><code>frogger</code></td><td>Play Frogger, cross the traffic</td><td></td></tr>
+<tr><td><code>twenty_forty_eight</code></td><td>Play 2048, the sliding-tile puzzle</td><td></td></tr>
+<tr><td><code>minesweeper</code></td><td>Play Minesweeper</td><td></td></tr>
 <tr><td><code>zone</code></td><td>Run the zone screen-saver (emacs zone)</td><td></td></tr>
 <tr><td><code>decipher</code></td><td>Solve a cryptogram (emacs decipher)</td><td></td></tr>
 <tr><td><code>dunnet</code></td><td>Play the dunnet text adventure (emacs dunnet)</td><td></td></tr>
@@ -6661,11 +6670,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>3126</strong> (45.7%)</li>
+<li>Ported: <strong>3129</strong> (45.7%)</li>
 <li>Partial: <strong>537</strong> (7.8%)</li>
-<li>Absent: <strong>3184</strong></li>
+<li>Absent: <strong>3181</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1028 static commands, 1637 typable <code>:</code> commands, 2666 default keybindings</li>
+<li>zemacs source surface: 1034 static commands, 1641 typable <code>:</code> commands, 2666 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -6721,7 +6730,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">723</td><td style="text-align: right">169</td><td style="text-align: right">24.0%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">726</td><td style="text-align: right">169</td><td style="text-align: right">24.1%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
@@ -6742,7 +6751,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">512</td><td style="text-align: right">84</td><td style="text-align: right">27.2%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">515</td><td style="text-align: right">84</td><td style="text-align: right">27.3%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
