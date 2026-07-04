@@ -5,6 +5,8 @@
 //! renders the result. Prior art: GNU Emacs Dired (sorting `s`, `% R`/`% u`/`% l`
 //! name transforms, human-readable sizes).
 
+use std::path::{Path, PathBuf};
+
 /// One directory entry as Dired needs it. `mtime` is seconds since the Unix
 /// epoch (only used as a sort key, so its absolute value is irrelevant).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -183,6 +185,62 @@ pub fn is_garbage_file(name: &str) -> bool {
         || GARBAGE_EXTENSIONS.contains(&extension(name).as_str())
 }
 
+/// Emacs `dired-mark-executables` predicate on a Unix permission `mode`: true
+/// when any of the owner/group/other execute bits (`0o111`) are set.
+pub fn is_executable_mode(mode: u32) -> bool {
+    mode & 0o111 != 0
+}
+
+/// Count and total byte size of the entries whose name satisfies `is_marked` —
+/// backs Emacs `dired-number-of-marked-files` (the `* N` display).
+pub fn marked_summary(entries: &[DiredEntry], is_marked: impl Fn(&str) -> bool) -> (usize, u64) {
+    entries
+        .iter()
+        .filter(|e| is_marked(&e.name))
+        .fold((0usize, 0u64), |(c, b), e| (c + 1, b + e.size))
+}
+
+/// Resolve the on-disk destination for copying/renaming/linking a file named
+/// `src_name` to the user-supplied `dest`. When `dest` is an existing directory
+/// the file keeps its basename inside it (Emacs Dired "Copy to: <dir>/"
+/// behaviour); otherwise `dest` is taken as the literal target path.
+pub fn destination_path(dest: &Path, dest_is_dir: bool, src_name: &str) -> PathBuf {
+    if dest_is_dir {
+        dest.join(src_name)
+    } else {
+        dest.to_path_buf()
+    }
+}
+
+/// Parse an octal file mode as typed for Emacs `dired-do-chmod` (e.g. `"755"`,
+/// `"0644"`). Returns `None` for empty input, non-octal digits, or overflow.
+pub fn parse_octal_mode(s: &str) -> Option<u32> {
+    let s = s.trim();
+    if s.is_empty() {
+        return None;
+    }
+    u32::from_str_radix(s, 8).ok()
+}
+
+/// Whether `name` is usable as a new single-component file name for the
+/// create/rename prompts: non-empty, not the `.`/`..` self/parent entries, and
+/// containing no path separator.
+pub fn is_valid_filename(name: &str) -> bool {
+    !name.is_empty() && name != "." && name != ".." && !name.contains('/')
+}
+
+/// Index of the next (`forward`) or previous directory entry relative to `from`,
+/// backing Emacs `dired-next-dirline` / `dired-prev-dirline`. Searches strictly
+/// away from `from` without wrapping; `None` if there is no further directory in
+/// that direction.
+pub fn next_dir_index(entries: &[DiredEntry], from: usize, forward: bool) -> Option<usize> {
+    if forward {
+        ((from + 1)..entries.len()).find(|&i| entries[i].is_dir)
+    } else {
+        (0..from.min(entries.len())).rev().find(|&i| entries[i].is_dir)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -307,5 +365,84 @@ mod tests {
         assert!(is_garbage_file("#foo.c#")); // auto-saves count as garbage
         assert!(!is_garbage_file("paper.tex"));
         assert!(!is_garbage_file("main.rs"));
+    }
+
+    #[test]
+    fn executable_mode_bits() {
+        assert!(is_executable_mode(0o755));
+        assert!(is_executable_mode(0o744)); // owner-only exec still counts
+        assert!(is_executable_mode(0o111));
+        assert!(!is_executable_mode(0o644));
+        assert!(!is_executable_mode(0o000));
+    }
+
+    #[test]
+    fn marked_summary_counts_and_sums() {
+        let v = vec![
+            e("a.txt", false, 100, 1),
+            e("b.txt", false, 250, 1),
+            e("dir", true, 0, 1),
+            e("c.txt", false, 4, 1),
+        ];
+        // Mark a.txt and c.txt only.
+        let marked = ["a.txt", "c.txt"];
+        let (count, bytes) = marked_summary(&v, |n| marked.contains(&n));
+        assert_eq!(count, 2);
+        assert_eq!(bytes, 104);
+        // Nothing marked → zero of both.
+        assert_eq!(marked_summary(&v, |_| false), (0, 0));
+    }
+
+    #[test]
+    fn destination_into_dir_or_literal() {
+        let dir = Path::new("/tmp/dst");
+        // Existing directory: keep the basename inside it.
+        assert_eq!(
+            destination_path(dir, true, "photo.png"),
+            PathBuf::from("/tmp/dst/photo.png")
+        );
+        // Not a directory: the literal target path is used verbatim.
+        assert_eq!(
+            destination_path(dir, false, "photo.png"),
+            PathBuf::from("/tmp/dst")
+        );
+    }
+
+    #[test]
+    fn octal_mode_parsing() {
+        assert_eq!(parse_octal_mode("755"), Some(0o755));
+        assert_eq!(parse_octal_mode("0644"), Some(0o644));
+        assert_eq!(parse_octal_mode("  600 "), Some(0o600));
+        assert_eq!(parse_octal_mode(""), None);
+        assert_eq!(parse_octal_mode("8"), None); // 8 is not an octal digit
+        assert_eq!(parse_octal_mode("nope"), None);
+    }
+
+    #[test]
+    fn valid_filenames() {
+        assert!(is_valid_filename("foo.txt"));
+        assert!(is_valid_filename("New Name"));
+        assert!(!is_valid_filename(""));
+        assert!(!is_valid_filename("."));
+        assert!(!is_valid_filename(".."));
+        assert!(!is_valid_filename("a/b"));
+    }
+
+    #[test]
+    fn dirline_navigation() {
+        // Indices:      0(d)   1      2(d)   3      4(d)
+        let v = vec![
+            e("adir", true, 0, 1),
+            e("a.txt", false, 1, 1),
+            e("bdir", true, 0, 1),
+            e("b.txt", false, 1, 1),
+            e("cdir", true, 0, 1),
+        ];
+        assert_eq!(next_dir_index(&v, 0, true), Some(2));
+        assert_eq!(next_dir_index(&v, 2, true), Some(4));
+        assert_eq!(next_dir_index(&v, 4, true), None); // nothing past the last dir
+        assert_eq!(next_dir_index(&v, 4, false), Some(2));
+        assert_eq!(next_dir_index(&v, 2, false), Some(0));
+        assert_eq!(next_dir_index(&v, 0, false), None); // nothing before the first dir
     }
 }

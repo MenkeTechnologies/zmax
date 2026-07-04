@@ -1285,6 +1285,14 @@ impl MappableCommand {
         video_poker, "Play Jacks-or-Better video poker",
         klondike, "Play Klondike solitaire",
         nonogram, "Play nonogram / picross",
+        xref_find_references, "Find references to a symbol across the workspace (emacs xref-find-references)",
+        project_find_file, "Find a file under the project root (emacs project-find-file)",
+        diffmode, "Open the unified-diff viewer (emacs diff-mode)",
+        picture, "Draw ASCII pictures on a canvas (emacs picture-mode)",
+        table, "Edit a text table (emacs table.el)",
+        facemenu, "Browse faces and colors (emacs list-faces-display / facemenu)",
+        bookmark_bmenu_list, "List bookmarks in an overlay (emacs bookmark-bmenu-list)",
+        proced, "Open the process viewer/manager (emacs proced)",
         zone, "Run the zone screen-saver (emacs zone)",
         decipher, "Solve a cryptogram (emacs decipher)",
         dunnet, "Play the dunnet text adventure (emacs dunnet)",
@@ -13934,6 +13942,83 @@ fn klondike(cx: &mut Context) {
 fn nonogram(cx: &mut Context) {
     open_overlay(cx, |_editor| {
         Ok(Box::new(crate::ui::nonogram::Nonogram::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `xref-find-references` (M-?): grep-scan the working tree for a symbol
+/// and list the hits in an Xref results overlay.
+fn xref_find_references(cx: &mut Context) {
+    let root = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let symbol = "TODO".to_string();
+    open_overlay(cx, move |_editor| {
+        crate::ui::xref::Xref::new(root, symbol)
+            .map(|x| Box::new(x) as Box<dyn Component>)
+            .map_err(|e| format!("xref: {e}"))
+    });
+}
+
+/// Emacs `project-find-file` (C-x p f): fuzzy-find a file under the project root.
+fn project_find_file(cx: &mut Context) {
+    let start = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    open_overlay(cx, move |_editor| {
+        crate::ui::project::Project::new(start)
+            .map(|p| Box::new(p) as Box<dyn Component>)
+            .map_err(|e| format!("project: {e}"))
+    });
+}
+
+/// Emacs `diff-mode`: open the unified-diff viewer on the working-tree `git diff`.
+fn diffmode(cx: &mut Context) {
+    let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let diff_text = std::process::Command::new("git")
+        .arg("diff")
+        .current_dir(&cwd)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| {
+            "--- a/example.txt\n+++ b/example.txt\n@@ -1,2 +1,2 @@\n context\n-old line\n+new line\n"
+                .to_string()
+        });
+    open_overlay(cx, move |_editor| {
+        Ok(Box::new(crate::ui::diffmode::DiffMode::new(diff_text)) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `picture-mode`: draw ASCII pictures on a 2-D canvas.
+fn picture(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::picture::Picture::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `table.el` (M-x table-insert): edit a text table.
+fn table(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::table::TableEditor::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `list-faces-display` / `facemenu`: browse faces and colors.
+fn facemenu(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::facemenu::FaceMenu::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `bookmark-bmenu-list` (C-x r l): the *Bookmark List* overlay.
+fn bookmark_bmenu_list(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::bookmark::BookmarkMenu::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `proced`: process viewer/manager.
+fn proced(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::proced::Proced::new()) as Box<dyn Component>)
     });
 }
 

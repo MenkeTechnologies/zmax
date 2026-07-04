@@ -78,7 +78,8 @@
 | `repeat_last_motion` | Repeat last motion | normal: `` ; ``, `` <C-x>z ``, select: `` ; ``, `` <C-x>z ``, insert: `` <C-x>z `` |
 | `repeat_find_char_reverse` | Repeat last find in opposite direction (,) | normal: `` , ``, select: `` , `` |
 | `replace` | Replace with new char | normal: `` r ``, select: `` r `` |
-| `switch_case` | Switch (toggle) case | normal: `` ~ ``, select: `` ~ `` |
+| `switch_case` | Switch (toggle) case | select: `` ~ `` |
+| `switch_case_forward` | Toggle case and advance cursor (vim ~) | normal: `` ~ `` |
 | `switch_to_uppercase` | Switch to uppercase | normal: `` <space>xU ``, `` <C-x><C-u> ``, select: `` <space>xU ``, `` <C-x><C-u> ``, insert: `` <C-x><C-u> `` |
 | `switch_to_lowercase` | Switch to lowercase | normal: `` <space>xu ``, `` <C-x><C-l> ``, select: `` <space>xu ``, `` <C-x><C-l> ``, insert: `` <C-x><C-l> `` |
 | `upcase_word` | Upper-case the word after point (emacs upcase-word, M-u) |  |
@@ -293,7 +294,7 @@
 | `select_line_below` | Select current line, if already selected, extend or shrink line below based on the anchor |  |
 | `extend_to_line_bounds` | Extend selection to line bounds | select: `` V `` |
 | `shrink_to_line_bounds` | Shrink selection to line bounds |  |
-| `delete_selection` | Delete selection | normal: `` x ``, `` <del> `` |
+| `delete_selection` | Delete selection |  |
 | `delete_selection_noyank` | Delete selection without yanking |  |
 | `change_selection` | Change selection | select: `` c ``, `` s `` |
 | `change_selection_noyank` | Change selection without yanking |  |
@@ -481,8 +482,10 @@
 | `insert_newline` | Insert newline char | normal: `` <C-x>6<ret> ``, select: `` <C-x>6<ret> ``, insert: `` <C-j> ``, `` <ret> ``, `` <C-x>6<ret> `` |
 | `insert_char_interactive` | Insert an interactively-chosen char | insert: `` <C-q> ``, `` <C-v> `` |
 | `append_char_interactive` | Append an interactively-chosen char |  |
-| `delete_char_backward` | Delete previous char | normal: `` X ``, insert: `` <backspace> `` |
+| `delete_char_backward` | Delete previous char | insert: `` <backspace> `` |
 | `delete_char_forward` | Delete next char | insert: `` <del> `` |
+| `delete_chars_forward_vim` | Delete char(s) under cursor, line-bounded (vim x) | normal: `` x ``, `` <del> `` |
+| `delete_chars_backward_vim` | Delete char(s) before cursor, no line join (vim X) | normal: `` X `` |
 | `delete_word_backward` | Delete previous word | normal: `` <C-x><backspace> ``, select: `` <C-x><backspace> ``, insert: `` <C-w> ``, `` <A-backspace> ``, `` <C-x><backspace> `` |
 | `delete_word_forward` | Delete next word | normal: `` <A-d> ``, insert: `` <A-d> `` |
 | `kill_to_line_start` | Delete till start of line | insert: `` <C-u> `` |
@@ -538,11 +541,13 @@
 | `paste_clipboard_before` | Paste clipboard before selections |  |
 | `paste_primary_clipboard_after` | Paste primary clipboard after selections |  |
 | `paste_primary_clipboard_before` | Paste primary clipboard before selections |  |
-| `indent` | Indent selection | normal: `` == ``, `` <gt><gt> ``, `` <C-x><tab> ``, `` <space>xac ``, `` <space>x<tab> ``, select: `` <C-x><tab> ``, `` <space>xac ``, `` <space>x<tab> ``, insert: `` <C-t> ``, `` <C-x><tab> `` |
-| `unindent` | Unindent selection | normal: `` <lt><lt> ``, insert: `` <C-d> `` |
+| `indent` | Indent selection | normal: `` == ``, `` <C-x><tab> ``, `` <space>xac ``, `` <space>x<tab> ``, select: `` <C-x><tab> ``, `` <space>xac ``, `` <space>x<tab> ``, insert: `` <C-t> ``, `` <C-x><tab> `` |
+| `unindent` | Unindent selection | insert: `` <C-d> `` |
 | `format_selections` | Format selection | normal: `` <A-q> ``, `` <space>j+ ``, `` <space>j= ``, `` <space>lf ``, select: `` <space>j+ ``, `` <space>j= ``, `` <space>lf `` |
-| `join_selections` | Join lines inside selection | normal: `` J ``, `` <A-^> ``, `` <space>kJ ``, select: `` <space>kJ `` |
+| `join_selections` | Join lines inside selection | normal: `` <A-^> ``, `` <space>kJ ``, select: `` <space>kJ `` |
 | `join_selections_space` | Join lines inside selection and select spaces |  |
+| `join_lines_vim` | Join line(s) with a space, cursor at join (vim J) | normal: `` J `` |
+| `join_lines_vim_nospace` | Join line(s) without a space (vim gJ) |  |
 | `keep_selections` | Keep selections matching regex |  |
 | `remove_selections` | Remove selections matching regex |  |
 | `align_selections` | Align selections in column | normal: `` <space>xaa ``, select: `` <space>xaa `` |
@@ -938,6 +943,36 @@
 | `frogger` | Play Frogger, cross the traffic |  |
 | `twenty_forty_eight` | Play 2048, the sliding-tile puzzle |  |
 | `minesweeper` | Play Minesweeper |  |
+| `tic_tac_toe` | Play Tic-Tac-Toe against the computer |  |
+| `connect_four` | Play Connect Four against the computer |  |
+| `reversi` | Play Reversi / Othello against the computer |  |
+| `sokoban` | Play Sokoban, push the boxes onto the goals |  |
+| `sudoku` | Play Sudoku |  |
+| `fifteen` | Play the 15-puzzle sliding tiles |  |
+| `hangman` | Play Hangman, guess the word |  |
+| `wordle` | Play Wordle, guess the five-letter word |  |
+| `mastermind` | Play Mastermind, crack the code |  |
+| `pacman` | Play Pac-Man |  |
+| `landmark` | Play landmark, find the hidden tree (emacs landmark) |  |
+| `centipede` | Play Centipede |  |
+| `missile_command` | Play Missile Command, defend the cities |  |
+| `tron` | Play Tron light-cycles against the computer |  |
+| `flappy` | Play Flappy, flap through the pipes |  |
+| `checkers` | Play Checkers / draughts against the computer |  |
+| `battleship` | Play Battleship against the computer |  |
+| `blackjack` | Play Blackjack against the dealer |  |
+| `yahtzee` | Play Yahtzee |  |
+| `simon` | Play Simon, the memory game |  |
+| `galaga` | Play Galaga |  |
+| `dig_dug` | Play Dig Dug |  |
+| `donkey_kong` | Play Donkey Kong |  |
+| `bomberman` | Play Bomberman |  |
+| `lunar_lander` | Play Lunar Lander |  |
+| `chess` | Play chess against the computer |  |
+| `mancala` | Play Mancala / Kalah against the computer |  |
+| `video_poker` | Play Jacks-or-Better video poker |  |
+| `klondike` | Play Klondike solitaire |  |
+| `nonogram` | Play nonogram / picross |  |
 | `zone` | Run the zone screen-saver (emacs zone) |  |
 | `decipher` | Solve a cryptogram (emacs decipher) |  |
 | `dunnet` | Play the dunnet text adventure (emacs dunnet) |  |

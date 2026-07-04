@@ -151,6 +151,94 @@ pub fn iso_week(d: Date) -> (i32, u32, u32) {
     (iso_year, week, iso_dow)
 }
 
+/// Day-of-month (1-based) of the `n`th occurrence (n = 1..) of `target` weekday
+/// (0 = Sunday .. 6 = Saturday) in `month`. Assumes the month has an `n`th such
+/// weekday (true for n <= 4, and n = 5 only for the weekdays that occur 5 times).
+pub fn nth_weekday(year: i32, month: u32, target: u32, n: u32) -> u32 {
+    let first_wd = weekday(Date::new(year, month, 1));
+    let offset = (7 + target - first_wd) % 7;
+    1 + offset + (n - 1) * 7
+}
+
+/// Day-of-month of the last `target` weekday (0 = Sunday .. 6 = Saturday) in
+/// `month` (Emacs uses this for Memorial Day = last Monday of May).
+pub fn last_weekday(year: i32, month: u32, target: u32) -> u32 {
+    let dim = days_in_month(year, month);
+    let last_wd = weekday(Date::new(year, month, dim));
+    dim - ((7 + last_wd - target) % 7)
+}
+
+/// Fixed and easily-computed US holidays that fall in `month` of `year`, as
+/// `(day-of-month, name)` sorted by day (Emacs `calendar-holidays`). Covers the
+/// fixed-date observances plus the `n`th-weekday floating holidays; deliberately
+/// omits astronomically-computed ones (Easter, equinoxes).
+pub fn holidays(year: i32, month: u32) -> Vec<(u32, &'static str)> {
+    // Fixed-date holidays: (month, day, name).
+    const FIXED: &[(u32, u32, &str)] = &[
+        (1, 1, "New Year's Day"),
+        (2, 2, "Groundhog Day"),
+        (2, 14, "Valentine's Day"),
+        (3, 17, "St. Patrick's Day"),
+        (4, 1, "April Fools' Day"),
+        (6, 19, "Juneteenth"),
+        (7, 4, "Independence Day"),
+        (10, 31, "Halloween"),
+        (11, 11, "Veterans Day"),
+        (12, 25, "Christmas"),
+        (12, 31, "New Year's Eve"),
+    ];
+    let mut out: Vec<(u32, &'static str)> = FIXED
+        .iter()
+        .filter(|&&(m, _, _)| m == month)
+        .map(|&(_, d, name)| (d, name))
+        .collect();
+    // Floating (nth-weekday) holidays. Weekday: 0 = Sunday .. 6 = Saturday.
+    match month {
+        1 => out.push((nth_weekday(year, 1, 1, 3), "Martin Luther King Jr. Day")),
+        2 => out.push((nth_weekday(year, 2, 1, 3), "Presidents' Day")),
+        5 => out.push((last_weekday(year, 5, 1), "Memorial Day")),
+        9 => out.push((nth_weekday(year, 9, 1, 1), "Labor Day")),
+        10 => out.push((nth_weekday(year, 10, 1, 2), "Columbus Day")),
+        11 => out.push((nth_weekday(year, 11, 4, 4), "Thanksgiving")),
+        _ => {}
+    }
+    out.sort_by_key(|&(d, _)| d);
+    out
+}
+
+/// The holiday falling exactly on `d`, if any (Emacs `calendar-cursor-holidays`).
+pub fn holiday_on(d: Date) -> Option<&'static str> {
+    holidays(d.year, d.month)
+        .into_iter()
+        .find(|&(day, _)| day == d.day)
+        .map(|(_, name)| name)
+}
+
+/// Parse a date typed at the `calendar-goto-date` prompt. Accepts `Y/M/D`,
+/// `Y-M-D`, or space/comma-separated `Y M D`, validating the month and the day
+/// against the month's length. Returns `None` on anything malformed.
+pub fn parse_ymd(s: &str) -> Option<Date> {
+    let nums: Option<Vec<i64>> = s
+        .split(|c: char| c == '/' || c == '-' || c == ',' || c.is_whitespace())
+        .filter(|t| !t.is_empty())
+        .map(|t| t.parse::<i64>().ok())
+        .collect();
+    let nums = nums?;
+    if nums.len() != 3 {
+        return None;
+    }
+    let (y, m, d) = (nums[0], nums[1], nums[2]);
+    if !(1..=12).contains(&m) {
+        return None;
+    }
+    let year = y as i32;
+    let month = m as u32;
+    if d < 1 || d as u32 > days_in_month(year, month) {
+        return None;
+    }
+    Some(Date::new(year, month, d as u32))
+}
+
 pub const MONTH_NAMES: [&str; 12] = [
     "January",
     "February",
@@ -264,6 +352,57 @@ mod tests {
     fn julian_day_number() {
         assert_eq!(julian_day(Date::new(1970, 1, 1)), 2440588);
         assert_eq!(julian_day(Date::new(2000, 1, 1)), 2451545);
+    }
+
+    #[test]
+    fn nth_and_last_weekday() {
+        // July 2026: Jul 1 is a Wednesday. The 1st Monday is Jul 6.
+        assert_eq!(weekday(Date::new(2026, 7, 1)), 3);
+        assert_eq!(nth_weekday(2026, 7, 1, 1), 6);
+        // 2026 MLK Day = 3rd Monday of January = Jan 19.
+        assert_eq!(nth_weekday(2026, 1, 1, 3), 19);
+        // 2026 Thanksgiving = 4th Thursday of November = Nov 26.
+        assert_eq!(nth_weekday(2026, 11, 4, 4), 26);
+        // 2026 Memorial Day = last Monday of May = May 25.
+        assert_eq!(last_weekday(2026, 5, 1), 25);
+        // Last Friday of Feb 2024 (leap) = Feb 23.
+        assert_eq!(last_weekday(2024, 2, 5), 23);
+    }
+
+    #[test]
+    fn holidays_fixed_and_floating() {
+        let jul = holidays(2026, 7);
+        assert!(jul.contains(&(4, "Independence Day")));
+        let dec = holidays(2026, 12);
+        assert!(dec.contains(&(25, "Christmas")));
+        assert!(dec.contains(&(31, "New Year's Eve")));
+        // Floating holidays land on the right days in 2026.
+        assert!(holidays(2026, 11).contains(&(26, "Thanksgiving")));
+        assert!(holidays(2026, 5).contains(&(25, "Memorial Day")));
+        assert!(holidays(2026, 1).contains(&(19, "Martin Luther King Jr. Day")));
+        // Output is sorted by day, and February has three holidays in 2026.
+        let feb = holidays(2026, 2);
+        assert!(feb.windows(2).all(|w| w[0].0 <= w[1].0));
+        assert_eq!(feb.len(), 3); // Groundhog, Valentine, Presidents' Day
+    }
+
+    #[test]
+    fn holiday_on_a_date() {
+        assert_eq!(holiday_on(Date::new(2026, 7, 4)), Some("Independence Day"));
+        assert_eq!(holiday_on(Date::new(2026, 12, 25)), Some("Christmas"));
+        assert_eq!(holiday_on(Date::new(2026, 7, 5)), None);
+    }
+
+    #[test]
+    fn parse_ymd_forms() {
+        assert_eq!(parse_ymd("2026/7/4"), Some(Date::new(2026, 7, 4)));
+        assert_eq!(parse_ymd("2026-12-25"), Some(Date::new(2026, 12, 25)));
+        assert_eq!(parse_ymd("  2024 2 29 "), Some(Date::new(2024, 2, 29)));
+        // Invalid: Feb 29 in a non-leap year, bad month, wrong arity.
+        assert_eq!(parse_ymd("2023/2/29"), None);
+        assert_eq!(parse_ymd("2026/13/1"), None);
+        assert_eq!(parse_ymd("2026/7"), None);
+        assert_eq!(parse_ymd("nonsense"), None);
     }
 
     #[test]

@@ -19,9 +19,11 @@ Zemacs is a modal IDE, meaning it has different modes for different tasks. The m
 
 Buffers are in-memory representations of files. You can have multiple buffers open at once. Use [pickers](./pickers.md) or commands like `:buffer-next` and `:buffer-previous` to open buffers or switch between them.
 
-## Selection-first editing
+## Editing model
 
-Inspired by [Kakoune](http://kakoune.org/), Zemacs follows the `selection → action` model. This means that whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action itself (delete, change, yank, etc.) comes second. A cursor is simply a single width selection.
+Zemacs ships several [keymap presets](./configuration.md#keymap-presets). The default (`spacemacs`) and the `vim` preset use Vim's **operator → motion** model: you press an action such as `d`, `c` or `y` and then the motion or text object it applies to (`dw`, `ciw`, `yy`). If you come from Vim, see [Migrating from Vim](./from-vim.md).
+
+The `helix` preset instead uses the Kakoune-inspired **selection → action** model: whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action (delete, change, yank, …) comes second. A cursor is simply a single-width selection.
 
 ## Multiple selections
 

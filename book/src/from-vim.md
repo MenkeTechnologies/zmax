@@ -1,140 +1,84 @@
 # Migrating from Vim
 
-- [Delete/Change Commands](#deletechange-commands)
-- [Navigation](#navigation)
-- [Line Deletes](#line-deletes)
-- [Comment lines, Completion, Search](#comment-lines-completion-search)
-- [File actions](#file-actions)
-
-Zemacs's editing model is strongly inspired from Vim and Kakoune, and a notable
-difference from Vim (and the most striking similarity to Kakoune) is that Zemacs
-follows the `selection → action` model. This means that whatever you are
-going to act on (a word, a paragraph, a line, etc.) is selected first and the
-action itself (delete, change, yank, etc.) comes second. A cursor is simply a
-single width selection.
-
-*Note:* As Zemacs is inspired by Vim and [Kakoune](https://github.com/mawww/kakoune), the keybindings are similar but also have some differences. The content of this page is inspired by [Kakoune Wiki](https://github.com/mawww/kakoune/wiki/Migrating-from-Vim).
-
-NOTE: Unlike vim, `f`, `F`, `t` and `T` are not confined to the current line.
-
-## Delete/Change Commands
-
-delete a word:
-* vim: `dw`
-* zemacs: `wd`
-
-change a word:
-* vim: `cw`
-* zemacs: `ec` or `wc` (includes the whitespace after the word)
-
-delete a character:
-* vim: `x`
-* zemacs: `d` or `;d` (`;` reduces the selection to a single char)
-
-copy a line:
-* vim: `yy`
-* zemacs: `Xy` (`X` extends all selections to whole lines)
-
-global replace:
-* vim: `:%s/word/replacement/g<ret>`
-* zemacs: `%sword<ret>creplacement<esc>`
-
-Explanation: `%` selects the entire buffer, `s` opens a prompt for a regex, `<ret>` validates the regex and reduces the selection to each match (hence, all occurrences of word are selected). `c` deletes the selection contents and enter insert mode, replacement is typed and then `<esc>` goes back to normal mode.
-
-## Navigation
-
-go to first line:
-* vim: `gg`
-* zemacs: `gg`
-
-go to last line:
-* vim: `G`
-* zemacs: `ge`
-
-go to line start:
-* vim: `0`
-* zemacs: `gh`
-
-go to line first non-blank character:
-* vim: `^`
-* zemacs: `gs`
-
-go to line end:
-* vim: `$`
-* zemacs: `gl`
-
-jump to matching bracket:
-* vim: `%`
-* zemacs: `mm`
-
-## Line Deletes
-
-delete to line end:
-* vim: `D`
-* zemacs: `vgld` or `t<ret>d`
-
-Note: `v` is used along with `gl` (go to line end), because [`gl` does not select text](https://github.com/MenkeTechnologies/zemacs/issues/1630).
-`t<ret>` selects "'til" the newline represented by `<ret>`.
-
-delete entire line:
-* vim: `dd`
-* zemacs: `xd`
-
-Note: `x` selects the entire line under the cursor
-
-## Comment lines, Completion, Search
-
-auto complete:
-* vim: `C-p`
-* zemacs: `C-x`
-
-comment lines:
-* vim: `gc`
-* zemacs: `Space-c`
-
-search for the word under the cursor:
-* vim: `*`
-* zemacs: `A-o*n` (if there's a tree-sitter grammar or LSP) or `be*n`
-
-Explanation: if there's a grammar or LSP, `A-o` expands selection to the parent syntax node (which would be the word in our case). Then `*` uses the current selection as the search pattern, and `n` goes to the next occurrence. `b` selects to the beginning of the word, and `e` selects to the end of the word, effectively selecting the whole word.
-
-block selection:
-* vim: `C-v`, then expand your selection vertically and horizontally
-* zemacs: There's no "block selection" mode, so instead you'd use multiple cursors. Expand your block selection vertically by adding new cursors on the line below with `C`, and horizontally using standard movements
-
-search "foo" and replace with "bar" in the current selection:
-* vim: `:s/foo/bar/g<ret>`
-* zemacs: `sfoo<ret>cbar<esc>,`
-
-Explanation: `s` will open a prompt in the command line for a regex, and select all matches inside the selection (effectively adding a new cursor on each match). Pressing enter will then finalise this step, and allow the `c` to change the selections to "bar". When done, go back to normal mode with `<esc>`, and keep only the primary selection with `,` (remove all the additional cursors).
-
-## File actions
-
-select the whole file:
-* vim: `ggVG`
-* zemacs: `%`
-
-reload a file from disk:
-* vim: `:e<ret>`
-* zemacs: `:reload<ret>` (or `:reload-all<ret>` to reload all the buffers)
-
-run shell command:
-* vim: `:!command`
-* zemacs: `:sh command` (or `!command` to insert its output into the buffer)
-
-setting a bookmark (bookmarking a location):
-* vim: `ma` to set bookmark with name a. Use `` `a `` to go back to this bookmarked location.
-* zemacs: there are no named bookmarks, but you can save a location in the jumplist with `C-s`, then jump back to that location by opening the jumplist picker with `<space>-j`, or back in the jumplist with `C-o` and forward with `C-i`
-
-zemacs allows [some limited movement in `insert` mode](./keymap.md#insert-mode) without switching to `normal` mode.
-
-Unlike Vim, under Zemacs, the cursor shape is the same (block) in insert mode and normal mode by default.
-This can be adjusted in configuration:
+Zemacs's default keymap (`spacemacs`) and its dedicated `vim` preset are built
+around Vim muscle memory: the **operator → motion** model you already know works
+as-is, so most of what you type in Vim does the same thing here. Pick a preset in
+`config.toml` (see [Configuration](./configuration.md#keymap-presets)):
 
 ```toml
-[editor.cursor-shape]
-insert = "bar"
+keymap = "vim"   # or the default "spacemacs" (vim base + an emacs C-x prefix)
 ```
 
-> TODO: Mention textobjects, surround, registers
+The rest of this page assumes one of those Vim-family presets. If you instead set
+`keymap = "helix"` you get the original Kakoune-style *selection → action* model —
+see [The `helix` preset](#the-helix-preset) at the bottom.
 
+## What works exactly like Vim
+
+- **Operators + motions / text objects** (verb → noun): `dw`, `de`, `db`, `d$`,
+  `diw`, `ci(`, `ca"`, `yy`, `cc`, `dd`, `>>`, `<<`, `gU`/`gu`, `df<char>` …
+- **Delete / change:** `x` deletes the character under the cursor (`3x` for a
+  count), `X` the one before it, `D`/`C` to the end of the line, `cw` changes to
+  the end of the word.
+- **Motions:** `w`/`e`/`b`/`ge`, `f`/`t`/`F`/`T` with `;`/`,`, `0`/`^`/`$`,
+  `gg`/`G`/`{n}G` (landing on the first non-blank), `{`/`}`, `%`, `H`/`M`/`L`.
+- **Lines:** `dd`, `yy`, `p`/`P`, `J` (join with a space), `gJ` (join without),
+  `o`/`O`, `>>`/`<<`.
+- **Insert entry & misc:** `i`/`a`/`I`/`A`, `s`/`S`, `r`/`R`, `~` (toggle case and
+  advance).
+- **Search:** `/`, `?`, `n`, `N`, `*`, `#`.
+- **Visual:** `v`, `V`, `<C-v>` (blockwise); operators apply to the selection.
+- **Jumps & marks:** `<C-o>`/`<C-i>` walk the jumplist; `` `{mark} ``/`'{mark}`
+  jump to a mark.
+
+For the authoritative, always-current list of every bound key and every
+`:`-command, see the generated [keymap](./keymap.md),
+[static commands](./generated/static-cmd.md) and
+[typable commands](./generated/typable-cmd.md) references.
+
+## Intentional differences from Vim
+
+- The cursor is a **block** in every mode by default (including insert). Change it
+  with:
+
+  ```toml
+  [editor.cursor-shape]
+  insert = "bar"
+  ```
+
+- `f`/`t`/`F`/`T` are **not confined to the current line**.
+- Some Ex commands are named differently (e.g. re-read a file, run a shell
+  command). Browse [typable commands](./generated/typable-cmd.md) or type `:` and
+  use the completion menu.
+- Zemacs adds first-class **multiple cursors**, syntax-aware
+  [text objects](./textobjects.md), [surround](./surround.md), an integrated LSP,
+  and tree-sitter selections — capabilities Vim reaches for plugins to provide.
+
+Zemacs also allows [some limited movement in `insert` mode](./keymap.md#insert-mode)
+without switching to `normal` mode.
+
+## The `helix` preset
+
+Setting `keymap = "helix"` switches to the Kakoune-inspired **selection → action**
+model: whatever you are going to act on is selected first and the action comes
+second, and a cursor is simply a single-width selection. Under that preset the
+common Vim keystrokes map differently — a few examples:
+
+| Action | Vim | Zemacs (`helix` preset) |
+| --- | --- | --- |
+| delete a word | `dw` | `wd` |
+| change a word | `cw` | `wc` / `ec` (includes trailing whitespace) |
+| delete a character | `x` | `d` (or `;d` to reduce to a single char first) |
+| copy a line | `yy` | `Xy` (`X` extends selections to whole lines) |
+| delete a line | `dd` | `xd` (`x` selects the whole line) |
+| go to last line | `G` | `ge` |
+| line start / first non-blank | `0` / `^` | `gh` / `gs` |
+| line end | `$` | `gl` |
+| matching bracket | `%` | `mm` |
+| global replace | `:%s/foo/bar/g` | `%sfoo<ret>cbar<esc>` |
+
+Here `%` selects the whole buffer, `s` opens a regex prompt and reduces the
+selection to each match (one cursor per match), and `c` changes them all at once.
+The `helix` preset content mirrors the
+[Kakoune "Migrating from Vim" wiki](https://github.com/mawww/kakoune/wiki/Migrating-from-Vim),
+since Zemacs's selection-first mode descends from the same lineage.

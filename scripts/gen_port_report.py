@@ -241,6 +241,16 @@ def parse_keymap():
     # Comint (M-x shell) is a modal subprocess Component; expose its keys so the
     # comint-* bindings resolve.
     result["comint"] = _parse_component_keymap("comint.rs", "comint")
+    # Additional modal Components ported as overlays; expose their keymaps so the
+    # corresponding Emacs subsystem bindings resolve.
+    result["xref"] = _parse_component_keymap("xref.rs", "xref")
+    result["project"] = _parse_component_keymap("project.rs", "project")
+    result["diffmode"] = _parse_component_keymap("diffmode.rs", "diffmode")
+    result["picture"] = _parse_component_keymap("picture.rs", "picture")
+    result["table"] = _parse_component_keymap("table.rs", "table")
+    result["facemenu"] = _parse_component_keymap("facemenu.rs", "facemenu")
+    result["bookmark"] = _parse_component_keymap("bookmark.rs", "bookmark")
+    result["proced"] = _parse_component_keymap("proced.rs", "proced")
     return result
 
 
