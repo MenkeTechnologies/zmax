@@ -20,7 +20,7 @@ use crate::{
 /// which digits appear, and which have been revealed. No I/O — unit-tested.
 #[derive(Clone)]
 pub struct Puzzle {
-    /// digit_to_letter[d] = the letter shown for digit d.
+    /// `digit_to_letter[d]` = the letter shown for digit d.
     pub cipher: [char; 10],
     pub m1: u32,
     pub m2: u32,

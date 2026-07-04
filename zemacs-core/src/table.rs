@@ -15,7 +15,7 @@
 //! [justification](Justify), per-column minimum width and per-row minimum
 //! height ([`Table::widen_cell`] / [`Table::heighten_cell`] and friends),
 //! [recognition](recognize) of an ASCII grid back into a `Table`,
-//! [capture](capture) of delimited plain text into a table, [release](Table::release)
+//! [capture] of delimited plain text into a table, [release](Table::release)
 //! back to plain text, [source generation](Table::generate_source) (HTML / LaTeX /
 //! CALS), [`Table::query_dimension`], and [`Table::insert_sequence`].
 

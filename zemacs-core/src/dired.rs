@@ -176,7 +176,7 @@ pub fn is_auto_save_file(name: &str) -> bool {
 const GARBAGE_EXTENSIONS: &[&str] = &["aux", "bak", "dvi", "log", "orig", "rej", "toc", "out"];
 
 /// Emacs `dired-flag-garbage-files` predicate: a backup/auto-save file, or a
-/// name whose extension is one of [`GARBAGE_EXTENSIONS`].
+/// name whose extension is one of `GARBAGE_EXTENSIONS`.
 pub fn is_garbage_file(name: &str) -> bool {
     is_backup_file(name)
         || is_auto_save_file(name)
@@ -200,7 +200,7 @@ pub fn marked_summary(entries: &[DiredEntry], is_marked: impl Fn(&str) -> bool) 
 
 /// Resolve the on-disk destination for copying/renaming/linking a file named
 /// `src_name` to the user-supplied `dest`. When `dest` is an existing directory
-/// the file keeps its basename inside it (Emacs Dired "Copy to: <dir>/"
+/// the file keeps its basename inside it (Emacs Dired "Copy to: `<dir>`/"
 /// behaviour); otherwise `dest` is taken as the literal target path.
 pub fn destination_path(dest: &Path, dest_is_dir: bool, src_name: &str) -> PathBuf {
     if dest_is_dir {

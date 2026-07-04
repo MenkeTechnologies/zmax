@@ -18090,7 +18090,7 @@ fn describe_keymap(cx: &mut Context) {
     }));
 }
 
-/// C-x <help>: describe-prefix-bindings — list the sub-bindings of a prefix. zemacs
+/// `C-x <help>`: describe-prefix-bindings — list the sub-bindings of a prefix. zemacs
 /// does not track the pending prefix from within a command, so this lists the
 /// current mode's full keymap (grouped by leading chord) for you to scan.
 fn describe_prefix_bindings(cx: &mut Context) {

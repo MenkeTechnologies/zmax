@@ -112,7 +112,7 @@ pub const ROOMS: &[(&str, &str)] = &[
     ("You have reached a dead end.  There is a PC on the floor here.  Above\nit is a sign that reads:\n          Type the ‘reset’ command to type on the PC.\nA hole leads north.", "PC area"),
 ];
 
-/// Exit matrix: MAP[room] = [N,S,E,W,NE,SE,NW,SW,Up,Down,In,Out].
+/// Exit matrix: `MAP[room]` = `[N,S,E,W,NE,SE,NW,SW,Up,Down,In,Out]`.
 /// -1 = no exit; 255 = a special/puzzle exit; else destination room.
 pub const MAP: &[[i16; 12]] = &[
     [96, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],

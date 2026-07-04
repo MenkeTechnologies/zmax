@@ -196,7 +196,7 @@ const UNICODE_BLOCKS: &[(u32, u32, &str)] = &[
 ];
 
 /// The Unicode block name for `ch`, or [`NO_BLOCK`] when it falls outside every
-/// range in the curated [`UNICODE_BLOCKS`] table.
+/// range in the curated `UNICODE_BLOCKS` table.
 pub fn unicode_block(ch: char) -> &'static str {
     let cp = ch as u32;
     // Table is sorted and non-overlapping; a short linear scan is fine.
