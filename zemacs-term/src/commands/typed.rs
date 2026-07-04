@@ -467,6 +467,7 @@ fn goto_compile_entry(
 ) -> anyhow::Result<()> {
     let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(&entry.file));
     cx.editor.open(&path, Action::Replace)?;
+    let scrolloff = cx.editor.config().scrolloff;
     let (view, doc) = current!(cx.editor);
     let coords = zemacs_core::Position::new(
         entry.line.saturating_sub(1),
@@ -474,7 +475,8 @@ fn goto_compile_entry(
     );
     let pos = Selection::point(pos_at_coords(doc.text().slice(..), coords, true));
     doc.set_selection(view.id, pos);
-    align_view(doc, view, Align::Center);
+    // vim `:compile` error jumps scroll minimally, not centered.
+    view.ensure_cursor_in_view(doc, scrolloff);
     Ok(())
 }
 

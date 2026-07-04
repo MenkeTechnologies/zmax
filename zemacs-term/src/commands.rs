@@ -391,6 +391,7 @@ impl MappableCommand {
         repeat_find_char_reverse, "Repeat last find in opposite direction (,)",
         replace, "Replace with new char",
         switch_case, "Switch (toggle) case",
+        switch_case_forward, "Toggle case and advance cursor (vim ~)",
         switch_to_uppercase, "Switch to uppercase",
         switch_to_lowercase, "Switch to lowercase",
         upcase_word, "Upper-case the word after point (emacs upcase-word, M-u)",
@@ -795,6 +796,8 @@ impl MappableCommand {
         append_char_interactive, "Append an interactively-chosen char",
         delete_char_backward, "Delete previous char",
         delete_char_forward, "Delete next char",
+        delete_chars_forward_vim, "Delete char(s) under cursor, line-bounded (vim x)",
+        delete_chars_backward_vim, "Delete char(s) before cursor, no line join (vim X)",
         delete_word_backward, "Delete previous word",
         delete_word_forward, "Delete next word",
         kill_to_line_start, "Delete till start of line",
@@ -855,6 +858,8 @@ impl MappableCommand {
         format_selections, "Format selection",
         join_selections, "Join lines inside selection",
         join_selections_space, "Join lines inside selection and select spaces",
+        join_lines_vim, "Join line(s) with a space, cursor at join (vim J)",
+        join_lines_vim_nospace, "Join line(s) without a space (vim gJ)",
         keep_selections, "Keep selections matching regex",
         remove_selections, "Remove selections matching regex",
         align_selections, "Align selections in column",
@@ -1250,6 +1255,36 @@ impl MappableCommand {
         frogger, "Play Frogger, cross the traffic",
         twenty_forty_eight, "Play 2048, the sliding-tile puzzle",
         minesweeper, "Play Minesweeper",
+        tic_tac_toe, "Play Tic-Tac-Toe against the computer",
+        connect_four, "Play Connect Four against the computer",
+        reversi, "Play Reversi / Othello against the computer",
+        sokoban, "Play Sokoban, push the boxes onto the goals",
+        sudoku, "Play Sudoku",
+        fifteen, "Play the 15-puzzle sliding tiles",
+        hangman, "Play Hangman, guess the word",
+        wordle, "Play Wordle, guess the five-letter word",
+        mastermind, "Play Mastermind, crack the code",
+        pacman, "Play Pac-Man",
+        landmark, "Play landmark, find the hidden tree (emacs landmark)",
+        centipede, "Play Centipede",
+        missile_command, "Play Missile Command, defend the cities",
+        tron, "Play Tron light-cycles against the computer",
+        flappy, "Play Flappy, flap through the pipes",
+        checkers, "Play Checkers / draughts against the computer",
+        battleship, "Play Battleship against the computer",
+        blackjack, "Play Blackjack against the dealer",
+        yahtzee, "Play Yahtzee",
+        simon, "Play Simon, the memory game",
+        galaga, "Play Galaga",
+        dig_dug, "Play Dig Dug",
+        donkey_kong, "Play Donkey Kong",
+        bomberman, "Play Bomberman",
+        lunar_lander, "Play Lunar Lander",
+        chess, "Play chess against the computer",
+        mancala, "Play Mancala / Kalah against the computer",
+        video_poker, "Play Jacks-or-Better video poker",
+        klondike, "Play Klondike solitaire",
+        nonogram, "Play nonogram / picross",
         zone, "Run the zone screen-saver (emacs zone)",
         decipher, "Solve a cryptogram (emacs decipher)",
         dunnet, "Play the dunnet text adventure (emacs dunnet)",
@@ -2729,10 +2764,16 @@ where
             Movement::Move
         };
 
-        let selection = doc
-            .selection(view.id)
-            .clone()
-            .transform(|range| move_fn(text, range, count, behavior));
+        let selection = doc.selection(view.id).clone().transform(|range| {
+            let moved = move_fn(text, range, count, behavior);
+            if behavior == Movement::Move {
+                // vim `{`/`}`/`(`/`)` are pure cursor moves — collapse onto the target
+                // rather than leaving Helix's selection spanning the paragraph.
+                Range::point(moved.head)
+            } else {
+                moved
+            }
+        });
         doc.set_selection(view.id, selection);
     };
     cx.editor.apply_motion(motion)
@@ -2767,8 +2808,10 @@ fn goto_file_start_impl(cx: &mut Context, movement: Movement) {
         goto_line_impl(cx, movement);
     } else {
         let (view, doc) = current!(cx.editor);
-        let start = doc.view_point_min(view.id);
+        let point_min = doc.view_point_min(view.id);
         let text = doc.text().slice(..);
+        // vim `gg` lands on the first non-blank of the first line, not column 0.
+        let start = first_nonblank_of_line(text, text.char_to_line(point_min)).max(point_min);
         let selection = doc
             .selection(view.id)
             .clone()
@@ -3336,9 +3379,8 @@ fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
                     zemacs_core::pos_at_coords(text, Position::new(line, mark.col), true)
                 };
                 doc.set_selection(view.id, Selection::point(pos));
-                if Action::Replace.align_view(view, doc.id()) {
-                    align_view(doc, view, Align::Center);
-                }
+                // vim `` ` ``/`'` mark jumps scroll minimally, never recenter (the
+                // render loop keeps the cursor in view, matching the local-mark branch).
                 return;
             }
             let (view, doc) = current!(cx.editor);
@@ -6997,7 +7039,8 @@ fn search_impl(
         };
 
         doc.set_selection(view.id, selection);
-        view.ensure_cursor_in_view_center(doc, scrolloff);
+        // vim `/`,`n`,`N` scroll minimally to reveal the match; they do not recenter.
+        view.ensure_cursor_in_view(doc, scrolloff);
     };
 }
 
@@ -13684,6 +13727,216 @@ fn minesweeper(cx: &mut Context) {
     });
 }
 
+/// `tic-tac-toe`: play noughts and crosses against an unbeatable computer.
+fn tic_tac_toe(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::tictactoe::TicTacToe::new()) as Box<dyn Component>)
+    });
+}
+
+/// `connect-four`: drop discs to make four in a row against the computer.
+fn connect_four(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::connectfour::ConnectFour::new()) as Box<dyn Component>)
+    });
+}
+
+/// `reversi`: play Reversi / Othello against the computer.
+fn reversi(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::reversi::Reversi::new()) as Box<dyn Component>)
+    });
+}
+
+/// `sokoban`: push the boxes onto the goals (also a GNU Emacs game).
+fn sokoban(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::sokoban::Sokoban::new()) as Box<dyn Component>)
+    });
+}
+
+/// `sudoku`: fill the 9x9 grid (turn-based overlay).
+fn sudoku(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::sudoku::Sudoku::new()) as Box<dyn Component>)
+    });
+}
+
+/// `fifteen`: slide the tiles into order, the 15-puzzle (turn-based overlay).
+fn fifteen(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::fifteen::Fifteen::new()) as Box<dyn Component>)
+    });
+}
+
+/// `hangman`: guess the hidden word letter by letter (turn-based overlay).
+fn hangman(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::hangman::Hangman::new()) as Box<dyn Component>)
+    });
+}
+
+/// `wordle`: guess the five-letter word in six tries (turn-based overlay).
+fn wordle(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::wordle::Wordle::new()) as Box<dyn Component>)
+    });
+}
+
+/// `mastermind`: crack the secret colour code (turn-based overlay).
+fn mastermind(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::mastermind::Mastermind::new()) as Box<dyn Component>)
+    });
+}
+
+/// `pacman`: eat the pellets and dodge the ghosts (self-animating overlay).
+fn pacman(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::pacman::Pacman::new()) as Box<dyn Component>)
+    });
+}
+
+/// Emacs `landmark`: steer the robot to the hidden landmark tree by smell.
+fn landmark(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::landmark::Landmark::new()) as Box<dyn Component>)
+    });
+}
+
+/// `centipede`: shoot the splitting centipede through the mushrooms.
+fn centipede(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::centipede::Centipede::new()) as Box<dyn Component>)
+    });
+}
+
+/// `missile-command`: intercept the incoming missiles and defend the cities.
+fn missile_command(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::missilecommand::MissileCommand::new()) as Box<dyn Component>)
+    });
+}
+
+/// `tron`: light-cycle duel against the computer.
+fn tron(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::tron::Tron::new()) as Box<dyn Component>)
+    });
+}
+
+/// `flappy`: flap through the scrolling pipes.
+fn flappy(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::flappy::Flappy::new()) as Box<dyn Component>)
+    });
+}
+
+/// `checkers`: play draughts against the computer.
+fn checkers(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::checkers::Checkers::new()) as Box<dyn Component>)
+    });
+}
+
+/// `battleship`: sink the computer's fleet.
+fn battleship(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::battleship::Battleship::new()) as Box<dyn Component>)
+    });
+}
+
+/// `blackjack`: play 21 against the dealer.
+fn blackjack(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::blackjack::Blackjack::new()) as Box<dyn Component>)
+    });
+}
+
+/// `yahtzee`: roll the dice and fill the scorecard.
+fn yahtzee(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::yahtzee::Yahtzee::new()) as Box<dyn Component>)
+    });
+}
+
+/// `simon`: repeat the growing colour sequence from memory.
+fn simon(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::simon::Simon::new()) as Box<dyn Component>)
+    });
+}
+
+/// `galaga`: formation shooter with diving enemies (self-animating overlay).
+fn galaga(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::galaga::Galaga::new()) as Box<dyn Component>)
+    });
+}
+
+/// `dig-dug`: tunnel through the soil and pump the enemies.
+fn dig_dug(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::digdug::DigDug::new()) as Box<dyn Component>)
+    });
+}
+
+/// `donkey-kong`: climb the girders and dodge the barrels.
+fn donkey_kong(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::donkeykong::DonkeyKong::new()) as Box<dyn Component>)
+    });
+}
+
+/// `bomberman`: bomb the walls and enemies in the lattice.
+fn bomberman(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::bomberman::Bomberman::new()) as Box<dyn Component>)
+    });
+}
+
+/// `lunar-lander`: land gently on the pad before the fuel runs out.
+fn lunar_lander(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::lunarlander::LunarLander::new()) as Box<dyn Component>)
+    });
+}
+
+/// `chess`: play chess against the computer.
+fn chess(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::chess::Chess::new()) as Box<dyn Component>)
+    });
+}
+
+/// `mancala`: play Kalah / Mancala against the computer.
+fn mancala(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::mancala::Mancala::new()) as Box<dyn Component>)
+    });
+}
+
+/// `video-poker`: Jacks-or-Better draw poker.
+fn video_poker(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::videopoker::VideoPoker::new()) as Box<dyn Component>)
+    });
+}
+
+/// `klondike`: play Klondike solitaire (the card game).
+fn klondike(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::klondike::Klondike::new()) as Box<dyn Component>)
+    });
+}
+
+/// `nonogram`: solve the picross puzzle from the row/column clues.
+fn nonogram(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(Box::new(crate::ui::nonogram::Nonogram::new()) as Box<dyn Component>)
+    });
+}
+
 /// Emacs `zone`: run the screen-saver (any key stops it).
 fn zone(cx: &mut Context) {
     open_overlay(cx, |_editor| {
@@ -14314,6 +14567,7 @@ fn qf_jump_to(editor: &mut Editor, kind: QfKind, idx: usize, action: Action) {
             return;
         }
     };
+    let scrolloff = editor.config().scrolloff;
     let doc = doc_mut!(editor, &id);
     let view = view_mut!(editor);
     let text = doc.text();
@@ -14326,9 +14580,8 @@ fn qf_jump_to(editor: &mut Editor, kind: QfKind, idx: usize, action: Action) {
     let pos = line_start + entry.col.min(line_len);
     push_jump(view, doc);
     doc.set_selection(view.id, Selection::point(pos));
-    if action.align_view(view, doc.id()) {
-        align_view(doc, view, Align::Center);
-    }
+    // vim quickfix jumps (`:cnext`/`:cc`/…) scroll minimally, not centered.
+    view.ensure_cursor_in_view(doc, scrolloff);
 }
 
 /// `:cnext`/`:cprev` (and location twins): step the current index by `delta`
@@ -16077,6 +16330,15 @@ fn push_jump(view: &mut View, doc: &mut Document) {
     view.push_jump(doc, jump);
 }
 
+/// Vim linewise motions (`gg`, `G`, `{n}G`, …) land on the first non-blank
+/// character of the destination line, not column 0 (Helix's `goto_line`).
+fn first_nonblank_of_line(text: RopeSlice, line: usize) -> usize {
+    let start = text.line_to_char(line);
+    text.line(line)
+        .first_non_whitespace_char()
+        .map_or(start, |offset| start + offset)
+}
+
 fn goto_line(cx: &mut Context) {
     goto_line_impl(cx, Movement::Move);
 }
@@ -16105,7 +16367,7 @@ fn goto_line_without_jumplist(
             text.len_lines() - 1
         };
         let line_idx = std::cmp::min(count.get() - 1, max_line);
-        let pos = text.line_to_char(line_idx);
+        let pos = first_nonblank_of_line(text, line_idx);
         let selection = doc
             .selection(view.id)
             .clone()
@@ -16124,6 +16386,13 @@ fn extend_to_last_line(cx: &mut Context) {
 }
 
 fn goto_last_line_impl(cx: &mut Context, movement: Movement) {
+    // vim `{count}G` jumps to that line (first non-blank); bare `G` to the last line.
+    if cx.count.is_some() {
+        let (view, doc) = current!(cx.editor);
+        push_jump(view, doc);
+        goto_line_without_jumplist(cx.editor, cx.count, movement);
+        return;
+    }
     let (view, doc) = current!(cx.editor);
     // When narrowed, `G` goes to the last line of the region (Emacs point-max line), per-view aware.
     let narrowed = doc.is_narrowed() || doc.view_narrow(view.id).is_some();
@@ -16140,7 +16409,7 @@ fn goto_last_line_impl(cx: &mut Context, movement: Movement) {
     } else {
         last_line
     };
-    let pos = text.line_to_char(line_idx);
+    let pos = first_nonblank_of_line(text, line_idx);
     let selection = doc
         .selection(view.id)
         .clone()
@@ -17362,7 +17631,23 @@ fn paste_impl(
             .unwrap_or_default();
         let anchor = offset + pos;
 
-        let new_range = Range::new(anchor, anchor + value_len).with_direction(range.direction());
+        // vim-faithful cursor rest in normal mode: a bare cursor with no leftover
+        // selection. Charwise paste rests on the last pasted char; linewise paste
+        // rests on the first non-blank of the first pasted line.
+        let new_range = if mode == Mode::Normal {
+            if linewise {
+                let nb = value
+                    .as_ref()
+                    .map(|v| v.chars().take_while(|&c| c == ' ' || c == '\t').count())
+                    .unwrap_or(0)
+                    .min(value_len.saturating_sub(1));
+                Range::point(anchor + nb)
+            } else {
+                Range::point(anchor + value_len.saturating_sub(1))
+            }
+        } else {
+            Range::new(anchor, anchor + value_len).with_direction(range.direction())
+        };
         ranges.push(new_range);
         offset += value_len;
 
@@ -18327,6 +18612,150 @@ fn join_selections(cx: &mut Context) {
 
 fn join_selections_space(cx: &mut Context) {
     join_selections_impl(cx, true)
+}
+
+/// vim `~`: toggle the case of `count` characters starting under the cursor
+/// (bounded to the current line), then advance the cursor past the toggled run.
+fn switch_case_forward(cx: &mut Context) {
+    let count = cx.count();
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let extended = doc.selection(view.id).clone().transform(|range| {
+            let cursor = range.cursor(text);
+            let line = text.char_to_line(cursor);
+            let line_end = line_end_char_index(&text, line);
+            let to = graphemes::nth_next_grapheme_boundary(text, cursor, count).min(line_end);
+            Range::new(cursor, to.max(cursor))
+        });
+        doc.set_selection(view.id, extended);
+    }
+    switch_case(cx);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let advanced = doc.selection(view.id).clone().transform(|range| {
+        let line = text.char_to_line(range.from());
+        let line_start = text.line_to_char(line);
+        let line_end = line_end_char_index(&text, line);
+        let cursor = if range.to() < line_end {
+            range.to()
+        } else {
+            graphemes::prev_grapheme_boundary(text, line_end).max(line_start)
+        };
+        Range::point(cursor)
+    });
+    doc.set_selection(view.id, advanced);
+}
+
+/// vim `x`: delete `count` characters starting under the cursor, bounded to the
+/// current line (never deletes the trailing newline).
+fn delete_chars_forward_vim(cx: &mut Context) {
+    let count = cx.count();
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let extended = doc.selection(view.id).clone().transform(|range| {
+            let cursor = range.cursor(text);
+            let line = text.char_to_line(cursor);
+            let line_end = line_end_char_index(&text, line);
+            let to = graphemes::nth_next_grapheme_boundary(text, cursor, count).min(line_end);
+            Range::new(cursor, to.max(cursor))
+        });
+        doc.set_selection(view.id, extended);
+    }
+    delete_selection(cx);
+}
+
+/// vim `X`: delete `count` characters before the cursor, bounded to the start of
+/// the current line (a no-op at column 0 — never joins with the previous line).
+fn delete_chars_backward_vim(cx: &mut Context) {
+    let count = cx.count();
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let extended = doc.selection(view.id).clone().transform(|range| {
+            let cursor = range.cursor(text);
+            let line = text.char_to_line(cursor);
+            let line_start = text.line_to_char(line);
+            let from = graphemes::nth_prev_grapheme_boundary(text, cursor, count).max(line_start);
+            Range::new(from, cursor)
+        });
+        doc.set_selection(view.id, extended);
+    }
+    delete_selection(cx);
+}
+
+/// Shared implementation of vim `J` (with a separating space) and `gJ` (raw).
+/// Joins `count` lines (minimum two) below each cursor and leaves the cursor on
+/// the join, matching vim.
+fn join_lines_below_vim(cx: &mut Context, space: bool) {
+    use movement::skip_while;
+    let count = cx.count();
+    // Number of line breaks to remove: bare `J`/`2J` join two lines (one break),
+    // `3J` joins three (two breaks), etc.
+    let joins = count.saturating_sub(1).max(1);
+
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let last_line = slice.len_lines().saturating_sub(1);
+
+    let mut changes: Vec<(usize, usize, Option<Tendril>)> = Vec::new();
+    for range in doc.selection(view.id).iter() {
+        let base = range.cursor_line(slice);
+        for k in 0..joins {
+            let line = base + k;
+            if line >= last_line {
+                break;
+            }
+            let start = line_end_char_index(&slice, line);
+            let mut end = slice.line_to_char(line + 1);
+            let separator = if space {
+                // vim `J` strips the joined line's leading whitespace and inserts a
+                // single space, except when the joined line is blank.
+                end = skip_while(slice, end, |ch| matches!(ch, ' ' | '\t')).unwrap_or(end);
+                if end == line_end_char_index(&slice, line + 1) {
+                    None
+                } else {
+                    Some(Tendril::from(" "))
+                }
+            } else {
+                // vim `gJ` removes only the newline, preserving all whitespace.
+                None
+            };
+            changes.push((start, end, separator));
+        }
+    }
+
+    if changes.is_empty() {
+        return;
+    }
+    changes.sort_unstable_by_key(|(from, _, _)| *from);
+    changes.dedup();
+
+    // Leave a bare cursor at each join point.
+    let mut offset = 0usize;
+    let ranges: SmallVec<[Range; 1]> = changes
+        .iter()
+        .map(|(from, to, sep)| {
+            let sep_len = sep.as_ref().map(|t| t.chars().count()).unwrap_or(0);
+            let r = Range::point(from.saturating_sub(offset));
+            offset += (to - from).saturating_sub(sep_len);
+            r
+        })
+        .collect();
+
+    let transaction = Transaction::change(text, changes.into_iter())
+        .with_selection(Selection::new(ranges, 0));
+    doc.apply(&transaction, view.id);
+}
+
+fn join_lines_vim(cx: &mut Context) {
+    join_lines_below_vim(cx, true)
+}
+
+fn join_lines_vim_nospace(cx: &mut Context) {
+    join_lines_below_vim(cx, false)
 }
 
 fn keep_selections(cx: &mut Context) {

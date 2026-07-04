@@ -410,9 +410,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "O" => open_above,
 
         // --- single-key edits ----------------------------------------------
-        "x" => delete_selection,            // delete char under cursor
-        "del" => delete_selection,          // <Del> = x (delete char under cursor)
-        "X" => delete_char_backward,        // delete char before cursor
+        "x" => delete_chars_forward_vim,    // delete char(s) under cursor (count, line-bounded)
+        "del" => delete_chars_forward_vim,  // <Del> = x
+        "X" => delete_chars_backward_vim,   // delete char(s) before cursor (no line join)
         "D" => [extend_to_line_end, delete_selection],
         "C" => [extend_to_line_end, change_selection],
         "Y" => [extend_to_line_bounds, yank, collapse_selection],
@@ -420,8 +420,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "S" => sneak_or_substitute_line,    // vim-sneak backward, else substitute line
         "r" => replace,
         "R" => replace_mode,                // enter Replace mode (overtype)
-        "J" => join_selections,
-        "~" => switch_case,
+        "J" => join_lines_vim,              // join line(s) with a space, cursor at join
+        "~" => switch_case_forward,         // toggle case and advance cursor
         "p" => paste_after,
         "P" => paste_before,
         "u" => undo,
@@ -429,7 +429,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
         // --- operator-pending: delete --------------------------------------
         "d" => { "delete"
-            "d" => [collapse_selection, extend_to_line_bounds, delete_selection],
+            "d" => [collapse_selection, extend_to_line_bounds, delete_selection, goto_first_nonwhitespace],
             "w" => [collapse_selection, subword_extend_w, delete_selection],
             "W" => [collapse_selection, extend_next_long_word_start, delete_selection],
             "e" => [collapse_selection, subword_extend_e, delete_selection],
@@ -492,7 +492,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
         // --- indent operators (vim >>, <<, >{motion}, <{motion}) -----------
         ">" => { "Indent"
-            ">" => indent,                       // >> indent current line
+            ">" => [indent, goto_first_nonwhitespace],       // >> indent, cursor to first non-blank (vim)
             "j" => [extend_to_line_bounds, extend_line_below, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "k" => [extend_to_line_bounds, extend_line_up, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "G" => [extend_to_last_line, indent, collapse_selection],
@@ -501,7 +501,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             },
         },
         "<" => { "Unindent"
-            "<" => unindent,                       // << unindent current line
+            "<" => [unindent, goto_first_nonwhitespace],     // << unindent, cursor to first non-blank (vim)
             "j" => [extend_to_line_bounds, extend_line_below, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "k" => [extend_to_line_bounds, extend_line_up, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "G" => [extend_to_last_line, unindent, collapse_selection],
@@ -611,6 +611,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "M" => goto_line_middle,           // gM middle of the text line
             "o" => goto_byte,                  // go to byte {count} in buffer
             "I" => insert_at_line_start,       // gI insert at column 1
+            "J" => join_lines_vim_nospace,     // gJ: join lines without a space
             "d" => goto_definition,
             "D" => goto_declaration,
             "y" => goto_type_definition,
@@ -2110,7 +2111,10 @@ mod tests {
         );
         assert_eq!(cmd_name(resolve(n, "G").unwrap()), Some("goto_last_line"));
         assert_eq!(cmd_name(resolve(n, "H").unwrap()), Some("goto_window_top"));
-        assert_eq!(cmd_name(resolve(n, "x").unwrap()), Some("delete_selection"));
+        assert_eq!(
+            cmd_name(resolve(n, "x").unwrap()),
+            Some("delete_chars_forward_vim")
+        );
         assert_eq!(cmd_name(resolve(n, "i").unwrap()), Some("insert_mode"));
         assert_eq!(cmd_name(resolve(n, "a").unwrap()), Some("append_mode"));
     }
