@@ -29571,5 +29571,77 @@
    "static:move_line_up"
   ],
   "note": "Move up one logical line ignoring soft-wrap = move_line_up (move_vertically)."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_sbnext_1",
+  "status": "ported",
+  "evidence": [
+   "typable:sbnext"
+  ],
+  "note": "Split window + go to next buffer; reuses :bnext navigation."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_sbprevious",
+  "status": "ported",
+  "evidence": [
+   "typable:sbprevious"
+  ],
+  "note": "Split window + go to previous buffer; reuses :bprev navigation."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_sbnext",
+  "status": "ported",
+  "evidence": [
+   "typable:sbprevious"
+  ],
+  "note": ":sbNext is an alias of :sbprevious (split + previous buffer)."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_sbfirst",
+  "status": "ported",
+  "evidence": [
+   "typable:sbfirst"
+  ],
+  "note": "Split window + go to first buffer in the list."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_sbrewind",
+  "status": "ported",
+  "evidence": [
+   "typable:sbfirst"
+  ],
+  "note": ":sbrewind is an alias of :sbfirst (split + first buffer)."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_sblast",
+  "status": "ported",
+  "evidence": [
+   "typable:sblast"
+  ],
+  "note": "Split window + go to last buffer in the list."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_sbmodified",
+  "status": "ported",
+  "evidence": [
+   "typable:sbmodified"
+  ],
+  "note": "Split window + go to next modified buffer; reuses :bmodified logic."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_sbuffer",
+  "status": "ported",
+  "evidence": [
+   "typable:sbuffer"
+  ],
+  "note": "Split window + go to buffer whose path contains {name}; reuses :buffer selection."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_sball",
+  "status": "ported",
+  "evidence": [
+   "typable:sball"
+  ],
+  "note": ":sball opens a window per buffer = existing :ball (alias sball)."
  }
 ]
