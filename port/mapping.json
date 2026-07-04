@@ -28781,17 +28781,19 @@
   "spec_id": "emacs.command.calendar_iso_print_date",
   "status": "ported",
   "evidence": [
+   "static:calendar_iso_print_date",
    "key:calendar:i"
   ],
-  "note": "calendar-iso-print-date: `i` shows the ISO 8601 week date via zemacs_core::calendar::iso_week"
+  "note": "calendar-iso-print-date: ISO 8601 week date via iso_week"
  },
  {
   "spec_id": "emacs.command.calendar_julian_print_date",
   "status": "ported",
   "evidence": [
+   "static:calendar_julian_print_date",
    "key:calendar:J"
   ],
-  "note": "calendar-julian-print-date: `J` shows the Julian day number via zemacs_core::calendar::julian_day"
+  "note": "calendar-julian-print-date: Julian (Roman) date via fixed_from_julian/julian_from_fixed; matches Emacs (2000-01-01 -> Dec 19 1999)"
  },
  {
   "spec_id": "emacs.command.calendar_print_day_of_year",
@@ -30272,5 +30274,271 @@
    "key:calendar:h"
   ],
   "note": "emacs calendar-mark-holidays -> zemacs calendar overlay"
+ },
+ {
+  "spec_id": "emacs.command.calendar_print_other_dates",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_print_other_dates",
+   "key:calendar:a"
+  ],
+  "note": "calendar-print-other-dates: point's/today's date in all supported other calendars at once (zemacs_core::calendar)"
+ },
+ {
+  "spec_id": "emacs.command.calendar_hebrew_print_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_hebrew_print_date"
+  ],
+  "note": "calendar-hebrew-print-date: arithmetic Hebrew calendar (cal-hebrew.el transcription); 2000-01-01 -> Teveth 23 5760"
+ },
+ {
+  "spec_id": "emacs.command.calendar_islamic_print_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_islamic_print_date"
+  ],
+  "note": "calendar-islamic-print-date: arithmetic/civil Islamic calendar; 2000-01-01 -> Ramadan 24 1420"
+ },
+ {
+  "spec_id": "emacs.command.calendar_persian_print_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_persian_print_date"
+  ],
+  "note": "calendar-persian-print-date: arithmetic 2820-year Persian calendar (cal-persia.el); 2000-01-01 -> Dey 11 1378"
+ },
+ {
+  "spec_id": "emacs.command.calendar_coptic_print_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_coptic_print_date"
+  ],
+  "note": "calendar-coptic-print-date: arithmetic Coptic calendar; 2000-01-01 -> Kiyahk 22 1716"
+ },
+ {
+  "spec_id": "emacs.command.calendar_ethiopic_print_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_ethiopic_print_date"
+  ],
+  "note": "calendar-ethiopic-print-date: arithmetic Ethiopic calendar (same structure as Coptic, epoch 2796)"
+ },
+ {
+  "spec_id": "emacs.command.calendar_french_print_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_french_print_date"
+  ],
+  "note": "calendar-french-print-date: French Revolutionary calendar, Romme arithmetic leap rule (cal-french.el)"
+ },
+ {
+  "spec_id": "emacs.command.calendar_bahai_print_date",
+  "status": "partial",
+  "evidence": [
+   "static:calendar_bahai_print_date"
+  ],
+  "note": "calendar-bahai-print-date: arithmetic Badi' calendar with Naw-Ruz fixed at Mar 21; Emacs uses astronomical Naw-Ruz for years >=172 BE so post-2015 dates can differ by a day"
+ },
+ {
+  "spec_id": "emacs.command.calendar_astro_print_day_number",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_astro_print_day_number"
+  ],
+  "note": "calendar-astro-print-day-number: astronomical (Julian) day number at noon UTC; 2000-01-01 -> 2451545"
+ },
+ {
+  "spec_id": "emacs.command.calendar_mayan_print_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_mayan_print_date"
+  ],
+  "note": "calendar-mayan-print-date: long count + tzolkin + haab, GMT-584283 correlation; 2012-12-21 -> 13.0.0.0.0 4 Ahau 3 Kankin"
+ },
+ {
+  "spec_id": "emacs.command.calendar_day_of_year",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_day_of_year",
+   "key:calendar:p"
+  ],
+  "note": "calendar-day-of-year: 1-based day number within the year"
+ },
+ {
+  "spec_id": "emacs.command.calendar_goto_day_of_year",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_goto_day_of_year"
+  ],
+  "note": "calendar-goto-day-of-year: prompt a day-of-year, echo that date in the current year"
+ },
+ {
+  "spec_id": "emacs.command.calendar_count_days_region",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_count_days_region"
+  ],
+  "note": "calendar-count-days-region: inclusive day count between two prompted dates (grid: mark..point)"
+ },
+ {
+  "spec_id": "emacs.command.calendar_list_holidays",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_list_holidays"
+  ],
+  "note": "calendar-list-holidays: list the year's holidays via zemacs_core::calendar::holidays"
+ },
+ {
+  "spec_id": "emacs.command.holidays",
+  "status": "ported",
+  "evidence": [
+   "static:holidays"
+  ],
+  "note": "holidays: alias of calendar-list-holidays"
+ },
+ {
+  "spec_id": "emacs.command.holiday_list",
+  "status": "ported",
+  "evidence": [
+   "static:holiday_list"
+  ],
+  "note": "holiday-list: alias of calendar-list-holidays"
+ },
+ {
+  "spec_id": "emacs.command.list_holidays",
+  "status": "ported",
+  "evidence": [
+   "static:list_holidays"
+  ],
+  "note": "list-holidays: alias of calendar-list-holidays"
+ },
+ {
+  "spec_id": "emacs.command.calendar_lunar_phases",
+  "status": "partial",
+  "evidence": [
+   "static:calendar_lunar_phases"
+  ],
+  "note": "calendar-lunar-phases: mean-synodic-month approximation of the month's principal phases; Emacs uses a full periodic (Meeus) model so times/dates can slip a day"
+ },
+ {
+  "spec_id": "emacs.command.calendar_sunrise_sunset",
+  "status": "partial",
+  "evidence": [
+   "static:calendar_sunrise_sunset"
+  ],
+  "note": "calendar-sunrise-sunset: standard sunrise-equation approximation for a default location; Emacs uses solar.el with configured calendar-latitude/longitude/time-zone"
+ },
+ {
+  "spec_id": "emacs.command.calendar_other_month",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_other_month"
+  ],
+  "note": "calendar-other-month: prompt a month/year and open the Calendar grid there (Calendar::at)"
+ },
+ {
+  "spec_id": "emacs.command.calendar_set_date_style",
+  "status": "partial",
+  "evidence": [
+   "static:calendar_set_date_style"
+  ],
+  "note": "calendar-set-date-style: cycles american/european/iso and records it; zemacs echo output is already ISO-labelled so display is unaffected"
+ },
+ {
+  "spec_id": "emacs.command.calendar_hebrew_goto_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_hebrew_goto_date"
+  ],
+  "note": "calendar-hebrew-goto-date: read a Hebrew date, echo the Gregorian equivalent (reverse conversion, round-trip tested)"
+ },
+ {
+  "spec_id": "emacs.command.calendar_islamic_goto_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_islamic_goto_date"
+  ],
+  "note": "calendar-islamic-goto-date: read an Islamic date, echo the Gregorian equivalent"
+ },
+ {
+  "spec_id": "emacs.command.calendar_julian_goto_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_julian_goto_date"
+  ],
+  "note": "calendar-julian-goto-date: read a Julian date, echo the Gregorian equivalent"
+ },
+ {
+  "spec_id": "emacs.command.calendar_iso_goto_week",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_iso_goto_week"
+  ],
+  "note": "calendar-iso-goto-week: read ISO year/week/weekday, echo the Gregorian date (date_from_iso)"
+ },
+ {
+  "spec_id": "emacs.command.calendar_iso_goto_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_iso_goto_week"
+  ],
+  "note": "calendar-iso-goto-date: served by calendar-iso-goto-week (reads ISO year/week/weekday -> Gregorian)"
+ },
+ {
+  "spec_id": "emacs.command.calendar_persian_goto_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_persian_goto_date"
+  ],
+  "note": "calendar-persian-goto-date: read a Persian date, echo the Gregorian equivalent"
+ },
+ {
+  "spec_id": "emacs.command.calendar_coptic_goto_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_coptic_goto_date"
+  ],
+  "note": "calendar-coptic-goto-date: read a Coptic date, echo the Gregorian equivalent"
+ },
+ {
+  "spec_id": "emacs.command.calendar_ethiopic_goto_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_ethiopic_goto_date"
+  ],
+  "note": "calendar-ethiopic-goto-date: read an Ethiopic date, echo the Gregorian equivalent"
+ },
+ {
+  "spec_id": "emacs.command.calendar_french_goto_date",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_french_goto_date"
+  ],
+  "note": "calendar-french-goto-date: read a French Revolutionary date, echo the Gregorian equivalent"
+ },
+ {
+  "spec_id": "emacs.command.calendar_bahai_goto_date",
+  "status": "partial",
+  "evidence": [
+   "static:calendar_bahai_goto_date"
+  ],
+  "note": "calendar-bahai-goto-date: read a Baha'i date, echo the Gregorian equivalent (arithmetic Naw-Ruz, see calendar-bahai-print-date)"
+ },
+ {
+  "spec_id": "emacs.command.calendar_astro_goto_day_number",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_astro_goto_day_number"
+  ],
+  "note": "calendar-astro-goto-day-number: read an astronomical (Julian) day number, echo the Gregorian date"
+ },
+ {
+  "spec_id": "emacs.command.calendar_mayan_goto_long_count",
+  "status": "ported",
+  "evidence": [
+   "static:calendar_mayan_goto_long_count"
+  ],
+  "note": "calendar-mayan-goto-long-count: read a Mayan long count, echo the Gregorian date"
  }
 ]
