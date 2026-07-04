@@ -831,6 +831,7 @@
 | `rotate_view_reverse` | Goto previous window | normal: `` <C-w>R ``, `` <C-w>W ``, `` <C-w>.R ``, `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, select: `` <space>wR ``, `` <space>wW ``, `` <space>w.R `` |
 | `scroll_other_window` | Scroll the other window forward (emacs scroll-other-window, C-M-v) |  |
 | `scroll_other_window_down` | Scroll the other window backward (emacs scroll-other-window-down, C-M-S-v) |  |
+| `recenter_other_window` | Recenter point in the other window (emacs recenter-other-window, C-M-S-l) | normal: `` <C-w>z ``, `` <space>wz ``, select: `` <space>wz `` |
 | `hsplit` | Horizontal bottom split | normal: `` <C-w>S ``, `` <C-w>s ``, `` <C-x>2 ``, `` <C-w>.S ``, `` <C-w>.s ``, `` <space>wS ``, `` <space>ws ``, `` <C-w><C-s> ``, `` <space>w.S ``, `` <space>w.s ``, `` <C-w>.<minus> ``, `` <space>w<C-s> ``, `` <space>w.<minus> ``, select: `` <C-x>2 ``, `` <space>wS ``, `` <space>ws ``, `` <space>w.S ``, `` <space>w.s ``, `` <space>w<C-s> ``, `` <space>w.<minus> ``, insert: `` <C-x>2 `` |
 | `hsplit_new` | Horizontal bottom split scratch buffer | normal: `` <C-w>n ``, `` <space>wn ``, `` <C-w><C-n> ``, `` <space>bNj ``, `` <space>bNk ``, `` <space>w<C-n> ``, select: `` <space>wn ``, `` <space>bNj ``, `` <space>bNk ``, `` <space>w<C-n> `` |
 | `vsplit` | Vertical right split | normal: `` <C-w>/ ``, `` <C-w>2 ``, `` <C-w>V ``, `` <C-w>v ``, `` <C-x>3 ``, `` <C-x>5 ``, `` <C-w>./ ``, `` <C-w>.V ``, `` <C-w>.v ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <C-w><C-v> ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, select: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, insert: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s `` |
@@ -952,6 +953,10 @@
 | `toggle_blame_annotate` | Toggle the git-blame annotate gutter column (SPC g B) | normal: `` <space>gB ``, select: `` <space>gB `` |
 | `git_branch_picker` | Pick a git branch and check it out | normal: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs ``, select: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs ``, insert: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs `` |
 | `preferences` | Open the unified Preferences window | normal: `` <space>, ``, select: `` <space>, `` |
+| `set_selective_display` | Hide lines indented past the prefix-arg column; no arg turns it off (emacs set-selective-display, C-x $) |  |
+| `global_whitespace_toggle_options` | Toggle rendering of whitespace characters (emacs global-whitespace-toggle-options) |  |
+| `global_tab_line_mode` | Toggle the buffer tab line (emacs global-tab-line-mode) |  |
+| `global_visual_wrap_prefix_mode` | Toggle soft-wrap with indentation carry-over (emacs global-visual-wrap-prefix-mode) |  |
 | `help` | Open the inline Help browser | normal: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, select: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, insert: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> `` |
 | `dashboard` | Open the system-stats Dashboard (Preferences) | normal: `` <space>bh ``, select: `` <space>bh `` |
 | `search_in_files` | Open the project-wide Find in Files panel |  |
@@ -1316,6 +1321,27 @@
 | `indent_code_rigidly` | Shift region lines by [count] columns, skipping lines that start in a string (emacs indent-code-rigidly, = r) | normal: `` =r `` |
 | `c_hungry_delete_forward` | Delete all whitespace after point, else one char (emacs c-hungry-delete-forward, SPC x d f) | normal: `` <space>xdf ``, select: `` <space>xdf `` |
 | `c_hungry_delete_backwards` | Delete all whitespace before point, else one char (emacs c-hungry-delete-backwards, SPC x d b) | normal: `` <space>xdb ``, select: `` <space>xdb `` |
+| `c_beginning_of_defun` | Move to the start of the function at point (emacs c-beginning-of-defun) |  |
+| `c_end_of_defun` | Move to the end of the function at point (emacs c-end-of-defun) |  |
+| `c_mark_function` | Select the whole function around point (emacs c-mark-function) |  |
+| `c_beginning_of_statement` | Move to the start of the C statement at point (emacs c-beginning-of-statement) |  |
+| `c_end_of_statement` | Move to the end of the C statement at point (emacs c-end-of-statement) |  |
+| `c_forward_conditional` | Move forward across a preprocessor conditional (emacs c-forward-conditional) |  |
+| `c_backward_conditional` | Move backward across a preprocessor conditional (emacs c-backward-conditional) |  |
+| `c_up_conditional` | Move up out of the containing preprocessor conditional (emacs c-up-conditional) |  |
+| `c_indent_line_or_region` | Re-indent the current line or the selected lines (emacs c-indent-line-or-region) |  |
+| `c_indent_defun` | Re-indent the whole function at point (emacs c-indent-defun) |  |
+| `c_ts_mode_indent_defun` | Re-indent the whole function at point via tree-sitter (emacs c-ts-mode-indent-defun) |  |
+| `c_indent_exp` | Re-indent the balanced expression after point (emacs c-indent-exp) |  |
+| `c_fill_paragraph` | Fill the C comment block around point (emacs c-fill-paragraph, M-q) |  |
+| `c_backslash_region` | Align trailing backslash continuations in the region (emacs c-backslash-region) |  |
+| `c_context_line_break` | Break the line, continuing a comment or macro (emacs c-context-line-break) |  |
+| `c_toggle_auto_newline` | Toggle auto-newline insertion in C mode (emacs c-toggle-auto-newline) |  |
+| `c_toggle_hungry_state` | Toggle hungry-delete state in C mode (emacs c-toggle-hungry-state) |  |
+| `c_toggle_electric_state` | Toggle electric behavior in C mode (emacs c-toggle-electric-state) |  |
+| `c_show_syntactic_information` | Report the tree-sitter node kind at point (emacs c-show-syntactic-information) |  |
+| `c_macro_expand` | Expand C preprocessor macros in the region via cpp (emacs c-macro-expand) |  |
+| `c_set_style` | Report the C indentation style (emacs c-set-style) |  |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |
@@ -1369,10 +1395,24 @@
 | `dap_edit_condition` | Edit breakpoint condition on current line |  |
 | `dap_breakpoints_picker` | View all breakpoints in a picker (JetBrains View Breakpoints) | normal: `` <space>dB ``, select: `` <space>dB `` |
 | `dap_edit_log` | Edit breakpoint log message on current line |  |
-| `dap_switch_thread` | Switch current thread |  |
-| `dap_switch_stack_frame` | Switch stack frame |  |
+| `dap_switch_thread` | Switch current thread | normal: `` <space>dgt ``, select: `` <space>dgt `` |
+| `dap_switch_stack_frame` | Switch stack frame | normal: `` <space>dgf ``, select: `` <space>dgf `` |
 | `dap_enable_exceptions` | Enable exception breakpoints |  |
 | `dap_disable_exceptions` | Disable exception breakpoints |  |
+| `gdb_display_locals_buffer` | Show local variables of the current frame (emacs gdb-display-locals-buffer) | normal: `` <space>dgl ``, select: `` <space>dgl `` |
+| `gdb_display_registers_buffer` | Show CPU registers of the current frame (emacs gdb-display-registers-buffer) | normal: `` <space>dgr ``, select: `` <space>dgr `` |
+| `gdb_display_stack_for_thread` | Show the call stack of the current thread (emacs gdb-display-stack-for-thread) | normal: `` <space>dgs ``, select: `` <space>dgs `` |
+| `gdb_display_locals_for_thread` | Show locals of the current thread's innermost frame (emacs gdb-display-locals-for-thread) |  |
+| `gdb_display_registers_for_thread` | Show registers of the current thread's innermost frame (emacs gdb-display-registers-for-thread) |  |
+| `gdb_display_disassembly_buffer` | Disassemble around the current frame PC (emacs gdb-display-disassembly-buffer) | normal: `` <space>dgd ``, select: `` <space>dgd `` |
+| `gdb_display_disassembly_for_thread` | Disassemble around the current thread PC (emacs gdb-display-disassembly-for-thread) |  |
+| `gdb_display_io_buffer` | Show the inferior IO / Run console (emacs gdb-display-io-buffer) | normal: `` <space>dgi ``, select: `` <space>dgi `` |
+| `gdb_display_memory_buffer` | Read and hexdump target memory (emacs gdb-display-memory-buffer) | normal: `` <space>dgm ``, select: `` <space>dgm `` |
+| `gdb_delete_breakpoint` | Delete the breakpoint on the current line (emacs gdb-delete-breakpoint) | normal: `` <space>dgk ``, select: `` <space>dgk `` |
+| `gdb_edit_value` | Set a variable/expression value in the debugger (emacs gdb-edit-value) | normal: `` <space>dge ``, select: `` <space>dge `` |
+| `gdb_many_windows` | Open the multi-pane debugger layout (emacs gdb-many-windows) | normal: `` <space>dgw ``, select: `` <space>dgw `` |
+| `gdb_restore_windows` | Restore the debugger window layout (emacs gdb-restore-windows) |  |
+| `gud_gdb_complete_command` | Complete the gdb command at point (emacs gud-gdb-complete-command) |  |
 | `shell_pipe` | Pipe selections through shell command |  |
 | `shell_pipe_to` | Pipe selections into shell command ignoring output |  |
 | `shell_insert_output` | Insert shell command output before selections |  |

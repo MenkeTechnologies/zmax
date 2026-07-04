@@ -814,6 +814,16 @@
 | `:outline-hide-by-heading-regexp` | Fold the subtree of every heading whose line matches the regexp (emacs outline-hide-by-heading-regexp). |
 | `:outline-show-by-heading-regexp` | Reveal the subtree of every heading whose line matches the regexp (emacs outline-show-by-heading-regexp). |
 | `:set-fill-column` | Set the fill width to N, or the current cursor column if omitted (emacs set-fill-column). |
+| `:customize`, `:customize-browse` | Open Preferences on the Settings tab (emacs customize / customize-browse). |
+| `:customize-variable`, `:customize-option` | Open Settings pre-filtered to a variable name (emacs customize-variable). |
+| `:customize-group` | Open Settings pre-filtered to a group name (emacs customize-group). |
+| `:customize-apropos` | Open Settings pre-filtered to a regexp/substring (emacs customize-apropos). |
+| `:customize-unsaved`, `:customize-changed`, `:customize-saved` | Open Settings showing only options changed from their default (emacs customize-unsaved). |
+| `:customize-face`, `:customize-themes`, `:customize-create-theme` | Open the Color Scheme (theme/face editor) tab (emacs customize-face / customize-themes). |
+| `:set-face-foreground` | Set a theme face's foreground color: :set-face-foreground <face> <color> (emacs set-face-foreground). |
+| `:set-face-background` | Set a theme face's background color: :set-face-background <face> <color> (emacs set-face-background). |
+| `:set-fringe-style` | Set the gutter (fringe) style: none clears it, default restores it (emacs set-fringe-style). |
+| `:set-right-margin` | Re-fill the region to N columns narrower than text-width (emacs set-right-margin). |
 | `:write-region` | Write the region (or whole buffer) to a file, overwriting it (emacs write-region). |
 | `:append-to-file` | Append the region (or whole buffer) to the end of a file (emacs append-to-file). |
 | `:set-justification-left` | Flush the region's lines to the left margin (emacs set-justification-left). |
