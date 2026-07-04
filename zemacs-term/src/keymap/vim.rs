@@ -166,6 +166,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x l u", "Text",    ":uniquify-lines"),                       // SPC x l u
     ("space x d l", "Text",    ":delete-blank-lines"),                   // SPC x d l
     ("space x d space", "Text", ":just-one-space"),                      // SPC x d SPC
+    ("space x d f", "Text",    "c_hungry_delete_forward"),               // SPC x d f : hungry-delete forward (emacs c-hungry-delete-forward)
+    ("space x d b", "Text",    "c_hungry_delete_backwards"),             // SPC x d b : hungry-delete backward (emacs c-hungry-delete-backwards)
     ("space x i c", "Text",    ":change-case camel"),                    // SPC x i c
     ("space x i u", "Text",    ":change-case snake"),                    // SPC x i u
     ("space x i k", "Text",    ":change-case kebab"),                    // SPC x i k

@@ -32215,5 +32215,21 @@
    "static:appt_activate"
   ],
   "note": "appt-activate: toggles the appt-checking flag and reports the next appointment; zemacs has no idle timer, so no timed pop-up reminder is delivered"
+ },
+ {
+  "spec_id": "emacs.command.c_hungry_delete_forward",
+  "status": "ported",
+  "evidence": [
+   "static:c_hungry_delete_forward"
+  ],
+  "note": "c-hungry-delete-forward (SPC x d f): skip whitespace after point (spaces/tabs/newlines) and delete the whole run, or one character if none follows, faithful to cc-cmds.el (c-skip-ws-forward then delete-region, else c-delete-function 1)."
+ },
+ {
+  "spec_id": "emacs.command.c_hungry_delete_backwards",
+  "status": "ported",
+  "evidence": [
+   "static:c_hungry_delete_backwards"
+  ],
+  "note": "c-hungry-delete-backwards (SPC x d b): skip whitespace before point (spaces/tabs/newlines) and delete the whole run, or one character if none precedes, faithful to cc-cmds.el (c-skip-ws-backward then delete-region, else c-backspace-function 1)."
  }
 ]

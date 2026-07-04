@@ -1532,6 +1532,8 @@ impl MappableCommand {
         studlify_word, "StudlyCaps the word after point (emacs studlify-word)",
         indent_relative, "Indent to under the next indent point in the previous line (emacs indent-relative)",
         indent_code_rigidly, "Shift region lines by [count] columns, skipping lines that start in a string (emacs indent-code-rigidly, = r)",
+        c_hungry_delete_forward, "Delete all whitespace after point, else one char (emacs c-hungry-delete-forward, SPC x d f)",
+        c_hungry_delete_backwards, "Delete all whitespace before point, else one char (emacs c-hungry-delete-backwards, SPC x d b)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -22561,6 +22563,94 @@ fn indent_code_rigidly(cx: &mut Context) {
     doc.append_changes_to_history(view);
 }
 
+/// The char range emacs `c-hungry-delete` removes at `idx`. When `forward`, it
+/// skips whitespace toward the end of `chars`; otherwise toward the start.
+/// Faithful to cc-cmds.el: `c-skip-ws-{forward,backward}` then, if that moved,
+/// `delete-region` over the skipped run — otherwise `c-{delete,backspace}-function`
+/// removes a single character. Whitespace is the syntax-whitespace class, which
+/// includes newlines; `char::is_whitespace` is the matching predicate. Returns
+/// `None` only at the buffer edge, where there is nothing to delete.
+///
+/// The command below scans the rope directly with the same `is_whitespace`
+/// predicate rather than materializing a char vector; this pure form mirrors it
+/// for unit testing (the same split the `horizontal_space_run` pair uses).
+#[cfg(test)]
+fn hungry_delete_range(chars: &[char], idx: usize, forward: bool) -> Option<(usize, usize)> {
+    let idx = idx.min(chars.len());
+    if forward {
+        let mut end = idx;
+        while end < chars.len() && chars[end].is_whitespace() {
+            end += 1;
+        }
+        if end != idx {
+            Some((idx, end))
+        } else if idx < chars.len() {
+            Some((idx, idx + 1))
+        } else {
+            None
+        }
+    } else {
+        let mut start = idx;
+        while start > 0 && chars[start - 1].is_whitespace() {
+            start -= 1;
+        }
+        if start != idx {
+            Some((start, idx))
+        } else if idx > 0 {
+            Some((idx - 1, idx))
+        } else {
+            None
+        }
+    }
+}
+
+/// emacs `c-hungry-delete-forward`: delete all whitespace after point up to the
+/// next non-whitespace character, or a single character if none follows.
+fn c_hungry_delete_forward(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let len = slice.len_chars();
+    let mut end = cursor;
+    while end < len && slice.char(end).is_whitespace() {
+        end += 1;
+    }
+    let (from, to) = if end != cursor {
+        (cursor, end)
+    } else if cursor < len {
+        (cursor, cursor + 1)
+    } else {
+        return;
+    };
+    let transaction = Transaction::change(doc.text(), std::iter::once((from, to, None)));
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::point(from));
+    doc.append_changes_to_history(view);
+}
+
+/// emacs `c-hungry-delete-backwards`: delete all whitespace before point back to
+/// the previous non-whitespace character, or a single character if none precedes.
+fn c_hungry_delete_backwards(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let mut start = cursor;
+    while start > 0 && slice.char(start - 1).is_whitespace() {
+        start -= 1;
+    }
+    let (from, to) = if start != cursor {
+        (start, cursor)
+    } else if cursor > 0 {
+        (cursor - 1, cursor)
+    } else {
+        return;
+    };
+    let transaction = Transaction::change(doc.text(), std::iter::once((from, to, None)));
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::point(from));
+    doc.append_changes_to_history(view);
+}
+
 fn rotate_selections(cx: &mut Context, direction: Direction) {
     let count = cx.count();
     let (view, doc) = current!(cx.editor);
@@ -31344,6 +31434,62 @@ mod path_yank_tests {
             p("https://bitbucket.org/o/r", "feed", "a.py", 3),
             "https://bitbucket.org/o/r/src/feed/a.py#lines-3"
         );
+    }
+}
+
+#[cfg(test)]
+mod hungry_delete_tests {
+    use super::hungry_delete_range;
+
+    fn cs(s: &str) -> Vec<char> {
+        s.chars().collect()
+    }
+
+    #[test]
+    fn forward_eats_whole_whitespace_run() {
+        // "a   b", cursor after 'a' (idx 1): skip the three spaces -> delete [1,4).
+        let c = cs("a   b");
+        assert_eq!(hungry_delete_range(&c, 1, true), Some((1, 4)));
+        // Whitespace class includes newlines: "a \n\n b" from idx 1 eats to 'b'.
+        let c = cs("a \n\n b");
+        assert_eq!(hungry_delete_range(&c, 1, true), Some((1, 5)));
+    }
+
+    #[test]
+    fn forward_falls_back_to_single_char() {
+        // No whitespace after point -> delete exactly one following char.
+        let c = cs("abc");
+        assert_eq!(hungry_delete_range(&c, 0, true), Some((0, 1)));
+        // At end of buffer there is nothing to delete.
+        assert_eq!(hungry_delete_range(&c, 3, true), None);
+    }
+
+    #[test]
+    fn backward_eats_whole_whitespace_run() {
+        // "a   b", cursor before 'b' (idx 4): skip the three spaces -> delete [1,4).
+        let c = cs("a   b");
+        assert_eq!(hungry_delete_range(&c, 4, false), Some((1, 4)));
+        // Newlines count as whitespace backward too.
+        let c = cs("a\n\n  b");
+        assert_eq!(hungry_delete_range(&c, 5, false), Some((1, 5)));
+    }
+
+    #[test]
+    fn backward_falls_back_to_single_char() {
+        // No whitespace before point -> delete exactly one preceding char.
+        let c = cs("abc");
+        assert_eq!(hungry_delete_range(&c, 3, false), Some((2, 3)));
+        // At start of buffer there is nothing to delete.
+        assert_eq!(hungry_delete_range(&c, 0, false), None);
+    }
+
+    #[test]
+    fn cursor_inside_run_deletes_only_the_directional_side() {
+        // "a   b" with cursor between the spaces (idx 2): forward eats the two
+        // trailing spaces, backward eats the one leading space — never both.
+        let c = cs("a   b");
+        assert_eq!(hungry_delete_range(&c, 2, true), Some((2, 4)));
+        assert_eq!(hungry_delete_range(&c, 2, false), Some((1, 2)));
     }
 }
 
