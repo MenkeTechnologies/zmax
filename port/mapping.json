@@ -30876,5 +30876,317 @@
    "static:swap_view_down"
   ],
   "note": "emacs windmove-swap-states-down -> swap_view_down: swap_split_in_direction(Down)."
+ },
+ {
+  "spec_id": "emacs.command.diary_list_entries",
+  "status": "ported",
+  "evidence": [
+   "static:diary_list_entries"
+  ],
+  "note": "diary-list-entries: list the current date's diary entries; the parser now evaluates %%(diary-...) sexp entries too (zemacs_core::diary)"
+ },
+ {
+  "spec_id": "emacs.command.diary_fancy_display",
+  "status": "partial",
+  "evidence": [
+   "static:diary_fancy_display"
+  ],
+  "note": "diary-fancy-display: reports the day's entries (dated header + text) in the echo area; zemacs has no separate *Fancy Diary Entries* buffer"
+ },
+ {
+  "spec_id": "emacs.command.diary_print_entries",
+  "status": "partial",
+  "evidence": [
+   "static:diary_print_entries"
+  ],
+  "note": "diary-print-entries: reports the day's entry count; zemacs has no lpr print subsystem"
+ },
+ {
+  "spec_id": "emacs.command.diary_day_of_year",
+  "status": "ported",
+  "evidence": [
+   "static:diary_day_of_year"
+  ],
+  "note": "diary-day-of-year: 'Day N of TOTAL; M days remaining' for today (zemacs_core::diary::day_of_year_string, unit-tested)"
+ },
+ {
+  "spec_id": "emacs.command.diary_anniversary",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_anniversary_entry"
+  ],
+  "note": "diary-anniversary predicate implemented + unit-tested (zemacs_core::diary::anniversary); evaluated from %%(diary-anniversary ...) entries and authored via diary-insert-anniversary-entry"
+ },
+ {
+  "spec_id": "emacs.command.diary_block",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_block_entry"
+  ],
+  "note": "diary-block predicate implemented + unit-tested (zemacs_core::diary::block); evaluated from %%(diary-block ...) entries and authored via diary-insert-block-entry"
+ },
+ {
+  "spec_id": "emacs.command.diary_cyclic",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_cyclic_entry"
+  ],
+  "note": "diary-cyclic predicate implemented + unit-tested (zemacs_core::diary::cyclic); evaluated from %%(diary-cyclic ...) entries and authored via diary-insert-cyclic-entry"
+ },
+ {
+  "spec_id": "emacs.command.diary_float",
+  "status": "ported",
+  "evidence": [
+   "static:diary_list_entries"
+  ],
+  "note": "diary-float (Nth weekday of month, +/-) implemented + unit-tested (zemacs_core::diary::float_match); genuinely evaluated by diary-list-entries from %%(diary-float ...) entries"
+ },
+ {
+  "spec_id": "emacs.command.diary_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_list_entries"
+  ],
+  "note": "diary-date wildcard match (t/* components) implemented + unit-tested (zemacs_core::diary::date_wildcard); evaluated by diary-list-entries from %%(diary-date ...) entries"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_date"
+  ],
+  "note": "diary-hebrew-date: today's Hebrew calendar date (reuses zemacs_core::calendar hebrew conversion)"
+ },
+ {
+  "spec_id": "emacs.command.diary_islamic_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_islamic_date"
+  ],
+  "note": "diary-islamic-date: today's Islamic (arithmetic/civil) date"
+ },
+ {
+  "spec_id": "emacs.command.diary_french_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_french_date"
+  ],
+  "note": "diary-french-date: today's French Revolutionary date"
+ },
+ {
+  "spec_id": "emacs.command.diary_bahai_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_bahai_date"
+  ],
+  "note": "diary-bahai-date: today's Baha'i calendar date"
+ },
+ {
+  "spec_id": "emacs.command.diary_coptic_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_coptic_date"
+  ],
+  "note": "diary-coptic-date: today's Coptic calendar date"
+ },
+ {
+  "spec_id": "emacs.command.diary_ethiopic_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_ethiopic_date"
+  ],
+  "note": "diary-ethiopic-date: today's Ethiopic calendar date"
+ },
+ {
+  "spec_id": "emacs.command.diary_astro_day_number",
+  "status": "ported",
+  "evidence": [
+   "static:diary_astro_day_number"
+  ],
+  "note": "diary-astro-day-number: today's astronomical (Julian) day number"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_omer",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_omer"
+  ],
+  "note": "diary-hebrew-omer: the Sefirat HaOmer count for today (zemacs_core::diary::hebrew_omer, unit-tested against the Hebrew calendar conversion)"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_rosh_hodesh",
+  "status": "partial",
+  "evidence": [
+   "static:diary_hebrew_rosh_hodesh"
+  ],
+  "note": "diary-hebrew-rosh-hodesh: detects Rosh Hodesh (1st/30th of a Hebrew month) and names it; Emacs additionally reports Shabbat Mevarchim / the molad, which need the parashah tables"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_birthday",
+  "status": "partial",
+  "evidence": [
+   "static:diary_hebrew_birthday"
+  ],
+  "note": "diary-hebrew-birthday: recurrence predicate implemented + unit-tested (zemacs_core::diary::hebrew_birthday); the command reports today's Hebrew date (the birth-date arg comes from the diary line). The 30-Heshvan/Adar-in-leap-year edge cases are not handled"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_monthly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_monthly_entry"
+  ],
+  "note": "diary-insert-monthly-entry: appends '* DAY ' (every month on today's day) to ~/diary and opens it"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_yearly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_yearly_entry"
+  ],
+  "note": "diary-insert-yearly-entry: appends 'Monthname Day ' (every year) to ~/diary"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_anniversary_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_anniversary_entry"
+  ],
+  "note": "diary-insert-anniversary-entry: appends '%%(diary-anniversary M D Y) ' for today"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_block_entry",
+  "status": "partial",
+  "evidence": [
+   "static:diary_insert_block_entry"
+  ],
+  "note": "diary-insert-block-entry: appends '%%(diary-block ...) '; standalone there is no calendar mark ring, so the range is today..today (edit the second date)"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_cyclic_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_cyclic_entry"
+  ],
+  "note": "diary-insert-cyclic-entry: prompts for N and appends '%%(diary-cyclic N M D Y) ' for today"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_insert_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_insert_entry"
+  ],
+  "note": "diary-hebrew-insert-entry: appends 'H<Hebrew date> ' for today"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_insert_monthly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_insert_monthly_entry"
+  ],
+  "note": "diary-hebrew-insert-monthly-entry: appends 'H* DAY ' (Hebrew day-of-month, every Hebrew month)"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_insert_yearly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_insert_yearly_entry"
+  ],
+  "note": "diary-hebrew-insert-yearly-entry: appends 'H<Hebrew month> <day> ' (every Hebrew year)"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_insert_anniversary_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_insert_anniversary_entry"
+  ],
+  "note": "diary-hebrew-insert-anniversary-entry: appends '%%(diary-hebrew-anniversary M D Y) '"
+ },
+ {
+  "spec_id": "emacs.command.diary_islamic_insert_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_islamic_insert_entry"
+  ],
+  "note": "diary-islamic-insert-entry: appends 'I<Islamic date> ' for today"
+ },
+ {
+  "spec_id": "emacs.command.diary_islamic_insert_monthly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_islamic_insert_monthly_entry"
+  ],
+  "note": "diary-islamic-insert-monthly-entry: appends 'I* DAY '"
+ },
+ {
+  "spec_id": "emacs.command.diary_islamic_insert_yearly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_islamic_insert_yearly_entry"
+  ],
+  "note": "diary-islamic-insert-yearly-entry: appends 'I<Islamic month> <day> '"
+ },
+ {
+  "spec_id": "emacs.command.diary_islamic_insert_anniversary_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_islamic_insert_anniversary_entry"
+  ],
+  "note": "diary-islamic-insert-anniversary-entry: appends '%%(diary-islamic-anniversary M D Y) '"
+ },
+ {
+  "spec_id": "emacs.command.diary_bahai_insert_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_bahai_insert_entry"
+  ],
+  "note": "diary-bahai-insert-entry: appends 'B<Baha'i date> ' for today"
+ },
+ {
+  "spec_id": "emacs.command.diary_bahai_insert_monthly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_bahai_insert_monthly_entry"
+  ],
+  "note": "diary-bahai-insert-monthly-entry: appends 'B* DAY '"
+ },
+ {
+  "spec_id": "emacs.command.diary_bahai_insert_yearly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_bahai_insert_yearly_entry"
+  ],
+  "note": "diary-bahai-insert-yearly-entry: appends 'B<Baha'i month> <day> '"
+ },
+ {
+  "spec_id": "emacs.command.diary_bahai_insert_anniversary_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_bahai_insert_anniversary_entry"
+  ],
+  "note": "diary-bahai-insert-anniversary-entry: appends '%%(diary-bahai-anniversary M D Y) '"
+ },
+ {
+  "spec_id": "emacs.command.appt_add",
+  "status": "ported",
+  "evidence": [
+   "static:appt_add"
+  ],
+  "note": "appt-add: prompts 'HH:MM message' and inserts into the sorted in-memory appointment list (zemacs_core::diary::appt_add, unit-tested)"
+ },
+ {
+  "spec_id": "emacs.command.appt_delete",
+  "status": "ported",
+  "evidence": [
+   "static:appt_delete"
+  ],
+  "note": "appt-delete: removes appointments whose message matches the typed text (zemacs_core::diary::appt_delete)"
+ },
+ {
+  "spec_id": "emacs.command.appt_activate",
+  "status": "partial",
+  "evidence": [
+   "static:appt_activate"
+  ],
+  "note": "appt-activate: toggles the appt-checking flag and reports the next appointment; zemacs has no idle timer, so no timed pop-up reminder is delivered"
  }
 ]

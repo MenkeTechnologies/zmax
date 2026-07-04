@@ -656,6 +656,40 @@ impl MappableCommand {
         diary_insert_entry, "Add a diary entry for today (emacs diary-insert-entry)",
         diary_insert_weekly_entry, "Add a weekly diary entry for today (emacs diary-insert-weekly-entry)",
         diary_mark_entries, "Mark calendar dates that have diary entries (emacs diary-mark-entries)",
+        diary_list_entries, "List diary entries for the current date (emacs diary-list-entries)",
+        diary_fancy_display, "Show the day's diary entries in fancy format (emacs diary-fancy-display)",
+        diary_print_entries, "Print the day's diary entries (emacs diary-print-entries)",
+        diary_day_of_year, "Report today's day-of-year and days remaining (emacs diary-day-of-year)",
+        diary_hebrew_date, "Today's Hebrew calendar date (emacs diary-hebrew-date)",
+        diary_islamic_date, "Today's Islamic calendar date (emacs diary-islamic-date)",
+        diary_french_date, "Today's French Revolutionary date (emacs diary-french-date)",
+        diary_bahai_date, "Today's Baha'i calendar date (emacs diary-bahai-date)",
+        diary_coptic_date, "Today's Coptic calendar date (emacs diary-coptic-date)",
+        diary_ethiopic_date, "Today's Ethiopic calendar date (emacs diary-ethiopic-date)",
+        diary_astro_day_number, "Today's astronomical (Julian) day number (emacs diary-astro-day-number)",
+        diary_hebrew_omer, "Report today's Omer count, if any (emacs diary-hebrew-omer)",
+        diary_hebrew_rosh_hodesh, "Report if today is Rosh Hodesh (emacs diary-hebrew-rosh-hodesh)",
+        diary_hebrew_birthday, "Today's Hebrew date for a birthday entry (emacs diary-hebrew-birthday)",
+        diary_insert_monthly_entry, "Add a monthly diary entry for today (emacs diary-insert-monthly-entry)",
+        diary_insert_yearly_entry, "Add a yearly diary entry for today (emacs diary-insert-yearly-entry)",
+        diary_insert_anniversary_entry, "Add a diary-anniversary entry for today (emacs diary-insert-anniversary-entry)",
+        diary_insert_block_entry, "Add a diary-block entry for today (emacs diary-insert-block-entry)",
+        diary_insert_cyclic_entry, "Add a diary-cyclic entry for today (emacs diary-insert-cyclic-entry)",
+        diary_hebrew_insert_entry, "Add a Hebrew-date diary entry for today (emacs diary-hebrew-insert-entry)",
+        diary_hebrew_insert_monthly_entry, "Add a monthly Hebrew diary entry (emacs diary-hebrew-insert-monthly-entry)",
+        diary_hebrew_insert_yearly_entry, "Add a yearly Hebrew diary entry (emacs diary-hebrew-insert-yearly-entry)",
+        diary_hebrew_insert_anniversary_entry, "Add a Hebrew anniversary diary entry (emacs diary-hebrew-insert-anniversary-entry)",
+        diary_islamic_insert_entry, "Add an Islamic-date diary entry for today (emacs diary-islamic-insert-entry)",
+        diary_islamic_insert_monthly_entry, "Add a monthly Islamic diary entry (emacs diary-islamic-insert-monthly-entry)",
+        diary_islamic_insert_yearly_entry, "Add a yearly Islamic diary entry (emacs diary-islamic-insert-yearly-entry)",
+        diary_islamic_insert_anniversary_entry, "Add an Islamic anniversary diary entry (emacs diary-islamic-insert-anniversary-entry)",
+        diary_bahai_insert_entry, "Add a Baha'i-date diary entry for today (emacs diary-bahai-insert-entry)",
+        diary_bahai_insert_monthly_entry, "Add a monthly Baha'i diary entry (emacs diary-bahai-insert-monthly-entry)",
+        diary_bahai_insert_yearly_entry, "Add a yearly Baha'i diary entry (emacs diary-bahai-insert-yearly-entry)",
+        diary_bahai_insert_anniversary_entry, "Add a Baha'i anniversary diary entry (emacs diary-bahai-insert-anniversary-entry)",
+        appt_add, "Add an appointment reminder (emacs appt-add)",
+        appt_delete, "Delete appointment reminders (emacs appt-delete)",
+        appt_activate, "Toggle appointment checking (emacs appt-activate)",
         calendar_print_other_dates, "Report today's date in all other calendars (emacs calendar-print-other-dates)",
         calendar_julian_print_date, "Today's Julian (Roman) calendar date (emacs calendar-julian-print-date)",
         calendar_iso_print_date, "Today's ISO 8601 week date (emacs calendar-iso-print-date)",
@@ -13650,7 +13684,7 @@ fn diary_show_all_entries(cx: &mut Context) {
 
 /// Append a diary header for `date` to the file and open it with point at the
 /// end, ready to type the entry (Emacs `insert-diary-entry` family).
-fn diary_insert(cx: &mut Context, header: String) {
+fn diary_insert(editor: &mut Editor, header: String) {
     let path = diary_path();
     let mut contents = std::fs::read_to_string(&path).unwrap_or_default();
     if !contents.is_empty() && !contents.ends_with('\n') {
@@ -13658,12 +13692,11 @@ fn diary_insert(cx: &mut Context, header: String) {
     }
     contents.push_str(&header);
     if let Err(e) = std::fs::write(&path, &contents) {
-        cx.editor
-            .set_error(format!("diary: cannot write {}: {e}", path.display()));
+        editor.set_error(format!("diary: cannot write {}: {e}", path.display()));
         return;
     }
-    if cx.editor.open(&path, Action::Replace).is_ok() {
-        let (view, doc) = current!(cx.editor);
+    if editor.open(&path, Action::Replace).is_ok() {
+        let (view, doc) = current!(editor);
         let end = doc.text().len_chars();
         doc.set_selection(view.id, Selection::point(end));
     }
@@ -13672,13 +13705,13 @@ fn diary_insert(cx: &mut Context, header: String) {
 /// Emacs `diary-insert-entry` / `insert-diary-entry`: add a dated entry for
 /// today.
 fn diary_insert_entry(cx: &mut Context) {
-    diary_insert(cx, zemacs_core::diary::format_daily(diary_today()));
+    diary_insert(cx.editor, zemacs_core::diary::format_daily(diary_today()));
 }
 
 /// Emacs `diary-insert-weekly-entry` / `insert-weekly-diary-entry`: add a
 /// weekly entry on today's weekday.
 fn diary_insert_weekly_entry(cx: &mut Context) {
-    diary_insert(cx, zemacs_core::diary::format_weekly(diary_today()));
+    diary_insert(cx.editor, zemacs_core::diary::format_weekly(diary_today()));
 }
 
 /// Emacs `diary-mark-entries`: mark the calendar dates that have diary entries.
@@ -13702,6 +13735,391 @@ fn diary_mark_entries(cx: &mut Context) {
         zemacs_core::calendar::MONTH_NAMES[(today.month - 1) as usize],
         today.year
     ));
+}
+
+/// Emacs `diary-list-entries`: list the diary entries for the current date.
+/// Standalone this is today; from the Calendar it is the date at point.
+fn diary_list_entries(cx: &mut Context) {
+    diary_show_for(cx, diary_today());
+}
+
+/// Emacs `diary-fancy-display`: show the day's entries in the "fancy" (headed)
+/// format. zemacs has no separate *Fancy Diary* buffer, so the entries are
+/// reported (dated header + each entry) in the echo area.
+fn diary_fancy_display(cx: &mut Context) {
+    let today = diary_today();
+    let entries = diary_entries();
+    let hits = zemacs_core::diary::entries_for(&entries, today);
+    if hits.is_empty() {
+        cx.editor.set_status("Diary: no entries for today".to_string());
+        return;
+    }
+    let header = zemacs_core::diary::format_daily(today);
+    let body = hits
+        .iter()
+        .map(|e| e.text.as_str())
+        .collect::<Vec<_>>()
+        .join("; ");
+    cx.editor
+        .set_status(format!("{}— {}", header.trim_end(), body));
+}
+
+/// Emacs `diary-print-entries`: print the diary display. zemacs has no `lpr`
+/// print subsystem, so this reports how many entries would be printed for today.
+fn diary_print_entries(cx: &mut Context) {
+    let today = diary_today();
+    let entries = diary_entries();
+    let n = zemacs_core::diary::entries_for(&entries, today).len();
+    cx.editor.set_status(format!(
+        "diary-print-entries: {n} entr{} for today (printing not available in zemacs)",
+        if n == 1 { "y" } else { "ies" }
+    ));
+}
+
+/// Emacs `diary-day-of-year`: report the day-of-year string for today.
+fn diary_day_of_year(cx: &mut Context) {
+    cx.editor
+        .set_status(zemacs_core::diary::day_of_year_string(diary_today()));
+}
+
+// --- per-calendar "date" diary sexps: report today's date in that calendar ---
+
+/// Emacs `diary-hebrew-date`: today's date on the Hebrew calendar.
+fn diary_hebrew_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Hebrew date (until sunset): {}",
+        zemacs_core::calendar::hebrew_string(diary_today())
+    ));
+}
+
+/// Emacs `diary-islamic-date`: today's date on the Islamic calendar.
+fn diary_islamic_date(cx: &mut Context) {
+    match zemacs_core::calendar::islamic_string(diary_today()) {
+        Some(s) => cx.editor.set_status(format!("Islamic date (until sunset): {s}")),
+        None => cx.editor.set_status("Islamic date: before the Islamic epoch".to_string()),
+    }
+}
+
+/// Emacs `diary-french-date`: today's date on the French Revolutionary calendar.
+fn diary_french_date(cx: &mut Context) {
+    match zemacs_core::calendar::french_string(diary_today()) {
+        Some(s) => cx.editor.set_status(format!("French Revolutionary date: {s}")),
+        None => cx.editor.set_status("French Revolutionary date: out of range".to_string()),
+    }
+}
+
+/// Emacs `diary-bahai-date`: today's date on the Baha'i calendar.
+fn diary_bahai_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Baha'i date (until sunset): {}",
+        zemacs_core::calendar::bahai_string(diary_today())
+    ));
+}
+
+/// Emacs `diary-coptic-date`: today's date on the Coptic calendar.
+fn diary_coptic_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Coptic date: {}",
+        zemacs_core::calendar::coptic_string(diary_today())
+    ));
+}
+
+/// Emacs `diary-ethiopic-date`: today's date on the Ethiopic calendar.
+fn diary_ethiopic_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Ethiopic date: {}",
+        zemacs_core::calendar::ethiopic_string(diary_today())
+    ));
+}
+
+/// Emacs `diary-astro-day-number`: today's astronomical (Julian) day number.
+fn diary_astro_day_number(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Astronomical (Julian) day number at noon UTC: {}",
+        zemacs_core::calendar::astro_day_number(diary_today())
+    ));
+}
+
+/// Emacs `diary-hebrew-omer`: if today is in the counting of the Omer, report it.
+fn diary_hebrew_omer(cx: &mut Context) {
+    match zemacs_core::diary::hebrew_omer(diary_today()) {
+        Some((omer, week, day)) => cx
+            .editor
+            .set_status(zemacs_core::diary::hebrew_omer_string(omer, week, day)),
+        None => cx
+            .editor
+            .set_status("Not during the counting of the Omer".to_string()),
+    }
+}
+
+/// Emacs `diary-hebrew-rosh-hodesh`: if today is Rosh Hodesh, report the month.
+fn diary_hebrew_rosh_hodesh(cx: &mut Context) {
+    match zemacs_core::diary::hebrew_rosh_hodesh(diary_today()) {
+        Some(month) => cx.editor.set_status(format!("Rosh Hodesh {month}")),
+        None => cx.editor.set_status("Today is not Rosh Hodesh".to_string()),
+    }
+}
+
+/// Emacs `diary-hebrew-birthday`: reports today's Hebrew date, the reference for
+/// authoring a `%%(diary-hebrew-birthday M D Y)` entry. The recurrence predicate
+/// is implemented + tested in `zemacs_core::diary::hebrew_birthday`, but the
+/// interactive command needs the birth date from the diary line; standalone we
+/// surface today's Hebrew date instead.
+fn diary_hebrew_birthday(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Today's Hebrew date (for a diary-hebrew-birthday entry): {}",
+        zemacs_core::calendar::hebrew_string(diary_today())
+    ));
+}
+
+// --- Gregorian insert-* commands (append a formatted line for today) --------
+
+/// Emacs `diary-insert-monthly-entry`: an entry on today's day-of-month, every
+/// month.
+fn diary_insert_monthly_entry(cx: &mut Context) {
+    diary_insert(cx.editor, zemacs_core::diary::format_monthly(diary_today().day));
+}
+
+/// Emacs `diary-insert-yearly-entry`: an entry on today's month/day, every year.
+fn diary_insert_yearly_entry(cx: &mut Context) {
+    diary_insert(cx.editor, zemacs_core::diary::format_yearly(diary_today()));
+}
+
+/// Emacs `diary-insert-anniversary-entry`: a `%%(diary-anniversary ...)` entry
+/// for today's date.
+fn diary_insert_anniversary_entry(cx: &mut Context) {
+    diary_insert(cx.editor, zemacs_core::diary::format_anniversary_sexp(diary_today()));
+}
+
+/// Emacs `diary-insert-block-entry`: a `%%(diary-block ...)` entry. Emacs uses
+/// the calendar mark ring for the range's other end; standalone we have no mark,
+/// so the block is today..today (edit the second date in the file as needed).
+fn diary_insert_block_entry(cx: &mut Context) {
+    let d = diary_today();
+    diary_insert(cx.editor, zemacs_core::diary::format_block_sexp(d, d));
+}
+
+/// Emacs `diary-insert-cyclic-entry`: a `%%(diary-cyclic N ...)` entry. Prompts
+/// for the repeat interval N.
+fn diary_insert_cyclic_entry(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Repeat every how many days: ".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            match input.trim().parse::<i64>() {
+                Ok(n) if n > 0 => {
+                    diary_insert(cx.editor, zemacs_core::diary::format_cyclic_sexp(n, diary_today()))
+                }
+                _ => cx.editor.set_error("diary-cyclic: need a positive integer"),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+// --- non-Gregorian insert-* commands ----------------------------------------
+
+/// Today's Hebrew `(month, day, year, month-name)`.
+fn hebrew_today() -> (u32, u32, i64, &'static str) {
+    let (y, m, d) = zemacs_core::calendar::hebrew_from_fixed(zemacs_core::calendar::rd(diary_today()));
+    let name = if zemacs_core::calendar::hebrew_last_month_of_year(y) == 12 {
+        zemacs_core::calendar::HEBREW_MONTH_NAMES_COMMON[(m - 1) as usize]
+    } else {
+        zemacs_core::calendar::HEBREW_MONTH_NAMES_LEAP[(m - 1) as usize]
+    };
+    (m, d, y, name)
+}
+
+fn diary_hebrew_insert_entry(cx: &mut Context) {
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_other_entry('H', &zemacs_core::calendar::hebrew_string(diary_today())),
+    );
+}
+fn diary_hebrew_insert_monthly_entry(cx: &mut Context) {
+    let (_, d, _, _) = hebrew_today();
+    diary_insert(cx.editor, zemacs_core::diary::format_other_monthly('H', d));
+}
+fn diary_hebrew_insert_yearly_entry(cx: &mut Context) {
+    let (_, d, _, name) = hebrew_today();
+    diary_insert(cx.editor, zemacs_core::diary::format_other_yearly('H', name, d));
+}
+fn diary_hebrew_insert_anniversary_entry(cx: &mut Context) {
+    let (m, d, y, _) = hebrew_today();
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_other_anniversary_sexp("hebrew", m, d, y),
+    );
+}
+
+/// Today's Islamic `(month, day, year, month-name)`, if after the Islamic epoch.
+fn islamic_today() -> Option<(u32, u32, i64, &'static str)> {
+    let (y, m, d) =
+        zemacs_core::calendar::islamic_from_fixed(zemacs_core::calendar::rd(diary_today()))?;
+    Some((m, d, y, zemacs_core::calendar::ISLAMIC_MONTH_NAMES[(m - 1) as usize]))
+}
+
+fn diary_islamic_insert_entry(cx: &mut Context) {
+    match zemacs_core::calendar::islamic_string(diary_today()) {
+        Some(s) => diary_insert(cx.editor, zemacs_core::diary::format_other_entry('I', &s)),
+        None => cx.editor.set_error("diary-islamic: before the Islamic epoch"),
+    }
+}
+fn diary_islamic_insert_monthly_entry(cx: &mut Context) {
+    match islamic_today() {
+        Some((_, d, _, _)) => diary_insert(cx.editor, zemacs_core::diary::format_other_monthly('I', d)),
+        None => cx.editor.set_error("diary-islamic: before the Islamic epoch"),
+    }
+}
+fn diary_islamic_insert_yearly_entry(cx: &mut Context) {
+    match islamic_today() {
+        Some((_, d, _, name)) => {
+            diary_insert(cx.editor, zemacs_core::diary::format_other_yearly('I', name, d))
+        }
+        None => cx.editor.set_error("diary-islamic: before the Islamic epoch"),
+    }
+}
+fn diary_islamic_insert_anniversary_entry(cx: &mut Context) {
+    match islamic_today() {
+        Some((m, d, y, _)) => diary_insert(
+            cx.editor,
+            zemacs_core::diary::format_other_anniversary_sexp("islamic", m, d, y),
+        ),
+        None => cx.editor.set_error("diary-islamic: before the Islamic epoch"),
+    }
+}
+
+/// Today's Baha'i `(month, day, year, month-name)`.
+fn bahai_today() -> (u32, u32, i64, String) {
+    let (y, m, d) = zemacs_core::calendar::bahai_from_fixed(zemacs_core::calendar::rd(diary_today()));
+    let name = if m == 0 {
+        "Ayyam-i-Ha".to_string()
+    } else {
+        zemacs_core::calendar::BAHAI_MONTH_NAMES[(m - 1) as usize].to_string()
+    };
+    (m, d, y, name)
+}
+
+fn diary_bahai_insert_entry(cx: &mut Context) {
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_other_entry('B', &zemacs_core::calendar::bahai_string(diary_today())),
+    );
+}
+fn diary_bahai_insert_monthly_entry(cx: &mut Context) {
+    let (_, d, _, _) = bahai_today();
+    diary_insert(cx.editor, zemacs_core::diary::format_other_monthly('B', d));
+}
+fn diary_bahai_insert_yearly_entry(cx: &mut Context) {
+    let (_, d, _, name) = bahai_today();
+    diary_insert(cx.editor, zemacs_core::diary::format_other_yearly('B', &name, d));
+}
+fn diary_bahai_insert_anniversary_entry(cx: &mut Context) {
+    let (m, d, y, _) = bahai_today();
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_other_anniversary_sexp("bahai", m, d, y),
+    );
+}
+
+// --- appt (appointment reminders) -------------------------------------------
+
+/// The live appointment list (appt.el `appt-time-msg-list`).
+static APPTS: std::sync::Mutex<Vec<zemacs_core::diary::Appt>> =
+    std::sync::Mutex::new(Vec::new());
+/// Whether appt checking is active (appt.el `appt-timer`).
+static APPT_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Emacs `appt-add`: add an appointment. Prompts for `HH:MM message`.
+fn appt_add(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Appointment (HH:MM message): ".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let (time_str, msg) = input.trim().split_once(char::is_whitespace).unwrap_or((input.trim(), ""));
+            let Some(minutes) = zemacs_core::diary::parse_appt_time(time_str) else {
+                cx.editor.set_error("appt-add: could not parse the time (use HH:MM)");
+                return;
+            };
+            let appt = zemacs_core::diary::Appt {
+                minutes,
+                message: msg.trim().to_string(),
+            };
+            let mut list = APPTS.lock().unwrap();
+            if zemacs_core::diary::appt_add(&mut list, appt) {
+                cx.editor.set_status(format!(
+                    "Appointment added at {} ({} total)",
+                    zemacs_core::diary::format_appt_time(minutes),
+                    list.len()
+                ));
+            } else {
+                cx.editor.set_status("appt-add: that appointment already exists".to_string());
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Emacs `appt-delete`: delete appointments whose message contains the text you
+/// type (Emacs prompts per-appointment; here it is a substring match).
+fn appt_delete(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Delete appointments matching: ".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let mut list = APPTS.lock().unwrap();
+            let n = zemacs_core::diary::appt_delete(&mut list, input.trim());
+            cx.editor.set_status(format!(
+                "appt-delete: removed {n} appointment{}",
+                if n == 1 { "" } else { "s" }
+            ));
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Emacs `appt-activate`: toggle appointment checking. zemacs has no idle timer,
+/// so no timed pop-up reminder is delivered; this flips the active flag and, when
+/// activating, reports the next upcoming appointment relative to the clock.
+fn appt_activate(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let now = {
+        let secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        ((secs % 86_400) / 60) as u32
+    };
+    let active = !APPT_ACTIVE.load(Ordering::Relaxed);
+    APPT_ACTIVE.store(active, Ordering::Relaxed);
+    if !active {
+        cx.editor.set_status("Appointment checking disabled".to_string());
+        return;
+    }
+    let list = APPTS.lock().unwrap();
+    let next = list.iter().find(|a| a.minutes >= now);
+    match next {
+        Some(a) => cx.editor.set_status(format!(
+            "Appointment checking enabled (no timer popups); next: {} {}",
+            zemacs_core::diary::format_appt_time(a.minutes),
+            a.message
+        )),
+        None => cx.editor.set_status(
+            "Appointment checking enabled (no timer popups); no more appointments today".to_string(),
+        ),
+    }
 }
 
 // ---------------------------------------------------------------------------
