@@ -579,10 +579,12 @@ pub fn diff_unified_to_context(text: &str) -> String {
             let (o_s, o_l, n_s, n_l) = parse_hunk_header(l);
             let mut j = i + 1;
             while j < n
-                && !lines[j].starts_with("@@")
-                && !(lines[j].starts_with("--- ") && j + 1 < n && lines[j + 1].starts_with("+++ "))
-                && !lines[j].starts_with("diff --git ")
-                && !lines[j].starts_with("Index: ")
+                && !(lines[j].starts_with("@@")
+                    || lines[j].starts_with("diff --git ")
+                    || lines[j].starts_with("Index: ")
+                    || (lines[j].starts_with("--- ")
+                        && j + 1 < n
+                        && lines[j + 1].starts_with("+++ ")))
             {
                 j += 1;
             }

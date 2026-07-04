@@ -64,7 +64,7 @@ mod tests {
     }
 
     #[test]
-    fn region_spec_is_git_log_L_form() {
+    fn region_spec_is_git_log_l_form() {
         assert_eq!(
             region_log_spec(10, 20, "src/main.rs"),
             "-L10,20:src/main.rs"

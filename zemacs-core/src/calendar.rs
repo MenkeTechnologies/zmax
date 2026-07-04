@@ -431,11 +431,12 @@ fn hebrew_elapsed_days(year: i64) -> i64 {
         5 + 12 * months_elapsed + 793 * (months_elapsed / 1080) + parts_elapsed / 1080;
     let day = 1 + 29 * months_elapsed + hours_elapsed / 24;
     let parts = 1080 * (hours_elapsed % 24) + parts_elapsed % 1080;
-    let day = if parts >= 19440 {
-        day + 1
-    } else if day % 7 == 2 && parts >= 9924 && !hebrew_leap(year) {
-        day + 1
-    } else if day % 7 == 1 && parts >= 16789 && hebrew_leap(year - 1) {
+    // The three postponement (dehiyyah) conditions each push the New Year one
+    // day later; kept as a single OR so the value-equal branches don't repeat.
+    let day = if parts >= 19440
+        || (day % 7 == 2 && parts >= 9924 && !hebrew_leap(year))
+        || (day % 7 == 1 && parts >= 16789 && hebrew_leap(year - 1))
+    {
         day + 1
     } else {
         day
@@ -546,9 +547,7 @@ pub fn islamic_leap(year: i64) -> bool {
     )
 }
 pub fn islamic_last_day_of_month(month: u32, year: i64) -> u32 {
-    if month % 2 == 1 {
-        30
-    } else if month == 12 && islamic_leap(year) {
+    if month % 2 == 1 || (month == 12 && islamic_leap(year)) {
         30
     } else {
         29
@@ -620,9 +619,7 @@ pub fn persian_leap(year: i64) -> bool {
 pub fn persian_last_day_of_month(month: u32, year: i64) -> u32 {
     if month < 7 {
         31
-    } else if month < 12 {
-        30
-    } else if persian_leap(year) {
+    } else if month < 12 || persian_leap(year) {
         30
     } else {
         29
