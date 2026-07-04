@@ -1096,6 +1096,7 @@
 | `toggle_readonly` | Toggle the buffer's read-only (writable) state (SPC b w) | normal: `` <space>bw ``, `` <C-x><C-q> ``, select: `` <space>bw ``, `` <C-x><C-q> ``, insert: `` <C-x><C-q> `` |
 | `toggle_window_dedication` | Toggle window dedication (spacemacs SPC w t) | normal: `` <C-w>t ``, `` <space>wt ``, select: `` <space>wt `` |
 | `toggle_subword` | Toggle sub-word w/b/e motions (spacemacs SPC t c) | normal: `` <space>tc ``, select: `` <space>tc `` |
+| `toggle_superword` | Toggle super-word w/b/e motions: symbols join words (emacs superword-mode, SPC t C) | normal: `` <space>tC ``, select: `` <space>tC `` |
 | `toggle_auto_fill` | Toggle auto-fill: wrap at text-width while typing (spacemacs SPC t F) | normal: `` <space>tF ``, select: `` <space>tF `` |
 | `toggle_follow_mode` | Toggle follow mode: windows on the same doc scroll together (spacemacs SPC w f) | normal: `` <C-w>f ``, `` <space>wf ``, select: `` <space>wf `` |
 | `subword_w` | Next word start, sub-word aware (w) | normal: `` w `` |
