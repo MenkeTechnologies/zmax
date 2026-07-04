@@ -39,6 +39,7 @@ pub mod history;
 pub mod increment;
 pub mod indent;
 pub mod ispell;
+pub mod kmacro;
 pub mod line_ending;
 pub mod line_filter;
 pub mod list_motion;
