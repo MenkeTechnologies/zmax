@@ -1182,6 +1182,7 @@
 | `studlify_buffer` | StudlyCaps the whole buffer (emacs studlify-buffer) |  |
 | `studlify_word` | StudlyCaps the word after point (emacs studlify-word) |  |
 | `indent_relative` | Indent to under the next indent point in the previous line (emacs indent-relative) |  |
+| `indent_code_rigidly` | Shift region lines by [count] columns, skipping lines that start in a string (emacs indent-code-rigidly, = r) | normal: `` =r `` |
 | `delete_find_char_backward` | Delete to prev char (dF) | normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | normal: `` cf `` |
