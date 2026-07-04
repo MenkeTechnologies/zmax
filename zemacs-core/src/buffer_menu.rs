@@ -16,6 +16,15 @@
 
 use std::collections::BTreeMap;
 
+/// Whether a buffer name is an Emacs "internal" buffer — one that
+/// `list-buffers` hides by default and `Buffer-menu-toggle-internal` reveals.
+/// Emacs treats a buffer as internal when its name starts with a space, and
+/// also groups the `*…*` "special" buffers (`*scratch*`, `*Messages*`) under
+/// the same toggle. Pure predicate so the filter is unit-testable.
+pub fn is_internal_name(name: &str) -> bool {
+    name.starts_with(' ') || (name.len() >= 2 && name.starts_with('*') && name.ends_with('*'))
+}
+
 /// A per-row mark in the Buffer Menu's leftmost column. At most one is visible on
 /// a line, matching Emacs's single tag column: setting a new mark replaces any
 /// previous one.
@@ -195,6 +204,25 @@ impl BufferMenu {
         self.marks.clear();
     }
 
+    /// Bury the buffer under point (`b`, `Buffer-menu-bury`): move its row to the
+    /// bottom of the list, leaving point on the same index so it now shows the
+    /// following buffer (matching Emacs, which sinks the current line and advances
+    /// to the next). Marks are keyed by buffer id, so the buried row keeps its
+    /// mark. Returns the buried buffer id, if any.
+    pub fn bury_current(&mut self) -> Option<u64> {
+        if self.selected >= self.rows.len() {
+            return None;
+        }
+        let row = self.rows.remove(self.selected);
+        let key = row.key;
+        self.rows.push(row);
+        // Point stays at the same index (now the next buffer), clamped.
+        if self.selected >= self.rows.len() {
+            self.selected = self.rows.len().saturating_sub(1);
+        }
+        Some(key)
+    }
+
     /// Whether any row carries a mark.
     pub fn has_marks(&self) -> bool {
         !self.marks.is_empty()
@@ -334,6 +362,43 @@ mod tests {
         assert_eq!(m.selected(), 1); // clamped from 2 -> 1
         assert_eq!(m.mark_of(1), Mark::Delete); // survived
         assert_eq!(m.mark_of(3), Mark::None); // dropped: gone
+    }
+
+    #[test]
+    fn bury_sinks_row_and_keeps_point_index() {
+        let mut m = menu(&[(1, "a"), (2, "b"), (3, "c")]);
+        m.set_mark(1, Mark::Save);
+        // Point on a: bury sinks a to the bottom, point now shows b.
+        assert_eq!(m.bury_current(), Some(1));
+        let order: Vec<u64> = m.rows().iter().map(|r| r.key).collect();
+        assert_eq!(order, vec![2, 3, 1]);
+        assert_eq!(m.selected(), 0);
+        assert_eq!(m.current_key(), Some(2));
+        // Buried row kept its mark (marks are keyed by id).
+        assert_eq!(m.mark_of(1), Mark::Save);
+        // Burying the last row leaves it last and clamps point onto it.
+        m.goto_last();
+        assert_eq!(m.current_key(), Some(1));
+        assert_eq!(m.bury_current(), Some(1));
+        assert_eq!(m.rows().last().map(|r| r.key), Some(1));
+        assert_eq!(m.selected(), 2);
+        // Empty menu: bury is a no-op.
+        let mut empty = BufferMenu::default();
+        assert_eq!(empty.bury_current(), None);
+    }
+
+    #[test]
+    fn internal_name_matches_emacs_convention() {
+        // Space-prefixed hidden buffers and *…* special buffers are internal.
+        assert!(is_internal_name(" *code-conversion-work*"));
+        assert!(is_internal_name("*scratch*"));
+        assert!(is_internal_name("*Messages*"));
+        // Ordinary file/visible buffers are not.
+        assert!(!is_internal_name("main.rs"));
+        assert!(!is_internal_name("[scratch]"));
+        assert!(!is_internal_name("*not-closed"));
+        assert!(!is_internal_name(""));
+        assert!(!is_internal_name("*"));
     }
 
     #[test]
