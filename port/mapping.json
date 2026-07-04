@@ -30012,6 +30012,86 @@
   "note": "emacs diff-goto-source -> zemacs diffmode overlay"
  },
  {
+  "spec_id": "emacs.command.diff_hunk_kill",
+  "status": "ported",
+  "evidence": [
+   "static:diff_hunk_kill"
+  ],
+  "note": "Pure diffmode::diff_hunk_kill deletes the hunk at point; if it is the file's only hunk the file header is removed too (matches diff-remove-hunk). Char-for-char unit-tested."
+ },
+ {
+  "spec_id": "emacs.command.diff_file_kill",
+  "status": "ported",
+  "evidence": [
+   "static:diff_file_kill"
+  ],
+  "note": "Pure diffmode::diff_file_kill deletes the whole file section (banner + ---/+++ headers + hunks) at point. Unit-tested."
+ },
+ {
+  "spec_id": "emacs.command.diff_split_hunk",
+  "status": "ported",
+  "evidence": [
+   "static:diff_split_hunk"
+  ],
+  "note": "Pure diffmode::diff_split_hunk splits a unified hunk at point; recomputes correct start+length for BOTH halves (stock Emacs leaves the 2nd header at a ,1 placeholder). Unit-tested."
+ },
+ {
+  "spec_id": "emacs.command.diff_reverse_direction",
+  "status": "ported",
+  "evidence": [
+   "static:diff_reverse_direction"
+  ],
+  "note": "Pure diffmode::diff_reverse_direction swaps ---/+++ paths, each @@ range and every +/- body sign; reverse-then-reverse round-trips byte-for-byte (tested)."
+ },
+ {
+  "spec_id": "emacs.command.diff_context_gtunified",
+  "status": "ported",
+  "evidence": [
+   "static:diff_context_to_unified"
+  ],
+  "note": "emacs diff-context->unified: pure diffmode::diff_context_to_unified converts a context diff to unified, interleaving both sides (reads ! change lines). Round-trip tested against diff-unified->context."
+ },
+ {
+  "spec_id": "emacs.command.diff_unified_gtcontext",
+  "status": "ported",
+  "evidence": [
+   "static:diff_unified_to_context"
+  ],
+  "note": "emacs diff-unified->context: pure diffmode::diff_unified_to_context converts unified to context (***/--- blocks, empty side omitted). Output matches diff -c; char-for-char tested."
+ },
+ {
+  "spec_id": "emacs.command.diff_delete_trailing_whitespace",
+  "status": "partial",
+  "evidence": [
+   "static:diff_delete_trailing_whitespace"
+  ],
+  "note": "Strips trailing whitespace from added (+) lines within the diff buffer. PARTIAL: stock Emacs also rewrites the patched source files on disk; zemacs only edits the diff buffer."
+ },
+ {
+  "spec_id": "emacs.command.diff_restrict_view",
+  "status": "ported",
+  "evidence": [
+   "static:diff_restrict_view"
+  ],
+  "note": "Narrows the buffer to the hunk at point via diffmode::hunk_line_bounds + doc.narrow_to (widen to undo). The prefix-arg file variant is not wired."
+ },
+ {
+  "spec_id": "emacs.command.diff_apply_hunk",
+  "status": "ported",
+  "evidence": [
+   "static:diff_apply_hunk"
+  ],
+  "note": "Applies the hunk at point to its target file on disk: locates the old image at old_start (fallback whole-file scan), replaces with the new image, writes the file. Pure apply_hunk unit-tested (exact position, scan, and mismatch-error cases)."
+ },
+ {
+  "spec_id": "emacs.command.diff_apply_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:diff_apply_buffer"
+  ],
+  "note": "Applies every hunk of every file in the diff buffer to its target file (hunks applied last-to-first so line numbers stay valid). Pure apply_file_diff unit-tested."
+ },
+ {
   "spec_id": "emacs.command.picture_mode",
   "status": "ported",
   "evidence": [
