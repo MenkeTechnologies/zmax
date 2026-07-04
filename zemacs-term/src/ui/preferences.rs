@@ -60,6 +60,22 @@ impl PreferencesPanel {
         p
     }
 
+    /// Open directly on the Settings tab, pre-filtered to `filter` (Emacs
+    /// `customize-variable` / `customize-option` / `customize-apropos`).
+    pub fn new_settings_filtered(filter: String) -> Self {
+        let mut p = Self::new(0);
+        p.settings = SettingsPanel::with_filter(filter);
+        p
+    }
+
+    /// Open directly on the Settings tab, showing only settings changed from their
+    /// default (Emacs `customize-unsaved` / `customize-changed`).
+    pub fn new_settings_modified() -> Self {
+        let mut p = Self::new(0);
+        p.settings = SettingsPanel::with_modified_only();
+        p
+    }
+
     fn active(&mut self) -> &mut dyn Component {
         match self.tab {
             0 => &mut self.settings,

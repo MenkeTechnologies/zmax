@@ -267,6 +267,9 @@ pub struct SettingsPanel {
     buf: String,
     filter: String,
     filtering: bool,
+    /// When true, only settings whose live value differs from the compiled
+    /// default are shown (Emacs `customize-unsaved` / `customize-changed`).
+    modified_only: bool,
     row_hits: Vec<(u16, u16, u16, usize)>,
     btn_hits: Vec<(u16, u16, u16, u8)>,
 }
@@ -287,21 +290,49 @@ impl SettingsPanel {
             buf: String::new(),
             filter: String::new(),
             filtering: false,
+            modified_only: false,
             row_hits: Vec::new(),
             btn_hits: Vec::new(),
         }
     }
 
+    /// Open the Settings tab pre-filtered to `filter` (Emacs `customize-variable`
+    /// / `customize-option` / `customize-apropos` / `customize-group`).
+    pub fn with_filter(filter: String) -> Self {
+        Self {
+            filter,
+            ..Self::new()
+        }
+    }
+
+    /// Open the Settings tab showing only settings changed from their default
+    /// (Emacs `customize-unsaved` / `customize-changed` / `customize-saved`).
+    pub fn with_modified_only() -> Self {
+        Self {
+            modified_only: true,
+            ..Self::new()
+        }
+    }
+
     fn visible(&self) -> Vec<usize> {
         // indices of rows that pass the filter (headers always shown if they have matches)
-        if self.filter.is_empty() {
+        let f = self.filter.to_lowercase();
+        if f.is_empty() && !self.modified_only {
             return (0..self.rows.len()).collect();
         }
-        let f = self.filter.to_lowercase();
         let mut out = Vec::new();
         for (i, r) in self.rows.iter().enumerate() {
-            if let Row::Field { path, label, .. } = r {
-                if label.to_lowercase().contains(&f) || path.join(".").to_lowercase().contains(&f) {
+            if let Row::Field {
+                path,
+                label,
+                modified,
+                ..
+            } = r
+            {
+                let matches_text = f.is_empty()
+                    || label.to_lowercase().contains(&f)
+                    || path.join(".").to_lowercase().contains(&f);
+                if matches_text && (!self.modified_only || *modified) {
                     out.push(i);
                 }
             }

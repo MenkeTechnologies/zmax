@@ -57,6 +57,7 @@ pub mod region_ops;
 pub mod rmail;
 pub mod search;
 pub mod selection;
+pub mod selective_display;
 pub mod sgml;
 pub mod snippets;
 pub mod sort;
