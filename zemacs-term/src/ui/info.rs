@@ -218,14 +218,23 @@ mod tests {
             for w in [40usize, 60, 90, 120, 160, 220, 300] {
                 let (text, budget, _h, _r, cols) = grid(&refs, 0, 16, w);
                 assert!((1..=8).contains(&cols), "w={w}: cols {cols} out of 1..=8");
-                assert!(cols >= prev_cols, "w={w}: cols shrank ({prev_cols} -> {cols})");
+                assert!(
+                    cols >= prev_cols,
+                    "w={w}: cols shrank ({prev_cols} -> {cols})"
+                );
                 prev_cols = cols;
                 for l in text.lines() {
-                    assert!(l.chars().count() <= budget, "w={w}: row overruns bar: {l:?}");
+                    assert!(
+                        l.chars().count() <= budget,
+                        "w={w}: row overruns bar: {l:?}"
+                    );
                 }
                 if cols >= 2 {
                     let widest = text.lines().map(|l| l.chars().count()).max().unwrap_or(0);
-                    assert_eq!(widest, budget, "w={w} cols={cols}: dead space (widest {widest} != budget {budget})");
+                    assert_eq!(
+                        widest, budget,
+                        "w={w} cols={cols}: dead space (widest {widest} != budget {budget})"
+                    );
                 }
             }
         }
