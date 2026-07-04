@@ -1143,6 +1143,7 @@ impl MappableCommand {
         rotate_view_reverse, "Goto previous window",
         scroll_other_window, "Scroll the other window forward (emacs scroll-other-window, C-M-v)",
         scroll_other_window_down, "Scroll the other window backward (emacs scroll-other-window-down, C-M-S-v)",
+        recenter_other_window, "Recenter point in the other window (emacs recenter-other-window, C-M-S-l)",
         hsplit, "Horizontal bottom split",
         hsplit_new, "Horizontal bottom split scratch buffer",
         vsplit, "Vertical right split",
@@ -24434,6 +24435,31 @@ fn scroll_other_window(cx: &mut Context) {
 
 fn scroll_other_window_down(cx: &mut Context) {
     scroll_other_window_impl(cx, Direction::Backward);
+}
+
+/// Recenter point in the *other* window without leaving the current one — Emacs
+/// `recenter-other-window` (C-M-S-l). Faithful to lisp/window.el, which runs
+/// `recenter-top-bottom` in `other-window-for-scrolling`; zemacs's C-l recenter
+/// is `align_view` `Center`, so this centers the other view on its cursor. Uses
+/// the same lightweight `tree.focus` retarget as `scroll_other_window` (avoiding
+/// the side effects of `Editor::focus`) and restores focus afterward.
+fn recenter_other_window(cx: &mut Context) {
+    if cx.editor.tree.views().count() < 2 {
+        cx.editor.set_status("no other window to recenter");
+        return;
+    }
+    let orig = cx.editor.tree.focus;
+    let other = cx.editor.tree.next();
+    if other == orig {
+        cx.editor.set_status("no other window to recenter");
+        return;
+    }
+    cx.editor.tree.focus = other;
+    {
+        let (view, doc) = current!(cx.editor);
+        align_view(doc, view, Align::Center);
+    }
+    cx.editor.tree.focus = orig;
 }
 
 fn jump_view_right(cx: &mut Context) {

@@ -813,6 +813,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "^" | "C-^" => goto_last_accessed_file, // C-w ^ / C-w C-^: edit alternate file
             "i" | "C-i" => goto_declaration,  // C-w i / C-w C-i: split + jump to declaration (no split)
             "p" | "C-p" => rotate_view,       // C-w p: go to previous (last accessed) window
+            "z" => recenter_other_window,     // C-w z: recenter point in the other window (emacs recenter-other-window)
             "C-t" => jump_view_up,            // C-w C-t: go to top window
             "t" => toggle_window_dedication,  // C-w t / SPC w t: toggle window dedication (spacemacs)
             "b" | "C-b" => jump_view_down,    // C-w b: go to bottom window
@@ -1183,6 +1184,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "^" | "C-^" => goto_last_accessed_file,
                 "i" | "C-i" => goto_declaration,
                 "p" | "C-p" => rotate_view,
+                "z" => recenter_other_window,     // SPC w z : recenter point in the other window (emacs recenter-other-window)
                 "C-t" => jump_view_up,
                 "t" => toggle_window_dedication,  // SPC w t : toggle window dedication (spacemacs)
                 "b" | "C-b" => jump_view_down,

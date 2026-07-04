@@ -33488,5 +33488,14 @@
    "key:insert:A-j"
   ],
   "note": "default-indent-new-line (M-j): break line at point and continue the comment, aligning the continuation under the current comment (comment-indent-new-line in-comment path); newline-and-indent when not in a comment."
+ },
+ {
+  "spec_id": "emacs.command.recenter_other_window",
+  "status": "ported",
+  "evidence": [
+   "static:recenter_other_window",
+   "key:normal:C-w z"
+  ],
+  "note": "recenter-other-window (C-M-S-l): recenter point in the other window, equivalent to C-l (recenter) acting on the other window. Ports lisp/window.el, which runs recenter-top-bottom in other-window-for-scrolling; centers the other view via align_view, restoring focus."
  }
 ]
