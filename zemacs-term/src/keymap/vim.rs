@@ -1420,6 +1420,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "r" => rerun_last_run,             // SPC c r : recompile (re-run last)
                 "m" => run_config_manager,         // SPC c m : pick a build/run target (helm-make)
                 "k" => clear_run_output,           // SPC c k : kill compilation (clear run output)
+                "x" => comment_kill,               // SPC c x : kill the comment on the current line (emacs comment-kill)
             },
             "j" => { "Jump"
                 "i" => symbol_picker,              // SPC j i

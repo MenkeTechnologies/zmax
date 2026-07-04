@@ -12360,6 +12360,14 @@
   "note": ""
  },
  {
+  "spec_id": "emacs.command.comment_kill",
+  "status": "ported",
+  "evidence": [
+   "static:comment_kill"
+  ],
+  "note": "Kills the comment on the current line (count kills that many lines) to the kill ring = emacs comment-kill; tree-sitter comment node with string-aware line-comment-token fallback."
+ },
+ {
   "spec_id": "emacs.command.indent_region",
   "status": "ported",
   "evidence": [
