@@ -11,7 +11,7 @@ use zemacs_lsp::{
     Client, LanguageServerId, OffsetEncoding,
 };
 
-use super::{align_view, push_jump, Align, Context, Editor};
+use super::{push_jump, Context, Editor};
 
 use zemacs_core::{
     diagnostic::DiagnosticProvider, syntax::config::LanguageServerFeature,
@@ -140,6 +140,7 @@ fn jump_to_position(
     offset_encoding: OffsetEncoding,
     action: Action,
 ) {
+    let scrolloff = editor.config().scrolloff;
     let doc = match editor.open(path, action) {
         Ok(id) => doc_mut!(editor, &id),
         Err(err) => {
@@ -160,9 +161,8 @@ fn jump_to_position(
     // we flip the range so that the cursor sits on the start of the symbol
     // (for example start of the function).
     doc.set_selection(view.id, Selection::single(new_range.head, new_range.anchor));
-    if action.align_view(view, doc.id()) {
-        align_view(doc, view, Align::Center);
-    }
+    // vim tag/definition jumps (gd, gr, Ctrl-]) scroll minimally, not centered.
+    view.ensure_cursor_in_view(doc, scrolloff);
 }
 
 fn display_symbol_kind(kind: lsp::SymbolKind) -> &'static str {

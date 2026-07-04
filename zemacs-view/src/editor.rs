@@ -3459,7 +3459,8 @@ impl Editor {
         }
         let (view, doc) = current!(self);
         doc.set_selection(view_id, selection);
-        view.ensure_cursor_in_view_center(doc, self.config.load().scrolloff);
+        // vim jumplist navigation (Ctrl-O/Ctrl-I) scrolls minimally, not centered.
+        view.ensure_cursor_in_view(doc, self.config.load().scrolloff);
     }
 }
 
