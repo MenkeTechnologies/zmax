@@ -73,11 +73,17 @@ fn grid(
     let visible = rows_total.min(max_rows);
     let scroll = scroll.min(rows_total.saturating_sub(visible));
 
-    // Spread the leftover width into the COLUMN WIDTHS (round-robin, each grows
-    // toward its natural width) rather than the gaps, keeping the gaps fixed at
-    // `SEP`. The extra space shows more description text instead of collapsing
-    // into a single mid-bar chasm (the failure mode when a 2-column menu dumps all
-    // leftover into its one gap).
+    // Fill the whole bar with NO dead space, in two passes:
+    //   1. Grow each column from its capped width toward its NATURAL (untruncated)
+    //      width. Long-description menus (e.g. the file menu) soak up the leftover
+    //      here, so more text is shown and the gaps below stay at `SEP` — this is
+    //      what stops the mid-bar chasm a 2-column menu used to open by dumping all
+    //      leftover into its single gap.
+    //   2. Distribute whatever leftover remains (short-label menus can't grow past
+    //      their content) EVENLY across the inter-column gaps, so many short columns
+    //      spread edge-to-edge instead of clustering on the left with dead space on
+    //      the right. With growth done first, the residual is small, so the gaps
+    //      never blow up into a chasm.
     let gaps = cols.saturating_sub(1);
     let natural: Vec<usize> = (0..cols).map(|c| col_width(cols, c, usize::MAX)).collect();
     let mut leftover = budget.saturating_sub(cw.iter().sum::<usize>() + SEP * gaps);
@@ -95,6 +101,11 @@ fn grid(
             }
         }
     }
+    // Pass 2: residual leftover spread evenly over the gaps (base + a 1-col extra
+    // for the first `gap_extra` gaps). One column has no gaps, so its short content
+    // trails into uniform background — the only case the width can't be filled.
+    let gap_base = leftover.checked_div(gaps).map_or(0, |q| SEP + q);
+    let gap_extra = if gaps > 0 { leftover % gaps } else { 0 };
 
     let mut out = String::new();
     for r in scroll..scroll + visible {
@@ -109,7 +120,7 @@ fn grid(
             };
             line.push_str(&format!("{cell:<w$}"));
             if c + 1 < cols {
-                line.push_str(&" ".repeat(SEP));
+                line.push_str(&" ".repeat(gap_base + usize::from(c < gap_extra)));
             }
         }
         out.push_str(line.trim_end());
@@ -178,6 +189,45 @@ impl Component for Info {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fills_full_width_1_to_8_cols_by_screen_width() {
+        // The which-key bar must never leave dead space and must use 1..=8 columns
+        // driven by screen width. Sweep realistic menus across widths and assert:
+        //   * cols always in 1..=8,
+        //   * cols never shrinks as the bar widens (responsive to width),
+        //   * no row overruns the bar,
+        //   * with >=2 columns the grid spans the FULL width (its widest row equals
+        //     the budget) — the last column always holds its widest entry at full
+        //     column width, and the gap distribution makes that row sum to budget,
+        //     so there is zero right-edge dead space and no mid-bar chasm.
+        // One column is exempt (no gap to spread into, so short content trails into
+        // uniform background).
+        let long: Vec<String> = (0..25)
+            .map(|i| match i % 5 {
+                0 => format!("{i:>2} : +grp"), // some short entries, like a real menu
+                _ => format!("{i:>2} : a reasonably long which-key description here"),
+            })
+            .collect();
+        let short: Vec<String> = (0..40).map(|i| format!("{i:>2} : +grp")).collect();
+        for menu in [&long, &short] {
+            let refs: Vec<&str> = menu.iter().map(String::as_str).collect();
+            let mut prev_cols = 0;
+            for w in [40usize, 60, 90, 120, 160, 220, 300] {
+                let (text, budget, _h, _r, cols) = grid(&refs, 0, 16, w);
+                assert!((1..=8).contains(&cols), "w={w}: cols {cols} out of 1..=8");
+                assert!(cols >= prev_cols, "w={w}: cols shrank ({prev_cols} -> {cols})");
+                prev_cols = cols;
+                for l in text.lines() {
+                    assert!(l.chars().count() <= budget, "w={w}: row overruns bar: {l:?}");
+                }
+                if cols >= 2 {
+                    let widest = text.lines().map(|l| l.chars().count()).max().unwrap_or(0);
+                    assert_eq!(widest, budget, "w={w} cols={cols}: dead space (widest {widest} != budget {budget})");
+                }
+            }
+        }
+    }
 
     #[test]
     fn col_cap_governs_count_not_display_width() {
