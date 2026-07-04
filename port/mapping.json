@@ -14938,6 +14938,15 @@
   "note": "emacs port (Step B)"
  },
  {
+  "spec_id": "emacs.command.inverse_add_global_abbrev",
+  "status": "ported",
+  "evidence": [
+   "static:inverse_add_global_abbrev",
+   "key:insert:C-x a i g"
+  ],
+  "note": "inverse-add-global-abbrev: word before point becomes the abbrev name, prompt for expansion, define in the global table (reuses emacs_abbrev::define + shared abbrev_word_before helper)"
+ },
+ {
   "spec_id": "functionality.selection.true-rectangle-insert-replace",
   "status": "ported",
   "evidence": [
