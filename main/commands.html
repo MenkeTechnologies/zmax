@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-58ae50b1.js";
+            window.path_to_searchindex_js = "searchindex-974f01a7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1313,6 +1313,11 @@
 <tr><td><code>toggle_modeline_position</code></td><td>Toggle cursor position in the mode line (SPC t m p)</td><td>normal: <code>&lt;space&gt;tmp</code>, select: <code>&lt;space&gt;tmp</code></td></tr>
 <tr><td><code>toggle_modeline_vcs</code></td><td>Toggle version-control info in the mode line (SPC t m v)</td><td>normal: <code>&lt;space&gt;tmv</code>, select: <code>&lt;space&gt;tmv</code></td></tr>
 <tr><td><code>toggle_centered_cursor</code></td><td>Keep the cursor vertically centered (SPC t -)</td><td>normal: <code>&lt;space&gt;t&lt;minus&gt;</code>, select: <code>&lt;space&gt;t&lt;minus&gt;</code></td></tr>
+<tr><td><code>toggle_hl_line</code></td><td>Highlight the current line (emacs hl-line-mode / global-hl-line-mode)</td><td></td></tr>
+<tr><td><code>toggle_electric_pair</code></td><td>Auto-insert matching close delimiters (emacs electric-pair-mode)</td><td></td></tr>
+<tr><td><code>toggle_auto_revert</code></td><td>Reload buffers when their file changes on disk (emacs auto-revert-mode)</td><td></td></tr>
+<tr><td><code>set_fill_prefix</code></td><td>Set the fill-prefix from line start to point (emacs set-fill-prefix)</td><td></td></tr>
+<tr><td><code>set_goal_column</code></td><td>Make vertical motion stick to the current column (emacs set-goal-column)</td><td></td></tr>
 <tr><td><code>toggle_fill_column</code></td><td>Toggle a fill-column ruler (SPC t f)</td><td>normal: <code>&lt;C-x&gt;f</code>, <code>&lt;space&gt;tf</code>, select: <code>&lt;C-x&gt;f</code>, <code>&lt;space&gt;tf</code>, insert: <code>&lt;C-x&gt;f</code></td></tr>
 <tr><td><code>toggle_long_line_marker</code></td><td>Toggle an 80th-column ruler (SPC t 8)</td><td>normal: <code>&lt;space&gt;t8</code>, <code>&lt;space&gt;t&lt;C-8&gt;</code>, select: <code>&lt;space&gt;t8</code>, <code>&lt;space&gt;t&lt;C-8&gt;</code></td></tr>
 <tr><td><code>toggle_soft_wrap</code></td><td>Toggle soft-wrap of long lines (IntelliJ View &gt; Soft-Wrap)</td><td>normal: <code>&lt;C-x&gt;xt</code>, select: <code>&lt;C-x&gt;xt</code>, insert: <code>&lt;C-x&gt;xt</code></td></tr>
@@ -1369,8 +1374,8 @@
 <tr><td><code>copy_system_info</code></td><td>Copy system info (version/OS/arch) to the clipboard (SPC h d s)</td><td>normal: <code>&lt;space&gt;hds</code>, select: <code>&lt;space&gt;hds</code></td></tr>
 <tr><td><code>copy_last_keys</code></td><td>Copy the most recently pressed keys to the clipboard (SPC h d l)</td><td>normal: <code>&lt;space&gt;hdl</code>, select: <code>&lt;space&gt;hdl</code></td></tr>
 <tr><td><code>ace_window</code></td><td>Jump to a window by its number, prompted (ace-window, SPC w . a)</td><td>normal: <code>&lt;C-w&gt;.a</code>, <code>&lt;space&gt;w.a</code>, select: <code>&lt;space&gt;w.a</code></td></tr>
-<tr><td><code>browse_news</code></td><td>Browse zemacs release notes / NEWS (SPC h n)</td><td>normal: <code>&lt;space&gt;hn</code>, <code>&lt;C-h&gt;&lt;C-n&gt;</code>, select: <code>&lt;space&gt;hn</code>, <code>&lt;C-h&gt;&lt;C-n&gt;</code>, insert: <code>&lt;C-h&gt;&lt;C-n&gt;</code></td></tr>
-<tr><td><code>browse_faq</code></td><td>Browse the zemacs FAQ (SPC h f)</td><td>normal: <code>&lt;space&gt;hf</code>, <code>&lt;C-h&gt;&lt;C-f&gt;</code>, <code>&lt;C-h&gt;&lt;C-p&gt;</code>, select: <code>&lt;space&gt;hf</code>, <code>&lt;C-h&gt;&lt;C-f&gt;</code>, <code>&lt;C-h&gt;&lt;C-p&gt;</code>, insert: <code>&lt;C-h&gt;&lt;C-f&gt;</code>, <code>&lt;C-h&gt;&lt;C-p&gt;</code></td></tr>
+<tr><td><code>browse_news</code></td><td>Browse zemacs release notes / NEWS (SPC h n)</td><td>normal: <code>&lt;C-h&gt;n</code>, <code>&lt;space&gt;hn</code>, <code>&lt;C-h&gt;&lt;C-n&gt;</code>, select: <code>&lt;C-h&gt;n</code>, <code>&lt;space&gt;hn</code>, <code>&lt;C-h&gt;&lt;C-n&gt;</code>, insert: <code>&lt;C-h&gt;n</code>, <code>&lt;C-h&gt;&lt;C-n&gt;</code></td></tr>
+<tr><td><code>browse_faq</code></td><td>Browse the zemacs FAQ (SPC h f)</td><td>normal: <code>&lt;space&gt;hf</code>, <code>&lt;C-h&gt;&lt;C-p&gt;</code>, select: <code>&lt;space&gt;hf</code>, <code>&lt;C-h&gt;&lt;C-p&gt;</code>, insert: <code>&lt;C-h&gt;&lt;C-p&gt;</code></td></tr>
 <tr><td><code>layer_search</code></td><td>Search zemacs capability areas / layers (SPC h l)</td><td>normal: <code>&lt;space&gt;hl</code>, select: <code>&lt;space&gt;hl</code></td></tr>
 <tr><td><code>show_environment</code></td><td>Show the editor’s environment variables (SPC f e e)</td><td>normal: <code>&lt;space&gt;fee</code>, select: <code>&lt;space&gt;fee</code></td></tr>
 <tr><td><code>reimport_shell_env</code></td><td>Re-import the shell environment into the editor (SPC f e C-e)</td><td>normal: <code>&lt;space&gt;feE</code>, <code>&lt;space&gt;fe&lt;C-e&gt;</code>, select: <code>&lt;space&gt;feE</code>, <code>&lt;space&gt;fe&lt;C-e&gt;</code></td></tr>
@@ -1385,6 +1390,25 @@
 <tr><td><code>describe_language_environment</code></td><td>Describe the language environment / locale (C-h L)</td><td>normal: <code>&lt;C-h&gt;L</code>, select: <code>&lt;C-h&gt;L</code>, insert: <code>&lt;C-h&gt;L</code></td></tr>
 <tr><td><code>describe_syntax</code></td><td>Describe the buffer’s syntax / tree-sitter status (C-h s)</td><td>normal: <code>&lt;C-h&gt;s</code>, select: <code>&lt;C-h&gt;s</code>, insert: <code>&lt;C-h&gt;s</code></td></tr>
 <tr><td><code>view_lossage</code></td><td>Show the recently pressed keys (C-h l)</td><td>normal: <code>&lt;C-h&gt;l</code>, select: <code>&lt;C-h&gt;l</code>, insert: <code>&lt;C-h&gt;l</code></td></tr>
+<tr><td><code>describe_char</code></td><td>Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =)</td><td></td></tr>
+<tr><td><code>view_hello_file</code></td><td>Show a multi-script greeting sample (emacs view-hello-file, C-h h)</td><td>normal: <code>&lt;C-h&gt;h</code>, select: <code>&lt;C-h&gt;h</code>, insert: <code>&lt;C-h&gt;h</code></td></tr>
+<tr><td><code>view_echo_area_messages</code></td><td>Show the last echo-area message (emacs view-echo-area-messages, C-h e)</td><td>normal: <code>&lt;C-h&gt;e</code>, select: <code>&lt;C-h&gt;e</code>, insert: <code>&lt;C-h&gt;e</code></td></tr>
+<tr><td><code>describe_copying</code></td><td>Show zemacs’s copying license, the GPL (emacs describe-copying, C-h C-c)</td><td>normal: <code>&lt;C-h&gt;&lt;C-c&gt;</code>, select: <code>&lt;C-h&gt;&lt;C-c&gt;</code>, insert: <code>&lt;C-h&gt;&lt;C-c&gt;</code></td></tr>
+<tr><td><code>describe_distribution</code></td><td>How to get zemacs / GNU software (emacs describe-distribution, C-h C-d)</td><td>normal: <code>&lt;C-h&gt;&lt;C-d&gt;</code>, select: <code>&lt;C-h&gt;&lt;C-d&gt;</code>, insert: <code>&lt;C-h&gt;&lt;C-d&gt;</code></td></tr>
+<tr><td><code>describe_gnu_project</code></td><td>Open the GNU project page (emacs describe-gnu-project, C-h g)</td><td>normal: <code>&lt;C-h&gt;g</code>, select: <code>&lt;C-h&gt;g</code>, insert: <code>&lt;C-h&gt;g</code></td></tr>
+<tr><td><code>describe_no_warranty</code></td><td>Show the GPL no-warranty sections (emacs describe-no-warranty, C-h C-w)</td><td>normal: <code>&lt;C-h&gt;&lt;C-w&gt;</code>, select: <code>&lt;C-h&gt;&lt;C-w&gt;</code>, insert: <code>&lt;C-h&gt;&lt;C-w&gt;</code></td></tr>
+<tr><td><code>view_emacs_faq</code></td><td>Open the GNU Emacs FAQ (emacs view-emacs-FAQ, C-h C-f)</td><td>normal: <code>&lt;C-h&gt;&lt;C-f&gt;</code>, select: <code>&lt;C-h&gt;&lt;C-f&gt;</code>, insert: <code>&lt;C-h&gt;&lt;C-f&gt;</code></td></tr>
+<tr><td><code>view_emacs_todo</code></td><td>Open the Emacs TODO list (emacs view-emacs-todo)</td><td></td></tr>
+<tr><td><code>view_emacs_problems</code></td><td>Open the Emacs known-problems file (emacs view-emacs-problems)</td><td></td></tr>
+<tr><td><code>view_emacs_debugging</code></td><td>Open the Emacs debugging manual (emacs view-emacs-debugging)</td><td></td></tr>
+<tr><td><code>view_order_manuals</code></td><td>Open where to get the GNU manuals (emacs view-order-manuals)</td><td></td></tr>
+<tr><td><code>view_external_packages</code></td><td>Open GNU ELPA / external packages (emacs view-external-packages)</td><td></td></tr>
+<tr><td><code>describe_keymap</code></td><td>List every binding of the current mode’s keymap (emacs describe-keymap)</td><td></td></tr>
+<tr><td><code>describe_prefix_bindings</code></td><td>List the sub-bindings of a prefix (emacs describe-prefix-bindings)</td><td></td></tr>
+<tr><td><code>describe_categories</code></td><td>List the character categories zemacs recognises (emacs describe-categories)</td><td></td></tr>
+<tr><td><code>list_character_sets</code></td><td>List the Unicode blocks zemacs knows (emacs list-character-sets)</td><td></td></tr>
+<tr><td><code>list_charset_chars</code></td><td>List the printable characters of each Unicode block (emacs list-charset-chars)</td><td></td></tr>
+<tr><td><code>list_coding_systems</code></td><td>List the coding systems / encodings zemacs supports (emacs list-coding-systems)</td><td></td></tr>
 <tr><td><code>describe_language_package</code></td><td>Describe the language-support config for the buffer (SPC h d p)</td><td>normal: <code>&lt;space&gt;hdp</code>, select: <code>&lt;space&gt;hdp</code></td></tr>
 <tr><td><code>package_search</code></td><td>Search configured language packages and describe one (SPC h p)</td><td>normal: <code>&lt;C-h&gt;P</code>, <code>&lt;C-h&gt;p</code>, <code>&lt;space&gt;hp</code>, <code>&lt;C-h&gt;&lt;C-e&gt;</code>, select: <code>&lt;C-h&gt;P</code>, <code>&lt;C-h&gt;p</code>, <code>&lt;space&gt;hp</code>, <code>&lt;C-h&gt;&lt;C-e&gt;</code>, insert: <code>&lt;C-h&gt;P</code>, <code>&lt;C-h&gt;p</code>, <code>&lt;C-h&gt;&lt;C-e&gt;</code></td></tr>
 <tr><td><code>config_variable_search</code></td><td>Search editor config variables, copy path on select (SPC h .)</td><td>normal: <code>&lt;C-h&gt;v</code>, <code>&lt;space&gt;h.</code>, select: <code>&lt;C-h&gt;v</code>, <code>&lt;space&gt;h.</code>, insert: <code>&lt;C-h&gt;v</code></td></tr>
@@ -1428,6 +1452,40 @@
 <tr><td><code>diary_insert_entry</code></td><td>Add a diary entry for today (emacs diary-insert-entry)</td><td></td></tr>
 <tr><td><code>diary_insert_weekly_entry</code></td><td>Add a weekly diary entry for today (emacs diary-insert-weekly-entry)</td><td></td></tr>
 <tr><td><code>diary_mark_entries</code></td><td>Mark calendar dates that have diary entries (emacs diary-mark-entries)</td><td></td></tr>
+<tr><td><code>calendar_print_other_dates</code></td><td>Report today’s date in all other calendars (emacs calendar-print-other-dates)</td><td></td></tr>
+<tr><td><code>calendar_julian_print_date</code></td><td>Today’s Julian (Roman) calendar date (emacs calendar-julian-print-date)</td><td></td></tr>
+<tr><td><code>calendar_iso_print_date</code></td><td>Today’s ISO 8601 week date (emacs calendar-iso-print-date)</td><td></td></tr>
+<tr><td><code>calendar_hebrew_print_date</code></td><td>Today’s Hebrew calendar date (emacs calendar-hebrew-print-date)</td><td></td></tr>
+<tr><td><code>calendar_islamic_print_date</code></td><td>Today’s Islamic calendar date (emacs calendar-islamic-print-date)</td><td></td></tr>
+<tr><td><code>calendar_persian_print_date</code></td><td>Today’s Persian calendar date (emacs calendar-persian-print-date)</td><td></td></tr>
+<tr><td><code>calendar_coptic_print_date</code></td><td>Today’s Coptic calendar date (emacs calendar-coptic-print-date)</td><td></td></tr>
+<tr><td><code>calendar_ethiopic_print_date</code></td><td>Today’s Ethiopic calendar date (emacs calendar-ethiopic-print-date)</td><td></td></tr>
+<tr><td><code>calendar_french_print_date</code></td><td>Today’s French Revolutionary date (emacs calendar-french-print-date)</td><td></td></tr>
+<tr><td><code>calendar_bahai_print_date</code></td><td>Today’s Baha’i date, approx (emacs calendar-bahai-print-date)</td><td></td></tr>
+<tr><td><code>calendar_astro_print_day_number</code></td><td>Astronomical (Julian) day number (emacs calendar-astro-print-day-number)</td><td></td></tr>
+<tr><td><code>calendar_mayan_print_date</code></td><td>Today’s Mayan date (emacs calendar-mayan-print-date)</td><td></td></tr>
+<tr><td><code>calendar_day_of_year</code></td><td>Day-of-year of today (emacs calendar-day-of-year)</td><td></td></tr>
+<tr><td><code>calendar_goto_day_of_year</code></td><td>Echo the date for a day-of-year (emacs calendar-goto-day-of-year)</td><td></td></tr>
+<tr><td><code>calendar_count_days_region</code></td><td>Count days between two dates (emacs calendar-count-days-region)</td><td></td></tr>
+<tr><td><code>calendar_list_holidays</code></td><td>List this year’s holidays (emacs calendar-list-holidays)</td><td></td></tr>
+<tr><td><code>holidays</code></td><td>List this year’s holidays (emacs holidays)</td><td></td></tr>
+<tr><td><code>holiday_list</code></td><td>List this year’s holidays (emacs holiday-list)</td><td></td></tr>
+<tr><td><code>list_holidays</code></td><td>List this year’s holidays (emacs list-holidays)</td><td></td></tr>
+<tr><td><code>calendar_lunar_phases</code></td><td>This month’s moon phases, approx (emacs calendar-lunar-phases)</td><td></td></tr>
+<tr><td><code>calendar_sunrise_sunset</code></td><td>Sunrise/sunset today, approx (emacs calendar-sunrise-sunset)</td><td></td></tr>
+<tr><td><code>calendar_other_month</code></td><td>Open the Calendar at another month (emacs calendar-other-month)</td><td></td></tr>
+<tr><td><code>calendar_set_date_style</code></td><td>Cycle american/european/iso date style (emacs calendar-set-date-style)</td><td></td></tr>
+<tr><td><code>calendar_hebrew_goto_date</code></td><td>Echo Gregorian for a Hebrew date (emacs calendar-hebrew-goto-date)</td><td></td></tr>
+<tr><td><code>calendar_islamic_goto_date</code></td><td>Echo Gregorian for an Islamic date (emacs calendar-islamic-goto-date)</td><td></td></tr>
+<tr><td><code>calendar_julian_goto_date</code></td><td>Echo Gregorian for a Julian date (emacs calendar-julian-goto-date)</td><td></td></tr>
+<tr><td><code>calendar_iso_goto_week</code></td><td>Echo Gregorian for an ISO week date (emacs calendar-iso-goto-week)</td><td></td></tr>
+<tr><td><code>calendar_persian_goto_date</code></td><td>Echo Gregorian for a Persian date (emacs calendar-persian-goto-date)</td><td></td></tr>
+<tr><td><code>calendar_coptic_goto_date</code></td><td>Echo Gregorian for a Coptic date (emacs calendar-coptic-goto-date)</td><td></td></tr>
+<tr><td><code>calendar_ethiopic_goto_date</code></td><td>Echo Gregorian for an Ethiopic date (emacs calendar-ethiopic-goto-date)</td><td></td></tr>
+<tr><td><code>calendar_french_goto_date</code></td><td>Echo Gregorian for a French Revolutionary date (emacs calendar-french-goto-date)</td><td></td></tr>
+<tr><td><code>calendar_bahai_goto_date</code></td><td>Echo Gregorian for a Baha’i date (emacs calendar-bahai-goto-date)</td><td></td></tr>
+<tr><td><code>calendar_astro_goto_day_number</code></td><td>Echo Gregorian for an astro day number (emacs calendar-astro-goto-day-number)</td><td></td></tr>
+<tr><td><code>calendar_mayan_goto_long_count</code></td><td>Echo Gregorian for a Mayan long count (emacs calendar-mayan-goto-long-count)</td><td></td></tr>
 <tr><td><code>calc_dispatch</code></td><td>Open the RPN Calc stack calculator (emacs calc / C-x *)</td><td>normal: <code>&lt;space&gt;ac</code>, select: <code>&lt;space&gt;ac</code></td></tr>
 <tr><td><code>occur</code></td><td>List lines matching a regexp in an <em>Occur</em> overlay (emacs occur / M-s o)</td><td></td></tr>
 <tr><td><code>rmail</code></td><td>Open the Rmail mail reader on ~/RMAIL (emacs rmail)</td><td>normal: <code>&lt;space&gt;ar</code>, select: <code>&lt;space&gt;ar</code></td></tr>
@@ -1668,6 +1726,7 @@
 <tr><td><code>comment_to_line</code></td><td>Comment/uncomment from the cursor line to a prompted line (SPC c t)</td><td>normal: <code>&lt;space&gt;ct</code>, select: <code>&lt;space&gt;ct</code></td></tr>
 <tr><td><code>invert_comment_to_line</code></td><td>Invert comments per line from the cursor to a prompted line (SPC c T)</td><td>normal: <code>&lt;space&gt;cT</code>, select: <code>&lt;space&gt;cT</code></td></tr>
 <tr><td><code>toggle_block_comments</code></td><td>Block comment/uncomment selections</td><td>normal: <code>&lt;space&gt;cb</code>, select: <code>&lt;space&gt;cb</code></td></tr>
+<tr><td><code>comment_kill</code></td><td>Kill the comment on the current line to the kill ring (emacs comment-kill; count kills that many lines)</td><td>normal: <code>&lt;space&gt;cx</code>, select: <code>&lt;space&gt;cx</code></td></tr>
 <tr><td><code>rotate_selections_forward</code></td><td>Rotate selections forward</td><td></td></tr>
 <tr><td><code>rotate_selections_backward</code></td><td>Rotate selections backward</td><td></td></tr>
 <tr><td><code>rotate_selection_contents_forward</code></td><td>Rotate selection contents forward</td><td></td></tr>
@@ -1856,7 +1915,7 @@
 <tr><td><code>toggle_blame_annotate</code></td><td>Toggle the git-blame annotate gutter column (SPC g B)</td><td>normal: <code>&lt;space&gt;gB</code>, select: <code>&lt;space&gt;gB</code></td></tr>
 <tr><td><code>git_branch_picker</code></td><td>Pick a git branch and check it out</td><td>normal: <code>&lt;C-x&gt;vr</code>, <code>&lt;C-x&gt;vs</code>, <code>&lt;C-x&gt;vbc</code>, <code>&lt;C-x&gt;vbs</code>, select: <code>&lt;C-x&gt;vr</code>, <code>&lt;C-x&gt;vs</code>, <code>&lt;C-x&gt;vbc</code>, <code>&lt;C-x&gt;vbs</code>, insert: <code>&lt;C-x&gt;vr</code>, <code>&lt;C-x&gt;vs</code>, <code>&lt;C-x&gt;vbc</code>, <code>&lt;C-x&gt;vbs</code></td></tr>
 <tr><td><code>preferences</code></td><td>Open the unified Preferences window</td><td>normal: <code>&lt;space&gt;,</code>, select: <code>&lt;space&gt;,</code></td></tr>
-<tr><td><code>help</code></td><td>Open the inline Help browser</td><td>normal: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;e</code>, <code>&lt;C-h&gt;g</code>, <code>&lt;C-h&gt;h</code>, <code>&lt;C-h&gt;n</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;t</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-c&gt;</code>, <code>&lt;C-h&gt;&lt;C-d&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-m&gt;</code>, <code>&lt;C-h&gt;&lt;C-o&gt;</code>, <code>&lt;C-h&gt;&lt;C-q&gt;</code>, <code>&lt;C-h&gt;&lt;C-t&gt;</code>, <code>&lt;C-h&gt;&lt;C-w&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, select: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;e</code>, <code>&lt;C-h&gt;g</code>, <code>&lt;C-h&gt;h</code>, <code>&lt;C-h&gt;n</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;t</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-c&gt;</code>, <code>&lt;C-h&gt;&lt;C-d&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-m&gt;</code>, <code>&lt;C-h&gt;&lt;C-o&gt;</code>, <code>&lt;C-h&gt;&lt;C-q&gt;</code>, <code>&lt;C-h&gt;&lt;C-t&gt;</code>, <code>&lt;C-h&gt;&lt;C-w&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, insert: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;e</code>, <code>&lt;C-h&gt;g</code>, <code>&lt;C-h&gt;h</code>, <code>&lt;C-h&gt;n</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;t</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;C-h&gt;&lt;C-c&gt;</code>, <code>&lt;C-h&gt;&lt;C-d&gt;</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-m&gt;</code>, <code>&lt;C-h&gt;&lt;C-o&gt;</code>, <code>&lt;C-h&gt;&lt;C-q&gt;</code>, <code>&lt;C-h&gt;&lt;C-t&gt;</code>, <code>&lt;C-h&gt;&lt;C-w&gt;</code></td></tr>
+<tr><td><code>help</code></td><td>Open the inline Help browser</td><td>normal: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;t</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-m&gt;</code>, <code>&lt;C-h&gt;&lt;C-o&gt;</code>, <code>&lt;C-h&gt;&lt;C-q&gt;</code>, <code>&lt;C-h&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, select: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;t</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-m&gt;</code>, <code>&lt;C-h&gt;&lt;C-o&gt;</code>, <code>&lt;C-h&gt;&lt;C-q&gt;</code>, <code>&lt;C-h&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, insert: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;t</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-m&gt;</code>, <code>&lt;C-h&gt;&lt;C-o&gt;</code>, <code>&lt;C-h&gt;&lt;C-q&gt;</code>, <code>&lt;C-h&gt;&lt;C-t&gt;</code></td></tr>
 <tr><td><code>dashboard</code></td><td>Open the system-stats Dashboard (Preferences)</td><td>normal: <code>&lt;space&gt;bh</code>, select: <code>&lt;space&gt;bh</code></td></tr>
 <tr><td><code>search_in_files</code></td><td>Open the project-wide Find in Files panel</td><td></td></tr>
 <tr><td><code>terminal</code></td><td>Open an integrated terminal (PTY shell)</td><td>normal: <code>&lt;space&gt;p'</code>, select: <code>&lt;space&gt;p'</code></td></tr>
@@ -2081,6 +2140,14 @@
 <tr><td><code>video_poker</code></td><td>Play Jacks-or-Better video poker</td><td></td></tr>
 <tr><td><code>klondike</code></td><td>Play Klondike solitaire</td><td></td></tr>
 <tr><td><code>nonogram</code></td><td>Play nonogram / picross</td><td></td></tr>
+<tr><td><code>xref_find_references</code></td><td>Find references to a symbol across the workspace (emacs xref-find-references)</td><td></td></tr>
+<tr><td><code>project_find_file</code></td><td>Find a file under the project root (emacs project-find-file)</td><td></td></tr>
+<tr><td><code>diffmode</code></td><td>Open the unified-diff viewer (emacs diff-mode)</td><td></td></tr>
+<tr><td><code>picture</code></td><td>Draw ASCII pictures on a canvas (emacs picture-mode)</td><td></td></tr>
+<tr><td><code>table</code></td><td>Edit a text table (emacs table.el)</td><td></td></tr>
+<tr><td><code>facemenu</code></td><td>Browse faces and colors (emacs list-faces-display / facemenu)</td><td></td></tr>
+<tr><td><code>bookmark_bmenu_list</code></td><td>List bookmarks in an overlay (emacs bookmark-bmenu-list)</td><td></td></tr>
+<tr><td><code>proced</code></td><td>Open the process viewer/manager (emacs proced)</td><td></td></tr>
 <tr><td><code>zone</code></td><td>Run the zone screen-saver (emacs zone)</td><td></td></tr>
 <tr><td><code>decipher</code></td><td>Solve a cryptogram (emacs decipher)</td><td></td></tr>
 <tr><td><code>dunnet</code></td><td>Play the dunnet text adventure (emacs dunnet)</td><td></td></tr>
