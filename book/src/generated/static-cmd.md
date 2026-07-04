@@ -651,6 +651,7 @@
 | `comment_to_line` | Comment/uncomment from the cursor line to a prompted line (SPC c t) | normal: `` <space>ct ``, select: `` <space>ct `` |
 | `invert_comment_to_line` | Invert comments per line from the cursor to a prompted line (SPC c T) | normal: `` <space>cT ``, select: `` <space>cT `` |
 | `toggle_block_comments` | Block comment/uncomment selections | normal: `` <space>cb ``, select: `` <space>cb `` |
+| `comment_kill` | Kill the comment on the current line to the kill ring (emacs comment-kill; count kills that many lines) | normal: `` <space>cx ``, select: `` <space>cx `` |
 | `rotate_selections_forward` | Rotate selections forward |  |
 | `rotate_selections_backward` | Rotate selections backward |  |
 | `rotate_selection_contents_forward` | Rotate selection contents forward |  |
