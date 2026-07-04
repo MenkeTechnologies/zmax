@@ -28,6 +28,7 @@ pub mod editor_config;
 pub mod email;
 pub mod facemenu;
 pub mod fold;
+pub mod fortran;
 pub mod fuzzy;
 pub mod graphemes;
 pub mod history;
