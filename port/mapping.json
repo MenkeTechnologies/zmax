@@ -30876,5 +30876,269 @@
    "static:swap_view_down"
   ],
   "note": "emacs windmove-swap-states-down -> swap_view_down: swap_split_in_direction(Down)."
+ },
+ {
+  "spec_id": "emacs.command.vc_print_log",
+  "status": "ported",
+  "evidence": [
+   "static:vc_print_log"
+  ],
+  "note": "VC log for the current file (git log via the gix commit picker)."
+ },
+ {
+  "spec_id": "emacs.command.vc_print_root_log",
+  "status": "ported",
+  "evidence": [
+   "static:vc_print_root_log"
+  ],
+  "note": "VC log for the whole repository (gix commit picker)."
+ },
+ {
+  "spec_id": "emacs.command.vc_print_branch_log",
+  "status": "ported",
+  "evidence": [
+   "static:vc_print_branch_log"
+  ],
+  "note": "git log for a prompted branch, shown in a scratch buffer."
+ },
+ {
+  "spec_id": "emacs.command.vc_root_diff",
+  "status": "ported",
+  "evidence": [
+   "static:vc_root_diff"
+  ],
+  "note": "git diff HEAD for the whole working tree, shown in a scratch buffer."
+ },
+ {
+  "spec_id": "emacs.command.vc_region_history",
+  "status": "ported",
+  "evidence": [
+   "static:vc_region_history"
+  ],
+  "note": "git log -L<from>,<to>:<file> for the selected line range."
+ },
+ {
+  "spec_id": "emacs.command.vc_log_incoming",
+  "status": "ported",
+  "evidence": [
+   "static:vc_log_incoming"
+  ],
+  "note": "git log ..@{u}: commits incoming from upstream (last fetch)."
+ },
+ {
+  "spec_id": "emacs.command.vc_log_outgoing",
+  "status": "ported",
+  "evidence": [
+   "static:vc_log_outgoing"
+  ],
+  "note": "git log @{u}..: commits outgoing to upstream."
+ },
+ {
+  "spec_id": "emacs.command.vc_log_search",
+  "status": "ported",
+  "evidence": [
+   "static:vc_log_search"
+  ],
+  "note": "git log --grep=<pattern> for a prompted pattern."
+ },
+ {
+  "spec_id": "emacs.command.vc_create_branch",
+  "status": "ported",
+  "evidence": [
+   "static:vc_create_branch"
+  ],
+  "note": "git switch -c <name>: create and switch to a new branch."
+ },
+ {
+  "spec_id": "emacs.command.vc_switch_branch",
+  "status": "ported",
+  "evidence": [
+   "static:vc_switch_branch"
+  ],
+  "note": "reuses the branch picker (git for-each-ref + git checkout)."
+ },
+ {
+  "spec_id": "emacs.command.vc_create_tag",
+  "status": "ported",
+  "evidence": [
+   "static:vc_create_tag"
+  ],
+  "note": "git tag <name> at HEAD."
+ },
+ {
+  "spec_id": "emacs.command.vc_retrieve_tag",
+  "status": "ported",
+  "evidence": [
+   "static:vc_retrieve_tag"
+  ],
+  "note": "git checkout <tag/branch>, then reload open buffers."
+ },
+ {
+  "spec_id": "emacs.command.vc_rename_file",
+  "status": "ported",
+  "evidence": [
+   "static:vc_rename_file"
+  ],
+  "note": "git mv the current file, then open the new path."
+ },
+ {
+  "spec_id": "emacs.command.vc_delete_file",
+  "status": "ported",
+  "evidence": [
+   "static:vc_delete_file"
+  ],
+  "note": "git rm -f the current file."
+ },
+ {
+  "spec_id": "emacs.command.vc_ignore",
+  "status": "ported",
+  "evidence": [
+   "static:vc_ignore"
+  ],
+  "note": "append the file's repo-relative path to .gitignore (zemacs_core::vc::gitignore_append, unit-tested)."
+ },
+ {
+  "spec_id": "emacs.command.vc_revert",
+  "status": "ported",
+  "evidence": [
+   "static:vc_revert"
+  ],
+  "note": "git checkout -- <file> to restore to HEAD, then reload the buffer."
+ },
+ {
+  "spec_id": "emacs.command.vc_refresh_state",
+  "status": "ported",
+  "evidence": [
+   "static:vc_refresh_state"
+  ],
+  "note": "recompute the buffer's diff base (gutter) and current-branch head via diff_providers."
+ },
+ {
+  "spec_id": "emacs.command.vc_state_refresh",
+  "status": "ported",
+  "evidence": [
+   "static:vc_state_refresh"
+  ],
+  "note": "alias of vc-refresh-state."
+ },
+ {
+  "spec_id": "emacs.command.vc_pull",
+  "status": "ported",
+  "evidence": [
+   "static:vc_pull"
+  ],
+  "note": "reuses git pull --ff-only (async)."
+ },
+ {
+  "spec_id": "emacs.command.vc_push",
+  "status": "ported",
+  "evidence": [
+   "static:vc_push"
+  ],
+  "note": "reuses git push (async)."
+ },
+ {
+  "spec_id": "emacs.command.vc_dir",
+  "status": "ported",
+  "evidence": [
+   "static:vc_dir"
+  ],
+  "note": "opens the Magit status buffer, zemacs's VC-directory equivalent."
+ },
+ {
+  "spec_id": "emacs.command.project_vc_dir",
+  "status": "ported",
+  "evidence": [
+   "static:project_vc_dir"
+  ],
+  "note": "opens the Magit status buffer for the project repo."
+ },
+ {
+  "spec_id": "emacs.command.project_search",
+  "status": "ported",
+  "evidence": [
+   "static:project_search"
+  ],
+  "note": "grep the project into the jumpable Run console (reuses the :grep machinery)."
+ },
+ {
+  "spec_id": "emacs.command.project_query_replace_regexp",
+  "status": "ported",
+  "evidence": [
+   "static:project_query_replace_regexp"
+  ],
+  "note": "regex search/replace across the project (reuses :project-replace core via ripgrep)."
+ },
+ {
+  "spec_id": "emacs.command.project_shell_command",
+  "status": "ported",
+  "evidence": [
+   "static:project_shell_command"
+  ],
+  "note": "run a synchronous shell command in the project root; output to a scratch buffer."
+ },
+ {
+  "spec_id": "emacs.command.project_async_shell_command",
+  "status": "ported",
+  "evidence": [
+   "static:project_async_shell_command"
+  ],
+  "note": "run an async shell command in the project root; output streamed to the Run console."
+ },
+ {
+  "spec_id": "emacs.command.xref_find_definitions_other_window",
+  "status": "ported",
+  "evidence": [
+   "static:xref_find_definitions_other_window"
+  ],
+  "note": "hsplit then LSP goto-definition of the symbol at point."
+ },
+ {
+  "spec_id": "emacs.command.vc_next_action",
+  "status": "partial",
+  "evidence": [
+   "static:vc_next_action"
+  ],
+  "note": "stages the current file then opens Magit to compose the commit; zemacs has no single check-in-comment buffer."
+ },
+ {
+  "spec_id": "emacs.command.project_switch_project",
+  "status": "partial",
+  "evidence": [
+   "static:project_switch_project"
+  ],
+  "note": "prompts for the project directory and opens its find-file overlay; zemacs keeps no persisted known-projects list."
+ },
+ {
+  "spec_id": "emacs.command.project_list_buffers",
+  "status": "partial",
+  "evidence": [
+   "static:project_list_buffers"
+  ],
+  "note": "lists all open buffers (reuses the buffer picker); not filtered to the current project."
+ },
+ {
+  "spec_id": "emacs.command.project_eshell",
+  "status": "partial",
+  "evidence": [
+   "static:project_eshell"
+  ],
+  "note": "opens an M-x shell-style comint buffer on $SHELL (not Emacs eshell); runs in the editor working directory."
+ },
+ {
+  "spec_id": "emacs.command.xref_query_replace_in_results",
+  "status": "partial",
+  "evidence": [
+   "static:xref_query_replace_in_results"
+  ],
+  "note": "whole-project ripgrep regex replace, not limited to the current xref result set."
+ },
+ {
+  "spec_id": "emacs.command.xref_find_references_and_replace",
+  "status": "partial",
+  "evidence": [
+   "static:xref_find_references_and_replace"
+  ],
+  "note": "whole-project ripgrep replace of the symbol (word-bounded), not the semantic LSP reference set."
  }
 ]
