@@ -768,6 +768,9 @@ impl MappableCommand {
         rmail, "Open the Rmail mail reader on ~/RMAIL (emacs rmail)",
         dired, "Open the Dired directory editor (emacs C-x d)",
         dired_jump, "Open Dired on the current buffer's directory (emacs C-x C-j)",
+        dired_other_window, "Open Dired (overlay; emacs dired-other-window C-x 4 d)",
+        dired_jump_other_window, "Open Dired on the buffer's dir (overlay; emacs dired-jump-other-window)",
+        dired_at_point, "Open Dired on the file name at point (emacs dired-at-point)",
         tex_insert_braces, "TeX: insert a {} brace pair (emacs tex-insert-braces)",
         tex_insert_quote, "TeX: insert `` or '' smart quotes (emacs tex-insert-quote)",
         tex_terminate_paragraph, "TeX: end the paragraph (emacs tex-terminate-paragraph)",
@@ -11908,7 +11911,7 @@ fn git_init(cx: &mut Context) {
 
 /// Load `content` into a fresh scratch buffer in the current window (replacing the view's
 /// document, which stays in the buffer list). Used to display read-only generated text.
-fn show_text_in_scratch(editor: &mut Editor, content: &str) {
+pub(crate) fn show_text_in_scratch(editor: &mut Editor, content: &str) {
     editor.new_file(Action::Replace);
     let (view, doc) = current!(editor);
     doc.ensure_view_init(view.id);
@@ -18153,6 +18156,62 @@ fn dired_jump(cx: &mut Context) {
         .path()
         .and_then(|p| p.parent().map(|p| p.to_path_buf()))
         .unwrap_or_else(zemacs_stdx::env::current_working_dir);
+    open_overlay(cx, move |_editor| {
+        crate::ui::dired::Dired::new(dir)
+            .map(|d| Box::new(d) as Box<dyn Component>)
+            .map_err(|e| format!("dired: {e}"))
+    });
+}
+
+/// Emacs `dired-other-window` (C-x 4 d): open Dired on the workspace root. In
+/// zemacs Dired is a full-screen modal overlay, so "other window" cannot show the
+/// listing beside the current buffer; it opens the same overlay (marked partial).
+fn dired_other_window(cx: &mut Context) {
+    dired(cx);
+}
+
+/// Emacs `dired-jump-other-window` (C-x 4 C-j): like `dired-jump` but nominally
+/// in another window. zemacs Dired is a modal overlay, so this is the same as
+/// `dired-jump` (marked partial for the missing split semantics).
+fn dired_jump_other_window(cx: &mut Context) {
+    dired_jump(cx);
+}
+
+/// Emacs `dired-at-point` (ffap): read the file name around point in the current
+/// buffer and open Dired on it — on its parent directory if it names a file. Pure
+/// token extraction lives in `zemacs_core::dired::filename_at_point`.
+fn dired_at_point(cx: &mut Context) {
+    let name = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let byte = text.char_to_byte(cursor);
+        zemacs_core::dired::filename_at_point(&text.to_string(), byte)
+    };
+    let Some(name) = name else {
+        cx.editor.set_error("dired-at-point: no file name at point");
+        return;
+    };
+    // Resolve relative to the current buffer's directory, else the working dir.
+    let base = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(zemacs_stdx::env::current_working_dir);
+    let target = if Path::new(&name).is_absolute() {
+        PathBuf::from(&name)
+    } else {
+        base.join(&name)
+    };
+    // Dired the directory itself, or the parent when it names a regular file.
+    let dir = if target.is_dir() {
+        target
+    } else {
+        target
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(zemacs_stdx::env::current_working_dir)
+    };
     open_overlay(cx, move |_editor| {
         crate::ui::dired::Dired::new(dir)
             .map(|d| Box::new(d) as Box<dyn Component>)

@@ -49,9 +49,30 @@
 //!   *   — mark by regexp                 (dired-mark-files-regexp)
 //!   /   — flag for deletion by regexp    (dired-flag-files-regexp)
 //!   J   — goto file by name              (dired-goto-file)
+//! > Later slice (this file), each on a free single key since the component
+//! > matches one key at a time (Emacs uses `%`/`*`-prefixed chords):
+//!   c   — change one mark char to another (dired-change-marks)
+//!   P   — mark all files in the subdir    (dired-mark-subdir-files)
+//!   y   — mark files whose CONTENTS match (dired-mark-files-containing-regexp)
+//!   ,   — flag excess numbered backups    (dired-clean-directory)
+//!   _   — undo the last listing edit      (dired-undo)
+//!   e/B/F/I/L — regexp rename/copy/hardlink/symlink/relsymlink of names
+//!               (dired-do-rename/copy/hardlink/symlink/relsymlink-regexp)
+//!   Y   — relative symlink to a dir       (dired-do-relsymlink)
+//!   =   — diff file at point vs another   (dired-diff)
+//!   @   — mark files differing from a dir (dired-compare-directories)
+//!   O/W — chown / chgrp targets           (dired-do-chown / dired-do-chgrp)
+//!   X   — gzip/gunzip targets             (dired-do-compress)
+//!   Q   — tar+gzip targets into an archive (dired-do-compress-to)
+//!   !   — run a shell command on targets  (dired-do-shell-command)
+//!   V   — open targets in the OS app      (dired-do-open)
+//!   a   — grep targets for a regexp       (dired-do-find-regexp)
+//!   i/h — incremental filename search     (dired-isearch-filenames[-regexp])
 //!
-//! Deferred to a later slice: chown/chgrp (need uid/gid resolution), wdired
-//! (editable listing), subdirectory insertion.
+//! Deferred / absent (honest): inserted-subdirectory support (dired-*-subdir,
+//! dired-tree-*, dired-hide-*, dired-maybe-insert-subdir — the listing shows one
+//! directory), wdired (editable listing), byte-compile/load (elisp-specific),
+//! man/info/print (no pager/printer integration), do-isearch of file *contents*.
 
 // The module doc above is an ASCII key-binding table where a leading `>` is a
 // literal Dired key, not a Markdown blockquote — so lazy-continuation doesn't
@@ -66,8 +87,9 @@ use std::time::UNIX_EPOCH;
 use regex::Regex;
 use tui::buffer::Buffer as Surface;
 use zemacs_core::dired::{
-    destination_path, human_size, is_executable_mode, is_valid_filename, mark_char, marked_summary,
-    next_dir_index, parse_octal_mode, sort_entries, transform_name, DiredEntry, NameTransform,
+    backups_to_clean, destination_path, dirs_differ, human_size, is_executable_mode,
+    is_valid_filename, mark_char, marked_summary, next_dir_index, parse_octal_mode,
+    regexp_replace_name, relative_path, sort_entries, transform_name, DiredEntry, NameTransform,
     SortKey,
 };
 use zemacs_view::{editor::Action, graphics::Rect};
@@ -93,6 +115,79 @@ enum Pending {
     MarkRegexp,
     FlagRegexp,
     GotoFile,
+    /// `dired-change-marks`: read "OLD NEW" (two chars) and re-mark.
+    ChangeMarks,
+    /// `dired-mark-files-containing-regexp`: mark files whose *contents* match.
+    MarkContaining,
+    /// `dired-isearch-filenames` (literal) / `-regexp`: move point to the next
+    /// entry whose name matches the typed pattern.
+    IsearchFilenames {
+        regexp: bool,
+    },
+    /// `dired-do-relsymlink`: make a *relative* symlink of the targets in `dest`.
+    RelSymlink(Vec<String>),
+    /// `dired-do-chgrp` / `-chown`: run the external tool on the targets.
+    Chgrp(Vec<String>),
+    Chown(Vec<String>),
+    /// `dired-do-compress-to`: archive the targets into the named archive.
+    CompressTo(Vec<String>),
+    /// `dired-do-shell-command`: run a shell command with the targets appended.
+    ShellCommand(Vec<String>),
+    /// `dired-diff`: diff the file at point against the file named here.
+    Diff(String),
+    /// `dired-compare-directories`: mark entries that differ from this directory.
+    CompareDir,
+    /// `dired-do-find-regexp`: grep the targets for a regexp, show the hits.
+    FindRegexp(Vec<String>),
+    /// First leg of a `% R`/`% C`/`% H`/`% S`/`% Y` regexp file op: read the
+    /// match regexp; the second leg reads the replacement.
+    RegexpOpPattern(RegexpKind, Vec<String>),
+    /// Second leg: apply `kind` using the stashed regexp text and this replacement.
+    RegexpOpReplace(RegexpKind, Vec<String>, String),
+}
+
+/// A whole-name regexp batch operation (`% R`/`% C`/`% H`/`% S`/`% Y`): rename,
+/// copy, hardlink, absolute-symlink or relative-symlink each matching target to
+/// its transformed name.
+#[derive(Clone, Copy)]
+enum RegexpKind {
+    Rename,
+    Copy,
+    Hardlink,
+    Symlink,
+    RelSymlink,
+}
+
+impl RegexpKind {
+    /// Prompt shown when reading the match regexp (first leg).
+    fn pattern_prompt(self) -> &'static str {
+        match self {
+            RegexpKind::Rename => "Rename from (regexp): ",
+            RegexpKind::Copy => "Copy from (regexp): ",
+            RegexpKind::Hardlink => "Hardlink from (regexp): ",
+            RegexpKind::Symlink => "Symlink from (regexp): ",
+            RegexpKind::RelSymlink => "RelSymlink from (regexp): ",
+        }
+    }
+    /// Prompt shown when reading the replacement (second leg).
+    fn replace_prompt(self) -> &'static str {
+        match self {
+            RegexpKind::Rename => "Rename to (replacement): ",
+            RegexpKind::Copy => "Copy to (replacement): ",
+            RegexpKind::Hardlink => "Hardlink to (replacement): ",
+            RegexpKind::Symlink => "Symlink to (replacement): ",
+            RegexpKind::RelSymlink => "RelSymlink to (replacement): ",
+        }
+    }
+    fn past(self) -> &'static str {
+        match self {
+            RegexpKind::Rename => "renamed",
+            RegexpKind::Copy => "copied",
+            RegexpKind::Hardlink => "hardlinked",
+            RegexpKind::Symlink => "symlinked",
+            RegexpKind::RelSymlink => "relsymlinked",
+        }
+    }
 }
 
 /// The four two-path filesystem operations Dired offers on a set of targets.
@@ -145,6 +240,46 @@ fn set_mtime_now(path: &Path) -> bool {
     }
 }
 
+/// Read `dir` into a fresh, unsorted `Vec<DiredEntry>` (skipping dotfiles unless
+/// `show_hidden`). Shared by the in-place [`Dired::read_dir`] and by
+/// `dired-compare-directories`, which needs to read a *second* directory without
+/// disturbing the current listing. Unreadable entries are skipped.
+fn read_entries(dir: &Path, show_hidden: bool) -> std::io::Result<Vec<DiredEntry>> {
+    let mut entries = Vec::new();
+    for entry in std::fs::read_dir(dir)? {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !show_hidden && name.starts_with('.') {
+            continue;
+        }
+        let ft = entry.file_type().ok();
+        let meta = entry.metadata().ok();
+        let mtime = meta
+            .as_ref()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        entries.push(DiredEntry {
+            name,
+            is_dir: ft.map(|f| f.is_dir()).unwrap_or(false),
+            is_symlink: ft.map(|f| f.is_symlink()).unwrap_or(false),
+            size: meta.map(|m| m.len()).unwrap_or(0),
+            mtime,
+        });
+    }
+    Ok(entries)
+}
+
+/// POSIX single-quote a shell word so a file name with spaces/metacharacters is
+/// passed verbatim to `dired-do-shell-command`.
+fn shell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', r"'\''"))
+}
+
 /// The interactive Dired overlay for a single directory.
 pub struct Dired {
     dir: PathBuf,
@@ -164,6 +299,13 @@ pub struct Dired {
     error: Option<String>,
     /// Active in-mode minibuffer read, if any (see [`Input`]).
     input: Option<Input>,
+    /// The listing as it was before the last `K`/undoable listing edit, for
+    /// `dired-undo` (which restores the previous set of visible rows).
+    undo_snapshot: Option<Vec<DiredEntry>>,
+    /// Set by actions that display their result in a buffer beneath the overlay
+    /// (`dired-diff`, `dired-do-find-regexp`): the overlay pops so the result is
+    /// visible.
+    close_requested: bool,
 }
 
 impl Dired {
@@ -185,6 +327,8 @@ impl Dired {
             show_details: true,
             error: None,
             input: None,
+            undo_snapshot: None,
+            close_requested: false,
         };
         d.read_dir()?;
         Ok(d)
@@ -193,32 +337,7 @@ impl Dired {
     /// Read `self.dir` into `self.entries` (respecting `show_hidden`) and sort.
     /// Marks/flags naming files no longer present are dropped.
     fn read_dir(&mut self) -> std::io::Result<()> {
-        let mut entries = Vec::new();
-        for entry in std::fs::read_dir(&self.dir)? {
-            let entry = match entry {
-                Ok(e) => e,
-                Err(_) => continue,
-            };
-            let name = entry.file_name().to_string_lossy().into_owned();
-            if !self.show_hidden && name.starts_with('.') {
-                continue;
-            }
-            let ft = entry.file_type().ok();
-            let meta = entry.metadata().ok();
-            let mtime = meta
-                .as_ref()
-                .and_then(|m| m.modified().ok())
-                .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-                .map(|d| d.as_secs() as i64)
-                .unwrap_or(0);
-            entries.push(DiredEntry {
-                name,
-                is_dir: ft.map(|f| f.is_dir()).unwrap_or(false),
-                is_symlink: ft.map(|f| f.is_symlink()).unwrap_or(false),
-                size: meta.map(|m| m.len()).unwrap_or(0),
-                mtime,
-            });
-        }
+        let mut entries = read_entries(&self.dir, self.show_hidden)?;
         sort_entries(&mut entries, self.sort, self.reverse);
         let present: HashSet<&String> = entries.iter().map(|e| &e.name).collect();
         self.marked.retain(|n| present.contains(n));
@@ -391,6 +510,7 @@ impl Dired {
         if targets.is_empty() {
             return 0;
         }
+        self.undo_snapshot = Some(self.entries.clone());
         let before = self.entries.len();
         self.entries.retain(|e| !targets.contains(&e.name));
         for name in &targets {
@@ -401,6 +521,169 @@ impl Dired {
             self.selected = self.entries.len().saturating_sub(1);
         }
         before - self.entries.len()
+    }
+
+    /// `dired-undo`: restore the listing captured by the last undoable edit
+    /// (currently `K` kill-lines / `dired-clean-directory` listing changes). Only
+    /// the *visible rows* are restored — files are never touched on disk. Returns
+    /// whether anything was undone.
+    fn undo(&mut self) -> bool {
+        if let Some(snap) = self.undo_snapshot.take() {
+            self.entries = snap;
+            if self.selected >= self.entries.len() {
+                self.selected = self.entries.len().saturating_sub(1);
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// `dired-mark-subdir-files`: mark every regular file (not a subdirectory) in
+    /// the current directory listing. Returns the number newly marked.
+    fn mark_subdir_files(&mut self) -> usize {
+        self.mark_where(|e| !e.is_dir)
+    }
+
+    /// `dired-change-marks`: replace every occurrence of mark char `old` with
+    /// `new` across the listing (`*`/`D` are the two marks Dired shows). Returns
+    /// how many entries were re-marked.
+    fn change_marks(&mut self, old: char, new: char) -> usize {
+        // Snapshot the names carrying `old`, then move them to `new`'s set.
+        let names: Vec<String> = self
+            .entries
+            .iter()
+            .map(|e| e.name.clone())
+            .filter(|n| match old {
+                '*' => self.marked.contains(n),
+                'D' => self.flagged.contains(n),
+                _ => false,
+            })
+            .collect();
+        for n in &names {
+            self.marked.remove(n);
+            self.flagged.remove(n);
+        }
+        for n in &names {
+            match new {
+                '*' => {
+                    self.marked.insert(n.clone());
+                }
+                'D' => {
+                    self.flagged.insert(n.clone());
+                }
+                // A space (or anything else) clears the mark entirely.
+                _ => {}
+            }
+        }
+        names.len()
+    }
+
+    /// `dired-mark-files-containing-regexp`: mark every regular file whose textual
+    /// contents match `re`. Binary/unreadable files are skipped. Returns the count.
+    fn mark_containing(&mut self, re: &Regex) -> usize {
+        let names: Vec<String> = self
+            .entries
+            .iter()
+            .filter(|e| !e.is_dir)
+            .map(|e| e.name.clone())
+            .collect();
+        let mut n = 0;
+        for name in names {
+            if let Ok(bytes) = std::fs::read(self.dir.join(&name)) {
+                if let Ok(text) = String::from_utf8(bytes) {
+                    if re.is_match(&text) && self.marked.insert(name) {
+                        n += 1;
+                    }
+                }
+            }
+        }
+        n
+    }
+
+    /// `dired-clean-directory`: flag excess numbered backups (`file.~N~`) for
+    /// deletion, keeping the two newest versions of each base (Emacs
+    /// `dired-kept-versions`). Snapshots for `dired-undo`. Returns count flagged.
+    fn clean_directory(&mut self) -> usize {
+        let names: Vec<String> = self.entries.iter().map(|e| e.name.clone()).collect();
+        let excess = backups_to_clean(&names, 2);
+        self.undo_snapshot = Some(self.entries.clone());
+        let mut n = 0;
+        for name in excess {
+            if self.flagged.insert(name) {
+                n += 1;
+            }
+        }
+        n
+    }
+
+    /// `dired-do-relsymlink`: make a *relative* symlink of each target into the
+    /// destination directory `dest`. Returns the count linked.
+    fn relsymlink_targets(&mut self, targets: &[String], dest: &str, cx: &mut Context) {
+        if dest.is_empty() || targets.is_empty() {
+            return;
+        }
+        let dest_path = self.dir.join(dest);
+        let dest_is_dir = dest_path.is_dir();
+        let mut n = 0;
+        for name in targets {
+            let src = self.dir.join(name);
+            let link = destination_path(&dest_path, dest_is_dir, name);
+            let link_dir = link.parent().map(Path::to_path_buf).unwrap_or_default();
+            let rel = relative_path(&link_dir, &src);
+            match std::os::unix::fs::symlink(&rel, &link) {
+                Ok(()) => n += 1,
+                Err(e) => {
+                    cx.editor.set_error(format!("relsymlink {name}: {e}"));
+                    break;
+                }
+            }
+        }
+        let _ = self.read_dir();
+        cx.editor
+            .set_status(format!("dired: relsymlinked {n} file(s)"));
+    }
+
+    /// Run a whole-name regexp op (`% R`/`% C`/`% H`/`% S`/`% Y`): for each target
+    /// matching `re`, compute its transformed name via [`regexp_replace_name`] and
+    /// apply `kind` (rename/copy/hardlink/(rel)symlink) in the same directory.
+    fn run_regexp_op(
+        &mut self,
+        kind: RegexpKind,
+        targets: &[String],
+        re: &Regex,
+        repl: &str,
+        cx: &mut Context,
+    ) {
+        let mut n = 0;
+        for name in targets {
+            let new = match regexp_replace_name(name, re, repl) {
+                Some(new) if new != *name => new,
+                _ => continue,
+            };
+            let src = self.dir.join(name);
+            let dst = self.dir.join(&new);
+            let res = match kind {
+                RegexpKind::Rename => std::fs::rename(&src, &dst),
+                RegexpKind::Copy => std::fs::copy(&src, &dst).map(|_| ()),
+                RegexpKind::Hardlink => std::fs::hard_link(&src, &dst),
+                RegexpKind::Symlink => std::os::unix::fs::symlink(&src, &dst),
+                RegexpKind::RelSymlink => {
+                    let rel = relative_path(&self.dir, &src);
+                    std::os::unix::fs::symlink(&rel, &dst)
+                }
+            };
+            match res {
+                Ok(()) => n += 1,
+                Err(e) => {
+                    cx.editor.set_error(format!("{name}: {e}"));
+                    break;
+                }
+            }
+        }
+        let _ = self.read_dir();
+        cx.editor
+            .set_status(format!("dired: {} {n} file(s)", kind.past()));
     }
 
     /// `dired-do-touch`: set the target(s)' mtime to now, then refresh.
@@ -573,7 +856,336 @@ impl Dired {
                     cx.editor.set_status(format!("dired: no file named {text}"));
                 }
             }
+            Pending::ChangeMarks => {
+                // Read "OLD NEW" — the first non-space char is the old mark, the
+                // second the new one (space clears). Emacs prompts for each char.
+                let mut chars = text.chars().filter(|c| !c.is_whitespace());
+                match (chars.next(), text.chars().last()) {
+                    (Some(old), _) => {
+                        // NEW is the last typed char; if only one char given, use space.
+                        let new = if text.chars().filter(|c| !c.is_whitespace()).count() >= 2 {
+                            text.chars().filter(|c| !c.is_whitespace()).nth(1).unwrap()
+                        } else {
+                            ' '
+                        };
+                        let n = self.change_marks(old, new);
+                        cx.editor
+                            .set_status(format!("dired: changed {n} mark(s) {old} -> {new}"));
+                    }
+                    _ => cx.editor.set_status("dired: change-marks needs OLD NEW"),
+                }
+            }
+            Pending::MarkContaining => {
+                if text.is_empty() {
+                    return;
+                }
+                match Regex::new(text) {
+                    Ok(re) => {
+                        let n = self.mark_containing(&re);
+                        cx.editor
+                            .set_status(format!("dired: marked {n} file(s) containing /{text}/"));
+                    }
+                    Err(e) => cx.editor.set_error(format!("dired: bad regexp: {e}")),
+                }
+            }
+            Pending::IsearchFilenames { regexp } => {
+                if text.is_empty() {
+                    return;
+                }
+                let start = self.selected;
+                let n = self.entries.len();
+                let matcher: Box<dyn Fn(&str) -> bool> = if regexp {
+                    match Regex::new(text) {
+                        Ok(re) => Box::new(move |name: &str| re.is_match(name)),
+                        Err(e) => {
+                            cx.editor.set_error(format!("dired: bad regexp: {e}"));
+                            return;
+                        }
+                    }
+                } else {
+                    let needle = text.to_string();
+                    Box::new(move |name: &str| name.contains(&needle))
+                };
+                // Search forward from the row after point, wrapping around.
+                let hit = (1..=n).find_map(|step| {
+                    let idx = (start + step) % n;
+                    matcher(&self.entries[idx].name).then_some(idx)
+                });
+                match hit {
+                    Some(i) => self.selected = i,
+                    None => cx
+                        .editor
+                        .set_status(format!("dired: no file name matches {text}")),
+                }
+            }
+            Pending::RelSymlink(targets) => {
+                self.relsymlink_targets(&targets, text, cx);
+            }
+            Pending::Chgrp(targets) => {
+                if self.run_external("chgrp", &[text], &targets, cx) {
+                    cx.editor
+                        .set_status(format!("dired: chgrp {text} on {} file(s)", targets.len()));
+                }
+            }
+            Pending::Chown(targets) => {
+                if self.run_external("chown", &[text], &targets, cx) {
+                    cx.editor
+                        .set_status(format!("dired: chown {text} on {} file(s)", targets.len()));
+                }
+            }
+            Pending::CompressTo(targets) => {
+                if text.is_empty() {
+                    return;
+                }
+                // tar+gzip archive of the targets, named as typed.
+                let mut args: Vec<&str> = vec!["-czf", text];
+                args.extend(targets.iter().map(String::as_str));
+                if self.run_external("tar", &args, &[], cx) {
+                    cx.editor.set_status(format!(
+                        "dired: archived {} file(s) to {text}",
+                        targets.len()
+                    ));
+                }
+            }
+            Pending::ShellCommand(targets) => {
+                if text.is_empty() {
+                    return;
+                }
+                // Emacs `!`: run `command file1 file2 ...` in the directory.
+                self.run_shell(text, &targets, cx);
+            }
+            Pending::Diff(other) => {
+                self.run_diff(&other, text, cx);
+            }
+            Pending::CompareDir => {
+                if text.is_empty() {
+                    return;
+                }
+                let other = if Path::new(text).is_absolute() {
+                    PathBuf::from(text)
+                } else {
+                    self.dir.join(text)
+                };
+                match read_entries(&other, self.show_hidden) {
+                    Ok(there) => {
+                        let names = dirs_differ(&self.entries, &there);
+                        let mut n = 0;
+                        for name in names {
+                            if self.marked.insert(name) {
+                                n += 1;
+                            }
+                        }
+                        cx.editor.set_status(format!(
+                            "dired: marked {n} file(s) differing from {}",
+                            other.display()
+                        ));
+                    }
+                    Err(e) => cx
+                        .editor
+                        .set_error(format!("compare-directories {}: {e}", other.display())),
+                }
+            }
+            Pending::FindRegexp(targets) => {
+                if text.is_empty() {
+                    return;
+                }
+                self.run_find_regexp(text, &targets, cx);
+            }
+            Pending::RegexpOpPattern(kind, targets) => {
+                if text.is_empty() {
+                    return;
+                }
+                match Regex::new(text) {
+                    Ok(_) => self.begin_input(
+                        kind.replace_prompt(),
+                        Pending::RegexpOpReplace(kind, targets, text.to_string()),
+                    ),
+                    Err(e) => cx.editor.set_error(format!("dired: bad regexp: {e}")),
+                }
+            }
+            Pending::RegexpOpReplace(kind, targets, pattern) => {
+                // `pattern` was validated in the first leg.
+                if let Ok(re) = Regex::new(&pattern) {
+                    self.run_regexp_op(kind, &targets, &re, text, cx);
+                }
+            }
         }
+    }
+
+    /// Run `prog arg... name...` in the Dired directory, then refresh. Used by
+    /// the external-tool file ops (`chgrp`/`chown`/`tar`). Reports success or the
+    /// tool's stderr.
+    fn run_external(
+        &mut self,
+        prog: &str,
+        args: &[&str],
+        names: &[String],
+        cx: &mut Context,
+    ) -> bool {
+        let mut cmd = std::process::Command::new(prog);
+        cmd.current_dir(&self.dir).args(args);
+        for n in names {
+            cmd.arg(n);
+        }
+        match cmd.output() {
+            Ok(out) if out.status.success() => {
+                let _ = self.read_dir();
+                true
+            }
+            Ok(out) => {
+                let err = String::from_utf8_lossy(&out.stderr);
+                cx.editor
+                    .set_error(format!("{prog}: {}", err.trim().replace('\n', "; ")));
+                let _ = self.read_dir();
+                false
+            }
+            Err(e) => {
+                cx.editor.set_error(format!("{prog}: {e}"));
+                false
+            }
+        }
+    }
+
+    /// `dired-do-shell-command`: run the shell `command`, with the target file
+    /// names appended as arguments, in the Dired directory.
+    fn run_shell(&mut self, command: &str, names: &[String], cx: &mut Context) {
+        let quoted: String = names
+            .iter()
+            .map(|n| format!(" {}", shell_quote(n)))
+            .collect();
+        let full = format!("{command}{quoted}");
+        match std::process::Command::new("/bin/sh")
+            .arg("-c")
+            .arg(&full)
+            .current_dir(&self.dir)
+            .output()
+        {
+            Ok(out) => {
+                let _ = self.read_dir();
+                let code = out.status.code().unwrap_or(-1);
+                cx.editor.set_status(format!(
+                    "dired: `{command}` on {} file(s) (exit {code})",
+                    names.len()
+                ));
+            }
+            Err(e) => cx.editor.set_error(format!("shell: {e}")),
+        }
+    }
+
+    /// `dired-diff`: run `diff -u OTHER FILE` and show the result in a scratch
+    /// buffer beneath the overlay (which is then closed to reveal it).
+    fn run_diff(&mut self, file: &str, other: &str, cx: &mut Context) {
+        if other.is_empty() {
+            return;
+        }
+        let a = if Path::new(other).is_absolute() {
+            PathBuf::from(other)
+        } else {
+            self.dir.join(other)
+        };
+        let b = self.dir.join(file);
+        match std::process::Command::new("diff")
+            .arg("-u")
+            .arg(&a)
+            .arg(&b)
+            .output()
+        {
+            Ok(out) => {
+                let body = String::from_utf8_lossy(&out.stdout);
+                let content = if body.trim().is_empty() {
+                    format!(
+                        "diff -u {} {}\n(no differences)\n",
+                        a.display(),
+                        b.display()
+                    )
+                } else {
+                    format!("diff -u {} {}\n{body}", a.display(), b.display())
+                };
+                crate::commands::show_text_in_scratch(cx.editor, &content);
+                self.close_requested = true;
+            }
+            Err(e) => cx.editor.set_error(format!("diff: {e}")),
+        }
+    }
+
+    /// `dired-do-find-regexp`: grep the targets for `pattern`, show the hits in a
+    /// scratch buffer (overlay closes to reveal it).
+    fn run_find_regexp(&mut self, pattern: &str, names: &[String], cx: &mut Context) {
+        let mut cmd = std::process::Command::new("grep");
+        cmd.current_dir(&self.dir).args(["-rnH", "-e", pattern]);
+        for n in names {
+            cmd.arg(n);
+        }
+        match cmd.output() {
+            Ok(out) => {
+                let body = String::from_utf8_lossy(&out.stdout);
+                let content = if body.trim().is_empty() {
+                    format!("find-regexp /{pattern}/\n(no matches)\n")
+                } else {
+                    format!("find-regexp /{pattern}/\n{body}")
+                };
+                crate::commands::show_text_in_scratch(cx.editor, &content);
+                self.close_requested = true;
+            }
+            Err(e) => cx.editor.set_error(format!("grep: {e}")),
+        }
+    }
+
+    /// `dired-do-compress`: gzip each target, or gunzip it when already a `.gz`
+    /// (Emacs toggles compression). Refreshes the listing afterwards.
+    fn compress_targets(&mut self, cx: &mut Context) {
+        let targets = self.targets();
+        let mut n = 0;
+        for name in &targets {
+            let (prog, arg) = if name.ends_with(".gz") {
+                ("gunzip", name.as_str())
+            } else {
+                ("gzip", name.as_str())
+            };
+            match std::process::Command::new(prog)
+                .arg(arg)
+                .current_dir(&self.dir)
+                .status()
+            {
+                Ok(s) if s.success() => n += 1,
+                Ok(_) => {}
+                Err(e) => {
+                    cx.editor.set_error(format!("{prog} {name}: {e}"));
+                    break;
+                }
+            }
+        }
+        let _ = self.read_dir();
+        cx.editor
+            .set_status(format!("dired: (un)compressed {n} file(s)"));
+    }
+
+    /// `dired-do-open`: hand each target to the system opener (`open` on macOS,
+    /// `xdg-open` elsewhere), detached, so the OS default app handles it.
+    fn open_targets(&mut self, cx: &mut Context) {
+        let opener = if cfg!(target_os = "macos") {
+            "open"
+        } else {
+            "xdg-open"
+        };
+        let targets = self.targets();
+        let mut n = 0;
+        for name in &targets {
+            match std::process::Command::new(opener)
+                .arg(self.dir.join(name))
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+            {
+                Ok(_) => n += 1,
+                Err(e) => {
+                    cx.editor.set_error(format!("{opener} {name}: {e}"));
+                    break;
+                }
+            }
+        }
+        cx.editor
+            .set_status(format!("dired: opened {n} file(s) externally"));
     }
 
     /// Shared body for copy/rename/symlink/hardlink over a set of targets to a
@@ -673,6 +1285,13 @@ impl Component for Dired {
                 key!(Enter) | ctrl!('j') => {
                     if let Some(inp) = self.input.take() {
                         self.run_pending(inp.action, &inp.buffer, cx);
+                    }
+                    if self.close_requested {
+                        return EventResult::Consumed(Some(Box::new(
+                            |compositor: &mut Compositor, _cx| {
+                                compositor.pop();
+                            },
+                        )));
                     }
                 }
                 key!(Backspace) | ctrl!('h') => {
@@ -905,6 +1524,107 @@ impl Component for Dired {
             key!('*') => self.begin_input("Mark (regexp): ", Pending::MarkRegexp),
             key!('/') => self.begin_input("Flag for deletion (regexp): ", Pending::FlagRegexp),
             key!('J') => self.begin_input("Goto file: ", Pending::GotoFile),
+            // ---- ported: marks / clean / undo ----
+            key!('c') => self.begin_input("Change marks (OLD NEW): ", Pending::ChangeMarks),
+            key!('P') => {
+                let n = self.mark_subdir_files();
+                cx.editor
+                    .set_status(format!("dired: marked {n} file(s) in subdir"));
+            }
+            key!('y') => {
+                self.begin_input("Mark files containing (regexp): ", Pending::MarkContaining)
+            }
+            key!(',') => {
+                let n = self.clean_directory();
+                cx.editor
+                    .set_status(format!("dired: flagged {n} excess backup(s)"));
+            }
+            key!('_') => {
+                if self.undo() {
+                    cx.editor.set_status("dired: undo");
+                } else {
+                    cx.editor.set_status("dired: nothing to undo");
+                }
+            }
+            // ---- ported: whole-name regexp batch ops (read regexp, then repl) ----
+            key!('e') => {
+                let t = self.targets();
+                self.begin_input(
+                    RegexpKind::Rename.pattern_prompt(),
+                    Pending::RegexpOpPattern(RegexpKind::Rename, t),
+                );
+            }
+            key!('B') => {
+                let t = self.targets();
+                self.begin_input(
+                    RegexpKind::Copy.pattern_prompt(),
+                    Pending::RegexpOpPattern(RegexpKind::Copy, t),
+                );
+            }
+            key!('F') => {
+                let t = self.targets();
+                self.begin_input(
+                    RegexpKind::Hardlink.pattern_prompt(),
+                    Pending::RegexpOpPattern(RegexpKind::Hardlink, t),
+                );
+            }
+            key!('I') => {
+                let t = self.targets();
+                self.begin_input(
+                    RegexpKind::Symlink.pattern_prompt(),
+                    Pending::RegexpOpPattern(RegexpKind::Symlink, t),
+                );
+            }
+            key!('L') => {
+                let t = self.targets();
+                self.begin_input(
+                    RegexpKind::RelSymlink.pattern_prompt(),
+                    Pending::RegexpOpPattern(RegexpKind::RelSymlink, t),
+                );
+            }
+            key!('Y') => {
+                let t = self.targets();
+                self.begin_input("RelSymlink to (dir): ", Pending::RelSymlink(t));
+            }
+            // ---- ported: comparison ----
+            key!('=') => {
+                if let Some(name) = self.current_name() {
+                    self.begin_input("Diff against: ", Pending::Diff(name));
+                }
+            }
+            key!('@') => self.begin_input("Compare with directory: ", Pending::CompareDir),
+            // ---- ported: external-tool file ops ----
+            key!('O') => {
+                let t = self.targets();
+                self.begin_input("Chown to: ", Pending::Chown(t));
+            }
+            key!('W') => {
+                let t = self.targets();
+                self.begin_input("Chgrp to: ", Pending::Chgrp(t));
+            }
+            key!('X') => self.compress_targets(cx),
+            key!('Q') => {
+                let t = self.targets();
+                self.begin_input("Compress to (archive): ", Pending::CompressTo(t));
+            }
+            key!('!') => {
+                let t = self.targets();
+                self.begin_input("Shell command: ", Pending::ShellCommand(t));
+            }
+            key!('V') => self.open_targets(cx),
+            key!('a') => {
+                let t = self.targets();
+                self.begin_input("Find regexp: ", Pending::FindRegexp(t));
+            }
+            // ---- ported: filename isearch ----
+            key!('i') => self.begin_input(
+                "Isearch filename: ",
+                Pending::IsearchFilenames { regexp: false },
+            ),
+            key!('h') => self.begin_input(
+                "Isearch filename (regexp): ",
+                Pending::IsearchFilenames { regexp: true },
+            ),
             _ => {}
         }
         // Stay modal: never leak keys to the editor behind us.
