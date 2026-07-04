@@ -167,10 +167,10 @@ fn ch_prefix() -> KeyTrie {
             "F" => help,                          // Info-goto-emacs-command-node
             "K" => help,                          // Info-goto-emacs-key-command-node
             "t" => help,                          // help-with-tutorial
-            "n" => help,                          // view-emacs-news
-            "g" => help,                          // describe-gnu-project
-            "h" => help,                          // view-hello-file
-            "e" => help,                          // view-echo-area-messages
+            "n" => browse_news,                   // view-emacs-news
+            "g" => describe_gnu_project,          // describe-gnu-project
+            "h" => view_hello_file,               // view-hello-file
+            "e" => view_echo_area_messages,       // view-echo-area-messages
             "I" => help,                          // describe-input-method
         },
     })
@@ -197,18 +197,18 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-h 4 i", "Other window", "info_search"),
     ("C-h 4 s", "Other window", "help"),
     ("C-h C", "C-h C", "help"),
-    ("C-h C-c", "C-h C-c", "help"),
-    ("C-h C-d", "C-h C-d", "help"),
+    ("C-h C-c", "C-h C-c", "describe_copying"),
+    ("C-h C-d", "C-h C-d", "describe_distribution"),
     ("C-h C-e", "C-h C-e", "package_search"),
-    ("C-h C-f", "C-h C-f", "browse_faq"),
+    ("C-h C-f", "C-h C-f", "view_emacs_faq"),
     ("C-h C-m", "C-h C-m", "help"),
     ("C-h C-n", "C-h C-n", "browse_news"),
     ("C-h C-o", "C-h C-o", "help"),
     ("C-h C-p", "C-h C-p", "browse_faq"),
     ("C-h C-q", "C-h C-q", "help"),
     ("C-h C-t", "C-h C-t", "help"),
-    ("C-h C-w", "C-h C-w", "help"),
-    ("C-h g", "C-h g", "help"),
+    ("C-h C-w", "C-h C-w", "describe_no_warranty"),
+    ("C-h g", "C-h g", "describe_gnu_project"),
     ("C-h I", "C-h I", "unicode_picker"),
     ("C-x #", "C-x #", "command_palette"),
     ("C-x $", "C-x $", "fold_close_all"),
@@ -520,6 +520,15 @@ mod tests {
             ("C-h l", "view_lossage"),
             ("C-h p", "package_search"),
             ("C-h .", "hover"),
+            // GNU help/doc commands wired to their faithful zemacs ports.
+            ("C-h h", "view_hello_file"),
+            ("C-h e", "view_echo_area_messages"),
+            ("C-h g", "describe_gnu_project"),
+            ("C-h n", "browse_news"),
+            ("C-h C-c", "describe_copying"),
+            ("C-h C-d", "describe_distribution"),
+            ("C-h C-f", "view_emacs_faq"),
+            ("C-h C-w", "describe_no_warranty"),
         ] {
             assert_eq!(
                 cmd(&km, Mode::Normal, chord).as_deref(),
@@ -529,7 +538,7 @@ mod tests {
         }
         // A non-colliding generated fallback still survives under C-h.
         assert_eq!(
-            cmd(&km, Mode::Normal, "C-h C-f").as_deref(),
+            cmd(&km, Mode::Normal, "C-h C-p").as_deref(),
             Some("browse_faq")
         );
     }
