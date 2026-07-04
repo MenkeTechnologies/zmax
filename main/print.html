@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-ad624e92.js";
+            window.path_to_searchindex_js = "searchindex-dc507b1d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -2382,6 +2382,16 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:outline-hide-by-heading-regexp</code></td><td>Fold the subtree of every heading whose line matches the regexp (emacs outline-hide-by-heading-regexp).</td></tr>
 <tr><td><code>:outline-show-by-heading-regexp</code></td><td>Reveal the subtree of every heading whose line matches the regexp (emacs outline-show-by-heading-regexp).</td></tr>
 <tr><td><code>:set-fill-column</code></td><td>Set the fill width to N, or the current cursor column if omitted (emacs set-fill-column).</td></tr>
+<tr><td><code>:customize</code>, <code>:customize-browse</code></td><td>Open Preferences on the Settings tab (emacs customize / customize-browse).</td></tr>
+<tr><td><code>:customize-variable</code>, <code>:customize-option</code></td><td>Open Settings pre-filtered to a variable name (emacs customize-variable).</td></tr>
+<tr><td><code>:customize-group</code></td><td>Open Settings pre-filtered to a group name (emacs customize-group).</td></tr>
+<tr><td><code>:customize-apropos</code></td><td>Open Settings pre-filtered to a regexp/substring (emacs customize-apropos).</td></tr>
+<tr><td><code>:customize-unsaved</code>, <code>:customize-changed</code>, <code>:customize-saved</code></td><td>Open Settings showing only options changed from their default (emacs customize-unsaved).</td></tr>
+<tr><td><code>:customize-face</code>, <code>:customize-themes</code>, <code>:customize-create-theme</code></td><td>Open the Color Scheme (theme/face editor) tab (emacs customize-face / customize-themes).</td></tr>
+<tr><td><code>:set-face-foreground</code></td><td>Set a theme face’s foreground color: :set-face-foreground <face> <color> (emacs set-face-foreground).</color></face></td></tr>
+<tr><td><code>:set-face-background</code></td><td>Set a theme face’s background color: :set-face-background <face> <color> (emacs set-face-background).</color></face></td></tr>
+<tr><td><code>:set-fringe-style</code></td><td>Set the gutter (fringe) style: none clears it, default restores it (emacs set-fringe-style).</td></tr>
+<tr><td><code>:set-right-margin</code></td><td>Re-fill the region to N columns narrower than text-width (emacs set-right-margin).</td></tr>
 <tr><td><code>:write-region</code></td><td>Write the region (or whole buffer) to a file, overwriting it (emacs write-region).</td></tr>
 <tr><td><code>:append-to-file</code></td><td>Append the region (or whole buffer) to the end of a file (emacs append-to-file).</td></tr>
 <tr><td><code>:set-justification-left</code></td><td>Flush the region’s lines to the left margin (emacs set-justification-left).</td></tr>
@@ -3306,6 +3316,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>rotate_view_reverse</code></td><td>Goto previous window</td><td>normal: <code>&lt;C-w&gt;R</code>, <code>&lt;C-w&gt;W</code>, <code>&lt;C-w&gt;.R</code>, <code>&lt;space&gt;wR</code>, <code>&lt;space&gt;wW</code>, <code>&lt;space&gt;w.R</code>, select: <code>&lt;space&gt;wR</code>, <code>&lt;space&gt;wW</code>, <code>&lt;space&gt;w.R</code></td></tr>
 <tr><td><code>scroll_other_window</code></td><td>Scroll the other window forward (emacs scroll-other-window, C-M-v)</td><td></td></tr>
 <tr><td><code>scroll_other_window_down</code></td><td>Scroll the other window backward (emacs scroll-other-window-down, C-M-S-v)</td><td></td></tr>
+<tr><td><code>recenter_other_window</code></td><td>Recenter point in the other window (emacs recenter-other-window, C-M-S-l)</td><td>normal: <code>&lt;C-w&gt;z</code>, <code>&lt;space&gt;wz</code>, select: <code>&lt;space&gt;wz</code></td></tr>
 <tr><td><code>hsplit</code></td><td>Horizontal bottom split</td><td>normal: <code>&lt;C-w&gt;S</code>, <code>&lt;C-w&gt;s</code>, <code>&lt;C-x&gt;2</code>, <code>&lt;C-w&gt;.S</code>, <code>&lt;C-w&gt;.s</code>, <code>&lt;space&gt;wS</code>, <code>&lt;space&gt;ws</code>, <code>&lt;C-w&gt;&lt;C-s&gt;</code>, <code>&lt;space&gt;w.S</code>, <code>&lt;space&gt;w.s</code>, <code>&lt;C-w&gt;.&lt;minus&gt;</code>, <code>&lt;space&gt;w&lt;C-s&gt;</code>, <code>&lt;space&gt;w.&lt;minus&gt;</code>, select: <code>&lt;C-x&gt;2</code>, <code>&lt;space&gt;wS</code>, <code>&lt;space&gt;ws</code>, <code>&lt;space&gt;w.S</code>, <code>&lt;space&gt;w.s</code>, <code>&lt;space&gt;w&lt;C-s&gt;</code>, <code>&lt;space&gt;w.&lt;minus&gt;</code>, insert: <code>&lt;C-x&gt;2</code></td></tr>
 <tr><td><code>hsplit_new</code></td><td>Horizontal bottom split scratch buffer</td><td>normal: <code>&lt;C-w&gt;n</code>, <code>&lt;space&gt;wn</code>, <code>&lt;C-w&gt;&lt;C-n&gt;</code>, <code>&lt;space&gt;bNj</code>, <code>&lt;space&gt;bNk</code>, <code>&lt;space&gt;w&lt;C-n&gt;</code>, select: <code>&lt;space&gt;wn</code>, <code>&lt;space&gt;bNj</code>, <code>&lt;space&gt;bNk</code>, <code>&lt;space&gt;w&lt;C-n&gt;</code></td></tr>
 <tr><td><code>vsplit</code></td><td>Vertical right split</td><td>normal: <code>&lt;C-w&gt;/</code>, <code>&lt;C-w&gt;2</code>, <code>&lt;C-w&gt;V</code>, <code>&lt;C-w&gt;v</code>, <code>&lt;C-x&gt;3</code>, <code>&lt;C-x&gt;5</code>, <code>&lt;C-w&gt;./</code>, <code>&lt;C-w&gt;.V</code>, <code>&lt;C-w&gt;.v</code>, <code>&lt;C-x&gt;62</code>, <code>&lt;C-x&gt;6s</code>, <code>&lt;space&gt;w/</code>, <code>&lt;space&gt;w2</code>, <code>&lt;space&gt;wV</code>, <code>&lt;space&gt;wv</code>, <code>&lt;C-w&gt;&lt;C-v&gt;</code>, <code>&lt;space&gt;w./</code>, <code>&lt;space&gt;w.V</code>, <code>&lt;space&gt;w.v</code>, <code>&lt;space&gt;w&lt;C-v&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w2</code>, select: <code>&lt;C-x&gt;3</code>, <code>&lt;C-x&gt;5</code>, <code>&lt;C-x&gt;62</code>, <code>&lt;C-x&gt;6s</code>, <code>&lt;space&gt;w/</code>, <code>&lt;space&gt;w2</code>, <code>&lt;space&gt;wV</code>, <code>&lt;space&gt;wv</code>, <code>&lt;space&gt;w./</code>, <code>&lt;space&gt;w.V</code>, <code>&lt;space&gt;w.v</code>, <code>&lt;space&gt;w&lt;C-v&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w2</code>, insert: <code>&lt;C-x&gt;3</code>, <code>&lt;C-x&gt;5</code>, <code>&lt;C-x&gt;62</code>, <code>&lt;C-x&gt;6s</code></td></tr>
@@ -3427,6 +3438,10 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>toggle_blame_annotate</code></td><td>Toggle the git-blame annotate gutter column (SPC g B)</td><td>normal: <code>&lt;space&gt;gB</code>, select: <code>&lt;space&gt;gB</code></td></tr>
 <tr><td><code>git_branch_picker</code></td><td>Pick a git branch and check it out</td><td>normal: <code>&lt;C-x&gt;vr</code>, <code>&lt;C-x&gt;vs</code>, <code>&lt;C-x&gt;vbc</code>, <code>&lt;C-x&gt;vbs</code>, select: <code>&lt;C-x&gt;vr</code>, <code>&lt;C-x&gt;vs</code>, <code>&lt;C-x&gt;vbc</code>, <code>&lt;C-x&gt;vbs</code>, insert: <code>&lt;C-x&gt;vr</code>, <code>&lt;C-x&gt;vs</code>, <code>&lt;C-x&gt;vbc</code>, <code>&lt;C-x&gt;vbs</code></td></tr>
 <tr><td><code>preferences</code></td><td>Open the unified Preferences window</td><td>normal: <code>&lt;space&gt;,</code>, select: <code>&lt;space&gt;,</code></td></tr>
+<tr><td><code>set_selective_display</code></td><td>Hide lines indented past the prefix-arg column; no arg turns it off (emacs set-selective-display, C-x $)</td><td></td></tr>
+<tr><td><code>global_whitespace_toggle_options</code></td><td>Toggle rendering of whitespace characters (emacs global-whitespace-toggle-options)</td><td></td></tr>
+<tr><td><code>global_tab_line_mode</code></td><td>Toggle the buffer tab line (emacs global-tab-line-mode)</td><td></td></tr>
+<tr><td><code>global_visual_wrap_prefix_mode</code></td><td>Toggle soft-wrap with indentation carry-over (emacs global-visual-wrap-prefix-mode)</td><td></td></tr>
 <tr><td><code>help</code></td><td>Open the inline Help browser</td><td>normal: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;t</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-m&gt;</code>, <code>&lt;C-h&gt;&lt;C-o&gt;</code>, <code>&lt;C-h&gt;&lt;C-q&gt;</code>, <code>&lt;C-h&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, select: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;t</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-m&gt;</code>, <code>&lt;C-h&gt;&lt;C-o&gt;</code>, <code>&lt;C-h&gt;&lt;C-q&gt;</code>, <code>&lt;C-h&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, insert: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;t</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;C-h&gt;&lt;C-m&gt;</code>, <code>&lt;C-h&gt;&lt;C-o&gt;</code>, <code>&lt;C-h&gt;&lt;C-q&gt;</code>, <code>&lt;C-h&gt;&lt;C-t&gt;</code></td></tr>
 <tr><td><code>dashboard</code></td><td>Open the system-stats Dashboard (Preferences)</td><td>normal: <code>&lt;space&gt;bh</code>, select: <code>&lt;space&gt;bh</code></td></tr>
 <tr><td><code>search_in_files</code></td><td>Open the project-wide Find in Files panel</td><td></td></tr>
@@ -3791,6 +3806,27 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>indent_code_rigidly</code></td><td>Shift region lines by [count] columns, skipping lines that start in a string (emacs indent-code-rigidly, = r)</td><td>normal: <code>=r</code></td></tr>
 <tr><td><code>c_hungry_delete_forward</code></td><td>Delete all whitespace after point, else one char (emacs c-hungry-delete-forward, SPC x d f)</td><td>normal: <code>&lt;space&gt;xdf</code>, select: <code>&lt;space&gt;xdf</code></td></tr>
 <tr><td><code>c_hungry_delete_backwards</code></td><td>Delete all whitespace before point, else one char (emacs c-hungry-delete-backwards, SPC x d b)</td><td>normal: <code>&lt;space&gt;xdb</code>, select: <code>&lt;space&gt;xdb</code></td></tr>
+<tr><td><code>c_beginning_of_defun</code></td><td>Move to the start of the function at point (emacs c-beginning-of-defun)</td><td></td></tr>
+<tr><td><code>c_end_of_defun</code></td><td>Move to the end of the function at point (emacs c-end-of-defun)</td><td></td></tr>
+<tr><td><code>c_mark_function</code></td><td>Select the whole function around point (emacs c-mark-function)</td><td></td></tr>
+<tr><td><code>c_beginning_of_statement</code></td><td>Move to the start of the C statement at point (emacs c-beginning-of-statement)</td><td></td></tr>
+<tr><td><code>c_end_of_statement</code></td><td>Move to the end of the C statement at point (emacs c-end-of-statement)</td><td></td></tr>
+<tr><td><code>c_forward_conditional</code></td><td>Move forward across a preprocessor conditional (emacs c-forward-conditional)</td><td></td></tr>
+<tr><td><code>c_backward_conditional</code></td><td>Move backward across a preprocessor conditional (emacs c-backward-conditional)</td><td></td></tr>
+<tr><td><code>c_up_conditional</code></td><td>Move up out of the containing preprocessor conditional (emacs c-up-conditional)</td><td></td></tr>
+<tr><td><code>c_indent_line_or_region</code></td><td>Re-indent the current line or the selected lines (emacs c-indent-line-or-region)</td><td></td></tr>
+<tr><td><code>c_indent_defun</code></td><td>Re-indent the whole function at point (emacs c-indent-defun)</td><td></td></tr>
+<tr><td><code>c_ts_mode_indent_defun</code></td><td>Re-indent the whole function at point via tree-sitter (emacs c-ts-mode-indent-defun)</td><td></td></tr>
+<tr><td><code>c_indent_exp</code></td><td>Re-indent the balanced expression after point (emacs c-indent-exp)</td><td></td></tr>
+<tr><td><code>c_fill_paragraph</code></td><td>Fill the C comment block around point (emacs c-fill-paragraph, M-q)</td><td></td></tr>
+<tr><td><code>c_backslash_region</code></td><td>Align trailing backslash continuations in the region (emacs c-backslash-region)</td><td></td></tr>
+<tr><td><code>c_context_line_break</code></td><td>Break the line, continuing a comment or macro (emacs c-context-line-break)</td><td></td></tr>
+<tr><td><code>c_toggle_auto_newline</code></td><td>Toggle auto-newline insertion in C mode (emacs c-toggle-auto-newline)</td><td></td></tr>
+<tr><td><code>c_toggle_hungry_state</code></td><td>Toggle hungry-delete state in C mode (emacs c-toggle-hungry-state)</td><td></td></tr>
+<tr><td><code>c_toggle_electric_state</code></td><td>Toggle electric behavior in C mode (emacs c-toggle-electric-state)</td><td></td></tr>
+<tr><td><code>c_show_syntactic_information</code></td><td>Report the tree-sitter node kind at point (emacs c-show-syntactic-information)</td><td></td></tr>
+<tr><td><code>c_macro_expand</code></td><td>Expand C preprocessor macros in the region via cpp (emacs c-macro-expand)</td><td></td></tr>
+<tr><td><code>c_set_style</code></td><td>Report the C indentation style (emacs c-set-style)</td><td></td></tr>
 <tr><td><code>delete_find_char_backward</code></td><td>Delete to prev char (dF)</td><td>normal: <code>dF</code></td></tr>
 <tr><td><code>delete_till_char_backward</code></td><td>Delete till prev char (dT)</td><td>normal: <code>dT</code></td></tr>
 <tr><td><code>change_find_char_forward</code></td><td>Change to next char (cf)</td><td>normal: <code>cf</code></td></tr>
@@ -3844,10 +3880,24 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>dap_edit_condition</code></td><td>Edit breakpoint condition on current line</td><td></td></tr>
 <tr><td><code>dap_breakpoints_picker</code></td><td>View all breakpoints in a picker (JetBrains View Breakpoints)</td><td>normal: <code>&lt;space&gt;dB</code>, select: <code>&lt;space&gt;dB</code></td></tr>
 <tr><td><code>dap_edit_log</code></td><td>Edit breakpoint log message on current line</td><td></td></tr>
-<tr><td><code>dap_switch_thread</code></td><td>Switch current thread</td><td></td></tr>
-<tr><td><code>dap_switch_stack_frame</code></td><td>Switch stack frame</td><td></td></tr>
+<tr><td><code>dap_switch_thread</code></td><td>Switch current thread</td><td>normal: <code>&lt;space&gt;dgt</code>, select: <code>&lt;space&gt;dgt</code></td></tr>
+<tr><td><code>dap_switch_stack_frame</code></td><td>Switch stack frame</td><td>normal: <code>&lt;space&gt;dgf</code>, select: <code>&lt;space&gt;dgf</code></td></tr>
 <tr><td><code>dap_enable_exceptions</code></td><td>Enable exception breakpoints</td><td></td></tr>
 <tr><td><code>dap_disable_exceptions</code></td><td>Disable exception breakpoints</td><td></td></tr>
+<tr><td><code>gdb_display_locals_buffer</code></td><td>Show local variables of the current frame (emacs gdb-display-locals-buffer)</td><td>normal: <code>&lt;space&gt;dgl</code>, select: <code>&lt;space&gt;dgl</code></td></tr>
+<tr><td><code>gdb_display_registers_buffer</code></td><td>Show CPU registers of the current frame (emacs gdb-display-registers-buffer)</td><td>normal: <code>&lt;space&gt;dgr</code>, select: <code>&lt;space&gt;dgr</code></td></tr>
+<tr><td><code>gdb_display_stack_for_thread</code></td><td>Show the call stack of the current thread (emacs gdb-display-stack-for-thread)</td><td>normal: <code>&lt;space&gt;dgs</code>, select: <code>&lt;space&gt;dgs</code></td></tr>
+<tr><td><code>gdb_display_locals_for_thread</code></td><td>Show locals of the current thread’s innermost frame (emacs gdb-display-locals-for-thread)</td><td></td></tr>
+<tr><td><code>gdb_display_registers_for_thread</code></td><td>Show registers of the current thread’s innermost frame (emacs gdb-display-registers-for-thread)</td><td></td></tr>
+<tr><td><code>gdb_display_disassembly_buffer</code></td><td>Disassemble around the current frame PC (emacs gdb-display-disassembly-buffer)</td><td>normal: <code>&lt;space&gt;dgd</code>, select: <code>&lt;space&gt;dgd</code></td></tr>
+<tr><td><code>gdb_display_disassembly_for_thread</code></td><td>Disassemble around the current thread PC (emacs gdb-display-disassembly-for-thread)</td><td></td></tr>
+<tr><td><code>gdb_display_io_buffer</code></td><td>Show the inferior IO / Run console (emacs gdb-display-io-buffer)</td><td>normal: <code>&lt;space&gt;dgi</code>, select: <code>&lt;space&gt;dgi</code></td></tr>
+<tr><td><code>gdb_display_memory_buffer</code></td><td>Read and hexdump target memory (emacs gdb-display-memory-buffer)</td><td>normal: <code>&lt;space&gt;dgm</code>, select: <code>&lt;space&gt;dgm</code></td></tr>
+<tr><td><code>gdb_delete_breakpoint</code></td><td>Delete the breakpoint on the current line (emacs gdb-delete-breakpoint)</td><td>normal: <code>&lt;space&gt;dgk</code>, select: <code>&lt;space&gt;dgk</code></td></tr>
+<tr><td><code>gdb_edit_value</code></td><td>Set a variable/expression value in the debugger (emacs gdb-edit-value)</td><td>normal: <code>&lt;space&gt;dge</code>, select: <code>&lt;space&gt;dge</code></td></tr>
+<tr><td><code>gdb_many_windows</code></td><td>Open the multi-pane debugger layout (emacs gdb-many-windows)</td><td>normal: <code>&lt;space&gt;dgw</code>, select: <code>&lt;space&gt;dgw</code></td></tr>
+<tr><td><code>gdb_restore_windows</code></td><td>Restore the debugger window layout (emacs gdb-restore-windows)</td><td></td></tr>
+<tr><td><code>gud_gdb_complete_command</code></td><td>Complete the gdb command at point (emacs gud-gdb-complete-command)</td><td></td></tr>
 <tr><td><code>shell_pipe</code></td><td>Pipe selections through shell command</td><td></td></tr>
 <tr><td><code>shell_pipe_to</code></td><td>Pipe selections into shell command ignoring output</td><td></td></tr>
 <tr><td><code>shell_insert_output</code></td><td>Insert shell command output before selections</td><td></td></tr>
@@ -6979,11 +7029,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>3488</strong> (50.9%)</li>
-<li>Partial: <strong>638</strong> (9.3%)</li>
-<li>Absent: <strong>2721</strong></li>
+<li>Ported: <strong>3523</strong> (51.5%)</li>
+<li>Partial: <strong>659</strong> (9.6%)</li>
+<li>Absent: <strong>2665</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1403 static commands, 1641 typable <code>:</code> commands, 2931 default keybindings</li>
+<li>zemacs source surface: 1442 static commands, 1657 typable <code>:</code> commands, 2942 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -7039,7 +7089,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">1085</td><td style="text-align: right">270</td><td style="text-align: right">36.0%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">1120</td><td style="text-align: right">291</td><td style="text-align: right">37.2%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
@@ -7060,7 +7110,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">874</td><td style="text-align: right">185</td><td style="text-align: right">46.4%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">909</td><td style="text-align: right">206</td><td style="text-align: right">48.2%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
