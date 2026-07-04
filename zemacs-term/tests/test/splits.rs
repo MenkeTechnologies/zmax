@@ -1,6 +1,7 @@
 use super::*;
 
 use zemacs_stdx::path;
+use zemacs_term::application::Application;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_split_write_quit_all() -> anyhow::Result<()> {
@@ -256,6 +257,99 @@ async fn test_reload_all_with_split_jumplist() -> anyhow::Result<()> {
             helpers::assert_status_not_error(&app.editor);
         }),
         false,
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// vim `:sbfirst` / `:sblast` / `:sbnext` — split the window and land the new
+/// split on the first / last / next buffer while the original window keeps its
+/// buffer. Exercises the split-buffer navigation family end-to-end.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_split_buffer_navigation() -> anyhow::Result<()> {
+    let file1 = tempfile::NamedTempFile::new()?;
+    let file2 = tempfile::NamedTempFile::new()?;
+    let file3 = tempfile::NamedTempFile::new()?;
+
+    // Start on file1, then open file2 and file3 into the SAME window (no split),
+    // leaving three buffers in creation order [file1, file2, file3] and the
+    // single window showing file3 (the last one edited).
+    let mut app = helpers::AppBuilder::new()
+        .with_file(file1.path(), None)
+        .build()?;
+
+    let p1 = path::normalize(file1.path());
+    let p3 = path::normalize(file3.path());
+
+    let doc_id = |app: &Application, want: &std::path::PathBuf| {
+        app.editor
+            .documents()
+            .find(|d| d.path().is_some_and(|p| p == want))
+            .map(|d| d.id())
+            .expect("buffer for path should exist")
+    };
+    let focused = |app: &Application| app.editor.tree.get(app.editor.tree.focus).doc;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(&format!(
+                    ":o {}<ret>:o {}<ret>",
+                    file2.path().to_string_lossy(),
+                    file3.path().to_string_lossy()
+                )),
+                Some(&|app| {
+                    helpers::assert_status_not_error(&app.editor);
+                    assert_eq!(3, app.editor.documents().count(), "three buffers");
+                    assert_eq!(1, app.editor.tree.views().count(), "still one window");
+                    assert_eq!(doc_id(app, &p3), focused(app), "window shows file3");
+                }),
+            ),
+            (
+                // Split + go to the first buffer: a second window opens on file1
+                // while the original window still shows file3.
+                Some(":sbfirst<ret>"),
+                Some(&|app| {
+                    helpers::assert_status_not_error(&app.editor);
+                    assert_eq!(2, app.editor.tree.views().count(), "sbfirst opens a split");
+                    assert_eq!(doc_id(app, &p1), focused(app), "new split shows file1");
+                }),
+            ),
+            (
+                // Split + go to the last buffer: file3 in the new (focused) split.
+                Some(":sblast<ret>"),
+                Some(&|app| {
+                    helpers::assert_status_not_error(&app.editor);
+                    assert_eq!(3, app.editor.tree.views().count(), "sblast opens a split");
+                    assert_eq!(doc_id(app, &p3), focused(app), "new split shows file3");
+                }),
+            ),
+            (
+                // Split + next buffer wraps from the last (file3) back to file1,
+                // matching :bnext wrap semantics.
+                Some(":sbnext<ret>"),
+                Some(&|app| {
+                    helpers::assert_status_not_error(&app.editor);
+                    assert_eq!(4, app.editor.tree.views().count(), "sbnext opens a split");
+                    assert_eq!(doc_id(app, &p1), focused(app), "sbnext wraps to file1");
+                }),
+            ),
+            (
+                // Split + previous buffer from file1 wraps to file3.
+                Some(":sbprevious<ret>"),
+                Some(&|app| {
+                    helpers::assert_status_not_error(&app.editor);
+                    assert_eq!(5, app.editor.tree.views().count(), "sbprevious opens a split");
+                    assert_eq!(doc_id(app, &p3), focused(app), "sbprevious wraps to file3");
+                }),
+            ),
+            // Close every window at once so the app exits cleanly (the harness's
+            // single `:q!` teardown would only close one of the five splits).
+            (Some(":qa!<ret>"), None),
+        ],
+        true,
     )
     .await?;
 

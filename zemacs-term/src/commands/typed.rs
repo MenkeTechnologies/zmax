@@ -1211,6 +1211,83 @@ fn buffer_previous(
     Ok(())
 }
 
+/// vim `:sbnext` / `:sbn` — split the window, then go to the next buffer in the
+/// new split (leaving the old window on the current buffer). Reuses the exact
+/// [`buffer_next`] navigation so the wrap/count behaviour is identical to `:bnext`.
+fn sbuffer_next(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    split(cx.editor, Action::HorizontalSplit);
+    buffer_next(cx, args, event)
+}
+
+/// vim `:sbprevious` / `:sbNext` / `:sbp` / `:sbN` — split, then go to the
+/// previous buffer in the new split. Reuses [`buffer_previous`].
+fn sbuffer_previous(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    split(cx.editor, Action::HorizontalSplit);
+    buffer_previous(cx, args, event)
+}
+
+/// vim `:sbfirst` / `:sbrewind` / `:sbf` / `:sbr` — split, then go to the first
+/// buffer in the new split. Reuses [`buffer_first`].
+fn sbuffer_first(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    split(cx.editor, Action::HorizontalSplit);
+    buffer_first(cx, args, event)
+}
+
+/// vim `:sblast` / `:sbl` — split, then go to the last buffer in the new split.
+/// Reuses [`buffer_last`].
+fn sbuffer_last(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    split(cx.editor, Action::HorizontalSplit);
+    buffer_last(cx, args, event)
+}
+
+/// vim `:sbmodified` / `:sbm` — split, then go to the next modified buffer in the
+/// new split (vim E84 when there is none, bubbled up from [`buffer_modified`]).
+fn sbuffer_modified(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    split(cx.editor, Action::HorizontalSplit);
+    buffer_modified(cx, args, event)
+}
+
+/// vim `:sbuffer {name}` / `:sb` — split, then in the new split go to the buffer
+/// whose path contains `{name}`; with no argument the split stays on the current
+/// buffer. Reuses the [`ex_buffer`] selection logic.
+fn sbuffer_open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    split(cx.editor, Action::HorizontalSplit);
+    if args.join(" ").trim().is_empty() {
+        return Ok(());
+    }
+    ex_buffer(cx, args, event)
+}
+
 /// `:nohlsearch` / `:noh` — clear the persistent search highlight (vim `:nohlsearch`). Mirrors the
 /// `clear_search_highlight` command: drop the last-search register and clear the status line.
 fn no_highlight_search(
@@ -26657,6 +26734,72 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sbnext",
+        aliases: &["sbn"],
+        doc: "Split window and go to the next buffer (vim :sbnext).",
+        fun: sbuffer_next,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sbprevious",
+        aliases: &["sbp", "sbNext", "sbN"],
+        doc: "Split window and go to the previous buffer (vim :sbprevious / :sbNext).",
+        fun: sbuffer_previous,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sbfirst",
+        aliases: &["sbf", "sbrewind", "sbr"],
+        doc: "Split window and go to the first buffer (vim :sbfirst / :sbrewind).",
+        fun: sbuffer_first,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sblast",
+        aliases: &["sbl"],
+        doc: "Split window and go to the last buffer (vim :sblast).",
+        fun: sbuffer_last,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sbmodified",
+        aliases: &["sbm"],
+        doc: "Split window and go to the next modified buffer (vim :sbmodified).",
+        fun: sbuffer_modified,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sbuffer",
+        aliases: &["sb"],
+        doc: "Split window and go to the buffer whose path contains {name} (vim :sbuffer / :sb).",
+        fun: sbuffer_open,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },

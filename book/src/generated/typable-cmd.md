@@ -339,6 +339,12 @@
 | `:buffer-close-all!`, `:bca!`, `:bcloseall!` | Force close all buffers ignoring unsaved changes without quitting. |
 | `:buffer-next`, `:bn`, `:bnext` | Goto next buffer. |
 | `:buffer-previous`, `:bp`, `:bprev` | Goto previous buffer. |
+| `:sbnext`, `:sbn` | Split window and go to the next buffer (vim :sbnext). |
+| `:sbprevious`, `:sbp`, `:sbNext`, `:sbN` | Split window and go to the previous buffer (vim :sbprevious / :sbNext). |
+| `:sbfirst`, `:sbf`, `:sbrewind`, `:sbr` | Split window and go to the first buffer (vim :sbfirst / :sbrewind). |
+| `:sblast`, `:sbl` | Split window and go to the last buffer (vim :sblast). |
+| `:sbmodified`, `:sbm` | Split window and go to the next modified buffer (vim :sbmodified). |
+| `:sbuffer`, `:sb` | Split window and go to the buffer whose path contains {name} (vim :sbuffer / :sb). |
 | `:nohlsearch`, `:noh`, `:nohl` | Clear the persistent search highlight (vim :nohlsearch). |
 | `:clearjumps` | Clear the current view's jump list (vim :clearjumps). |
 | `:project-replace`, `:replace-in-files` | Regex-replace across all matching workspace files (JetBrains Replace in Files). |
