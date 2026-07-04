@@ -14088,6 +14088,15 @@
   "note": "forward-sexp (C-M-f): move over the next balanced s-expression"
  },
  {
+  "spec_id": "emacs.command.prog_indent_sexp",
+  "status": "ported",
+  "evidence": [
+   "key:normal:= s",
+   "static:prog_indent_sexp"
+  ],
+  "note": "prog-indent-sexp (prog-mode C-M-q, here = s): reindent point .. end-of-forward-sexp via the tree-sitter reindent (indent-region equivalent); with a prefix argument reindent the enclosing defun. Faithful to prog-mode.el (forward-sexp span, prefix -> beginning-of-defun)."
+ },
+ {
   "spec_id": "emacs.command.backward_up_list",
   "status": "ported",
   "evidence": [

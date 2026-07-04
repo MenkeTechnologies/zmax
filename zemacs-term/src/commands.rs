@@ -1128,6 +1128,7 @@ impl MappableCommand {
         mark_sexp, "Set the region over the following s-expression (emacs mark-sexp, C-M-SPC)",
         forward_sexp, "Move forward over the next s-expression (emacs forward-sexp, C-M-f)",
         backward_sexp, "Move backward over the previous s-expression (emacs backward-sexp, C-M-b)",
+        prog_indent_sexp, "Re-indent the s-expression after point, or the enclosing defun with a prefix (emacs prog-indent-sexp, C-M-q; here = s)",
         copy_region_as_kill, "Copy the region to the kill ring without deleting (emacs copy-region-as-kill, M-w)",
         mark_word, "Set the region over the next word (emacs mark-word, M-@)",
         mark_paragraph, "Select the paragraph around point (emacs mark-paragraph, M-h)",
@@ -24314,6 +24315,68 @@ fn c_indent_exp(cx: &mut Context) {
     }
 }
 
+/// Emacs `prog-indent-sexp` (prog-mode `C-M-q`, here `= s`): re-indent the
+/// expression after point. With a prefix argument, re-indent the enclosing
+/// defun instead.
+///
+/// Faithful to `prog-mode.el`: without a prefix it indents the region from
+/// point to the end of `forward-sexp`; with a prefix it first moves to
+/// `beginning-of-defun`, so the span (`beginning-of-defun` .. `forward-sexp`)
+/// covers the whole function. Both paths route through [`c_reindent_lines`],
+/// the tree-sitter re-indent that stands in for Emacs `indent-region`.
+fn prog_indent_sexp(cx: &mut Context) {
+    // Prefix argument -> indent the enclosing defun. `c_function_object` gives
+    // the tree-sitter `function` bounds around point, mirroring the
+    // `beginning-of-defun` + `forward-sexp` span emacs uses for the defun case.
+    if cx.count.is_some() {
+        match c_function_object(cx) {
+            Some((_vid, from, to)) => {
+                let (start_line, end_line) = {
+                    let (_view, doc) = current_ref!(cx.editor);
+                    let text = doc.text();
+                    (
+                        text.char_to_line(from),
+                        text.char_to_line(to.saturating_sub(1).max(from)),
+                    )
+                };
+                c_reindent_lines(cx, start_line, end_line);
+            }
+            None => cx
+                .editor
+                .set_status("prog-indent-sexp: no defun at point (needs a parsed syntax tree)"),
+        }
+        return;
+    }
+    // No prefix: indent point .. end-of-following-s-expression.
+    let span = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        prog_indent_sexp_line_span(doc.text(), cursor)
+    };
+    match span {
+        Some((start_line, end_line)) => {
+            c_reindent_lines(cx, start_line, end_line);
+        }
+        None => cx.editor.set_status("no s-expression after point"),
+    }
+}
+
+/// The `[start_line, end_line]` line range emacs `prog-indent-sexp` re-indents
+/// in the no-prefix case: from the line holding `cursor` to the line holding
+/// the last character of the following s-expression (`indent-region` over the
+/// `point .. forward-sexp` span). `None` when there is no non-empty
+/// s-expression after point. Pure kernel shared by [`prog_indent_sexp`] and its
+/// unit test.
+fn prog_indent_sexp_line_span(text: &Rope, cursor: usize) -> Option<(usize, usize)> {
+    let s = text.to_string();
+    let end = zemacs_core::list_motion::forward_sexp(&s, cursor)?;
+    if end <= cursor {
+        return None;
+    }
+    Some((text.char_to_line(cursor), text.char_to_line(end - 1)))
+}
+
 /// The contiguous run of comment lines around `line` sharing its comment style
 /// (`//` line comments, or block-comment body lines beginning with `*`).
 /// Returns the inclusive `(start_line, end_line)` range, or `None` when `line`
@@ -34349,6 +34412,27 @@ mod wildfire_tests {
         // N=2 jumps straight to the inside of the 2nd-closest pair `()`.
         let g = wildfire_grow_range(None, slice, start, 2);
         assert_eq!(slice.slice(g.from()..g.to()), "a [b] c");
+    }
+
+    #[test]
+    fn prog_indent_sexp_span_covers_full_multiline_sexp() {
+        use super::prog_indent_sexp_line_span;
+        // A three-line list. Emacs `prog-indent-sexp` with point on the opening
+        // paren re-indents `indent-region` over point .. end-of-forward-sexp,
+        // i.e. every line from the `(` line through the `)` line.
+        //   line 0: (foo
+        //   line 1:   bar
+        //   line 2:   baz)
+        let doc = Rope::from("(foo\n  bar\n  baz)\n");
+        assert_eq!(prog_indent_sexp_line_span(&doc, 0), Some((0, 2)));
+
+        // Point mid-buffer, on the `bar` atom (line 1). forward-sexp spans only
+        // that atom, so the range is a single line.
+        let bar = doc.line_to_char(1) + 2; // first non-ws of line 1
+        assert_eq!(prog_indent_sexp_line_span(&doc, bar), Some((1, 1)));
+
+        // At end of buffer there is no following s-expression -> no range.
+        assert_eq!(prog_indent_sexp_line_span(&doc, doc.len_chars()), None);
     }
 
     // Expected outputs captured from GNU Emacs 30.2 `studlify-buffer` on each
