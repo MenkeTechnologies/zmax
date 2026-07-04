@@ -788,6 +788,150 @@ pub mod requests {
         type Result = ();
         const COMMAND: &'static str = "startDebugging";
     }
+
+    #[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SetVariableArguments {
+        pub variables_reference: usize,
+        pub name: String,
+        pub value: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub format: Option<ValueFormat>,
+    }
+
+    #[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SetVariableResponse {
+        pub value: String,
+        #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+        pub ty: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub variables_reference: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub named_variables: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub indexed_variables: Option<usize>,
+    }
+
+    #[derive(Debug)]
+    pub enum SetVariable {}
+
+    impl Request for SetVariable {
+        type Arguments = SetVariableArguments;
+        type Result = SetVariableResponse;
+        const COMMAND: &'static str = "setVariable";
+    }
+
+    #[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SetExpressionArguments {
+        pub expression: String,
+        pub value: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub frame_id: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub format: Option<ValueFormat>,
+    }
+
+    #[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SetExpressionResponse {
+        pub value: String,
+        #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+        pub ty: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub presentation_hint: Option<VariablePresentationHint>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub variables_reference: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub named_variables: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub indexed_variables: Option<usize>,
+    }
+
+    #[derive(Debug)]
+    pub enum SetExpression {}
+
+    impl Request for SetExpression {
+        type Arguments = SetExpressionArguments;
+        type Result = SetExpressionResponse;
+        const COMMAND: &'static str = "setExpression";
+    }
+
+    #[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct ReadMemoryArguments {
+        pub memory_reference: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub offset: Option<i64>,
+        pub count: usize,
+    }
+
+    #[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct ReadMemoryResponse {
+        /// The address of the first byte, as a (possibly `0x`-prefixed) string.
+        pub address: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub unreadable_bytes: Option<usize>,
+        /// The bytes read, base64-encoded (absent when nothing was readable).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub data: Option<String>,
+    }
+
+    #[derive(Debug)]
+    pub enum ReadMemory {}
+
+    impl Request for ReadMemory {
+        type Arguments = ReadMemoryArguments;
+        type Result = ReadMemoryResponse;
+        const COMMAND: &'static str = "readMemory";
+    }
+
+    #[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct DisassembleArguments {
+        pub memory_reference: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub offset: Option<i64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub instruction_offset: Option<i64>,
+        pub instruction_count: usize,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub resolve_symbols: Option<bool>,
+    }
+
+    #[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct DisassembledInstruction {
+        /// The instruction's address, as a (possibly `0x`-prefixed) string.
+        pub address: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub instruction_bytes: Option<String>,
+        /// The disassembled text of the instruction.
+        pub instruction: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub symbol: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub location: Option<Source>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub line: Option<usize>,
+    }
+
+    #[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct DisassembleResponse {
+        pub instructions: Vec<DisassembledInstruction>,
+    }
+
+    #[derive(Debug)]
+    pub enum Disassemble {}
+
+    impl Request for Disassemble {
+        type Arguments = DisassembleArguments;
+        type Result = DisassembleResponse;
+        const COMMAND: &'static str = "disassemble";
+    }
 }
 
 // Events

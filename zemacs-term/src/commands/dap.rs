@@ -838,3 +838,432 @@ pub fn dap_switch_stack_frame(cx: &mut Context) {
     });
     cx.push_layer(Box::new(picker))
 }
+
+// -- Emacs GUD / GDB data-buffer, thread/frame and value commands --------------
+//
+// These map GNU Emacs `gdb-mode`'s data buffers onto the corresponding DAP
+// requests via the existing `Client`: locals/registers = `scopes`+`variables`,
+// stack = the cached `stackTrace` frames, disassembly = `disassemble`, memory =
+// `readMemory`, and value editing = `setExpression`/`evaluate`. Views render in
+// a popup; the pure text is built by `zemacs_dap::gud_view` (unit-tested).
+
+/// Which DAP scopes a data buffer wants: the CPU-register scope, or everything
+/// else (locals + arguments), matched on the scope's reported name.
+enum ScopeKind {
+    /// Only the adapter's `Registers`/`CPU` scope (may be absent).
+    Register,
+    /// Every scope except the register scope (locals, arguments, ...).
+    NonRegister,
+}
+
+/// True when a DAP scope name looks like the CPU-register scope. Adapters that
+/// expose registers name the scope e.g. "Registers" or "CPU Registers".
+fn is_register_scope(name: &str) -> bool {
+    name.to_ascii_lowercase().contains("register")
+}
+
+/// The `StackFrame` a data buffer should read from: the innermost frame when
+/// `top`, otherwise the user's currently-selected frame.
+fn selected_frame(debugger: &dap::Client, top: bool) -> Option<&StackFrame> {
+    let thread_id = debugger.thread_id?;
+    let frames = debugger.stack_frames.get(&thread_id)?;
+    let idx = if top {
+        0
+    } else {
+        debugger.active_frame.unwrap_or(0)
+    };
+    frames.get(idx)
+}
+
+/// Fetch and format the scopes/variables of `frame_id`, keeping only the scopes
+/// selected by `kind`. Synchronous (`block_on`) like `dap_variables`.
+fn frame_scope_rows(
+    debugger: &dap::Client,
+    frame_id: usize,
+    kind: ScopeKind,
+) -> Vec<dap::gud_view::ScopeRows> {
+    let Ok(scopes) = block_on(debugger.scopes(frame_id)) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for scope in scopes {
+        let is_reg = is_register_scope(&scope.name);
+        let keep = match kind {
+            ScopeKind::Register => is_reg,
+            ScopeKind::NonRegister => !is_reg,
+        };
+        if !keep {
+            continue;
+        }
+        let vars = block_on(debugger.variables(scope.variables_reference)).unwrap_or_default();
+        let rows = vars
+            .into_iter()
+            .map(|v| dap::gud_view::VarRow {
+                name: v.name,
+                ty: v.ty,
+                value: v.value,
+            })
+            .collect();
+        out.push(dap::gud_view::ScopeRows {
+            name: scope.name,
+            vars: rows,
+        });
+    }
+    out
+}
+
+/// Show a read-only text popup with the given body, replacing any prior popup
+/// with the same id.
+fn show_gdb_popup(cx: &mut Context, id: &'static str, body: String) {
+    let popup = Popup::new(id, Text::new(body));
+    cx.replace_or_push_layer(id, popup);
+}
+
+/// `gdb-display-locals-buffer`: the local variables (and arguments) of the
+/// currently-selected stack frame, via DAP `scopes`/`variables`.
+pub fn gdb_display_locals_buffer(cx: &mut Context) {
+    let debugger = debugger!(cx.editor);
+    let Some(frame_id) = selected_frame(debugger, false).map(|f| f.id) else {
+        cx.editor
+            .set_status("gdb-locals: no stopped stack frame (start or pause the debugger first)");
+        return;
+    };
+    let scopes = frame_scope_rows(debugger, frame_id, ScopeKind::NonRegister);
+    let body = dap::gud_view::format_scopes(&scopes);
+    show_gdb_popup(cx, "gdb-locals", body);
+}
+
+/// `gdb-display-registers-buffer`: the CPU registers of the current frame. Only
+/// works when the adapter exposes a `Registers` scope (many do not).
+pub fn gdb_display_registers_buffer(cx: &mut Context) {
+    let debugger = debugger!(cx.editor);
+    let Some(frame_id) = selected_frame(debugger, false).map(|f| f.id) else {
+        cx.editor
+            .set_status("gdb-registers: no stopped stack frame");
+        return;
+    };
+    let scopes = frame_scope_rows(debugger, frame_id, ScopeKind::Register);
+    if scopes.is_empty() {
+        cx.editor
+            .set_status("gdb-registers: this debug adapter exposes no Registers scope");
+        return;
+    }
+    let body = dap::gud_view::format_scopes(&scopes);
+    show_gdb_popup(cx, "gdb-registers", body);
+}
+
+/// Build the stack-view rows for a thread from the client's cached frames.
+fn stack_rows(debugger: &dap::Client, thread_id: dap::ThreadId) -> Vec<dap::gud_view::StackRow> {
+    match debugger.stack_frames.get(&thread_id) {
+        Some(frames) => frames
+            .iter()
+            .enumerate()
+            .map(|(i, f)| dap::gud_view::StackRow {
+                level: i,
+                name: f.name.clone(),
+                location: f
+                    .source
+                    .as_ref()
+                    .and_then(|s| s.path.as_ref())
+                    .map(|p| format!("{}:{}", p.display(), f.line)),
+            })
+            .collect(),
+        None => Vec::new(),
+    }
+}
+
+/// `gdb-display-stack-for-thread`: the call stack (DAP `stackTrace`, cached on
+/// stop) of the current thread, with the selected frame marked.
+pub fn gdb_display_stack_for_thread(cx: &mut Context) {
+    let debugger = debugger!(cx.editor);
+    let Some(thread_id) = debugger.thread_id else {
+        cx.editor.set_status("gdb-stack: no stopped thread");
+        return;
+    };
+    let active = debugger.active_frame;
+    let rows = stack_rows(debugger, thread_id);
+    let body = dap::gud_view::format_stack(&rows, active);
+    show_gdb_popup(cx, "gdb-stack", body);
+}
+
+/// `gdb-display-locals-for-thread`: the locals of the current thread's innermost
+/// frame (its top `stackTrace` frame).
+pub fn gdb_display_locals_for_thread(cx: &mut Context) {
+    let debugger = debugger!(cx.editor);
+    let Some(frame_id) = selected_frame(debugger, true).map(|f| f.id) else {
+        cx.editor
+            .set_status("gdb-locals-for-thread: no stopped thread");
+        return;
+    };
+    let scopes = frame_scope_rows(debugger, frame_id, ScopeKind::NonRegister);
+    let body = dap::gud_view::format_scopes(&scopes);
+    show_gdb_popup(cx, "gdb-locals", body);
+}
+
+/// `gdb-display-registers-for-thread`: the CPU registers of the current thread's
+/// innermost frame. Gated on the adapter exposing a `Registers` scope.
+pub fn gdb_display_registers_for_thread(cx: &mut Context) {
+    let debugger = debugger!(cx.editor);
+    let Some(frame_id) = selected_frame(debugger, true).map(|f| f.id) else {
+        cx.editor
+            .set_status("gdb-registers-for-thread: no stopped thread");
+        return;
+    };
+    let scopes = frame_scope_rows(debugger, frame_id, ScopeKind::Register);
+    if scopes.is_empty() {
+        cx.editor
+            .set_status("gdb-registers-for-thread: this debug adapter exposes no Registers scope");
+        return;
+    }
+    let body = dap::gud_view::format_scopes(&scopes);
+    show_gdb_popup(cx, "gdb-registers", body);
+}
+
+/// Shared body for the two disassembly commands: disassemble ~32 instructions
+/// at the instruction pointer of the selected (`top` = innermost) frame.
+fn gdb_disassemble(cx: &mut Context, top: bool) {
+    let debugger = debugger!(cx.editor);
+    if !debugger
+        .capabilities()
+        .supports_disassemble_request
+        .unwrap_or(false)
+    {
+        cx.editor.set_status(
+            "gdb-disassembly: this debug adapter does not support the DAP disassemble request",
+        );
+        return;
+    }
+    let Some(memref) =
+        selected_frame(debugger, top).and_then(|f| f.instruction_pointer_reference.clone())
+    else {
+        cx.editor
+            .set_status("gdb-disassembly: no instruction pointer for the current frame");
+        return;
+    };
+    match block_on(debugger.disassemble(memref, 32)) {
+        Ok(resp) => {
+            let mut body = String::new();
+            for ins in &resp.instructions {
+                match &ins.symbol {
+                    Some(sym) => body.push_str(&format!(
+                        "{}: {}\t; {}\n",
+                        ins.address, ins.instruction, sym
+                    )),
+                    None => body.push_str(&format!("{}: {}\n", ins.address, ins.instruction)),
+                }
+            }
+            if body.is_empty() {
+                body.push_str("<no instructions>\n");
+            }
+            show_gdb_popup(cx, "gdb-disassembly", body);
+        }
+        Err(e) => cx.editor.set_error(format!("gdb-disassembly: {e}")),
+    }
+}
+
+/// `gdb-display-disassembly-buffer`: disassemble around the selected frame's PC.
+pub fn gdb_display_disassembly_buffer(cx: &mut Context) {
+    gdb_disassemble(cx, false);
+}
+
+/// `gdb-display-disassembly-for-thread`: disassemble around the current thread's
+/// innermost frame PC.
+pub fn gdb_display_disassembly_for_thread(cx: &mut Context) {
+    gdb_disassemble(cx, true);
+}
+
+/// Parse a hex address, tolerating a leading `0x`.
+fn parse_addr(s: &str) -> Option<u64> {
+    let s = s.trim();
+    let s = s
+        .strip_prefix("0x")
+        .or_else(|| s.strip_prefix("0X"))
+        .unwrap_or(s);
+    u64::from_str_radix(s, 16).ok()
+}
+
+/// `gdb-display-memory-buffer`: prompt for an address/expression, read target
+/// memory via DAP `readMemory`, and show a hexdump. Gated on the adapter's
+/// `supportsReadMemoryRequest` capability.
+pub fn gdb_display_memory_buffer(cx: &mut Context) {
+    let debugger = debugger!(cx.editor);
+    if !debugger
+        .capabilities()
+        .supports_read_memory_request
+        .unwrap_or(false)
+    {
+        cx.editor.set_status(
+            "gdb-memory: this debug adapter does not support the DAP readMemory request",
+        );
+        return;
+    }
+    let frame_id = selected_frame(debugger, false).map(|f| f.id);
+    let prompt = Prompt::new(
+        "gdb read memory (address or &expr):".into(),
+        None,
+        ui::completers::none,
+        move |cx, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let expr = input.trim();
+            if expr.is_empty() {
+                return;
+            }
+            // Resolve the input to a DAP memory reference: evaluate it first (an
+            // expression like `&buf` yields a memoryReference), else treat the
+            // literal text as the reference.
+            let memref = match cx.editor.debug_adapters.get_active_client() {
+                Some(d) => match block_on(d.eval(expr.to_string(), frame_id)) {
+                    Ok(r) => r.memory_reference.unwrap_or(r.result),
+                    Err(_) => expr.to_string(),
+                },
+                None => return,
+            };
+            const COUNT: usize = 256;
+            let Some(d) = cx.editor.debug_adapters.get_active_client() else {
+                return;
+            };
+            match block_on(d.read_memory(memref, Some(0), COUNT)) {
+                Ok(resp) => {
+                    let base = parse_addr(&resp.address).unwrap_or(0);
+                    let bytes = resp
+                        .data
+                        .as_deref()
+                        .and_then(dap::gud_view::decode_base64)
+                        .unwrap_or_default();
+                    let body = if bytes.is_empty() {
+                        "<no readable bytes>\n".to_string()
+                    } else {
+                        dap::gud_view::hexdump(base, &bytes)
+                    };
+                    cx.jobs.callback(async move {
+                        let call: Callback =
+                            Callback::EditorCompositor(Box::new(move |_editor, compositor| {
+                                compositor.replace_or_push(
+                                    "gdb-memory",
+                                    Popup::new("gdb-memory", Text::new(body)),
+                                );
+                            }));
+                        Ok(call)
+                    });
+                }
+                Err(e) => cx.editor.set_error(format!("gdb-memory: {e}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// `gdb-display-io-buffer`: the inferior's stdio. zemacs' DAP path has no
+/// dedicated IO buffer (adapter `output` events are surfaced inline), so this
+/// focuses the IDE Run console where program output lands. For a true separate
+/// inferior-IO buffer use `gud-gdb`, which drives gdb in a comint terminal.
+pub fn gdb_display_io_buffer(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.focus_ide_panel("run");
+        }
+    }));
+    cx.editor.set_status(
+        "gdb-io: showing the Run console (DAP program output). For a dedicated inferior-IO terminal use gud-gdb.",
+    );
+}
+
+/// `gdb-delete-breakpoint`: remove the breakpoint on the current source line and
+/// push the updated set to the adapter (DAP `setBreakpoints`).
+pub fn gdb_delete_breakpoint(cx: &mut Context) {
+    let Some((idx, _bp)) = get_breakpoint_at_current_line(cx.editor) else {
+        cx.editor
+            .set_status("gdb-delete-breakpoint: no breakpoint on the current line");
+        return;
+    };
+    let Some(path) = doc!(cx.editor).path().map(ToOwned::to_owned) else {
+        return;
+    };
+    let breakpoints = cx.editor.breakpoints.entry(path.clone()).or_default();
+    breakpoints.remove(idx);
+    let debugger = debugger!(cx.editor);
+    if let Err(e) = breakpoints_changed(debugger, path, breakpoints) {
+        cx.editor.set_error(format!("gdb-delete-breakpoint: {e}"));
+    } else {
+        cx.editor.set_status("gdb-delete-breakpoint: removed");
+    }
+}
+
+/// `gdb-edit-value`: set the value of a variable/lvalue expression. Prompts for
+/// `expr = value`; uses DAP `setExpression` when supported, else an assignment
+/// `evaluate` (which gdb/lldb honour).
+pub fn gdb_edit_value(cx: &mut Context) {
+    let debugger = debugger!(cx.editor);
+    let Some(frame_id) = selected_frame(debugger, false).map(|f| f.id) else {
+        cx.editor
+            .set_status("gdb-edit-value: no stopped stack frame");
+        return;
+    };
+    let supports_set_expr = debugger
+        .capabilities()
+        .supports_set_expression
+        .unwrap_or(false);
+    let prompt = Prompt::new(
+        "gdb set (expr = value):".into(),
+        None,
+        ui::completers::none,
+        move |cx, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let Some((lhs, rhs)) = input.split_once('=') else {
+                cx.editor
+                    .set_error("gdb-edit-value: expected `expr = value`");
+                return;
+            };
+            let lhs = lhs.trim().to_string();
+            let rhs = rhs.trim().to_string();
+            if lhs.is_empty() || rhs.is_empty() {
+                cx.editor
+                    .set_error("gdb-edit-value: expected `expr = value`");
+                return;
+            }
+            let Some(d) = cx.editor.debug_adapters.get_active_client() else {
+                return;
+            };
+            let result = if supports_set_expr {
+                block_on(d.set_expression(lhs.clone(), rhs.clone(), Some(frame_id)))
+                    .map(|r| r.value)
+            } else {
+                block_on(d.eval(format!("{lhs} = {rhs}"), Some(frame_id))).map(|r| r.result)
+            };
+            match result {
+                Ok(v) => cx.editor.set_status(format!("gdb-edit-value: {lhs} = {v}")),
+                Err(e) => cx.editor.set_error(format!("gdb-edit-value: {e}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// `gdb-many-windows`: open the IDE debug tool window, whose panes (call stack /
+/// variables / breakpoints) mirror Emacs' multi-window GDB layout.
+pub fn gdb_many_windows(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.focus_ide_panel("debug");
+        }
+    }));
+    cx.editor.set_status(
+        "gdb-many-windows: opened the IDE debug tool window (call stack / variables / breakpoints)",
+    );
+}
+
+/// `gdb-restore-windows`: restore the debugger's multi-pane layout by reopening
+/// the IDE debug tool window.
+pub fn gdb_restore_windows(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.focus_ide_panel("debug");
+        }
+    }));
+    cx.editor
+        .set_status("gdb-restore-windows: restored the IDE debug tool window");
+}
