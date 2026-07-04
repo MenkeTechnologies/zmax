@@ -970,7 +970,7 @@
 | `kmacro_name_last_macro` | Name the last kbd macro and register it as an invokable command (emacs kmacro-name-last-macro) |  |
 | `insert_kbd_macro` | Insert a textual definition of the last kbd macro (emacs insert-kbd-macro) |  |
 | `apply_macro_to_region_lines` | Run the last kbd macro at the start of each line in the region (emacs apply-macro-to-region-lines) |  |
-| `kmacro_end_or_call_macro` | End recording, or call the last kbd macro (emacs kmacro-end-or-call-macro, F4) |  |
+| `kmacro_end_or_call_macro` | End recording, or call the last kbd macro (emacs kmacro-end-or-call-macro, F4) | normal: `` <F4> `` |
 | `kmacro_end_or_call_macro_repeat` | Repeat-variant of end-or-call macro (emacs kmacro-end-or-call-macro-repeat) |  |
 | `kmacro_edit_macro` | Edit the last kbd macro's keys as text (emacs edit-kbd-macro / kmacro-edit-macro) |  |
 | `kmacro_step_edit_macro` | Edit the whole last kbd macro (emacs kmacro-step-edit-macro; no per-key stepping) |  |

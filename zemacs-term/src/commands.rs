@@ -26195,34 +26195,6 @@ fn kmacro_set_format(cx: &mut Context) {
 
 // --- named / callable keyboard macros (Emacs kmacro standalone commands) -----
 
-/// Replay the given macro key-string `count` times by feeding its keys back
-/// through the compositor, guarding against recursion via the `@` replay slot.
-/// This is the one path that actually re-runs a macro: it defers onto
-/// `cx.callback`, which the main key loop drains with the compositor in hand.
-fn replay_macro_string(cx: &mut Context, macro_str: &str, count: usize) {
-    let keys = match zemacs_view::input::parse_macro(macro_str) {
-        Ok(k) => k,
-        Err(err) => {
-            cx.editor.set_error(format!("Invalid macro: {err}"));
-            return;
-        }
-    };
-    if cx.editor.macro_replaying.contains(&'@') {
-        cx.editor
-            .set_error("Cannot execute macro because the [@] register is already playing a macro");
-        return;
-    }
-    cx.editor.macro_replaying.push('@');
-    cx.callback.push(Box::new(move |compositor, cx| {
-        for _ in 0..count {
-            for &key in keys.iter() {
-                compositor.handle_event(&compositor::Event::Key(key), cx);
-            }
-        }
-        cx.editor.macro_replaying.pop();
-    }));
-}
-
 /// Emacs `kmacro-name-last-macro` (C-x C-k n): give the last keyboard macro a
 /// name and register it so the name resolves as an invokable command.
 fn kmacro_name_last_macro(cx: &mut Context) {
@@ -26323,19 +26295,6 @@ fn apply_macro_to_region_lines(cx: &mut Context) {
         }
         cx.editor.macro_replaying.pop();
     }));
-}
-
-/// Emacs `kmacro-end-or-call-macro` (F4): if a macro is being recorded, end the
-/// recording; otherwise call (replay) the last keyboard macro.
-fn kmacro_end_or_call_macro(cx: &mut Context) {
-    if cx.editor.macro_recording.is_some() {
-        record_macro(cx); // toggles recording off
-    } else if let Some(macro_str) = macro_ring_head() {
-        let count = cx.count();
-        replay_macro_string(cx, &macro_str, count);
-    } else {
-        cx.editor.set_status("no keyboard macro defined yet");
-    }
 }
 
 /// Emacs `kmacro-end-or-call-macro-repeat`: the repeat-friendly F4 variant.
@@ -26442,6 +26401,50 @@ fn kmacro_bind_to_key(cx: &mut Context) {
 fn kmacro_redisplay(cx: &mut Context) {
     cx.editor
         .set_status("kmacro-redisplay (no-op: zemacs redraws every frame)");
+}
+
+/// What `kmacro-end-or-call-macro` should do this invocation. Emacs makes a
+/// single key (C-x e / F4) finish a macro that is being defined, or otherwise
+/// replay the last one — so the whole behaviour is this branch.
+#[derive(Debug, PartialEq)]
+enum KmacroEndOrCall {
+    /// A macro is being recorded → end the definition.
+    EndRecording,
+    /// Not recording → replay this macro string (the ring head = last macro).
+    Call(String),
+    /// Not recording and the ring is empty → nothing to call.
+    NoMacro,
+}
+
+fn kmacro_end_or_call_decision(is_recording: bool, ring_head: Option<String>) -> KmacroEndOrCall {
+    if is_recording {
+        KmacroEndOrCall::EndRecording
+    } else {
+        match ring_head {
+            Some(s) => KmacroEndOrCall::Call(s),
+            None => KmacroEndOrCall::NoMacro,
+        }
+    }
+}
+
+/// Emacs `kmacro-end-or-call-macro` (`C-x e` / `F4`): if a keyboard macro is
+/// being recorded, end the definition; otherwise execute the last keyboard
+/// macro (the head of the macro ring) `count` times. Bound to a single key so
+/// the end path leaves exactly one trailing key for `record_macro` to strip,
+/// exactly as vim's `q` stop does.
+fn kmacro_end_or_call_macro(cx: &mut Context) {
+    let ring_head = MACRO_RING.lock().ok().and_then(|r| r.first().cloned());
+    match kmacro_end_or_call_decision(cx.editor.macro_recording.is_some(), ring_head) {
+        KmacroEndOrCall::EndRecording => record_macro(cx),
+        KmacroEndOrCall::Call(s) => {
+            // Sync the last macro into register `@` (as SPC K r does) and replay;
+            // replay_macro honours cx.count() for the repeat count.
+            let _ = cx.editor.registers.write('@', vec![s]);
+            cx.register = Some('@');
+            replay_macro(cx);
+        }
+        KmacroEndOrCall::NoMacro => cx.editor.set_error("No keyboard macro defined"),
+    }
 }
 
 // --- paredit-style structural editing (spacemacs SPC k) ----------------------
@@ -29455,6 +29458,29 @@ mod insert_generator_tests {
         assert_eq!(kmacro_counter_add(1), 43);
         kmacro_counter_reset();
         assert_eq!(kmacro_counter_value(), 0);
+    }
+
+    #[test]
+    fn kmacro_end_or_call_decision_branches() {
+        // Recording in progress → end the definition, regardless of the ring.
+        assert_eq!(
+            kmacro_end_or_call_decision(true, Some("iabc<esc>".into())),
+            KmacroEndOrCall::EndRecording
+        );
+        assert_eq!(
+            kmacro_end_or_call_decision(true, None),
+            KmacroEndOrCall::EndRecording
+        );
+        // Not recording, ring has a macro → call the ring head verbatim.
+        assert_eq!(
+            kmacro_end_or_call_decision(false, Some("iabc<esc>".into())),
+            KmacroEndOrCall::Call("iabc<esc>".into())
+        );
+        // Not recording, empty ring → nothing to call.
+        assert_eq!(
+            kmacro_end_or_call_decision(false, None),
+            KmacroEndOrCall::NoMacro
+        );
     }
 
     #[test]
