@@ -1567,6 +1567,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "K" => drag_line_up,
                 },
                 "c" => count_selection,            // SPC x c : count chars/words/lines
+                "e" => { "Abbrev"
+                    "u" => unexpand_abbrev,        // SPC x e u : undo last abbrev expansion (emacs unexpand-abbrev)
+                },
                 "u" => switch_to_lowercase,        // SPC x u : lowercase
                 "U" => switch_to_uppercase,        // SPC x U : uppercase the selection
                 "o" => goto_file,                  // SPC x o : open link in frame (avy)

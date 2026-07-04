@@ -939,6 +939,7 @@ impl MappableCommand {
         define_abbrev, "Define a global abbrev: <name> <expansion> (emacs C-x a g)",
         inverse_add_global_abbrev, "Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g)",
         expand_abbrev, "Expand the abbrev before point (emacs C-x ')",
+        unexpand_abbrev, "Undo the last abbrev expansion, restoring the original abbrev text (emacs unexpand-abbrev)",
         insert_abbrevs, "Insert a description of every defined abbrev at point (emacs insert-abbrevs)",
         define_abbrevs, "Define abbrevs from the buffer text after point (emacs define-abbrevs)",
         paste_clipboard_after, "Paste clipboard after selections",
@@ -14121,6 +14122,41 @@ fn inverse_add_global_abbrev(cx: &mut Context) {
     );
 }
 
+/// State recorded by `expand-abbrev` so `unexpand-abbrev` can undo it, mirroring
+/// emacs's `last-abbrev` / `last-abbrev-text` / `last-abbrev-location`
+/// (`lisp/abbrev.el`, set in `abbrev--default-expand`).
+#[derive(Clone)]
+struct LastAbbrev {
+    /// Char offset of the start of the expansion (`last-abbrev-location`).
+    location: usize,
+    /// The abbrev symbol/name whose expansion was inserted (`last-abbrev`).
+    name: String,
+    /// The exact original text that was replaced; `None` once it has been
+    /// unexpanded (emacs sets `last-abbrev-text` to nil).
+    text: Option<String>,
+}
+
+static LAST_ABBREV: std::sync::Mutex<Option<LastAbbrev>> = std::sync::Mutex::new(None);
+
+/// Compute the `unexpand-abbrev` replacement: remove the `expansion_len` chars
+/// that `expand-abbrev` inserted at `location`, restoring `orig_len` chars of
+/// the original abbrev text. Returns `(start, end, new_pos)` — the span to
+/// replace and the resulting cursor — or `None` when the recorded span no
+/// longer fits `buf_len` (emacs's `(<= (point-min) last-abbrev-location
+/// (point-max))` guard, extended to the span end after later edits).
+fn unexpand_span(
+    location: usize,
+    expansion_len: usize,
+    orig_len: usize,
+    buf_len: usize,
+) -> Option<(usize, usize, usize)> {
+    let end = location + expansion_len;
+    if location > buf_len || end > buf_len {
+        return None;
+    }
+    Some((location, end, location + orig_len))
+}
+
 /// Emacs `expand-abbrev` (C-x '): expand the word before point if it is a
 /// defined abbrev.
 fn expand_abbrev(cx: &mut Context) {
@@ -14151,6 +14187,63 @@ fn expand_abbrev(cx: &mut Context) {
     let new_pos = start + expansion.chars().count();
     doc.set_selection(view.id, Selection::point(new_pos));
     doc.append_changes_to_history(view);
+    // Record what was expanded so `unexpand-abbrev` can undo it. Here the
+    // matched word is both the abbrev name and the exact replaced text.
+    *LAST_ABBREV.lock().unwrap() = Some(LastAbbrev {
+        location: start,
+        name: word.clone(),
+        text: Some(word.clone()),
+    });
+}
+
+/// Emacs `unexpand-abbrev`: undo the expansion of the last abbrev that
+/// `expand-abbrev` expanded, without undoing edits made since. Faithful to
+/// `unexpand-abbrev` in `lisp/abbrev.el`: it re-fetches the abbrev's current
+/// expansion (whose length is what was inserted), replaces that span with the
+/// original abbrev text, moves point past the restored text, then clears the
+/// saved text so a second call is a no-op.
+fn unexpand_abbrev(cx: &mut Context) {
+    let saved = LAST_ABBREV.lock().unwrap().clone();
+    // `(when (stringp last-abbrev-text) ...)` — nil once already unexpanded.
+    let Some(la) = saved else {
+        cx.editor.set_error("No abbrev to unexpand");
+        return;
+    };
+    let Some(orig_text) = la.text.clone() else {
+        cx.editor.set_error("No abbrev to unexpand");
+        return;
+    };
+    // `(let ((val (symbol-value last-abbrev))) ...)` — its length is the span
+    // of inserted text to remove.
+    let Some(expansion) = crate::emacs_abbrev::get(&la.name) else {
+        cx.editor
+            .set_error("Value of abbrev-symbol must be a string");
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let len_chars = doc.text().len_chars();
+    let Some((start, end, new_pos)) = unexpand_span(
+        la.location,
+        expansion.chars().count(),
+        orig_text.chars().count(),
+        len_chars,
+    ) else {
+        return;
+    };
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((start, end, Some(Tendril::from(orig_text.as_str())))),
+    );
+    doc.apply(&transaction, view.id);
+    // `(goto-char (+ (point) (length last-abbrev-text)))`.
+    doc.set_selection(view.id, Selection::point(new_pos));
+    doc.append_changes_to_history(view);
+    // `(setq last-abbrev-text nil)`.
+    if let Some(state) = LAST_ABBREV.lock().unwrap().as_mut() {
+        state.text = None;
+    }
+    cx.editor
+        .set_status(format!("Unexpanded abbrev '{}'", la.name));
 }
 
 /// Emacs `insert-abbrevs`: insert after point a description of every defined
@@ -29290,6 +29383,25 @@ mod abbrev_tests {
         let text = rope.slice(..);
         // Cursor after "bcd" stops at the '.', not including "a".
         assert_eq!(abbrev_word_before(text, 5), (2, "bcd".to_string()));
+    }
+
+    #[test]
+    fn unexpand_span_removes_expansion_and_restores_original_length() {
+        // "teh" (3) expanded to "the quick" (9) at offset 4 in a 20-char buffer:
+        // remove [4, 13), and land the cursor after the restored 3-char abbrev.
+        assert_eq!(unexpand_span(4, 9, 3, 20), Some((4, 13, 7)));
+        // Expansion shorter than the abbrev still restores the abbrev's length.
+        assert_eq!(unexpand_span(0, 1, 5, 10), Some((0, 1, 5)));
+        // Span exactly reaching the buffer end is valid.
+        assert_eq!(unexpand_span(2, 8, 4, 10), Some((2, 10, 6)));
+    }
+
+    #[test]
+    fn unexpand_span_guards_span_past_buffer_end() {
+        // Recorded location beyond the (edited) buffer: emacs's point-max guard.
+        assert_eq!(unexpand_span(15, 3, 2, 10), None);
+        // Location in range but the expansion span now overruns the buffer.
+        assert_eq!(unexpand_span(8, 5, 3, 10), None);
     }
 }
 

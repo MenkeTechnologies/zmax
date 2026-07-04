@@ -14930,6 +14930,14 @@
   "note": "emacs port (Step B)"
  },
  {
+  "spec_id": "emacs.command.unexpand_abbrev",
+  "status": "ported",
+  "evidence": [
+   "static:unexpand_abbrev"
+  ],
+  "note": "unexpand-abbrev: undo the last expand-abbrev, replacing the inserted expansion with the original abbrev text and moving point past it, then clearing the saved text so a repeat is a no-op. Faithful to lisp/abbrev.el (last-abbrev / last-abbrev-text / last-abbrev-location recorded by expand_abbrev; unexpand_span helper for the replace span + point-max guard). Bound at SPC x e u."
+ },
+ {
   "spec_id": "emacs.command.add_global_abbrev",
   "status": "ported",
   "evidence": [
