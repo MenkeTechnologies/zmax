@@ -803,6 +803,11 @@ impl Ide {
                 self.select_tab(BottomTab::Registers);
                 self.focus = Focus::Problems;
             }
+            "debug" => {
+                self.fold_problems = false;
+                self.select_tab(BottomTab::Debug);
+                self.focus = Focus::Problems;
+            }
             "jumplist" => {
                 self.fold_problems = false;
                 self.select_tab(BottomTab::Jumplist);

@@ -1685,6 +1685,20 @@ impl MappableCommand {
         dap_switch_stack_frame, "Switch stack frame",
         dap_enable_exceptions, "Enable exception breakpoints",
         dap_disable_exceptions, "Disable exception breakpoints",
+        gdb_display_locals_buffer, "Show local variables of the current frame (emacs gdb-display-locals-buffer)",
+        gdb_display_registers_buffer, "Show CPU registers of the current frame (emacs gdb-display-registers-buffer)",
+        gdb_display_stack_for_thread, "Show the call stack of the current thread (emacs gdb-display-stack-for-thread)",
+        gdb_display_locals_for_thread, "Show locals of the current thread's innermost frame (emacs gdb-display-locals-for-thread)",
+        gdb_display_registers_for_thread, "Show registers of the current thread's innermost frame (emacs gdb-display-registers-for-thread)",
+        gdb_display_disassembly_buffer, "Disassemble around the current frame PC (emacs gdb-display-disassembly-buffer)",
+        gdb_display_disassembly_for_thread, "Disassemble around the current thread PC (emacs gdb-display-disassembly-for-thread)",
+        gdb_display_io_buffer, "Show the inferior IO / Run console (emacs gdb-display-io-buffer)",
+        gdb_display_memory_buffer, "Read and hexdump target memory (emacs gdb-display-memory-buffer)",
+        gdb_delete_breakpoint, "Delete the breakpoint on the current line (emacs gdb-delete-breakpoint)",
+        gdb_edit_value, "Set a variable/expression value in the debugger (emacs gdb-edit-value)",
+        gdb_many_windows, "Open the multi-pane debugger layout (emacs gdb-many-windows)",
+        gdb_restore_windows, "Restore the debugger window layout (emacs gdb-restore-windows)",
+        gud_gdb_complete_command, "Complete the gdb command at point (emacs gud-gdb-complete-command)",
         shell_pipe, "Pipe selections through shell command",
         shell_pipe_to, "Pipe selections into shell command ignoring output",
         shell_insert_output, "Insert shell command output before selections",
@@ -25664,6 +25678,22 @@ fn gud_watch(cx: &mut Context) {
         return;
     };
     gud_send_owned(cx, format!("watch {word}"));
+}
+
+/// `gud-gdb-complete-command`: complete the gdb command word at point. zemacs
+/// sends gdb's own `complete WORD` to the inferior debugger; the candidates are
+/// printed in the debugger (comint) buffer. This is a partial port: unlike
+/// Emacs there is no in-place completion of the command line itself.
+fn gud_gdb_complete_command(cx: &mut Context) {
+    let Some(word) = gud_word_at_point(cx) else {
+        cx.editor
+            .set_error("gud-gdb-complete-command: no command word at point");
+        return;
+    };
+    gud_send_owned(cx, format!("complete {word}"));
+    cx.editor.set_status(
+        "gud-gdb-complete-command: sent `complete` to gdb (candidates print in the debugger buffer)",
+    );
 }
 
 /// `gud-up`: select the stack frame one level up (emacs `gud-up`).
