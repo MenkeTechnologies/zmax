@@ -939,6 +939,7 @@ impl MappableCommand {
         define_abbrev, "Define a global abbrev: <name> <expansion> (emacs C-x a g)",
         inverse_add_global_abbrev, "Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g)",
         expand_abbrev, "Expand the abbrev before point (emacs C-x ')",
+        abbrev_prefix_mark, "Mark point as an abbrev prefix boundary; insert a hyphen the next expand-abbrev removes (emacs abbrev-prefix-mark, M-')",
         unexpand_abbrev, "Undo the last abbrev expansion, restoring the original abbrev text (emacs unexpand-abbrev)",
         insert_abbrevs, "Insert a description of every defined abbrev at point (emacs insert-abbrevs)",
         define_abbrevs, "Define abbrevs from the buffer text after point (emacs define-abbrevs)",
@@ -14138,6 +14139,34 @@ struct LastAbbrev {
 
 static LAST_ABBREV: std::sync::Mutex<Option<LastAbbrev>> = std::sync::Mutex::new(None);
 
+/// `abbrev-start-location` / `abbrev-start-location-buffer` (lisp/abbrev.el): the
+/// buffer position `expand-abbrev` should treat as the start of the abbrev, set
+/// by `abbrev-prefix-mark`. Process-global paired with the document it was set
+/// for, mirroring emacs's per-buffer variable plus its buffer guard. Cleared on
+/// use, so `expand-abbrev` consults it at most once.
+static ABBREV_START: std::sync::Mutex<Option<(DocumentId, usize)>> = std::sync::Mutex::new(None);
+
+/// `abbrev--before-point`'s start-location handling: return the recorded start
+/// position if it belongs to `doc`, clearing it either way — emacs sets
+/// `abbrev-start-location` to nil on any expand, and clears it outright when the
+/// current buffer differs from `abbrev-start-location-buffer`.
+fn take_abbrev_start(doc: DocumentId) -> Option<usize> {
+    match ABBREV_START.lock().unwrap().take() {
+        Some((d, pos)) if d == doc => Some(pos),
+        _ => None,
+    }
+}
+
+/// Split the text typed after an `abbrev-prefix-mark` hyphen into the abbrev
+/// name and the count of trailing whitespace chars to leave in the buffer.
+/// Faithful to `abbrev--before-point`'s `(skip-syntax-backward " ")`, which
+/// excludes trailing whitespace from the abbrev name.
+fn abbrev_prefix_split(typed: &str) -> (String, usize) {
+    let name = typed.trim_end_matches(char::is_whitespace);
+    let ws = typed.chars().count() - name.chars().count();
+    (name.to_string(), ws)
+}
+
 /// Compute the `unexpand-abbrev` replacement: remove the `expansion_len` chars
 /// that `expand-abbrev` inserted at `location`, restoring `orig_len` chars of
 /// the original abbrev text. Returns `(start, end, new_pos)` — the span to
@@ -14157,43 +14186,130 @@ fn unexpand_span(
     Some((location, end, location + orig_len))
 }
 
-/// Emacs `expand-abbrev` (C-x '): expand the word before point if it is a
-/// defined abbrev.
-fn expand_abbrev(cx: &mut Context) {
-    let (start, word) = {
-        let (view, doc) = current!(cx.editor);
-        let text = doc.text().slice(..);
-        let cursor = doc.selection(view.id).primary().cursor(text);
-        abbrev_word_before(text, cursor)
-    };
-    if word.is_empty() {
-        cx.editor.set_error("No word before cursor");
-        return;
-    }
-    let Some(expansion) = crate::emacs_abbrev::get(&word) else {
-        cx.editor.set_error(format!("'{word}' is not an abbrev"));
-        return;
-    };
+/// Replace buffer chars `[start, end)` with `expansion`, move point to the end
+/// of the inserted text, and record the expansion for `unexpand-abbrev`. `name`
+/// is the abbrev symbol and the exact text removed (`last-abbrev` /
+/// `last-abbrev-text` in emacs).
+fn abbrev_do_expand(cx: &mut Context, start: usize, end: usize, name: &str, expansion: &str) {
     let (view, doc) = current!(cx.editor);
-    let cursor = doc
-        .selection(view.id)
-        .primary()
-        .cursor(doc.text().slice(..));
     let transaction = Transaction::change(
         doc.text(),
-        std::iter::once((start, cursor, Some(Tendril::from(expansion.as_str())))),
+        std::iter::once((start, end, Some(Tendril::from(expansion)))),
     );
     doc.apply(&transaction, view.id);
     let new_pos = start + expansion.chars().count();
     doc.set_selection(view.id, Selection::point(new_pos));
     doc.append_changes_to_history(view);
-    // Record what was expanded so `unexpand-abbrev` can undo it. Here the
-    // matched word is both the abbrev name and the exact replaced text.
     *LAST_ABBREV.lock().unwrap() = Some(LastAbbrev {
         location: start,
-        name: word.clone(),
-        text: Some(word.clone()),
+        name: name.to_string(),
+        text: Some(name.to_string()),
     });
+}
+
+/// Delete the dangling hyphen an `abbrev-prefix-mark` left at `loc` when the
+/// text after it is not an abbrev. `abbrev--before-point` removes that hyphen
+/// unconditionally before deciding whether an abbrev is present.
+fn abbrev_delete_hyphen(cx: &mut Context, loc: usize) {
+    let (view, doc) = current!(cx.editor);
+    let transaction = Transaction::change(doc.text(), std::iter::once((loc, loc + 1, None)));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Core of `expand-abbrev` / `abbrev--before-point`: find the abbrev before
+/// point — using the `abbrev-prefix-mark` start-location if one is set for this
+/// buffer, otherwise the word before point — and replace it with its expansion.
+/// Returns `true` if an abbrev was expanded. Errors are only surfaced when
+/// `report` is set, so the silent pre-expansion `abbrev-prefix-mark` performs
+/// stays quiet.
+fn abbrev_expand_impl(cx: &mut Context, report: bool) -> bool {
+    let doc_id = current!(cx.editor).1.id();
+    let start_loc = take_abbrev_start(doc_id);
+    // Resolve the span [start, end) to replace, the abbrev name, and — for the
+    // prefix-mark path — the hyphen position to strip if nothing expands.
+    let (start, end, word, hyphen) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        match start_loc {
+            Some(loc) if loc < cursor => {
+                let hyphen = text.char(loc) == '-';
+                let content_start = if hyphen { loc + 1 } else { loc };
+                let typed: String = text
+                    .slice(content_start.min(cursor)..cursor)
+                    .chars()
+                    .collect();
+                let (name, ws) = abbrev_prefix_split(&typed);
+                // Replace hyphen + name; leave trailing whitespace in place.
+                (
+                    loc,
+                    cursor - ws,
+                    name,
+                    if hyphen { Some(loc) } else { None },
+                )
+            }
+            _ => {
+                let (s, w) = abbrev_word_before(text, cursor);
+                (s, cursor, w, None)
+            }
+        }
+    };
+    if word.is_empty() {
+        if let Some(loc) = hyphen {
+            abbrev_delete_hyphen(cx, loc);
+        } else if report {
+            cx.editor.set_error("No word before cursor");
+        }
+        return false;
+    }
+    let Some(expansion) = crate::emacs_abbrev::get(&word) else {
+        if let Some(loc) = hyphen {
+            abbrev_delete_hyphen(cx, loc);
+        }
+        if report {
+            cx.editor.set_error(format!("'{word}' is not an abbrev"));
+        }
+        return false;
+    };
+    abbrev_do_expand(cx, start, end, &word, &expansion);
+    true
+}
+
+/// Emacs `expand-abbrev` (C-x '): expand the word before point if it is a
+/// defined abbrev. Honors an `abbrev-prefix-mark` start-location when set.
+fn expand_abbrev(cx: &mut Context) {
+    abbrev_expand_impl(cx, true);
+}
+
+/// Emacs `abbrev-prefix-mark` (M-'): mark point as the start of an abbrev so a
+/// following `expand-abbrev` treats only the text after this point as the
+/// abbrev, letting a non-abbrev prefix precede it. Without a prefix argument it
+/// first expands any abbrev already before point, then records the location and
+/// inserts a hyphen that `expand-abbrev` removes on expansion. Faithful to
+/// `abbrev-prefix-mark` in lisp/abbrev.el: `(or arg (expand-abbrev))`, then
+/// `(setq abbrev-start-location (point-marker) …)` and `(insert "-")`.
+fn abbrev_prefix_mark(cx: &mut Context) {
+    // `(or arg (expand-abbrev))` — with no prefix argument, pre-expand silently.
+    if cx.count.is_none() {
+        abbrev_expand_impl(cx, false);
+    }
+    let (view, doc) = current!(cx.editor);
+    let doc_id = doc.id();
+    let cursor = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
+    // `(insert "-")` — a plain `point-marker` (insertion type nil) stays before
+    // the hyphen, so the recorded start is the hyphen's position.
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((cursor, cursor, Some(Tendril::from("-")))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::point(cursor + 1));
+    doc.append_changes_to_history(view);
+    *ABBREV_START.lock().unwrap() = Some((doc_id, cursor));
 }
 
 /// Emacs `unexpand-abbrev`: undo the expansion of the last abbrev that
@@ -29402,6 +29518,37 @@ mod abbrev_tests {
         assert_eq!(unexpand_span(15, 3, 2, 10), None);
         // Location in range but the expansion span now overruns the buffer.
         assert_eq!(unexpand_span(8, 5, 3, 10), None);
+    }
+
+    #[test]
+    fn abbrev_prefix_split_trims_trailing_whitespace_only() {
+        // No trailing whitespace: the whole typed text is the abbrev name.
+        assert_eq!(abbrev_prefix_split("expand"), ("expand".to_string(), 0));
+        // Trailing spaces and tabs are excluded from the name but counted so the
+        // caller can leave them in the buffer (emacs skip-syntax-backward " ").
+        assert_eq!(abbrev_prefix_split("expand  "), ("expand".to_string(), 2));
+        assert_eq!(abbrev_prefix_split("expand\t"), ("expand".to_string(), 1));
+        // Interior whitespace is preserved as part of the name.
+        assert_eq!(abbrev_prefix_split("a b "), ("a b".to_string(), 1));
+        // Empty / all-whitespace input yields an empty name (nothing to expand).
+        assert_eq!(abbrev_prefix_split(""), (String::new(), 0));
+        assert_eq!(abbrev_prefix_split("   "), (String::new(), 3));
+    }
+
+    #[test]
+    fn take_abbrev_start_returns_matching_doc_and_clears() {
+        // `take_abbrev_start` reads at most once (emacs sets abbrev-start-location
+        // to nil on every expand). Serialize against the shared global.
+        static GUARD: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _g = GUARD.lock().unwrap_or_else(|e| e.into_inner());
+        let id = DocumentId::default();
+        *ABBREV_START.lock().unwrap() = Some((id, 7));
+        assert_eq!(take_abbrev_start(id), Some(7));
+        // Cleared: a second read finds nothing.
+        assert_eq!(take_abbrev_start(id), None);
+        // Unset store also yields None.
+        *ABBREV_START.lock().unwrap() = None;
+        assert_eq!(take_abbrev_start(id), None);
     }
 }
 

@@ -1569,6 +1569,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "c" => count_selection,            // SPC x c : count chars/words/lines
                 "e" => { "Abbrev"
                     "u" => unexpand_abbrev,        // SPC x e u : undo last abbrev expansion (emacs unexpand-abbrev)
+                    "m" => abbrev_prefix_mark,     // SPC x e m : mark abbrev prefix boundary (emacs abbrev-prefix-mark, M-')
                 },
                 "u" => switch_to_lowercase,        // SPC x u : lowercase
                 "U" => switch_to_uppercase,        // SPC x U : uppercase the selection

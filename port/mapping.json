@@ -14930,6 +14930,15 @@
   "note": "emacs port (Step B)"
  },
  {
+  "spec_id": "emacs.command.abbrev_prefix_mark",
+  "status": "ported",
+  "evidence": [
+   "static:abbrev_prefix_mark",
+   "key:normal:space x e m"
+  ],
+  "note": "abbrev-prefix-mark (M-'): mark point as the start of an abbrev so the next expand-abbrev treats only the text after the mark as the abbrev, keeping any non-abbrev prefix. Faithful to lisp/abbrev.el: without a prefix arg it first expands any abbrev before point ((or arg (expand-abbrev))), then records the location (abbrev-start-location / ABBREV_START keyed on DocumentId) and inserts a hyphen ((insert \"-\")). expand_abbrev, refactored into abbrev_expand_impl, consults the location via take_abbrev_start and abbrev--before-point's logic: strip the hyphen, take text up to point minus trailing whitespace (abbrev_prefix_split) as the abbrev name, expand it, and remove a dangling hyphen when nothing matches. Bound at SPC x e m."
+ },
+ {
   "spec_id": "emacs.command.unexpand_abbrev",
   "status": "ported",
   "evidence": [
