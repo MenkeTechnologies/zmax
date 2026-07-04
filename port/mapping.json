@@ -28461,7 +28461,7 @@
   "evidence": [
    "key:bufmenu:I"
   ],
-  "note": "Buffer-menu-toggle-internal -> I toggles showing internal (space-prefixed / *…* special) buffers; the filter is faithful but zemacs does not create Emacs-style internal buffers, so in practice it reveals nothing"
+  "note": "Buffer-menu-toggle-internal -> I toggles showing internal (space-prefixed / *\u2026* special) buffers; the filter is faithful but zemacs does not create Emacs-style internal buffers, so in practice it reveals nothing"
  },
  {
   "spec_id": "emacs.keybinding.ret_lparenbuffer_menu_rparen",
@@ -33488,5 +33488,149 @@
    "key:insert:A-j"
   ],
   "note": "default-indent-new-line (M-j): break line at point and continue the comment, aligning the continuation under the current comment (comment-indent-new-line in-comment path); newline-and-indent when not in a comment."
+ },
+ {
+  "spec_id": "emacs.command.gdb_toggle_breakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_toggle_breakpoint"
+  ],
+  "note": "Toggle a breakpoint on the current line = gdb-toggle-breakpoint; reuses the existing DAP breakpoint model + setBreakpoints (dap-toggle-breakpoint)."
+ },
+ {
+  "spec_id": "emacs.command.gdb_goto_breakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:dap_breakpoints_picker"
+  ],
+  "note": "Jump to a breakpoint's source line via the breakpoints picker = gdb-goto-breakpoint."
+ },
+ {
+  "spec_id": "emacs.command.gdb_select_thread",
+  "status": "ported",
+  "evidence": [
+   "static:dap_switch_thread"
+  ],
+  "note": "Make a thread current (DAP threads + select-thread) = gdb-select-thread."
+ },
+ {
+  "spec_id": "emacs.command.gdb_frames_select",
+  "status": "ported",
+  "evidence": [
+   "static:dap_switch_stack_frame"
+  ],
+  "note": "Select a stack frame, jumping to it and making its scopes current (DAP stackTrace/scopes) = gdb-frames-select."
+ },
+ {
+  "spec_id": "emacs.command.gdb_display_locals_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:gdb_display_locals_buffer"
+  ],
+  "note": "Local variables (and arguments) of the current frame via DAP scopes/variables, shown in a popup = gdb-display-locals-buffer."
+ },
+ {
+  "spec_id": "emacs.command.gdb_display_stack_for_thread",
+  "status": "ported",
+  "evidence": [
+   "static:gdb_display_stack_for_thread"
+  ],
+  "note": "Call stack of the current thread (cached DAP stackTrace frames), selected frame marked = gdb-display-stack-for-thread."
+ },
+ {
+  "spec_id": "emacs.command.gdb_display_locals_for_thread",
+  "status": "ported",
+  "evidence": [
+   "static:gdb_display_locals_for_thread"
+  ],
+  "note": "Locals of the current thread's innermost frame via DAP scopes/variables = gdb-display-locals-for-thread."
+ },
+ {
+  "spec_id": "emacs.command.gdb_delete_breakpoint",
+  "status": "ported",
+  "evidence": [
+   "static:gdb_delete_breakpoint"
+  ],
+  "note": "Delete the breakpoint on the current line and re-send DAP setBreakpoints = gdb-delete-breakpoint."
+ },
+ {
+  "spec_id": "emacs.command.gdb_edit_value",
+  "status": "ported",
+  "evidence": [
+   "static:gdb_edit_value"
+  ],
+  "note": "Set a variable/lvalue value via DAP setExpression, or an assignment evaluate when unsupported = gdb-edit-value."
+ },
+ {
+  "spec_id": "emacs.command.gdb_display_registers_buffer",
+  "status": "partial",
+  "evidence": [
+   "static:gdb_display_registers_buffer"
+  ],
+  "note": "CPU registers = the adapter's Registers scope; DAP has no dedicated register request, so this only works when the adapter exposes a Registers scope (many do not)."
+ },
+ {
+  "spec_id": "emacs.command.gdb_display_registers_for_thread",
+  "status": "partial",
+  "evidence": [
+   "static:gdb_display_registers_for_thread"
+  ],
+  "note": "Registers of the current thread's innermost frame; same Registers-scope limitation as gdb-display-registers-buffer."
+ },
+ {
+  "spec_id": "emacs.command.gdb_display_disassembly_buffer",
+  "status": "partial",
+  "evidence": [
+   "static:gdb_display_disassembly_buffer"
+  ],
+  "note": "Issues the real DAP disassemble request around the selected frame PC and shows it; gated on the adapter's supportsDisassembleRequest capability (many adapters lack it)."
+ },
+ {
+  "spec_id": "emacs.command.gdb_display_disassembly_for_thread",
+  "status": "partial",
+  "evidence": [
+   "static:gdb_display_disassembly_for_thread"
+  ],
+  "note": "Disassemble around the current thread's innermost-frame PC via the DAP disassemble request; gated on supportsDisassembleRequest."
+ },
+ {
+  "spec_id": "emacs.command.gdb_display_memory_buffer",
+  "status": "partial",
+  "evidence": [
+   "static:gdb_display_memory_buffer"
+  ],
+  "note": "Prompts for an address/expression, issues the real DAP readMemory request and hexdumps the bytes; gated on the adapter's supportsReadMemoryRequest capability (many adapters lack it)."
+ },
+ {
+  "spec_id": "emacs.command.gdb_display_io_buffer",
+  "status": "partial",
+  "evidence": [
+   "static:gdb_display_io_buffer"
+  ],
+  "note": "zemacs' DAP path has no dedicated inferior-IO buffer (adapter output events surface inline), so this focuses the IDE Run console where program output lands. A true separate inferior-IO terminal is gud-gdb."
+ },
+ {
+  "spec_id": "emacs.command.gdb_many_windows",
+  "status": "partial",
+  "evidence": [
+   "static:gdb_many_windows"
+  ],
+  "note": "Opens the IDE debug tool window (call stack / variables / breakpoints panes); a single multi-section panel rather than Emacs' separate multi-window GDB layout."
+ },
+ {
+  "spec_id": "emacs.command.gdb_restore_windows",
+  "status": "partial",
+  "evidence": [
+   "static:gdb_restore_windows"
+  ],
+  "note": "Restores the debugger layout by reopening the IDE debug tool window (see gdb-many-windows caveat)."
+ },
+ {
+  "spec_id": "emacs.command.gud_gdb_complete_command",
+  "status": "partial",
+  "evidence": [
+   "static:gud_gdb_complete_command"
+  ],
+  "note": "Sends gdb's own `complete WORD` to the inferior in the gud comint buffer; candidates print there. No in-place command-line completion like Emacs."
  }
 ]
