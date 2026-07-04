@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-b251e313.js";
+            window.path_to_searchindex_js = "searchindex-d6760e2b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1611,6 +1611,39 @@
 <tr><td><code>git_push</code></td><td>Push the current branch to its remote (SPC g P)</td><td>normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, insert: <code>&lt;C-x&gt;vP</code></td></tr>
 <tr><td><code>git_pull</code></td><td>Fast-forward pull from upstream (SPC g u)</td><td>normal: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, select: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, insert: <code>&lt;C-x&gt;v+</code></td></tr>
 <tr><td><code>git_fetch</code></td><td>Fetch all remotes (SPC g F)</td><td>normal: <code>&lt;space&gt;gF</code>, select: <code>&lt;space&gt;gF</code></td></tr>
+<tr><td><code>vc_print_log</code></td><td>VC log for the current file (emacs vc-print-log)</td><td></td></tr>
+<tr><td><code>vc_print_root_log</code></td><td>VC log for the whole repository (emacs vc-print-root-log)</td><td></td></tr>
+<tr><td><code>vc_print_branch_log</code></td><td>VC log for a named branch (emacs vc-print-branch-log)</td><td></td></tr>
+<tr><td><code>vc_root_diff</code></td><td>Diff the whole working tree vs HEAD (emacs vc-root-diff)</td><td></td></tr>
+<tr><td><code>vc_region_history</code></td><td>History of the selected line range (emacs vc-region-history)</td><td></td></tr>
+<tr><td><code>vc_log_incoming</code></td><td>Commits incoming from upstream (emacs vc-log-incoming)</td><td></td></tr>
+<tr><td><code>vc_log_outgoing</code></td><td>Commits outgoing to upstream (emacs vc-log-outgoing)</td><td></td></tr>
+<tr><td><code>vc_log_search</code></td><td>Search the commit log by pattern (emacs vc-log-search)</td><td></td></tr>
+<tr><td><code>vc_create_branch</code></td><td>Create and switch to a new branch (emacs vc-create-branch)</td><td></td></tr>
+<tr><td><code>vc_switch_branch</code></td><td>Switch to an existing branch (emacs vc-switch-branch)</td><td></td></tr>
+<tr><td><code>vc_create_tag</code></td><td>Create a git tag at HEAD (emacs vc-create-tag)</td><td></td></tr>
+<tr><td><code>vc_retrieve_tag</code></td><td>Check out a tag or branch (emacs vc-retrieve-tag)</td><td></td></tr>
+<tr><td><code>vc_rename_file</code></td><td>Rename the current file under VC (emacs vc-rename-file)</td><td></td></tr>
+<tr><td><code>vc_delete_file</code></td><td>Delete the current file under VC (emacs vc-delete-file)</td><td></td></tr>
+<tr><td><code>vc_ignore</code></td><td>Add the current file to .gitignore (emacs vc-ignore)</td><td></td></tr>
+<tr><td><code>vc_revert</code></td><td>Revert the current file to HEAD (emacs vc-revert)</td><td></td></tr>
+<tr><td><code>vc_refresh_state</code></td><td>Recompute the buffer’s VC state (emacs vc-refresh-state)</td><td></td></tr>
+<tr><td><code>vc_state_refresh</code></td><td>Recompute the buffer’s VC state (emacs vc-state-refresh)</td><td></td></tr>
+<tr><td><code>vc_pull</code></td><td>Pull from upstream (emacs vc-pull)</td><td></td></tr>
+<tr><td><code>vc_push</code></td><td>Push to upstream (emacs vc-push)</td><td></td></tr>
+<tr><td><code>vc_next_action</code></td><td>Do the next logical VC step: stage + commit (emacs vc-next-action)</td><td></td></tr>
+<tr><td><code>vc_dir</code></td><td>Open the VC directory / Magit status (emacs vc-dir)</td><td></td></tr>
+<tr><td><code>project_vc_dir</code></td><td>Open the project’s VC directory / Magit status (emacs project-vc-dir)</td><td></td></tr>
+<tr><td><code>project_switch_project</code></td><td>Switch to another project (emacs project-switch-project)</td><td></td></tr>
+<tr><td><code>project_search</code></td><td>Grep-search the project (emacs project-search)</td><td></td></tr>
+<tr><td><code>project_query_replace_regexp</code></td><td>Project-wide regex replace (emacs project-query-replace-regexp)</td><td></td></tr>
+<tr><td><code>project_list_buffers</code></td><td>List open buffers (emacs project-list-buffers)</td><td></td></tr>
+<tr><td><code>project_shell_command</code></td><td>Run a shell command in the project root (emacs project-shell-command)</td><td></td></tr>
+<tr><td><code>project_async_shell_command</code></td><td>Run an async shell command in the project (emacs project-async-shell-command)</td><td></td></tr>
+<tr><td><code>project_eshell</code></td><td>Open a shell buffer for the project (emacs project-eshell)</td><td></td></tr>
+<tr><td><code>xref_find_definitions_other_window</code></td><td>Goto definition in another window (emacs xref-find-definitions-other-window)</td><td></td></tr>
+<tr><td><code>xref_query_replace_in_results</code></td><td>Query-replace across xref/project results (emacs xref-query-replace-in-results)</td><td></td></tr>
+<tr><td><code>xref_find_references_and_replace</code></td><td>Find references and replace them (emacs xref-find-references-and-replace)</td><td></td></tr>
 <tr><td><code>cut_to_clipboard</code></td><td>Cut the selection to the system clipboard</td><td></td></tr>
 <tr><td><code>org_cycle</code></td><td>Org: toggle subtree fold</td><td>normal: <code>&lt;space&gt;mz</code>, <code>&lt;space&gt;m&lt;tab&gt;</code>, select: <code>&lt;space&gt;mz</code>, <code>&lt;space&gt;m&lt;tab&gt;</code></td></tr>
 <tr><td><code>org_todo</code></td><td>Org: cycle TODO keyword</td><td></td></tr>
@@ -1928,6 +1961,33 @@
 <tr><td><code>gud_tbreak</code></td><td>Set a temporary breakpoint at the current line (emacs gud-tbreak)</td><td></td></tr>
 <tr><td><code>gud_print</code></td><td>Print the expression at point in the debugger (emacs gud-print)</td><td></td></tr>
 <tr><td><code>gud_watch</code></td><td>Watch the expression at point in the debugger (emacs gud-watch)</td><td></td></tr>
+<tr><td><code>gud_jump</code></td><td>Set the debugger execution point to the current line (emacs gud-jump)</td><td></td></tr>
+<tr><td><code>gud_refresh</code></td><td>Redisplay the debugger buffer (emacs gud-refresh)</td><td></td></tr>
+<tr><td><code>comint_kill_input</code></td><td>Discard the pending comint input line (emacs comint-kill-input)</td><td></td></tr>
+<tr><td><code>comint_bol_or_process_mark</code></td><td>Move to the process mark or beginning of line (emacs comint-bol-or-process-mark)</td><td></td></tr>
+<tr><td><code>comint_delchar_or_maybe_eof</code></td><td>Delete char or send EOF on empty input (emacs comint-delchar-or-maybe-eof)</td><td></td></tr>
+<tr><td><code>comint_magic_space</code></td><td>Expand history designators then insert a space (emacs comint-magic-space)</td><td></td></tr>
+<tr><td><code>comint_insert_previous_argument</code></td><td>Insert the last argument of the previous command (emacs comint-insert-previous-argument)</td><td></td></tr>
+<tr><td><code>comint_get_next_from_history</code></td><td>Yank the next history entry onto the input (emacs comint-get-next-from-history)</td><td></td></tr>
+<tr><td><code>comint_next_prompt</code></td><td>Move to the next command prompt (emacs comint-next-prompt)</td><td></td></tr>
+<tr><td><code>comint_previous_prompt</code></td><td>Move to the previous command prompt (emacs comint-previous-prompt)</td><td></td></tr>
+<tr><td><code>comint_show_output</code></td><td>Scroll the last command’s output to the top (emacs comint-show-output)</td><td></td></tr>
+<tr><td><code>comint_show_maximum_output</code></td><td>Scroll the newest output to the bottom (emacs comint-show-maximum-output)</td><td></td></tr>
+<tr><td><code>comint_delete_output</code></td><td>Delete the last command’s output (emacs comint-delete-output)</td><td></td></tr>
+<tr><td><code>comint_write_output</code></td><td>Write the last command’s output to a file (emacs comint-write-output)</td><td></td></tr>
+<tr><td><code>comint_copy_old_input</code></td><td>Copy the most recent input onto the input line (emacs comint-copy-old-input)</td><td></td></tr>
+<tr><td><code>comint_truncate_buffer</code></td><td>Trim the comint scrollback to the maximum size (emacs comint-truncate-buffer)</td><td></td></tr>
+<tr><td><code>comint_strip_ctrl_m</code></td><td>Strip carriage returns from the scrollback (emacs comint-strip-ctrl-m)</td><td></td></tr>
+<tr><td><code>comint_interrupt_subjob</code></td><td>Send SIGINT to the comint child (emacs comint-interrupt-subjob)</td><td></td></tr>
+<tr><td><code>comint_stop_subjob</code></td><td>Suspend the comint child with SIGTSTP (emacs comint-stop-subjob)</td><td></td></tr>
+<tr><td><code>comint_continue_subjob</code></td><td>Resume the comint child with SIGCONT (emacs comint-continue-subjob)</td><td></td></tr>
+<tr><td><code>comint_quit_subjob</code></td><td>Send SIGQUIT to the comint child (emacs comint-quit-subjob)</td><td></td></tr>
+<tr><td><code>comint_kill_subjob</code></td><td>Send SIGKILL to the comint child (emacs comint-kill-subjob)</td><td></td></tr>
+<tr><td><code>comint_dynamic_list_input_ring</code></td><td>List the comint input history (emacs comint-dynamic-list-input-ring)</td><td></td></tr>
+<tr><td><code>comint_history_isearch_backward_regexp</code></td><td>Search the comint input history backward (emacs comint-history-isearch-backward-regexp)</td><td></td></tr>
+<tr><td><code>comint_run</code></td><td>Run a program in a new comint buffer (emacs comint-run)</td><td></td></tr>
+<tr><td><code>shell_forward_command</code></td><td>Move forward over a shell command on the input line (emacs shell-forward-command)</td><td></td></tr>
+<tr><td><code>shell_backward_command</code></td><td>Move backward over a shell command on the input line (emacs shell-backward-command)</td><td></td></tr>
 <tr><td><code>run_config_manager</code></td><td>Manage run/debug configurations</td><td>normal: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code>, select: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code></td></tr>
 <tr><td><code>run_active_config</code></td><td>Run the active run configuration</td><td>normal: <code>&lt;F5&gt;</code>, <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code>, select: <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-c&gt;</code></td></tr>
 <tr><td><code>clear_run_output</code></td><td>Clear the Run tool window output</td><td>normal: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code>, select: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code></td></tr>
@@ -2015,6 +2075,16 @@
 <tr><td><code>kmacro_insert_counter</code></td><td>Insert the macro counter value, then increment (SPC K c c)</td><td>normal: <code>&lt;space&gt;Kcc</code>, <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-i&gt;</code>, select: <code>&lt;space&gt;Kcc</code>, <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-i&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-i&gt;</code></td></tr>
 <tr><td><code>kmacro_set_counter</code></td><td>Set the keyboard-macro counter to [count] (emacs kmacro-set-counter)</td><td></td></tr>
 <tr><td><code>kmacro_set_format</code></td><td>Set the macro-counter insert format, e.g. %03d (emacs kmacro-set-format)</td><td></td></tr>
+<tr><td><code>kmacro_name_last_macro</code></td><td>Name the last kbd macro and register it as an invokable command (emacs kmacro-name-last-macro)</td><td></td></tr>
+<tr><td><code>insert_kbd_macro</code></td><td>Insert a textual definition of the last kbd macro (emacs insert-kbd-macro)</td><td></td></tr>
+<tr><td><code>apply_macro_to_region_lines</code></td><td>Run the last kbd macro at the start of each line in the region (emacs apply-macro-to-region-lines)</td><td></td></tr>
+<tr><td><code>kmacro_end_or_call_macro</code></td><td>End recording, or call the last kbd macro (emacs kmacro-end-or-call-macro, F4)</td><td>normal: <code>&lt;F4&gt;</code></td></tr>
+<tr><td><code>kmacro_end_or_call_macro_repeat</code></td><td>Repeat-variant of end-or-call macro (emacs kmacro-end-or-call-macro-repeat)</td><td></td></tr>
+<tr><td><code>kmacro_edit_macro</code></td><td>Edit the last kbd macro’s keys as text (emacs edit-kbd-macro / kmacro-edit-macro)</td><td></td></tr>
+<tr><td><code>kmacro_step_edit_macro</code></td><td>Edit the whole last kbd macro (emacs kmacro-step-edit-macro; no per-key stepping)</td><td></td></tr>
+<tr><td><code>kmacro_edit_lossage</code></td><td>Edit the recently pressed keys as a macro (emacs kmacro-edit-lossage)</td><td></td></tr>
+<tr><td><code>kmacro_bind_to_key</code></td><td>Report the config binding for the last kbd macro (emacs kmacro-bind-to-key)</td><td></td></tr>
+<tr><td><code>kmacro_redisplay</code></td><td>Refresh display during macro execution (emacs kmacro-redisplay)</td><td></td></tr>
 <tr><td><code>toggle_readonly</code></td><td>Toggle the buffer’s read-only (writable) state (SPC b w)</td><td>normal: <code>&lt;space&gt;bw</code>, <code>&lt;C-x&gt;&lt;C-q&gt;</code>, select: <code>&lt;space&gt;bw</code>, <code>&lt;C-x&gt;&lt;C-q&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-q&gt;</code></td></tr>
 <tr><td><code>toggle_window_dedication</code></td><td>Toggle window dedication (spacemacs SPC w t)</td><td>normal: <code>&lt;C-w&gt;t</code>, <code>&lt;space&gt;wt</code>, select: <code>&lt;space&gt;wt</code></td></tr>
 <tr><td><code>toggle_subword</code></td><td>Toggle sub-word w/b/e motions (spacemacs SPC t c)</td><td>normal: <code>&lt;space&gt;tc</code>, select: <code>&lt;space&gt;tc</code></td></tr>
@@ -2144,8 +2214,69 @@
 <tr><td><code>xref_find_references</code></td><td>Find references to a symbol across the workspace (emacs xref-find-references)</td><td></td></tr>
 <tr><td><code>project_find_file</code></td><td>Find a file under the project root (emacs project-find-file)</td><td></td></tr>
 <tr><td><code>diffmode</code></td><td>Open the unified-diff viewer (emacs diff-mode)</td><td></td></tr>
+<tr><td><code>diff_hunk_kill</code></td><td>Kill the diff hunk at point (emacs diff-hunk-kill)</td><td></td></tr>
+<tr><td><code>diff_file_kill</code></td><td>Kill the whole file section at point (emacs diff-file-kill)</td><td></td></tr>
+<tr><td><code>diff_split_hunk</code></td><td>Split the diff hunk at point into two (emacs diff-split-hunk)</td><td></td></tr>
+<tr><td><code>diff_reverse_direction</code></td><td>Reverse the direction of the diff (emacs diff-reverse-direction)</td><td></td></tr>
+<tr><td><code>diff_context_to_unified</code></td><td>Convert a context diff to a unified diff (emacs diff-context-&gt;unified)</td><td></td></tr>
+<tr><td><code>diff_unified_to_context</code></td><td>Convert a unified diff to a context diff (emacs diff-unified-&gt;context)</td><td></td></tr>
+<tr><td><code>diff_delete_trailing_whitespace</code></td><td>Strip trailing whitespace from added lines (emacs diff-delete-trailing-whitespace)</td><td></td></tr>
+<tr><td><code>diff_restrict_view</code></td><td>Narrow the diff buffer to the hunk at point (emacs diff-restrict-view)</td><td></td></tr>
+<tr><td><code>diff_apply_hunk</code></td><td>Apply the diff hunk at point to its target file (emacs diff-apply-hunk)</td><td></td></tr>
+<tr><td><code>diff_apply_buffer</code></td><td>Apply every hunk in the diff buffer to its target files (emacs diff-apply-buffer)</td><td></td></tr>
 <tr><td><code>picture</code></td><td>Draw ASCII pictures on a canvas (emacs picture-mode)</td><td></td></tr>
+<tr><td><code>picture_mode</code></td><td>Toggle picture-mode overwrite drawing on the buffer (emacs picture-mode)</td><td></td></tr>
+<tr><td><code>edit_picture</code></td><td>Enter picture-mode on the current buffer (emacs edit-picture)</td><td></td></tr>
+<tr><td><code>picture_movement_right</code></td><td>Picture-mode: draw toward the right (emacs picture-movement-right)</td><td></td></tr>
+<tr><td><code>picture_movement_left</code></td><td>Picture-mode: draw toward the left (emacs picture-movement-left)</td><td></td></tr>
+<tr><td><code>picture_movement_up</code></td><td>Picture-mode: draw upward (emacs picture-movement-up)</td><td></td></tr>
+<tr><td><code>picture_movement_down</code></td><td>Picture-mode: draw downward (emacs picture-movement-down)</td><td></td></tr>
+<tr><td><code>picture_movement_nw</code></td><td>Picture-mode: draw up-and-left (emacs picture-movement-nw)</td><td></td></tr>
+<tr><td><code>picture_movement_ne</code></td><td>Picture-mode: draw up-and-right (emacs picture-movement-ne)</td><td></td></tr>
+<tr><td><code>picture_movement_sw</code></td><td>Picture-mode: draw down-and-left (emacs picture-movement-sw)</td><td></td></tr>
+<tr><td><code>picture_movement_se</code></td><td>Picture-mode: draw down-and-right (emacs picture-movement-se)</td><td></td></tr>
+<tr><td><code>picture_motion</code></td><td>Picture-mode: move point in the drawing direction (emacs picture-motion)</td><td></td></tr>
+<tr><td><code>picture_motion_reverse</code></td><td>Picture-mode: move point opposite the drawing direction (emacs picture-motion-reverse)</td><td></td></tr>
+<tr><td><code>picture_set_tab_stops</code></td><td>Picture-mode: set tab stops from this line (emacs picture-set-tab-stops)</td><td></td></tr>
+<tr><td><code>picture_tab</code></td><td>Picture-mode: move to the next tab stop (emacs picture-tab)</td><td></td></tr>
+<tr><td><code>picture_tab_search</code></td><td>Picture-mode: move under next word-start above (emacs picture-tab-search)</td><td></td></tr>
+<tr><td><code>picture_open_line</code></td><td>Picture-mode: split the line at point (emacs picture-open-line)</td><td></td></tr>
+<tr><td><code>picture_clear_line</code></td><td>Picture-mode: clear to end of line (emacs picture-clear-line)</td><td></td></tr>
+<tr><td><code>picture_clear_column</code></td><td>Picture-mode: blank columns after point (emacs picture-clear-column)</td><td></td></tr>
+<tr><td><code>picture_backward_clear_column</code></td><td>Picture-mode: blank columns before point (emacs picture-backward-clear-column)</td><td></td></tr>
+<tr><td><code>picture_clear_rectangle_to_register</code></td><td>Picture-mode: clear rectangle into a register (emacs picture-clear-rectangle-to-register)</td><td></td></tr>
+<tr><td><code>picture_yank_rectangle</code></td><td>Picture-mode: overlay the killed rectangle (emacs picture-yank-rectangle)</td><td></td></tr>
+<tr><td><code>picture_yank_rectangle_from_register</code></td><td>Picture-mode: overlay a register’s rectangle (emacs picture-yank-rectangle-from-register)</td><td></td></tr>
+<tr><td><code>twocol_two_columns</code></td><td>Two-column: create a side-by-side partner buffer (emacs 2C-two-columns)</td><td></td></tr>
+<tr><td><code>twocol_associate_buffer</code></td><td>Two-column: associate the other window’s buffer (emacs 2C-associate-buffer)</td><td></td></tr>
+<tr><td><code>twocol_split</code></td><td>Two-column: split the buffer at point into two columns (emacs 2C-split)</td><td></td></tr>
+<tr><td><code>twocol_merge</code></td><td>Two-column: merge the partner column back in (emacs 2C-merge)</td><td></td></tr>
+<tr><td><code>twocol_dissociate</code></td><td>Two-column: break the association (emacs 2C-dissociate)</td><td></td></tr>
+<tr><td><code>twocol_newline</code></td><td>Two-column: newline in both columns (emacs 2C-newline)</td><td></td></tr>
 <tr><td><code>table</code></td><td>Edit a text table (emacs table.el)</td><td></td></tr>
+<tr><td><code>table_recognize</code></td><td>Recognize the ASCII table at point and report its dimensions (emacs table-recognize)</td><td></td></tr>
+<tr><td><code>table_recognize_region</code></td><td>Recognize the table in the selection and report its dimensions (emacs table-recognize-region)</td><td></td></tr>
+<tr><td><code>table_recognize_table</code></td><td>Recognize the whole table at point (emacs table-recognize-table)</td><td></td></tr>
+<tr><td><code>table_recognize_cell</code></td><td>Report the table cell at point (emacs table-recognize-cell)</td><td></td></tr>
+<tr><td><code>table_unrecognize</code></td><td>Deactivate table recognition at point (emacs table-unrecognize)</td><td></td></tr>
+<tr><td><code>table_unrecognize_region</code></td><td>Deactivate table recognition in the selection (emacs table-unrecognize-region)</td><td></td></tr>
+<tr><td><code>table_unrecognize_table</code></td><td>Deactivate recognition of the table at point (emacs table-unrecognize-table)</td><td></td></tr>
+<tr><td><code>table_unrecognize_cell</code></td><td>Deactivate recognition of the cell at point (emacs table-unrecognize-cell)</td><td></td></tr>
+<tr><td><code>table_query_dimension</code></td><td>Report the size of the table cell and table at point (emacs table-query-dimension)</td><td></td></tr>
+<tr><td><code>table_justify</code></td><td>Cycle the justification of the current table column (emacs table-justify)</td><td></td></tr>
+<tr><td><code>table_widen_cell</code></td><td>Widen the current table column by one column (emacs table-widen-cell)</td><td></td></tr>
+<tr><td><code>table_narrow_cell</code></td><td>Narrow the current table column by one column (emacs table-narrow-cell)</td><td></td></tr>
+<tr><td><code>table_heighten_cell</code></td><td>Heighten the current table row by one line (emacs table-heighten-cell)</td><td></td></tr>
+<tr><td><code>table_shorten_cell</code></td><td>Shorten the current table row by one line (emacs table-shorten-cell)</td><td></td></tr>
+<tr><td><code>table_span_cell</code></td><td>Merge the current table cell with the one to its right (emacs table-span-cell)</td><td></td></tr>
+<tr><td><code>table_split_cell</code></td><td>Split the current table cell vertically at its middle (emacs table-split-cell)</td><td></td></tr>
+<tr><td><code>table_split_cell_horizontally</code></td><td>Split the current table cell into two columns (emacs table-split-cell-horizontally)</td><td></td></tr>
+<tr><td><code>table_split_cell_vertically</code></td><td>Split the current table cell into two rows (emacs table-split-cell-vertically)</td><td></td></tr>
+<tr><td><code>table_insert_sequence</code></td><td>Fill table cells from point with an incrementing sequence (emacs table-insert-sequence)</td><td></td></tr>
+<tr><td><code>table_generate_source</code></td><td>Emit HTML source for the table at point (emacs table-generate-source)</td><td></td></tr>
+<tr><td><code>table_capture</code></td><td>Capture the selected plain text into a table (emacs table-capture)</td><td></td></tr>
+<tr><td><code>table_release</code></td><td>Release the table at point back to plain text (emacs table-release)</td><td></td></tr>
+<tr><td><code>table_fixed_width_mode</code></td><td>Toggle table fixed-width mode (emacs table-fixed-width-mode)</td><td></td></tr>
 <tr><td><code>facemenu</code></td><td>Browse faces and colors (emacs list-faces-display / facemenu)</td><td></td></tr>
 <tr><td><code>bookmark_bmenu_list</code></td><td>List bookmarks in an overlay (emacs bookmark-bmenu-list)</td><td></td></tr>
 <tr><td><code>proced</code></td><td>Open the process viewer/manager (emacs proced)</td><td></td></tr>
