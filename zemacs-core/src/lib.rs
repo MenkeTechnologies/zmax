@@ -10,6 +10,7 @@ pub mod calc;
 pub mod calendar;
 pub mod case_conversion;
 pub mod chars;
+pub mod cmode;
 pub mod comint;
 pub mod command_line;
 pub mod comment;
