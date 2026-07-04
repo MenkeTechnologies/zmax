@@ -32007,7 +32007,11 @@ mod insert_generator_tests {
         // dropped, newline + indent inserted, no comment prefix.
         let line: Vec<char> = "foo  bar".chars().collect();
         let (s, e, ins) = default_indent_new_line_edit(&line, 5, None, "", "\n");
-        assert_eq!((s, e), (3, 5), "both inter-word spaces collapsed at the break");
+        assert_eq!(
+            (s, e),
+            (3, 5),
+            "both inter-word spaces collapsed at the break"
+        );
         assert_eq!(ins, "\n");
     }
 
