@@ -1448,6 +1448,18 @@ fn project_replace(
     }
     let pattern = args[0].to_string();
     let replacement = args[1].to_string();
+    run_project_replace(cx, pattern, replacement)
+}
+
+/// Core of `:project-replace` / Emacs `project-query-replace-regexp`: replace
+/// every regex match of `pattern` with `replacement` across the project's
+/// tracked files (found via `rg -l`), off-thread, then reload affected buffers.
+/// Shared by the typable command and the static `project_query_replace_regexp`.
+pub(crate) fn run_project_replace(
+    cx: &mut compositor::Context,
+    pattern: String,
+    replacement: String,
+) -> anyhow::Result<()> {
     let re = regex::Regex::new(&pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
     let root = zemacs_loader::find_workspace().0;
     cx.editor.set_status("project-replace: searching…");
@@ -7137,7 +7149,7 @@ fn shell_single_quote(s: &str) -> String {
 /// Build the shell command for a project search: ripgrep `--vimgrep` (jumpable
 /// `file:line:col:text`) with a `grep -rnHIE` fallback when rg isn't installed.
 /// Pure — unit tested.
-fn grep_command(pattern: &str, whole_word: bool) -> String {
+pub(crate) fn grep_command(pattern: &str, whole_word: bool) -> String {
     let q = shell_single_quote(pattern);
     let w = if whole_word { "-w " } else { "" };
     format!("rg --vimgrep --color=never {w}-e {q} 2>/dev/null || grep -rnHIE {w}-e {q} .")
@@ -7168,7 +7180,7 @@ fn word_at_col(line: &str, col: usize) -> Option<String> {
 }
 
 /// Spawn `cmd` in the project root and route its output to the jumpable Run console.
-fn spawn_into_run_console(cx: &mut compositor::Context, cmd: String) {
+pub(crate) fn spawn_into_run_console(cx: &mut compositor::Context, cmd: String) {
     let path = doc!(cx.editor).path().map(|p| p.to_path_buf());
     let (_default, cwd) = crate::ui::run::smart_command(path.as_deref());
     let shell = cx.editor.config().shell.clone();

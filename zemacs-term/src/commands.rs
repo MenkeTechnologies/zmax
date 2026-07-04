@@ -815,6 +815,39 @@ impl MappableCommand {
         git_push, "Push the current branch to its remote (SPC g P)",
         git_pull, "Fast-forward pull from upstream (SPC g u)",
         git_fetch, "Fetch all remotes (SPC g F)",
+        vc_print_log, "VC log for the current file (emacs vc-print-log)",
+        vc_print_root_log, "VC log for the whole repository (emacs vc-print-root-log)",
+        vc_print_branch_log, "VC log for a named branch (emacs vc-print-branch-log)",
+        vc_root_diff, "Diff the whole working tree vs HEAD (emacs vc-root-diff)",
+        vc_region_history, "History of the selected line range (emacs vc-region-history)",
+        vc_log_incoming, "Commits incoming from upstream (emacs vc-log-incoming)",
+        vc_log_outgoing, "Commits outgoing to upstream (emacs vc-log-outgoing)",
+        vc_log_search, "Search the commit log by pattern (emacs vc-log-search)",
+        vc_create_branch, "Create and switch to a new branch (emacs vc-create-branch)",
+        vc_switch_branch, "Switch to an existing branch (emacs vc-switch-branch)",
+        vc_create_tag, "Create a git tag at HEAD (emacs vc-create-tag)",
+        vc_retrieve_tag, "Check out a tag or branch (emacs vc-retrieve-tag)",
+        vc_rename_file, "Rename the current file under VC (emacs vc-rename-file)",
+        vc_delete_file, "Delete the current file under VC (emacs vc-delete-file)",
+        vc_ignore, "Add the current file to .gitignore (emacs vc-ignore)",
+        vc_revert, "Revert the current file to HEAD (emacs vc-revert)",
+        vc_refresh_state, "Recompute the buffer's VC state (emacs vc-refresh-state)",
+        vc_state_refresh, "Recompute the buffer's VC state (emacs vc-state-refresh)",
+        vc_pull, "Pull from upstream (emacs vc-pull)",
+        vc_push, "Push to upstream (emacs vc-push)",
+        vc_next_action, "Do the next logical VC step: stage + commit (emacs vc-next-action)",
+        vc_dir, "Open the VC directory / Magit status (emacs vc-dir)",
+        project_vc_dir, "Open the project's VC directory / Magit status (emacs project-vc-dir)",
+        project_switch_project, "Switch to another project (emacs project-switch-project)",
+        project_search, "Grep-search the project (emacs project-search)",
+        project_query_replace_regexp, "Project-wide regex replace (emacs project-query-replace-regexp)",
+        project_list_buffers, "List open buffers (emacs project-list-buffers)",
+        project_shell_command, "Run a shell command in the project root (emacs project-shell-command)",
+        project_async_shell_command, "Run an async shell command in the project (emacs project-async-shell-command)",
+        project_eshell, "Open a shell buffer for the project (emacs project-eshell)",
+        xref_find_definitions_other_window, "Goto definition in another window (emacs xref-find-definitions-other-window)",
+        xref_query_replace_in_results, "Query-replace across xref/project results (emacs xref-query-replace-in-results)",
+        xref_find_references_and_replace, "Find references and replace them (emacs xref-find-references-and-replace)",
         cut_to_clipboard, "Cut the selection to the system clipboard",
         org_cycle, "Org: toggle subtree fold",
         org_todo, "Org: cycle TODO keyword",
@@ -23464,6 +23497,529 @@ fn git_fetch(cx: &mut Context) {
         vec!["fetch".into(), "--all".into()],
         "fetched",
     );
+}
+
+// ===========================================================================
+// Emacs `vc` (version control) command ports. zemacs is git-backed, which is a
+// faithful backend for `vc` in a git repo. Log/diff reuse the existing git-log
+// pickers / `git_exec`; mutating ops shell out to the `git` binary (the same
+// mechanism the rest of the editor's git commands use). Pure rev-range and
+// .gitignore helpers live (with tests) in `zemacs_core::vc`.
+// ===========================================================================
+
+/// Prompt for one line of input, then run `f` with it (trimmed, non-empty) on
+/// Validate. The callback receives a `compositor::Context` so it can shell out,
+/// reload buffers, or push overlays. Shared by the `vc-*` / `project-*` ports.
+fn prompt_then<F>(cx: &mut Context, label: &'static str, f: F)
+where
+    F: Fn(&mut crate::compositor::Context, &str) + 'static,
+{
+    let prompt = crate::ui::prompt::Prompt::new(
+        label.into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let input = input.trim();
+            if input.is_empty() {
+                return;
+            }
+            f(cx, input);
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Run a read-only `git` command in the workspace root and show its output in a
+/// scratch buffer (the `vc-*-log` / `vc-root-diff` family). Blocking — git
+/// log/diff are local and fast.
+fn git_output_to_scratch(cx: &mut Context, args: &[&str], empty_msg: &str) {
+    match git_exec(args) {
+        Ok(out) if out.trim().is_empty() => cx.editor.set_status(empty_msg.to_string()),
+        Ok(out) => {
+            show_text_in_scratch(cx.editor, &out);
+            cx.editor.set_status(format!("git {}", args.join(" ")));
+        }
+        Err(e) => cx.editor.set_error(format!(
+            "git {}: {}",
+            args.join(" "),
+            e.lines().next().unwrap_or("failed")
+        )),
+    }
+}
+
+/// `vc-print-log` (C-x v l): commit log for the current file.
+fn vc_print_log(cx: &mut Context) {
+    git_log_picker(cx, true);
+}
+
+/// `vc-print-root-log` (C-x v L): commit log for the whole repository.
+fn vc_print_root_log(cx: &mut Context) {
+    git_log_picker(cx, false);
+}
+
+/// `vc-print-branch-log` (C-x v b l): commit log for a named branch.
+fn vc_print_branch_log(cx: &mut Context) {
+    prompt_then(cx, "branch log: ", |cx, branch| {
+        git_output_to_scratch_cx(cx, &["log", "--oneline", "-200", branch], "vc-print-branch-log: no commits");
+    });
+}
+
+/// `vc-root-diff` (C-x v D): unified diff of the whole working tree vs HEAD.
+fn vc_root_diff(cx: &mut Context) {
+    git_output_to_scratch(cx, &["diff", "HEAD"], "vc-root-diff: no differences");
+}
+
+/// `vc-region-history`: history of the selected line range in the current file
+/// (`git log -L<from>,<to>:<file>`).
+fn vc_region_history(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("Buffer has no file");
+        return;
+    };
+    let (from_line, to_line) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let sel = doc.selection(view.id).primary();
+        (
+            text.char_to_line(sel.from()) + 1,
+            text.char_to_line(sel.to().saturating_sub(1).max(sel.from())) + 1,
+        )
+    };
+    let root = find_workspace().0;
+    let rel = path
+        .strip_prefix(&root)
+        .unwrap_or(&path)
+        .to_string_lossy()
+        .replace('\\', "/");
+    let spec = zemacs_core::vc::region_log_spec(from_line, to_line, &rel);
+    git_output_to_scratch(cx, &["log", &spec], "vc-region-history: no history");
+}
+
+/// `vc-log-incoming`: commits on the upstream tracking branch not yet in HEAD
+/// (what a pull would bring in — reflects the last fetch).
+fn vc_log_incoming(cx: &mut Context) {
+    git_output_to_scratch(
+        cx,
+        &["log", "--oneline", "-200", zemacs_core::vc::incoming_rev_range()],
+        "vc-log-incoming: nothing incoming (up to date with upstream)",
+    );
+}
+
+/// `vc-log-outgoing`: commits in HEAD not yet on the upstream branch (what a
+/// push would send).
+fn vc_log_outgoing(cx: &mut Context) {
+    git_output_to_scratch(
+        cx,
+        &["log", "--oneline", "-200", zemacs_core::vc::outgoing_rev_range()],
+        "vc-log-outgoing: nothing outgoing (upstream up to date)",
+    );
+}
+
+/// `vc-log-search`: search the commit log by a `--grep` pattern.
+fn vc_log_search(cx: &mut Context) {
+    prompt_then(cx, "log search (grep): ", |cx, pat| {
+        git_output_to_scratch_cx(
+            cx,
+            &["log", "--oneline", "-200", &format!("--grep={pat}")],
+            "vc-log-search: no matching commits",
+        );
+    });
+}
+
+/// Same as [`git_output_to_scratch`] but for a `compositor::Context` (used from
+/// prompt callbacks).
+fn git_output_to_scratch_cx(cx: &mut crate::compositor::Context, args: &[&str], empty_msg: &str) {
+    match git_exec(args) {
+        Ok(out) if out.trim().is_empty() => cx.editor.set_status(empty_msg.to_string()),
+        Ok(out) => {
+            show_text_in_scratch(cx.editor, &out);
+            cx.editor.set_status(format!("git {}", args.join(" ")));
+        }
+        Err(e) => cx.editor.set_error(format!(
+            "git {}: {}",
+            args.join(" "),
+            e.lines().next().unwrap_or("failed")
+        )),
+    }
+}
+
+/// `vc-create-branch`: create a new branch and switch to it (`git switch -c`).
+fn vc_create_branch(cx: &mut Context) {
+    prompt_then(cx, "create branch: ", |cx, name| {
+        match git_exec(&["switch", "-c", name]) {
+            Ok(_) => {
+                crate::commands::typed::reload_open_docs(cx);
+                cx.editor
+                    .set_status(format!("Created and switched to branch {name}"));
+            }
+            Err(e) => cx
+                .editor
+                .set_error(format!("git switch -c: {}", e.lines().next().unwrap_or("failed"))),
+        }
+    });
+}
+
+/// `vc-switch-branch`: pick an existing branch and check it out.
+fn vc_switch_branch(cx: &mut Context) {
+    git_branch_picker(cx);
+}
+
+/// `vc-create-tag`: create a git tag at HEAD.
+fn vc_create_tag(cx: &mut Context) {
+    prompt_then(cx, "create tag: ", |cx, name| match git_exec(&["tag", name]) {
+        Ok(_) => cx.editor.set_status(format!("Created tag {name}")),
+        Err(e) => cx
+            .editor
+            .set_error(format!("git tag: {}", e.lines().next().unwrap_or("failed"))),
+    });
+}
+
+/// `vc-retrieve-tag`: check out a tag or branch (`git checkout <name>`).
+fn vc_retrieve_tag(cx: &mut Context) {
+    prompt_then(cx, "retrieve tag/branch: ", |cx, name| {
+        match git_exec(&["checkout", name]) {
+            Ok(_) => {
+                crate::commands::typed::reload_open_docs(cx);
+                cx.editor.set_status(format!("Checked out {name}"));
+            }
+            Err(e) => cx
+                .editor
+                .set_error(format!("git checkout: {}", e.lines().next().unwrap_or("failed"))),
+        }
+    });
+}
+
+/// `vc-rename-file`: rename the current file under version control (`git mv`).
+fn vc_rename_file(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("Buffer has no file");
+        return;
+    };
+    prompt_then(cx, "rename file to: ", move |cx, newname| {
+        let root = find_workspace().0;
+        let new_path = root.join(newname);
+        match git_exec(&["mv", &path.to_string_lossy(), &new_path.to_string_lossy()]) {
+            Ok(_) => {
+                let _ = cx.editor.open(&new_path, Action::Replace);
+                cx.editor
+                    .set_status(format!("Renamed to {}", new_path.display()));
+            }
+            Err(e) => cx
+                .editor
+                .set_error(format!("git mv: {}", e.lines().next().unwrap_or("failed"))),
+        }
+    });
+}
+
+/// `vc-delete-file`: remove the current file from the working tree and the
+/// index (`git rm -f`).
+fn vc_delete_file(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("Buffer has no file");
+        return;
+    };
+    match git_exec(&["rm", "-f", &path.to_string_lossy()]) {
+        Ok(_) => cx
+            .editor
+            .set_status(format!("Deleted {} (git rm)", path.display())),
+        Err(e) => cx
+            .editor
+            .set_error(format!("git rm: {}", e.lines().next().unwrap_or("failed"))),
+    }
+}
+
+/// `vc-ignore`: add the current file to the repo's `.gitignore`.
+fn vc_ignore(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("Buffer has no file");
+        return;
+    };
+    let root = find_workspace().0;
+    let entry = path
+        .strip_prefix(&root)
+        .unwrap_or(&path)
+        .to_string_lossy()
+        .replace('\\', "/");
+    let gitignore = root.join(".gitignore");
+    let existing = std::fs::read_to_string(&gitignore).unwrap_or_default();
+    match zemacs_core::vc::gitignore_append(&existing, &entry) {
+        Some(new) => match std::fs::write(&gitignore, new) {
+            Ok(_) => cx.editor.set_status(format!("Added {entry} to .gitignore")),
+            Err(e) => cx.editor.set_error(format!(".gitignore: {e}")),
+        },
+        None => cx.editor.set_status(format!("{entry} is already ignored")),
+    }
+}
+
+/// `vc-revert` (C-x v u): discard working-tree changes to the current file,
+/// restoring it to HEAD (`git checkout -- <file>`), then reload the buffer.
+fn vc_revert(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("Buffer has no file");
+        return;
+    };
+    match git_exec(&["checkout", "--", &path.to_string_lossy()]) {
+        Ok(_) => {
+            reload_docs_for_paths(cx.editor, std::slice::from_ref(&path));
+            cx.editor.set_status("Reverted file to HEAD");
+        }
+        Err(e) => cx
+            .editor
+            .set_error(format!("git checkout: {}", e.lines().next().unwrap_or("failed"))),
+    }
+}
+
+/// `vc-refresh-state` / `vc-state-refresh`: recompute the current buffer's VC
+/// state — reload its diff base (gutter) and current-branch head from git.
+fn vc_refresh_state(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("Buffer has no file");
+        return;
+    };
+    let repo_dir = path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+    let trust_full = cx
+        .editor
+        .workspace_trust
+        .query(
+            &zemacs_loader::find_workspace_in(&repo_dir).0,
+            zemacs_loader::workspace_trust::TrustQuery::Git,
+        )
+        .is_trusted();
+    let base = cx.editor.diff_providers.get_diff_base(&path, trust_full);
+    let head = cx
+        .editor
+        .diff_providers
+        .get_current_head_name(&path, trust_full);
+    let doc = doc_mut!(cx.editor);
+    if let Some(base) = base {
+        doc.set_diff_base(base);
+    }
+    doc.set_version_control_head(head);
+    let branch = doc.version_control_head().map(|h| h.to_string());
+    match branch {
+        Some(b) => cx.editor.set_status(format!("VC state refreshed (branch {b})")),
+        None => cx.editor.set_status("VC state refreshed (not in a git repo)"),
+    }
+}
+
+/// `vc-state-refresh`: alias of [`vc_refresh_state`].
+fn vc_state_refresh(cx: &mut Context) {
+    vc_refresh_state(cx);
+}
+
+/// `vc-pull`: fast-forward pull from upstream.
+fn vc_pull(cx: &mut Context) {
+    git_pull(cx);
+}
+
+/// `vc-push`: push the current branch to its upstream remote.
+fn vc_push(cx: &mut Context) {
+    git_push(cx);
+}
+
+/// `vc-next-action` (C-x v v): the "do the next logical VC step". For a tracked
+/// modified file the next step is check-in: stage the current file, then open
+/// the Magit status buffer to compose the commit. (Partial: zemacs has no
+/// single check-in-comment buffer, so the commit itself happens in Magit.)
+fn vc_next_action(cx: &mut Context) {
+    if let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) {
+        if let Err(e) = git_exec(&["add", "--", &path.to_string_lossy()]) {
+            cx.editor
+                .set_error(format!("git add: {}", e.lines().next().unwrap_or("failed")));
+            return;
+        }
+        cx.editor
+            .set_status("vc-next-action: staged current file — commit in Magit");
+    }
+    git_status(cx);
+}
+
+/// `vc-dir` / `project-vc-dir`: open the Magit status buffer (zemacs's VC
+/// directory equivalent) over the current repo.
+fn vc_dir(cx: &mut Context) {
+    git_status(cx);
+}
+
+/// `project-vc-dir` (C-x p v): open the Magit status buffer for the project's
+/// repo (zemacs's VC directory equivalent).
+fn project_vc_dir(cx: &mut Context) {
+    git_status(cx);
+}
+
+// ---- Emacs `project.el` command ports -------------------------------------
+
+/// `project-switch-project` (C-x p p): open another project's find-file overlay.
+/// (Partial: zemacs keeps no persisted "known projects" list, so this prompts
+/// for the project directory.)
+fn project_switch_project(cx: &mut Context) {
+    prompt_then(cx, "switch to project (dir): ", |cx, dir| {
+        let expanded = match dir.strip_prefix("~") {
+            Some(rest) if dir == "~" || dir.starts_with("~/") => {
+                std::env::var_os("HOME")
+                    .map(|home| std::path::PathBuf::from(home).join(rest.trim_start_matches('/')))
+                    .unwrap_or_else(|| std::path::PathBuf::from(dir))
+            }
+            _ => std::path::PathBuf::from(dir),
+        };
+        let dir = expanded;
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                match crate::ui::project::Project::new(dir.clone()) {
+                    Ok(p) => compositor.push(Box::new(p)),
+                    Err(e) => editor.set_error(format!("project: {e}")),
+                }
+            },
+        ));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+}
+
+/// `project-search` (C-x p g / M-x): grep the project and stream jumpable hits
+/// into the Run console.
+fn project_search(cx: &mut Context) {
+    prompt_then(cx, "project-search (regex): ", |cx, pat| {
+        crate::commands::typed::spawn_into_run_console(
+            cx,
+            crate::commands::typed::grep_command(pat, false),
+        );
+    });
+}
+
+/// `project-query-replace-regexp`: regex search/replace across the project.
+fn project_query_replace_regexp(cx: &mut Context) {
+    prompt_then(cx, "query replace regexp (from): ", |cx, from| {
+        let from = from.to_string();
+        prompt_then_cx(cx, "query replace regexp (to): ", move |cx, to| {
+            if let Err(e) =
+                crate::commands::typed::run_project_replace(cx, from.clone(), to.to_string())
+            {
+                cx.editor.set_error(e.to_string());
+            }
+        });
+    });
+}
+
+/// `prompt_then` for a `compositor::Context` (used to chain a second prompt from
+/// inside the first prompt's callback). Pushes the follow-up prompt via a job so
+/// it reaches the compositor.
+fn prompt_then_cx<F>(cx: &mut crate::compositor::Context, label: &'static str, f: F)
+where
+    F: Fn(&mut crate::compositor::Context, &str) + Send + 'static,
+{
+    // The `Prompt` is not `Send`, so construct it inside the (main-thread)
+    // compositor callback rather than moving it across the job boundary.
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = crate::ui::prompt::Prompt::new(
+                label.into(),
+                None,
+                ui::completers::none,
+                move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let input = input.trim();
+                    if input.is_empty() {
+                        return;
+                    }
+                    f(cx, input);
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// `project-list-buffers` (C-x p b via the picker): list open buffers.
+/// (Partial: lists all open buffers, not filtered to the current project.)
+fn project_list_buffers(cx: &mut Context) {
+    buffer_picker(cx);
+}
+
+/// `project-shell-command`: run a synchronous shell command in the project root
+/// and show its output in a scratch buffer (Emacs `M-!` scoped to the project).
+fn project_shell_command(cx: &mut Context) {
+    prompt_then(cx, "project shell command: ", |cx, cmd| {
+        let root = find_workspace().0;
+        let shell = cx.editor.config().shell.clone();
+        if shell.is_empty() {
+            cx.editor.set_error("no shell configured");
+            return;
+        }
+        let out = std::process::Command::new(&shell[0])
+            .args(&shell[1..])
+            .arg(cmd)
+            .current_dir(&root)
+            .output();
+        match out {
+            Ok(o) => {
+                let mut text = String::from_utf8_lossy(&o.stdout).into_owned();
+                let err = String::from_utf8_lossy(&o.stderr);
+                if !err.trim().is_empty() {
+                    text.push_str(&err);
+                }
+                if text.trim().is_empty() {
+                    cx.editor
+                        .set_status(format!("project-shell-command: {cmd} (no output)"));
+                } else {
+                    show_text_in_scratch(cx.editor, &text);
+                    cx.editor.set_status(format!("$ {cmd}"));
+                }
+            }
+            Err(e) => cx.editor.set_error(format!("shell: {e}")),
+        }
+    });
+}
+
+/// `project-async-shell-command`: run a shell command in the project root
+/// asynchronously, streaming output into the Run console.
+fn project_async_shell_command(cx: &mut Context) {
+    prompt_then(cx, "project async shell command: ", |cx, cmd| {
+        crate::commands::typed::spawn_into_run_console(cx, cmd.to_string());
+    });
+}
+
+/// `project-eshell`: open an interactive shell buffer. (Partial: maps to the
+/// `M-x shell`-style comint buffer on `$SHELL`, not Emacs's own eshell; runs in
+/// the editor's working directory.)
+fn project_eshell(cx: &mut Context) {
+    comint_shell(cx);
+}
+
+// ---- Emacs `xref` command ports -------------------------------------------
+
+/// `xref-find-definitions-other-window`: jump to the definition of the symbol
+/// at point in a new split (LSP-backed).
+fn xref_find_definitions_other_window(cx: &mut Context) {
+    hsplit(cx);
+    goto_definition(cx);
+}
+
+/// `xref-query-replace-in-results`: regex query-replace across the project.
+/// (Partial: replaces across the whole project via ripgrep rather than only the
+/// current xref result set.)
+fn xref_query_replace_in_results(cx: &mut Context) {
+    project_query_replace_regexp(cx);
+}
+
+/// `xref-find-references-and-replace`: find references to a symbol and replace
+/// them project-wide. (Partial: uses a whole-project ripgrep replace rather than
+/// the semantic LSP reference set.)
+fn xref_find_references_and_replace(cx: &mut Context) {
+    prompt_then(cx, "replace references to symbol: ", |cx, sym| {
+        let pattern = format!(r"\b{}\b", regex::escape(sym));
+        prompt_then_cx(cx, "replace with: ", move |cx, to| {
+            if let Err(e) =
+                crate::commands::typed::run_project_replace(cx, pattern.clone(), to.to_string())
+            {
+                cx.editor.set_error(e.to_string());
+            }
+        });
+    });
 }
 
 /// Cut: copy the selection to the system clipboard, then delete it.
