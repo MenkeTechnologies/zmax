@@ -26,11 +26,13 @@ const SEP: usize = 3;
 /// `describe-bindings`) and return the visible slice starting at `scroll` rows
 /// down. The column count (1..=8) is driven by the screen width — as many columns
 /// as fit at each column's `COL_CAP`-capped content width, so one long entry can't
-/// collapse the count. Leftover width is then spread into the COLUMN WIDTHS (each
-/// grows toward its natural, untruncated width), keeping the gaps fixed at `SEP` —
-/// so the extra space shows more description text instead of inflating a single
-/// gap into a mid-bar chasm. Returns `(text, body_width, body_height, rows_total,
-/// cols)`; `body_width` is the full inner width the grid spans.
+/// collapse the count. Leftover width is filled in two passes: first the COLUMN
+/// WIDTHS grow toward their natural, untruncated width (so long menus show more
+/// text and their gaps stay tight — no mid-bar chasm), then any residual is spread
+/// EVENLY across the gaps (so short-label menus fan out edge-to-edge instead of
+/// leaving dead space on the right). A `>=2`-column grid therefore always spans
+/// the full bar. Returns `(text, body_width, body_height, rows_total, cols)`;
+/// `body_width` is the full inner width the grid spans.
 fn grid(
     lines: &[&str],
     scroll: usize,
