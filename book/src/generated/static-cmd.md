@@ -205,6 +205,11 @@
 | `toggle_modeline_position` | Toggle cursor position in the mode line (SPC t m p) | normal: `` <space>tmp ``, select: `` <space>tmp `` |
 | `toggle_modeline_vcs` | Toggle version-control info in the mode line (SPC t m v) | normal: `` <space>tmv ``, select: `` <space>tmv `` |
 | `toggle_centered_cursor` | Keep the cursor vertically centered (SPC t -) | normal: `` <space>t<minus> ``, select: `` <space>t<minus> `` |
+| `toggle_hl_line` | Highlight the current line (emacs hl-line-mode / global-hl-line-mode) |  |
+| `toggle_electric_pair` | Auto-insert matching close delimiters (emacs electric-pair-mode) |  |
+| `toggle_auto_revert` | Reload buffers when their file changes on disk (emacs auto-revert-mode) |  |
+| `set_fill_prefix` | Set the fill-prefix from line start to point (emacs set-fill-prefix) |  |
+| `set_goal_column` | Make vertical motion stick to the current column (emacs set-goal-column) |  |
 | `toggle_fill_column` | Toggle a fill-column ruler (SPC t f) | normal: `` <C-x>f ``, `` <space>tf ``, select: `` <C-x>f ``, `` <space>tf ``, insert: `` <C-x>f `` |
 | `toggle_long_line_marker` | Toggle an 80th-column ruler (SPC t 8) | normal: `` <space>t8 ``, `` <space>t<C-8> ``, select: `` <space>t8 ``, `` <space>t<C-8> `` |
 | `toggle_soft_wrap` | Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap) | normal: `` <C-x>xt ``, select: `` <C-x>xt ``, insert: `` <C-x>xt `` |
@@ -261,8 +266,8 @@
 | `copy_system_info` | Copy system info (version/OS/arch) to the clipboard (SPC h d s) | normal: `` <space>hds ``, select: `` <space>hds `` |
 | `copy_last_keys` | Copy the most recently pressed keys to the clipboard (SPC h d l) | normal: `` <space>hdl ``, select: `` <space>hdl `` |
 | `ace_window` | Jump to a window by its number, prompted (ace-window, SPC w . a) | normal: `` <C-w>.a ``, `` <space>w.a ``, select: `` <space>w.a `` |
-| `browse_news` | Browse zemacs release notes / NEWS (SPC h n) | normal: `` <space>hn ``, `` <C-h><C-n> ``, select: `` <space>hn ``, `` <C-h><C-n> ``, insert: `` <C-h><C-n> `` |
-| `browse_faq` | Browse the zemacs FAQ (SPC h f) | normal: `` <space>hf ``, `` <C-h><C-f> ``, `` <C-h><C-p> ``, select: `` <space>hf ``, `` <C-h><C-f> ``, `` <C-h><C-p> ``, insert: `` <C-h><C-f> ``, `` <C-h><C-p> `` |
+| `browse_news` | Browse zemacs release notes / NEWS (SPC h n) | normal: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, select: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, insert: `` <C-h>n ``, `` <C-h><C-n> `` |
+| `browse_faq` | Browse the zemacs FAQ (SPC h f) | normal: `` <space>hf ``, `` <C-h><C-p> ``, select: `` <space>hf ``, `` <C-h><C-p> ``, insert: `` <C-h><C-p> `` |
 | `layer_search` | Search zemacs capability areas / layers (SPC h l) | normal: `` <space>hl ``, select: `` <space>hl `` |
 | `show_environment` | Show the editor's environment variables (SPC f e e) | normal: `` <space>fee ``, select: `` <space>fee `` |
 | `reimport_shell_env` | Re-import the shell environment into the editor (SPC f e C-e) | normal: `` <space>feE ``, `` <space>fe<C-e> ``, select: `` <space>feE ``, `` <space>fe<C-e> `` |
@@ -277,6 +282,25 @@
 | `describe_language_environment` | Describe the language environment / locale (C-h L) | normal: `` <C-h>L ``, select: `` <C-h>L ``, insert: `` <C-h>L `` |
 | `describe_syntax` | Describe the buffer's syntax / tree-sitter status (C-h s) | normal: `` <C-h>s ``, select: `` <C-h>s ``, insert: `` <C-h>s `` |
 | `view_lossage` | Show the recently pressed keys (C-h l) | normal: `` <C-h>l ``, select: `` <C-h>l ``, insert: `` <C-h>l `` |
+| `describe_char` | Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =) |  |
+| `view_hello_file` | Show a multi-script greeting sample (emacs view-hello-file, C-h h) | normal: `` <C-h>h ``, select: `` <C-h>h ``, insert: `` <C-h>h `` |
+| `view_echo_area_messages` | Show the last echo-area message (emacs view-echo-area-messages, C-h e) | normal: `` <C-h>e ``, select: `` <C-h>e ``, insert: `` <C-h>e `` |
+| `describe_copying` | Show zemacs's copying license, the GPL (emacs describe-copying, C-h C-c) | normal: `` <C-h><C-c> ``, select: `` <C-h><C-c> ``, insert: `` <C-h><C-c> `` |
+| `describe_distribution` | How to get zemacs / GNU software (emacs describe-distribution, C-h C-d) | normal: `` <C-h><C-d> ``, select: `` <C-h><C-d> ``, insert: `` <C-h><C-d> `` |
+| `describe_gnu_project` | Open the GNU project page (emacs describe-gnu-project, C-h g) | normal: `` <C-h>g ``, select: `` <C-h>g ``, insert: `` <C-h>g `` |
+| `describe_no_warranty` | Show the GPL no-warranty sections (emacs describe-no-warranty, C-h C-w) | normal: `` <C-h><C-w> ``, select: `` <C-h><C-w> ``, insert: `` <C-h><C-w> `` |
+| `view_emacs_faq` | Open the GNU Emacs FAQ (emacs view-emacs-FAQ, C-h C-f) | normal: `` <C-h><C-f> ``, select: `` <C-h><C-f> ``, insert: `` <C-h><C-f> `` |
+| `view_emacs_todo` | Open the Emacs TODO list (emacs view-emacs-todo) |  |
+| `view_emacs_problems` | Open the Emacs known-problems file (emacs view-emacs-problems) |  |
+| `view_emacs_debugging` | Open the Emacs debugging manual (emacs view-emacs-debugging) |  |
+| `view_order_manuals` | Open where to get the GNU manuals (emacs view-order-manuals) |  |
+| `view_external_packages` | Open GNU ELPA / external packages (emacs view-external-packages) |  |
+| `describe_keymap` | List every binding of the current mode's keymap (emacs describe-keymap) |  |
+| `describe_prefix_bindings` | List the sub-bindings of a prefix (emacs describe-prefix-bindings) |  |
+| `describe_categories` | List the character categories zemacs recognises (emacs describe-categories) |  |
+| `list_character_sets` | List the Unicode blocks zemacs knows (emacs list-character-sets) |  |
+| `list_charset_chars` | List the printable characters of each Unicode block (emacs list-charset-chars) |  |
+| `list_coding_systems` | List the coding systems / encodings zemacs supports (emacs list-coding-systems) |  |
 | `describe_language_package` | Describe the language-support config for the buffer (SPC h d p) | normal: `` <space>hdp ``, select: `` <space>hdp `` |
 | `package_search` | Search configured language packages and describe one (SPC h p) | normal: `` <C-h>P ``, `` <C-h>p ``, `` <space>hp ``, `` <C-h><C-e> ``, select: `` <C-h>P ``, `` <C-h>p ``, `` <space>hp ``, `` <C-h><C-e> ``, insert: `` <C-h>P ``, `` <C-h>p ``, `` <C-h><C-e> `` |
 | `config_variable_search` | Search editor config variables, copy path on select (SPC h .) | normal: `` <C-h>v ``, `` <space>h. ``, select: `` <C-h>v ``, `` <space>h. ``, insert: `` <C-h>v `` |
@@ -320,6 +344,40 @@
 | `diary_insert_entry` | Add a diary entry for today (emacs diary-insert-entry) |  |
 | `diary_insert_weekly_entry` | Add a weekly diary entry for today (emacs diary-insert-weekly-entry) |  |
 | `diary_mark_entries` | Mark calendar dates that have diary entries (emacs diary-mark-entries) |  |
+| `calendar_print_other_dates` | Report today's date in all other calendars (emacs calendar-print-other-dates) |  |
+| `calendar_julian_print_date` | Today's Julian (Roman) calendar date (emacs calendar-julian-print-date) |  |
+| `calendar_iso_print_date` | Today's ISO 8601 week date (emacs calendar-iso-print-date) |  |
+| `calendar_hebrew_print_date` | Today's Hebrew calendar date (emacs calendar-hebrew-print-date) |  |
+| `calendar_islamic_print_date` | Today's Islamic calendar date (emacs calendar-islamic-print-date) |  |
+| `calendar_persian_print_date` | Today's Persian calendar date (emacs calendar-persian-print-date) |  |
+| `calendar_coptic_print_date` | Today's Coptic calendar date (emacs calendar-coptic-print-date) |  |
+| `calendar_ethiopic_print_date` | Today's Ethiopic calendar date (emacs calendar-ethiopic-print-date) |  |
+| `calendar_french_print_date` | Today's French Revolutionary date (emacs calendar-french-print-date) |  |
+| `calendar_bahai_print_date` | Today's Baha'i date, approx (emacs calendar-bahai-print-date) |  |
+| `calendar_astro_print_day_number` | Astronomical (Julian) day number (emacs calendar-astro-print-day-number) |  |
+| `calendar_mayan_print_date` | Today's Mayan date (emacs calendar-mayan-print-date) |  |
+| `calendar_day_of_year` | Day-of-year of today (emacs calendar-day-of-year) |  |
+| `calendar_goto_day_of_year` | Echo the date for a day-of-year (emacs calendar-goto-day-of-year) |  |
+| `calendar_count_days_region` | Count days between two dates (emacs calendar-count-days-region) |  |
+| `calendar_list_holidays` | List this year's holidays (emacs calendar-list-holidays) |  |
+| `holidays` | List this year's holidays (emacs holidays) |  |
+| `holiday_list` | List this year's holidays (emacs holiday-list) |  |
+| `list_holidays` | List this year's holidays (emacs list-holidays) |  |
+| `calendar_lunar_phases` | This month's moon phases, approx (emacs calendar-lunar-phases) |  |
+| `calendar_sunrise_sunset` | Sunrise/sunset today, approx (emacs calendar-sunrise-sunset) |  |
+| `calendar_other_month` | Open the Calendar at another month (emacs calendar-other-month) |  |
+| `calendar_set_date_style` | Cycle american/european/iso date style (emacs calendar-set-date-style) |  |
+| `calendar_hebrew_goto_date` | Echo Gregorian for a Hebrew date (emacs calendar-hebrew-goto-date) |  |
+| `calendar_islamic_goto_date` | Echo Gregorian for an Islamic date (emacs calendar-islamic-goto-date) |  |
+| `calendar_julian_goto_date` | Echo Gregorian for a Julian date (emacs calendar-julian-goto-date) |  |
+| `calendar_iso_goto_week` | Echo Gregorian for an ISO week date (emacs calendar-iso-goto-week) |  |
+| `calendar_persian_goto_date` | Echo Gregorian for a Persian date (emacs calendar-persian-goto-date) |  |
+| `calendar_coptic_goto_date` | Echo Gregorian for a Coptic date (emacs calendar-coptic-goto-date) |  |
+| `calendar_ethiopic_goto_date` | Echo Gregorian for an Ethiopic date (emacs calendar-ethiopic-goto-date) |  |
+| `calendar_french_goto_date` | Echo Gregorian for a French Revolutionary date (emacs calendar-french-goto-date) |  |
+| `calendar_bahai_goto_date` | Echo Gregorian for a Baha'i date (emacs calendar-bahai-goto-date) |  |
+| `calendar_astro_goto_day_number` | Echo Gregorian for an astro day number (emacs calendar-astro-goto-day-number) |  |
+| `calendar_mayan_goto_long_count` | Echo Gregorian for a Mayan long count (emacs calendar-mayan-goto-long-count) |  |
 | `calc_dispatch` | Open the RPN Calc stack calculator (emacs calc / C-x *) | normal: `` <space>ac ``, select: `` <space>ac `` |
 | `occur` | List lines matching a regexp in an *Occur* overlay (emacs occur / M-s o) |  |
 | `rmail` | Open the Rmail mail reader on ~/RMAIL (emacs rmail) | normal: `` <space>ar ``, select: `` <space>ar `` |
@@ -445,6 +503,39 @@
 | `git_push` | Push the current branch to its remote (SPC g P) | normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP ``, insert: `` <C-x>vP `` |
 | `git_pull` | Fast-forward pull from upstream (SPC g u) | normal: `` <C-x>v+ ``, `` <space>gu ``, select: `` <C-x>v+ ``, `` <space>gu ``, insert: `` <C-x>v+ `` |
 | `git_fetch` | Fetch all remotes (SPC g F) | normal: `` <space>gF ``, select: `` <space>gF `` |
+| `vc_print_log` | VC log for the current file (emacs vc-print-log) |  |
+| `vc_print_root_log` | VC log for the whole repository (emacs vc-print-root-log) |  |
+| `vc_print_branch_log` | VC log for a named branch (emacs vc-print-branch-log) |  |
+| `vc_root_diff` | Diff the whole working tree vs HEAD (emacs vc-root-diff) |  |
+| `vc_region_history` | History of the selected line range (emacs vc-region-history) |  |
+| `vc_log_incoming` | Commits incoming from upstream (emacs vc-log-incoming) |  |
+| `vc_log_outgoing` | Commits outgoing to upstream (emacs vc-log-outgoing) |  |
+| `vc_log_search` | Search the commit log by pattern (emacs vc-log-search) |  |
+| `vc_create_branch` | Create and switch to a new branch (emacs vc-create-branch) |  |
+| `vc_switch_branch` | Switch to an existing branch (emacs vc-switch-branch) |  |
+| `vc_create_tag` | Create a git tag at HEAD (emacs vc-create-tag) |  |
+| `vc_retrieve_tag` | Check out a tag or branch (emacs vc-retrieve-tag) |  |
+| `vc_rename_file` | Rename the current file under VC (emacs vc-rename-file) |  |
+| `vc_delete_file` | Delete the current file under VC (emacs vc-delete-file) |  |
+| `vc_ignore` | Add the current file to .gitignore (emacs vc-ignore) |  |
+| `vc_revert` | Revert the current file to HEAD (emacs vc-revert) |  |
+| `vc_refresh_state` | Recompute the buffer's VC state (emacs vc-refresh-state) |  |
+| `vc_state_refresh` | Recompute the buffer's VC state (emacs vc-state-refresh) |  |
+| `vc_pull` | Pull from upstream (emacs vc-pull) |  |
+| `vc_push` | Push to upstream (emacs vc-push) |  |
+| `vc_next_action` | Do the next logical VC step: stage + commit (emacs vc-next-action) |  |
+| `vc_dir` | Open the VC directory / Magit status (emacs vc-dir) |  |
+| `project_vc_dir` | Open the project's VC directory / Magit status (emacs project-vc-dir) |  |
+| `project_switch_project` | Switch to another project (emacs project-switch-project) |  |
+| `project_search` | Grep-search the project (emacs project-search) |  |
+| `project_query_replace_regexp` | Project-wide regex replace (emacs project-query-replace-regexp) |  |
+| `project_list_buffers` | List open buffers (emacs project-list-buffers) |  |
+| `project_shell_command` | Run a shell command in the project root (emacs project-shell-command) |  |
+| `project_async_shell_command` | Run an async shell command in the project (emacs project-async-shell-command) |  |
+| `project_eshell` | Open a shell buffer for the project (emacs project-eshell) |  |
+| `xref_find_definitions_other_window` | Goto definition in another window (emacs xref-find-definitions-other-window) |  |
+| `xref_query_replace_in_results` | Query-replace across xref/project results (emacs xref-query-replace-in-results) |  |
+| `xref_find_references_and_replace` | Find references and replace them (emacs xref-find-references-and-replace) |  |
 | `cut_to_clipboard` | Cut the selection to the system clipboard |  |
 | `org_cycle` | Org: toggle subtree fold | normal: `` <space>mz ``, `` <space>m<tab> ``, select: `` <space>mz ``, `` <space>m<tab> `` |
 | `org_todo` | Org: cycle TODO keyword |  |
@@ -748,7 +839,7 @@
 | `toggle_blame_annotate` | Toggle the git-blame annotate gutter column (SPC g B) | normal: `` <space>gB ``, select: `` <space>gB `` |
 | `git_branch_picker` | Pick a git branch and check it out | normal: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs ``, select: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs ``, insert: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs `` |
 | `preferences` | Open the unified Preferences window | normal: `` <space>, ``, select: `` <space>, `` |
-| `help` | Open the inline Help browser | normal: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>e ``, `` <C-h>g ``, `` <C-h>h ``, `` <C-h>n ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-c> ``, `` <C-h><C-d> ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <C-h><C-w> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, select: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>e ``, `` <C-h>g ``, `` <C-h>h ``, `` <C-h>n ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-c> ``, `` <C-h><C-d> ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <C-h><C-w> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, insert: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>e ``, `` <C-h>g ``, `` <C-h>h ``, `` <C-h>n ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <C-h><C-c> ``, `` <C-h><C-d> ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <C-h><C-w> `` |
+| `help` | Open the inline Help browser | normal: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, select: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, insert: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> `` |
 | `dashboard` | Open the system-stats Dashboard (Preferences) | normal: `` <space>bh ``, select: `` <space>bh `` |
 | `search_in_files` | Open the project-wide Find in Files panel |  |
 | `terminal` | Open an integrated terminal (PTY shell) | normal: `` <space>p' ``, select: `` <space>p' `` |
@@ -760,6 +851,33 @@
 | `gud_tbreak` | Set a temporary breakpoint at the current line (emacs gud-tbreak) |  |
 | `gud_print` | Print the expression at point in the debugger (emacs gud-print) |  |
 | `gud_watch` | Watch the expression at point in the debugger (emacs gud-watch) |  |
+| `gud_jump` | Set the debugger execution point to the current line (emacs gud-jump) |  |
+| `gud_refresh` | Redisplay the debugger buffer (emacs gud-refresh) |  |
+| `comint_kill_input` | Discard the pending comint input line (emacs comint-kill-input) |  |
+| `comint_bol_or_process_mark` | Move to the process mark or beginning of line (emacs comint-bol-or-process-mark) |  |
+| `comint_delchar_or_maybe_eof` | Delete char or send EOF on empty input (emacs comint-delchar-or-maybe-eof) |  |
+| `comint_magic_space` | Expand history designators then insert a space (emacs comint-magic-space) |  |
+| `comint_insert_previous_argument` | Insert the last argument of the previous command (emacs comint-insert-previous-argument) |  |
+| `comint_get_next_from_history` | Yank the next history entry onto the input (emacs comint-get-next-from-history) |  |
+| `comint_next_prompt` | Move to the next command prompt (emacs comint-next-prompt) |  |
+| `comint_previous_prompt` | Move to the previous command prompt (emacs comint-previous-prompt) |  |
+| `comint_show_output` | Scroll the last command's output to the top (emacs comint-show-output) |  |
+| `comint_show_maximum_output` | Scroll the newest output to the bottom (emacs comint-show-maximum-output) |  |
+| `comint_delete_output` | Delete the last command's output (emacs comint-delete-output) |  |
+| `comint_write_output` | Write the last command's output to a file (emacs comint-write-output) |  |
+| `comint_copy_old_input` | Copy the most recent input onto the input line (emacs comint-copy-old-input) |  |
+| `comint_truncate_buffer` | Trim the comint scrollback to the maximum size (emacs comint-truncate-buffer) |  |
+| `comint_strip_ctrl_m` | Strip carriage returns from the scrollback (emacs comint-strip-ctrl-m) |  |
+| `comint_interrupt_subjob` | Send SIGINT to the comint child (emacs comint-interrupt-subjob) |  |
+| `comint_stop_subjob` | Suspend the comint child with SIGTSTP (emacs comint-stop-subjob) |  |
+| `comint_continue_subjob` | Resume the comint child with SIGCONT (emacs comint-continue-subjob) |  |
+| `comint_quit_subjob` | Send SIGQUIT to the comint child (emacs comint-quit-subjob) |  |
+| `comint_kill_subjob` | Send SIGKILL to the comint child (emacs comint-kill-subjob) |  |
+| `comint_dynamic_list_input_ring` | List the comint input history (emacs comint-dynamic-list-input-ring) |  |
+| `comint_history_isearch_backward_regexp` | Search the comint input history backward (emacs comint-history-isearch-backward-regexp) |  |
+| `comint_run` | Run a program in a new comint buffer (emacs comint-run) |  |
+| `shell_forward_command` | Move forward over a shell command on the input line (emacs shell-forward-command) |  |
+| `shell_backward_command` | Move backward over a shell command on the input line (emacs shell-backward-command) |  |
 | `run_config_manager` | Manage run/debug configurations | normal: `` <space>Rc ``, `` <space>Re ``, `` <space>cm ``, `` <space>pi ``, select: `` <space>Rc ``, `` <space>Re ``, `` <space>cm ``, `` <space>pi `` |
 | `run_active_config` | Run the active run configuration | normal: `` <F5> ``, `` <space>Rr ``, `` <space>cC ``, `` <space>pc ``, `` <space>pu ``, `` <C-c><C-c> ``, select: `` <space>Rr ``, `` <space>cC ``, `` <space>pc ``, `` <space>pu ``, `` <C-c><C-c> ``, insert: `` <C-c><C-c> `` |
 | `clear_run_output` | Clear the Run tool window output | normal: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck ``, select: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck `` |
@@ -847,6 +965,16 @@
 | `kmacro_insert_counter` | Insert the macro counter value, then increment (SPC K c c) | normal: `` <space>Kcc ``, `` <C-x><C-k><C-i> ``, select: `` <space>Kcc ``, `` <C-x><C-k><C-i> ``, insert: `` <C-x><C-k><C-i> `` |
 | `kmacro_set_counter` | Set the keyboard-macro counter to [count] (emacs kmacro-set-counter) |  |
 | `kmacro_set_format` | Set the macro-counter insert format, e.g. %03d (emacs kmacro-set-format) |  |
+| `kmacro_name_last_macro` | Name the last kbd macro and register it as an invokable command (emacs kmacro-name-last-macro) |  |
+| `insert_kbd_macro` | Insert a textual definition of the last kbd macro (emacs insert-kbd-macro) |  |
+| `apply_macro_to_region_lines` | Run the last kbd macro at the start of each line in the region (emacs apply-macro-to-region-lines) |  |
+| `kmacro_end_or_call_macro` | End recording, or call the last kbd macro (emacs kmacro-end-or-call-macro, F4) |  |
+| `kmacro_end_or_call_macro_repeat` | Repeat-variant of end-or-call macro (emacs kmacro-end-or-call-macro-repeat) |  |
+| `kmacro_edit_macro` | Edit the last kbd macro's keys as text (emacs edit-kbd-macro / kmacro-edit-macro) |  |
+| `kmacro_step_edit_macro` | Edit the whole last kbd macro (emacs kmacro-step-edit-macro; no per-key stepping) |  |
+| `kmacro_edit_lossage` | Edit the recently pressed keys as a macro (emacs kmacro-edit-lossage) |  |
+| `kmacro_bind_to_key` | Report the config binding for the last kbd macro (emacs kmacro-bind-to-key) |  |
+| `kmacro_redisplay` | Refresh display during macro execution (emacs kmacro-redisplay) |  |
 | `toggle_readonly` | Toggle the buffer's read-only (writable) state (SPC b w) | normal: `` <space>bw ``, `` <C-x><C-q> ``, select: `` <space>bw ``, `` <C-x><C-q> ``, insert: `` <C-x><C-q> `` |
 | `toggle_window_dedication` | Toggle window dedication (spacemacs SPC w t) | normal: `` <C-w>t ``, `` <space>wt ``, select: `` <space>wt `` |
 | `toggle_subword` | Toggle sub-word w/b/e motions (spacemacs SPC t c) | normal: `` <space>tc ``, select: `` <space>tc `` |
@@ -973,6 +1101,75 @@
 | `video_poker` | Play Jacks-or-Better video poker |  |
 | `klondike` | Play Klondike solitaire |  |
 | `nonogram` | Play nonogram / picross |  |
+| `xref_find_references` | Find references to a symbol across the workspace (emacs xref-find-references) |  |
+| `project_find_file` | Find a file under the project root (emacs project-find-file) |  |
+| `diffmode` | Open the unified-diff viewer (emacs diff-mode) |  |
+| `diff_hunk_kill` | Kill the diff hunk at point (emacs diff-hunk-kill) |  |
+| `diff_file_kill` | Kill the whole file section at point (emacs diff-file-kill) |  |
+| `diff_split_hunk` | Split the diff hunk at point into two (emacs diff-split-hunk) |  |
+| `diff_reverse_direction` | Reverse the direction of the diff (emacs diff-reverse-direction) |  |
+| `diff_context_to_unified` | Convert a context diff to a unified diff (emacs diff-context->unified) |  |
+| `diff_unified_to_context` | Convert a unified diff to a context diff (emacs diff-unified->context) |  |
+| `diff_delete_trailing_whitespace` | Strip trailing whitespace from added lines (emacs diff-delete-trailing-whitespace) |  |
+| `diff_restrict_view` | Narrow the diff buffer to the hunk at point (emacs diff-restrict-view) |  |
+| `diff_apply_hunk` | Apply the diff hunk at point to its target file (emacs diff-apply-hunk) |  |
+| `diff_apply_buffer` | Apply every hunk in the diff buffer to its target files (emacs diff-apply-buffer) |  |
+| `picture` | Draw ASCII pictures on a canvas (emacs picture-mode) |  |
+| `picture_mode` | Toggle picture-mode overwrite drawing on the buffer (emacs picture-mode) |  |
+| `edit_picture` | Enter picture-mode on the current buffer (emacs edit-picture) |  |
+| `picture_movement_right` | Picture-mode: draw toward the right (emacs picture-movement-right) |  |
+| `picture_movement_left` | Picture-mode: draw toward the left (emacs picture-movement-left) |  |
+| `picture_movement_up` | Picture-mode: draw upward (emacs picture-movement-up) |  |
+| `picture_movement_down` | Picture-mode: draw downward (emacs picture-movement-down) |  |
+| `picture_movement_nw` | Picture-mode: draw up-and-left (emacs picture-movement-nw) |  |
+| `picture_movement_ne` | Picture-mode: draw up-and-right (emacs picture-movement-ne) |  |
+| `picture_movement_sw` | Picture-mode: draw down-and-left (emacs picture-movement-sw) |  |
+| `picture_movement_se` | Picture-mode: draw down-and-right (emacs picture-movement-se) |  |
+| `picture_motion` | Picture-mode: move point in the drawing direction (emacs picture-motion) |  |
+| `picture_motion_reverse` | Picture-mode: move point opposite the drawing direction (emacs picture-motion-reverse) |  |
+| `picture_set_tab_stops` | Picture-mode: set tab stops from this line (emacs picture-set-tab-stops) |  |
+| `picture_tab` | Picture-mode: move to the next tab stop (emacs picture-tab) |  |
+| `picture_tab_search` | Picture-mode: move under next word-start above (emacs picture-tab-search) |  |
+| `picture_open_line` | Picture-mode: split the line at point (emacs picture-open-line) |  |
+| `picture_clear_line` | Picture-mode: clear to end of line (emacs picture-clear-line) |  |
+| `picture_clear_column` | Picture-mode: blank columns after point (emacs picture-clear-column) |  |
+| `picture_backward_clear_column` | Picture-mode: blank columns before point (emacs picture-backward-clear-column) |  |
+| `picture_clear_rectangle_to_register` | Picture-mode: clear rectangle into a register (emacs picture-clear-rectangle-to-register) |  |
+| `picture_yank_rectangle` | Picture-mode: overlay the killed rectangle (emacs picture-yank-rectangle) |  |
+| `picture_yank_rectangle_from_register` | Picture-mode: overlay a register's rectangle (emacs picture-yank-rectangle-from-register) |  |
+| `twocol_two_columns` | Two-column: create a side-by-side partner buffer (emacs 2C-two-columns) |  |
+| `twocol_associate_buffer` | Two-column: associate the other window's buffer (emacs 2C-associate-buffer) |  |
+| `twocol_split` | Two-column: split the buffer at point into two columns (emacs 2C-split) |  |
+| `twocol_merge` | Two-column: merge the partner column back in (emacs 2C-merge) |  |
+| `twocol_dissociate` | Two-column: break the association (emacs 2C-dissociate) |  |
+| `twocol_newline` | Two-column: newline in both columns (emacs 2C-newline) |  |
+| `table` | Edit a text table (emacs table.el) |  |
+| `table_recognize` | Recognize the ASCII table at point and report its dimensions (emacs table-recognize) |  |
+| `table_recognize_region` | Recognize the table in the selection and report its dimensions (emacs table-recognize-region) |  |
+| `table_recognize_table` | Recognize the whole table at point (emacs table-recognize-table) |  |
+| `table_recognize_cell` | Report the table cell at point (emacs table-recognize-cell) |  |
+| `table_unrecognize` | Deactivate table recognition at point (emacs table-unrecognize) |  |
+| `table_unrecognize_region` | Deactivate table recognition in the selection (emacs table-unrecognize-region) |  |
+| `table_unrecognize_table` | Deactivate recognition of the table at point (emacs table-unrecognize-table) |  |
+| `table_unrecognize_cell` | Deactivate recognition of the cell at point (emacs table-unrecognize-cell) |  |
+| `table_query_dimension` | Report the size of the table cell and table at point (emacs table-query-dimension) |  |
+| `table_justify` | Cycle the justification of the current table column (emacs table-justify) |  |
+| `table_widen_cell` | Widen the current table column by one column (emacs table-widen-cell) |  |
+| `table_narrow_cell` | Narrow the current table column by one column (emacs table-narrow-cell) |  |
+| `table_heighten_cell` | Heighten the current table row by one line (emacs table-heighten-cell) |  |
+| `table_shorten_cell` | Shorten the current table row by one line (emacs table-shorten-cell) |  |
+| `table_span_cell` | Merge the current table cell with the one to its right (emacs table-span-cell) |  |
+| `table_split_cell` | Split the current table cell vertically at its middle (emacs table-split-cell) |  |
+| `table_split_cell_horizontally` | Split the current table cell into two columns (emacs table-split-cell-horizontally) |  |
+| `table_split_cell_vertically` | Split the current table cell into two rows (emacs table-split-cell-vertically) |  |
+| `table_insert_sequence` | Fill table cells from point with an incrementing sequence (emacs table-insert-sequence) |  |
+| `table_generate_source` | Emit HTML source for the table at point (emacs table-generate-source) |  |
+| `table_capture` | Capture the selected plain text into a table (emacs table-capture) |  |
+| `table_release` | Release the table at point back to plain text (emacs table-release) |  |
+| `table_fixed_width_mode` | Toggle table fixed-width mode (emacs table-fixed-width-mode) |  |
+| `facemenu` | Browse faces and colors (emacs list-faces-display / facemenu) |  |
+| `bookmark_bmenu_list` | List bookmarks in an overlay (emacs bookmark-bmenu-list) |  |
+| `proced` | Open the process viewer/manager (emacs proced) |  |
 | `zone` | Run the zone screen-saver (emacs zone) |  |
 | `decipher` | Solve a cryptogram (emacs decipher) |  |
 | `dunnet` | Play the dunnet text adventure (emacs dunnet) |  |
