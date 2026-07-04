@@ -1549,6 +1549,26 @@ impl MappableCommand {
         table_capture, "Capture the selected plain text into a table (emacs table-capture)",
         table_release, "Release the table at point back to plain text (emacs table-release)",
         table_fixed_width_mode, "Toggle table fixed-width mode (emacs table-fixed-width-mode)",
+        fortran_next_statement, "Move to the next fixed-form Fortran statement (emacs fortran-next-statement)",
+        fortran_previous_statement, "Move to the previous fixed-form Fortran statement (emacs fortran-previous-statement)",
+        fortran_beginning_of_block, "Move to the opening of the Fortran block at point (emacs fortran-beginning-of-block)",
+        fortran_end_of_block, "Move to the END of the Fortran block at point (emacs fortran-end-of-block)",
+        f90_next_statement, "Move to the next free-form F90 statement (emacs f90-next-statement)",
+        f90_previous_statement, "Move to the previous free-form F90 statement (emacs f90-previous-statement)",
+        f90_next_block, "Move to the next F90 block opening (emacs f90-next-block)",
+        f90_previous_block, "Move to the previous F90 block opening (emacs f90-previous-block)",
+        f90_beginning_of_block, "Move to the opening of the F90 block at point (emacs f90-beginning-of-block)",
+        f90_end_of_block, "Move to the end of the F90 block at point (emacs f90-end-of-block)",
+        fortran_split_line, "Break the line at point onto a Fortran continuation line (emacs fortran-split-line)",
+        fortran_join_line, "Join the current line with the following Fortran continuation line (emacs fortran-join-line)",
+        fortran_comment_region, "Comment (or uncomment) the selected lines as Fortran comments (emacs fortran-comment-region)",
+        fortran_indent_subprogram, "Re-indent the buffer by fixed-form Fortran block nesting (emacs fortran-indent-subprogram)",
+        fortran_strip_sequence_nos, "Delete sequence numbers in columns 73+ on every line (emacs fortran-strip-sequence-nos)",
+        fortran_column_ruler, "Show the fixed-form Fortran column ruler in the echo area (emacs fortran-column-ruler)",
+        fortran_window_create, "Report the fixed-form column-72 boundary (emacs fortran-window-create)",
+        fortran_window_create_momentarily, "Report the fixed-form column-72 boundary momentarily (emacs fortran-window-create-momentarily)",
+        fortran_mode, "Enter fixed-form Fortran mode (emacs fortran-mode)",
+        f90_mode, "Enter free-form Fortran/F90 mode (emacs f90-mode)",
         facemenu, "Browse faces and colors (emacs list-faces-display / facemenu)",
         bookmark_bmenu_list, "List bookmarks in an overlay (emacs bookmark-bmenu-list)",
         proced, "Open the process viewer/manager (emacs proced)",
@@ -2904,6 +2924,323 @@ fn what_cursor_position(cx: &mut Context) {
     let char_at_point = (cursor < total).then(|| text.char(cursor));
     let msg = zemacs_core::cursor_info::what_cursor_position(char_at_point, point, total, column);
     cx.editor.set_status(msg);
+}
+
+// ---------------------------------------------------------------------------
+// Fortran / F90 mode commands. Pure column/motion/edit logic lives in
+// `zemacs_core::fortran`; these wrappers apply it to the current buffer.
+// ---------------------------------------------------------------------------
+
+/// Move point to the line chosen by a `zemacs_core::fortran` motion function
+/// (statement / block motions), or report `No <what>` when there is no target.
+fn fortran_motion(cx: &mut Context, f: fn(&[&str], usize) -> Option<usize>, what: &str) {
+    let pos = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let cur_line = slice.char_to_line(cursor);
+        let content = text.to_string();
+        let lines: Vec<&str> = content.lines().collect();
+        f(&lines, cur_line).map(|t| text.line_to_char(t.min(text.len_lines().saturating_sub(1))))
+    };
+    match pos {
+        Some(p) => {
+            let (view, doc) = current!(cx.editor);
+            doc.set_selection(view.id, Selection::point(p));
+        }
+        None => cx.editor.set_status(format!("No {what}")),
+    }
+}
+
+/// Emacs `fortran-next-statement`: move to the start of the next fixed-form
+/// statement, skipping continuation and comment lines.
+fn fortran_next_statement(cx: &mut Context) {
+    fortran_motion(
+        cx,
+        zemacs_core::fortran::fortran_next_statement,
+        "next statement",
+    );
+}
+
+/// Emacs `fortran-previous-statement`: move to the start of the previous
+/// fixed-form statement.
+fn fortran_previous_statement(cx: &mut Context) {
+    fortran_motion(
+        cx,
+        zemacs_core::fortran::fortran_previous_statement,
+        "previous statement",
+    );
+}
+
+/// Emacs `fortran-beginning-of-block`: move to the opening statement of the
+/// fixed-form block enclosing point.
+fn fortran_beginning_of_block(cx: &mut Context) {
+    fortran_motion(
+        cx,
+        zemacs_core::fortran::fortran_beginning_of_block,
+        "block beginning",
+    );
+}
+
+/// Emacs `fortran-end-of-block`: move to the `END` of the fixed-form block
+/// enclosing point.
+fn fortran_end_of_block(cx: &mut Context) {
+    fortran_motion(cx, zemacs_core::fortran::fortran_end_of_block, "block end");
+}
+
+/// Emacs `f90-next-statement`: move to the start of the next free-form
+/// statement, honouring `&` continuation.
+fn f90_next_statement(cx: &mut Context) {
+    fortran_motion(
+        cx,
+        zemacs_core::fortran::f90_next_statement,
+        "next statement",
+    );
+}
+
+/// Emacs `f90-previous-statement`: move to the start of the previous free-form
+/// statement.
+fn f90_previous_statement(cx: &mut Context) {
+    fortran_motion(
+        cx,
+        zemacs_core::fortran::f90_previous_statement,
+        "previous statement",
+    );
+}
+
+/// Emacs `f90-next-block`: move to the next free-form block opening.
+fn f90_next_block(cx: &mut Context) {
+    fortran_motion(cx, zemacs_core::fortran::f90_next_block, "next block");
+}
+
+/// Emacs `f90-previous-block`: move to the previous free-form block opening.
+fn f90_previous_block(cx: &mut Context) {
+    fortran_motion(
+        cx,
+        zemacs_core::fortran::f90_previous_block,
+        "previous block",
+    );
+}
+
+/// Emacs `f90-beginning-of-block`: move to the opening of the free-form block
+/// enclosing point.
+fn f90_beginning_of_block(cx: &mut Context) {
+    fortran_motion(
+        cx,
+        zemacs_core::fortran::f90_beginning_of_block,
+        "block beginning",
+    );
+}
+
+/// Emacs `f90-end-of-block`: move to the `end` of the free-form block enclosing
+/// point.
+fn f90_end_of_block(cx: &mut Context) {
+    fortran_motion(cx, zemacs_core::fortran::f90_end_of_block, "block end");
+}
+
+/// The current line's character range excluding its line ending, and whether it
+/// carries a trailing line ending.
+fn fortran_line_body(text: &zemacs_core::Rope, line_idx: usize) -> (usize, usize, bool) {
+    let start = text.line_to_char(line_idx);
+    let end_incl = text.line_to_char((line_idx + 1).min(text.len_lines()));
+    let full = text.slice(start..end_incl).to_string();
+    let trimmed = full.trim_end_matches(['\r', '\n']);
+    let has_nl = trimmed.len() < full.len();
+    (start, start + trimmed.chars().count(), has_nl)
+}
+
+/// Emacs `fortran-split-line` (M-RET): break the current line at point and start
+/// a continuation line with the marker in column 6.
+fn fortran_split_line(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    let line_idx = text.char_to_line(cursor);
+    let (body_start, body_end, _) = fortran_line_body(text, line_idx);
+    let col = cursor.saturating_sub(body_start);
+    let body: String = text.slice(body_start..body_end).to_string();
+    let (first, second) =
+        zemacs_core::fortran::split_line(&body, col, zemacs_core::fortran::CONTINUATION_CHAR);
+    let le = doc.line_ending.as_str();
+    let new_col = second.chars().count();
+    let replacement = format!("{first}{le}{second}");
+    let tx = Transaction::change(
+        text,
+        std::iter::once((body_start, body_end, Some(replacement.into()))),
+    );
+    doc.apply(&tx, view.id);
+    // Leave point at the start of the code on the new continuation line.
+    let (view, doc) = current!(cx.editor);
+    let new_line_start = doc.text().line_to_char(line_idx + 1);
+    let pos = (new_line_start + new_col).min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::point(pos));
+}
+
+/// Emacs `fortran-join-line`: join the current line with the following
+/// continuation line, dropping the continuation marker.
+fn fortran_join_line(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    let line_idx = text.char_to_line(cursor);
+    if line_idx + 1 >= text.len_lines() {
+        cx.editor.set_status("fortran-join-line: no following line");
+        return;
+    }
+    let (cur_start, cur_end, _) = fortran_line_body(text, line_idx);
+    let (next_start, next_end, next_nl) = fortran_line_body(text, line_idx + 1);
+    let body1 = text.slice(cur_start..cur_end).to_string();
+    let body2 = text.slice(next_start..next_end).to_string();
+    let joined = zemacs_core::fortran::join_continuation(&body1, &body2);
+    let le = doc.line_ending.as_str();
+    let region_end = text.line_to_char((line_idx + 2).min(text.len_lines()));
+    let replacement = if next_nl {
+        format!("{joined}{le}")
+    } else {
+        joined
+    };
+    let tx = Transaction::change(
+        text,
+        std::iter::once((cur_start, region_end, Some(replacement.into()))),
+    );
+    doc.apply(&tx, view.id);
+    let (view, doc) = current!(cx.editor);
+    doc.set_selection(
+        view.id,
+        Selection::point(cur_start.min(doc.text().len_chars())),
+    );
+}
+
+/// Rewrite the selected line range of the current buffer by mapping each line
+/// through `f`, preserving the buffer's line ending and trailing newline.
+fn fortran_rewrite_region(
+    cx: &mut Context,
+    whole_buffer: bool,
+    f: impl Fn(&[&str]) -> Vec<String>,
+) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let (start_line, end_line) = if whole_buffer {
+        (0, text.len_lines().saturating_sub(1))
+    } else {
+        doc.selection(view.id).primary().line_range(slice)
+    };
+    let region_start = text.line_to_char(start_line);
+    let region_end = text.line_to_char((end_line + 1).min(text.len_lines()));
+    let region = text.slice(region_start..region_end).to_string();
+    let had_trailing_nl = region.ends_with('\n');
+    let lines: Vec<&str> = region.lines().collect();
+    let out = f(&lines);
+    let le = doc.line_ending.as_str();
+    let mut replacement = out.join(le);
+    if had_trailing_nl {
+        replacement.push_str(le);
+    }
+    let tx = Transaction::change(
+        text,
+        std::iter::once((region_start, region_end, Some(replacement.into()))),
+    );
+    doc.apply(&tx, view.id);
+}
+
+/// Emacs `fortran-comment-region`: comment out the selected lines with a `C`
+/// marker in column 1, or uncomment them when they are already comment lines.
+fn fortran_comment_region(cx: &mut Context) {
+    fortran_rewrite_region(cx, false, |lines| {
+        let all_comment = lines
+            .iter()
+            .filter(|l| !l.trim().is_empty())
+            .all(|l| zemacs_core::fortran::is_fixed_comment(l));
+        lines
+            .iter()
+            .map(|l| {
+                if all_comment {
+                    // Strip a single leading comment character.
+                    if zemacs_core::fortran::is_fixed_comment(l) {
+                        l.chars().skip(1).collect()
+                    } else {
+                        (*l).to_string()
+                    }
+                } else {
+                    zemacs_core::fortran::comment_region_line(l, "C")
+                }
+            })
+            .collect()
+    });
+    cx.editor.set_status("fortran-comment-region");
+}
+
+/// Emacs `fortran-indent-subprogram`: re-indent the whole buffer by fixed-form
+/// block nesting (code at column 7, three columns per level).
+fn fortran_indent_subprogram(cx: &mut Context) {
+    fortran_rewrite_region(cx, true, |lines| {
+        zemacs_core::fortran::indent_subprogram(lines)
+    });
+    cx.editor.set_status("fortran-indent-subprogram");
+}
+
+/// Emacs `fortran-strip-sequence-nos`: delete the sequence-number field (columns
+/// 73+) on every line of the buffer.
+fn fortran_strip_sequence_nos(cx: &mut Context) {
+    fortran_rewrite_region(cx, true, |lines| {
+        lines
+            .iter()
+            .map(|l| zemacs_core::fortran::strip_sequence_nos(l))
+            .collect()
+    });
+    cx.editor.set_status("fortran-strip-sequence-nos");
+}
+
+/// Emacs `fortran-column-ruler` (C-c C-r): show the fixed-form column ruler in
+/// the echo area.
+fn fortran_column_ruler(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "{}  (label 1-5, cont 6, code 7-72, seq 73+)",
+        zemacs_core::fortran::FORTRAN_COLUMN_RULER
+    ));
+}
+
+/// Emacs `fortran-window-create`: reduce the window to columns 1-72 so
+/// overlong lines are visible. zemacs's terminal windows cannot clip to a fixed
+/// column, so this only reports the column-72 boundary.
+fn fortran_window_create(cx: &mut Context) {
+    cx.editor.set_status(
+        "fortran-window-create: fixed-form code ends at column 72 (column clipping unavailable)",
+    );
+}
+
+/// Emacs `fortran-window-create-momentarily`: as `fortran-window-create`, but
+/// only until the next keypress. Reported, not clipped (see
+/// `fortran_window_create`).
+fn fortran_window_create_momentarily(cx: &mut Context) {
+    cx.editor
+        .set_status("fortran-window-create-momentarily: fixed-form code ends at column 72 (column clipping unavailable)");
+}
+
+/// Set the current document's language to Fortran and report the requested mode.
+fn fortran_set_mode(cx: &mut Context, label: &str) {
+    let loader = cx.editor.syn_loader.load();
+    let msg = {
+        let (_view, doc) = current!(cx.editor);
+        match doc.set_language_by_language_id("fortran", &loader) {
+            Ok(()) => format!("{label} enabled"),
+            Err(e) => format!("{label}: {e}"),
+        }
+    };
+    cx.editor.set_status(msg);
+}
+
+/// Emacs `fortran-mode`: enter fixed-form Fortran mode.
+fn fortran_mode(cx: &mut Context) {
+    fortran_set_mode(cx, "Fortran mode (fixed-form)");
+}
+
+/// Emacs `f90-mode`: enter free-form Fortran (F90) mode. zemacs uses the shared
+/// tree-sitter `fortran` grammar for both fixed- and free-form source.
+fn f90_mode(cx: &mut Context) {
+    fortran_set_mode(cx, "F90 mode (free-form)");
 }
 
 thread_local! {
