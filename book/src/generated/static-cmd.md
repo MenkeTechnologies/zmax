@@ -344,6 +344,40 @@
 | `diary_insert_entry` | Add a diary entry for today (emacs diary-insert-entry) |  |
 | `diary_insert_weekly_entry` | Add a weekly diary entry for today (emacs diary-insert-weekly-entry) |  |
 | `diary_mark_entries` | Mark calendar dates that have diary entries (emacs diary-mark-entries) |  |
+| `diary_list_entries` | List diary entries for the current date (emacs diary-list-entries) |  |
+| `diary_fancy_display` | Show the day's diary entries in fancy format (emacs diary-fancy-display) |  |
+| `diary_print_entries` | Print the day's diary entries (emacs diary-print-entries) |  |
+| `diary_day_of_year` | Report today's day-of-year and days remaining (emacs diary-day-of-year) |  |
+| `diary_hebrew_date` | Today's Hebrew calendar date (emacs diary-hebrew-date) |  |
+| `diary_islamic_date` | Today's Islamic calendar date (emacs diary-islamic-date) |  |
+| `diary_french_date` | Today's French Revolutionary date (emacs diary-french-date) |  |
+| `diary_bahai_date` | Today's Baha'i calendar date (emacs diary-bahai-date) |  |
+| `diary_coptic_date` | Today's Coptic calendar date (emacs diary-coptic-date) |  |
+| `diary_ethiopic_date` | Today's Ethiopic calendar date (emacs diary-ethiopic-date) |  |
+| `diary_astro_day_number` | Today's astronomical (Julian) day number (emacs diary-astro-day-number) |  |
+| `diary_hebrew_omer` | Report today's Omer count, if any (emacs diary-hebrew-omer) |  |
+| `diary_hebrew_rosh_hodesh` | Report if today is Rosh Hodesh (emacs diary-hebrew-rosh-hodesh) |  |
+| `diary_hebrew_birthday` | Today's Hebrew date for a birthday entry (emacs diary-hebrew-birthday) |  |
+| `diary_insert_monthly_entry` | Add a monthly diary entry for today (emacs diary-insert-monthly-entry) |  |
+| `diary_insert_yearly_entry` | Add a yearly diary entry for today (emacs diary-insert-yearly-entry) |  |
+| `diary_insert_anniversary_entry` | Add a diary-anniversary entry for today (emacs diary-insert-anniversary-entry) |  |
+| `diary_insert_block_entry` | Add a diary-block entry for today (emacs diary-insert-block-entry) |  |
+| `diary_insert_cyclic_entry` | Add a diary-cyclic entry for today (emacs diary-insert-cyclic-entry) |  |
+| `diary_hebrew_insert_entry` | Add a Hebrew-date diary entry for today (emacs diary-hebrew-insert-entry) |  |
+| `diary_hebrew_insert_monthly_entry` | Add a monthly Hebrew diary entry (emacs diary-hebrew-insert-monthly-entry) |  |
+| `diary_hebrew_insert_yearly_entry` | Add a yearly Hebrew diary entry (emacs diary-hebrew-insert-yearly-entry) |  |
+| `diary_hebrew_insert_anniversary_entry` | Add a Hebrew anniversary diary entry (emacs diary-hebrew-insert-anniversary-entry) |  |
+| `diary_islamic_insert_entry` | Add an Islamic-date diary entry for today (emacs diary-islamic-insert-entry) |  |
+| `diary_islamic_insert_monthly_entry` | Add a monthly Islamic diary entry (emacs diary-islamic-insert-monthly-entry) |  |
+| `diary_islamic_insert_yearly_entry` | Add a yearly Islamic diary entry (emacs diary-islamic-insert-yearly-entry) |  |
+| `diary_islamic_insert_anniversary_entry` | Add an Islamic anniversary diary entry (emacs diary-islamic-insert-anniversary-entry) |  |
+| `diary_bahai_insert_entry` | Add a Baha'i-date diary entry for today (emacs diary-bahai-insert-entry) |  |
+| `diary_bahai_insert_monthly_entry` | Add a monthly Baha'i diary entry (emacs diary-bahai-insert-monthly-entry) |  |
+| `diary_bahai_insert_yearly_entry` | Add a yearly Baha'i diary entry (emacs diary-bahai-insert-yearly-entry) |  |
+| `diary_bahai_insert_anniversary_entry` | Add a Baha'i anniversary diary entry (emacs diary-bahai-insert-anniversary-entry) |  |
+| `appt_add` | Add an appointment reminder (emacs appt-add) |  |
+| `appt_delete` | Delete appointment reminders (emacs appt-delete) |  |
+| `appt_activate` | Toggle appointment checking (emacs appt-activate) |  |
 | `calendar_print_other_dates` | Report today's date in all other calendars (emacs calendar-print-other-dates) |  |
 | `calendar_julian_print_date` | Today's Julian (Roman) calendar date (emacs calendar-julian-print-date) |  |
 | `calendar_iso_print_date` | Today's ISO 8601 week date (emacs calendar-iso-print-date) |  |
