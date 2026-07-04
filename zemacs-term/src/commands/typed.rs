@@ -1216,7 +1216,11 @@ fn buffer_previous(
 /// vim `:sbnext` / `:sbn` — split the window, then go to the next buffer in the
 /// new split (leaving the old window on the current buffer). Reuses the exact
 /// [`buffer_next`] navigation so the wrap/count behaviour is identical to `:bnext`.
-fn sbuffer_next(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sbuffer_next(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -1254,7 +1258,11 @@ fn sbuffer_first(
 
 /// vim `:sblast` / `:sbl` — split, then go to the last buffer in the new split.
 /// Reuses [`buffer_last`].
-fn sbuffer_last(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sbuffer_last(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -1279,7 +1287,11 @@ fn sbuffer_modified(
 /// vim `:sbuffer {name}` / `:sb` — split, then in the new split go to the buffer
 /// whose path contains `{name}`; with no argument the split stays on the current
 /// buffer. Reuses the [`ex_buffer`] selection logic.
-fn sbuffer_open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sbuffer_open(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3487,10 +3499,15 @@ fn embedded_capture(argv: &[String]) -> anyhow::Result<String> {
 
 /// Spawn `argv` in a live PTY terminal panel (for upload / serial monitor),
 /// created on the main thread since the PTY handle isn't `Send`.
-fn embedded_spawn_terminal(cx: &mut compositor::Context, argv: Vec<String>, cwd: std::path::PathBuf) {
+fn embedded_spawn_terminal(
+    cx: &mut compositor::Context,
+    argv: Vec<String>,
+    cwd: std::path::PathBuf,
+) {
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
         move |editor: &mut Editor, compositor: &mut Compositor| {
-            match crate::ui::terminal::TerminalPanel::with_command(&argv[0], &argv[1..], Some(&cwd)) {
+            match crate::ui::terminal::TerminalPanel::with_command(&argv[0], &argv[1..], Some(&cwd))
+            {
                 Ok(panel) => compositor.push(Box::new(panel)),
                 Err(e) => editor.set_error(format!("{}: {e}", argv[0])),
             }
@@ -3502,7 +3519,11 @@ fn embedded_spawn_terminal(cx: &mut compositor::Context, argv: Vec<String>, cwd:
 /// `:arduino-compile` (alias `:averify`) — the Arduino IDE "Verify" button. Runs
 /// `arduino-cli compile --fqbn <board> <sketch>` and collects avr-gcc/arm-gcc
 /// diagnostics into the `*compilation*` list so `:next-error` walks them.
-fn arduino_compile(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3514,7 +3535,11 @@ fn arduino_compile(cx: &mut compositor::Context, _args: Args, event: PromptEvent
 
 /// `:arduino-upload` (alias `:aupload`) — build + flash to the connected board.
 /// Runs live in a terminal panel so the avrdude/bossac progress bar renders.
-fn arduino_upload(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_upload(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3527,7 +3552,11 @@ fn arduino_upload(cx: &mut compositor::Context, _args: Args, event: PromptEvent)
 
 /// `:arduino-monitor` (alias `:amonitor`) — open the serial monitor for the
 /// selected port/baud in a live PTY panel (`arduino-cli monitor`).
-fn arduino_monitor(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_monitor(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3565,7 +3594,11 @@ fn arduino_monitor_flags(cx: &mut compositor::Context, extra: &[String]) -> anyh
 }
 
 /// `:arduino-compile-verbose` — verbose compile (`arduino-cli compile -v`).
-fn arduino_compile_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_verbose(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3574,7 +3607,11 @@ fn arduino_compile_verbose(cx: &mut compositor::Context, _args: Args, event: Pro
 
 /// `:arduino-compile-clean` — compile without cached build artifacts
 /// (`arduino-cli compile --clean`).
-fn arduino_compile_clean(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_clean(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3583,7 +3620,11 @@ fn arduino_compile_clean(cx: &mut compositor::Context, _args: Args, event: Promp
 
 /// `:arduino-compile-jobs <n>` — compile with N parallel jobs
 /// (`arduino-cli compile -j <n>`).
-fn arduino_compile_jobs(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_jobs(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3596,7 +3637,11 @@ fn arduino_compile_jobs(cx: &mut compositor::Context, args: Args, event: PromptE
 
 /// `:arduino-compiledb` — generate `compile_commands.json` for the C/C++ LSP
 /// (`arduino-cli compile --only-compilation-database`).
-fn arduino_compiledb(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compiledb(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3605,7 +3650,11 @@ fn arduino_compiledb(cx: &mut compositor::Context, _args: Args, event: PromptEve
 
 /// `:arduino-compile-warnings <none|default|more|all>` — compile at a warning
 /// level (`arduino-cli compile --warnings <lvl>`).
-fn arduino_compile_warnings(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_warnings(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3618,7 +3667,11 @@ fn arduino_compile_warnings(cx: &mut compositor::Context, args: Args, event: Pro
 
 /// `:arduino-compile-profile <name>` — compile using a sketch build profile
 /// (`arduino-cli compile --profile <name>`).
-fn arduino_compile_profile(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_profile(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3631,7 +3684,11 @@ fn arduino_compile_profile(cx: &mut compositor::Context, args: Args, event: Prom
 
 /// `:arduino-compile-debug-opt` — compile with debug-friendly optimization
 /// (`arduino-cli compile --optimize-for-debug`), before a debug session.
-fn arduino_compile_debug_opt(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_debug_opt(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3640,7 +3697,11 @@ fn arduino_compile_debug_opt(cx: &mut compositor::Context, _args: Args, event: P
 
 /// `:arduino-upload-verify` — build + flash, then verify the flashed program
 /// (`arduino-cli compile --upload --verify`).
-fn arduino_upload_verify(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_upload_verify(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3649,7 +3710,11 @@ fn arduino_upload_verify(cx: &mut compositor::Context, _args: Args, event: Promp
 
 /// `:arduino-upload-programmer <programmer>` — build + flash through a programmer
 /// (`arduino-cli compile --upload --programmer <id>`).
-fn arduino_upload_programmer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_upload_programmer(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3662,7 +3727,11 @@ fn arduino_upload_programmer(cx: &mut compositor::Context, args: Args, event: Pr
 
 /// `:arduino-upload-dir <dir>` — flash a pre-built binary directory without
 /// recompiling (`arduino-cli upload --input-dir <dir>`).
-fn arduino_upload_dir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_upload_dir(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3672,14 +3741,19 @@ fn arduino_upload_dir(cx: &mut compositor::Context, args: Args, event: PromptEve
     }
     require_tool(embedded::ARDUINO_CLI)?;
     let settings = embedded::load();
-    let argv = embedded::arduino_upload_input(&settings, "--input-dir", &dir).map_err(|e| anyhow!(e))?;
+    let argv =
+        embedded::arduino_upload_input(&settings, "--input-dir", &dir).map_err(|e| anyhow!(e))?;
     embedded_spawn_terminal(cx, argv, settings.sketch_dir());
     Ok(())
 }
 
 /// `:arduino-upload-file <file>` — flash a specific pre-built binary without
 /// recompiling (`arduino-cli upload --input-file <file>`).
-fn arduino_upload_file(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_upload_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3689,14 +3763,19 @@ fn arduino_upload_file(cx: &mut compositor::Context, args: Args, event: PromptEv
     }
     require_tool(embedded::ARDUINO_CLI)?;
     let settings = embedded::load();
-    let argv = embedded::arduino_upload_input(&settings, "--input-file", &file).map_err(|e| anyhow!(e))?;
+    let argv =
+        embedded::arduino_upload_input(&settings, "--input-file", &file).map_err(|e| anyhow!(e))?;
     embedded_spawn_terminal(cx, argv, settings.sketch_dir());
     Ok(())
 }
 
 /// `:arduino-monitor-raw` — serial monitor without output transformations
 /// (`arduino-cli monitor --raw`).
-fn arduino_monitor_raw(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_monitor_raw(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3705,7 +3784,11 @@ fn arduino_monitor_raw(cx: &mut compositor::Context, _args: Args, event: PromptE
 
 /// `:arduino-monitor-timestamp` — serial monitor prefixing each line with a
 /// timestamp (`arduino-cli monitor --timestamp`).
-fn arduino_monitor_timestamp(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_monitor_timestamp(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3714,7 +3797,11 @@ fn arduino_monitor_timestamp(cx: &mut compositor::Context, _args: Args, event: P
 
 /// `:arduino-board-programmers` — list the programmers the selected board
 /// supports (`arduino-cli board details --fqbn <fqbn> --list-programmers`).
-fn arduino_board_programmers(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_board_programmers(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3723,13 +3810,21 @@ fn arduino_board_programmers(cx: &mut compositor::Context, _args: Args, event: P
     if settings.fqbn.is_empty() {
         bail!("no board selected — run :arduino-boards to pick an FQBN");
     }
-    embedded_browse(cx, embedded::arduino_board_details_programmers(&settings.fqbn), false);
+    embedded_browse(
+        cx,
+        embedded::arduino_board_details_programmers(&settings.fqbn),
+        false,
+    );
     Ok(())
 }
 
 /// `:arduino-board-list-watch` — continuously watch for boards connecting /
 /// disconnecting (`arduino-cli board list --watch`), live in a terminal panel.
-fn arduino_board_list_watch(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_board_list_watch(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3741,7 +3836,11 @@ fn arduino_board_list_watch(cx: &mut compositor::Context, _args: Args, event: Pr
 
 /// `:arduino-lib-list-updatable` — installed libraries with a newer version
 /// available (`arduino-cli lib list --updatable`).
-fn arduino_lib_list_updatable(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_list_updatable(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3752,7 +3851,11 @@ fn arduino_lib_list_updatable(cx: &mut compositor::Context, _args: Args, event: 
 
 /// `:arduino-lib-install-git <url>` — install a library from a git repository
 /// (`arduino-cli lib install --git-url <url>`), live in a terminal panel.
-fn arduino_lib_install_git(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_install_git(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3768,7 +3871,11 @@ fn arduino_lib_install_git(cx: &mut compositor::Context, args: Args, event: Prom
 
 /// `:arduino-lib-install-zip <path>` — install a library from a local `.zip`
 /// (`arduino-cli lib install --zip-path <path>`), live in a terminal panel.
-fn arduino_lib_install_zip(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_install_zip(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3793,7 +3900,11 @@ fn arduino_compile_browse(cx: &mut compositor::Context, extra: &[String]) -> any
 }
 
 /// `:arduino-compile-quiet` — quiet compile, errors only (`arduino-cli compile -q`).
-fn arduino_compile_quiet(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_quiet(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3802,7 +3913,11 @@ fn arduino_compile_quiet(cx: &mut compositor::Context, _args: Args, event: Promp
 
 /// `:arduino-compile-properties` — dump the resolved build properties without
 /// building (`arduino-cli compile --show-properties`), in a scratch buffer.
-fn arduino_compile_properties(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_properties(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3811,7 +3926,11 @@ fn arduino_compile_properties(cx: &mut compositor::Context, _args: Args, event: 
 
 /// `:arduino-compile-preprocess` — output the preprocessed sketch
 /// (`arduino-cli compile --preprocess`), in a scratch buffer.
-fn arduino_compile_preprocess(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_preprocess(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3820,7 +3939,11 @@ fn arduino_compile_preprocess(cx: &mut compositor::Context, _args: Args, event: 
 
 /// `:arduino-compile-dump-profile` — print a reproducible build profile for the
 /// sketch (`arduino-cli compile --dump-profile`), in a scratch buffer.
-fn arduino_compile_dump_profile(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_dump_profile(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3829,7 +3952,11 @@ fn arduino_compile_dump_profile(cx: &mut compositor::Context, _args: Args, event
 
 /// `:arduino-compile-board-options <opts>` — compile with custom board menu
 /// options (`arduino-cli compile --board-options <opts>`, e.g. `cpu=16MHzatmega328`).
-fn arduino_compile_board_options(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_board_options(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3843,20 +3970,30 @@ fn arduino_compile_board_options(cx: &mut compositor::Context, args: Args, event
 /// `:arduino-compile-build-property <key=value>` — compile overriding a build
 /// property (`arduino-cli compile --build-property <prop>`, e.g.
 /// `build.extra_flags=-DDEBUG`). The arduino counterpart of `:pio-init-option`.
-fn arduino_compile_build_property(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_build_property(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let prop = args.join(" ").trim().to_string();
     if !prop.contains('=') {
-        bail!("usage: :arduino-compile-build-property <key=value>  (e.g. build.extra_flags=-DDEBUG)");
+        bail!(
+            "usage: :arduino-compile-build-property <key=value>  (e.g. build.extra_flags=-DDEBUG)"
+        );
     }
     arduino_compile_flags(cx, &["--build-property".to_string(), prop])
 }
 
 /// `:arduino-compile-output-dir <dir>` — compile and save the build artifacts
 /// (`.hex`/`.bin`/`.elf`) to `dir` (`arduino-cli compile --output-dir <dir>`).
-fn arduino_compile_output_dir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_output_dir(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3869,7 +4006,11 @@ fn arduino_compile_output_dir(cx: &mut compositor::Context, args: Args, event: P
 
 /// `:arduino-upload-verbose` — verbose build + flash
 /// (`arduino-cli compile --upload -v`).
-fn arduino_upload_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_upload_verbose(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3878,20 +4019,29 @@ fn arduino_upload_verbose(cx: &mut compositor::Context, _args: Args, event: Prom
 
 /// `:arduino-debug-info` — print the debugger configuration without starting a
 /// session (`arduino-cli debug --info`), in a scratch buffer.
-fn arduino_debug_info(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_debug_info(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::ARDUINO_CLI)?;
     let settings = embedded::load();
-    let argv = embedded::arduino_debug_with(&settings, &["--info".to_string()]).map_err(|e| anyhow!(e))?;
+    let argv =
+        embedded::arduino_debug_with(&settings, &["--info".to_string()]).map_err(|e| anyhow!(e))?;
     embedded_browse(cx, argv, false);
     Ok(())
 }
 
 /// `:arduino-debug-programmer <id>` — launch the debugger through a programmer
 /// (`arduino-cli debug --programmer <id>`), live in a terminal panel.
-fn arduino_debug_programmer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_debug_programmer(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3909,7 +4059,11 @@ fn arduino_debug_programmer(cx: &mut compositor::Context, args: Args, event: Pro
 
 /// `:arduino-monitor-quiet` — serial monitor suppressing non-error diagnostics
 /// (`arduino-cli monitor --quiet`).
-fn arduino_monitor_quiet(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_monitor_quiet(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3918,20 +4072,29 @@ fn arduino_monitor_quiet(cx: &mut compositor::Context, _args: Args, event: Promp
 
 /// `:arduino-monitor-describe` — describe the port's supported monitor settings
 /// (`arduino-cli monitor --describe`), in a scratch buffer.
-fn arduino_monitor_describe(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_monitor_describe(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::ARDUINO_CLI)?;
     let settings = embedded::load();
-    let argv = embedded::arduino_monitor_with(&settings, &["--describe".to_string()]).map_err(|e| anyhow!(e))?;
+    let argv = embedded::arduino_monitor_with(&settings, &["--describe".to_string()])
+        .map_err(|e| anyhow!(e))?;
     embedded_browse(cx, argv, false);
     Ok(())
 }
 
 /// `:arduino-core-list-updatable` — installed platforms with a newer version
 /// available (`arduino-cli core list --updatable`).
-fn arduino_core_list_updatable(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_core_list_updatable(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3942,7 +4105,11 @@ fn arduino_core_list_updatable(cx: &mut compositor::Context, _args: Args, event:
 
 /// `:arduino-core-list-all` — every installed platform incl. release channels
 /// (`arduino-cli core list --all`).
-fn arduino_core_list_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_core_list_all(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3953,7 +4120,11 @@ fn arduino_core_list_all(cx: &mut compositor::Context, _args: Args, event: Promp
 
 /// `:arduino-lib-list-all` — installed libraries across all locations, incl. the
 /// built-in bundled ones (`arduino-cli lib list --all`).
-fn arduino_lib_list_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_list_all(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3964,7 +4135,11 @@ fn arduino_lib_list_all(cx: &mut compositor::Context, _args: Args, event: Prompt
 
 /// `:arduino-update-outdated` — refresh the indexes and then list upgradable
 /// cores/libraries in one step (`arduino-cli update --show-outdated`).
-fn arduino_update_outdated(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_update_outdated(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3975,7 +4150,11 @@ fn arduino_update_outdated(cx: &mut compositor::Context, _args: Args, event: Pro
 
 /// `:arduino-boards-hidden` — every known board including platform-hidden
 /// variants (`arduino-cli board listall --show-hidden`).
-fn arduino_boards_hidden(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_boards_hidden(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3986,7 +4165,11 @@ fn arduino_boards_hidden(cx: &mut compositor::Context, _args: Args, event: Promp
 
 /// `:arduino-lib-search-names <query>` — a names-only library search
 /// (`arduino-cli lib search <query> --names`).
-fn arduino_lib_search_names(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_search_names(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4001,20 +4184,31 @@ fn arduino_lib_search_names(cx: &mut compositor::Context, args: Args, event: Pro
 
 /// `:arduino-sketch-archive-full` — archive the sketch *with* its build output
 /// (`arduino-cli sketch archive --include-build-dir`).
-fn arduino_sketch_archive_full(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_sketch_archive_full(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::ARDUINO_CLI)?;
     let dir = embedded::load().sketch_dir();
     embedded_capture(&embedded::arduino_sketch_archive_full(&dir))?;
-    cx.editor.set_status(format!("Archived sketch {} (with build dir)", dir.display()));
+    cx.editor.set_status(format!(
+        "Archived sketch {} (with build dir)",
+        dir.display()
+    ));
     Ok(())
 }
 
 /// `:arduino-lib-install-no-deps <name>` — install a library without its declared
 /// dependencies (`arduino-cli lib install <name> --no-deps`).
-fn arduino_lib_install_no_deps(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_install_no_deps(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4030,7 +4224,11 @@ fn arduino_lib_install_no_deps(cx: &mut compositor::Context, args: Args, event: 
 
 /// `:arduino-board-details-full` — the complete board detail dump for the
 /// selected FQBN (`arduino-cli board details --full`), in a scratch buffer.
-fn arduino_board_details_full(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_board_details_full(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4039,13 +4237,21 @@ fn arduino_board_details_full(cx: &mut compositor::Context, _args: Args, event: 
     if settings.fqbn.is_empty() {
         bail!("no board selected — run :arduino-boards to pick an FQBN");
     }
-    embedded_browse(cx, embedded::arduino_board_details_full(&settings.fqbn), false);
+    embedded_browse(
+        cx,
+        embedded::arduino_board_details_full(&settings.fqbn),
+        false,
+    );
     Ok(())
 }
 
 /// `:arduino-boards` — the Arduino IDE "Board" selector. Fuzzy-pick from every
 /// board across the installed platforms; the choice becomes the project FQBN.
-fn arduino_boards(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_boards(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4053,7 +4259,9 @@ fn arduino_boards(cx: &mut compositor::Context, _args: Args, event: PromptEvent)
     let mut boards = embedded::parse_board_listall(&json);
     boards.retain(|b| b.fqbn.is_some());
     if boards.is_empty() {
-        bail!("no boards found — install a core first with :arduino-core-install (e.g. arduino:avr)");
+        bail!(
+            "no boards found — install a core first with :arduino-core-install (e.g. arduino:avr)"
+        );
     }
     let callback = async move {
         let call: job::Callback = job::Callback::EditorCompositor(Box::new(
@@ -4074,7 +4282,8 @@ fn arduino_boards(cx: &mut compositor::Context, _args: Args, event: PromptEvent)
                     move |cx, board: &embedded::BoardEntry, _action| {
                         if let Some(fqbn) = board.fqbn.clone() {
                             embedded::update(|s| s.fqbn = fqbn.clone());
-                            cx.editor.set_status(format!("Board set to {} ({fqbn})", board.name));
+                            cx.editor
+                                .set_status(format!("Board set to {} ({fqbn})", board.name));
                         }
                     },
                 );
@@ -4089,7 +4298,11 @@ fn arduino_boards(cx: &mut compositor::Context, _args: Args, event: PromptEvent)
 
 /// `:arduino-ports` — pick the serial port from the connected devices
 /// (`arduino-cli board list`); the choice becomes the project's upload/monitor port.
-fn arduino_ports(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_ports(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4127,7 +4340,11 @@ fn arduino_ports(cx: &mut compositor::Context, _args: Args, event: PromptEvent) 
 
 /// `:arduino-lib-search <query>` — the Arduino IDE Library Manager. Fuzzy-pick a
 /// matching library; selecting it runs `arduino-cli lib install`.
-fn arduino_lib_search(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_search(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4155,14 +4372,16 @@ fn arduino_lib_search(cx: &mut compositor::Context, args: Args, event: PromptEve
     let callback = async move {
         let call: job::Callback = job::Callback::EditorCompositor(Box::new(
             move |_editor: &mut Editor, compositor: &mut Compositor| {
-                let columns =
-                    [ui::PickerColumn::new("library", |n: &String, _: &()| n.as_str().into())];
-                let picker = ui::Picker::new(columns, 0, names, (), move |cx, name: &String, _action| {
-                    match embedded_capture(&embedded::arduino_lib_install(name)) {
-                        Ok(_) => cx.editor.set_status(format!("Installed library `{name}`")),
-                        Err(e) => cx.editor.set_error(format!("lib install: {e}")),
-                    }
-                });
+                let columns = [ui::PickerColumn::new("library", |n: &String, _: &()| {
+                    n.as_str().into()
+                })];
+                let picker =
+                    ui::Picker::new(columns, 0, names, (), move |cx, name: &String, _action| {
+                        match embedded_capture(&embedded::arduino_lib_install(name)) {
+                            Ok(_) => cx.editor.set_status(format!("Installed library `{name}`")),
+                            Err(e) => cx.editor.set_error(format!("lib install: {e}")),
+                        }
+                    });
                 compositor.push(Box::new(overlaid(picker)));
             },
         ));
@@ -4174,7 +4393,11 @@ fn arduino_lib_search(cx: &mut compositor::Context, args: Args, event: PromptEve
 
 /// `:arduino-core-install <package>` — install a board-support core, e.g.
 /// `:arduino-core-install arduino:avr` (Arduino IDE Boards Manager).
-fn arduino_core_install(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_core_install(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4197,7 +4420,11 @@ fn pio_build(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     require_tool(embedded::PIO)?;
     let settings = embedded::load();
     let dir = settings.sketch_dir();
-    let cmd = format!("cd {} && {}", embedded::shell_join(&[dir.to_string_lossy().into_owned()]), embedded::shell_join(&embedded::pio_build(&settings)));
+    let cmd = format!(
+        "cd {} && {}",
+        embedded::shell_join(&[dir.to_string_lossy().into_owned()]),
+        embedded::shell_join(&embedded::pio_build(&settings))
+    );
     run_compile(cx, &cmd)
 }
 
@@ -4232,7 +4459,11 @@ fn pio_exec(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
 /// one shot (`pio run -t upload -t monitor`), live in a terminal panel. With no
 /// argument it monitors the project's configured port; pass `port` to override
 /// (`--monitor-port <port>`). PlatformIO IDE's "Upload and Monitor".
-fn pio_upload_monitor(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_upload_monitor(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4240,12 +4471,20 @@ fn pio_upload_monitor(cx: &mut compositor::Context, args: Args, event: PromptEve
     let settings = embedded::load();
     let dir = settings.sketch_dir();
     let port = args.join(" ");
-    embedded_spawn_terminal(cx, embedded::pio_upload_monitor(&settings, port.trim()), dir);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_upload_monitor(&settings, port.trim()),
+        dir,
+    );
     Ok(())
 }
 
 /// `:pio-monitor` — PlatformIO serial monitor (`pio device monitor`), live panel.
-fn pio_monitor(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4257,7 +4496,11 @@ fn pio_monitor(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
 }
 
 /// `:pio-devices` — pick a serial port from `pio device list`, set it as the port.
-fn pio_devices(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_devices(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4269,7 +4512,10 @@ fn pio_devices(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
             arr.iter()
                 .filter_map(|d| {
                     let addr = d.get("port").and_then(|p| p.as_str())?.to_string();
-                    let desc = d.get("description").and_then(|p| p.as_str()).unwrap_or("serial");
+                    let desc = d
+                        .get("description")
+                        .and_then(|p| p.as_str())
+                        .unwrap_or("serial");
                     Some(embedded::PortEntry {
                         label: format!("{addr} — {desc}"),
                         address: addr,
@@ -4288,11 +4534,17 @@ fn pio_devices(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
                     "device",
                     |p: &embedded::PortEntry, _: &()| p.label.as_str().into(),
                 )];
-                let picker = ui::Picker::new(columns, 0, ports, (), move |cx, port: &embedded::PortEntry, _action| {
-                    let addr = port.address.clone();
-                    embedded::update(|s| s.port = addr.clone());
-                    cx.editor.set_status(format!("Serial port set to {addr}"));
-                });
+                let picker = ui::Picker::new(
+                    columns,
+                    0,
+                    ports,
+                    (),
+                    move |cx, port: &embedded::PortEntry, _action| {
+                        let addr = port.address.clone();
+                        embedded::update(|s| s.port = addr.clone());
+                        cx.editor.set_status(format!("Serial port set to {addr}"));
+                    },
+                );
                 compositor.push(Box::new(overlaid(picker)));
             },
         ));
@@ -4322,14 +4574,24 @@ fn pio_init(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
         .output()
         .map_err(|e| anyhow!("pio init: {e}"))?;
     if !output.status.success() {
-        bail!("pio init failed: {}", String::from_utf8_lossy(&output.stderr).trim());
+        bail!(
+            "pio init failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
     }
-    cx.editor.set_status(format!("PlatformIO project initialised for `{board}` in {}", dir.display()));
+    cx.editor.set_status(format!(
+        "PlatformIO project initialised for `{board}` in {}",
+        dir.display()
+    ));
     Ok(())
 }
 
 /// `:embedded-baud <rate>` — set the serial monitor baud rate for this project.
-fn embedded_baud(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn embedded_baud(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4338,7 +4600,8 @@ fn embedded_baud(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
         .and_then(|a| a.parse().ok())
         .ok_or_else(|| anyhow!("usage: :embedded-baud <rate>  (e.g. 9600, 115200)"))?;
     embedded::update(|s| s.baud = rate);
-    cx.editor.set_status(format!("Serial baud rate set to {rate}"));
+    cx.editor
+        .set_status(format!("Serial baud rate set to {rate}"));
     Ok(())
 }
 
@@ -4357,7 +4620,11 @@ fn open_serial_plotter(cx: &mut compositor::Context, argv: Vec<String>, title: &
 
 /// `:arduino-plotter` (alias `:serial-plotter`) — the Arduino IDE Serial Plotter:
 /// graph the numbers streaming from the board's serial port live.
-fn arduino_plotter(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_plotter(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4370,19 +4637,31 @@ fn arduino_plotter(cx: &mut compositor::Context, _args: Args, event: PromptEvent
 
 /// `:pio-plotter` — PlatformIO serial plotter (`pio device monitor` piped into a
 /// live chart).
-fn pio_plotter(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_plotter(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let settings = embedded::load();
-    open_serial_plotter(cx, embedded::pio_monitor(&settings), "PlatformIO Serial Plotter");
+    open_serial_plotter(
+        cx,
+        embedded::pio_monitor(&settings),
+        "PlatformIO Serial Plotter",
+    );
     Ok(())
 }
 
 /// `:arduino-new-sketch <name>` — scaffold a new sketch (`arduino-cli sketch new`)
 /// in the workspace and open its `.ino` (Arduino IDE File → New Sketch).
-fn arduino_new_sketch(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_new_sketch(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4399,11 +4678,15 @@ fn arduino_new_sketch(cx: &mut compositor::Context, args: Args, event: PromptEve
         .output()
         .map_err(|e| anyhow!("sketch new: {e}"))?;
     if !output.status.success() {
-        bail!("sketch new failed: {}", String::from_utf8_lossy(&output.stderr).trim());
+        bail!(
+            "sketch new failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
     }
     let ino = root.join(name).join(format!("{name}.ino"));
     cx.editor.open(&ino, Action::Replace)?;
-    cx.editor.set_status(format!("Created sketch `{name}` → {}", ino.display()));
+    cx.editor
+        .set_status(format!("Created sketch `{name}` → {}", ino.display()));
     Ok(())
 }
 
@@ -4426,7 +4709,11 @@ fn embedded_browse(cx: &mut compositor::Context, argv: Vec<String>, in_project: 
 
 /// `:arduino-compile-export` (alias `:aexport`) — Arduino IDE "Export Compiled
 /// Binary": compile and drop the built firmware into the sketch folder.
-fn arduino_compile_export(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_compile_export(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4438,7 +4725,11 @@ fn arduino_compile_export(cx: &mut compositor::Context, _args: Args, event: Prom
 
 /// `:arduino-burn-bootloader` (alias `:arduino-bootloader`) — flash the
 /// bootloader to the selected board (Tools → Burn Bootloader).
-fn arduino_burn_bootloader(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_burn_bootloader(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4451,7 +4742,11 @@ fn arduino_burn_bootloader(cx: &mut compositor::Context, _args: Args, event: Pro
 
 /// `:arduino-board-info` (alias `:arduino-board-details`) — print the selected
 /// board's specs and menu options (Arduino IDE "Get Board Info").
-fn arduino_board_info(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_board_info(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4465,7 +4760,11 @@ fn arduino_board_info(cx: &mut compositor::Context, _args: Args, event: PromptEv
 }
 
 /// `:arduino-core-search <query>` — browse the Boards Manager index.
-fn arduino_core_search(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_core_search(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4479,7 +4778,11 @@ fn arduino_core_search(cx: &mut compositor::Context, args: Args, event: PromptEv
 }
 
 /// `:arduino-core-list` (alias `:arduino-cores`) — installed platforms.
-fn arduino_core_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_core_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4489,7 +4792,11 @@ fn arduino_core_list(cx: &mut compositor::Context, _args: Args, event: PromptEve
 }
 
 /// `:arduino-core-uninstall <package>` — remove a board-support core.
-fn arduino_core_uninstall(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_core_uninstall(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4499,13 +4806,18 @@ fn arduino_core_uninstall(cx: &mut compositor::Context, args: Args, event: Promp
     }
     require_tool(embedded::ARDUINO_CLI)?;
     embedded_capture(&embedded::arduino_core_uninstall(pkg.trim()))?;
-    cx.editor.set_status(format!("Uninstalled core `{}`", pkg.trim()));
+    cx.editor
+        .set_status(format!("Uninstalled core `{}`", pkg.trim()));
     Ok(())
 }
 
 /// `:arduino-core-update-index` (alias `:arduino-update-index`) — refresh the
 /// Boards Manager index.
-fn arduino_core_update_index(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_core_update_index(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4516,7 +4828,11 @@ fn arduino_core_update_index(cx: &mut compositor::Context, _args: Args, event: P
 }
 
 /// `:arduino-core-upgrade` — upgrade all installed platforms (live in a panel).
-fn arduino_core_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_core_upgrade(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4527,7 +4843,11 @@ fn arduino_core_upgrade(cx: &mut compositor::Context, _args: Args, event: Prompt
 }
 
 /// `:arduino-lib-list` (alias `:arduino-libs`) — installed libraries.
-fn arduino_lib_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4537,7 +4857,11 @@ fn arduino_lib_list(cx: &mut compositor::Context, _args: Args, event: PromptEven
 }
 
 /// `:arduino-lib-uninstall <name>` — remove an installed library.
-fn arduino_lib_uninstall(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_uninstall(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4547,12 +4871,17 @@ fn arduino_lib_uninstall(cx: &mut compositor::Context, args: Args, event: Prompt
     }
     require_tool(embedded::ARDUINO_CLI)?;
     embedded_capture(&embedded::arduino_lib_uninstall(name.trim()))?;
-    cx.editor.set_status(format!("Uninstalled library `{}`", name.trim()));
+    cx.editor
+        .set_status(format!("Uninstalled library `{}`", name.trim()));
     Ok(())
 }
 
 /// `:arduino-lib-upgrade` — upgrade all installed libraries (live in a panel).
-fn arduino_lib_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_upgrade(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4563,7 +4892,11 @@ fn arduino_lib_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptE
 }
 
 /// `:arduino-lib-examples <name>` — list a library's example sketches.
-fn arduino_lib_examples(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_examples(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4578,14 +4911,19 @@ fn arduino_lib_examples(cx: &mut compositor::Context, args: Args, event: PromptE
 
 /// `:arduino-sketch-archive` (alias `:arduino-archive`) — zip the whole sketch
 /// (Arduino IDE Sketch → Archive Sketch).
-fn arduino_sketch_archive(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_sketch_archive(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::ARDUINO_CLI)?;
     let dir = embedded::load().sketch_dir();
     embedded_capture(&embedded::arduino_sketch_archive(&dir))?;
-    cx.editor.set_status(format!("Archived sketch {}", dir.display()));
+    cx.editor
+        .set_status(format!("Archived sketch {}", dir.display()));
     Ok(())
 }
 
@@ -4651,7 +4989,11 @@ fn pio_boards(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
 
 /// `:pio-boards-json [query]` — the Board Explorer as JSON
 /// (`pio boards --json-output`), shown in a scratch buffer.
-fn pio_boards_json(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_boards_json(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4662,7 +5004,11 @@ fn pio_boards_json(cx: &mut compositor::Context, args: Args, event: PromptEvent)
 
 /// `:pio-lib-install <name>` (alias `:pio-pkg-install`) — add a library to the
 /// PlatformIO project (`pio pkg install -l`), live in a panel.
-fn pio_lib_install(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_lib_install(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4677,7 +5023,11 @@ fn pio_lib_install(cx: &mut compositor::Context, args: Args, event: PromptEvent)
 }
 
 /// `:pio-lib-list` (alias `:pio-pkg-list`) — installed project packages.
-fn pio_lib_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_lib_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4688,7 +5038,11 @@ fn pio_lib_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
 
 /// `:pio-lib-uninstall <name>` (alias `:pio-pkg-uninstall`) — remove a project
 /// library (`pio pkg uninstall -l`), live in a panel.
-fn pio_lib_uninstall(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_lib_uninstall(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4704,7 +5058,11 @@ fn pio_lib_uninstall(cx: &mut compositor::Context, args: Args, event: PromptEven
 
 /// `:pio-lib-update` (alias `:pio-pkg-update`) — update installed project
 /// packages (`pio pkg update`), live in a panel.
-fn pio_lib_update(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_lib_update(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4716,7 +5074,11 @@ fn pio_lib_update(cx: &mut compositor::Context, _args: Args, event: PromptEvent)
 
 /// `:arduino-update` — refresh the core *and* library indexes together
 /// (arduino-cli update).
-fn arduino_update(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_update(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4728,7 +5090,11 @@ fn arduino_update(cx: &mut compositor::Context, _args: Args, event: PromptEvent)
 
 /// `:arduino-upgrade` — upgrade all installed cores *and* libraries, live in a
 /// terminal panel (arduino-cli upgrade).
-fn arduino_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_upgrade(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4739,7 +5105,11 @@ fn arduino_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptEvent
 }
 
 /// `:arduino-outdated` — list cores and libraries with newer versions available.
-fn arduino_outdated(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_outdated(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4749,7 +5119,11 @@ fn arduino_outdated(cx: &mut compositor::Context, _args: Args, event: PromptEven
 }
 
 /// `:arduino-lib-deps <name>` — dependency status for a library.
-fn arduino_lib_deps(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_deps(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4764,7 +5138,11 @@ fn arduino_lib_deps(cx: &mut compositor::Context, args: Args, event: PromptEvent
 
 /// `:arduino-config` (alias `:arduino-config-dump`) — print the active
 /// arduino-cli configuration.
-fn arduino_config(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_config(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4775,7 +5153,11 @@ fn arduino_config(cx: &mut compositor::Context, _args: Args, event: PromptEvent)
 
 /// `:arduino-debug` — launch the arduino-cli debugger for the selected board,
 /// live in a terminal panel (needs a debug-capable board + programmer).
-fn arduino_debug(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_debug(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4788,7 +5170,11 @@ fn arduino_debug(cx: &mut compositor::Context, _args: Args, event: PromptEvent) 
 
 /// `:pio-lib-search <query>` (alias `:pio-pkg-search`) — search the PlatformIO
 /// registry (Library Manager).
-fn pio_lib_search(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_lib_search(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4803,7 +5189,11 @@ fn pio_lib_search(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
 
 /// `:pio-lib-outdated` (alias `:pio-pkg-outdated`) — installed project packages
 /// with newer versions available.
-fn pio_lib_outdated(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_lib_outdated(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4813,7 +5203,11 @@ fn pio_lib_outdated(cx: &mut compositor::Context, _args: Args, event: PromptEven
 }
 
 /// `:pio-lib-show <pkg>` (alias `:pio-pkg-show`) — registry details for a package.
-fn pio_lib_show(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_lib_show(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4839,7 +5233,11 @@ fn pio_debug(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
 }
 
 /// `:pio-upgrade` — upgrade PlatformIO Core itself, live in a terminal panel.
-fn pio_upgrade(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_upgrade(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4885,7 +5283,11 @@ fn pio_size(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
 
 /// `:pio-compiledb` — generate `compile_commands.json` (`pio run -t compiledb`)
 /// so the C/C++ LSP resolves the project's include paths and defines.
-fn pio_compiledb(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_compiledb(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4893,7 +5295,11 @@ fn pio_compiledb(cx: &mut compositor::Context, _args: Args, event: PromptEvent) 
 }
 
 /// `:pio-buildfs` — build the SPIFFS/LittleFS filesystem image (`pio run -t buildfs`).
-fn pio_buildfs(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_buildfs(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4901,7 +5307,11 @@ fn pio_buildfs(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
 }
 
 /// `:pio-envdump` — dump the resolved build environment (`pio run -t envdump`).
-fn pio_envdump(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_envdump(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4909,7 +5319,11 @@ fn pio_envdump(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
 }
 
 /// `:pio-cleanall` — remove all build artifacts including deps (`pio run -t cleanall`).
-fn pio_cleanall(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_cleanall(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4917,7 +5331,11 @@ fn pio_cleanall(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
 }
 
 /// `:pio-uploadfs` — flash the filesystem image to the board (`pio run -t uploadfs`).
-fn pio_uploadfs(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_uploadfs(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4925,7 +5343,11 @@ fn pio_uploadfs(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
 }
 
 /// `:pio-uploadeep` — flash the EEPROM (`pio run -t uploadeep`, AVR boards).
-fn pio_uploadeep(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_uploadeep(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4933,7 +5355,11 @@ fn pio_uploadeep(cx: &mut compositor::Context, _args: Args, event: PromptEvent) 
 }
 
 /// `:pio-bootloader` — burn the bootloader (`pio run -t bootloader`, AVR boards).
-fn pio_bootloader(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_bootloader(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4949,7 +5375,11 @@ fn pio_fuses(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
 }
 
 /// `:pio-nobuild` — flash the existing firmware without rebuilding (`pio run -t nobuild`).
-fn pio_nobuild(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_nobuild(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4957,7 +5387,11 @@ fn pio_nobuild(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
 }
 
 /// `:pio-project-config` — show the computed project configuration.
-fn pio_project_config(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_project_config(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4967,7 +5401,11 @@ fn pio_project_config(cx: &mut compositor::Context, _args: Args, event: PromptEv
 }
 
 /// `:pio-project-metadata` — dump the IDE/LSP metadata for the project.
-fn pio_project_metadata(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_project_metadata(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4978,7 +5416,11 @@ fn pio_project_metadata(cx: &mut compositor::Context, _args: Args, event: Prompt
 
 /// `:pio-pkg-exec <argv…>` — run a tool from an installed package
 /// (`pio pkg exec -- <argv>`), live in a terminal panel.
-fn pio_pkg_exec(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_exec(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4994,7 +5436,11 @@ fn pio_pkg_exec(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
 
 /// `:pio-pkg-exec-pkg <pkg> <argv…>` — run a tool from a *specific* installed
 /// package (`pio pkg exec -p <pkg> -- <argv>`), live in a terminal panel.
-fn pio_pkg_exec_package(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_exec_package(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5011,7 +5457,11 @@ fn pio_pkg_exec_package(cx: &mut compositor::Context, args: Args, event: PromptE
 
 /// `:pio-platform-install <spec>` — install a development platform globally
 /// (`pio pkg install -g -p <spec>`), live in a terminal panel.
-fn pio_platform_install(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_platform_install(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5026,7 +5476,11 @@ fn pio_platform_install(cx: &mut compositor::Context, args: Args, event: PromptE
 }
 
 /// `:pio-pkg-pack` — build a tarball of the current package (registry authoring).
-fn pio_pkg_pack(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_pack(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5041,7 +5495,11 @@ fn pio_pkg_pack(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
 /// registry; extra args forward `pio pkg publish` options (`--owner <o>`,
 /// `--type <library|platform|tool>`, `--private`, `--no-notify`,
 /// `--released-at <date>`, `--no-interactive`).
-fn pio_pkg_publish(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_publish(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5054,7 +5512,11 @@ fn pio_pkg_publish(cx: &mut compositor::Context, args: Args, event: PromptEvent)
 
 /// `:pio-project-config-lint` — validate `platformio.ini` without building
 /// (`pio project config --lint`), in a scratch buffer.
-fn pio_project_config_lint(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_project_config_lint(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5064,7 +5526,11 @@ fn pio_project_config_lint(cx: &mut compositor::Context, _args: Args, event: Pro
 }
 
 /// `:pio-pkg-list-global` — globally installed packages (`pio pkg list -g`).
-fn pio_pkg_list_global(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_list_global(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5075,7 +5541,11 @@ fn pio_pkg_list_global(cx: &mut compositor::Context, _args: Args, event: PromptE
 
 /// `:pio-pkg-update-global` — update globally installed packages
 /// (`pio pkg update -g`), live in a terminal panel.
-fn pio_pkg_update_global(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_update_global(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5087,7 +5557,11 @@ fn pio_pkg_update_global(cx: &mut compositor::Context, _args: Args, event: Promp
 
 /// `:pio-pkg-install-skip-deps <spec>` — install a package without its
 /// dependencies (`pio pkg install --skip-dependencies <spec>`).
-fn pio_pkg_install_skip_deps(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_install_skip_deps(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5104,7 +5578,11 @@ fn pio_pkg_install_skip_deps(cx: &mut compositor::Context, args: Args, event: Pr
 
 /// `:pio-test-junit <path>` — run unit tests and write a JUnit XML report
 /// (`pio test --junit-output-path <path>`); failures also land in *compilation*.
-fn pio_test_junit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_junit(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5114,12 +5592,19 @@ fn pio_test_junit(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_test_with(&st, &["--junit-output-path".to_string(), path]))
+    pio_run_compile(
+        cx,
+        embedded::pio_test_with(&st, &["--junit-output-path".to_string(), path]),
+    )
 }
 
 /// `:pio-test-json-path <path>` — run unit tests and write a JSON report
 /// (`pio test --json-output-path <path>`).
-fn pio_test_json_path(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_json_path(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5129,12 +5614,19 @@ fn pio_test_json_path(cx: &mut compositor::Context, args: Args, event: PromptEve
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_test_with(&st, &["--json-output-path".to_string(), path]))
+    pio_run_compile(
+        cx,
+        embedded::pio_test_with(&st, &["--json-output-path".to_string(), path]),
+    )
 }
 
 /// `:pio-test-port <port>` — run unit tests over a specific serial port
 /// (`pio test --test-port <port>`).
-fn pio_test_port(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_port(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5144,12 +5636,19 @@ fn pio_test_port(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_test_with(&st, &["--test-port".to_string(), port]))
+    pio_run_compile(
+        cx,
+        embedded::pio_test_with(&st, &["--test-port".to_string(), port]),
+    )
 }
 
 /// `:pio-test-upload-port <port>` — flash the test firmware to a specific serial
 /// port (`pio test --upload-port <port>`).
-fn pio_test_upload_port(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_upload_port(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5159,12 +5658,19 @@ fn pio_test_upload_port(cx: &mut compositor::Context, args: Args, event: PromptE
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_test_with(&st, &["--upload-port".to_string(), port]))
+    pio_run_compile(
+        cx,
+        embedded::pio_test_with(&st, &["--upload-port".to_string(), port]),
+    )
 }
 
 /// `:pio-test-monitor-dtr <0|1>` — set the DTR line state for the post-test
 /// serial monitor (`pio test --monitor-dtr <state>`).
-fn pio_test_monitor_dtr(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_monitor_dtr(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5174,12 +5680,19 @@ fn pio_test_monitor_dtr(cx: &mut compositor::Context, args: Args, event: PromptE
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_test_with(&st, &["--monitor-dtr".to_string(), state]))
+    pio_run_compile(
+        cx,
+        embedded::pio_test_with(&st, &["--monitor-dtr".to_string(), state]),
+    )
 }
 
 /// `:pio-test-monitor-rts <0|1>` — set the RTS line state for the post-test
 /// serial monitor (`pio test --monitor-rts <state>`).
-fn pio_test_monitor_rts(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_monitor_rts(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5189,12 +5702,19 @@ fn pio_test_monitor_rts(cx: &mut compositor::Context, args: Args, event: PromptE
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_test_with(&st, &["--monitor-rts".to_string(), state]))
+    pio_run_compile(
+        cx,
+        embedded::pio_test_with(&st, &["--monitor-rts".to_string(), state]),
+    )
 }
 
 /// `:pio-project-metadata-path <path>` — write the IDE/LSP metadata JSON to a
 /// file (`pio project metadata --json-output --json-output-path <path>`).
-fn pio_project_metadata_path(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_project_metadata_path(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5204,13 +5724,18 @@ fn pio_project_metadata_path(cx: &mut compositor::Context, args: Args, event: Pr
     }
     require_tool(embedded::PIO)?;
     embedded_capture(&embedded::pio_project_metadata_path(&path))?;
-    cx.editor.set_status(format!("PlatformIO project metadata written to `{path}`"));
+    cx.editor
+        .set_status(format!("PlatformIO project metadata written to `{path}`"));
     Ok(())
 }
 
 /// `:pio-check-silent` — quiet static analysis, warnings/errors only
 /// (`pio check -s`).
-fn pio_check_silent(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_check_silent(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5221,19 +5746,31 @@ fn pio_check_silent(cx: &mut compositor::Context, _args: Args, event: PromptEven
 
 /// `:pio-upgrade-deps-only` — upgrade only PlatformIO Core's dependencies
 /// (`pio upgrade --only-dependencies`), live in a terminal panel.
-fn pio_upgrade_deps_only(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_upgrade_deps_only(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let root = zemacs_loader::find_workspace().0;
-    embedded_spawn_terminal(cx, embedded::pio_upgrade_with(&["--only-dependencies".to_string()]), root);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_upgrade_with(&["--only-dependencies".to_string()]),
+        root,
+    );
     Ok(())
 }
 
 /// `:pio-init-env-prefix <prefix>` — scaffold a project prefixing generated
 /// environment names (`pio project init --env-prefix <prefix>`).
-fn pio_init_env_prefix(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_init_env_prefix(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5243,12 +5780,20 @@ fn pio_init_env_prefix(cx: &mut compositor::Context, args: Args, event: PromptEv
     }
     require_tool(embedded::PIO)?;
     let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_project_init_with(&["--env-prefix".to_string(), prefix]), dir);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_project_init_with(&["--env-prefix".to_string(), prefix]),
+        dir,
+    );
     Ok(())
 }
 
 /// `:pio-pkg-unpublish <pkg>` — remove a previously published package.
-fn pio_pkg_unpublish(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_unpublish(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5263,7 +5808,11 @@ fn pio_pkg_unpublish(cx: &mut compositor::Context, args: Args, event: PromptEven
 }
 
 /// `:pio-system-info` — system-wide PlatformIO information.
-fn pio_system_info(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_system_info(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5273,7 +5822,11 @@ fn pio_system_info(cx: &mut compositor::Context, _args: Args, event: PromptEvent
 }
 
 /// `:pio-system-prune` — remove unused caches/packages (`pio system prune -f`).
-fn pio_system_prune(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_system_prune(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5285,7 +5838,11 @@ fn pio_system_prune(cx: &mut compositor::Context, _args: Args, event: PromptEven
 
 /// `:pio-prune-cache` — prune only cached data (`pio system prune -f --cache`),
 /// leaving installed core/platform packages intact.
-fn pio_prune_cache(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_prune_cache(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5297,7 +5854,11 @@ fn pio_prune_cache(cx: &mut compositor::Context, _args: Args, event: PromptEvent
 
 /// `:pio-prune-core` — prune only unnecessary core packages
 /// (`pio system prune -f --core-packages`).
-fn pio_prune_core(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_prune_core(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5309,19 +5870,31 @@ fn pio_prune_core(cx: &mut compositor::Context, _args: Args, event: PromptEvent)
 
 /// `:pio-prune-platform` — prune only unnecessary development-platform packages
 /// (`pio system prune -f --platform-packages`).
-fn pio_prune_platform(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_prune_platform(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let root = zemacs_loader::find_workspace().0;
-    embedded_spawn_terminal(cx, embedded::pio_system_prune_scoped("platform-packages"), root);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_system_prune_scoped("platform-packages"),
+        root,
+    );
     Ok(())
 }
 
 /// `:pio-prune-dry-run` — report what `pio system prune` would remove without
 /// deleting anything (`pio system prune --dry-run`).
-fn pio_prune_dry_run(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_prune_dry_run(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5345,7 +5918,11 @@ fn pio_home(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
 }
 
 /// `:pio-device-logical` — list logical (disk) devices (`pio device list --logical`).
-fn pio_device_logical(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_device_logical(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5356,7 +5933,11 @@ fn pio_device_logical(cx: &mut compositor::Context, _args: Args, event: PromptEv
 
 /// `:pio-device-mdns` — list multicast-DNS / network (OTA) devices
 /// (`pio device list --mdns`).
-fn pio_device_mdns(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_device_mdns(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5367,7 +5948,11 @@ fn pio_device_mdns(cx: &mut compositor::Context, _args: Args, event: PromptEvent
 
 /// `:pio-device-serial` — list serial ports only (`pio device list --serial`),
 /// the explicit serial sibling of `--logical`/`--mdns`.
-fn pio_device_serial(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_device_serial(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5378,7 +5963,11 @@ fn pio_device_serial(cx: &mut compositor::Context, _args: Args, event: PromptEve
 
 /// `:pio-pkg-list-libraries` — installed libraries only
 /// (`pio pkg list --only-libraries`).
-fn pio_pkg_list_libraries(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_list_libraries(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5389,7 +5978,11 @@ fn pio_pkg_list_libraries(cx: &mut compositor::Context, _args: Args, event: Prom
 
 /// `:pio-pkg-list-platforms` — installed platforms only
 /// (`pio pkg list --only-platforms`).
-fn pio_pkg_list_platforms(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_list_platforms(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5400,7 +5993,11 @@ fn pio_pkg_list_platforms(cx: &mut compositor::Context, _args: Args, event: Prom
 
 /// `:pio-pkg-list-tools` — installed tool packages only
 /// (`pio pkg list --only-tools`).
-fn pio_pkg_list_tools(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_list_tools(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5411,19 +6008,31 @@ fn pio_pkg_list_tools(cx: &mut compositor::Context, _args: Args, event: PromptEv
 
 /// `:pio-test-json` — unit-test results as JSON (`pio test --json-output`), shown
 /// in a scratch buffer (the report sibling of `:pio-check-json`).
-fn pio_test_json(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_json(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    embedded_browse(cx, embedded::pio_test_with(&st, &["--json-output".to_string()]), true);
+    embedded_browse(
+        cx,
+        embedded::pio_test_with(&st, &["--json-output".to_string()]),
+        true,
+    );
     Ok(())
 }
 
 /// `:pio-project-config-json` — the computed project configuration as JSON
 /// (`pio project config --json-output`).
-fn pio_project_config_json(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_project_config_json(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5434,7 +6043,11 @@ fn pio_project_config_json(cx: &mut compositor::Context, _args: Args, event: Pro
 
 /// `:pio-project-metadata-json` — IDE/LSP metadata as JSON
 /// (`pio project metadata --json-output`).
-fn pio_project_metadata_json(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_project_metadata_json(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5445,7 +6058,11 @@ fn pio_project_metadata_json(cx: &mut compositor::Context, _args: Args, event: P
 
 /// `:pio-system-info-json` — system-wide PlatformIO information as JSON
 /// (`pio system info --json-output`).
-fn pio_system_info_json(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_system_info_json(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5456,24 +6073,39 @@ fn pio_system_info_json(cx: &mut compositor::Context, _args: Args, event: Prompt
 
 /// `:pio-pkg-search-page <query> <n>` — a specific page of registry search
 /// results (`pio pkg search <query> --page <n>`).
-fn pio_pkg_search_page(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_search_page(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
-    let page = tokens.last().map(|s| s.trim().to_string()).unwrap_or_default();
+    let page = tokens
+        .last()
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
     if tokens.len() < 2 || page.parse::<u32>().is_err() {
         bail!("usage: :pio-pkg-search-page <query> <n>  (e.g. wifi 2)");
     }
     let query = tokens[..tokens.len() - 1].join(" ");
     require_tool(embedded::PIO)?;
-    embedded_browse(cx, embedded::pio_pkg_search_page(query.trim(), &page), false);
+    embedded_browse(
+        cx,
+        embedded::pio_pkg_search_page(query.trim(), &page),
+        false,
+    );
     Ok(())
 }
 
 /// `:pio-pkg-unpublish-undo <pkg>` — restore a previously unpublished package
 /// (`pio pkg unpublish <pkg> --undo`).
-fn pio_pkg_unpublish_undo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_unpublish_undo(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5489,7 +6121,11 @@ fn pio_pkg_unpublish_undo(cx: &mut compositor::Context, args: Args, event: Promp
 
 /// `:pio-init-no-deps <board>` — scaffold a project without installing declared
 /// dependencies (`pio project init --board <board> --no-install-dependencies`).
-fn pio_init_no_deps(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_init_no_deps(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5509,7 +6145,11 @@ fn pio_init_no_deps(cx: &mut compositor::Context, args: Args, event: PromptEvent
 }
 
 /// `:pio-settings-get [name]` — print PlatformIO Core settings (all, or one key).
-fn pio_settings_get(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_settings_get(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5519,7 +6159,11 @@ fn pio_settings_get(cx: &mut compositor::Context, args: Args, event: PromptEvent
 }
 
 /// `:pio-settings-set <name> <value>` — change a PlatformIO Core setting.
-fn pio_settings_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_settings_set(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5532,12 +6176,19 @@ fn pio_settings_set(cx: &mut compositor::Context, args: Args, event: PromptEvent
     };
     require_tool(embedded::PIO)?;
     embedded_capture(&embedded::pio_settings_set(&name, value.trim()))?;
-    cx.editor.set_status(format!("PlatformIO setting `{name}` set to `{}`", value.trim()));
+    cx.editor.set_status(format!(
+        "PlatformIO setting `{name}` set to `{}`",
+        value.trim()
+    ));
     Ok(())
 }
 
 /// `:pio-remote-agent-list` — active PlatformIO Remote agents.
-fn pio_remote_agent_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_agent_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5548,7 +6199,11 @@ fn pio_remote_agent_list(cx: &mut compositor::Context, _args: Args, event: Promp
 
 /// `:pio-remote-agent-start` — start a Remote agent on this machine, live in a
 /// terminal panel (long-running foreground process).
-fn pio_remote_agent_start(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_agent_start(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5560,7 +6215,11 @@ fn pio_remote_agent_start(cx: &mut compositor::Context, args: Args, event: Promp
 }
 
 /// `:pio-remote-devices` — serial devices attached to remote agents.
-fn pio_remote_device_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_device_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5572,7 +6231,11 @@ fn pio_remote_device_list(cx: &mut compositor::Context, _args: Args, event: Prom
 /// `:pio-remote-run [args…]` — build/upload the project through a remote agent;
 /// extra args forward `pio remote run` flags (`-t <target>`, `--upload-port <p>`,
 /// `-r`, `-s`, `-v`, `--disable-auto-clean`).
-fn pio_remote_run(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_run(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5588,7 +6251,11 @@ fn pio_remote_run(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
 /// forward `pio remote test` flags (`-f <filter>`, `-i <ignore>`,
 /// `--without-building`, `--without-uploading`, `--test-port <p>`,
 /// `--upload-port <p>`, `-r`, `-v`).
-fn pio_remote_test(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_test(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5601,7 +6268,11 @@ fn pio_remote_test(cx: &mut compositor::Context, args: Args, event: PromptEvent)
 }
 
 /// `:pio-remote-update` — update platforms/packages/libraries on remote agents.
-fn pio_remote_update(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_update(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5614,7 +6285,11 @@ fn pio_remote_update(cx: &mut compositor::Context, args: Args, event: PromptEven
 
 /// `:pio-account-login` — sign in to a PlatformIO account (interactive prompts),
 /// live in a terminal panel.
-fn pio_account_login(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_account_login(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5625,7 +6300,11 @@ fn pio_account_login(cx: &mut compositor::Context, _args: Args, event: PromptEve
 }
 
 /// `:pio-account-logout` — sign out of the PlatformIO account.
-fn pio_account_logout(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_account_logout(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5636,7 +6315,11 @@ fn pio_account_logout(cx: &mut compositor::Context, _args: Args, event: PromptEv
 }
 
 /// `:pio-account-show` — the current PlatformIO account information.
-fn pio_account_show(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_account_show(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5648,7 +6331,11 @@ fn pio_account_show(cx: &mut compositor::Context, args: Args, event: PromptEvent
 
 /// `:pio-account-token` — print (or regenerate) the account auth token, live in
 /// a terminal panel (may prompt for the account password).
-fn pio_account_token(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_account_token(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5671,11 +6358,13 @@ fn pio_env(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     if !name.is_empty() {
         if name == "-" || name.eq_ignore_ascii_case("all") {
             embedded::update(|s| s.env.clear());
-            cx.editor.set_status("PlatformIO environment cleared (targets all envs)");
+            cx.editor
+                .set_status("PlatformIO environment cleared (targets all envs)");
         } else {
             let env = name.to_string();
             embedded::update(|s| s.env = env.clone());
-            cx.editor.set_status(format!("PlatformIO environment set to `{env}`"));
+            cx.editor
+                .set_status(format!("PlatformIO environment set to `{env}`"));
         }
         return Ok(());
     }
@@ -5697,11 +6386,13 @@ fn pio_env(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                     "environment",
                     |e: &String, _: &()| e.as_str().into(),
                 )];
-                let picker = ui::Picker::new(columns, 0, envs, (), move |cx, env: &String, _action| {
-                    let env = env.clone();
-                    embedded::update(|s| s.env = env.clone());
-                    cx.editor.set_status(format!("PlatformIO environment set to `{env}`"));
-                });
+                let picker =
+                    ui::Picker::new(columns, 0, envs, (), move |cx, env: &String, _action| {
+                        let env = env.clone();
+                        embedded::update(|s| s.env = env.clone());
+                        cx.editor
+                            .set_status(format!("PlatformIO environment set to `{env}`"));
+                    });
                 compositor.push(Box::new(overlaid(picker)));
             },
         ));
@@ -5712,7 +6403,11 @@ fn pio_env(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
 }
 
 /// `:pio-list-targets` — enumerate the project's build targets (`pio run --list-targets`).
-fn pio_list_targets(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_list_targets(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5722,7 +6417,11 @@ fn pio_list_targets(cx: &mut compositor::Context, _args: Args, event: PromptEven
 }
 
 /// `:pio-list-tests` — list the project's test suites (`pio test --list-tests`).
-fn pio_list_tests(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_list_tests(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5733,7 +6432,11 @@ fn pio_list_tests(cx: &mut compositor::Context, _args: Args, event: PromptEvent)
 
 /// `:pio-test-filter <pattern>` — run only the tests matching `pattern`
 /// (`pio test -f`), through the compilation list.
-fn pio_test_filter(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_filter(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5753,7 +6456,11 @@ fn pio_test_filter(cx: &mut compositor::Context, args: Args, event: PromptEvent)
 
 /// `:pio-check-severity <low|medium|high>` — static analysis filtered by minimum
 /// defect severity (`pio check --severity`).
-fn pio_check_severity(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_check_severity(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5774,7 +6481,11 @@ fn pio_check_severity(cx: &mut compositor::Context, args: Args, event: PromptEve
 
 /// `:pio-tool-install <spec>` — install a tool package globally (`pio pkg install
 /// -g -t`), e.g. `tool-openocd`, live in a terminal panel.
-fn pio_tool_install(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_tool_install(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5789,7 +6500,11 @@ fn pio_tool_install(cx: &mut compositor::Context, args: Args, event: PromptEvent
 }
 
 /// `:pio-boards-installed [query]` — boards from installed platforms only.
-fn pio_boards_installed(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_boards_installed(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5800,7 +6515,11 @@ fn pio_boards_installed(cx: &mut compositor::Context, args: Args, event: PromptE
 
 /// `:pio-monitor-filter <name>` — append a `pio device monitor` filter for this
 /// project (e.g. `time`, `log2file`, `hexlify`, `send_on_enter`).
-fn pio_monitor_filter(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_filter(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5814,12 +6533,17 @@ fn pio_monitor_filter(cx: &mut compositor::Context, args: Args, event: PromptEve
             s.filters.push(filter.clone());
         }
     });
-    cx.editor.set_status(format!("Added serial monitor filter `{filter}`"));
+    cx.editor
+        .set_status(format!("Added serial monitor filter `{filter}`"));
     Ok(())
 }
 
 /// `:pio-monitor-filters-clear` — remove all configured serial monitor filters.
-fn pio_monitor_filters_clear(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_filters_clear(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5829,7 +6553,11 @@ fn pio_monitor_filters_clear(cx: &mut compositor::Context, _args: Args, event: P
 }
 
 /// `:pio-monitor-eol <CR|LF|CRLF>` — set the serial monitor end-of-line mode.
-fn pio_monitor_eol(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_eol(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5839,12 +6567,17 @@ fn pio_monitor_eol(cx: &mut compositor::Context, args: Args, event: PromptEvent)
         bail!("usage: :pio-monitor-eol <CR|LF|CRLF>");
     }
     embedded::update(|s| s.eol = eol.clone());
-    cx.editor.set_status(format!("Serial monitor EOL set to {eol}"));
+    cx.editor
+        .set_status(format!("Serial monitor EOL set to {eol}"));
     Ok(())
 }
 
 /// `:pio-monitor-parity <N|E|O|S|M>` — set the serial monitor parity.
-fn pio_monitor_parity(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_parity(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5854,12 +6587,17 @@ fn pio_monitor_parity(cx: &mut compositor::Context, args: Args, event: PromptEve
         bail!("usage: :pio-monitor-parity <N|E|O|S|M>");
     }
     embedded::update(|s| s.parity = parity.clone());
-    cx.editor.set_status(format!("Serial monitor parity set to {parity}"));
+    cx.editor
+        .set_status(format!("Serial monitor parity set to {parity}"));
     Ok(())
 }
 
 /// `:pio-monitor-rts <0|1>` — set the initial RTS line state for the monitor.
-fn pio_monitor_rts(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_rts(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5868,12 +6606,17 @@ fn pio_monitor_rts(cx: &mut compositor::Context, args: Args, event: PromptEvent)
         bail!("usage: :pio-monitor-rts <0|1>");
     }
     embedded::update(|s| s.rts = v.clone());
-    cx.editor.set_status(format!("Serial monitor RTS set to {v}"));
+    cx.editor
+        .set_status(format!("Serial monitor RTS set to {v}"));
     Ok(())
 }
 
 /// `:pio-monitor-dtr <0|1>` — set the initial DTR line state for the monitor.
-fn pio_monitor_dtr(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_dtr(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5882,33 +6625,52 @@ fn pio_monitor_dtr(cx: &mut compositor::Context, args: Args, event: PromptEvent)
         bail!("usage: :pio-monitor-dtr <0|1>");
     }
     embedded::update(|s| s.dtr = v.clone());
-    cx.editor.set_status(format!("Serial monitor DTR set to {v}"));
+    cx.editor
+        .set_status(format!("Serial monitor DTR set to {v}"));
     Ok(())
 }
 
 /// `:pio-monitor-echo` — toggle local echo in the serial monitor (`--echo`).
-fn pio_monitor_echo(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_echo(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let now = embedded::update(|s| s.echo = !s.echo).echo;
-    cx.editor.set_status(format!("Serial monitor echo {}", if now { "on" } else { "off" }));
+    cx.editor.set_status(format!(
+        "Serial monitor echo {}",
+        if now { "on" } else { "off" }
+    ));
     Ok(())
 }
 
 /// `:pio-monitor-raw` — toggle raw mode (`--raw`), disabling output transforms.
-fn pio_monitor_raw(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_raw(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let now = embedded::update(|s| s.raw = !s.raw).raw;
-    cx.editor.set_status(format!("Serial monitor raw mode {}", if now { "on" } else { "off" }));
+    cx.editor.set_status(format!(
+        "Serial monitor raw mode {}",
+        if now { "on" } else { "off" }
+    ));
     Ok(())
 }
 
 /// `:pio-monitor-encoding <enc>` — set the monitor encoding (e.g. `UTF-8`,
 /// `Latin-1`, `hexlify`); empty clears it back to the default.
-fn pio_monitor_encoding(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_encoding(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5917,13 +6679,18 @@ fn pio_monitor_encoding(cx: &mut compositor::Context, args: Args, event: PromptE
     if enc.is_empty() {
         cx.editor.set_status("Serial monitor encoding cleared");
     } else {
-        cx.editor.set_status(format!("Serial monitor encoding set to {enc}"));
+        cx.editor
+            .set_status(format!("Serial monitor encoding set to {enc}"));
     }
     Ok(())
 }
 
 /// `:pio-monitor-flow <none|rtscts|xonxoff>` — select serial flow control.
-fn pio_monitor_flow(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_flow(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5938,13 +6705,18 @@ fn pio_monitor_flow(cx: &mut compositor::Context, args: Args, event: PromptEvent
         s.rtscts = rtscts;
         s.xonxoff = xonxoff;
     });
-    cx.editor.set_status(format!("Serial monitor flow control: {mode}"));
+    cx.editor
+        .set_status(format!("Serial monitor flow control: {mode}"));
     Ok(())
 }
 
 /// `:pio-monitor-reconnect <on|off>` — toggle automatic reconnection
 /// (`off` sets `--no-reconnect`).
-fn pio_monitor_reconnect(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_reconnect(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5955,24 +6727,36 @@ fn pio_monitor_reconnect(cx: &mut compositor::Context, args: Args, event: Prompt
         _ => bail!("usage: :pio-monitor-reconnect <on|off>"),
     };
     embedded::update(|s| s.no_reconnect = no_reconnect);
-    cx.editor.set_status(format!("Serial monitor auto-reconnect {mode}"));
+    cx.editor
+        .set_status(format!("Serial monitor auto-reconnect {mode}"));
     Ok(())
 }
 
 /// `:pio-monitor-quiet` — toggle suppression of non-error monitor diagnostics
 /// (`--quiet`).
-fn pio_monitor_quiet(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_quiet(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let now = embedded::update(|s| s.quiet = !s.quiet).quiet;
-    cx.editor.set_status(format!("Serial monitor quiet mode {}", if now { "on" } else { "off" }));
+    cx.editor.set_status(format!(
+        "Serial monitor quiet mode {}",
+        if now { "on" } else { "off" }
+    ));
     Ok(())
 }
 
 /// `:pio-monitor-exit-char <n>` — set the ASCII code of the monitor exit
 /// character (`--exit-char`; default `3` = Ctrl+C). Empty clears the override.
-fn pio_monitor_exit_char(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_exit_char(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -5984,14 +6768,19 @@ fn pio_monitor_exit_char(cx: &mut compositor::Context, args: Args, event: Prompt
     if n.is_empty() {
         cx.editor.set_status("Serial monitor exit-char cleared");
     } else {
-        cx.editor.set_status(format!("Serial monitor exit-char set to {n}"));
+        cx.editor
+            .set_status(format!("Serial monitor exit-char set to {n}"));
     }
     Ok(())
 }
 
 /// `:pio-monitor-menu-char <n>` — set the ASCII code of the monitor menu
 /// character (`--menu-char`; default `20` = Ctrl+T). Empty clears the override.
-fn pio_monitor_menu_char(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_monitor_menu_char(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6003,31 +6792,47 @@ fn pio_monitor_menu_char(cx: &mut compositor::Context, args: Args, event: Prompt
     if n.is_empty() {
         cx.editor.set_status("Serial monitor menu-char cleared");
     } else {
-        cx.editor.set_status(format!("Serial monitor menu-char set to {n}"));
+        cx.editor
+            .set_status(format!("Serial monitor menu-char set to {n}"));
     }
     Ok(())
 }
 
 /// `:pio-pkg-show-type <pkg> <library|platform|tool>` — registry details scoped
 /// to a package type (`pio pkg show --type <type> <pkg>`).
-fn pio_pkg_show_type(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_show_type(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
-    let pkg_type = tokens.last().map(|s| s.to_ascii_lowercase()).unwrap_or_default();
+    let pkg_type = tokens
+        .last()
+        .map(|s| s.to_ascii_lowercase())
+        .unwrap_or_default();
     if tokens.len() < 2 || !matches!(pkg_type.as_str(), "library" | "platform" | "tool") {
         bail!("usage: :pio-pkg-show-type <pkg> <library|platform|tool>");
     }
     let pkg = tokens[..tokens.len() - 1].join(" ");
     require_tool(embedded::PIO)?;
-    embedded_browse(cx, embedded::pio_pkg_show_type(pkg.trim(), &pkg_type), false);
+    embedded_browse(
+        cx,
+        embedded::pio_pkg_show_type(pkg.trim(), &pkg_type),
+        false,
+    );
     Ok(())
 }
 
 /// `:pio-pkg-exec-call <argv…>` — run a package tool via the `-c/--call` form
 /// (`pio pkg exec -c <argv…>`), live in a terminal panel.
-fn pio_pkg_exec_call(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_exec_call(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6054,7 +6859,11 @@ fn pio_run_compile(cx: &mut compositor::Context, argv: Vec<String>) -> anyhow::R
 }
 
 /// `:pio-build-verbose` — verbose build (`pio run -v`).
-fn pio_build_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_build_verbose(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6064,7 +6873,11 @@ fn pio_build_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEve
 }
 
 /// `:pio-build-silent` — quiet build, warnings/errors only (`pio run -s`).
-fn pio_build_silent(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_build_silent(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6074,7 +6887,11 @@ fn pio_build_silent(cx: &mut compositor::Context, _args: Args, event: PromptEven
 }
 
 /// `:pio-run-jobs <n>` — build with N parallel jobs (`pio run -j <n>`).
-fn pio_run_jobs(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_run_jobs(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6089,13 +6906,20 @@ fn pio_run_jobs(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
 
 /// `:pio-build-no-auto-clean` — build without the pre-build clean
 /// (`pio run --disable-auto-clean`).
-fn pio_build_no_auto_clean(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_build_no_auto_clean(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_run_with(&st, &["--disable-auto-clean".to_string()]))
+    pio_run_compile(
+        cx,
+        embedded::pio_run_with(&st, &["--disable-auto-clean".to_string()]),
+    )
 }
 
 /// `:pio-target <name>` — run an arbitrary build target (`pio run -t <name>`),
@@ -6117,7 +6941,11 @@ fn pio_target(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
 
 /// `:pio-upload-to <port>` — build + flash to a specific port
 /// (`pio run -t upload --upload-port <port>`), live in a terminal panel.
-fn pio_upload_to(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_upload_to(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6130,14 +6958,23 @@ fn pio_upload_to(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
     let dir = st.sketch_dir();
     let argv = embedded::pio_run_with(
         &st,
-        &["-t".to_string(), "upload".to_string(), "--upload-port".to_string(), port],
+        &[
+            "-t".to_string(),
+            "upload".to_string(),
+            "--upload-port".to_string(),
+            port,
+        ],
     );
     embedded_spawn_terminal(cx, argv, dir);
     Ok(())
 }
 
 /// `:pio-test-verbose` — verbose unit tests (`pio test -v`).
-fn pio_test_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_verbose(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6148,7 +6985,11 @@ fn pio_test_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEven
 
 /// `:pio-test-ignore <pattern>` — run tests except those matching `pattern`
 /// (`pio test -i <pattern>`).
-fn pio_test_ignore(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_ignore(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6163,50 +7004,82 @@ fn pio_test_ignore(cx: &mut compositor::Context, args: Args, event: PromptEvent)
 
 /// `:pio-test-without-building` — test the last build without rebuilding
 /// (`pio test --without-building`).
-fn pio_test_without_building(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_without_building(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_test_with(&st, &["--without-building".to_string()]))
+    pio_run_compile(
+        cx,
+        embedded::pio_test_with(&st, &["--without-building".to_string()]),
+    )
 }
 
 /// `:pio-test-without-uploading` — test without flashing first
 /// (`pio test --without-uploading`).
-fn pio_test_without_uploading(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_without_uploading(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_test_with(&st, &["--without-uploading".to_string()]))
+    pio_run_compile(
+        cx,
+        embedded::pio_test_with(&st, &["--without-uploading".to_string()]),
+    )
 }
 
 /// `:pio-test-without-testing` — build + upload but skip running the tests
 /// (`pio test --without-testing`).
-fn pio_test_without_testing(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_without_testing(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_test_with(&st, &["--without-testing".to_string()]))
+    pio_run_compile(
+        cx,
+        embedded::pio_test_with(&st, &["--without-testing".to_string()]),
+    )
 }
 
 /// `:pio-test-no-reset` — do not reset the board between tests
 /// (`pio test --no-reset`).
-fn pio_test_no_reset(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_no_reset(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_test_with(&st, &["--no-reset".to_string()]))
+    pio_run_compile(
+        cx,
+        embedded::pio_test_with(&st, &["--no-reset".to_string()]),
+    )
 }
 
 /// `:pio-check-verbose` — verbose static analysis (`pio check -v`).
-fn pio_check_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_check_verbose(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6217,19 +7090,31 @@ fn pio_check_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEve
 
 /// `:pio-check-json` — static analysis as JSON (`pio check --json-output`),
 /// shown in a scratch buffer.
-fn pio_check_json(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_check_json(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    embedded_browse(cx, embedded::pio_check_with(&st, &["--json-output".to_string()]), true);
+    embedded_browse(
+        cx,
+        embedded::pio_check_with(&st, &["--json-output".to_string()]),
+        true,
+    );
     Ok(())
 }
 
 /// `:pio-check-flags <flags>` — analysis with extra tool flags
 /// (`pio check --flags <flags>`).
-fn pio_check_flags(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_check_flags(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6239,12 +7124,19 @@ fn pio_check_flags(cx: &mut compositor::Context, args: Args, event: PromptEvent)
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_check_with(&st, &["--flags".to_string(), flags]))
+    pio_run_compile(
+        cx,
+        embedded::pio_check_with(&st, &["--flags".to_string(), flags]),
+    )
 }
 
 /// `:pio-check-fail-on <low|medium|high>` — exit non-zero on defects at or above
 /// the given severity (`pio check --fail-on-defect <sev>`).
-fn pio_check_fail_on(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_check_fail_on(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6254,23 +7146,37 @@ fn pio_check_fail_on(cx: &mut compositor::Context, args: Args, event: PromptEven
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_check_with(&st, &["--fail-on-defect".to_string(), sev]))
+    pio_run_compile(
+        cx,
+        embedded::pio_check_with(&st, &["--fail-on-defect".to_string(), sev]),
+    )
 }
 
 /// `:pio-check-skip-packages` — analyse only project sources, skipping libraries
 /// (`pio check --skip-packages`).
-fn pio_check_skip_packages(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_check_skip_packages(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_check_with(&st, &["--skip-packages".to_string()]))
+    pio_run_compile(
+        cx,
+        embedded::pio_check_with(&st, &["--skip-packages".to_string()]),
+    )
 }
 
 /// `:pio-check-src-filters <pattern>` — restrict analysis to matching sources
 /// (`pio check --src-filters <pattern>`).
-fn pio_check_src_filters(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_check_src_filters(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6280,11 +7186,18 @@ fn pio_check_src_filters(cx: &mut compositor::Context, args: Args, event: Prompt
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
-    pio_run_compile(cx, embedded::pio_check_with(&st, &["--src-filters".to_string(), pat]))
+    pio_run_compile(
+        cx,
+        embedded::pio_check_with(&st, &["--src-filters".to_string(), pat]),
+    )
 }
 
 /// `:pio-debug-verbose` — verbose debugger session (`pio debug -v`).
-fn pio_debug_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_debug_verbose(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6297,7 +7210,11 @@ fn pio_debug_verbose(cx: &mut compositor::Context, _args: Args, event: PromptEve
 
 /// `:pio-debug-interface <name>` — debug with a specific interface
 /// (`pio debug --interface <name>`).
-fn pio_debug_interface(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_debug_interface(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6308,13 +7225,21 @@ fn pio_debug_interface(cx: &mut compositor::Context, args: Args, event: PromptEv
     require_tool(embedded::PIO)?;
     let st = embedded::load();
     let dir = st.sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_debug_with(&st, &["--interface".to_string(), iface]), dir);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_debug_with(&st, &["--interface".to_string(), iface]),
+        dir,
+    );
     Ok(())
 }
 
 /// `:pio-debug-load-mode <always|modified|manual>` — control firmware (re)loading
 /// on debug start (`pio debug --load-mode <mode>`).
-fn pio_debug_load_mode(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_debug_load_mode(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6325,13 +7250,21 @@ fn pio_debug_load_mode(cx: &mut compositor::Context, args: Args, event: PromptEv
     require_tool(embedded::PIO)?;
     let st = embedded::load();
     let dir = st.sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_debug_with(&st, &["--load-mode".to_string(), mode]), dir);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_debug_with(&st, &["--load-mode".to_string(), mode]),
+        dir,
+    );
     Ok(())
 }
 
 /// `:pio-build-conf <path>` — build using an alternate `platformio.ini`
 /// (`pio run -c <path>`), for multi-config projects (CI/debug variants).
-fn pio_build_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_build_conf(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6346,7 +7279,11 @@ fn pio_build_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
 
 /// `:pio-test-conf <path>` — run unit tests using an alternate `platformio.ini`
 /// (`pio test -c <path>`).
-fn pio_test_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_test_conf(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6361,7 +7298,11 @@ fn pio_test_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
 
 /// `:pio-check-conf <path>` — static analysis using an alternate `platformio.ini`
 /// (`pio check -c <path>`).
-fn pio_check_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_check_conf(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6376,7 +7317,11 @@ fn pio_check_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
 
 /// `:pio-debug-conf <path>` — debug using an alternate `platformio.ini`
 /// (`pio debug -c <path>`), live in a terminal panel.
-fn pio_debug_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_debug_conf(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6387,33 +7332,57 @@ fn pio_debug_conf(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
     require_tool(embedded::PIO)?;
     let st = embedded::load();
     let dir = st.sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_debug_with(&st, &["-c".to_string(), path]), dir);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_debug_with(&st, &["-c".to_string(), path]),
+        dir,
+    );
     Ok(())
 }
 
 /// `:pio-init-ide <ide>` — (re)generate IDE integration files for the project
 /// (`pio project init --ide <ide>`).
-fn pio_init_ide(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_init_ide(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let ide = args.join(" ").trim().to_ascii_lowercase();
     const IDES: &[&str] = &[
-        "clion", "codeblocks", "eclipse", "emacs", "netbeans", "qtcreator", "sublimetext", "vim",
-        "visualstudio", "vscode",
+        "clion",
+        "codeblocks",
+        "eclipse",
+        "emacs",
+        "netbeans",
+        "qtcreator",
+        "sublimetext",
+        "vim",
+        "visualstudio",
+        "vscode",
     ];
     if !IDES.contains(&ide.as_str()) {
         bail!("usage: :pio-init-ide <{}>", IDES.join("|"));
     }
     require_tool(embedded::PIO)?;
     let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_project_init_with(&["--ide".to_string(), ide]), dir);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_project_init_with(&["--ide".to_string(), ide]),
+        dir,
+    );
     Ok(())
 }
 
 /// `:pio-init-sample <board>` — scaffold a project with example code
 /// (`pio project init --board <board> --sample-code`).
-fn pio_init_sample(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_init_sample(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6434,7 +7403,11 @@ fn pio_init_sample(cx: &mut compositor::Context, args: Args, event: PromptEvent)
 
 /// `:pio-init-option <name=value>` — set a `platformio.ini` option while
 /// initialising (`pio project init -O <name=value>`).
-fn pio_init_option(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_init_option(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6444,13 +7417,21 @@ fn pio_init_option(cx: &mut compositor::Context, args: Args, event: PromptEvent)
     }
     require_tool(embedded::PIO)?;
     let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_project_init_with(&["-O".to_string(), opt]), dir);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_project_init_with(&["-O".to_string(), opt]),
+        dir,
+    );
     Ok(())
 }
 
 /// `:pio-pkg-install-force <spec>` — reinstall a package even if present
 /// (`pio pkg install -f <spec>`).
-fn pio_pkg_install_force(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_install_force(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6460,13 +7441,21 @@ fn pio_pkg_install_force(cx: &mut compositor::Context, args: Args, event: Prompt
     }
     require_tool(embedded::PIO)?;
     let dir = embedded::load().sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_pkg_install_with(&["-f".to_string(), spec]), dir);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_pkg_install_with(&["-f".to_string(), spec]),
+        dir,
+    );
     Ok(())
 }
 
 /// `:pio-pkg-install-global <spec>` — install a package globally
 /// (`pio pkg install -g <spec>`).
-fn pio_pkg_install_global(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_install_global(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6476,13 +7465,21 @@ fn pio_pkg_install_global(cx: &mut compositor::Context, args: Args, event: Promp
     }
     require_tool(embedded::PIO)?;
     let root = zemacs_loader::find_workspace().0;
-    embedded_spawn_terminal(cx, embedded::pio_pkg_install_with(&["-g".to_string(), spec]), root);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_pkg_install_with(&["-g".to_string(), spec]),
+        root,
+    );
     Ok(())
 }
 
 /// `:pio-lib-install-nosave <name>` — install a library without writing it to
 /// `platformio.ini` (`pio pkg install -l <name> --no-save`).
-fn pio_lib_install_nosave(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_lib_install_nosave(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6499,25 +7496,40 @@ fn pio_lib_install_nosave(cx: &mut compositor::Context, args: Args, event: Promp
 
 /// `:pio-pkg-search-sort <query> <relevance|popularity|trending|added|updated>` —
 /// registry search with an explicit sort order.
-fn pio_pkg_search_sort(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_pkg_search_sort(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
-    let sort = tokens.last().map(|s| s.to_ascii_lowercase()).unwrap_or_default();
+    let sort = tokens
+        .last()
+        .map(|s| s.to_ascii_lowercase())
+        .unwrap_or_default();
     let sorts = ["relevance", "popularity", "trending", "added", "updated"];
     if tokens.len() < 2 || !sorts.contains(&sort.as_str()) {
         bail!("usage: :pio-pkg-search-sort <query> <{}>", sorts.join("|"));
     }
     let query = tokens[..tokens.len() - 1].join(" ");
     require_tool(embedded::PIO)?;
-    embedded_browse(cx, embedded::pio_pkg_search_sort(query.trim(), &sort), false);
+    embedded_browse(
+        cx,
+        embedded::pio_pkg_search_sort(query.trim(), &sort),
+        false,
+    );
     Ok(())
 }
 
 /// `:pio-upgrade-dev` — upgrade PlatformIO Core to the development branch
 /// (`pio upgrade --dev`).
-fn pio_upgrade_dev(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_upgrade_dev(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6529,20 +7541,32 @@ fn pio_upgrade_dev(cx: &mut compositor::Context, _args: Args, event: PromptEvent
 
 /// `:pio-remote-run-force` — force the build to run on the remote agent even when
 /// it could run locally (`pio remote run -r`).
-fn pio_remote_run_force(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_run_force(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     let st = embedded::load();
     let dir = st.sketch_dir();
-    embedded_spawn_terminal(cx, embedded::pio_remote_run_with(&st, &["-r".to_string()]), dir);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_remote_run_with(&st, &["-r".to_string()]),
+        dir,
+    );
     Ok(())
 }
 
 /// `:pio-remote-agent-start-named <name>` — start a named Remote agent
 /// (`pio remote agent start --name <name>`).
-fn pio_remote_agent_start_named(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_agent_start_named(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6552,13 +7576,21 @@ fn pio_remote_agent_start_named(cx: &mut compositor::Context, args: Args, event:
     }
     require_tool(embedded::PIO)?;
     let root = zemacs_loader::find_workspace().0;
-    embedded_spawn_terminal(cx, embedded::pio_remote_agent_start_with(&["--name".to_string(), name]), root);
+    embedded_spawn_terminal(
+        cx,
+        embedded::pio_remote_agent_start_with(&["--name".to_string(), name]),
+        root,
+    );
     Ok(())
 }
 
 /// `:pio-remote-monitor` — serial monitor over a Remote agent (`pio remote device
 /// monitor`), live in a terminal panel.
-fn pio_remote_monitor(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_remote_monitor(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6570,18 +7602,27 @@ fn pio_remote_monitor(cx: &mut compositor::Context, args: Args, event: PromptEve
 }
 
 /// `:pio-settings-reset` — restore PlatformIO Core settings to defaults.
-fn pio_settings_reset(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_settings_reset(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::PIO)?;
     embedded_capture(&embedded::pio_settings_reset())?;
-    cx.editor.set_status("PlatformIO settings reset to defaults");
+    cx.editor
+        .set_status("PlatformIO settings reset to defaults");
     Ok(())
 }
 
 /// `:pio-system-completion <shell>` — emit a shell completion script.
-fn pio_system_completion(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_system_completion(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6634,7 +7675,11 @@ fn pio_admin_browse(cx: &mut compositor::Context, group: &str, sub: &str) -> any
 }
 
 /// `:pio-account-register` — create a new PlatformIO account (interactive).
-fn pio_account_register(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_account_register(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6642,7 +7687,11 @@ fn pio_account_register(cx: &mut compositor::Context, args: Args, event: PromptE
 }
 
 /// `:pio-account-password` — change the PlatformIO account password (interactive).
-fn pio_account_password(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_account_password(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6650,7 +7699,11 @@ fn pio_account_password(cx: &mut compositor::Context, args: Args, event: PromptE
 }
 
 /// `:pio-account-update` — update PlatformIO profile information (interactive).
-fn pio_account_update(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_account_update(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6658,7 +7711,11 @@ fn pio_account_update(cx: &mut compositor::Context, args: Args, event: PromptEve
 }
 
 /// `:pio-account-forgot` — begin PlatformIO account password recovery.
-fn pio_account_forgot(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_account_forgot(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6666,7 +7723,11 @@ fn pio_account_forgot(cx: &mut compositor::Context, args: Args, event: PromptEve
 }
 
 /// `:pio-account-destroy` — permanently destroy the PlatformIO account.
-fn pio_account_destroy(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_account_destroy(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6674,7 +7735,11 @@ fn pio_account_destroy(cx: &mut compositor::Context, args: Args, event: PromptEv
 }
 
 /// `:pio-org-list` — organizations and their members.
-fn pio_org_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_org_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6682,7 +7747,11 @@ fn pio_org_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
 }
 
 /// `:pio-org-create <orgname>` — create a new organization.
-fn pio_org_create(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_org_create(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6698,7 +7767,11 @@ fn pio_org_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
 }
 
 /// `:pio-org-remove <orgname> <username>` — remove an owner from an organization.
-fn pio_org_remove(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_org_remove(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6706,7 +7779,11 @@ fn pio_org_remove(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
 }
 
 /// `:pio-org-update <orgname>` — update organization information.
-fn pio_org_update(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_org_update(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6714,7 +7791,11 @@ fn pio_org_update(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
 }
 
 /// `:pio-org-destroy <orgname>` — destroy an organization.
-fn pio_org_destroy(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_org_destroy(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6722,7 +7803,11 @@ fn pio_org_destroy(cx: &mut compositor::Context, args: Args, event: PromptEvent)
 }
 
 /// `:pio-team-list <orgname>` — teams in an organization and their members.
-fn pio_team_list(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_team_list(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6730,7 +7815,11 @@ fn pio_team_list(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
 }
 
 /// `:pio-team-create <orgname:team>` — create a team in an organization.
-fn pio_team_create(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_team_create(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6738,7 +7827,11 @@ fn pio_team_create(cx: &mut compositor::Context, args: Args, event: PromptEvent)
 }
 
 /// `:pio-team-add <orgname:team> <username>` — add a member to a team.
-fn pio_team_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_team_add(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6746,7 +7839,11 @@ fn pio_team_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
 }
 
 /// `:pio-team-remove <orgname:team> <username>` — remove a member from a team.
-fn pio_team_remove(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_team_remove(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6754,7 +7851,11 @@ fn pio_team_remove(cx: &mut compositor::Context, args: Args, event: PromptEvent)
 }
 
 /// `:pio-team-update <orgname:team>` — update team information.
-fn pio_team_update(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_team_update(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6762,7 +7863,11 @@ fn pio_team_update(cx: &mut compositor::Context, args: Args, event: PromptEvent)
 }
 
 /// `:pio-team-destroy <orgname:team>` — destroy a team.
-fn pio_team_destroy(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_team_destroy(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6770,7 +7875,11 @@ fn pio_team_destroy(cx: &mut compositor::Context, args: Args, event: PromptEvent
 }
 
 /// `:pio-access-list` — published resources and their access levels.
-fn pio_access_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_access_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6778,7 +7887,11 @@ fn pio_access_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent
 }
 
 /// `:pio-access-grant <level> <resource> <team>` — grant access to a resource.
-fn pio_access_grant(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_access_grant(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6786,7 +7899,11 @@ fn pio_access_grant(cx: &mut compositor::Context, args: Args, event: PromptEvent
 }
 
 /// `:pio-access-revoke <resource> <team>` — revoke access to a resource.
-fn pio_access_revoke(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_access_revoke(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6794,7 +7911,11 @@ fn pio_access_revoke(cx: &mut compositor::Context, args: Args, event: PromptEven
 }
 
 /// `:pio-access-public <resource>` — make a published resource public.
-fn pio_access_public(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_access_public(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6802,7 +7923,11 @@ fn pio_access_public(cx: &mut compositor::Context, args: Args, event: PromptEven
 }
 
 /// `:pio-access-private <resource>` — make a published resource private.
-fn pio_access_private(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn pio_access_private(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6843,7 +7968,11 @@ fn arduino_raw(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
 }
 
 /// `:arduino-core-download <package>` — fetch a core without installing it.
-fn arduino_core_download(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_core_download(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6858,7 +7987,11 @@ fn arduino_core_download(cx: &mut compositor::Context, args: Args, event: Prompt
 }
 
 /// `:arduino-lib-download <name>` — fetch a library without installing it.
-fn arduino_lib_download(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_download(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6873,7 +8006,11 @@ fn arduino_lib_download(cx: &mut compositor::Context, args: Args, event: PromptE
 }
 
 /// `:arduino-lib-update-index` — refresh the library index.
-fn arduino_lib_update_index(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_update_index(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6884,7 +8021,11 @@ fn arduino_lib_update_index(cx: &mut compositor::Context, _args: Args, event: Pr
 }
 
 /// `:arduino-board-search [query]` — search the Boards Manager for a board.
-fn arduino_board_search(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_board_search(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6894,7 +8035,11 @@ fn arduino_board_search(cx: &mut compositor::Context, args: Args, event: PromptE
 }
 
 /// `:arduino-cache-clean` — delete the Boards/Library Manager download cache.
-fn arduino_cache_clean(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_cache_clean(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6905,7 +8050,11 @@ fn arduino_cache_clean(cx: &mut compositor::Context, _args: Args, event: PromptE
 }
 
 /// `:arduino-completion <shell>` — emit a shell completion script.
-fn arduino_completion(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_completion(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6919,7 +8068,11 @@ fn arduino_completion(cx: &mut compositor::Context, args: Args, event: PromptEve
 }
 
 /// `:arduino-config-get <key>` — read one arduino-cli configuration key.
-fn arduino_config_get(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_config_get(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6928,12 +8081,20 @@ fn arduino_config_get(cx: &mut compositor::Context, args: Args, event: PromptEve
         bail!("usage: :arduino-config-get <key>  (e.g. board_manager.additional_urls)");
     }
     require_tool(embedded::ARDUINO_CLI)?;
-    embedded_browse(cx, embedded::arduino_config("get", &[key.trim().to_string()]), false);
+    embedded_browse(
+        cx,
+        embedded::arduino_config("get", &[key.trim().to_string()]),
+        false,
+    );
     Ok(())
 }
 
 /// `:arduino-config-set <key> <value…>` — set an arduino-cli configuration value.
-fn arduino_config_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_config_set(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6943,13 +8104,18 @@ fn arduino_config_set(cx: &mut compositor::Context, args: Args, event: PromptEve
     }
     require_tool(embedded::ARDUINO_CLI)?;
     embedded_capture(&embedded::arduino_config("set", &tokens))?;
-    cx.editor.set_status(format!("arduino-cli config `{}` set", tokens[0]));
+    cx.editor
+        .set_status(format!("arduino-cli config `{}` set", tokens[0]));
     Ok(())
 }
 
 /// `:arduino-config-add <key> <value…>` — append value(s) to an arduino-cli
 /// list setting (e.g. additional board-manager URLs).
-fn arduino_config_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_config_add(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6959,12 +8125,17 @@ fn arduino_config_add(cx: &mut compositor::Context, args: Args, event: PromptEve
     }
     require_tool(embedded::ARDUINO_CLI)?;
     embedded_capture(&embedded::arduino_config("add", &tokens))?;
-    cx.editor.set_status(format!("arduino-cli config `{}` appended", tokens[0]));
+    cx.editor
+        .set_status(format!("arduino-cli config `{}` appended", tokens[0]));
     Ok(())
 }
 
 /// `:arduino-config-remove <key> <value…>` — remove value(s) from a list setting.
-fn arduino_config_remove(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_config_remove(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6974,12 +8145,17 @@ fn arduino_config_remove(cx: &mut compositor::Context, args: Args, event: Prompt
     }
     require_tool(embedded::ARDUINO_CLI)?;
     embedded_capture(&embedded::arduino_config("remove", &tokens))?;
-    cx.editor.set_status(format!("arduino-cli config `{}` updated", tokens[0]));
+    cx.editor
+        .set_status(format!("arduino-cli config `{}` updated", tokens[0]));
     Ok(())
 }
 
 /// `:arduino-config-delete <key>` — delete a settings key and its sub-keys.
-fn arduino_config_delete(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_config_delete(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -6988,25 +8164,38 @@ fn arduino_config_delete(cx: &mut compositor::Context, args: Args, event: Prompt
         bail!("usage: :arduino-config-delete <key>");
     }
     require_tool(embedded::ARDUINO_CLI)?;
-    embedded_capture(&embedded::arduino_config("delete", &[key.trim().to_string()]))?;
-    cx.editor.set_status(format!("arduino-cli config `{}` deleted", key.trim()));
+    embedded_capture(&embedded::arduino_config(
+        "delete",
+        &[key.trim().to_string()],
+    ))?;
+    cx.editor
+        .set_status(format!("arduino-cli config `{}` deleted", key.trim()));
     Ok(())
 }
 
 /// `:arduino-config-init` — write the current configuration to a config file.
-fn arduino_config_init(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_config_init(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     require_tool(embedded::ARDUINO_CLI)?;
     let out = embedded_capture(&embedded::arduino_config("init", &[]))?;
-    cx.editor.set_status(format!("arduino-cli config initialised: {}", out.trim()));
+    cx.editor
+        .set_status(format!("arduino-cli config initialised: {}", out.trim()));
     Ok(())
 }
 
 /// `:arduino-board-attach <argv…>` — attach a sketch to a board
 /// (`arduino-cli board attach`, e.g. `-p <port> -b <fqbn> [sketch]`).
-fn arduino_board_attach(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_board_attach(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -7022,7 +8211,11 @@ fn arduino_board_attach(cx: &mut compositor::Context, args: Args, event: PromptE
 
 /// `:arduino-profile-create <argv…>` — create/update a build profile in the
 /// sketch project file (`arduino-cli profile create`).
-fn arduino_profile_create(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_profile_create(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -7037,7 +8230,11 @@ fn arduino_profile_create(cx: &mut compositor::Context, args: Args, event: Promp
 }
 
 /// `:arduino-profile-set-default <name>` — set the default build profile.
-fn arduino_profile_set_default(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_profile_set_default(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -7046,15 +8243,24 @@ fn arduino_profile_set_default(cx: &mut compositor::Context, args: Args, event: 
         bail!("usage: :arduino-profile-set-default <name>");
     }
     require_tool(embedded::ARDUINO_CLI)?;
-    embedded_capture(&embedded::arduino_sub("profile", "set-default", &[name.trim().to_string()]))?;
-    cx.editor.set_status(format!("Default build profile set to `{}`", name.trim()));
+    embedded_capture(&embedded::arduino_sub(
+        "profile",
+        "set-default",
+        &[name.trim().to_string()],
+    ))?;
+    cx.editor
+        .set_status(format!("Default build profile set to `{}`", name.trim()));
     Ok(())
 }
 
 /// `:arduino-lib-install <name>` — install a library by name directly
 /// (`arduino-cli lib install <name>`), live in a terminal panel (the direct
 /// counterpart to the `:arduino-lib-search` search-and-install picker).
-fn arduino_lib_install(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_lib_install(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -7070,7 +8276,11 @@ fn arduino_lib_install(cx: &mut compositor::Context, args: Args, event: PromptEv
 
 /// `:arduino-profile-lib-add <lib>` — add a library to the sketch's build profile
 /// (`arduino-cli profile lib add <lib>`).
-fn arduino_profile_lib_add(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_profile_lib_add(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -7088,7 +8298,11 @@ fn arduino_profile_lib_add(cx: &mut compositor::Context, args: Args, event: Prom
 
 /// `:arduino-profile-lib-remove <lib>` — remove a library from the sketch's build
 /// profile (`arduino-cli profile lib remove <lib>`).
-fn arduino_profile_lib_remove(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_profile_lib_remove(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -7107,7 +8321,11 @@ fn arduino_profile_lib_remove(cx: &mut compositor::Context, args: Args, event: P
 /// `:arduino-daemon [args…]` — run arduino-cli as a gRPC daemon (IDE/tooling
 /// backend), live in a terminal panel; extra args tune the server (`--port <n>`,
 /// `--daemonize`, `--debug`).
-fn arduino_daemon(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_daemon(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -7120,7 +8338,11 @@ fn arduino_daemon(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
 
 /// `:arduino-version [args…]` — the arduino-cli version (`--format json` for the
 /// machine-readable form), shown in the Run console.
-fn arduino_version(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn arduino_version(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -8698,7 +9920,8 @@ fn set_file_modes(
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
             .map_err(|e| anyhow!("set-file-modes: {e}"))?;
-        cx.editor.set_status(format!("Set mode of {path} to {mode:o}"));
+        cx.editor
+            .set_status(format!("Set mode of {path} to {mode:o}"));
     }
     #[cfg(not(unix))]
     {
@@ -8906,11 +10129,7 @@ fn expand_region_abbrevs(
 
 /// `:getenv <var>` — Emacs `getenv`: report the value of environment variable
 /// VAR in the echo area (blank if unset).
-fn getenv_cmd(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn getenv_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -8928,11 +10147,7 @@ fn getenv_cmd(
 
 /// `:setenv <var> [value]` — Emacs `setenv`: set environment variable VAR to
 /// VALUE for this editor process. With no VALUE, unset VAR.
-fn setenv_cmd(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn setenv_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -8983,7 +10198,10 @@ fn apropos_command(
         .collect();
     names.sort_unstable();
     names.dedup();
-    let mut body = format!("Commands matching \"{pattern}\" ({} found):\n\n", names.len());
+    let mut body = format!(
+        "Commands matching \"{pattern}\" ({} found):\n\n",
+        names.len()
+    );
     for name in &names {
         body.push_str("  ");
         body.push_str(name);
@@ -9245,11 +10463,7 @@ fn emacs_version(
 }
 
 /// `:browse-url <url>` — Emacs `browse-url`: open URL in the OS default browser.
-fn browse_url(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn browse_url(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -9280,7 +10494,8 @@ fn write_abbrev_file(
     }
     let n = crate::emacs_abbrev::write_to(std::path::Path::new(path))
         .map_err(|e| anyhow!("write-abbrev-file: {e}"))?;
-    cx.editor.set_status(format!("Wrote {n} abbrev(s) to {path}"));
+    cx.editor
+        .set_status(format!("Wrote {n} abbrev(s) to {path}"));
     Ok(())
 }
 
@@ -9427,7 +10642,8 @@ fn highlight_phrase(
         .replace_all(&escaped, r"\s+")
         .into_owned();
     crate::hi_lock::add(&collapsed, false).map_err(|e| anyhow!("highlight-phrase: {e}"))?;
-    cx.editor.set_status(format!("Highlighting phrase \"{phrase}\""));
+    cx.editor
+        .set_status(format!("Highlighting phrase \"{phrase}\""));
     Ok(())
 }
 
@@ -9448,7 +10664,8 @@ fn highlight_lines_matching_regexp(
     }
     crate::hi_lock::add(pattern, true)
         .map_err(|e| anyhow!("highlight-lines-matching-regexp: {e}"))?;
-    cx.editor.set_status(format!("Highlighting lines matching /{pattern}/"));
+    cx.editor
+        .set_status(format!("Highlighting lines matching /{pattern}/"));
     Ok(())
 }
 
@@ -9469,7 +10686,8 @@ fn unhighlight_regexp(
         crate::hi_lock::clear();
         cx.editor.set_status("Removed all highlights");
     } else if crate::hi_lock::remove(pattern) {
-        cx.editor.set_status(format!("Removed highlight /{pattern}/"));
+        cx.editor
+            .set_status(format!("Removed highlight /{pattern}/"));
     } else {
         cx.editor.set_error(format!("No highlight /{pattern}/"));
     }
@@ -9555,8 +10773,7 @@ fn hi_lock_find_patterns(
     // Only the first `hi_lock::FILE_PATTERNS_RANGE` bytes are scanned; take a head
     // slice so a large buffer is not fully stringified.
     let text = doc.text();
-    let end = text
-        .byte_to_char(crate::hi_lock::FILE_PATTERNS_RANGE.min(text.len_bytes()));
+    let end = text.byte_to_char(crate::hi_lock::FILE_PATTERNS_RANGE.min(text.len_bytes()));
     let head = text.slice(..end).to_string();
     let patterns = crate::hi_lock::find_patterns(&head, crate::hi_lock::FILE_PATTERNS_RANGE);
     if patterns.is_empty() {
@@ -9751,8 +10968,9 @@ fn copy_matching_lines_cmd(
     }
     let n = matched.lines().count();
     crate::emacs_kill::record(matched);
-    cx.editor
-        .set_status(format!("copied {n} line(s) matching /{pattern}/ to the kill ring"));
+    cx.editor.set_status(format!(
+        "copied {n} line(s) matching /{pattern}/ to the kill ring"
+    ));
     Ok(())
 }
 
@@ -9789,8 +11007,9 @@ fn kill_matching_lines_cmd(
         Transaction::change(text, std::iter::once((from, to, Some(survivors.into()))));
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
-    cx.editor
-        .set_status(format!("killed {n} line(s) matching /{pattern}/ to the kill ring"));
+    cx.editor.set_status(format!(
+        "killed {n} line(s) matching /{pattern}/ to the kill ring"
+    ));
     Ok(())
 }
 
@@ -20273,7 +21492,11 @@ fn fill_individual_paragraphs_cmd(
     let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
         return Ok(());
     };
-    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let block: String = doc
+        .text()
+        .slice(region_start..region_end)
+        .chunks()
+        .collect();
     let out = zemacs_core::text_engine::fill_individual_paragraphs(&block, width);
     if out == block {
         return Ok(());
@@ -20304,7 +21527,11 @@ fn fill_nonuniform_paragraphs_cmd(
     let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
         return Ok(());
     };
-    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let block: String = doc
+        .text()
+        .slice(region_start..region_end)
+        .chunks()
+        .collect();
     let out = zemacs_core::text_engine::fill_nonuniform_paragraphs(&block, width);
     if out == block {
         return Ok(());
@@ -20331,7 +21558,11 @@ fn justify_region(
     let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
         return Ok(());
     };
-    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let block: String = doc
+        .text()
+        .slice(region_start..region_end)
+        .chunks()
+        .collect();
     let out = zemacs_core::text_engine::justify_block(&block, width, mode);
     if out == block {
         return Ok(());
@@ -20426,7 +21657,11 @@ fn apply_left_margin(
     let Some((region_start, region_end)) = selection_or_buffer_line_region(doc, view.id) else {
         return Ok(());
     };
-    let block: String = doc.text().slice(region_start..region_end).chunks().collect();
+    let block: String = doc
+        .text()
+        .slice(region_start..region_end)
+        .chunks()
+        .collect();
     let out = transform(&block);
     if out == block {
         return Ok(());
@@ -20442,11 +21677,18 @@ fn apply_left_margin(
 
 /// `:set-left-margin [col]` — Emacs `set-left-margin`: rewrite each content line
 /// of the region so its left margin is exactly `col` spaces (default 0).
-fn set_left_margin(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn set_left_margin(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let margin = args.first().and_then(|s| s.parse::<usize>().ok()).unwrap_or(0);
+    let margin = args
+        .first()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(0);
     apply_left_margin(cx, |block| {
         zemacs_core::text_engine::set_left_margin(block, margin)
     })
@@ -20462,7 +21704,10 @@ fn increase_left_margin(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let n = args.first().and_then(|s| s.parse::<usize>().ok()).unwrap_or(STANDARD_INDENT);
+    let n = args
+        .first()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(STANDARD_INDENT);
     apply_left_margin(cx, |block| {
         zemacs_core::text_engine::adjust_left_margin(block, n as isize)
     })
@@ -20479,7 +21724,10 @@ fn decrease_left_margin(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let n = args.first().and_then(|s| s.parse::<usize>().ok()).unwrap_or(STANDARD_INDENT);
+    let n = args
+        .first()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(STANDARD_INDENT);
     apply_left_margin(cx, |block| {
         zemacs_core::text_engine::adjust_left_margin(block, -(n as isize))
     })
@@ -20539,10 +21787,8 @@ fn accumulate_to_buffer(
     } else {
         (0, 0)
     };
-    let transaction = Transaction::change(
-        doc.text(),
-        std::iter::once((from, to, Some(region.into()))),
-    );
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((from, to, Some(region.into()))));
     doc.apply(&transaction, view_id);
     doc.append_changes_to_history(view);
     Ok(())
@@ -20550,7 +21796,11 @@ fn accumulate_to_buffer(
 
 /// `:append-to-buffer <buffer>` — Emacs `append-to-buffer`: insert the region at
 /// the end of an already-open buffer named `<buffer>`.
-fn append_to_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn append_to_buffer(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -20559,7 +21809,11 @@ fn append_to_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent
 
 /// `:prepend-to-buffer <buffer>` — Emacs `prepend-to-buffer`: insert the region
 /// at the beginning of an already-open buffer named `<buffer>`.
-fn prepend_to_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn prepend_to_buffer(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -20568,7 +21822,11 @@ fn prepend_to_buffer(cx: &mut compositor::Context, args: Args, event: PromptEven
 
 /// `:copy-to-buffer <buffer>` — Emacs `copy-to-buffer`: replace the whole
 /// contents of an already-open buffer named `<buffer>` with the region.
-fn copy_to_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn copy_to_buffer(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -20578,7 +21836,11 @@ fn copy_to_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
 /// `:rename-buffer <name>` — Emacs `rename-buffer`: give the current buffer an
 /// explicit display name distinct from the file it visits. Errors if another
 /// open buffer already carries `<name>` (matching Emacs' non-unique rename).
-fn rename_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn rename_buffer(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -20601,7 +21863,11 @@ fn rename_buffer(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
 
 /// `:rename-uniquely` — Emacs `rename-uniquely`: rename the current buffer to a
 /// similar name carrying a numeric `<N>` suffix that no other buffer uses.
-fn rename_uniquely(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn rename_uniquely(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -20617,7 +21883,8 @@ fn rename_uniquely(cx: &mut compositor::Context, _args: Args, event: PromptEvent
     let new_name =
         zemacs_core::buffer_name::rename_uniquely(&current, |c| taken.iter().any(|t| t == c));
     doc_mut!(cx.editor, &current_id).set_buffer_name(Some(new_name.clone()));
-    cx.editor.set_status(format!("renamed buffer to `{new_name}`"));
+    cx.editor
+        .set_status(format!("renamed buffer to `{new_name}`"));
     Ok(())
 }
 
@@ -22363,8 +23630,13 @@ fn add_name_to_file(
     };
     let src = current_file_path(cx)?;
     let dst = zemacs_stdx::path::expand_tilde(Path::new(dest)).into_owned();
-    std::fs::hard_link(&src, &dst)
-        .map_err(|e| anyhow!("add-name-to-file: {} -> {}: {e}", src.display(), dst.display()))?;
+    std::fs::hard_link(&src, &dst).map_err(|e| {
+        anyhow!(
+            "add-name-to-file: {} -> {}: {e}",
+            src.display(),
+            dst.display()
+        )
+    })?;
     cx.editor
         .set_status(format!("added name {}", dst.display()));
     Ok(())
@@ -32963,7 +34235,10 @@ mod vim_set_tests {
         // A bare basename resolves an absolute-path buffer name.
         assert!(buffer_name_matches("/home/u/notes.txt", "notes.txt"));
         // The full name matches exactly.
-        assert!(buffer_name_matches("/home/u/notes.txt", "/home/u/notes.txt"));
+        assert!(buffer_name_matches(
+            "/home/u/notes.txt",
+            "/home/u/notes.txt"
+        ));
         // The scratch buffer name matches itself (it has no path component).
         assert!(buffer_name_matches("[scratch]", "[scratch]"));
         // A different basename does not match, and a partial component does not.
@@ -35023,18 +36298,16 @@ mod vim_set_tests {
         use super::abbrev_region_edits;
         use std::collections::HashMap;
 
-        let table: HashMap<&str, &str> =
-            [("teh", "the"), ("recieve", "receive")].into_iter().collect();
+        let table: HashMap<&str, &str> = [("teh", "the"), ("recieve", "receive")]
+            .into_iter()
+            .collect();
         let lookup = |w: &str| table.get(w).map(|s| s.to_string());
 
         // Two abbrevs in a sentence; punctuation and spaces break runs.
         let edits = abbrev_region_edits("teh cat, recieve it", lookup);
         assert_eq!(
             edits,
-            vec![
-                (0, 3, "the".to_string()),
-                (9, 16, "receive".to_string()),
-            ]
+            vec![(0, 3, "the".to_string()), (9, 16, "receive".to_string()),]
         );
 
         // Trailing run at end-of-text is handled.

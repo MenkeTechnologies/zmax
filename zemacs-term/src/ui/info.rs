@@ -118,7 +118,10 @@ mod tests {
         let b = "k : Generate a shell command from natural language help";
         let lines = vec![a, b];
         let (text, width, _h, _rows, _cols) = grid(&lines, 0, 16, 220);
-        assert!(!text.contains("selection/buffer text"), "not cut off: {text:?}");
+        assert!(
+            !text.contains("selection/buffer text"),
+            "not cut off: {text:?}"
+        );
         // Every rendered row still fits the bar.
         for line in text.lines() {
             assert!(line.chars().count() <= width, "row overruns bar: {line:?}");
@@ -172,7 +175,11 @@ mod tests {
                 .collect();
             let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
             let (_t, width, _h, _r, cols) = grid(&refs, 0, 16, w);
-            assert_eq!(width, w - 2, "grid must span the full inner width for w={w}");
+            assert_eq!(
+                width,
+                w - 2,
+                "grid must span the full inner width for w={w}"
+            );
             assert!((1..=8).contains(&cols), "cols out of 1..=8: {cols}");
         }
     }

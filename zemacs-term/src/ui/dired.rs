@@ -433,8 +433,10 @@ impl Dired {
                             if let Some(doc) = cx.editor.document_mut(id) {
                                 doc.readonly = true;
                             }
-                            cx.editor
-                                .set_status(format!("dired: viewing {} (read-only)", path.display()));
+                            cx.editor.set_status(format!(
+                                "dired: viewing {} (read-only)",
+                                path.display()
+                            ));
                         }
                     }
                     Err(err) => cx
@@ -820,7 +822,8 @@ impl Component for Dired {
             }
             alt!('s') => {
                 let n = self.mark_where(|e| e.is_symlink);
-                cx.editor.set_status(format!("dired: marked {n} symlink(s)"));
+                cx.editor
+                    .set_status(format!("dired: marked {n} symlink(s)"));
             }
             key!('N') => {
                 let (count, bytes) = marked_summary(&self.entries, |n| self.marked.contains(n));
@@ -835,7 +838,8 @@ impl Component for Dired {
             }
             key!('Z') => {
                 let n = self.rename_transform(NameTransform::Downcase);
-                cx.editor.set_status(format!("dired: downcased {n} name(s)"));
+                cx.editor
+                    .set_status(format!("dired: downcased {n} name(s)"));
             }
             key!('K') => {
                 let n = self.kill_lines();

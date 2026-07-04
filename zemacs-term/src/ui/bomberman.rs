@@ -121,7 +121,8 @@ impl Game {
     fn build(&mut self) {
         for r in 0..H {
             for c in 0..W {
-                let hard = r == 0 || r == H - 1 || c == 0 || c == W - 1 || (r % 2 == 0 && c % 2 == 0);
+                let hard =
+                    r == 0 || r == H - 1 || c == 0 || c == W - 1 || (r % 2 == 0 && c % 2 == 0);
                 self.grid[(r * W + c) as usize] = if hard { Cell::Hard } else { Cell::Empty };
             }
         }
@@ -174,7 +175,10 @@ impl Game {
         if self.bombs.iter().any(|b| b.pos == self.player) {
             return;
         }
-        self.bombs.push(Bomb { pos: self.player, fuse: FUSE });
+        self.bombs.push(Bomb {
+            pos: self.player,
+            fuse: FUSE,
+        });
     }
 
     /// Light a cross-shaped blast from `(r, c)`, stopped by hard pillars and
@@ -480,7 +484,10 @@ impl Component for Bomberman {
 
         let sy = oy + H as u16 + 1;
         let status = if self.game.over {
-            format!("Game over — score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "Game over — score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if self.paused {
             "Paused — SPC bomb · p resume · n new · q quit".to_string()
         } else {

@@ -95,7 +95,13 @@ impl Game {
             let speed = 1 + (self.rand() % 3) as u32; // 1..=3
             let spacing = 4 + (self.rand() % 4) as i16; // 4..=7
             let offset = (self.rand() % spacing as u64) as i16;
-            self.lanes.push(Lane { row, dir, speed, spacing, offset });
+            self.lanes.push(Lane {
+                row,
+                dir,
+                speed,
+                spacing,
+                offset,
+            });
             idx += 1;
             row += 2;
         }
@@ -264,7 +270,10 @@ impl Component for Frogger {
         surface.set_string(
             ox,
             area.y,
-            &format!("Frogger  score {}  lives {}", self.game.score, self.game.lives),
+            &format!(
+                "Frogger  score {}  lives {}",
+                self.game.score, self.game.lives
+            ),
             header_style,
         );
 
@@ -300,9 +309,15 @@ impl Component for Frogger {
 
         let sy = oy + H as u16 + 1;
         let status = if self.game.over {
-            format!("Game over — score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "Game over — score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if self.paused {
-            format!("Paused — score {}.  SPC resume  n new  q quit", self.game.score)
+            format!(
+                "Paused — score {}.  SPC resume  n new  q quit",
+                self.game.score
+            )
         } else {
             "arrows/hjkl hop · SPC pause · n new · q quit".to_string()
         };
@@ -319,7 +334,11 @@ mod tests {
         let mut g = Game::new(1);
         let (r, c) = g.frog; // starts on the safe bottom row
         g.move_frog(-1, 0);
-        assert_eq!(g.frog, (r - 1, c), "up moves the frog one row toward the goal");
+        assert_eq!(
+            g.frog,
+            (r - 1, c),
+            "up moves the frog one row toward the goal"
+        );
     }
 
     #[test]
@@ -332,7 +351,11 @@ mod tests {
         let lives = g.lives;
         g.step();
         assert_eq!(g.lives, lives - 1, "a car on the frog's cell costs a life");
-        assert_eq!(g.frog, (START_ROW, START_COL), "the frog respawns at the start");
+        assert_eq!(
+            g.frog,
+            (START_ROW, START_COL),
+            "the frog respawns at the start"
+        );
     }
 
     #[test]
@@ -341,7 +364,11 @@ mod tests {
         g.frog = (GOAL_ROW + 1, START_COL); // one hop below the goal, a safe row
         g.move_frog(-1, 0);
         assert_eq!(g.score, 1, "reaching the top row scores");
-        assert_eq!(g.frog, (START_ROW, START_COL), "the frog restarts from the bottom");
+        assert_eq!(
+            g.frog,
+            (START_ROW, START_COL),
+            "the frog restarts from the bottom"
+        );
     }
 
     #[test]

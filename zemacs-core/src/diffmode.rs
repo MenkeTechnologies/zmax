@@ -580,9 +580,7 @@ pub fn diff_unified_to_context(text: &str) -> String {
             let mut j = i + 1;
             while j < n
                 && !lines[j].starts_with("@@")
-                && !(lines[j].starts_with("--- ")
-                    && j + 1 < n
-                    && lines[j + 1].starts_with("+++ "))
+                && !(lines[j].starts_with("--- ") && j + 1 < n && lines[j + 1].starts_with("+++ "))
                 && !lines[j].starts_with("diff --git ")
                 && !lines[j].starts_with("Index: ")
             {
@@ -1006,7 +1004,10 @@ diff --git a/README.md b/README.md
         // README.md has a single hunk; killing it removes the whole file section.
         let line = TWO_FILE.lines().position(|l| l == "-# Title").unwrap();
         let out = diff_hunk_kill(TWO_FILE, line).expect("killed");
-        assert!(!out.contains("README.md"), "file header removed with lone hunk");
+        assert!(
+            !out.contains("README.md"),
+            "file header removed with lone hunk"
+        );
         assert!(out.contains("src/foo.rs"));
         assert_eq!(parse(&out).files.len(), 1);
     }
@@ -1037,7 +1038,10 @@ diff --git a/README.md b/README.md
 
     #[test]
     fn split_hunk_rejects_the_header_line() {
-        let hdr = TWO_FILE.lines().position(|l| l.starts_with("@@ -1,3")).unwrap();
+        let hdr = TWO_FILE
+            .lines()
+            .position(|l| l.starts_with("@@ -1,3"))
+            .unwrap();
         assert_eq!(diff_split_hunk(TWO_FILE, hdr), None);
     }
 
@@ -1060,8 +1064,14 @@ diff --git a/README.md b/README.md
 
     #[test]
     fn reverse_direction_round_trips() {
-        assert_eq!(diff_reverse_direction(&diff_reverse_direction(TWO_FILE)), TWO_FILE);
-        assert_eq!(diff_reverse_direction(&diff_reverse_direction(UNIFIED)), UNIFIED);
+        assert_eq!(
+            diff_reverse_direction(&diff_reverse_direction(TWO_FILE)),
+            TWO_FILE
+        );
+        assert_eq!(
+            diff_reverse_direction(&diff_reverse_direction(UNIFIED)),
+            UNIFIED
+        );
     }
 
     #[test]
@@ -1082,7 +1092,10 @@ diff --git a/README.md b/README.md
 
     #[test]
     fn unified_context_round_trips() {
-        assert_eq!(diff_context_to_unified(&diff_unified_to_context(UNIFIED)), UNIFIED);
+        assert_eq!(
+            diff_context_to_unified(&diff_unified_to_context(UNIFIED)),
+            UNIFIED
+        );
     }
 
     #[test]

@@ -404,7 +404,11 @@ impl Component for Yahtzee {
         for i in 0..5 {
             let x = ox + (i as u16) * 3;
             let face = die_face(self.game.dice()[i]);
-            let style = if self.game.held(i) { held_style } else { text_style };
+            let style = if self.game.held(i) {
+                held_style
+            } else {
+                text_style
+            };
             surface.set_string(x, oy, face, style);
             let (mark, mstyle) = if self.game.held(i) {
                 ("hld", held_style)
@@ -451,7 +455,10 @@ impl Component for Yahtzee {
             surface.set_string(
                 ox,
                 fy,
-                &format!("GAME OVER  total {} · n new · q quit", self.game.grand_total()),
+                &format!(
+                    "GAME OVER  total {} · n new · q quit",
+                    self.game.grand_total()
+                ),
                 over_style,
             );
         } else {
@@ -484,13 +491,19 @@ mod tests {
 
     #[test]
     fn small_straight_scores_thirty() {
-        assert_eq!(score_category(&[1, 2, 3, 4, 6], Category::SmallStraight), 30);
+        assert_eq!(
+            score_category(&[1, 2, 3, 4, 6], Category::SmallStraight),
+            30
+        );
         assert_eq!(score_category(&[1, 1, 2, 2, 5], Category::SmallStraight), 0);
     }
 
     #[test]
     fn large_straight_scores_forty() {
-        assert_eq!(score_category(&[2, 3, 4, 5, 6], Category::LargeStraight), 40);
+        assert_eq!(
+            score_category(&[2, 3, 4, 5, 6], Category::LargeStraight),
+            40
+        );
         // A small straight is not a large straight.
         assert_eq!(score_category(&[1, 2, 3, 4, 6], Category::LargeStraight), 0);
     }

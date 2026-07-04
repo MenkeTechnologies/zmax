@@ -39,7 +39,9 @@ impl Board {
         // Scramble from the solved state with a deterministic number of presses.
         let mut s = seed | 1;
         for _ in 0..(12 + (seed % 8)) {
-            s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let r = ((s >> 33) as usize) % N;
             let c = ((s >> 17) as usize) % N;
             b.press(r, c);

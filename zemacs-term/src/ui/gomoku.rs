@@ -302,7 +302,10 @@ mod tests {
         }
         let mv = b.best_move(Stone::O).unwrap();
         b.place(mv.0, mv.1, Stone::O);
-        assert!(b.wins(Stone::O), "computer should complete five, played {mv:?}");
+        assert!(
+            b.wins(Stone::O),
+            "computer should complete five, played {mv:?}"
+        );
     }
 
     #[test]
@@ -313,6 +316,10 @@ mod tests {
             b.place(6, c, Stone::X);
         }
         let mv = b.best_move(Stone::O).unwrap();
-        assert_eq!(mv, (6, 7), "computer should block the open four, played {mv:?}");
+        assert_eq!(
+            mv,
+            (6, 7),
+            "computer should block the open four, played {mv:?}"
+        );
     }
 }

@@ -102,7 +102,11 @@ impl Calendar {
                 }
             }
             key!(Enter) => {
-                let text = self.input.as_ref().map(|(_, b)| b.clone()).unwrap_or_default();
+                let text = self
+                    .input
+                    .as_ref()
+                    .map(|(_, b)| b.clone())
+                    .unwrap_or_default();
                 self.input = None;
                 match mode {
                     InputMode::Goto => match parse_ymd(&text) {

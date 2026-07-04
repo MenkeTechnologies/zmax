@@ -386,7 +386,10 @@ impl Component for Pacman {
         surface.set_string(
             ox,
             area.y,
-            &format!("Pac-Man  score {}  lives {}", self.game.score, self.game.lives),
+            &format!(
+                "Pac-Man  score {}  lives {}",
+                self.game.score, self.game.lives
+            ),
             header_style,
         );
 
@@ -427,9 +430,15 @@ impl Component for Pacman {
 
         let sy = oy + H as u16 + 1;
         let status = if self.game.over {
-            format!("Game over — score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "Game over — score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if self.game.won {
-            format!("You win! — score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "You win! — score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if self.paused {
             format!("Paused — score {}.  SPC resume", self.game.score)
         } else {
@@ -480,7 +489,10 @@ mod tests {
         g.pac_dir = (0, -1);
         assert_eq!(g.frightened, 0);
         g.step();
-        assert!(g.frightened > 0, "eating a power pellet frightens the ghosts");
+        assert!(
+            g.frightened > 0,
+            "eating a power pellet frightens the ghosts"
+        );
         assert_eq!(g.score, 50);
     }
 

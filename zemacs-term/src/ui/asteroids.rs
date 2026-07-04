@@ -119,10 +119,10 @@ impl Game {
         self.asteroids.clear();
         for _ in 0..count {
             let pos = match self.rand() % 4 {
-                0 => (0, (self.rand() % W as u64) as i16),       // top edge
-                1 => (H - 1, (self.rand() % W as u64) as i16),   // bottom edge
-                2 => ((self.rand() % H as u64) as i16, 0),       // left edge
-                _ => ((self.rand() % H as u64) as i16, W - 1),   // right edge
+                0 => (0, (self.rand() % W as u64) as i16),     // top edge
+                1 => (H - 1, (self.rand() % W as u64) as i16), // bottom edge
+                2 => ((self.rand() % H as u64) as i16, 0),     // left edge
+                _ => ((self.rand() % H as u64) as i16, W - 1), // right edge
             };
             let vr = (self.rand() % 3) as i16 - 1;
             let vc = (self.rand() % 3) as i16 - 1;
@@ -176,7 +176,10 @@ impl Game {
         }
 
         // Move the ship.
-        self.ship_pos = wrap((self.ship_pos.0 + self.ship_vel.0, self.ship_pos.1 + self.ship_vel.1));
+        self.ship_pos = wrap((
+            self.ship_pos.0 + self.ship_vel.0,
+            self.ship_pos.1 + self.ship_vel.1,
+        ));
 
         // Drift the asteroids.
         for a in &mut self.asteroids {
@@ -206,8 +209,16 @@ impl Game {
             }
             if hit {
                 if a.size > 1 {
-                    next.push(Asteroid { pos: a.pos, vel: (a.vel.1, -a.vel.0), size: a.size - 1 });
-                    next.push(Asteroid { pos: a.pos, vel: (-a.vel.1, a.vel.0), size: a.size - 1 });
+                    next.push(Asteroid {
+                        pos: a.pos,
+                        vel: (a.vel.1, -a.vel.0),
+                        size: a.size - 1,
+                    });
+                    next.push(Asteroid {
+                        pos: a.pos,
+                        vel: (-a.vel.1, a.vel.0),
+                        size: a.size - 1,
+                    });
                 }
             } else {
                 next.push(a.clone());
@@ -222,7 +233,12 @@ impl Game {
         });
 
         // Ship vs. asteroid: costs a life and respawns (unless invulnerable).
-        if self.invuln == 0 && self.asteroids.iter().any(|a| collide(self.ship_pos, a.pos, a.size)) {
+        if self.invuln == 0
+            && self
+                .asteroids
+                .iter()
+                .any(|a| collide(self.ship_pos, a.pos, a.size))
+        {
             self.lives = self.lives.saturating_sub(1);
             if self.lives == 0 {
                 self.alive = false;
@@ -378,7 +394,12 @@ impl Component for Asteroids {
         }
         let (sr, sc) = self.game.ship_pos;
         if sr >= 0 && sr < H && sc >= 0 && sc < W {
-            surface.set_string(ox + sc as u16, oy + sr as u16, GLYPHS[self.game.heading], ship_style);
+            surface.set_string(
+                ox + sc as u16,
+                oy + sr as u16,
+                GLYPHS[self.game.heading],
+                ship_style,
+            );
         }
 
         let sy = oy + H as u16 + 1;
@@ -386,7 +407,10 @@ impl Component for Asteroids {
             surface.set_string(
                 ox,
                 sy,
-                &format!("Game over — score {}.  n: new game  q: quit", self.game.score),
+                &format!(
+                    "Game over — score {}.  n: new game  q: quit",
+                    self.game.score
+                ),
                 over_style,
             );
         } else if self.paused {
@@ -413,7 +437,11 @@ mod tests {
         g.ship_pos = (0, 5);
         g.ship_vel = (-1, 0); // heading off the top edge
         g.step();
-        assert_eq!(g.ship_pos.0, H - 1, "the ship wraps from the top to the bottom");
+        assert_eq!(
+            g.ship_pos.0,
+            H - 1,
+            "the ship wraps from the top to the bottom"
+        );
     }
 
     #[test]
@@ -425,9 +453,16 @@ mod tests {
         for _ in 0..8 {
             g.rotate(1);
         }
-        assert_eq!(g.heading, (start + 1) % 8, "eight steps return to the same heading");
+        assert_eq!(
+            g.heading,
+            (start + 1) % 8,
+            "eight steps return to the same heading"
+        );
         g.rotate(-1);
-        assert_eq!(g.heading, start, "a counter-clockwise step undoes one clockwise");
+        assert_eq!(
+            g.heading, start,
+            "a counter-clockwise step undoes one clockwise"
+        );
     }
 
     #[test]
@@ -445,10 +480,22 @@ mod tests {
         g.asteroids.clear();
         g.bullets.clear();
         // Two rocks so clearing one doesn't trigger a fresh wave.
-        g.asteroids.push(Asteroid { pos: (5, 5), vel: (0, 0), size: 1 });
-        g.asteroids.push(Asteroid { pos: (15, 30), vel: (0, 0), size: 1 });
+        g.asteroids.push(Asteroid {
+            pos: (5, 5),
+            vel: (0, 0),
+            size: 1,
+        });
+        g.asteroids.push(Asteroid {
+            pos: (15, 30),
+            vel: (0, 0),
+            size: 1,
+        });
         // A bullet one cell to the left, moving right onto the first rock.
-        g.bullets.push(Bullet { pos: (5, 4), vel: (0, 1), life: 10 });
+        g.bullets.push(Bullet {
+            pos: (5, 4),
+            vel: (0, 1),
+            life: 10,
+        });
         let before = g.score;
         g.step();
         assert_eq!(g.asteroids.len(), 1, "the shot asteroid is gone");
@@ -463,10 +510,22 @@ mod tests {
         g.ship_pos = (7, 10);
         g.ship_vel = (0, 0);
         g.invuln = 0;
-        g.asteroids.push(Asteroid { pos: (7, 10), vel: (0, 0), size: 1 });
+        g.asteroids.push(Asteroid {
+            pos: (7, 10),
+            vel: (0, 0),
+            size: 1,
+        });
         let lives = g.lives;
         g.step();
-        assert_eq!(g.lives, lives - 1, "colliding with an asteroid costs a life");
-        assert_eq!(g.ship_pos, (H / 2, W / 2), "the ship respawns at the centre");
+        assert_eq!(
+            g.lives,
+            lives - 1,
+            "colliding with an asteroid costs a life"
+        );
+        assert_eq!(
+            g.ship_pos,
+            (H / 2, W / 2),
+            "the ship respawns at the centre"
+        );
     }
 }

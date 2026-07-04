@@ -290,7 +290,11 @@ pub fn julian_leap(year: i32) -> bool {
 
 /// R.D. of a Julian date `(year, month, day)` (Dershowitz–Reingold).
 pub fn fixed_from_julian(year: i32, month: u32, day: u32) -> i64 {
-    let y = if year < 0 { year as i64 + 1 } else { year as i64 };
+    let y = if year < 0 {
+        year as i64 + 1
+    } else {
+        year as i64
+    };
     let m = month as i64;
     JULIAN_EPOCH - 1
         + 365 * (y - 1)
@@ -339,8 +343,19 @@ const COPTIC_EPOCH: i64 = 103605; // R.D. of Coptic 0001-01-01.
 const ETHIOPIC_EPOCH: i64 = 2796; // R.D. of Ethiopic 0001-01-01.
 
 pub const COPTIC_MONTH_NAMES: [&str; 13] = [
-    "Tut", "Babah", "Hatur", "Kiyahk", "Tubah", "Amshir", "Baramhat", "Baramundah", "Bashans",
-    "Baunah", "Abib", "Misra", "Nasi",
+    "Tut",
+    "Babah",
+    "Hatur",
+    "Kiyahk",
+    "Tubah",
+    "Amshir",
+    "Baramhat",
+    "Baramundah",
+    "Bashans",
+    "Baunah",
+    "Abib",
+    "Misra",
+    "Nasi",
 ];
 pub const ETHIOPIC_MONTH_NAMES: [&str; 13] = [
     "Maskaram", "Teqemt", "Khedar", "Takhsas", "Ter", "Yakatit", "Magabit", "Miyazya", "Genbot",
@@ -479,7 +494,11 @@ pub fn hebrew_from_fixed(f: i64) -> (i64, u32, u32) {
     while f >= fixed_from_hebrew(year + 1, 7, 1) {
         year += 1;
     }
-    let start = if f < fixed_from_hebrew(year, 1, 1) { 7 } else { 1 };
+    let start = if f < fixed_from_hebrew(year, 1, 1) {
+        7
+    } else {
+        1
+    };
     let mut month = start;
     while f > fixed_from_hebrew(year, month, hebrew_last_day_of_month(month, year)) {
         month += 1;
@@ -501,8 +520,18 @@ pub fn hebrew_string(d: Date) -> String {
 // --- Islamic calendar (arithmetic/civil; cal-islam.el) ---------------------
 
 pub const ISLAMIC_MONTH_NAMES: [&str; 12] = [
-    "Muharram", "Safar", "Rabi I", "Rabi II", "Jumada I", "Jumada II", "Rajab", "Sha'ban",
-    "Ramadan", "Shawwal", "Dhu al-Qada", "Dhu al-Hijjah",
+    "Muharram",
+    "Safar",
+    "Rabi I",
+    "Rabi II",
+    "Jumada I",
+    "Jumada II",
+    "Rajab",
+    "Sha'ban",
+    "Ramadan",
+    "Shawwal",
+    "Dhu al-Qada",
+    "Dhu al-Hijjah",
 ];
 
 /// R.D. of the Islamic epoch (Julian 16 July 622).
@@ -511,7 +540,10 @@ fn islamic_epoch() -> i64 {
 }
 
 pub fn islamic_leap(year: i64) -> bool {
-    matches!(year.rem_euclid(30), 2 | 5 | 7 | 10 | 13 | 16 | 18 | 21 | 24 | 26 | 29)
+    matches!(
+        year.rem_euclid(30),
+        2 | 5 | 7 | 10 | 13 | 16 | 18 | 21 | 24 | 26 | 29
+    )
 }
 pub fn islamic_last_day_of_month(month: u32, year: i64) -> u32 {
     if month % 2 == 1 {
@@ -752,8 +784,25 @@ pub fn french_string(d: Date) -> Option<String> {
 // for pre-2015 dates; for later years it can differ by a day. Marked PARTIAL.
 
 pub const BAHAI_MONTH_NAMES: [&str; 19] = [
-    "Baha", "Jalal", "Jamal", "'Azamat", "Nur", "Rahmat", "Kalimat", "Kamal", "Asma'", "'Izzat",
-    "Mashiyyat", "'Ilm", "Qudrat", "Qawl", "Masa'il", "Sharaf", "Sultan", "Mulk", "'Ala'",
+    "Baha",
+    "Jalal",
+    "Jamal",
+    "'Azamat",
+    "Nur",
+    "Rahmat",
+    "Kalimat",
+    "Kamal",
+    "Asma'",
+    "'Izzat",
+    "Mashiyyat",
+    "'Ilm",
+    "Qudrat",
+    "Qawl",
+    "Masa'il",
+    "Sharaf",
+    "Sultan",
+    "Mulk",
+    "'Ala'",
 ];
 
 /// R.D. of Naw-Ruz beginning Baha'i `year` (fixed at Gregorian March 21).
@@ -840,8 +889,7 @@ pub fn mayan_long_count_from_fixed(f: i64) -> (i64, i64, i64, i64, i64) {
 
 /// R.D. of a Mayan long count.
 pub fn fixed_from_mayan_long_count(baktun: i64, katun: i64, tun: i64, uinal: i64, kin: i64) -> i64 {
-    baktun * 144000 + katun * 7200 + tun * 360 + uinal * 20 + kin
-        - MAYAN_DAYS_BEFORE_ABSOLUTE_ZERO
+    baktun * 144000 + katun * 7200 + tun * 360 + uinal * 20 + kin - MAYAN_DAYS_BEFORE_ABSOLUTE_ZERO
 }
 
 /// Mayan haab `(day, month_index_1based)` for R.D. `f`.
@@ -949,14 +997,15 @@ pub fn sunrise_sunset_utc(d: Date, lat_deg: f64, lon_deg: f64) -> Option<(f64, f
     let n = (jd - 2451545.0 + 0.0008).ceil();
     let j_star = n - lon_deg / 360.0;
     let m = (357.5291 + 0.98560028 * j_star).rem_euclid(360.0);
-    let c = 1.9148 * (m * rad).sin() + 0.02 * (2.0 * m * rad).sin() + 0.0003 * (3.0 * m * rad).sin();
+    let c =
+        1.9148 * (m * rad).sin() + 0.02 * (2.0 * m * rad).sin() + 0.0003 * (3.0 * m * rad).sin();
     let lambda = (m + c + 180.0 + 102.9372).rem_euclid(360.0);
     let j_transit =
         2451545.0 + j_star + 0.0053 * (m * rad).sin() - 0.0069 * (2.0 * lambda * rad).sin();
     let sin_decl = (lambda * rad).sin() * (23.44 * rad).sin();
     let decl = sin_decl.asin();
-    let cos_omega =
-        ((-0.833 * rad).sin() - (lat_deg * rad).sin() * sin_decl) / ((lat_deg * rad).cos() * decl.cos());
+    let cos_omega = ((-0.833 * rad).sin() - (lat_deg * rad).sin() * sin_decl)
+        / ((lat_deg * rad).cos() * decl.cos());
     if !(-1.0..=1.0).contains(&cos_omega) {
         return None; // polar day or night
     }
@@ -1197,7 +1246,10 @@ mod other_calendar_tests {
     #[test]
     fn persian_known() {
         // 2000-01-01 Gregorian = 11 Dey 1378.
-        assert_eq!(persian_from_fixed(rd(Date::new(2000, 1, 1))), (1378, 10, 11));
+        assert_eq!(
+            persian_from_fixed(rd(Date::new(2000, 1, 1))),
+            (1378, 10, 11)
+        );
         assert_eq!(persian_string(Date::new(2000, 1, 1)), "Dey 11, 1378");
         for f in 725000..725730 {
             let (y, m, d) = persian_from_fixed(f);
@@ -1259,7 +1311,10 @@ mod other_calendar_tests {
     fn astro_and_iso_strings() {
         assert_eq!(astro_day_number(Date::new(2000, 1, 1)), 2451545);
         // 1999-12-31 (Friday) is ISO Day 5 of week 52 of 1999.
-        assert_eq!(iso_string(Date::new(1999, 12, 31)), "Day 5 of week 52 of 1999");
+        assert_eq!(
+            iso_string(Date::new(1999, 12, 31)),
+            "Day 5 of week 52 of 1999"
+        );
     }
 
     #[test]

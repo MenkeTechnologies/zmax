@@ -336,11 +336,21 @@ impl Component for Tetris {
                 surface.set_string(x, oy + r as u16, glyph, style);
             }
         }
-        surface.set_string(ox, oy + H as u16, &"─".repeat((W as usize) * 2 + 2), wall_style);
+        surface.set_string(
+            ox,
+            oy + H as u16,
+            &"─".repeat((W as usize) * 2 + 2),
+            wall_style,
+        );
 
         let sx = ox + (W as u16) * 2 + 4;
         surface.set_string(sx, oy, &format!("score {}", self.game.score), text_style);
-        surface.set_string(sx, oy + 1, &format!("lines {}", self.game.lines), text_style);
+        surface.set_string(
+            sx,
+            oy + 1,
+            &format!("lines {}", self.game.lines),
+            text_style,
+        );
         let hint = if !self.game.alive {
             "GAME OVER  n: new"
         } else if self.paused {
@@ -349,7 +359,12 @@ impl Component for Tetris {
             "SPC drop · p pause"
         };
         surface.set_string(sx, oy + 3, hint, text_style);
-        surface.set_string(ox, oy + H as u16 + 1, "←→ move · ↑ rotate · ↓ soft · SPC hard · n new · q quit", wall_style);
+        surface.set_string(
+            ox,
+            oy + H as u16 + 1,
+            "←→ move · ↑ rotate · ↓ soft · SPC hard · n new · q quit",
+            wall_style,
+        );
     }
 }
 
@@ -391,7 +406,10 @@ mod tests {
         let before = g.lines;
         g.clear_lines();
         assert_eq!(g.lines, before + 1);
-        assert!(g.board[(H - 1) as usize].iter().all(|c| c.is_none()), "row cleared");
+        assert!(
+            g.board[(H - 1) as usize].iter().all(|c| c.is_none()),
+            "row cleared"
+        );
         assert!(g.score >= 40);
     }
 
@@ -413,6 +431,8 @@ mod tests {
         for _ in 0..20 {
             g.shift(0, -1);
         }
-        assert!(piece_cells(g.shape, g.rot, g.pos).iter().all(|&(_, c)| c >= 0));
+        assert!(piece_cells(g.shape, g.rot, g.pos)
+            .iter()
+            .all(|&(_, c)| c >= 0));
     }
 }

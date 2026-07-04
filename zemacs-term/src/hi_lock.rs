@@ -55,7 +55,12 @@ pub fn clear() {
 
 /// The active pattern sources, for completion and status.
 pub fn sources() -> Vec<String> {
-    PATTERNS.lock().unwrap().iter().map(|p| p.src.clone()).collect()
+    PATTERNS
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|p| p.src.clone())
+        .collect()
 }
 
 /// Whether any highlight is active (lets the render loop skip the work).
@@ -219,10 +224,7 @@ mod tests {
     fn finds_char_ranges_for_each_match() {
         let text = "foo bar foo";
         let pats = [pat("foo", false)];
-        assert_eq!(
-            viewport_matches(text, &pats),
-            vec![(0, 3, 0), (8, 11, 0)]
-        );
+        assert_eq!(viewport_matches(text, &pats), vec![(0, 3, 0), (8, 11, 0)]);
     }
 
     #[test]

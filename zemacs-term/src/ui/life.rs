@@ -73,7 +73,8 @@ impl Grid {
         for r in 0..ROWS {
             for c in 0..COLS {
                 let n = self.live_neighbours(r, c);
-                next[Self::idx(r, c)] = matches!((self.get(r, c), n), (true, 2) | (true, 3) | (false, 3));
+                next[Self::idx(r, c)] =
+                    matches!((self.get(r, c), n), (true, 2) | (true, 3) | (false, 3));
             }
         }
         self.cells = next;
@@ -101,7 +102,9 @@ impl Grid {
         let mut g = Grid::blank();
         let mut s = seed | 1;
         for cell in g.cells.iter_mut() {
-            s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             *cell = (s >> 40) % 10 < 3;
         }
         g

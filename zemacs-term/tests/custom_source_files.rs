@@ -17,10 +17,7 @@ use zemacs_loader::workspace_trust::WorkspaceTrust;
 use zemacs_term::{application::Application, args::Args};
 use zemacs_view::theme::Color;
 
-fn make_app(
-    elisp: Option<String>,
-    viml: Option<String>,
-) -> anyhow::Result<Application> {
+fn make_app(elisp: Option<String>, viml: Option<String>) -> anyhow::Result<Application> {
     let mut config = test_config();
     config.editor.source_elisp_file = elisp;
     config.editor.source_viml_file = viml;

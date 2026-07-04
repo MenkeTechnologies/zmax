@@ -369,8 +369,16 @@ impl Component for LunarLander {
         let alt = (ground - lrow).max(0);
         let vy = self.game.vy;
         let vx = self.game.vx;
-        let vstyle = if vy.abs() <= SAFE_VY { safe_style } else { danger_style };
-        let hstyle = if vx.abs() <= SAFE_VX { safe_style } else { danger_style };
+        let vstyle = if vy.abs() <= SAFE_VY {
+            safe_style
+        } else {
+            danger_style
+        };
+        let hstyle = if vx.abs() <= SAFE_VX {
+            safe_style
+        } else {
+            danger_style
+        };
 
         let hud_y = oy + H as u16;
         let mut cx = ox;
@@ -387,7 +395,12 @@ impl Component for LunarLander {
         let hs = fmt_speed(vx);
         surface.set_string(cx, hud_y, &hs, hstyle);
         cx += hs.chars().count() as u16;
-        surface.set_string(cx, hud_y, &format!("   fuel {}", self.game.fuel.max(0)), text_style);
+        surface.set_string(
+            cx,
+            hud_y,
+            &format!("   fuel {}", self.game.fuel.max(0)),
+            text_style,
+        );
 
         // Footer / status.
         let foot_y = oy + H as u16 + 1;
@@ -396,13 +409,8 @@ impl Component for LunarLander {
                 "LANDED! +{} fuel bonus — score {}.  n new  q quit",
                 self.game.score, self.game.score
             ),
-            Outcome::Crashed => format!(
-                "CRASHED — {} lives left.  n new  q quit",
-                self.game.lives
-            ),
-            Outcome::Flying if self.paused => {
-                "PAUSED — p resume · n new · q quit".to_string()
-            }
+            Outcome::Crashed => format!("CRASHED — {} lives left.  n new  q quit", self.game.lives),
+            Outcome::Flying if self.paused => "PAUSED — p resume · n new · q quit".to_string(),
             Outcome::Flying => {
                 "SPC/↑ thrust · ←/→ (h/l) steer · p pause · n new · q quit".to_string()
             }

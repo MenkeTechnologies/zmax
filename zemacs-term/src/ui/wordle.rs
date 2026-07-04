@@ -26,11 +26,10 @@ use crate::{
 /// The candidate targets. Any typed five-letter guess is accepted; the target is
 /// always drawn from this list so a seed reproduces the same word.
 const WORDS: &[&str] = &[
-    "crane", "slate", "trace", "adieu", "audio", "raise", "roast", "ratio",
-    "brave", "cloud", "dance", "eager", "flame", "grape", "house", "ivory",
-    "joker", "knead", "lemon", "mango", "night", "ocean", "peach", "quiet",
-    "river", "stone", "table", "unity", "vivid", "waltz", "yield", "zebra",
-    "bloom", "charm", "drift", "ember", "frost", "glide", "haste", "index",
+    "crane", "slate", "trace", "adieu", "audio", "raise", "roast", "ratio", "brave", "cloud",
+    "dance", "eager", "flame", "grape", "house", "ivory", "joker", "knead", "lemon", "mango",
+    "night", "ocean", "peach", "quiet", "river", "stone", "table", "unity", "vivid", "waltz",
+    "yield", "zebra", "bloom", "charm", "drift", "ember", "frost", "glide", "haste", "index",
 ];
 
 const ROWS: usize = 6;
@@ -396,6 +395,10 @@ mod tests {
         }
         assert_eq!(g.state(), State::Lost);
         assert_eq!(g.guesses().len(), ROWS);
-        assert_eq!(g.target(), "crane", "the answer survives the loss for reveal");
+        assert_eq!(
+            g.target(),
+            "crane",
+            "the answer survives the loss for reveal"
+        );
     }
 }

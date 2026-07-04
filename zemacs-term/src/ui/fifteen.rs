@@ -288,7 +288,10 @@ mod tests {
     fn solved_board_is_detected_as_solved() {
         let g = Game::new(1);
         assert!(g.is_solved(), "a fresh board starts in the solved order");
-        assert!(!g.won, "the win flag isn't set until a slide reaches the goal");
+        assert!(
+            !g.won,
+            "the win flag isn't set until a slide reaches the goal"
+        );
         assert_eq!(g.board[15], 0, "the blank is last in the solved position");
     }
 
@@ -298,15 +301,22 @@ mod tests {
         assert_eq!(g.blank_index(), 15);
         // Sliding Down brings the tile *above* the blank (index 11, value 12) down.
         assert!(g.slide(Dir::Down));
-        assert_eq!(g.blank_index(), 11, "the blank moved up into the vacated cell");
-        assert_eq!(g.board[15], 12, "exactly that neighbour tile filled the blank");
+        assert_eq!(
+            g.blank_index(),
+            11,
+            "the blank moved up into the vacated cell"
+        );
+        assert_eq!(
+            g.board[15], 12,
+            "exactly that neighbour tile filled the blank"
+        );
         assert_eq!(g.moves, 1, "one slide counts as one move");
     }
 
     #[test]
     fn an_illegal_slide_is_a_no_op() {
         let mut g = Game::new(1); // blank at the bottom-right corner
-        // No tile below the blank (it's on the bottom row) → Up can't slide.
+                                  // No tile below the blank (it's on the bottom row) → Up can't slide.
         assert!(!g.slide(Dir::Up));
         // No tile to the right of the blank (it's on the last column) → Left can't.
         assert!(!g.slide(Dir::Left));
@@ -326,7 +336,10 @@ mod tests {
         for &v in g.board.iter() {
             seen[v as usize] = true;
         }
-        assert!(seen.iter().all(|&s| s), "every tile 0..=15 appears exactly once");
+        assert!(
+            seen.iter().all(|&s| s),
+            "every tile 0..=15 appears exactly once"
+        );
     }
 
     #[test]

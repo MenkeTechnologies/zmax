@@ -1226,7 +1226,10 @@ mod tests {
     fn set_left_margin_normalizes_indentation_to_spaces() {
         // Existing leading whitespace (spaces or tabs) is replaced by exactly
         // `margin` spaces; content after the indent is untouched.
-        assert_eq!(set_left_margin("foo\n\tbar\n    baz", 2), "  foo\n  bar\n  baz");
+        assert_eq!(
+            set_left_margin("foo\n\tbar\n    baz", 2),
+            "  foo\n  bar\n  baz"
+        );
         // margin 0 flushes every line to column zero.
         assert_eq!(set_left_margin("   x\n\t y", 0), "x\ny");
     }

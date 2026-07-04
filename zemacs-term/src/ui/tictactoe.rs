@@ -299,7 +299,12 @@ impl Component for TicTacToe {
             State::OWins => "Computer wins",
             State::Draw => "Draw",
         };
-        surface.set_string(ox, area.y, &format!("Tic-Tac-Toe  [{}]", status), header_style);
+        surface.set_string(
+            ox,
+            area.y,
+            &format!("Tic-Tac-Toe  [{}]", status),
+            header_style,
+        );
 
         for r in 0..3usize {
             let y = oy + (r as u16) * 2;
@@ -367,7 +372,11 @@ mod tests {
 
     #[test]
     fn detects_row_col_and_diagonal_wins() {
-        assert_eq!(check(&[X, X, X, E, E, E, E, E, E]), Some(Cell::X), "top row");
+        assert_eq!(
+            check(&[X, X, X, E, E, E, E, E, E]),
+            Some(Cell::X),
+            "top row"
+        );
         assert_eq!(
             check(&[O, E, E, O, E, E, O, E, E]),
             Some(Cell::O),

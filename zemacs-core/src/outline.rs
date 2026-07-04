@@ -199,11 +199,7 @@ pub fn sublevel_folds(hs: &[Heading], levels: u32, total_lines: usize) -> Vec<(u
 /// Body ranges to fold for `outline-hide-leaves` (in the subtree at `line`, hide
 /// every heading's body text while keeping all subheadings visible). One
 /// `(first, last)` range per heading in the subtree that has a body.
-pub fn subtree_leaf_bodies(
-    hs: &[Heading],
-    line: usize,
-    total_lines: usize,
-) -> Vec<(usize, usize)> {
+pub fn subtree_leaf_bodies(hs: &[Heading], line: usize, total_lines: usize) -> Vec<(usize, usize)> {
     let Some((start, end)) = subtree_bounds(hs, line, total_lines) else {
         return Vec::new();
     };

@@ -230,14 +230,20 @@ pub const OBJECTS: &[(&str, &str)] = &[
     ("There is some food here.", "Some food"),
     ("There is a shiny brass key here.", "A brass key"),
     ("There is a slip of paper here.", "A slip of paper"),
-    ("There is a wax statuette of Richard Stallman here.", "An RMS statuette"),
+    (
+        "There is a wax statuette of Richard Stallman here.",
+        "An RMS statuette",
+    ),
     ("There is a shimmering diamond here.", "A diamond"),
     ("There is a 10 pound weight here.", "A weight"),
     ("There is a life preserver here.", "A life preserver"),
     ("There is an emerald bracelet here.", "A bracelet"),
     ("There is a gold bar here.", "A gold bar"),
     ("There is a platinum bar here.", "A platinum bar"),
-    ("There is a beach towel on the ground here.", "A beach towel"),
+    (
+        "There is a beach towel on the ground here.",
+        "A beach towel",
+    ),
     ("There is an axe here.", "An axe"),
     ("There is a silver bar here.", "A silver bar"),
     ("There is a bus driver's license here.", "A license"),
@@ -255,8 +261,12 @@ pub const OBJECTS: &[(&str, &str)] = &[
 ];
 
 /// Object weights (pounds) and treasure points, indexed by object number.
-pub const OBJ_LBS: &[i16] = &[2, 1, 1, 1, 1, 0, 2, 2, 10, 3, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 2, 2, 1, 0, 0];
-pub const OBJ_PTS: &[i16] = &[0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 10, 10, 10, 0, 0, 10, 0, 10, 10, 0, 0, 0, 0, 10, 10, 10, 10, 0];
+pub const OBJ_LBS: &[i16] = &[
+    2, 1, 1, 1, 1, 0, 2, 2, 10, 3, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 2, 2, 1, 0, 0,
+];
+pub const OBJ_PTS: &[i16] = &[
+    0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 10, 10, 10, 0, 0, 10, 0, 10, 10, 0, 0, 0, 0, 10, 10, 10, 10, 0,
+];
 
 /// Initial objects per room (first 105 slots = rooms). Negative = a fixed
 /// scenery object (see PERM_OBJECTS by absolute value); 255 = a special.

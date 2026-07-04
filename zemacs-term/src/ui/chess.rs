@@ -642,7 +642,11 @@ impl Component for Chess {
                     }
                     None => {
                         // Empty squares alternate to read as a checkerboard.
-                        let st = if (r + c) % 2 == 0 { text_style } else { dark_style };
+                        let st = if (r + c) % 2 == 0 {
+                            text_style
+                        } else {
+                            dark_style
+                        };
                         ("·".to_string(), st)
                     }
                 };
@@ -746,7 +750,10 @@ mod tests {
         set(&mut g, 0, 0, Kind::King, false);
         set(&mut g, 0, 3, Kind::Rook, false);
         let moves = g.legal_moves((7, 4));
-        assert!(!moves.contains(&(7, 3)), "stepping onto the rook file is illegal");
+        assert!(
+            !moves.contains(&(7, 3)),
+            "stepping onto the rook file is illegal"
+        );
         assert!(!moves.contains(&(6, 3)), "the rook file is attacked");
         assert!(moves.contains(&(7, 5)), "stepping away stays legal");
     }

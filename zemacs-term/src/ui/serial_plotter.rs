@@ -388,7 +388,11 @@ impl Component for SerialPlotter {
         );
     }
 
-    fn cursor(&self, _area: Rect, _ctx: &zemacs_view::Editor) -> (Option<zemacs_core::Position>, CursorKind) {
+    fn cursor(
+        &self,
+        _area: Rect,
+        _ctx: &zemacs_view::Editor,
+    ) -> (Option<zemacs_core::Position>, CursorKind) {
         (None, CursorKind::Hidden)
     }
 }
@@ -409,7 +413,10 @@ mod tests {
     #[test]
     fn parses_comma_separated() {
         let v = parse_serial_line("10,20,30");
-        assert_eq!(v.iter().map(|(_, f)| *f).collect::<Vec<_>>(), vec![10.0, 20.0, 30.0]);
+        assert_eq!(
+            v.iter().map(|(_, f)| *f).collect::<Vec<_>>(),
+            vec![10.0, 20.0, 30.0]
+        );
     }
 
     #[test]
@@ -457,7 +464,10 @@ mod tests {
         d.push_line(&[(None, 3.0)]);
         d.push_line(&[(None, 3.0)]);
         let (lo, hi) = d.bounds();
-        assert!(lo < 3.0 && hi > 3.0, "flat line must not collapse: {lo}..{hi}");
+        assert!(
+            lo < 3.0 && hi > 3.0,
+            "flat line must not collapse: {lo}..{hi}"
+        );
     }
 
     #[test]

@@ -173,9 +173,7 @@ pub fn is_auto_save_file(name: &str) -> bool {
 
 /// Extensions matched by Emacs `dired-garbage-files-regexp` (the dired-x
 /// default): intermediate build/tex droppings.
-const GARBAGE_EXTENSIONS: &[&str] = &[
-    "aux", "bak", "dvi", "log", "orig", "rej", "toc", "out",
-];
+const GARBAGE_EXTENSIONS: &[&str] = &["aux", "bak", "dvi", "log", "orig", "rej", "toc", "out"];
 
 /// Emacs `dired-flag-garbage-files` predicate: a backup/auto-save file, or a
 /// name whose extension is one of [`GARBAGE_EXTENSIONS`].
@@ -237,7 +235,9 @@ pub fn next_dir_index(entries: &[DiredEntry], from: usize, forward: bool) -> Opt
     if forward {
         ((from + 1)..entries.len()).find(|&i| entries[i].is_dir)
     } else {
-        (0..from.min(entries.len())).rev().find(|&i| entries[i].is_dir)
+        (0..from.min(entries.len()))
+            .rev()
+            .find(|&i| entries[i].is_dir)
     }
 }
 

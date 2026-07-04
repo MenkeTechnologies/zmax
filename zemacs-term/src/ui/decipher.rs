@@ -43,7 +43,9 @@ impl Puzzle {
         let mut perm: [u8; 26] = std::array::from_fn(|i| i as u8);
         let mut s = seed | 1;
         for i in (1..26).rev() {
-            s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let j = ((s >> 33) as usize) % (i + 1);
             perm.swap(i, j);
         }
@@ -105,10 +107,13 @@ impl Puzzle {
 
     /// Solved when every plain letter used maps back correctly.
     pub fn solved(&self) -> bool {
-        self.plain.chars().filter(|c| c.is_ascii_lowercase()).all(|c| {
-            let cipher = self.enc[(c as u8 - b'a') as usize];
-            self.guess[(cipher as u8 - b'A') as usize] == Some(c)
-        })
+        self.plain
+            .chars()
+            .filter(|c| c.is_ascii_lowercase())
+            .all(|c| {
+                let cipher = self.enc[(c as u8 - b'a') as usize];
+                self.guess[(cipher as u8 - b'A') as usize] == Some(c)
+            })
     }
 }
 
@@ -147,7 +152,11 @@ impl Decipher {
                 self.status = if self.puzzle.solved() {
                     "Solved!  n: new cryptogram".into()
                 } else {
-                    format!("{} = {}", cipher.to_ascii_uppercase(), ch.to_ascii_lowercase())
+                    format!(
+                        "{} = {}",
+                        cipher.to_ascii_uppercase(),
+                        ch.to_ascii_lowercase()
+                    )
                 };
             }
             None => {
@@ -201,7 +210,12 @@ impl Component for Decipher {
         }
         let ox = area.x + 2;
         let oy = area.y + 2;
-        surface.set_string(ox, area.y, "Decipher — crack the substitution", header_style);
+        surface.set_string(
+            ox,
+            area.y,
+            "Decipher — crack the substitution",
+            header_style,
+        );
 
         // Cipher line above, current decryption (or solution) below.
         let cipher = self.puzzle.ciphertext();
@@ -211,7 +225,11 @@ impl Component for Decipher {
             self.puzzle.worked()
         };
         surface.set_string(ox, oy, &cipher, cipher_style);
-        let wstyle = if self.revealed { plain_style } else { text_style };
+        let wstyle = if self.revealed {
+            plain_style
+        } else {
+            text_style
+        };
         surface.set_string(ox, oy + 1, &worked, wstyle);
 
         // Frequency table (only letters that occur).

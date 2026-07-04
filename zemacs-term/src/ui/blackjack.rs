@@ -386,10 +386,7 @@ impl Component for Blackjack {
 
         // Result line.
         let (result, result_style) = match self.game.outcome() {
-            None => (
-                format!("Your move — bet {}", BET),
-                text_style,
-            ),
+            None => (format!("Your move — bet {}", BET), text_style),
             Some(Outcome::PlayerBlackjack) => {
                 (format!("Blackjack! You win {}", BET * 3 / 2), win_style)
             }

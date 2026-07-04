@@ -304,7 +304,11 @@ impl Component for Simon {
             (ox + PAD_W + GAP_XY, oy + PAD_H + GAP_XY),
         ];
         for (p, &(px, py)) in pads.iter().enumerate() {
-            let style = if lit == Some(p) { pad_styles[p] } else { dim_style };
+            let style = if lit == Some(p) {
+                pad_styles[p]
+            } else {
+                dim_style
+            };
             for ry in 0..PAD_H {
                 for rx in 0..PAD_W {
                     surface.set_string(px + rx, py + ry, "█", style);
@@ -312,7 +316,12 @@ impl Component for Simon {
             }
             // The pad's number, centred, so keys and pads line up at a glance.
             let label = ((p as u8 + 1) + b'0') as char;
-            surface.set_string(px + PAD_W / 2, py + PAD_H / 2, &label.to_string(), sel_style);
+            surface.set_string(
+                px + PAD_W / 2,
+                py + PAD_H / 2,
+                &label.to_string(),
+                sel_style,
+            );
         }
 
         let py = oy + PAD_H * 2 + GAP_XY;

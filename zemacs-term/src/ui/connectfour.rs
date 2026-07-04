@@ -324,7 +324,8 @@ impl Game {
                     }
                     let mut window = [None; 4];
                     for k in 0..4 {
-                        window[k] = self.cell((r + k as i32 * dr) as usize, (c + k as i32 * dc) as usize);
+                        window[k] =
+                            self.cell((r + k as i32 * dr) as usize, (c + k as i32 * dc) as usize);
                     }
                     score += score_window(&window, player);
                 }

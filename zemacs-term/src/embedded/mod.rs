@@ -290,7 +290,12 @@ pub fn arduino_compile_with(
     if settings.fqbn.is_empty() {
         return Err("no board selected — run :arduino-boards to pick an FQBN".into());
     }
-    let mut v = vec![s(ARDUINO_CLI), s("compile"), s("--fqbn"), settings.fqbn.clone()];
+    let mut v = vec![
+        s(ARDUINO_CLI),
+        s("compile"),
+        s("--fqbn"),
+        settings.fqbn.clone(),
+    ];
     v.extend(extra.iter().cloned());
     v.push(settings.sketch_dir().to_string_lossy().into_owned());
     Ok(v)
@@ -411,13 +416,26 @@ pub fn arduino_burn_bootloader(settings: &EmbeddedSettings) -> Result<Vec<String
 
 /// `arduino-cli board details --fqbn <fqbn>` — board specs / menu options.
 pub fn arduino_board_details(fqbn: &str) -> Vec<String> {
-    vec![s(ARDUINO_CLI), s("board"), s("details"), s("--fqbn"), s(fqbn)]
+    vec![
+        s(ARDUINO_CLI),
+        s("board"),
+        s("details"),
+        s("--fqbn"),
+        s(fqbn),
+    ]
 }
 
 /// `arduino-cli board details --fqbn <fqbn> --full` — the complete board detail
 /// dump (all tools, properties, and identification info).
 pub fn arduino_board_details_full(fqbn: &str) -> Vec<String> {
-    vec![s(ARDUINO_CLI), s("board"), s("details"), s("--fqbn"), s(fqbn), s("--full")]
+    vec![
+        s(ARDUINO_CLI),
+        s("board"),
+        s("details"),
+        s("--fqbn"),
+        s(fqbn),
+        s("--full"),
+    ]
 }
 
 /// `arduino-cli core search <query>` — Boards Manager search.
@@ -641,18 +659,36 @@ pub fn arduino_lib_list_updatable() -> Vec<String> {
 /// `arduino-cli lib install --git-url <url>` — install a library straight from a
 /// git repository (requires arduino-cli's `library.enable_unsafe_install`).
 pub fn arduino_lib_install_git(url: &str) -> Vec<String> {
-    vec![s(ARDUINO_CLI), s("lib"), s("install"), s("--git-url"), s(url)]
+    vec![
+        s(ARDUINO_CLI),
+        s("lib"),
+        s("install"),
+        s("--git-url"),
+        s(url),
+    ]
 }
 
 /// `arduino-cli lib install --zip-path <path>` — install a library from a local
 /// `.zip` archive (requires arduino-cli's `library.enable_unsafe_install`).
 pub fn arduino_lib_install_zip(path: &str) -> Vec<String> {
-    vec![s(ARDUINO_CLI), s("lib"), s("install"), s("--zip-path"), s(path)]
+    vec![
+        s(ARDUINO_CLI),
+        s("lib"),
+        s("install"),
+        s("--zip-path"),
+        s(path),
+    ]
 }
 
 /// `arduino-cli board listall --format json` (installed platforms' boards).
 pub fn arduino_board_listall() -> Vec<String> {
-    vec![s(ARDUINO_CLI), s("board"), s("listall"), s("--format"), s("json")]
+    vec![
+        s(ARDUINO_CLI),
+        s("board"),
+        s("listall"),
+        s("--format"),
+        s("json"),
+    ]
 }
 
 /// `arduino-cli board listall --show-hidden` — every known board *including*
@@ -664,7 +700,13 @@ pub fn arduino_board_listall_hidden() -> Vec<String> {
 
 /// `arduino-cli board list --format json` (connected boards / ports).
 pub fn arduino_board_list() -> Vec<String> {
-    vec![s(ARDUINO_CLI), s("board"), s("list"), s("--format"), s("json")]
+    vec![
+        s(ARDUINO_CLI),
+        s("board"),
+        s("list"),
+        s("--format"),
+        s("json"),
+    ]
 }
 
 /// `arduino-cli lib search <query> --format json`
@@ -682,7 +724,13 @@ pub fn arduino_lib_search(query: &str) -> Vec<String> {
 /// `arduino-cli lib search <query> --names` — library names only (a compact,
 /// fast-scanning result list, without the per-release detail).
 pub fn arduino_lib_search_names(query: &str) -> Vec<String> {
-    vec![s(ARDUINO_CLI), s("lib"), s("search"), s(query), s("--names")]
+    vec![
+        s(ARDUINO_CLI),
+        s("lib"),
+        s("search"),
+        s(query),
+        s("--names"),
+    ]
 }
 
 /// `arduino-cli lib install <name>`
@@ -693,7 +741,13 @@ pub fn arduino_lib_install(name: &str) -> Vec<String> {
 /// `arduino-cli lib install <name> --no-deps` — install a library without pulling
 /// its declared dependencies.
 pub fn arduino_lib_install_no_deps(name: &str) -> Vec<String> {
-    vec![s(ARDUINO_CLI), s("lib"), s("install"), s(name), s("--no-deps")]
+    vec![
+        s(ARDUINO_CLI),
+        s("lib"),
+        s("install"),
+        s(name),
+        s("--no-deps"),
+    ]
 }
 
 /// `arduino-cli core install <package>`
@@ -817,7 +871,14 @@ pub fn pio_upload(settings: &EmbeddedSettings) -> Vec<String> {
 /// flag is omitted so `pio` picks the port. Verified against `pio run -t monitor`
 /// on PlatformIO 6.1.19 (the `monitor` target enters `device_monitor_cmd`).
 pub fn pio_upload_monitor(settings: &EmbeddedSettings, port_override: &str) -> Vec<String> {
-    let mut v = vec![s(PIO), s("run"), s("-t"), s("upload"), s("-t"), s("monitor")];
+    let mut v = vec![
+        s(PIO),
+        s("run"),
+        s("-t"),
+        s("upload"),
+        s("-t"),
+        s("monitor"),
+    ];
     let port = if !port_override.trim().is_empty() {
         port_override.trim()
     } else {
@@ -1012,7 +1073,14 @@ pub fn pio_pkg_search(query: &str) -> Vec<String> {
 /// `pio pkg search <query> --page <n>` — a specific page of registry results
 /// (results are paginated). Verified against `pio pkg search --help` on 6.1.19.
 pub fn pio_pkg_search_page(query: &str, page: &str) -> Vec<String> {
-    vec![s(PIO), s("pkg"), s("search"), s(query), s("--page"), s(page)]
+    vec![
+        s(PIO),
+        s("pkg"),
+        s("search"),
+        s(query),
+        s("--page"),
+        s(page),
+    ]
 }
 
 /// `pio pkg outdated` — list installed packages with newer versions available.
@@ -1139,7 +1207,14 @@ pub fn pio_remote_agent_start_with(extra: &[String]) -> Vec<String> {
 /// `pio pkg search <query> --sort <relevance|popularity|trending|added|updated>`
 /// — registry search with an explicit sort order.
 pub fn pio_pkg_search_sort(query: &str, sort: &str) -> Vec<String> {
-    vec![s(PIO), s("pkg"), s("search"), s(query), s("--sort"), s(sort)]
+    vec![
+        s(PIO),
+        s("pkg"),
+        s("search"),
+        s(query),
+        s("--sort"),
+        s(sort),
+    ]
 }
 
 /// `pio pkg pack [extra…]` — tarball the current package with extra options
@@ -1153,7 +1228,14 @@ pub fn pio_pkg_pack_with(extra: &[String]) -> Vec<String> {
 /// `pio pkg show <pkg> --type <library|platform|tool>` — registry details scoped
 /// to a package type (disambiguates same-named packages across types).
 pub fn pio_pkg_show_type(pkg: &str, pkg_type: &str) -> Vec<String> {
-    vec![s(PIO), s("pkg"), s("show"), s("--type"), s(pkg_type), s(pkg)]
+    vec![
+        s(PIO),
+        s("pkg"),
+        s("show"),
+        s("--type"),
+        s(pkg_type),
+        s(pkg),
+    ]
 }
 
 /// `pio pkg exec -c <argv…>` — run a package tool through the `-c/--call` form
@@ -1447,9 +1529,9 @@ pub fn shell_join(argv: &[String]) -> String {
 
 fn shell_quote(arg: &str) -> String {
     if !arg.is_empty()
-        && arg
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.' | b'/' | b'=' | b':' | b','))
+        && arg.bytes().all(|b| {
+            b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.' | b'/' | b'=' | b':' | b',')
+        })
     {
         arg.to_string()
     } else {
@@ -1509,10 +1591,7 @@ pub fn parse_port_list(json: &str) -> Vec<PortEntry> {
     arr.iter()
         .filter_map(|entry| {
             let port = entry.get("port").unwrap_or(entry);
-            let address = port
-                .get("address")
-                .and_then(|a| a.as_str())?
-                .to_string();
+            let address = port.get("address").and_then(|a| a.as_str())?.to_string();
             let board = entry
                 .get("matching_boards")
                 .and_then(|b| b.as_array())
@@ -1677,7 +1756,10 @@ mod tests {
         assert!(argv.contains(&"-v".to_string()));
         assert!(argv.contains(&"--clean".to_string()));
         let clean_idx = argv.iter().position(|a| a == "--clean").unwrap();
-        assert!(clean_idx < argv.len() - 1, "flags must precede the sketch path {sketch}");
+        assert!(
+            clean_idx < argv.len() - 1,
+            "flags must precede the sketch path {sketch}"
+        );
     }
 
     #[test]
@@ -1733,20 +1815,32 @@ mod tests {
     fn arduino_compile_build_property_and_output_dir_splice() {
         let bp = arduino_compile_with(
             &settings(),
-            &["--build-property".into(), "build.extra_flags=-DDEBUG".into()],
+            &[
+                "--build-property".into(),
+                "build.extra_flags=-DDEBUG".into(),
+            ],
         )
         .unwrap();
-        assert!(bp.windows(2).any(|w| w == ["--build-property", "build.extra_flags=-DDEBUG"]));
+        assert!(bp
+            .windows(2)
+            .any(|w| w == ["--build-property", "build.extra_flags=-DDEBUG"]));
         // sketch path stays the trailing positional after the spliced flag.
         assert!(bp.iter().position(|a| a == "--build-property").unwrap() < bp.len() - 1);
-        let od = arduino_compile_with(&settings(), &["--output-dir".into(), "build/out".into()]).unwrap();
+        let od = arduino_compile_with(&settings(), &["--output-dir".into(), "build/out".into()])
+            .unwrap();
         assert!(od.windows(2).any(|w| w == ["--output-dir", "build/out"]));
     }
 
     #[test]
     fn arduino_fourth_pass_flag_builders() {
-        assert_eq!(arduino_core_list_all(), ["arduino-cli", "core", "list", "--all"]);
-        assert_eq!(arduino_lib_list_all(), ["arduino-cli", "lib", "list", "--all"]);
+        assert_eq!(
+            arduino_core_list_all(),
+            ["arduino-cli", "core", "list", "--all"]
+        );
+        assert_eq!(
+            arduino_lib_list_all(),
+            ["arduino-cli", "lib", "list", "--all"]
+        );
         assert!(arduino_update_show_outdated().contains(&"--show-outdated".to_string()));
         assert!(arduino_board_listall_hidden().contains(&"--show-hidden".to_string()));
         let ns = arduino_lib_search_names("servo");
@@ -1795,14 +1889,8 @@ mod tests {
 
     #[test]
     fn pio_third_pass_flag_builders() {
-        assert_eq!(
-            pio_pkg_list_global(),
-            ["pio", "pkg", "list", "-g"]
-        );
-        assert_eq!(
-            pio_pkg_update_global(),
-            ["pio", "pkg", "update", "-g"]
-        );
+        assert_eq!(pio_pkg_list_global(), ["pio", "pkg", "list", "-g"]);
+        assert_eq!(pio_pkg_update_global(), ["pio", "pkg", "update", "-g"]);
         assert!(pio_project_config_lint().contains(&"--lint".to_string()));
         let pubv = pio_pkg_publish_with(&["--private".into(), "--type".into(), "library".into()]);
         assert_eq!(pubv[..3], ["pio", "pkg", "publish"]);
@@ -1832,10 +1920,14 @@ mod tests {
         let argv = pio_upload_monitor(&st, "");
         assert_eq!(argv[..6], ["pio", "run", "-t", "upload", "-t", "monitor"]);
         // configured port threaded as --monitor-port when no override.
-        assert!(argv.windows(2).any(|w| w == ["--monitor-port", "/dev/cu.usbmodem1401"]));
+        assert!(argv
+            .windows(2)
+            .any(|w| w == ["--monitor-port", "/dev/cu.usbmodem1401"]));
         // explicit override wins.
         let argv2 = pio_upload_monitor(&st, "/dev/ttyUSB9");
-        assert!(argv2.windows(2).any(|w| w == ["--monitor-port", "/dev/ttyUSB9"]));
+        assert!(argv2
+            .windows(2)
+            .any(|w| w == ["--monitor-port", "/dev/ttyUSB9"]));
         // no configured port and no override => flag omitted.
         let mut bare = settings();
         bare.port.clear();
@@ -1872,7 +1964,9 @@ mod tests {
     #[test]
     fn pio_project_metadata_path_writes_to_file() {
         let argv = pio_project_metadata_path("meta.json");
-        assert!(argv.windows(2).any(|w| w == ["--json-output-path", "meta.json"]));
+        assert!(argv
+            .windows(2)
+            .any(|w| w == ["--json-output-path", "meta.json"]));
         assert!(argv.contains(&"--json-output".to_string()));
     }
 
@@ -1881,7 +1975,9 @@ mod tests {
         let mut st = settings();
         st.env = "uno".into();
         let argv = pio_test_with(&st, &["--junit-output-path".into(), "out.xml".into()]);
-        assert!(argv.windows(2).any(|w| w == ["--junit-output-path", "out.xml"]));
+        assert!(argv
+            .windows(2)
+            .any(|w| w == ["--junit-output-path", "out.xml"]));
         assert!(argv.windows(2).any(|w| w == ["-e", "uno"]));
     }
 
@@ -1996,20 +2092,44 @@ mod tests {
     #[test]
     fn board_details_carries_fqbn() {
         let argv = arduino_board_details("arduino:avr:uno");
-        assert_eq!(argv, ["arduino-cli", "board", "details", "--fqbn", "arduino:avr:uno"]);
+        assert_eq!(
+            argv,
+            [
+                "arduino-cli",
+                "board",
+                "details",
+                "--fqbn",
+                "arduino:avr:uno"
+            ]
+        );
     }
 
     #[test]
     fn core_and_lib_subcommands() {
-        assert_eq!(arduino_core_search("esp32"), ["arduino-cli", "core", "search", "esp32"]);
+        assert_eq!(
+            arduino_core_search("esp32"),
+            ["arduino-cli", "core", "search", "esp32"]
+        );
         assert_eq!(arduino_core_list(), ["arduino-cli", "core", "list"]);
-        assert_eq!(arduino_core_uninstall("arduino:avr"), ["arduino-cli", "core", "uninstall", "arduino:avr"]);
+        assert_eq!(
+            arduino_core_uninstall("arduino:avr"),
+            ["arduino-cli", "core", "uninstall", "arduino:avr"]
+        );
         assert_eq!(arduino_core_upgrade(), ["arduino-cli", "core", "upgrade"]);
-        assert_eq!(arduino_core_update_index(), ["arduino-cli", "core", "update-index"]);
+        assert_eq!(
+            arduino_core_update_index(),
+            ["arduino-cli", "core", "update-index"]
+        );
         assert_eq!(arduino_lib_list(), ["arduino-cli", "lib", "list"]);
-        assert_eq!(arduino_lib_uninstall("Servo"), ["arduino-cli", "lib", "uninstall", "Servo"]);
+        assert_eq!(
+            arduino_lib_uninstall("Servo"),
+            ["arduino-cli", "lib", "uninstall", "Servo"]
+        );
         assert_eq!(arduino_lib_upgrade(), ["arduino-cli", "lib", "upgrade"]);
-        assert_eq!(arduino_lib_examples("Servo"), ["arduino-cli", "lib", "examples", "Servo"]);
+        assert_eq!(
+            arduino_lib_examples("Servo"),
+            ["arduino-cli", "lib", "examples", "Servo"]
+        );
     }
 
     #[test]
@@ -2025,9 +2145,15 @@ mod tests {
         assert_eq!(pio_test(&st), ["pio", "test"]);
         assert_eq!(pio_check(&st), ["pio", "check"]);
         assert_eq!(pio_pkg_list(), ["pio", "pkg", "list"]);
-        assert_eq!(pio_pkg_uninstall("Adafruit GFX"), ["pio", "pkg", "uninstall", "-l", "Adafruit GFX"]);
+        assert_eq!(
+            pio_pkg_uninstall("Adafruit GFX"),
+            ["pio", "pkg", "uninstall", "-l", "Adafruit GFX"]
+        );
         assert_eq!(pio_pkg_update(), ["pio", "pkg", "update"]);
-        assert_eq!(pio_lib_install("Adafruit GFX"), ["pio", "pkg", "install", "-l", "Adafruit GFX"]);
+        assert_eq!(
+            pio_lib_install("Adafruit GFX"),
+            ["pio", "pkg", "install", "-l", "Adafruit GFX"]
+        );
     }
 
     #[test]
@@ -2041,7 +2167,10 @@ mod tests {
         assert_eq!(arduino_update(), ["arduino-cli", "update"]);
         assert_eq!(arduino_upgrade(), ["arduino-cli", "upgrade"]);
         assert_eq!(arduino_outdated(), ["arduino-cli", "outdated"]);
-        assert_eq!(arduino_lib_deps("Servo"), ["arduino-cli", "lib", "deps", "Servo"]);
+        assert_eq!(
+            arduino_lib_deps("Servo"),
+            ["arduino-cli", "lib", "deps", "Servo"]
+        );
         assert_eq!(arduino_config_dump(), ["arduino-cli", "config", "dump"]);
     }
 
@@ -2058,7 +2187,10 @@ mod tests {
 
     #[test]
     fn pio_pkg_and_maintenance_subcommands() {
-        assert_eq!(pio_pkg_search("Adafruit"), ["pio", "pkg", "search", "Adafruit"]);
+        assert_eq!(
+            pio_pkg_search("Adafruit"),
+            ["pio", "pkg", "search", "Adafruit"]
+        );
         assert_eq!(pio_pkg_outdated(), ["pio", "pkg", "outdated"]);
         assert_eq!(pio_pkg_show("Servo"), ["pio", "pkg", "show", "Servo"]);
         assert_eq!(pio_debug(&settings()), ["pio", "debug"]);
@@ -2069,9 +2201,18 @@ mod tests {
     fn pio_run_targets_build_argv() {
         let st = settings();
         assert_eq!(pio_run_target(&st, "size"), ["pio", "run", "-t", "size"]);
-        assert_eq!(pio_run_target(&st, "compiledb"), ["pio", "run", "-t", "compiledb"]);
-        assert_eq!(pio_run_target(&st, "uploadfs"), ["pio", "run", "-t", "uploadfs"]);
-        assert_eq!(pio_run_target(&st, "nobuild"), ["pio", "run", "-t", "nobuild"]);
+        assert_eq!(
+            pio_run_target(&st, "compiledb"),
+            ["pio", "run", "-t", "compiledb"]
+        );
+        assert_eq!(
+            pio_run_target(&st, "uploadfs"),
+            ["pio", "run", "-t", "uploadfs"]
+        );
+        assert_eq!(
+            pio_run_target(&st, "nobuild"),
+            ["pio", "run", "-t", "nobuild"]
+        );
     }
 
     #[test]
@@ -2079,12 +2220,21 @@ mod tests {
         let mut st = settings();
         st.env = "esp32dev".into();
         assert_eq!(pio_build(&st), ["pio", "run", "-e", "esp32dev"]);
-        assert_eq!(pio_upload(&st), ["pio", "run", "-t", "upload", "-e", "esp32dev"]);
-        assert_eq!(pio_clean(&st), ["pio", "run", "-t", "clean", "-e", "esp32dev"]);
+        assert_eq!(
+            pio_upload(&st),
+            ["pio", "run", "-t", "upload", "-e", "esp32dev"]
+        );
+        assert_eq!(
+            pio_clean(&st),
+            ["pio", "run", "-t", "clean", "-e", "esp32dev"]
+        );
         assert_eq!(pio_test(&st), ["pio", "test", "-e", "esp32dev"]);
         assert_eq!(pio_check(&st), ["pio", "check", "-e", "esp32dev"]);
         assert_eq!(pio_debug(&st), ["pio", "debug", "-e", "esp32dev"]);
-        assert_eq!(pio_run_target(&st, "size"), ["pio", "run", "-t", "size", "-e", "esp32dev"]);
+        assert_eq!(
+            pio_run_target(&st, "size"),
+            ["pio", "run", "-t", "size", "-e", "esp32dev"]
+        );
         // Empty env adds no flag.
         let st = settings();
         assert_eq!(pio_build(&st), ["pio", "run"]);
@@ -2111,30 +2261,78 @@ mod tests {
         let st = settings();
         assert_eq!(pio_list_targets(&st), ["pio", "run", "--list-targets"]);
         assert_eq!(pio_list_tests(&st), ["pio", "test", "--list-tests"]);
-        assert_eq!(pio_test_filter(&st, "sensor*"), ["pio", "test", "-f", "sensor*"]);
-        assert_eq!(pio_check_severity(&st, "high"), ["pio", "check", "--severity", "high"]);
+        assert_eq!(
+            pio_test_filter(&st, "sensor*"),
+            ["pio", "test", "-f", "sensor*"]
+        );
+        assert_eq!(
+            pio_check_severity(&st, "high"),
+            ["pio", "check", "--severity", "high"]
+        );
         assert_eq!(pio_boards_installed(""), ["pio", "boards", "--installed"]);
-        assert_eq!(pio_boards_installed("uno"), ["pio", "boards", "--installed", "uno"]);
-        assert_eq!(pio_tool_install("tool-openocd"), ["pio", "pkg", "install", "-g", "-t", "tool-openocd"]);
+        assert_eq!(
+            pio_boards_installed("uno"),
+            ["pio", "boards", "--installed", "uno"]
+        );
+        assert_eq!(
+            pio_tool_install("tool-openocd"),
+            ["pio", "pkg", "install", "-g", "-t", "tool-openocd"]
+        );
         assert_eq!(pio_settings_reset(), ["pio", "settings", "reset"]);
-        assert_eq!(pio_system_completion("zsh"), ["pio", "system", "completion", "zsh"]);
-        assert_eq!(pio_remote_device_monitor(), ["pio", "remote", "device", "monitor"]);
+        assert_eq!(
+            pio_system_completion("zsh"),
+            ["pio", "system", "completion", "zsh"]
+        );
+        assert_eq!(
+            pio_remote_device_monitor(),
+            ["pio", "remote", "device", "monitor"]
+        );
     }
 
     #[test]
     fn arduino_extra_leaves_and_config() {
-        assert_eq!(arduino_core_download("arduino:avr"), ["arduino-cli", "core", "download", "arduino:avr"]);
-        assert_eq!(arduino_lib_download("Servo"), ["arduino-cli", "lib", "download", "Servo"]);
-        assert_eq!(arduino_lib_update_index(), ["arduino-cli", "lib", "update-index"]);
-        assert_eq!(arduino_board_search(""), ["arduino-cli", "board", "search"]);
-        assert_eq!(arduino_board_search("uno"), ["arduino-cli", "board", "search", "uno"]);
-        assert_eq!(arduino_cache_clean(), ["arduino-cli", "cache", "clean"]);
-        assert_eq!(arduino_completion("zsh"), ["arduino-cli", "completion", "zsh"]);
         assert_eq!(
-            arduino_config("set", &["board_manager.additional_urls".to_string(), "http://x".to_string()]),
-            ["arduino-cli", "config", "set", "board_manager.additional_urls", "http://x"]
+            arduino_core_download("arduino:avr"),
+            ["arduino-cli", "core", "download", "arduino:avr"]
         );
-        assert_eq!(arduino_config("init", &[]), ["arduino-cli", "config", "init"]);
+        assert_eq!(
+            arduino_lib_download("Servo"),
+            ["arduino-cli", "lib", "download", "Servo"]
+        );
+        assert_eq!(
+            arduino_lib_update_index(),
+            ["arduino-cli", "lib", "update-index"]
+        );
+        assert_eq!(arduino_board_search(""), ["arduino-cli", "board", "search"]);
+        assert_eq!(
+            arduino_board_search("uno"),
+            ["arduino-cli", "board", "search", "uno"]
+        );
+        assert_eq!(arduino_cache_clean(), ["arduino-cli", "cache", "clean"]);
+        assert_eq!(
+            arduino_completion("zsh"),
+            ["arduino-cli", "completion", "zsh"]
+        );
+        assert_eq!(
+            arduino_config(
+                "set",
+                &[
+                    "board_manager.additional_urls".to_string(),
+                    "http://x".to_string()
+                ]
+            ),
+            [
+                "arduino-cli",
+                "config",
+                "set",
+                "board_manager.additional_urls",
+                "http://x"
+            ]
+        );
+        assert_eq!(
+            arduino_config("init", &[]),
+            ["arduino-cli", "config", "init"]
+        );
         assert_eq!(
             arduino_sub("profile", "set-default", &["nano".to_string()]),
             ["arduino-cli", "profile", "set-default", "nano"]
@@ -2163,7 +2361,11 @@ mod tests {
 
     #[test]
     fn pio_ci_and_sub_passthrough() {
-        let ci = pio_ci(&["-b".to_string(), "uno".to_string(), "src/main.cpp".to_string()]);
+        let ci = pio_ci(&[
+            "-b".to_string(),
+            "uno".to_string(),
+            "src/main.cpp".to_string(),
+        ]);
         assert_eq!(ci, ["pio", "ci", "-b", "uno", "src/main.cpp"]);
         assert_eq!(
             pio_sub("org", "create", &["MyOrg".to_string()]),
@@ -2171,7 +2373,11 @@ mod tests {
         );
         assert_eq!(pio_sub("access", "list", &[]), ["pio", "access", "list"]);
         assert_eq!(
-            pio_sub("team", "add", &["MyOrg:devs".to_string(), "user@x.com".to_string()]),
+            pio_sub(
+                "team",
+                "add",
+                &["MyOrg:devs".to_string(), "user@x.com".to_string()]
+            ),
             ["pio", "team", "add", "MyOrg:devs", "user@x.com"]
         );
     }
@@ -2186,8 +2392,14 @@ mod tests {
 
     #[test]
     fn pio_prune_scopes_and_dry_run() {
-        assert_eq!(pio_system_prune_scoped(""), ["pio", "system", "prune", "-f"]);
-        assert_eq!(pio_system_prune_scoped("cache"), ["pio", "system", "prune", "-f", "--cache"]);
+        assert_eq!(
+            pio_system_prune_scoped(""),
+            ["pio", "system", "prune", "-f"]
+        );
+        assert_eq!(
+            pio_system_prune_scoped("cache"),
+            ["pio", "system", "prune", "-f", "--cache"]
+        );
         assert_eq!(
             pio_system_prune_scoped("core-packages"),
             ["pio", "system", "prune", "-f", "--core-packages"]
@@ -2196,7 +2408,10 @@ mod tests {
             pio_system_prune_scoped("platform-packages"),
             ["pio", "system", "prune", "-f", "--platform-packages"]
         );
-        assert_eq!(pio_system_prune_dry_run(), ["pio", "system", "prune", "--dry-run"]);
+        assert_eq!(
+            pio_system_prune_dry_run(),
+            ["pio", "system", "prune", "--dry-run"]
+        );
     }
 
     #[test]
@@ -2269,7 +2484,10 @@ mod tests {
     fn pio_flag_carrying_builders_thread_env() {
         let mut st = settings();
         st.env = "uno".into();
-        assert_eq!(pio_run_with(&st, &["-v".into()]), ["pio", "run", "-v", "-e", "uno"]);
+        assert_eq!(
+            pio_run_with(&st, &["-v".into()]),
+            ["pio", "run", "-v", "-e", "uno"]
+        );
         assert_eq!(
             pio_run_with(&st, &["-j".into(), "4".into()]),
             ["pio", "run", "-j", "4", "-e", "uno"]
@@ -2299,7 +2517,10 @@ mod tests {
             pio_pkg_install_with(&["-f".into(), "-l".into(), "Servo".into()]),
             ["pio", "pkg", "install", "-f", "-l", "Servo"]
         );
-        assert_eq!(pio_upgrade_with(&["--dev".into()]), ["pio", "upgrade", "--dev"]);
+        assert_eq!(
+            pio_upgrade_with(&["--dev".into()]),
+            ["pio", "upgrade", "--dev"]
+        );
         assert_eq!(
             pio_remote_agent_start_with(&["--name".into(), "lab".into()]),
             ["pio", "remote", "agent", "start", "--name", "lab"]
@@ -2314,10 +2535,17 @@ mod tests {
     fn pio_home_and_device_list_variants() {
         assert_eq!(pio_home(&[]), ["pio", "home"]);
         assert_eq!(
-            pio_home(&["--port".to_string(), "8010".to_string(), "--no-open".to_string()]),
+            pio_home(&[
+                "--port".to_string(),
+                "8010".to_string(),
+                "--no-open".to_string()
+            ]),
             ["pio", "home", "--port", "8010", "--no-open"]
         );
-        assert_eq!(pio_device_list_logical(), ["pio", "device", "list", "--logical"]);
+        assert_eq!(
+            pio_device_list_logical(),
+            ["pio", "device", "list", "--logical"]
+        );
         assert_eq!(pio_device_list_mdns(), ["pio", "device", "list", "--mdns"]);
     }
 
@@ -2327,14 +2555,23 @@ mod tests {
         assert_eq!(exec, ["pio", "pkg", "exec", "--", "esptool.py", "--help"]);
         assert_eq!(pio_pkg_pack(), ["pio", "pkg", "pack"]);
         assert_eq!(pio_pkg_publish(), ["pio", "pkg", "publish"]);
-        assert_eq!(pio_pkg_unpublish("Foo@1.0.0"), ["pio", "pkg", "unpublish", "Foo@1.0.0"]);
-        assert_eq!(pio_platform_install("atmelavr"), ["pio", "pkg", "install", "-g", "-p", "atmelavr"]);
+        assert_eq!(
+            pio_pkg_unpublish("Foo@1.0.0"),
+            ["pio", "pkg", "unpublish", "Foo@1.0.0"]
+        );
+        assert_eq!(
+            pio_platform_install("atmelavr"),
+            ["pio", "pkg", "install", "-g", "-p", "atmelavr"]
+        );
     }
 
     #[test]
     fn pio_settings_get_omits_empty_name() {
         assert_eq!(pio_settings_get(""), ["pio", "settings", "get"]);
-        assert_eq!(pio_settings_get("enable_telemetry"), ["pio", "settings", "get", "enable_telemetry"]);
+        assert_eq!(
+            pio_settings_get("enable_telemetry"),
+            ["pio", "settings", "get", "enable_telemetry"]
+        );
         assert_eq!(
             pio_settings_set("enable_telemetry", "false"),
             ["pio", "settings", "set", "enable_telemetry", "false"]
@@ -2344,8 +2581,14 @@ mod tests {
     #[test]
     fn pio_remote_and_account_subcommands() {
         assert_eq!(pio_remote_agent_list(), ["pio", "remote", "agent", "list"]);
-        assert_eq!(pio_remote_agent_start(), ["pio", "remote", "agent", "start"]);
-        assert_eq!(pio_remote_device_list(), ["pio", "remote", "device", "list"]);
+        assert_eq!(
+            pio_remote_agent_start(),
+            ["pio", "remote", "agent", "start"]
+        );
+        assert_eq!(
+            pio_remote_device_list(),
+            ["pio", "remote", "device", "list"]
+        );
         assert_eq!(pio_remote_run(), ["pio", "remote", "run"]);
         assert_eq!(pio_remote_test(), ["pio", "remote", "test"]);
         assert_eq!(pio_remote_update(), ["pio", "remote", "update"]);

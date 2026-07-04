@@ -469,9 +469,15 @@ impl Component for DonkeyKong {
 
         let sy = oy + self.game.h as u16 + 1;
         let status = if self.game.won {
-            format!("You win! — score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "You win! — score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if self.game.lives == 0 {
-            format!("Game over — score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "Game over — score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if self.paused {
             format!("Paused — score {}.  p resume", self.game.score)
         } else {
@@ -490,7 +496,10 @@ mod tests {
         let mut g = Game::new(1);
         g.player = (15, 10); // air above the bottom girder
         g.step();
-        assert!(g.player.0 > 15, "an unsupported player falls toward the girder");
+        assert!(
+            g.player.0 > 15,
+            "an unsupported player falls toward the girder"
+        );
     }
 
     #[test]
@@ -508,7 +517,10 @@ mod tests {
         let base = g.player.0;
         g.jump();
         g.step();
-        assert!(g.player.0 < base, "the jump lifts the player off the girder");
+        assert!(
+            g.player.0 < base,
+            "the jump lifts the player off the girder"
+        );
         for _ in 0..4 {
             g.step();
         }
@@ -528,7 +540,10 @@ mod tests {
             scored: false,
         });
         g.step();
-        assert_eq!(g.barrels[0].c, 11, "the barrel advances a cell along the girder");
+        assert_eq!(
+            g.barrels[0].c, 11,
+            "the barrel advances a cell along the girder"
+        );
     }
 
     #[test]

@@ -141,13 +141,15 @@ impl DiffMode {
             self.status = Some(format!("diff: file not on disk: {path}"));
             return None;
         }
-        Some(Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
-            compositor.pop();
-            if let Err(err) = cx.editor.open(&pb, Action::Replace) {
-                cx.editor
-                    .set_error(format!("failed to open {}: {err}", pb.display()));
-            }
-        }))
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                if let Err(err) = cx.editor.open(&pb, Action::Replace) {
+                    cx.editor
+                        .set_error(format!("failed to open {}: {err}", pb.display()));
+                }
+            },
+        ))
     }
 }
 
@@ -267,12 +269,6 @@ impl Component for DiffMode {
 
         // Footer: keys.
         let footer = "j/k line  C-d/C-u page  n/p hunk  {/} file  Enter open  q quit";
-        surface.set_stringn(
-            area.x,
-            area.y + area.height - 1,
-            footer,
-            width,
-            info_style,
-        );
+        surface.set_stringn(area.x, area.y + area.height - 1, footer, width, info_style);
     }
 }

@@ -315,7 +315,12 @@ impl Component for Mastermind {
             surface.set_string(ox, sy, "code was ", text_style);
             let px = ox + 9;
             for (i, &c) in self.game.secret().iter().enumerate() {
-                surface.set_string(px + (i as u16) * 2, sy, &c.to_string(), theme.get(color_key(c)));
+                surface.set_string(
+                    px + (i as u16) * 2,
+                    sy,
+                    &c.to_string(),
+                    theme.get(color_key(c)),
+                );
             }
             surface.set_string(ox, sy + 1, "n new · q quit", text_style);
         }

@@ -270,7 +270,10 @@ impl Component for Breakout {
         surface.set_string(
             ox,
             area.y,
-            &format!("Breakout  score {}  lives {}", self.game.score, self.game.lives),
+            &format!(
+                "Breakout  score {}  lives {}",
+                self.game.score, self.game.lives
+            ),
             header_style,
         );
 
@@ -309,9 +312,15 @@ impl Component for Breakout {
 
         let sy = oy + H as u16 + 1;
         let status = if self.game.won {
-            format!("You cleared the wall! — score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "You cleared the wall! — score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if !self.game.alive {
-            format!("Game over — score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "Game over — score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if self.paused {
             format!("Paused — score {}.  SPC resume", self.game.score)
         } else {

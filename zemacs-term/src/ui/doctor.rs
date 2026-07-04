@@ -50,7 +50,9 @@ pub fn respond(input: &str, turn: usize) -> String {
     }
     let lower = text.to_ascii_lowercase();
     let strip = |kw: &str| -> Option<String> {
-        lower.find(kw).map(|i| reflect(text[i + kw.len()..].trim_end_matches(['.', '!', '?', ' '])))
+        lower
+            .find(kw)
+            .map(|i| reflect(text[i + kw.len()..].trim_end_matches(['.', '!', '?', ' '])))
     };
 
     if let Some(rest) = strip("i need ") {
@@ -224,7 +226,10 @@ mod tests {
     fn keyword_rules_fire() {
         assert!(respond("I need a vacation", 0).starts_with("Why do you need"));
         assert!(respond("I am sad", 0).starts_with("How long have you been"));
-        assert_eq!(respond("Tell me about my mother", 0), "Tell me more about your family.");
+        assert_eq!(
+            respond("Tell me about my mother", 0),
+            "Tell me more about your family."
+        );
         assert_eq!(respond("no", 0), "Why not?");
         assert_eq!(respond("What is emacs?", 0), "Do machines worry you?");
     }

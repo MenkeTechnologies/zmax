@@ -255,18 +255,16 @@ impl Component for Flappy {
             surface.set_string(
                 ox,
                 sy,
-                &format!("Game over — score {}.  n: new game  q: quit", self.game.score),
+                &format!(
+                    "Game over — score {}.  n: new game  q: quit",
+                    self.game.score
+                ),
                 over_style,
             );
         } else if self.paused {
             surface.set_string(ox, sy, "PAUSED — p resume · n new · q quit", text_style);
         } else {
-            surface.set_string(
-                ox,
-                sy,
-                "SPC/↑ flap · p pause · n new · q quit",
-                text_style,
-            );
+            surface.set_string(ox, sy, "SPC/↑ flap · p pause · n new · q quit", text_style);
         }
     }
 }

@@ -115,7 +115,10 @@ impl Game {
 
     /// Board cell of the formation enemy at grid position `(row, col)`.
     fn enemy_cell(&self, row: usize, col: usize) -> (i16, i16) {
-        (FORMATION_TOP + row as i16, BASE_X + col as i16 * ENEMY_GAP + self.sway_x)
+        (
+            FORMATION_TOP + row as i16,
+            BASE_X + col as i16 * ENEMY_GAP + self.sway_x,
+        )
     }
 
     /// Slide the ship by `d`, kept inside the court.
@@ -449,17 +452,19 @@ impl Component for Galaga {
         let sy = oy + H as u16 + 1;
         let status = match self.game.status {
             Status::Lost => {
-                format!("Game over — score {}.  n: new game  q: quit", self.game.score)
+                format!(
+                    "Game over — score {}.  n: new game  q: quit",
+                    self.game.score
+                )
             }
             Status::Won => {
-                format!("Formation cleared! — score {}.  n: next wave  q: quit", self.game.score)
+                format!(
+                    "Formation cleared! — score {}.  n: next wave  q: quit",
+                    self.game.score
+                )
             }
-            Status::Playing if self.paused => {
-                "Paused — p resume · n new · q quit".to_string()
-            }
-            Status::Playing => {
-                "←/→ move · SPC/↑ fire · p pause · n new · q quit".to_string()
-            }
+            Status::Playing if self.paused => "Paused — p resume · n new · q quit".to_string(),
+            Status::Playing => "←/→ move · SPC/↑ fire · p pause · n new · q quit".to_string(),
         };
         surface.set_string(ox, sy, &status, text_style);
     }
@@ -485,7 +490,10 @@ mod tests {
     fn a_diver_descends_one_row_per_step() {
         let mut g = Game::new(1);
         let x = g.ship;
-        g.divers = vec![Diver { pos: (5, x), target_x: x }];
+        g.divers = vec![Diver {
+            pos: (5, x),
+            target_x: x,
+        }];
         g.step();
         assert_eq!(g.divers[0].pos.0, 6, "the diver drops exactly one row");
     }
@@ -494,7 +502,10 @@ mod tests {
     fn a_diver_reaching_the_ship_costs_a_life() {
         let mut g = Game::new(1);
         let x = g.ship;
-        g.divers = vec![Diver { pos: (SHIP_ROW - 1, x), target_x: x }];
+        g.divers = vec![Diver {
+            pos: (SHIP_ROW - 1, x),
+            target_x: x,
+        }];
         let before = g.lives;
         g.step();
         assert_eq!(g.lives, before - 1, "ramming the ship costs a life");
@@ -507,7 +518,11 @@ mod tests {
         g.enemy_bullets = vec![(SHIP_ROW - 1, x)];
         let before = g.lives;
         g.step();
-        assert_eq!(g.lives, before - 1, "an enemy shot on the ship costs a life");
+        assert_eq!(
+            g.lives,
+            before - 1,
+            "an enemy shot on the ship costs a life"
+        );
     }
 
     #[test]
@@ -521,6 +536,10 @@ mod tests {
         let wave = g.wave;
         g.step();
         assert_eq!(g.status, Status::Won);
-        assert_eq!(g.wave, wave + 1, "the wave advances when the formation is cleared");
+        assert_eq!(
+            g.wave,
+            wave + 1,
+            "the wave advances when the formation is cleared"
+        );
     }
 }

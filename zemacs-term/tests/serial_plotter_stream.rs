@@ -26,7 +26,10 @@ fn plotter_ingests_a_live_serial_stream() {
             assert_eq!(channels, 2, "two numeric channels per line");
             return;
         }
-        assert!(Instant::now() < deadline, "reader thread never ingested the stream (got {samples})");
+        assert!(
+            Instant::now() < deadline,
+            "reader thread never ingested the stream (got {samples})"
+        );
         std::thread::sleep(Duration::from_millis(20));
     }
 }
@@ -48,7 +51,10 @@ fn plotter_ignores_non_numeric_log_lines() {
             assert_eq!(channels, 1);
             return;
         }
-        assert!(Instant::now() < deadline, "expected 2 numeric samples, got {samples}");
+        assert!(
+            Instant::now() < deadline,
+            "expected 2 numeric samples, got {samples}"
+        );
         std::thread::sleep(Duration::from_millis(20));
     }
 }

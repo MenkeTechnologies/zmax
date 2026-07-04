@@ -22,30 +22,9 @@ const MAX_MISSES: usize = 6;
 
 /// The word list. All lowercase, no spaces, varied length.
 const WORDS: &[&str] = &[
-    "rust",
-    "emacs",
-    "buffer",
-    "keyboard",
-    "compiler",
-    "terminal",
-    "cursor",
-    "window",
-    "syntax",
-    "closure",
-    "pointer",
-    "lambda",
-    "macro",
-    "vector",
-    "thread",
-    "kernel",
-    "socket",
-    "gallows",
-    "puzzle",
-    "cipher",
-    "parser",
-    "lexer",
-    "widget",
-    "palette",
+    "rust", "emacs", "buffer", "keyboard", "compiler", "terminal", "cursor", "window", "syntax",
+    "closure", "pointer", "lambda", "macro", "vector", "thread", "kernel", "socket", "gallows",
+    "puzzle", "cipher", "parser", "lexer", "widget", "palette",
 ];
 
 /// The pure hangman game. No I/O, no timing — unit-tested. The word is chosen
@@ -245,7 +224,12 @@ impl Component for Hangman {
         surface.set_string(
             ox,
             area.y,
-            &format!("Hangman  misses {}/{}  [{}]", self.game.misses(), MAX_MISSES, status),
+            &format!(
+                "Hangman  misses {}/{}  [{}]",
+                self.game.misses(),
+                MAX_MISSES,
+                status
+            ),
             header_style,
         );
 
@@ -314,7 +298,11 @@ mod tests {
         let mut g = with_word("apple");
         g.guess('z');
         g.guess('z');
-        assert_eq!(g.misses(), 1, "guessing the same wrong letter twice costs one miss");
+        assert_eq!(
+            g.misses(),
+            1,
+            "guessing the same wrong letter twice costs one miss"
+        );
         assert_eq!(g.guessed().len(), 1, "the letter is recorded only once");
     }
 

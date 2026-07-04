@@ -98,7 +98,10 @@ impl Game {
         let hits_self = if growing {
             self.body.contains(&head)
         } else {
-            self.body.iter().take(self.body.len() - 1).any(|&c| c == head)
+            self.body
+                .iter()
+                .take(self.body.len() - 1)
+                .any(|&c| c == head)
         };
         if hits_self {
             self.alive = false;
@@ -236,11 +239,17 @@ impl Component for Snake {
 
         let sy = oy + H as u16 + 1;
         let status = if !self.game.alive {
-            format!("Game over — score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "Game over — score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if self.paused {
             format!("Paused — score {}.  SPC resume", self.game.score)
         } else {
-            format!("score {}   ·  arrows/hjkl turn  SPC pause  n new  q quit", self.game.score)
+            format!(
+                "score {}   ·  arrows/hjkl turn  SPC pause  n new  q quit",
+                self.game.score
+            )
         };
         surface.set_string(ox, sy, &status, text_style);
     }

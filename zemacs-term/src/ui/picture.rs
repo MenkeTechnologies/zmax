@@ -190,12 +190,7 @@ impl Component for Picture {
             &format!("dir={} ", self.canvas.dir().arrow()),
             dir_style,
         );
-        surface.set_string(
-            ox + 16,
-            area.y,
-            &format!("({}, {})", cr, cc),
-            frame_style,
-        );
+        surface.set_string(ox + 16, area.y, &format!("({}, {})", cr, cc), frame_style);
 
         // Top / bottom frame.
         for c in 0..W {
@@ -211,12 +206,20 @@ impl Component for Picture {
         }
         if let Some((mr, mc)) = self.mark {
             let ch = self.canvas.get(mr, mc);
-            let s = if ch == ' ' { "·".to_string() } else { ch.to_string() };
+            let s = if ch == ' ' {
+                "·".to_string()
+            } else {
+                ch.to_string()
+            };
             surface.set_string(ox + mc as u16, oy + mr as u16, &s, mark_style);
         }
         // Cursor last so it wins even when it coincides with the mark.
         let cch = self.canvas.get(cr, cc);
-        let cs = if cch == ' ' { " ".to_string() } else { cch.to_string() };
+        let cs = if cch == ' ' {
+            " ".to_string()
+        } else {
+            cch.to_string()
+        };
         surface.set_string(ox + cc as u16, oy + cr as u16, &cs, cursor_style);
 
         // Footer legend + transient status.

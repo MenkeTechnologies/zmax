@@ -2791,7 +2791,11 @@ fn count_lines_page(cx: &mut Context) {
     let (view, doc) = current_ref!(cx.editor);
     let text = doc.text();
     let last = text.len_chars();
-    let cursor = doc.selection(view.id).primary().cursor(text.slice(..)).min(last);
+    let cursor = doc
+        .selection(view.id)
+        .primary()
+        .cursor(text.slice(..))
+        .min(last);
     let whole = text.to_string();
     let (start, end) = zemacs_core::page::page_bounds(&whole, cursor);
     let (start, end) = (start.min(last), end.min(last));
@@ -4176,7 +4180,9 @@ fn downcase_word(cx: &mut Context) {
 /// Emacs `capitalize-word` (M-c): capitalize the word after point (first letter
 /// upper, rest lower).
 fn capitalize_word(cx: &mut Context) {
-    case_word(cx, |w| zemacs_core::case_conversion::capitalize_words(w.chars()));
+    case_word(cx, |w| {
+        zemacs_core::case_conversion::capitalize_words(w.chars())
+    });
 }
 
 /// Emacs `capitalize-region`: title-case every word in the selected region.
@@ -4345,7 +4351,11 @@ fn indent_relative(cx: &mut Context) {
     // The nearest non-empty line above the current one (emacs `^[^\n]`).
     let mut prev: Option<String> = None;
     for l in (0..cur_line).rev() {
-        let s: String = slice.line(l).chars().filter(|&c| c != '\n' && c != '\r').collect();
+        let s: String = slice
+            .line(l)
+            .chars()
+            .filter(|&c| c != '\n' && c != '\r')
+            .collect();
         if !s.is_empty() {
             prev = Some(s);
             break;
@@ -8230,7 +8240,8 @@ fn transpose_line(cx: &mut Context) {
     // transpose_lines swaps index i with i+1; use cur_line-1 to swap prev+current.
     let swapped = zemacs_core::region_ops::transpose_lines(&lines, cur_line - 1).join("\n");
     let len = doc.text().len_chars();
-    let transaction = Transaction::change(doc.text(), std::iter::once((0, len, Some(swapped.into()))));
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((0, len, Some(swapped.into()))));
     doc.apply(&transaction, view.id);
     // Emacs leaves point on the line after the swapped pair.
     let dest = (cur_line + 1).min(doc.text().len_lines().saturating_sub(1));
@@ -9134,8 +9145,7 @@ fn set_fill_prefix(cx: &mut Context) {
         cx.editor.fill_prefix = None;
         cx.editor.set_status("fill-prefix cancelled");
     } else {
-        cx.editor
-            .set_status(format!("fill-prefix: \"{prefix}\""));
+        cx.editor.set_status(format!("fill-prefix: \"{prefix}\""));
         cx.editor.fill_prefix = Some(prefix);
     }
 }
@@ -9158,8 +9168,7 @@ fn set_goal_column(cx: &mut Context) {
         cursor - slice.line_to_char(line)
     };
     cx.editor.goal_column = Some(col);
-    cx.editor
-        .set_status(format!("goal-column set to {col}"));
+    cx.editor.set_status(format!("goal-column set to {col}"));
 }
 
 /// SPC t f: toggle a fill-column ruler at `text-width` (default 80).
@@ -13067,9 +13076,8 @@ fn emacs_insert_register(cx: &mut Context) {
                 doc.apply(&transaction, view.id);
                 doc.append_changes_to_history(view);
             } else {
-                cx.editor.set_error(format!(
-                    "Register {ch} does not hold a number or rectangle"
-                ));
+                cx.editor
+                    .set_error(format!("Register {ch} does not hold a number or rectangle"));
             }
         }
     });
@@ -13386,8 +13394,8 @@ fn picture_tab(cx: &mut Context) {
         let (_view, doc) = current_ref!(cx.editor);
         doc.tab_width()
     };
-    let dest = zemacs_core::picture::next_tab_stop(col, &stops)
-        .unwrap_or_else(|| ((col / tw) + 1) * tw);
+    let dest =
+        zemacs_core::picture::next_tab_stop(col, &stops).unwrap_or_else(|| ((col / tw) + 1) * tw);
     let lines = {
         let (_view, doc) = current_ref!(cx.editor);
         doc_lines(doc.text())
@@ -13447,8 +13455,7 @@ fn picture_clear_line(cx: &mut Context) {
     let line = text.char_to_line(cursor);
     let end = line_end_char_index(&text.slice(..), line);
     if end > cursor {
-        let transaction =
-            Transaction::change(&text, std::iter::once((cursor, end, None)));
+        let transaction = Transaction::change(&text, std::iter::once((cursor, end, None)));
         doc.apply(&transaction, view.id);
         doc.set_selection(view.id, Selection::point(cursor));
         doc.append_changes_to_history(view);
@@ -13564,8 +13571,7 @@ fn picture_yank_rectangle_from_register(cx: &mut Context) {
                 let (_view, doc) = current_ref!(cx.editor);
                 doc_lines(doc.text())
             };
-            let new_lines =
-                zemacs_core::picture::overlay_rectangle(&lines, row, col, &rect);
+            let new_lines = zemacs_core::picture::overlay_rectangle(&lines, row, col, &rect);
             picture_apply(cx, new_lines, row, col);
         }
     });
@@ -13658,8 +13664,9 @@ fn twocol_split(cx: &mut Context) {
     let right_text = right.join(&le);
     twocol_set_doc_text(cx.editor, partner, &right_text);
     twocol_associate(cur_id, partner, col);
-    cx.editor
-        .set_status(format!("2C-split at column {col}; right column moved to a new buffer"));
+    cx.editor.set_status(format!(
+        "2C-split at column {col}; right column moved to a new buffer"
+    ));
 }
 
 /// `2C-two-columns`: create an empty partner buffer side-by-side and associate
@@ -13777,8 +13784,11 @@ fn twocol_newline(cx: &mut Context) {
         let text = doc.text().clone();
         let point = doc.selection(view.id).primary().cursor(text.slice(..));
         let le = doc.line_ending.as_str().to_string();
-        let tx = Transaction::change(&text, std::iter::once((point, point, Some(le.as_str().into()))))
-            .with_selection(Selection::point(point + le.chars().count()));
+        let tx = Transaction::change(
+            &text,
+            std::iter::once((point, point, Some(le.as_str().into()))),
+        )
+        .with_selection(Selection::point(point + le.chars().count()));
         doc.apply(&tx, view.id);
         doc.append_changes_to_history(view);
     }
@@ -13932,13 +13942,18 @@ fn list_bookmarks(cx: &mut Context) {
 fn bookmark_insert_location(cx: &mut Context) {
     let marks = crate::emacs_bookmark::list();
     if marks.is_empty() {
-        cx.editor.set_status("No bookmarks yet — set one with C-x r m");
+        cx.editor
+            .set_status("No bookmarks yet — set one with C-x r m");
         return;
     }
     let picker = bookmark_picker(marks, |cx, item| {
         let loc = item.1.display().to_string();
         let (view, doc) = current!(cx.editor);
-        let tx = Transaction::insert(doc.text(), doc.selection(view.id), Tendril::from(loc.as_str()));
+        let tx = Transaction::insert(
+            doc.text(),
+            doc.selection(view.id),
+            Tendril::from(loc.as_str()),
+        );
         doc.apply(&tx, view.id);
         doc.append_changes_to_history(view);
     });
@@ -13950,7 +13965,8 @@ fn bookmark_insert_location(cx: &mut Context) {
 fn bookmark_insert(cx: &mut Context) {
     let marks = crate::emacs_bookmark::list();
     if marks.is_empty() {
-        cx.editor.set_status("No bookmarks yet — set one with C-x r m");
+        cx.editor
+            .set_status("No bookmarks yet — set one with C-x r m");
         return;
     }
     let picker = bookmark_picker(marks, |cx, item| match std::fs::read_to_string(&item.1) {
@@ -14621,7 +14637,11 @@ fn calendar_goto_day_of_year(cx: &mut Context) {
                     return;
                 }
             };
-            let max = if zemacs_core::calendar::is_leap(year) { 366 } else { 365 };
+            let max = if zemacs_core::calendar::is_leap(year) {
+                366
+            } else {
+                365
+            };
             if !(1..=max).contains(&n) {
                 cx.editor
                     .set_error(format!("Day of year must be 1..{max} for {year}"));
@@ -14663,13 +14683,20 @@ fn calendar_count_days_region(cx: &mut Context) {
                     .set_error("Need two dates: Y/M/D Y/M/D (six numbers)");
                 return;
             }
-            let a = zemacs_core::calendar::parse_ymd(&format!("{} {} {}", nums[0], nums[1], nums[2]));
-            let b = zemacs_core::calendar::parse_ymd(&format!("{} {} {}", nums[3], nums[4], nums[5]));
+            let a =
+                zemacs_core::calendar::parse_ymd(&format!("{} {} {}", nums[0], nums[1], nums[2]));
+            let b =
+                zemacs_core::calendar::parse_ymd(&format!("{} {} {}", nums[3], nums[4], nums[5]));
             match (a, b) {
                 (Some(a), Some(b)) => cx.editor.set_status(format!(
                     "{} days (inclusive) from {}/{}/{} to {}/{}/{}",
                     zemacs_core::calendar::count_days(a, b),
-                    a.year, a.month, a.day, b.year, b.month, b.day
+                    a.year,
+                    a.month,
+                    a.day,
+                    b.year,
+                    b.month,
+                    b.day
                 )),
                 _ => cx.editor.set_error("Invalid date(s)"),
             }
@@ -14800,19 +14827,14 @@ fn calendar_set_date_style(cx: &mut Context) {
         1 => "european (day/month/year)",
         _ => "iso (year/month/day)",
     };
-    cx.editor
-        .set_status(format!("Calendar date style: {name}"));
+    cx.editor.set_status(format!("Calendar date style: {name}"));
 }
 
 // --- goto-date variants: read an other-calendar date, echo the Gregorian one --
 
 /// Shared prompt for the `*-goto-date` commands: read `year month day` and map
 /// through `conv` (returns an R.D. fixed day number) to a Gregorian date.
-fn cal_goto_other(
-    cx: &mut Context,
-    label: &'static str,
-    conv: fn(i64, u32, u32) -> Option<i64>,
-) {
+fn cal_goto_other(cx: &mut Context, label: &'static str, conv: fn(i64, u32, u32) -> Option<i64>) {
     ui::prompt(
         cx,
         format!("{label} date (year month day): ").into(),
@@ -14823,12 +14845,12 @@ fn cal_goto_other(
                 return;
             }
             let Some((y, m, d)) = cal_three_ints(input) else {
-                cx.editor
-                    .set_error(format!("{label}: need year month day"));
+                cx.editor.set_error(format!("{label}: need year month day"));
                 return;
             };
             if !(1..=32).contains(&m) || !(1..=40).contains(&d) {
-                cx.editor.set_error(format!("{label}: month/day out of range"));
+                cx.editor
+                    .set_error(format!("{label}: month/day out of range"));
                 return;
             }
             match conv(y, m as u32, d as u32) {
@@ -14978,7 +15000,11 @@ fn calendar_mayan_goto_long_count(cx: &mut Context) {
             let g = zemacs_core::calendar::from_rd(f);
             cx.editor.set_status(format!(
                 "Long count {}.{}.{}.{}.{} = {} {}, {} (Gregorian)",
-                nums[0], nums[1], nums[2], nums[3], nums[4],
+                nums[0],
+                nums[1],
+                nums[2],
+                nums[3],
+                nums[4],
                 zemacs_core::calendar::MONTH_NAMES[(g.month - 1) as usize],
                 g.day,
                 g.year
@@ -15466,7 +15492,9 @@ fn diff_hunk_kill(cx: &mut Context) {
             diff_replace_buffer(cx, new);
             cx.editor.set_status("Killed hunk");
         }
-        None => cx.editor.set_status("diff-hunk-kill: point is not in a hunk"),
+        None => cx
+            .editor
+            .set_status("diff-hunk-kill: point is not in a hunk"),
     }
 }
 
@@ -15478,7 +15506,9 @@ fn diff_file_kill(cx: &mut Context) {
             diff_replace_buffer(cx, new);
             cx.editor.set_status("Killed file section");
         }
-        None => cx.editor.set_status("diff-file-kill: point is not in a file section"),
+        None => cx
+            .editor
+            .set_status("diff-file-kill: point is not in a file section"),
     }
 }
 
@@ -15546,9 +15576,12 @@ fn diff_restrict_view(cx: &mut Context) {
             };
             doc.narrow_to(cstart, cend);
             let _ = view;
-            cx.editor.set_status("Restricted view to hunk (widen to undo)");
+            cx.editor
+                .set_status("Restricted view to hunk (widen to undo)");
         }
-        None => cx.editor.set_status("diff-restrict-view: point is not in a hunk"),
+        None => cx
+            .editor
+            .set_status("diff-restrict-view: point is not in a hunk"),
     }
 }
 
@@ -15573,14 +15606,13 @@ fn diff_resolve_target(cx: &mut Context, rel: &str) -> Option<std::path::PathBuf
 
 /// Emacs `diff-apply-hunk` (C-c C-a): apply the hunk at point to its target file.
 fn diff_apply_hunk(cx: &mut Context) {
-    use zemacs_core::diffmode::{
-        apply_hunk, file_line_bounds, hunk_line_bounds, parse,
-    };
+    use zemacs_core::diffmode::{apply_hunk, file_line_bounds, hunk_line_bounds, parse};
     let (line, full) = diff_point_line(cx);
     let (Some((fs, fe)), Some((hs, he))) =
         (file_line_bounds(&full, line), hunk_line_bounds(&full, line))
     else {
-        cx.editor.set_status("diff-apply-hunk: point is not in a hunk");
+        cx.editor
+            .set_status("diff-apply-hunk: point is not in a hunk");
         return;
     };
     let all: Vec<&str> = full.lines().collect();
@@ -15596,7 +15628,8 @@ fn diff_apply_hunk(cx: &mut Context) {
     }
     let d = parse(&snippet);
     let Some(file) = d.files.first() else {
-        cx.editor.set_status("diff-apply-hunk: could not parse the hunk");
+        cx.editor
+            .set_status("diff-apply-hunk: could not parse the hunk");
         return;
     };
     let Some(hunk) = file.hunks.first() else {
@@ -15623,7 +15656,9 @@ fn diff_apply_hunk(cx: &mut Context) {
             Ok(()) => cx
                 .editor
                 .set_status(format!("Applied hunk to {}", target.display())),
-            Err(e) => cx.editor.set_status(format!("diff-apply-hunk: write failed: {e}")),
+            Err(e) => cx
+                .editor
+                .set_status(format!("diff-apply-hunk: write failed: {e}")),
         },
         Err(e) => cx.editor.set_status(format!("diff-apply-hunk: {e}")),
     }
@@ -15759,7 +15794,10 @@ fn replace_table_region(
 ) {
     let (view, doc) = current!(cx.editor);
     let rendered = table.render();
-    let tx = Transaction::change(doc.text(), std::iter::once((start, end, Some(rendered.into()))));
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((start, end, Some(rendered.into()))),
+    );
     doc.apply(&tx, view.id);
     doc.append_changes_to_history(view);
 }
@@ -15798,7 +15836,12 @@ fn table_recognize_region(cx: &mut Context) {
         if range.from() == range.to() {
             None
         } else {
-            Some(slice.slice(range.from()..range.to()).chars().collect::<String>())
+            Some(
+                slice
+                    .slice(range.from()..range.to())
+                    .chars()
+                    .collect::<String>(),
+            )
         }
     };
     let parsed = block.as_deref().and_then(zemacs_core::table::recognize);
@@ -15858,7 +15901,9 @@ fn table_unrecognize_cell(cx: &mut Context) {
 /// table, its grid dimension and total cell count.
 fn table_query_dimension(cx: &mut Context) {
     match table_at_cursor(cx) {
-        Some(tc) => cx.editor.set_status(tc.table.query_dimension(tc.row, tc.col)),
+        Some(tc) => cx
+            .editor
+            .set_status(tc.table.query_dimension(tc.row, tc.col)),
         None => not_on_table(cx),
     }
 }
@@ -15878,7 +15923,12 @@ fn table_justify(cx: &mut Context) {
         not_on_table(cx);
         return;
     };
-    let order = [Justify::Left, Justify::Center, Justify::Right, Justify::Full];
+    let order = [
+        Justify::Left,
+        Justify::Center,
+        Justify::Right,
+        Justify::Full,
+    ];
     let phase = TABLE_JUSTIFY_CYCLE.with(|p| {
         let v = p.get();
         p.set((v + 1) % order.len() as u8);
@@ -15953,7 +16003,8 @@ fn table_span_cell(cx: &mut Context) {
     }
     tc.table.span_cell_right(tc.row, tc.col);
     replace_table_region(cx, tc.start, tc.end, &tc.table);
-    cx.editor.set_status("Merged cell with the one to its right");
+    cx.editor
+        .set_status("Merged cell with the one to its right");
 }
 
 /// Emacs `table-split-cell-horizontally`: split the current cell into two
@@ -16023,7 +16074,8 @@ fn table_generate_source(cx: &mut Context) {
     );
     doc.apply(&tx, view.id);
     doc.append_changes_to_history(view);
-    cx.editor.set_status("Generated HTML source below the table");
+    cx.editor
+        .set_status("Generated HTML source below the table");
 }
 
 /// Emacs `table-capture`: turn the selected plain text into a table (rows split
@@ -16039,7 +16091,10 @@ fn table_capture(cx: &mut Context) {
             Some((
                 range.from(),
                 range.to(),
-                slice.slice(range.from()..range.to()).chars().collect::<String>(),
+                slice
+                    .slice(range.from()..range.to())
+                    .chars()
+                    .collect::<String>(),
             ))
         }
     };
@@ -16051,7 +16106,10 @@ fn table_capture(cx: &mut Context) {
     let table = zemacs_core::table::capture(&text, None, None);
     let rendered = table.render();
     let (view, doc) = current!(cx.editor);
-    let tx = Transaction::change(doc.text(), std::iter::once((from, to, Some(rendered.into()))));
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((from, to, Some(rendered.into()))),
+    );
     doc.apply(&tx, view.id);
     doc.append_changes_to_history(view);
     cx.editor.set_status(format!(
@@ -16076,7 +16134,8 @@ fn table_release(cx: &mut Context) {
     );
     doc.apply(&tx, view.id);
     doc.append_changes_to_history(view);
-    cx.editor.set_status("Released the table back to plain text");
+    cx.editor
+        .set_status("Released the table back to plain text");
 }
 
 thread_local! {
@@ -16213,7 +16272,10 @@ fn dissociated_press(cx: &mut Context) {
     }
     let seed = fastrand::u64(..);
     open_overlay(cx, move |_editor| {
-        Ok(Box::new(crate::ui::dissociate::Dissociate::new(&source, 2, seed)) as Box<dyn Component>)
+        Ok(
+            Box::new(crate::ui::dissociate::Dissociate::new(&source, 2, seed))
+                as Box<dyn Component>,
+        )
     });
 }
 
@@ -17893,7 +17955,8 @@ fn open_gnu_doc(cx: &mut Context, label: &str, url: &str) {
 fn describe_copying(cx: &mut Context) {
     const COPYING: &str = include_str!("../../LICENSE");
     show_text_in_scratch(cx.editor, COPYING);
-    cx.editor.set_status("Copying — the GNU General Public License");
+    cx.editor
+        .set_status("Copying — the GNU General Public License");
 }
 
 /// C-h C-d: describe-distribution — how to get zemacs / GNU software.
@@ -17903,7 +17966,11 @@ fn describe_distribution(cx: &mut Context) {
 
 /// C-h g: describe-gnu-project — the GNU project page.
 fn describe_gnu_project(cx: &mut Context) {
-    open_gnu_doc(cx, "GNU project", "https://www.gnu.org/gnu/thegnuproject.html");
+    open_gnu_doc(
+        cx,
+        "GNU project",
+        "https://www.gnu.org/gnu/thegnuproject.html",
+    );
 }
 
 /// C-h C-w: describe-no-warranty — the GPL's no-warranty sections.
@@ -17986,15 +18053,17 @@ fn view_echo_area_messages(cx: &mut Context) {
 
 /// Render the current mode's whole keymap as sorted "chord  command" lines.
 fn dump_mode_keymap(compositor: &mut Compositor, cx: &mut compositor::Context, header: &str) {
-    let rmap = compositor.find::<ui::EditorView>().unwrap().keymaps.map()[&cx.editor.mode]
-        .reverse_map();
+    let rmap =
+        compositor.find::<ui::EditorView>().unwrap().keymaps.map()[&cx.editor.mode].reverse_map();
     let mut rows: Vec<(String, String)> = rmap
         .iter()
         .flat_map(|(name, binds)| {
             let name = name.clone();
             binds.iter().map(move |b| {
                 (
-                    b.iter().map(|k| k.key_sequence_format()).collect::<String>(),
+                    b.iter()
+                        .map(|k| k.key_sequence_format())
+                        .collect::<String>(),
                     name.clone(),
                 )
             })
@@ -18054,9 +18123,8 @@ fn describe_categories(cx: &mut Context) {
 /// editor with no legacy charset registry, so instead of Emacs's charset list this
 /// lists the Unicode blocks it knows, with their codepoint ranges.
 fn list_character_sets(cx: &mut Context) {
-    let mut out = String::from(
-        "Unicode blocks (zemacs is UTF-8; it has no legacy charset registry)\n\n",
-    );
+    let mut out =
+        String::from("Unicode blocks (zemacs is UTF-8; it has no legacy charset registry)\n\n");
     out.push_str(&format!("{:<12} {:<12} {}\n", "Start", "End", "Block"));
     for &(start, end, name) in zemacs_core::chars::unicode_blocks() {
         out.push_str(&format!("U+{start:04X}       U+{end:04X}       {name}\n"));
@@ -21223,8 +21291,8 @@ fn join_lines_below_vim(cx: &mut Context, space: bool) {
         })
         .collect();
 
-    let transaction = Transaction::change(text, changes.into_iter())
-        .with_selection(Selection::new(ranges, 0));
+    let transaction =
+        Transaction::change(text, changes.into_iter()).with_selection(Selection::new(ranges, 0));
     doc.apply(&transaction, view.id);
 }
 
@@ -22296,7 +22364,8 @@ fn view_register(cx: &mut Context) {
                 let n = joined.chars().count();
                 let preview: String = joined.chars().take(140).collect();
                 let ell = if n > 140 { "…" } else { "" };
-                cx.editor.set_status(format!("Register {ch}: {preview}{ell}"));
+                cx.editor
+                    .set_status(format!("Register {ch}: {preview}{ell}"));
             }
             _ => cx.editor.set_status(format!("Register {ch} is empty")),
         }
@@ -23276,8 +23345,7 @@ where
             if let Some(comint) = compositor.find::<crate::ui::comint::Comint>() {
                 f(comint, cx);
             } else {
-                cx.editor
-                    .set_error("comint: no active shell/comint buffer");
+                cx.editor.set_error("comint: no active shell/comint buffer");
             }
         }));
 }
@@ -23444,7 +23512,8 @@ fn comint_interrupt_subjob(cx: &mut Context) {
         if comint.interrupt_subjob() {
             cx.editor.set_status("comint: sent SIGINT");
         } else {
-            cx.editor.set_error("comint: could not signal (no live child)");
+            cx.editor
+                .set_error("comint: could not signal (no live child)");
         }
     });
 }
@@ -23455,7 +23524,8 @@ fn comint_stop_subjob(cx: &mut Context) {
         if comint.stop_subjob() {
             cx.editor.set_status("comint: sent SIGTSTP (stop)");
         } else {
-            cx.editor.set_error("comint: could not signal (no live child)");
+            cx.editor
+                .set_error("comint: could not signal (no live child)");
         }
     });
 }
@@ -23466,7 +23536,8 @@ fn comint_continue_subjob(cx: &mut Context) {
         if comint.continue_subjob() {
             cx.editor.set_status("comint: sent SIGCONT (continue)");
         } else {
-            cx.editor.set_error("comint: could not signal (no live child)");
+            cx.editor
+                .set_error("comint: could not signal (no live child)");
         }
     });
 }
@@ -23477,7 +23548,8 @@ fn comint_quit_subjob(cx: &mut Context) {
         if comint.quit_subjob() {
             cx.editor.set_status("comint: sent SIGQUIT");
         } else {
-            cx.editor.set_error("comint: could not signal (no live child)");
+            cx.editor
+                .set_error("comint: could not signal (no live child)");
         }
     });
 }
@@ -23488,7 +23560,8 @@ fn comint_kill_subjob(cx: &mut Context) {
         if comint.kill_subjob() {
             cx.editor.set_status("comint: sent SIGKILL");
         } else {
-            cx.editor.set_error("comint: could not signal (no live child)");
+            cx.editor
+                .set_error("comint: could not signal (no live child)");
         }
     });
 }
@@ -23497,8 +23570,7 @@ fn comint_kill_subjob(cx: &mut Context) {
 fn comint_dynamic_list_input_ring(cx: &mut Context) {
     comint_action(cx, |comint, cx| {
         let n = comint.list_input_ring();
-        cx.editor
-            .set_status(format!("comint: {n} history entries"));
+        cx.editor.set_status(format!("comint: {n} history entries"));
     });
 }
 
@@ -23561,12 +23633,13 @@ fn comint_run(cx: &mut Context) {
                 return;
             };
             let args: Vec<String> = parts.map(str::to_string).collect();
-            let call: job::Callback = Callback::EditorCompositor(Box::new(move |editor, compositor| {
-                match crate::ui::comint::Comint::with_program(&program, &args) {
-                    Ok(panel) => compositor.push(Box::new(panel)),
-                    Err(e) => editor.set_error(format!("comint-run: {e}")),
-                }
-            }));
+            let call: job::Callback =
+                Callback::EditorCompositor(Box::new(move |editor, compositor| {
+                    match crate::ui::comint::Comint::with_program(&program, &args) {
+                        Ok(panel) => compositor.push(Box::new(panel)),
+                        Err(e) => editor.set_error(format!("comint-run: {e}")),
+                    }
+                }));
             cx.jobs.callback(async move { Ok(call) });
         },
     );
@@ -23927,7 +24000,11 @@ fn vc_print_root_log(cx: &mut Context) {
 /// `vc-print-branch-log` (C-x v b l): commit log for a named branch.
 fn vc_print_branch_log(cx: &mut Context) {
     prompt_then(cx, "branch log: ", |cx, branch| {
-        git_output_to_scratch_cx(cx, &["log", "--oneline", "-200", branch], "vc-print-branch-log: no commits");
+        git_output_to_scratch_cx(
+            cx,
+            &["log", "--oneline", "-200", branch],
+            "vc-print-branch-log: no commits",
+        );
     });
 }
 
@@ -23967,7 +24044,12 @@ fn vc_region_history(cx: &mut Context) {
 fn vc_log_incoming(cx: &mut Context) {
     git_output_to_scratch(
         cx,
-        &["log", "--oneline", "-200", zemacs_core::vc::incoming_rev_range()],
+        &[
+            "log",
+            "--oneline",
+            "-200",
+            zemacs_core::vc::incoming_rev_range(),
+        ],
         "vc-log-incoming: nothing incoming (up to date with upstream)",
     );
 }
@@ -23977,7 +24059,12 @@ fn vc_log_incoming(cx: &mut Context) {
 fn vc_log_outgoing(cx: &mut Context) {
     git_output_to_scratch(
         cx,
-        &["log", "--oneline", "-200", zemacs_core::vc::outgoing_rev_range()],
+        &[
+            "log",
+            "--oneline",
+            "-200",
+            zemacs_core::vc::outgoing_rev_range(),
+        ],
         "vc-log-outgoing: nothing outgoing (upstream up to date)",
     );
 }
@@ -24019,9 +24106,10 @@ fn vc_create_branch(cx: &mut Context) {
                 cx.editor
                     .set_status(format!("Created and switched to branch {name}"));
             }
-            Err(e) => cx
-                .editor
-                .set_error(format!("git switch -c: {}", e.lines().next().unwrap_or("failed"))),
+            Err(e) => cx.editor.set_error(format!(
+                "git switch -c: {}",
+                e.lines().next().unwrap_or("failed")
+            )),
         }
     });
 }
@@ -24033,11 +24121,13 @@ fn vc_switch_branch(cx: &mut Context) {
 
 /// `vc-create-tag`: create a git tag at HEAD.
 fn vc_create_tag(cx: &mut Context) {
-    prompt_then(cx, "create tag: ", |cx, name| match git_exec(&["tag", name]) {
-        Ok(_) => cx.editor.set_status(format!("Created tag {name}")),
-        Err(e) => cx
-            .editor
-            .set_error(format!("git tag: {}", e.lines().next().unwrap_or("failed"))),
+    prompt_then(cx, "create tag: ", |cx, name| {
+        match git_exec(&["tag", name]) {
+            Ok(_) => cx.editor.set_status(format!("Created tag {name}")),
+            Err(e) => cx
+                .editor
+                .set_error(format!("git tag: {}", e.lines().next().unwrap_or("failed"))),
+        }
     });
 }
 
@@ -24049,9 +24139,10 @@ fn vc_retrieve_tag(cx: &mut Context) {
                 crate::commands::typed::reload_open_docs(cx);
                 cx.editor.set_status(format!("Checked out {name}"));
             }
-            Err(e) => cx
-                .editor
-                .set_error(format!("git checkout: {}", e.lines().next().unwrap_or("failed"))),
+            Err(e) => cx.editor.set_error(format!(
+                "git checkout: {}",
+                e.lines().next().unwrap_or("failed")
+            )),
         }
     });
 }
@@ -24130,9 +24221,10 @@ fn vc_revert(cx: &mut Context) {
             reload_docs_for_paths(cx.editor, std::slice::from_ref(&path));
             cx.editor.set_status("Reverted file to HEAD");
         }
-        Err(e) => cx
-            .editor
-            .set_error(format!("git checkout: {}", e.lines().next().unwrap_or("failed"))),
+        Err(e) => cx.editor.set_error(format!(
+            "git checkout: {}",
+            e.lines().next().unwrap_or("failed")
+        )),
     }
 }
 
@@ -24164,8 +24256,12 @@ fn vc_refresh_state(cx: &mut Context) {
     doc.set_version_control_head(head);
     let branch = doc.version_control_head().map(|h| h.to_string());
     match branch {
-        Some(b) => cx.editor.set_status(format!("VC state refreshed (branch {b})")),
-        None => cx.editor.set_status("VC state refreshed (not in a git repo)"),
+        Some(b) => cx
+            .editor
+            .set_status(format!("VC state refreshed (branch {b})")),
+        None => cx
+            .editor
+            .set_status("VC state refreshed (not in a git repo)"),
     }
 }
 
@@ -24221,11 +24317,9 @@ fn project_vc_dir(cx: &mut Context) {
 fn project_switch_project(cx: &mut Context) {
     prompt_then(cx, "switch to project (dir): ", |cx, dir| {
         let expanded = match dir.strip_prefix("~") {
-            Some(rest) if dir == "~" || dir.starts_with("~/") => {
-                std::env::var_os("HOME")
-                    .map(|home| std::path::PathBuf::from(home).join(rest.trim_start_matches('/')))
-                    .unwrap_or_else(|| std::path::PathBuf::from(dir))
-            }
+            Some(rest) if dir == "~" || dir.starts_with("~/") => std::env::var_os("HOME")
+                .map(|home| std::path::PathBuf::from(home).join(rest.trim_start_matches('/')))
+                .unwrap_or_else(|| std::path::PathBuf::from(dir)),
             _ => std::path::PathBuf::from(dir),
         };
         let dir = expanded;
@@ -25328,7 +25422,10 @@ fn outline_hide_leaves(cx: &mut Context) {
 /// Reveal the subtree at `line` and then re-apply the given fold ranges — the
 /// shared body of `outline-show-children` / `outline-show-branches`, which reach
 /// their end state regardless of the prior fold state.
-fn outline_show_with_folds(cx: &mut Context, folds: impl Fn(&[zemacs_core::outline::Heading], usize, usize) -> Vec<(usize, usize)>) {
+fn outline_show_with_folds(
+    cx: &mut Context,
+    folds: impl Fn(&[zemacs_core::outline::Heading], usize, usize) -> Vec<(usize, usize)>,
+) {
     let (line, text) = outline_context(cx);
     let hs = zemacs_core::outline::headings(&text);
     let (view, doc) = current!(cx.editor);
@@ -25978,9 +26075,8 @@ fn replay_macro_string(cx: &mut Context, macro_str: &str, count: usize) {
         }
     };
     if cx.editor.macro_replaying.contains(&'@') {
-        cx.editor.set_error(
-            "Cannot execute macro because the [@] register is already playing a macro",
-        );
+        cx.editor
+            .set_error("Cannot execute macro because the [@] register is already playing a macro");
         return;
     }
     cx.editor.macro_replaying.push('@');
@@ -26070,9 +26166,8 @@ fn apply_macro_to_region_lines(cx: &mut Context) {
         (a, b)
     };
     if cx.editor.macro_replaying.contains(&'@') {
-        cx.editor.set_error(
-            "Cannot execute macro because the [@] register is already playing a macro",
-        );
+        cx.editor
+            .set_error("Cannot execute macro because the [@] register is already playing a macro");
         return;
     }
     cx.editor.macro_replaying.push('@');
@@ -30108,7 +30203,10 @@ mod wildfire_tests {
     #[test]
     fn studlify_matches_emacs() {
         assert_eq!(super::studlify("Hello World"), "Hello WoRld");
-        assert_eq!(super::studlify("the quick brown fox"), "thE QuIck BrowN fox");
+        assert_eq!(
+            super::studlify("the quick brown fox"),
+            "thE QuIck BrowN fox"
+        );
         assert_eq!(super::studlify("StudlyCaps rocks"), "StudlyCaps rocks");
         assert_eq!(super::studlify("abc def ghi"), "abc def ghi");
         assert_eq!(super::studlify("AAAA bbbb CCCC"), "AAAA BbBb CCCC");
@@ -30141,7 +30239,10 @@ mod wildfire_tests {
         let w = ["aaaa", "bbbb", "cccc", "dddd"];
         assert_eq!(super::fill_words(&w, 9), "aaaa bbbb\ncccc dddd");
         // A single word longer than width still lands on its own line.
-        assert_eq!(super::fill_words(&["short", "muchlongerword"], 8), "short\nmuchlongerword");
+        assert_eq!(
+            super::fill_words(&["short", "muchlongerword"], 8),
+            "short\nmuchlongerword"
+        );
         // Empty input yields empty output.
         assert_eq!(super::fill_words(&[], 70), "");
     }

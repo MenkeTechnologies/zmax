@@ -11,9 +11,7 @@ use std::time::{Duration, Instant};
 use tui::buffer::Buffer as Surface;
 use zemacs_view::graphics::Rect;
 
-use crate::{
-    compositor::{Callback, Component, Compositor, Context, Event, EventResult},
-};
+use crate::compositor::{Callback, Component, Compositor, Context, Event, EventResult};
 
 const COLS: usize = 80;
 

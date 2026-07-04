@@ -234,7 +234,7 @@ mod tests {
         incoming.set("c", mk("/c.rs", 5, None)); // new
         assert_eq!(base.merge(&incoming), 2);
         assert_eq!(base.len(), 3); // a, b, c
-        // Loaded "b" replaced the original.
+                                   // Loaded "b" replaced the original.
         assert_eq!(base.get("b"), Some(&mk("/b2.rs", 20, Some(3))));
         assert_eq!(base.get("a"), Some(&mk("/a.rs", 1, None)));
         assert_eq!(base.get("c"), Some(&mk("/c.rs", 5, None)));

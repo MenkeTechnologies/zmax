@@ -107,8 +107,16 @@ mod tests {
         // contents but the gap stays between the slots.
         let text = "b | a";
         let records = vec![
-            Record { start: 0, end: 1, key: "b".into() },
-            Record { start: 4, end: 5, key: "a".into() },
+            Record {
+                start: 0,
+                end: 1,
+                key: "b".into(),
+            },
+            Record {
+                start: 4,
+                end: 5,
+                key: "a".into(),
+            },
         ];
         assert_eq!(reorder(text, &records, false), "a | b");
         assert_eq!(reorder(text, &records, true), "b | a");

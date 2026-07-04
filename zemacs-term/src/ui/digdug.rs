@@ -376,7 +376,11 @@ impl Component for DigDug {
         // Harpoon: a short line along the facing axis.
         if let Some((hr, hc)) = self.game.harpoon {
             if in_bounds((hr, hc)) {
-                let glyph = if self.game.harpoon_dir.0 != 0 { "|" } else { "-" };
+                let glyph = if self.game.harpoon_dir.0 != 0 {
+                    "|"
+                } else {
+                    "-"
+                };
                 let (x, y) = cell(hr, hc);
                 surface.set_string(x, y, glyph, harpoon_style);
             }
@@ -394,13 +398,20 @@ impl Component for DigDug {
         let (dr, dc) = self.game.digger;
         if in_bounds((dr, dc)) {
             let (x, y) = cell(dr, dc);
-            let style = if self.game.harpoon.is_some() { pump_style } else { digger_style };
+            let style = if self.game.harpoon.is_some() {
+                pump_style
+            } else {
+                digger_style
+            };
             surface.set_string(x, y, "☺", style);
         }
 
         let sy = oy + H as u16 + 1;
         let status = if !self.game.alive {
-            format!("Game over — score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "Game over — score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if self.paused {
             format!("Paused — score {}.  SPC resume", self.game.score)
         } else {
@@ -422,7 +433,10 @@ mod tests {
         assert!(g.soil(target.0, target.1), "cell above the start is soil");
         g.move_dir((-1, 0));
         assert_eq!(g.digger, target, "the digger advances into the cell");
-        assert!(!g.soil(target.0, target.1), "the entered cell becomes tunnel");
+        assert!(
+            !g.soil(target.0, target.1),
+            "the entered cell becomes tunnel"
+        );
     }
 
     #[test]

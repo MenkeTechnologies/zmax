@@ -366,7 +366,12 @@ impl Component for Mancala {
             surface.set_string(pcol(j), oy, &format!("{:>3}", pits[pit]), style);
         }
         // The stores sit at the ends, spanning the middle row.
-        surface.set_string(ox, oy + 1, &format!("[{:>2}]", pits[CPU_STORE]), store_style);
+        surface.set_string(
+            ox,
+            oy + 1,
+            &format!("[{:>2}]", pits[CPU_STORE]),
+            store_style,
+        );
         surface.set_string(
             right_store_x,
             oy + 1,
@@ -396,7 +401,11 @@ impl Component for Mancala {
             surface.set_string(ox, sy, &format!("Game over — {}", msg), style);
             surface.set_string(ox, sy + 1, "n new · q quit", text_style);
         } else {
-            let whose = if you_active { "your move" } else { "cpu thinking" };
+            let whose = if you_active {
+                "your move"
+            } else {
+                "cpu thinking"
+            };
             surface.set_string(ox, sy, whose, text_style);
             surface.set_string(
                 ox,
@@ -475,9 +484,17 @@ mod tests {
         pits[11] = 5;
         let mut g = board(pits);
         g.sow(0);
-        assert_eq!(g.pits()[YOU_STORE], 6, "captured seed plus the opposite pit");
+        assert_eq!(
+            g.pits()[YOU_STORE],
+            6,
+            "captured seed plus the opposite pit"
+        );
         assert_eq!(g.pits()[1], 0, "the landing pit is emptied by the capture");
-        assert_eq!(g.pits()[11], 0, "the opposite pit is emptied by the capture");
+        assert_eq!(
+            g.pits()[11],
+            0,
+            "the opposite pit is emptied by the capture"
+        );
     }
 
     #[test]

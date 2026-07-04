@@ -72,9 +72,7 @@ pub struct Hanoi {
 
 impl Hanoi {
     pub fn new() -> Self {
-        Hanoi {
-            game: Game::new(3),
-        }
+        Hanoi { game: Game::new(3) }
     }
 }
 

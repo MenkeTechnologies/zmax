@@ -341,7 +341,11 @@ async fn test_split_buffer_navigation() -> anyhow::Result<()> {
                 Some(":sbprevious<ret>"),
                 Some(&|app| {
                     helpers::assert_status_not_error(&app.editor);
-                    assert_eq!(5, app.editor.tree.views().count(), "sbprevious opens a split");
+                    assert_eq!(
+                        5,
+                        app.editor.tree.views().count(),
+                        "sbprevious opens a split"
+                    );
                     assert_eq!(doc_id(app, &p3), focused(app), "sbprevious wraps to file3");
                 }),
             ),

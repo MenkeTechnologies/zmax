@@ -255,7 +255,11 @@ impl Component for Tron {
         let now = Instant::now();
         if !self.paused {
             let over = !(self.game.p_alive && self.game.c_alive);
-            let step_interval = if over { self.interval * 12 } else { self.interval };
+            let step_interval = if over {
+                self.interval * 12
+            } else {
+                self.interval
+            };
             match self.last {
                 Some(t) if now.duration_since(t) >= step_interval => {
                     if over {
@@ -289,7 +293,10 @@ impl Component for Tron {
         surface.set_string(
             ox,
             area.y,
-            &format!("Tron    you {}  —  {} cpu", self.game.p_wins, self.game.c_wins),
+            &format!(
+                "Tron    you {}  —  {} cpu",
+                self.game.p_wins, self.game.c_wins
+            ),
             header_style,
         );
 
@@ -350,7 +357,11 @@ mod tests {
         let mut g = Game::new(1); // player heads right
         let (r, c) = g.p_pos;
         g.step();
-        assert_eq!(g.p_pos, (r, c + 1), "the cycle moves one cell in its direction");
+        assert_eq!(
+            g.p_pos,
+            (r, c + 1),
+            "the cycle moves one cell in its direction"
+        );
         assert!(g.p_alive, "an open advance does not crash");
     }
 

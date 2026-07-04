@@ -113,7 +113,10 @@ impl Table {
 
     /// The contents of cell `(r, c)`, or `None` if out of bounds.
     pub fn get(&self, r: usize, c: usize) -> Option<&str> {
-        self.cells.get(r).and_then(|row| row.get(c)).map(|s| s.as_str())
+        self.cells
+            .get(r)
+            .and_then(|row| row.get(c))
+            .map(|s| s.as_str())
     }
 
     /// Replace the contents of cell `(r, c)`. Out-of-bounds writes are ignored.
@@ -243,7 +246,15 @@ impl Table {
     /// grid shares one width per column.
     pub fn widen_cell(&mut self, c: usize, by: usize) {
         if let Some(w) = self.min_col_width.get_mut(c) {
-            *w = self.cells.iter().filter_map(|row| row.get(c)).map(|s| text_width(s)).max().unwrap_or(0).max(*w) + by;
+            *w = self
+                .cells
+                .iter()
+                .filter_map(|row| row.get(c))
+                .map(|s| text_width(s))
+                .max()
+                .unwrap_or(0)
+                .max(*w)
+                + by;
         }
     }
 
@@ -317,7 +328,11 @@ impl Table {
     pub fn query_dimension(&self, r: usize, c: usize) -> String {
         let rendered = self.render();
         let t_h = rendered.lines().count();
-        let t_w = rendered.lines().map(|l| l.chars().count()).max().unwrap_or(0);
+        let t_w = rendered
+            .lines()
+            .map(|l| l.chars().count())
+            .max()
+            .unwrap_or(0);
         let cell_w = self.col_width(c);
         let cell_h = self.row_height(r);
         format!(
@@ -345,7 +360,9 @@ impl Table {
         if self.rows == 0 || self.cols == 0 {
             return;
         }
-        let digits_start = pattern.trim_end_matches(|ch: char| ch.is_ascii_digit()).len();
+        let digits_start = pattern
+            .trim_end_matches(|ch: char| ch.is_ascii_digit())
+            .len();
         let prefix = &pattern[..digits_start];
         let seed: i64 = pattern[digits_start..].parse().unwrap_or(0);
         let step = interval.max(1);
@@ -411,7 +428,13 @@ impl Table {
         let mut out = String::new();
         for r in 0..self.rows {
             let row: Vec<String> = (0..self.cols)
-                .map(|c| self.get(r, c).unwrap_or("").replace('\n', " ").trim().to_string())
+                .map(|c| {
+                    self.get(r, c)
+                        .unwrap_or("")
+                        .replace('\n', " ")
+                        .trim()
+                        .to_string()
+                })
                 .filter(|s| !s.is_empty())
                 .collect();
             out.push_str(row.join(" ").trim_end());
@@ -544,7 +567,9 @@ fn full_justify(s: &str, width: usize) -> String {
 
 /// Escape `&`, `<`, `>` for HTML/CALS output.
 fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 /// Escape the LaTeX special characters so cell text survives `tabular`.
@@ -714,7 +739,10 @@ pub fn cell_at_position(block: &str, line: usize, col: usize) -> Option<(usize, 
     if ncols == 0 {
         return None;
     }
-    let nborders = lines.iter().filter(|l| l.trim_start().starts_with('+')).count();
+    let nborders = lines
+        .iter()
+        .filter(|l| l.trim_start().starts_with('+'))
+        .count();
     let nrows = nborders.saturating_sub(1).max(1);
 
     // Row = number of border lines strictly before `line`, minus 1.
@@ -727,11 +755,7 @@ pub fn cell_at_position(block: &str, line: usize, col: usize) -> Option<(usize, 
 
     // Column = number of `|` at char-positions < col, minus 1.
     let target = lines[line];
-    let pipes_before = target
-        .chars()
-        .take(col)
-        .filter(|ch| *ch == '|')
-        .count();
+    let pipes_before = target.chars().take(col).filter(|ch| *ch == '|').count();
     let c = pipes_before.saturating_sub(1).min(ncols - 1);
     Some((row, c))
 }
@@ -1097,7 +1121,7 @@ mod tests {
         assert_eq!(cell_at_position(&block, 1, 9), Some((0, 1))); // inside "age"
         assert_eq!(cell_at_position(&block, 3, 2), Some((1, 0))); // inside "sam"
         assert_eq!(cell_at_position(&block, 3, 9), Some((1, 1))); // inside "42"
-        // a caret on a border line clamps to the row below/above
+                                                                  // a caret on a border line clamps to the row below/above
         assert_eq!(cell_at_position(&block, 0, 2), Some((0, 0)));
     }
 

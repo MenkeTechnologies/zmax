@@ -276,7 +276,13 @@ impl Component for Project {
 
         // Query line: "  > <query>    N/M".
         let prompt = format!(" > {}", self.query);
-        surface.set_stringn(area.x, area.y + 1, &prompt, area.width as usize, query_style);
+        surface.set_stringn(
+            area.x,
+            area.y + 1,
+            &prompt,
+            area.width as usize,
+            query_style,
+        );
         let count = format!("{}/{}", self.ranked.len(), self.files.len());
         if prompt.len() + count.len() + 2 < area.width as usize {
             surface.set_stringn(

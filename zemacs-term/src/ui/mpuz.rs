@@ -48,7 +48,9 @@ impl Puzzle {
     pub fn from_seed(seed: u64) -> Self {
         let mut s = seed | 1;
         let mut next = || {
-            s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             s >> 33
         };
         let m1 = 100 + (next() % 900) as u32; // 100..=999
@@ -117,7 +119,11 @@ impl Puzzle {
 
     /// Render number `n` using the current reveal state (right-aligned to `w`).
     fn show(&self, n: u32, w: usize) -> String {
-        let s: String = n.to_string().chars().map(|c| self.glyph((c as u8 - b'0') as usize)).collect();
+        let s: String = n
+            .to_string()
+            .chars()
+            .map(|c| self.glyph((c as u8 - b'0') as usize))
+            .collect();
         format!("{s:>w$}")
     }
 }
@@ -261,7 +267,13 @@ mod tests {
         let p = Puzzle::from_seed(3);
         // Every digit flagged present must occur in one of the shown numbers.
         let mut want = [false; 10];
-        for n in [p.m1, p.m2, p.m1 * (p.m2 % 10), p.m1 * (p.m2 / 10), p.m1 * p.m2] {
+        for n in [
+            p.m1,
+            p.m2,
+            p.m1 * (p.m2 % 10),
+            p.m1 * (p.m2 / 10),
+            p.m1 * p.m2,
+        ] {
             digits_of(n, &mut want);
         }
         assert_eq!(p.present, want);

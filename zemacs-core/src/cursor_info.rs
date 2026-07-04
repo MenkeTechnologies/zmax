@@ -167,7 +167,10 @@ mod tests {
         let s = describe_char(Some('A'), 1, 3, 0);
         assert!(s.starts_with("Char: A (65, #o101, #x41)"), "{s}");
         assert!(s.contains("codepoint:        U+0041"), "{s}");
-        assert!(s.contains("general-category: Lu (Letter, Uppercase)"), "{s}");
+        assert!(
+            s.contains("general-category: Lu (Letter, Uppercase)"),
+            "{s}"
+        );
         assert!(s.contains("Unicode block:    Basic Latin"), "{s}");
         assert!(s.contains("point=1 of 3 column=0"), "{s}");
     }
@@ -178,7 +181,10 @@ mod tests {
         let s = describe_char(Some('λ'), 2, 5, 3);
         assert!(s.starts_with("Char: λ (955, #o1673, #x3bb)"), "{s}");
         assert!(s.contains("codepoint:        U+03BB"), "{s}");
-        assert!(s.contains("general-category: Ll (Letter, Lowercase)"), "{s}");
+        assert!(
+            s.contains("general-category: Ll (Letter, Lowercase)"),
+            "{s}"
+        );
         assert!(s.contains("Unicode block:    Greek and Coptic"), "{s}");
     }
 

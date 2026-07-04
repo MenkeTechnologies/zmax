@@ -67,8 +67,11 @@ pub fn fuzzy_score(candidate: &str, query: &str) -> Option<i64> {
             if prev_matched {
                 score += 10; // consecutive-run bonus (dominates a scattered match)
             }
-            let boundary =
-                ci == 0 || matches!(prev_char, Some('/') | Some('_') | Some('-') | Some('.') | Some(' '));
+            let boundary = ci == 0
+                || matches!(
+                    prev_char,
+                    Some('/') | Some('_') | Some('-') | Some('.') | Some(' ')
+                );
             if boundary {
                 score += 8; // start / word-boundary bonus
             }
@@ -186,11 +189,7 @@ mod tests {
 
     #[test]
     fn rank_empty_query_keeps_all_in_lexical_order() {
-        let files = vec![
-            "b.rs".to_string(),
-            "a.rs".to_string(),
-            "c.rs".to_string(),
-        ];
+        let files = vec!["b.rs".to_string(), "a.rs".to_string(), "c.rs".to_string()];
         let ranked = rank(&files, "");
         assert_eq!(ranked, vec!["a.rs", "b.rs", "c.rs"]);
     }

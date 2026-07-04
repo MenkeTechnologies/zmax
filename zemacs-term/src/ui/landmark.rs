@@ -254,12 +254,7 @@ impl Component for Landmark {
         }
 
         let sy = oy + GH as u16 + 1;
-        surface.set_string(
-            ox,
-            sy,
-            "hjkl/arrows move · n new · q quit",
-            text_style,
-        );
+        surface.set_string(ox, sy, "hjkl/arrows move · n new · q quit", text_style);
 
         // Heat readout on the ramp ui.linenr→ui.text→function→warning→error.
         let heat_style = match self.game.heat() {
@@ -301,7 +296,10 @@ mod tests {
         let mut g = at((5, 5), (5, 8));
         let before = g.distance();
         g.move_robot(0, 1); // step right, toward the tree
-        assert!(g.distance() < before, "distance shrinks moving toward the tree");
+        assert!(
+            g.distance() < before,
+            "distance shrinks moving toward the tree"
+        );
         assert_eq!(g.trend(), "warmer");
     }
 
@@ -310,7 +308,10 @@ mod tests {
         let mut g = at((5, 5), (5, 8));
         let before = g.distance();
         g.move_robot(0, -1); // step left, away from the tree
-        assert!(g.distance() > before, "distance grows moving away from the tree");
+        assert!(
+            g.distance() > before,
+            "distance grows moving away from the tree"
+        );
         assert_eq!(g.trend(), "colder");
     }
 
@@ -346,6 +347,9 @@ mod tests {
                 break;
             }
         }
-        assert!(found_elsewhere, "a fresh board can hide the tree somewhere new");
+        assert!(
+            found_elsewhere,
+            "a fresh board can hide the tree somewhere new"
+        );
     }
 }

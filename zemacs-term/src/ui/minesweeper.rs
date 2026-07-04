@@ -294,7 +294,11 @@ impl Component for Minesweeper {
         surface.set_string(
             ox,
             area.y,
-            &format!("Minesweeper  mines {}  [{}]", self.game.mines_remaining(), status),
+            &format!(
+                "Minesweeper  mines {}  [{}]",
+                self.game.mines_remaining(),
+                status
+            ),
             header_style,
         );
 
@@ -408,7 +412,11 @@ mod tests {
         // A flagged cell can't be revealed: flag the mine, then try to reveal it.
         g.toggle_flag(0, 0);
         g.reveal(0, 0);
-        assert_eq!(g.state(), State::Playing, "flag protects the mine from reveal");
+        assert_eq!(
+            g.state(),
+            State::Playing,
+            "flag protects the mine from reveal"
+        );
         // Toggling again clears it.
         g.toggle_flag(5, 5);
         assert!(!g.flagged[idx(5, 5)]);

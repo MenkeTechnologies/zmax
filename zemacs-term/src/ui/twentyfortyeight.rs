@@ -373,12 +373,7 @@ mod tests {
     fn full_board_with_no_merges_does_not_move() {
         // A checkerboard of distinct neighbours: nothing can slide or merge.
         let mut g = Game::new(1);
-        g.board = [
-            [2, 4, 2, 4],
-            [4, 2, 4, 2],
-            [2, 4, 2, 4],
-            [4, 2, 4, 2],
-        ];
+        g.board = [[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]];
         assert!(!g.slide(Dir::Left), "a locked board reports no move");
         assert!(!g.can_move(), "and no move is possible at all");
     }
@@ -386,12 +381,7 @@ mod tests {
     #[test]
     fn a_real_move_spawns_exactly_one_tile() {
         let mut g = Game::new(1);
-        g.board = [
-            [2, 2, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-        ];
+        g.board = [[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
         let before = g.board.iter().flatten().filter(|&&v| v != 0).count();
         assert!(g.slide(Dir::Left));
         g.spawn_tile();
@@ -405,12 +395,7 @@ mod tests {
     #[test]
     fn reaching_2048_sets_the_win_flag() {
         let mut g = Game::new(1);
-        g.board = [
-            [1024, 1024, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-        ];
+        g.board = [[1024, 1024, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
         assert!(!g.won);
         assert!(g.slide(Dir::Left));
         assert_eq!(g.board[0][0], 2048);

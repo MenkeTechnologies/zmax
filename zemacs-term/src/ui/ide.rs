@@ -674,10 +674,10 @@ impl Ide {
     pub fn toggle_col_fold(&mut self, col: usize) -> bool {
         let [a, b] = self.bottom_splits;
         self.bottom_splits = match col {
-            0 if a == 0 => [25.min(b), b], // unfold left
-            0 => [0, b],                   // fold left
-            2 if b >= 100 => [a, a.max(75)], // unfold right
-            2 => [a, 100],                 // fold right
+            0 if a == 0 => [25.min(b), b],             // unfold left
+            0 => [0, b],                               // fold left
+            2 if b >= 100 => [a, a.max(75)],           // unfold right
+            2 => [a, 100],                             // fold right
             1 if b.saturating_sub(a) <= 2 => [33, 66], // unfold middle
             1 => {
                 let m = (a + b) / 2;
@@ -2163,7 +2163,8 @@ impl Ide {
                 // zero width; the two dividers may meet to fold the middle.
                 if self.problems_rect.width > 2 {
                     let rel = col.saturating_sub(self.problems_rect.x);
-                    let mut pct = (rel as u32 * 100 / self.problems_rect.width as u32).min(100) as u16;
+                    let mut pct =
+                        (rel as u32 * 100 / self.problems_rect.width as u32).min(100) as u16;
                     if pct <= 3 {
                         pct = 0;
                     }
@@ -3578,7 +3579,12 @@ impl Ide {
         let cols = [
             Rect::new(full.x, full.y, d0.saturating_sub(full.x), full.height),
             Rect::new(d0 + 1, full.y, d1.saturating_sub(d0 + 1), full.height),
-            Rect::new((d1 + 1).min(end), full.y, end.saturating_sub(d1 + 1), full.height),
+            Rect::new(
+                (d1 + 1).min(end),
+                full.y,
+                end.saturating_sub(d1 + 1),
+                full.height,
+            ),
         ];
         for i in 0..3 {
             if cols[i].width >= 2 {
@@ -5321,7 +5327,10 @@ mod parse_tests {
         ide.bottom_splits = [0, 70];
         ide.bottom_zoom = true;
         let saved = ide.layout();
-        assert!(saved.bottom_left_folded, "s0=0 should persist as left-folded");
+        assert!(
+            saved.bottom_left_folded,
+            "s0=0 should persist as left-folded"
+        );
 
         let mut restored = super::Ide::new();
         restored.apply_layout(&saved);
@@ -5330,7 +5339,10 @@ mod parse_tests {
         assert!(restored.fold_minimap);
         assert_eq!(restored.bottom_height, 17);
         assert_eq!(restored.bottom_splits, [0, 70]);
-        assert!(restored.col_folded(0), "left column stays folded after restore");
+        assert!(
+            restored.col_folded(0),
+            "left column stays folded after restore"
+        );
         assert!(restored.bottom_zoom);
     }
 

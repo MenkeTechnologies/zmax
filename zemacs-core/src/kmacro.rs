@@ -119,7 +119,9 @@ mod tests {
         assert_eq!(macro_named("kmt-a").as_deref(), Some("bbb"));
 
         // Appears in the listing.
-        assert!(named_macros().iter().any(|(n, k)| n == "kmt-a" && k == "bbb"));
+        assert!(named_macros()
+            .iter()
+            .any(|(n, k)| n == "kmt-a" && k == "bbb"));
 
         // Remove is idempotent-reporting.
         assert!(remove_named_macro("kmt-a"));

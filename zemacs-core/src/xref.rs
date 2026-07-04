@@ -38,8 +38,14 @@ fn find_word_col(line: &str, symbol: &str) -> Option<usize> {
     while let Some(rel) = line[start..].find(symbol) {
         let i = start + rel;
         let end = i + symbol.len();
-        let before_ok = line[..i].chars().next_back().map_or(true, |c| !is_word_char(c));
-        let after_ok = line[end..].chars().next().map_or(true, |c| !is_word_char(c));
+        let before_ok = line[..i]
+            .chars()
+            .next_back()
+            .map_or(true, |c| !is_word_char(c));
+        let after_ok = line[end..]
+            .chars()
+            .next()
+            .map_or(true, |c| !is_word_char(c));
         if before_ok && after_ok {
             return Some(line[..i].chars().count());
         }
@@ -104,8 +110,14 @@ pub fn looks_like_definition(line: &str, symbol: &str) -> bool {
         while let Some(rel) = line[start..].find(&needle) {
             let i = start + rel;
             let end = i + needle.len();
-            let before_ok = line[..i].chars().next_back().map_or(true, |c| !is_word_char(c));
-            let after_ok = line[end..].chars().next().map_or(true, |c| !is_word_char(c));
+            let before_ok = line[..i]
+                .chars()
+                .next_back()
+                .map_or(true, |c| !is_word_char(c));
+            let after_ok = line[end..]
+                .chars()
+                .next()
+                .map_or(true, |c| !is_word_char(c));
             if before_ok && after_ok {
                 return true;
             }
@@ -117,7 +129,10 @@ pub fn looks_like_definition(line: &str, symbol: &str) -> bool {
     while let Some(rel) = line[start..].find(symbol) {
         let i = start + rel;
         let end = i + symbol.len();
-        let before_ok = line[..i].chars().next_back().map_or(true, |c| !is_word_char(c));
+        let before_ok = line[..i]
+            .chars()
+            .next_back()
+            .map_or(true, |c| !is_word_char(c));
         if before_ok {
             let rest = line[end..].trim_start();
             if let Some(after_eq) = rest.strip_prefix('=') {

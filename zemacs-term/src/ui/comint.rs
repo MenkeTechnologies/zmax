@@ -112,7 +112,10 @@ impl Comint {
     }
 
     /// Open a comint running `program` with `args` (Emacs `comint-run`).
-    pub fn with_program(program: &str, args: &[impl AsRef<std::ffi::OsStr>]) -> std::io::Result<Self> {
+    pub fn with_program(
+        program: &str,
+        args: &[impl AsRef<std::ffi::OsStr>],
+    ) -> std::io::Result<Self> {
         let mut child = Command::new(program)
             .args(args)
             .stdin(Stdio::piped())
@@ -440,7 +443,9 @@ impl Comint {
             return false;
         }
         // The line currently anchored to the top of the body (approx.).
-        let current_top = self.pending_top.unwrap_or_else(|| total.saturating_sub(self.scroll + 1));
+        let current_top = self
+            .pending_top
+            .unwrap_or_else(|| total.saturating_sub(self.scroll + 1));
         let target = if forward {
             prompts.iter().copied().find(|&p| p > current_top)
         } else {
@@ -738,7 +743,11 @@ impl Component for Comint {
         let input_y = area.y + area.height - 1;
         let body_rows = input_y.saturating_sub(body_top) as usize;
 
-        let lines = self.scrollback.lock().map(|sb| sb.lines.clone()).unwrap_or_default();
+        let lines = self
+            .scrollback
+            .lock()
+            .map(|sb| sb.lines.clone())
+            .unwrap_or_default();
         // Tail-follow, offset upward by `scroll`.
         let total = lines.len();
         // Resolve a pending "put this line at the top" request now that the body

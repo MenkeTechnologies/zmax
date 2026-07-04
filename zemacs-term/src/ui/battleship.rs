@@ -585,7 +585,11 @@ mod tests {
         place_enemy(&mut g, 0, &[(4, 1), (4, 2), (4, 3)]);
         assert_eq!(g.fire_at_enemy(4, 1), Shot::Hit);
         assert_eq!(g.fire_at_enemy(4, 2), Shot::Hit);
-        assert_eq!(g.fire_at_enemy(4, 3), Shot::Sunk, "last cell sinks the ship");
+        assert_eq!(
+            g.fire_at_enemy(4, 3),
+            Shot::Sunk,
+            "last cell sinks the ship"
+        );
     }
 
     #[test]
@@ -611,7 +615,10 @@ mod tests {
         // Its next turn must fire an orthogonally-adjacent cell.
         let (r, c) = g.cpu_turn().expect("cpu fired");
         let adjacent = (r as i32 - 3).abs() + (c as i32 - 3).abs() == 1;
-        assert!(adjacent, "cpu follows up next to its last hit, got ({r},{c})");
+        assert!(
+            adjacent,
+            "cpu follows up next to its last hit, got ({r},{c})"
+        );
     }
 
     #[test]

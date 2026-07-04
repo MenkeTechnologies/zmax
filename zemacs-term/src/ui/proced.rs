@@ -173,7 +173,10 @@ impl Proced {
         }
         self.marked.clear();
         self.refresh();
-        self.status = Some(format!("proced: sent SIGTERM to {killed} of {} process(es)", pids.len()));
+        self.status = Some(format!(
+            "proced: sent SIGTERM to {killed} of {} process(es)",
+            pids.len()
+        ));
     }
 
     /// Handle a key while the refine needle is being typed. Returns once the key

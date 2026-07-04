@@ -468,7 +468,12 @@ impl Component for VideoPoker {
 
         // Cards and holds to the right of the paytable.
         let cards_x = ox + 20;
-        surface.set_string(cards_x, oy, &format!("Bet {}", self.game.bet()), header_style);
+        surface.set_string(
+            cards_x,
+            oy,
+            &format!("Bet {}", self.game.bet()),
+            header_style,
+        );
         let hand_y = oy + 2;
         let showing = self.game.phase() != Phase::Deal;
         for i in 0..5 {
@@ -523,34 +528,16 @@ mod tests {
 
     #[test]
     fn four_of_a_kind_detected() {
-        let hand = [
-            card(9, 0),
-            card(9, 1),
-            card(9, 2),
-            card(9, 3),
-            card(2, 0),
-        ];
+        let hand = [card(9, 0), card(9, 1), card(9, 2), card(9, 3), card(2, 0)];
         assert_eq!(evaluate(&hand), HandRank::FourOfAKind);
     }
 
     #[test]
     fn full_house_detected_and_beats_a_flush() {
-        let full = [
-            card(5, 0),
-            card(5, 1),
-            card(5, 2),
-            card(11, 0),
-            card(11, 1),
-        ];
+        let full = [card(5, 0), card(5, 1), card(5, 2), card(11, 0), card(11, 1)];
         assert_eq!(evaluate(&full), HandRank::FullHouse);
         // A five-card flush (all spades, no straight, no pairs).
-        let flush = [
-            card(2, 0),
-            card(5, 0),
-            card(8, 0),
-            card(11, 0),
-            card(13, 0),
-        ];
+        let flush = [card(2, 0), card(5, 0), card(8, 0), card(11, 0), card(13, 0)];
         assert_eq!(evaluate(&flush), HandRank::Flush);
         // The paytable ranks the full house above the flush.
         assert!(payout(HandRank::FullHouse, 1) > payout(HandRank::Flush, 1));
@@ -559,13 +546,7 @@ mod tests {
     #[test]
     fn ace_low_straight_is_a_straight() {
         // A-2-3-4-5 across mixed suits (the wheel).
-        let hand = [
-            card(14, 0),
-            card(2, 1),
-            card(3, 2),
-            card(4, 3),
-            card(5, 0),
-        ];
+        let hand = [card(14, 0), card(2, 1), card(3, 2), card(4, 3), card(5, 0)];
         assert_eq!(evaluate(&hand), HandRank::Straight);
     }
 
@@ -580,35 +561,17 @@ mod tests {
         ];
         assert_eq!(evaluate(&hand), HandRank::RoyalFlush);
         // The wheel straight flush is not a royal.
-        let wheel_sf = [
-            card(14, 2),
-            card(2, 2),
-            card(3, 2),
-            card(4, 2),
-            card(5, 2),
-        ];
+        let wheel_sf = [card(14, 2), card(2, 2), card(3, 2), card(4, 2), card(5, 2)];
         assert_eq!(evaluate(&wheel_sf), HandRank::StraightFlush);
     }
 
     #[test]
     fn jacks_or_better_pays_but_a_low_pair_does_not() {
-        let jacks = [
-            card(11, 0),
-            card(11, 1),
-            card(3, 2),
-            card(7, 3),
-            card(9, 0),
-        ];
+        let jacks = [card(11, 0), card(11, 1), card(3, 2), card(7, 3), card(9, 0)];
         assert_eq!(evaluate(&jacks), HandRank::JacksOrBetter);
         assert!(payout(HandRank::JacksOrBetter, 5) > 0);
         // A pair of fives is below the paying line.
-        let fives = [
-            card(5, 0),
-            card(5, 1),
-            card(3, 2),
-            card(7, 3),
-            card(9, 0),
-        ];
+        let fives = [card(5, 0), card(5, 1), card(3, 2), card(7, 3), card(9, 0)];
         assert_eq!(evaluate(&fives), HandRank::Nothing);
         assert_eq!(payout(HandRank::Nothing, 5), 0);
     }

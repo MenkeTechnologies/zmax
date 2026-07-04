@@ -294,9 +294,7 @@ impl Game {
         };
         let card = match pick {
             Some(Pick::Waste) => self.waste.last().copied(),
-            Some(Pick::Tableau(col)) => {
-                self.tableau[col].last().filter(|s| s.up).map(|s| s.card)
-            }
+            Some(Pick::Tableau(col)) => self.tableau[col].last().filter(|s| s.up).map(|s| s.card),
             None => None,
         };
         let card = match card {
@@ -622,7 +620,11 @@ mod tests {
         let mut g = blank();
         g.stock = vec![card(2, 0), card(3, 1), card(4, 2)]; // 4♦ on top
         g.draw();
-        assert_eq!(g.waste.last(), Some(&card(4, 2)), "the drawn card is on the waste");
+        assert_eq!(
+            g.waste.last(),
+            Some(&card(4, 2)),
+            "the drawn card is on the waste"
+        );
         assert_eq!(g.stock.len(), 2);
 
         // With the stock empty, drawing recycles the waste back into the stock.
@@ -654,11 +656,20 @@ mod tests {
         let mut g = blank();
         // Column 0: a face-down 9♣ under a face-up 6♥.
         g.tableau[0] = vec![
-            Slot { card: card(9, 3), up: false },
-            Slot { card: card(6, 1), up: true },
+            Slot {
+                card: card(9, 3),
+                up: false,
+            },
+            Slot {
+                card: card(6, 1),
+                up: true,
+            },
         ];
         // Column 1: a face-up 7♠ to receive the red 6.
-        g.tableau[1] = vec![Slot { card: card(7, 0), up: true }];
+        g.tableau[1] = vec![Slot {
+            card: card(7, 0),
+            up: true,
+        }];
         g.sel = Some(Source::Tableau { col: 0, idx: 1 });
         assert!(g.move_to_tableau(1));
         assert_eq!(g.tableau[1].len(), 2, "the 6 moved onto the 7");

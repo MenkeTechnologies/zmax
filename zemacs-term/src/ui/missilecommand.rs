@@ -136,7 +136,12 @@ impl Game {
 
     fn spawn_missile(&mut self) {
         let col = (self.rand() % W as u64) as i16;
-        let alive: Vec<i16> = self.cities.iter().filter(|c| c.alive).map(|c| c.col).collect();
+        let alive: Vec<i16> = self
+            .cities
+            .iter()
+            .filter(|c| c.alive)
+            .map(|c| c.col)
+            .collect();
         let tc = if alive.is_empty() {
             col
         } else {
@@ -462,7 +467,11 @@ mod tests {
         g.spawn_timer = 999;
         g.missiles.clear();
         g.interceptors.clear();
-        g.missiles.push(Missile { r: 5, c: 10, tc: 10 });
+        g.missiles.push(Missile {
+            r: 5,
+            c: 10,
+            tc: 10,
+        });
         g.blasts.push(Blast {
             r: 6,
             c: 10,
@@ -520,6 +529,10 @@ mod tests {
         let score = g.score;
         g.step();
         assert_eq!(g.wave, wave + 1, "the next wave begins");
-        assert_eq!(g.score, score + WAVE_BONUS, "clearing a wave awards a bonus");
+        assert_eq!(
+            g.score,
+            score + WAVE_BONUS,
+            "clearing a wave awards a bonus"
+        );
     }
 }

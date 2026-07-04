@@ -21,7 +21,11 @@ pub fn incoming_rev_range() -> &'static str {
 /// `git log -L <start>,<end>:<file>` line-range spec for `vc-region-history`.
 /// `start`/`end` are 1-based inclusive line numbers.
 pub fn region_log_spec(start: usize, end: usize, file: &str) -> String {
-    let (lo, hi) = if start <= end { (start, end) } else { (end, start) };
+    let (lo, hi) = if start <= end {
+        (start, end)
+    } else {
+        (end, start)
+    };
     format!("-L{lo},{hi}:{file}")
 }
 
@@ -61,7 +65,10 @@ mod tests {
 
     #[test]
     fn region_spec_is_git_log_L_form() {
-        assert_eq!(region_log_spec(10, 20, "src/main.rs"), "-L10,20:src/main.rs");
+        assert_eq!(
+            region_log_spec(10, 20, "src/main.rs"),
+            "-L10,20:src/main.rs"
+        );
         // Order-insensitive: a backwards selection is normalized.
         assert_eq!(region_log_spec(20, 10, "a.txt"), "-L10,20:a.txt");
         assert_eq!(region_log_spec(5, 5, "a.txt"), "-L5,5:a.txt");
@@ -69,7 +76,10 @@ mod tests {
 
     #[test]
     fn gitignore_append_to_empty() {
-        assert_eq!(gitignore_append("", "target/"), Some("target/\n".to_string()));
+        assert_eq!(
+            gitignore_append("", "target/"),
+            Some("target/\n".to_string())
+        );
     }
 
     #[test]

@@ -35,7 +35,10 @@ pub struct Face {
 /// Names are unique; RGB values may repeat (e.g. `cyan` and `aqua`).
 pub fn colors() -> &'static [NamedColor] {
     const fn c(name: &'static str, r: u8, g: u8, b: u8) -> NamedColor {
-        NamedColor { name, rgb: (r, g, b) }
+        NamedColor {
+            name,
+            rgb: (r, g, b),
+        }
     }
     const TABLE: &[NamedColor] = &[
         c("black", 0, 0, 0),
@@ -148,7 +151,11 @@ mod tests {
     #[test]
     fn colors_non_empty_and_names_unique() {
         let cs = colors();
-        assert!(cs.len() >= 40, "expected the full X11 palette, got {}", cs.len());
+        assert!(
+            cs.len() >= 40,
+            "expected the full X11 palette, got {}",
+            cs.len()
+        );
         let names: HashSet<&str> = cs.iter().map(|c| c.name).collect();
         assert_eq!(names.len(), cs.len(), "color names must be unique");
     }

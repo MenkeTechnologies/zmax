@@ -236,6 +236,9 @@ mod tests {
         // Nothing before point.
         assert_eq!(backward_sexp("   ", 3), None);
         // Round-trips with forward_sexp over an atom.
-        assert_eq!(backward_sexp("foo bar", forward_sexp("foo bar", 4).unwrap()), Some(4));
+        assert_eq!(
+            backward_sexp("foo bar", forward_sexp("foo bar", 4).unwrap()),
+            Some(4)
+        );
     }
 }

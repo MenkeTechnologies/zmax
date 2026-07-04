@@ -96,7 +96,10 @@ impl Game {
 
     /// Board cell of the alien at grid position `(row, col)`.
     fn alien_cell(&self, row: usize, col: usize) -> (i16, i16) {
-        (self.fleet_y + row as i16, self.fleet_x + col as i16 * ALIEN_GAP)
+        (
+            self.fleet_y + row as i16,
+            self.fleet_x + col as i16 * ALIEN_GAP,
+        )
     }
 
     /// Slide the cannon by `d`, kept inside the court.
@@ -387,17 +390,19 @@ impl Component for Invaders {
         let sy = oy + H as u16 + 1;
         let status = match self.game.status {
             Status::Lost => {
-                format!("Game over — score {}.  n: new game  q: quit", self.game.score)
+                format!(
+                    "Game over — score {}.  n: new game  q: quit",
+                    self.game.score
+                )
             }
             Status::Won => {
-                format!("Fleet cleared! — score {}.  n: next wave  q: quit", self.game.score)
+                format!(
+                    "Fleet cleared! — score {}.  n: next wave  q: quit",
+                    self.game.score
+                )
             }
-            Status::Playing if self.paused => {
-                "Paused — SPC resume · n new · q quit".to_string()
-            }
-            Status::Playing => {
-                "←/→ move · f/↑ fire · SPC pause · n new · q quit".to_string()
-            }
+            Status::Playing if self.paused => "Paused — SPC resume · n new · q quit".to_string(),
+            Status::Playing => "←/→ move · f/↑ fire · SPC pause · n new · q quit".to_string(),
         };
         surface.set_string(ox, sy, &status, text_style);
     }

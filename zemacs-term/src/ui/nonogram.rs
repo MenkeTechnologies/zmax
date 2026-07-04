@@ -307,7 +307,11 @@ impl Component for Nonogram {
         for c in 0..N {
             let clues = self.game.col_clues(c);
             let x = grid_x + (c as u16) * 2;
-            let style = if c == cc { active_clue_style } else { clue_style };
+            let style = if c == cc {
+                active_clue_style
+            } else {
+                clue_style
+            };
             for (k, v) in clues.iter().rev().enumerate() {
                 let y = grid_y - 1 - k as u16;
                 surface.set_string(x, y, &format!("{}", v), style);
@@ -323,7 +327,11 @@ impl Component for Nonogram {
                 .collect::<Vec<_>>()
                 .join(" ");
             let y = grid_y + r as u16;
-            let style = if r == cr { active_clue_style } else { clue_style };
+            let style = if r == cr {
+                active_clue_style
+            } else {
+                clue_style
+            };
             let x = grid_x.saturating_sub(text.len() as u16 + 1);
             surface.set_string(x, y, &text, style);
         }

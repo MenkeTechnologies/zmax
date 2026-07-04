@@ -204,7 +204,10 @@ impl Component for Pong {
         surface.set_string(
             ox,
             area.y,
-            &format!("Pong    you {}  —  {} cpu", self.game.left_score, self.game.right_score),
+            &format!(
+                "Pong    you {}  —  {} cpu",
+                self.game.left_score, self.game.right_score
+            ),
             header_style,
         );
 

@@ -560,7 +560,9 @@ pub fn load_init_scripts(cx: &mut compositor::Context) {
     // An arbitrary user-specified Emacs Lisp file, sourced last so it has final say.
     if let Some(file) = cx.editor.config().source_elisp_file.clone() {
         if !file.trim().is_empty() {
-            el_candidates.push(zemacs_stdx::path::expand_tilde(std::path::Path::new(file.trim())).into_owned());
+            el_candidates.push(
+                zemacs_stdx::path::expand_tilde(std::path::Path::new(file.trim())).into_owned(),
+            );
         }
     }
     let el_present: Vec<std::path::PathBuf> =
@@ -613,7 +615,9 @@ pub fn load_init_scripts(cx: &mut compositor::Context) {
         // An arbitrary user-specified Vimscript file, sourced last so it wins.
         if let Some(file) = cx.editor.config().source_viml_file.clone() {
             if !file.trim().is_empty() {
-                candidates.push(zemacs_stdx::path::expand_tilde(std::path::Path::new(file.trim())).into_owned());
+                candidates.push(
+                    zemacs_stdx::path::expand_tilde(std::path::Path::new(file.trim())).into_owned(),
+                );
             }
         }
 

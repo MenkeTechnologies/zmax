@@ -85,8 +85,16 @@ mod tests {
     fn split_handles_lines_shorter_than_the_column() {
         let lines = v(&["ab", "abcdef"]);
         let (left, right) = split_columns(&lines, 0, 4);
-        assert_eq!(left, v(&["ab", "abcd"]), "short line kept whole on the left");
-        assert_eq!(right, v(&["", "ef"]), "short line contributes an empty right part");
+        assert_eq!(
+            left,
+            v(&["ab", "abcd"]),
+            "short line kept whole on the left"
+        );
+        assert_eq!(
+            right,
+            v(&["", "ef"]),
+            "short line contributes an empty right part"
+        );
     }
 
     #[test]
@@ -101,7 +109,10 @@ mod tests {
         let left = v(&["one", "two", "three"]);
         let right = v(&["R"]);
         // only row 0 has a right part; rows 1,2 are padded and kept
-        assert_eq!(merge_columns(&left, &right, 6), v(&["one   R", "two   ", "three "]));
+        assert_eq!(
+            merge_columns(&left, &right, 6),
+            v(&["one   R", "two   ", "three "])
+        );
 
         let left = v(&["x"]);
         let right = v(&["a", "b"]);

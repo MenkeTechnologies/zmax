@@ -54,7 +54,9 @@ impl Grid {
         let mut balls = [[false; 8]; 8];
         let mut placed = 0;
         while placed < BALLS {
-            s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let r = ((s >> 40) % N as u64) as usize;
             let c = ((s >> 20) % N as u64) as usize;
             if !balls[r][c] {

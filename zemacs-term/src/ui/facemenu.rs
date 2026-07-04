@@ -244,7 +244,11 @@ impl Component for FaceMenu {
                 {
                     let y = body_y + (offset - self.scroll) as u16;
                     let line = format!("{:<32}  {}", f.name, f.attrs);
-                    let style = if offset == self.face_sel { sel_style } else { name_style };
+                    let style = if offset == self.face_sel {
+                        sel_style
+                    } else {
+                        name_style
+                    };
                     surface.set_stringn(area.x, y, &line, area.width as usize, style);
                 }
             }
@@ -257,7 +261,11 @@ impl Component for FaceMenu {
                 {
                     let y = body_y + (offset - self.scroll) as u16;
                     let label = format!("{:<16} {}  ", c.name, hex(c.rgb));
-                    let style = if offset == self.color_sel { sel_style } else { text_style };
+                    let style = if offset == self.color_sel {
+                        sel_style
+                    } else {
+                        text_style
+                    };
                     surface.set_stringn(area.x, y, &label, area.width as usize, style);
                     // Live swatch: two cells painted with the color's RGB.
                     let swatch_x = area.x + label.len() as u16;

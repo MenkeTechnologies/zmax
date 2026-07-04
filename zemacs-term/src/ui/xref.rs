@@ -239,7 +239,11 @@ fn read_tree(root: &Path) -> Vec<(String, String)> {
                 if files.len() >= MAX_FILES {
                     return files;
                 }
-                if entry.metadata().map(|m| m.len() > MAX_FILE_BYTES).unwrap_or(true) {
+                if entry
+                    .metadata()
+                    .map(|m| m.len() > MAX_FILE_BYTES)
+                    .unwrap_or(true)
+                {
                     continue;
                 }
                 // read_to_string fails on non-UTF-8 (binary) files, skipping them.

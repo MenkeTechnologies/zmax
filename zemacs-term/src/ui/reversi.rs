@@ -173,9 +173,7 @@ impl Game {
         let mut out = Vec::new();
         for r in 0..N {
             for c in 0..N {
-                if self.board[idx(r, c)] == Cell::Empty
-                    && !self.flips((r, c), player).is_empty()
-                {
+                if self.board[idx(r, c)] == Cell::Empty && !self.flips((r, c), player).is_empty() {
                     out.push((r, c));
                 }
             }

@@ -370,7 +370,10 @@ mod tests {
         assert_eq!(g.board[3][3], 4);
         g.set(3, 3, 0);
         assert_eq!(g.board[3][3], 0);
-        assert!(!g.conflicts(3, 3), "a cleared cell holds nothing to conflict");
+        assert!(
+            !g.conflicts(3, 3),
+            "a cleared cell holds nothing to conflict"
+        );
     }
 
     #[test]

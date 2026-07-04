@@ -179,7 +179,9 @@ mod tests {
 
     #[test]
     fn output_is_drawn_only_from_source_characters() {
-        let source: Vec<char> = "the quick brown fox jumps over the lazy dog".chars().collect();
+        let source: Vec<char> = "the quick brown fox jumps over the lazy dog"
+            .chars()
+            .collect();
         let allowed: std::collections::HashSet<char> = source.iter().copied().collect();
         let mut rng = 12345u64;
         let out = dissociate(&source, 2, 500, &mut rng);

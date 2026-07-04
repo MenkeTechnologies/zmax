@@ -126,7 +126,13 @@ impl Game {
             k += 1;
         }
         if !right.is_empty() {
-            self.chains.insert(ci + k, Chain { segs: right, dir: -dir });
+            self.chains.insert(
+                ci + k,
+                Chain {
+                    segs: right,
+                    dir: -dir,
+                },
+            );
         }
     }
 
@@ -333,7 +339,10 @@ impl Component for Centipede {
         surface.set_string(
             ox,
             area.y,
-            &format!("Centipede  score {}  lives {}", self.game.score, self.game.lives),
+            &format!(
+                "Centipede  score {}  lives {}",
+                self.game.score, self.game.lives
+            ),
             header_style,
         );
 
@@ -352,7 +361,11 @@ impl Component for Centipede {
         for ch in &self.game.chains {
             for (i, &(r, c)) in ch.segs.iter().enumerate() {
                 if on_board(r, c) {
-                    let (glyph, st) = if i == 0 { ("●", head_style) } else { ("o", body_style) };
+                    let (glyph, st) = if i == 0 {
+                        ("●", head_style)
+                    } else {
+                        ("o", body_style)
+                    };
                     surface.set_string(ox + c as u16, oy + r as u16, glyph, st);
                 }
             }
@@ -362,13 +375,24 @@ impl Component for Centipede {
                 surface.set_string(ox + c as u16, oy + r as u16, "|", bullet_style);
             }
         }
-        surface.set_string(ox + self.game.shooter as u16, oy + SHOOTER_ROW as u16, "▲", shooter_style);
+        surface.set_string(
+            ox + self.game.shooter as u16,
+            oy + SHOOTER_ROW as u16,
+            "▲",
+            shooter_style,
+        );
 
         let sy = oy + H as u16 + 1;
         let status = if self.game.over {
-            format!("Game over — score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "Game over — score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if self.game.won {
-            format!("Wave cleared — you win!  score {}.  n: new game  q: quit", self.game.score)
+            format!(
+                "Wave cleared — you win!  score {}.  n: new game  q: quit",
+                self.game.score
+            )
         } else if self.paused {
             format!("Paused — score {}.  p resume  q quit", self.game.score)
         } else {
@@ -386,7 +410,10 @@ mod tests {
     fn bullet_removes_a_segment_and_scores() {
         let mut g = Game::new(1);
         g.mushrooms.clear();
-        g.chains = vec![Chain { segs: vec![(3, 10), (3, 11), (3, 12)], dir: 1 }];
+        g.chains = vec![Chain {
+            segs: vec![(3, 10), (3, 11), (3, 12)],
+            dir: 1,
+        }];
         g.bullets = vec![(4, 11)]; // one row below the middle segment, flying up
         let before = g.score;
         g.step();
@@ -400,9 +427,15 @@ mod tests {
         let mut g = Game::new(1);
         g.mushrooms.clear();
         g.bullets.clear();
-        g.chains = vec![Chain { segs: vec![(5, W - 1)], dir: 1 }];
+        g.chains = vec![Chain {
+            segs: vec![(5, W - 1)],
+            dir: 1,
+        }];
         g.step();
-        assert_eq!(g.chains[0].segs[0].0, 6, "the centipede drops a row at the wall");
+        assert_eq!(
+            g.chains[0].segs[0].0, 6,
+            "the centipede drops a row at the wall"
+        );
         assert_eq!(g.chains[0].dir, -1, "and reverses direction");
     }
 
@@ -411,7 +444,10 @@ mod tests {
         let mut g = Game::new(1);
         g.mushrooms.clear();
         g.bullets.clear();
-        g.chains = vec![Chain { segs: vec![(3, 10), (3, 11), (3, 12)], dir: 1 }];
+        g.chains = vec![Chain {
+            segs: vec![(3, 10), (3, 11), (3, 12)],
+            dir: 1,
+        }];
         g.bullets = vec![(4, 11)]; // strike the middle segment
         g.step();
         assert_eq!(g.chains.len(), 2, "a mid-chain hit yields two sub-chains");
@@ -423,7 +459,10 @@ mod tests {
         g.mushrooms.clear();
         g.bullets.clear();
         g.shooter = 10;
-        g.chains = vec![Chain { segs: vec![(SHOOTER_ROW, 9)], dir: 1 }];
+        g.chains = vec![Chain {
+            segs: vec![(SHOOTER_ROW, 9)],
+            dir: 1,
+        }];
         let before = g.lives;
         g.step(); // walks into the shooter's column
         assert_eq!(g.lives, before - 1, "touching the shooter costs a life");
@@ -433,7 +472,10 @@ mod tests {
     fn clearing_all_segments_sets_the_win_state() {
         let mut g = Game::new(1);
         g.mushrooms.clear();
-        g.chains = vec![Chain { segs: vec![(3, 10)], dir: 1 }];
+        g.chains = vec![Chain {
+            segs: vec![(3, 10)],
+            dir: 1,
+        }];
         g.bullets = vec![(4, 10)]; // the killing shot on the last segment
         g.step();
         assert!(g.chains.is_empty(), "the field is cleared");

@@ -215,7 +215,8 @@ impl Game {
             89 => {
                 // vermont-station: the train takes you to the museum station.
                 let mut out = vec![
-                    "As you board the train it immediately leaves the station.  It is a very".into(),
+                    "As you board the train it immediately leaves the station.  It is a very"
+                        .into(),
                     "bumpy ride, and finally throws you out at another station.".into(),
                 ];
                 out.extend(self.enter(90));
@@ -316,8 +317,9 @@ impl Game {
                             self.room_objects[59].remove(p);
                         }
                         self.room_objects[83].push(OBJ_BUS);
-                        let mut out =
-                            vec!["As the bus approaches, the gate opens and you drive through.".into()];
+                        let mut out = vec![
+                            "As the bus approaches, the gate opens and you drive through.".into(),
+                        ];
                         out.extend(self.enter(83));
                         out
                     }
@@ -354,7 +356,10 @@ impl Game {
         if !self.inventory.is_empty() && self.inven_weight() + OBJ_LBS[num as usize] > MAX_WEIGHT {
             return "Your load would be too heavy.".into();
         }
-        let pos = self.room_objects[self.room].iter().position(|&o| o == num).unwrap();
+        let pos = self.room_objects[self.room]
+            .iter()
+            .position(|&o| o == num)
+            .unwrap();
         self.room_objects[self.room].remove(pos);
         self.inventory.push(num);
         if num == OBJ_TOWEL && self.room == RED_ROOM {
@@ -421,7 +426,10 @@ impl Game {
             }
             self.remove_from_inventory(OBJ_KEY);
             self.room_objects[COMPUTER_ROOM].push(OBJ_KEY);
-            if let Some(p) = self.room_objects[self.room].iter().position(|&o| o == OBJ_BOX) {
+            if let Some(p) = self.room_objects[self.room]
+                .iter()
+                .position(|&o| o == OBJ_BOX)
+            {
                 self.room_objects[self.room].remove(p);
             }
             self.key_level += 1;
@@ -762,12 +770,19 @@ impl Component for Dunnet {
             if s.chars().count() > width {
                 s = s.chars().take(width).collect();
             }
-            let style = if line.starts_with('>') { cmd_style } else { text_style };
+            let style = if line.starts_with('>') {
+                cmd_style
+            } else {
+                text_style
+            };
             surface.set_string(ox, area.y + i as u16, &s, style);
         }
         let mut prompt = format!("> {}", self.input);
         if prompt.chars().count() > width {
-            prompt = prompt.chars().skip(prompt.chars().count() - width).collect();
+            prompt = prompt
+                .chars()
+                .skip(prompt.chars().count() - width)
+                .collect();
         }
         surface.set_string(ox, input_y, &prompt, prompt_style);
     }
@@ -867,7 +882,10 @@ mod tests {
         g.room = 5;
         let dir = MAP[5].iter().position(|&d| d == 255).unwrap();
         // Without the key it refuses; with the key you enter room 8.
-        assert_eq!(g.go(dir), vec!["You don't have a key that can open this door.".to_string()]);
+        assert_eq!(
+            g.go(dir),
+            vec!["You don't have a key that can open this door.".to_string()]
+        );
         g.inventory.push(OBJ_KEY);
         g.go(dir);
         assert_eq!(g.room, 8);
@@ -880,7 +898,10 @@ mod tests {
         let dir = MAP[32].iter().position(|&d| d == 255).unwrap();
         g.go(dir);
         assert!(g.awaiting_combo);
-        assert_eq!(g.command("000"), vec!["Sorry, that combination is incorrect.".to_string()]);
+        assert_eq!(
+            g.command("000"),
+            vec!["Sorry, that combination is incorrect.".to_string()]
+        );
         // Correct combo enters the gamma computing center (room 57).
         g.room = 32;
         g.go(dir);
@@ -920,8 +941,14 @@ mod tests {
         let msg = g.put("key", "box");
         assert!(msg.contains("explodes"));
         assert_eq!(g.key_level, before + 1);
-        assert!(!g.inventory.contains(&OBJ_KEY), "key vanished from inventory");
-        assert!(g.room_objects[COMPUTER_ROOM].contains(&OBJ_KEY), "key reappears in computer room");
+        assert!(
+            !g.inventory.contains(&OBJ_KEY),
+            "key vanished from inventory"
+        );
+        assert!(
+            g.room_objects[COMPUTER_ROOM].contains(&OBJ_KEY),
+            "key reappears in computer room"
+        );
     }
 
     #[test]
@@ -986,10 +1013,16 @@ mod tests {
         // No axe -> refuse.
         g.inventory = vec![0];
         g.room_objects[g.room] = vec![7];
-        assert_eq!(g.break_obj("diamond"), vec!["You have nothing you can use to break things.".to_string()]);
+        assert_eq!(
+            g.break_obj("diamond"),
+            vec!["You have nothing you can use to break things.".to_string()]
+        );
         // With the axe, breaking a held object is fatal.
         g.inventory = vec![14, 7];
-        assert!(g.break_obj("diamond").iter().any(|l| l.contains("bleed to death")));
+        assert!(g
+            .break_obj("diamond")
+            .iter()
+            .any(|l| l.contains("bleed to death")));
         assert!(g.dead.is_some());
         // With the axe, a regular object in the room is destroyed.
         let mut g = Game::new();

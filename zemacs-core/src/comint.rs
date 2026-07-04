@@ -473,7 +473,10 @@ mod tests {
         assert_eq!(last_argument("git commit -m msg"), Some("msg"));
         assert_eq!(last_argument("ls"), Some("ls"));
         assert_eq!(last_argument("   "), None);
-        assert_eq!(all_arguments("git commit -m msg"), Some("commit -m msg".into()));
+        assert_eq!(
+            all_arguments("git commit -m msg"),
+            Some("commit -m msg".into())
+        );
         assert_eq!(all_arguments("ls"), None);
     }
 
@@ -489,7 +492,10 @@ mod tests {
             Some("cargo build --release".into())
         );
         assert_eq!(expand_history("run !$", &r), Some("run --release".into()));
-        assert_eq!(expand_history("echo !*", &r), Some("echo build --release".into()));
+        assert_eq!(
+            expand_history("echo !*", &r),
+            Some("echo build --release".into())
+        );
         assert_eq!(expand_history("!-2", &r), Some("git status".into()));
         assert_eq!(expand_history("!git", &r), Some("git status".into()));
         // No designator -> None (unchanged).

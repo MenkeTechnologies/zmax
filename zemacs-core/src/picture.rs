@@ -112,7 +112,11 @@ impl Canvas {
 
     /// The character at `(r, c)`, or a space if out of bounds.
     pub fn get(&self, r: usize, c: usize) -> char {
-        self.grid.get(r).and_then(|row| row.get(c)).copied().unwrap_or(' ')
+        self.grid
+            .get(r)
+            .and_then(|row| row.get(c))
+            .copied()
+            .unwrap_or(' ')
     }
 
     /// Set the drawing direction (Emacs `picture-set-motion` family).
@@ -122,10 +126,7 @@ impl Canvas {
 
     /// Move the cursor to `(r, c)`, clamped inside the grid.
     pub fn move_to(&mut self, r: usize, c: usize) {
-        self.cursor = (
-            r.min(self.height() - 1),
-            c.min(self.width() - 1),
-        );
+        self.cursor = (r.min(self.height() - 1), c.min(self.width() - 1));
     }
 
     /// Advance the cursor one step in the current direction, clamped to the grid
@@ -151,7 +152,13 @@ impl Canvas {
 
     /// Normalize a corner pair into `(r0, c0, r1, c1)` with `r0 <= r1`,
     /// `c0 <= c1`, all clamped to the grid.
-    fn normalize(&self, r0: usize, c0: usize, r1: usize, c1: usize) -> (usize, usize, usize, usize) {
+    fn normalize(
+        &self,
+        r0: usize,
+        c0: usize,
+        r1: usize,
+        c1: usize,
+    ) -> (usize, usize, usize, usize) {
         let h = self.height() - 1;
         let w = self.width() - 1;
         (
@@ -264,7 +271,12 @@ pub fn clear_columns(line: &str, col: usize, n: usize) -> String {
 /// corner at `(line, col)`, *overwriting* the cells it covers (unlike the
 /// insert-and-shift [`crate` rectangle yank](crate)). Rows past the buffer's end
 /// are appended; lines shorter than the target column are padded with spaces.
-pub fn overlay_rectangle(lines: &[String], line: usize, col: usize, rect: &[String]) -> Vec<String> {
+pub fn overlay_rectangle(
+    lines: &[String],
+    line: usize,
+    col: usize,
+    rect: &[String],
+) -> Vec<String> {
     let mut out: Vec<String> = lines.to_vec();
     for (i, piece) in rect.iter().enumerate() {
         let target = line + i;
@@ -294,8 +306,16 @@ mod tests {
         assert_eq!(advance(2, 3, Dir::E, 1), (2, 4), "east adds a column");
         assert_eq!(advance(2, 3, Dir::W, 2), (2, 1), "west subtracts columns");
         assert_eq!(advance(0, 0, Dir::NW, 1), (0, 0), "clamped at the corner");
-        assert_eq!(advance(1, 1, Dir::SE, 3), (4, 4), "diagonal steps scale by n");
-        assert_eq!(advance(0, 5, Dir::N, 4), (0, 5), "north clamps the row at 0");
+        assert_eq!(
+            advance(1, 1, Dir::SE, 3),
+            (4, 4),
+            "diagonal steps scale by n"
+        );
+        assert_eq!(
+            advance(0, 5, Dir::N, 4),
+            (0, 5),
+            "north clamps the row at 0"
+        );
     }
 
     #[test]
@@ -305,7 +325,16 @@ mod tests {
         assert_eq!(Dir::NE.reverse(), Dir::SW);
         assert_eq!(Dir::SE.reverse(), Dir::NW);
         // Reversing twice is the identity.
-        for d in [Dir::N, Dir::S, Dir::E, Dir::W, Dir::NE, Dir::NW, Dir::SE, Dir::SW] {
+        for d in [
+            Dir::N,
+            Dir::S,
+            Dir::E,
+            Dir::W,
+            Dir::NE,
+            Dir::NW,
+            Dir::SE,
+            Dir::SW,
+        ] {
             assert_eq!(d.reverse().reverse(), d);
         }
     }
@@ -332,14 +361,21 @@ mod tests {
     #[test]
     fn clear_columns_overwrites_in_place() {
         assert_eq!(clear_columns("abcdef", 1, 2), "a  def", "b,c become spaces");
-        assert_eq!(clear_columns("ab", 1, 2), "a  ", "short line padded then blanked");
+        assert_eq!(
+            clear_columns("ab", 1, 2),
+            "a  ",
+            "short line padded then blanked"
+        );
         assert_eq!(clear_columns("xyz", 0, 1), " yz");
     }
 
     #[test]
     fn overlay_rectangle_overwrites_not_inserts() {
         let lines = vec!["abcdef".to_string()];
-        assert_eq!(overlay_rectangle(&lines, 0, 2, &["XX".to_string()]), vec!["abXXef"]);
+        assert_eq!(
+            overlay_rectangle(&lines, 0, 2, &["XX".to_string()]),
+            vec!["abXXef"]
+        );
 
         // Multi-row, padding a short second line and appending a third.
         let lines = vec!["abcdef".to_string(), "gh".to_string()];
@@ -458,7 +494,11 @@ mod tests {
         for ch in "yo".chars() {
             c.put_char(ch);
         }
-        assert_eq!(c.to_string(), "hi\nyo\n", "trailing blank cells and rows trim to empty lines");
+        assert_eq!(
+            c.to_string(),
+            "hi\nyo\n",
+            "trailing blank cells and rows trim to empty lines"
+        );
     }
 
     #[test]

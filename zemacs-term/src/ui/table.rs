@@ -211,7 +211,13 @@ impl Component for TableEditor {
                 for _ in 0..pad {
                     disp.push(' ');
                 }
-                surface.set_stringn(area.x + self.cell_x_offset(self.col), cy, &disp, w, sel_style);
+                surface.set_stringn(
+                    area.x + self.cell_x_offset(self.col),
+                    cy,
+                    &disp,
+                    w,
+                    sel_style,
+                );
             }
         }
 

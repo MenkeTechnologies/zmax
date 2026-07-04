@@ -35,7 +35,9 @@ impl Board {
         let mut cells = vec![vec![None; COLS]; ROWS];
         for row in cells.iter_mut() {
             for cell in row.iter_mut() {
-                s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                s = s
+                    .wrapping_mul(6364136223846793005)
+                    .wrapping_add(1442695040888963407);
                 *cell = Some(((s >> 40) % COLORS as u64) as u8);
             }
         }
@@ -54,7 +56,10 @@ impl Board {
         seen[r][c] = true;
         while let Some((y, x)) = stack.pop() {
             out.push((y, x));
-            let push = |ny: usize, nx: usize, stack: &mut Vec<(usize, usize)>, seen: &mut Vec<Vec<bool>>| {
+            let push = |ny: usize,
+                        nx: usize,
+                        stack: &mut Vec<(usize, usize)>,
+                        seen: &mut Vec<Vec<bool>>| {
                 if !seen[ny][nx] && self.cells[ny][nx] == Some(color) {
                     seen[ny][nx] = true;
                     stack.push((ny, nx));
@@ -240,7 +245,11 @@ impl Component for Bubbles {
                     Some(col) => (glyphs[col as usize], palette[col as usize]),
                     None => ('·', empty_style),
                 };
-                let style = if self.cur == (r, c) { cursor_style } else { style };
+                let style = if self.cur == (r, c) {
+                    cursor_style
+                } else {
+                    style
+                };
                 let mut buf = [0u8; 4];
                 surface.set_string(x, y, glyph.encode_utf8(&mut buf), style);
             }
@@ -292,7 +301,7 @@ mod tests {
         let mut b = board_from(&["1.", "1."]);
         assert_eq!(b.pop(0, 0), 2);
         assert_eq!(b.score, 1); // (2-1)^2
-        // Board emptied and collapsed.
+                                // Board emptied and collapsed.
         assert_eq!(b.remaining(), 0);
     }
 

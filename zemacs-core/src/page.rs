@@ -79,7 +79,10 @@ pub fn page_bounds(text: &str, cursor: usize) -> (usize, usize) {
 pub fn page_and_line(text: &str, cursor: usize) -> (usize, usize) {
     let chars: Vec<char> = text.chars().collect();
     let c = cursor.min(chars.len());
-    let page = 1 + chars[..c].iter().filter(|&&ch| ch == PAGE_DELIMITER).count();
+    let page = 1 + chars[..c]
+        .iter()
+        .filter(|&&ch| ch == PAGE_DELIMITER)
+        .count();
     let (start, _) = page_bounds(text, c);
     let line = 1 + chars[start..c].iter().filter(|&&ch| ch == '\n').count();
     (page, line)
