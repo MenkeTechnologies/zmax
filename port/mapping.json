@@ -20354,6 +20354,94 @@
   "note": "kmacro-end-macro = record_macro (start/stop toggle)."
  },
  {
+  "spec_id": "emacs.command.kmacro_name_last_macro",
+  "status": "ported",
+  "evidence": [
+   "static:kmacro_name_last_macro"
+  ],
+  "note": "Prompts for a name, stores name->keys in a process-global registry (zemacs_core::kmacro), and makes the name resolve through MappableCommand::from_str so it can be bound to a key and replayed. Not shown in the command palette because zemacs macro replay must be triggered from the main key loop (deferred callbacks are dropped in the palette)."
+ },
+ {
+  "spec_id": "emacs.command.insert_kbd_macro",
+  "status": "ported",
+  "evidence": [
+   "static:insert_kbd_macro"
+  ],
+  "note": "Inserts a textual (fset 'last-kbd-macro (kmacro \"KEYS\")) definition of the last macro at point via zemacs_core::kmacro::format_kbd_macro_definition. KEYS is zemacs's key-string (round-trips through parse_macro), not Emacs format-kbd-macro spelling; inserts the last macro rather than prompting for a name."
+ },
+ {
+  "spec_id": "emacs.command.apply_macro_to_region_lines",
+  "status": "ported",
+  "evidence": [
+   "static:apply_macro_to_region_lines"
+  ],
+  "note": "Runs the last kbd macro once at the start of each line in the primary selection, feeding keys through the compositor. Recomputes each line start from line number rather than using Emacs markers, so a macro that changes the line count can drift; in-place per-line edits (the common case) work."
+ },
+ {
+  "spec_id": "emacs.command.kmacro_end_or_call_macro",
+  "status": "ported",
+  "evidence": [
+   "static:kmacro_end_or_call_macro"
+  ],
+  "note": "F4: if recording, ends the recording (record_macro); otherwise replays the last macro count times through the compositor."
+ },
+ {
+  "spec_id": "emacs.command.kmacro_end_or_call_macro_repeat",
+  "status": "partial",
+  "evidence": [
+   "static:kmacro_end_or_call_macro_repeat"
+  ],
+  "note": "Same end-or-call behaviour as kmacro-end-or-call-macro; the sticky 'press the last key again to repeat' loop is not implemented, so it is functionally the non-repeat command."
+ },
+ {
+  "spec_id": "emacs.command.edit_kbd_macro",
+  "status": "partial",
+  "evidence": [
+   "static:kmacro_edit_macro"
+  ],
+  "note": "Opens the last macro's key-string in a minibuffer prompt; on accept it re-parses and stores the edited keys as the last macro. Uses a one-line minibuffer editor, not Emacs's dedicated *Edit Macro* buffer with its annotated per-key layout."
+ },
+ {
+  "spec_id": "emacs.command.kmacro_edit_macro",
+  "status": "partial",
+  "evidence": [
+   "static:kmacro_edit_macro"
+  ],
+  "note": "Edits the last macro's keys in a minibuffer prompt and re-parses on accept (shared with edit-kbd-macro). Not the full *Edit Macro* buffer."
+ },
+ {
+  "spec_id": "emacs.command.kmacro_step_edit_macro",
+  "status": "partial",
+  "evidence": [
+   "static:kmacro_step_edit_macro"
+  ],
+  "note": "Opens the whole macro for editing like kmacro-edit-macro; per-key step-through prompting (insert/skip/replace each action) is not implemented."
+ },
+ {
+  "spec_id": "emacs.command.kmacro_edit_lossage",
+  "status": "partial",
+  "evidence": [
+   "static:kmacro_edit_lossage"
+  ],
+  "note": "Builds a macro key-string from the recent-key ring (last_keys, dropping the invoking key) and opens it in the macro editor. The recent-key ring is bounded and the reconstruction is not guaranteed to be a clean replayable macro."
+ },
+ {
+  "spec_id": "emacs.command.kmacro_bind_to_key",
+  "status": "partial",
+  "evidence": [
+   "static:kmacro_bind_to_key"
+  ],
+  "note": "Prompts for a key and reports the exact config line ([keys.normal] \"key\" = \"@KEYS\") to bind the last macro. zemacs cannot mutate the live keymap at runtime (the keymap is read-only ArcSwap behind DynAccess), so it does not install the binding itself."
+ },
+ {
+  "spec_id": "emacs.command.kmacro_redisplay",
+  "status": "partial",
+  "evidence": [
+   "static:kmacro_redisplay"
+  ],
+  "note": "No-op: zemacs redraws every frame, so there is no separate mid-macro redisplay to force. Reports itself rather than doing work."
+ },
+ {
   "spec_id": "emacs.command.enlarge_window_horizontally",
   "status": "ported",
   "evidence": [
