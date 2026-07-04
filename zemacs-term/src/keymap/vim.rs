@@ -1329,6 +1329,19 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "r" => dap_restart,                // SPC d r : restart session
                 "v" => dap_variables,              // SPC d v : list variables
                 "q" => dap_terminate,              // SPC d q : end debug session
+                "g" => { "GDB data buffers"
+                    "l" => gdb_display_locals_buffer,      // SPC d g l : locals buffer
+                    "r" => gdb_display_registers_buffer,   // SPC d g r : registers buffer
+                    "s" => gdb_display_stack_for_thread,   // SPC d g s : stack for thread
+                    "d" => gdb_display_disassembly_buffer, // SPC d g d : disassembly buffer
+                    "m" => gdb_display_memory_buffer,      // SPC d g m : memory buffer
+                    "i" => gdb_display_io_buffer,          // SPC d g i : inferior IO buffer
+                    "e" => gdb_edit_value,                 // SPC d g e : edit value
+                    "k" => gdb_delete_breakpoint,          // SPC d g k : delete breakpoint
+                    "t" => dap_switch_thread,              // SPC d g t : select thread
+                    "f" => dap_switch_stack_frame,         // SPC d g f : select frame
+                    "w" => gdb_many_windows,               // SPC d g w : many windows
+                },
             },
             "*" => global_search_symbol,           // SPC * : search with default input (symbol at point)
             // Window-by-number (window-numbering-mode): SPC 1..9 jump to window N.

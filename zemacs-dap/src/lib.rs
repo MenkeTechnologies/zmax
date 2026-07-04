@@ -1,4 +1,5 @@
 mod client;
+pub mod gud_view;
 pub mod registry;
 mod transport;
 
