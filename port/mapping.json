@@ -28461,7 +28461,7 @@
   "evidence": [
    "key:bufmenu:I"
   ],
-  "note": "Buffer-menu-toggle-internal -> I toggles showing internal (space-prefixed / *…* special) buffers; the filter is faithful but zemacs does not create Emacs-style internal buffers, so in practice it reveals nothing"
+  "note": "Buffer-menu-toggle-internal -> I toggles showing internal (space-prefixed / *\u2026* special) buffers; the filter is faithful but zemacs does not create Emacs-style internal buffers, so in practice it reveals nothing"
  },
  {
   "spec_id": "emacs.keybinding.ret_lparenbuffer_menu_rparen",
@@ -33488,5 +33488,173 @@
    "key:insert:A-j"
   ],
   "note": "default-indent-new-line (M-j): break line at point and continue the comment, aligning the continuation under the current comment (comment-indent-new-line in-comment path); newline-and-indent when not in a comment."
+ },
+ {
+  "spec_id": "emacs.command.c_beginning_of_defun",
+  "status": "ported",
+  "evidence": [
+   "static:c_beginning_of_defun"
+  ],
+  "note": "Move to the start of the function at point via the tree-sitter `function` text object (like mark-defun's Around object)."
+ },
+ {
+  "spec_id": "emacs.command.c_end_of_defun",
+  "status": "ported",
+  "evidence": [
+   "static:c_end_of_defun"
+  ],
+  "note": "Move to the end of the function at point via the tree-sitter `function` text object."
+ },
+ {
+  "spec_id": "emacs.command.c_mark_function",
+  "status": "ported",
+  "evidence": [
+   "static:c_mark_function"
+  ],
+  "note": "Select the whole function around point via the tree-sitter `function` text object."
+ },
+ {
+  "spec_id": "emacs.command.c_beginning_of_statement",
+  "status": "ported",
+  "evidence": [
+   "static:c_beginning_of_statement"
+  ],
+  "note": "Move to the first token of the C statement at point; pure `;`/`{`/`}`-delimited scan in zemacs_core::cmode, unit tested. Does not parse string/comment contents (documented limitation matching the common case)."
+ },
+ {
+  "spec_id": "emacs.command.c_end_of_statement",
+  "status": "ported",
+  "evidence": [
+   "static:c_end_of_statement"
+  ],
+  "note": "Move just past the next `;`/`{`/`}` ending the statement at point; pure scan in zemacs_core::cmode, unit tested (same string/comment limitation)."
+ },
+ {
+  "spec_id": "emacs.command.c_forward_conditional",
+  "status": "ported",
+  "evidence": [
+   "static:c_forward_conditional"
+  ],
+  "note": "Move forward across the following #if/#endif preprocessor conditional; depth-counting port of c-scan-conditionals core in zemacs_core::cmode, unit tested (nested + enclosing cases)."
+ },
+ {
+  "spec_id": "emacs.command.c_backward_conditional",
+  "status": "ported",
+  "evidence": [
+   "static:c_backward_conditional"
+  ],
+  "note": "Move backward across the preceding preprocessor conditional; mirror depth-counter in zemacs_core::cmode, unit tested."
+ },
+ {
+  "spec_id": "emacs.command.c_up_conditional",
+  "status": "ported",
+  "evidence": [
+   "static:c_up_conditional"
+  ],
+  "note": "Move up out of the containing preprocessor conditional (skips balanced siblings, honours a numeric prefix for levels); pure up_conditional in zemacs_core::cmode, unit tested."
+ },
+ {
+  "spec_id": "emacs.command.c_indent_line_or_region",
+  "status": "ported",
+  "evidence": [
+   "static:c_indent_line_or_region"
+  ],
+  "note": "Re-indent the current line or every selected line to the tree-sitter indentation (reuses zemacs_core::indent::indent_for_newline per line)."
+ },
+ {
+  "spec_id": "emacs.command.c_indent_defun",
+  "status": "ported",
+  "evidence": [
+   "static:c_indent_defun"
+  ],
+  "note": "Re-indent every line of the function at point (tree-sitter `function` object bounds + per-line tree-sitter reindent)."
+ },
+ {
+  "spec_id": "emacs.command.c_ts_mode_indent_defun",
+  "status": "ported",
+  "evidence": [
+   "static:c_ts_mode_indent_defun"
+  ],
+  "note": "c-ts-mode variant of c-indent-defun: re-indent the whole function at point via the tree-sitter indent query."
+ },
+ {
+  "spec_id": "emacs.command.c_indent_exp",
+  "status": "ported",
+  "evidence": [
+   "static:c_indent_exp"
+  ],
+  "note": "Re-indent the balanced { } expression at/after point (brace-match to find the range, then per-line tree-sitter reindent)."
+ },
+ {
+  "spec_id": "emacs.command.c_fill_paragraph",
+  "status": "ported",
+  "evidence": [
+   "static:c_fill_paragraph"
+  ],
+  "note": "Fill the // or * comment block around point to text-width, reusing the block's comment prefix; pure fill_c_comment in zemacs_core::cmode, unit tested. Does not re-synthesise /* */ delimiters (fills interior body lines)."
+ },
+ {
+  "spec_id": "emacs.command.c_backslash_region",
+  "status": "ported",
+  "evidence": [
+   "static:c_backslash_region"
+  ],
+  "note": "Align trailing backslash line-continuations in the region to a common column (c-backslash-column 48 / max 72), or remove them with a numeric prefix; pure align/remove/column helpers in zemacs_core::cmode, unit tested."
+ },
+ {
+  "spec_id": "emacs.command.c_context_line_break",
+  "status": "ported",
+  "evidence": [
+   "static:c_context_line_break"
+  ],
+  "note": "Break the line at point: continue a // or * comment prefix, or append a `\\` continuation inside a multi-line macro, else a plain indented newline; pure prefix/in_cpp_macro helpers in zemacs_core::cmode, unit tested."
+ },
+ {
+  "spec_id": "emacs.command.c_toggle_auto_newline",
+  "status": "partial",
+  "evidence": [
+   "static:c_toggle_auto_newline"
+  ],
+  "note": "Toggles and reports the auto-newline flag, but zemacs has no live cc-mode electric insertion, so no automatic newlines are inserted (flag only)."
+ },
+ {
+  "spec_id": "emacs.command.c_toggle_hungry_state",
+  "status": "partial",
+  "evidence": [
+   "static:c_toggle_hungry_state"
+  ],
+  "note": "Toggles and reports the hungry-delete flag; the c-hungry-delete-* commands already work explicitly regardless of this flag (no live DEL/Backspace remap)."
+ },
+ {
+  "spec_id": "emacs.command.c_toggle_electric_state",
+  "status": "partial",
+  "evidence": [
+   "static:c_toggle_electric_state"
+  ],
+  "note": "Toggles and reports the electric flag, but zemacs has no live cc-mode electric machinery (flag only)."
+ },
+ {
+  "spec_id": "emacs.command.c_show_syntactic_information",
+  "status": "partial",
+  "evidence": [
+   "static:c_show_syntactic_information"
+  ],
+  "note": "Reports the tree-sitter node kind at point and the enclosing node stack; not cc-mode's own syntactic-analysis symbols (statement-cont, arglist-intro, ...), which need CC Mode's parser."
+ },
+ {
+  "spec_id": "emacs.command.c_macro_expand",
+  "status": "partial",
+  "evidence": [
+   "static:c_macro_expand"
+  ],
+  "note": "Expands the region by shelling out to `cpp -P` and shows the result in a scratch buffer; requires a cpp on PATH, there is no in-process preprocessor."
+ },
+ {
+  "spec_id": "emacs.command.c_set_style",
+  "status": "partial",
+  "evidence": [
+   "static:c_set_style"
+  ],
+  "note": "Reports the current tree-sitter indentation style/width; zemacs has no cc-mode style engine (gnu/k&r/bsd/... named styles) to select."
  }
 ]
