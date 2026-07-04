@@ -632,6 +632,40 @@ impl MappableCommand {
         diary_insert_entry, "Add a diary entry for today (emacs diary-insert-entry)",
         diary_insert_weekly_entry, "Add a weekly diary entry for today (emacs diary-insert-weekly-entry)",
         diary_mark_entries, "Mark calendar dates that have diary entries (emacs diary-mark-entries)",
+        calendar_print_other_dates, "Report today's date in all other calendars (emacs calendar-print-other-dates)",
+        calendar_julian_print_date, "Today's Julian (Roman) calendar date (emacs calendar-julian-print-date)",
+        calendar_iso_print_date, "Today's ISO 8601 week date (emacs calendar-iso-print-date)",
+        calendar_hebrew_print_date, "Today's Hebrew calendar date (emacs calendar-hebrew-print-date)",
+        calendar_islamic_print_date, "Today's Islamic calendar date (emacs calendar-islamic-print-date)",
+        calendar_persian_print_date, "Today's Persian calendar date (emacs calendar-persian-print-date)",
+        calendar_coptic_print_date, "Today's Coptic calendar date (emacs calendar-coptic-print-date)",
+        calendar_ethiopic_print_date, "Today's Ethiopic calendar date (emacs calendar-ethiopic-print-date)",
+        calendar_french_print_date, "Today's French Revolutionary date (emacs calendar-french-print-date)",
+        calendar_bahai_print_date, "Today's Baha'i date, approx (emacs calendar-bahai-print-date)",
+        calendar_astro_print_day_number, "Astronomical (Julian) day number (emacs calendar-astro-print-day-number)",
+        calendar_mayan_print_date, "Today's Mayan date (emacs calendar-mayan-print-date)",
+        calendar_day_of_year, "Day-of-year of today (emacs calendar-day-of-year)",
+        calendar_goto_day_of_year, "Echo the date for a day-of-year (emacs calendar-goto-day-of-year)",
+        calendar_count_days_region, "Count days between two dates (emacs calendar-count-days-region)",
+        calendar_list_holidays, "List this year's holidays (emacs calendar-list-holidays)",
+        holidays, "List this year's holidays (emacs holidays)",
+        holiday_list, "List this year's holidays (emacs holiday-list)",
+        list_holidays, "List this year's holidays (emacs list-holidays)",
+        calendar_lunar_phases, "This month's moon phases, approx (emacs calendar-lunar-phases)",
+        calendar_sunrise_sunset, "Sunrise/sunset today, approx (emacs calendar-sunrise-sunset)",
+        calendar_other_month, "Open the Calendar at another month (emacs calendar-other-month)",
+        calendar_set_date_style, "Cycle american/european/iso date style (emacs calendar-set-date-style)",
+        calendar_hebrew_goto_date, "Echo Gregorian for a Hebrew date (emacs calendar-hebrew-goto-date)",
+        calendar_islamic_goto_date, "Echo Gregorian for an Islamic date (emacs calendar-islamic-goto-date)",
+        calendar_julian_goto_date, "Echo Gregorian for a Julian date (emacs calendar-julian-goto-date)",
+        calendar_iso_goto_week, "Echo Gregorian for an ISO week date (emacs calendar-iso-goto-week)",
+        calendar_persian_goto_date, "Echo Gregorian for a Persian date (emacs calendar-persian-goto-date)",
+        calendar_coptic_goto_date, "Echo Gregorian for a Coptic date (emacs calendar-coptic-goto-date)",
+        calendar_ethiopic_goto_date, "Echo Gregorian for an Ethiopic date (emacs calendar-ethiopic-goto-date)",
+        calendar_french_goto_date, "Echo Gregorian for a French Revolutionary date (emacs calendar-french-goto-date)",
+        calendar_bahai_goto_date, "Echo Gregorian for a Baha'i date (emacs calendar-bahai-goto-date)",
+        calendar_astro_goto_day_number, "Echo Gregorian for an astro day number (emacs calendar-astro-goto-day-number)",
+        calendar_mayan_goto_long_count, "Echo Gregorian for a Mayan long count (emacs calendar-mayan-goto-long-count)",
         calc_dispatch, "Open the RPN Calc stack calculator (emacs calc / C-x *)",
         occur, "List lines matching a regexp in an *Occur* overlay (emacs occur / M-s o)",
         rmail, "Open the Rmail mail reader on ~/RMAIL (emacs rmail)",
@@ -13533,6 +13567,548 @@ fn diary_mark_entries(cx: &mut Context) {
         zemacs_core::calendar::MONTH_NAMES[(today.month - 1) as usize],
         today.year
     ));
+}
+
+// ---------------------------------------------------------------------------
+// Emacs "other calendars" + date-info commands (cal-julian / cal-hebrew /
+// cal-islam / cal-persia / cal-coptic / cal-french / cal-bahai / cal-mayan,
+// plus holidays / lunar / solar). Standalone (outside the Calendar grid) these
+// operate on today's date; the pure, unit-tested conversions live in
+// zemacs_core::calendar. The `*-goto-date` variants read the other-calendar
+// date in the minibuffer and report the Gregorian equivalent (in the open
+// Calendar grid the goto keys move point instead).
+// ---------------------------------------------------------------------------
+
+/// The Gregorian date these standalone commands report on: today.
+fn cal_point() -> zemacs_core::calendar::Date {
+    diary_today()
+}
+
+/// `calendar-julian-print-date`: today's date on the Julian (Roman) calendar.
+fn calendar_julian_print_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Julian date: {}",
+        zemacs_core::calendar::julian_string(cal_point())
+    ));
+}
+
+/// `calendar-iso-print-date`: today's ISO 8601 week date.
+fn calendar_iso_print_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "ISO date: {}",
+        zemacs_core::calendar::iso_string(cal_point())
+    ));
+}
+
+/// `calendar-hebrew-print-date`: today's date on the Hebrew calendar.
+fn calendar_hebrew_print_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Hebrew date (before sunset): {}",
+        zemacs_core::calendar::hebrew_string(cal_point())
+    ));
+}
+
+/// `calendar-islamic-print-date`: today's date on the Islamic calendar.
+fn calendar_islamic_print_date(cx: &mut Context) {
+    match zemacs_core::calendar::islamic_string(cal_point()) {
+        Some(s) => cx
+            .editor
+            .set_status(format!("Islamic date (before sunset): {s}")),
+        None => cx.editor.set_status("Date is pre-Islamic"),
+    }
+}
+
+/// `calendar-persian-print-date`: today's date on the Persian (Solar Hijri) calendar.
+fn calendar_persian_print_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Persian date: {}",
+        zemacs_core::calendar::persian_string(cal_point())
+    ));
+}
+
+/// `calendar-coptic-print-date`: today's date on the Coptic calendar.
+fn calendar_coptic_print_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Coptic date: {}",
+        zemacs_core::calendar::coptic_string(cal_point())
+    ));
+}
+
+/// `calendar-ethiopic-print-date`: today's date on the Ethiopic calendar.
+fn calendar_ethiopic_print_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Ethiopic date: {}",
+        zemacs_core::calendar::ethiopic_string(cal_point())
+    ));
+}
+
+/// `calendar-french-print-date`: today's date on the French Revolutionary calendar.
+fn calendar_french_print_date(cx: &mut Context) {
+    match zemacs_core::calendar::french_string(cal_point()) {
+        Some(s) => cx
+            .editor
+            .set_status(format!("French Revolutionary date: {s}")),
+        None => cx.editor.set_status("Date is pre-French Revolution"),
+    }
+}
+
+/// `calendar-bahai-print-date`: today's date on the Baha'i calendar (arithmetic
+/// approximation; Emacs uses astronomical Naw-Ruz for years >= 172 BE).
+fn calendar_bahai_print_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Baha'i date (before sunset, approx): {}",
+        zemacs_core::calendar::bahai_string(cal_point())
+    ));
+}
+
+/// `calendar-astro-print-day-number`: the astronomical (Julian) day number at
+/// noon UTC for today.
+fn calendar_astro_print_day_number(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Astronomical (Julian) day number at noon UTC: {}.0",
+        zemacs_core::calendar::astro_day_number(cal_point())
+    ));
+}
+
+/// `calendar-mayan-print-date`: today's date on the Mayan calendar (long count,
+/// tzolkin and haab).
+fn calendar_mayan_print_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Mayan date: {}",
+        zemacs_core::calendar::mayan_string(cal_point())
+    ));
+}
+
+/// `calendar-print-other-dates`: report today's date in every supported other
+/// calendar at once.
+fn calendar_print_other_dates(cx: &mut Context) {
+    let d = cal_point();
+    use zemacs_core::calendar as c;
+    let islamic = c::islamic_string(d).unwrap_or_else(|| "pre-Islamic".into());
+    let french = c::french_string(d).unwrap_or_else(|| "pre-Revolution".into());
+    cx.editor.set_status(format!(
+        "Julian {} · Hebrew {} · Islamic {} · Persian {} · Coptic {} · Ethiopic {} · French {} · Baha'i {} · Astro {} · Mayan {}",
+        c::julian_string(d),
+        c::hebrew_string(d),
+        islamic,
+        c::persian_string(d),
+        c::coptic_string(d),
+        c::ethiopic_string(d),
+        french,
+        c::bahai_string(d),
+        c::astro_day_number(d),
+        c::mayan_string(d),
+    ));
+}
+
+/// `calendar-day-of-year`: report the 1-based day number of today within its year.
+fn calendar_day_of_year(cx: &mut Context) {
+    let d = cal_point();
+    cx.editor.set_status(format!(
+        "Day {} of {}",
+        zemacs_core::calendar::day_of_year(d),
+        d.year
+    ));
+}
+
+/// Read three whitespace/`/`,`-`,`,`-separated integers from `s`.
+fn cal_three_ints(s: &str) -> Option<(i64, i64, i64)> {
+    let nums: Vec<i64> = s
+        .split(|c: char| c == '/' || c == '-' || c == ',' || c.is_whitespace())
+        .filter(|t| !t.is_empty())
+        .filter_map(|t| t.parse::<i64>().ok())
+        .collect();
+    if nums.len() == 3 {
+        Some((nums[0], nums[1], nums[2]))
+    } else {
+        None
+    }
+}
+
+/// `calendar-goto-day-of-year`: prompt for a day-of-year, echo that date in the
+/// current year.
+fn calendar_goto_day_of_year(cx: &mut Context) {
+    let year = cal_point().year;
+    ui::prompt(
+        cx,
+        "Day of year: ".into(),
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let n: i64 = match input.trim().parse() {
+                Ok(n) => n,
+                Err(_) => {
+                    cx.editor.set_error("Not a number");
+                    return;
+                }
+            };
+            let max = if zemacs_core::calendar::is_leap(year) { 366 } else { 365 };
+            if !(1..=max).contains(&n) {
+                cx.editor
+                    .set_error(format!("Day of year must be 1..{max} for {year}"));
+                return;
+            }
+            let d = zemacs_core::calendar::add_days(
+                zemacs_core::calendar::Date::new(year, 1, 1),
+                n - 1,
+            );
+            cx.editor.set_status(format!(
+                "Day {n} of {year} = {} {}, {}",
+                zemacs_core::calendar::MONTH_NAMES[(d.month - 1) as usize],
+                d.day,
+                d.year
+            ));
+        },
+    );
+}
+
+/// `calendar-count-days-region`: prompt for two Gregorian dates and report the
+/// inclusive number of days between them (Emacs counts mark..point in the grid).
+fn calendar_count_days_region(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Count days FROM..TO (Y/M/D Y/M/D): ".into(),
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let nums: Vec<i64> = input
+                .split(|c: char| c == '/' || c == '-' || c == ',' || c.is_whitespace())
+                .filter(|t| !t.is_empty())
+                .filter_map(|t| t.parse::<i64>().ok())
+                .collect();
+            if nums.len() != 6 {
+                cx.editor
+                    .set_error("Need two dates: Y/M/D Y/M/D (six numbers)");
+                return;
+            }
+            let a = zemacs_core::calendar::parse_ymd(&format!("{} {} {}", nums[0], nums[1], nums[2]));
+            let b = zemacs_core::calendar::parse_ymd(&format!("{} {} {}", nums[3], nums[4], nums[5]));
+            match (a, b) {
+                (Some(a), Some(b)) => cx.editor.set_status(format!(
+                    "{} days (inclusive) from {}/{}/{} to {}/{}/{}",
+                    zemacs_core::calendar::count_days(a, b),
+                    a.year, a.month, a.day, b.year, b.month, b.day
+                )),
+                _ => cx.editor.set_error("Invalid date(s)"),
+            }
+        },
+    );
+}
+
+/// `calendar-list-holidays` / `holidays` / `holiday-list` / `list-holidays`:
+/// list the holidays of the current year.
+fn calendar_list_holidays(cx: &mut Context) {
+    let year = cal_point().year;
+    let mut all: Vec<String> = Vec::new();
+    for month in 1..=12u32 {
+        for (day, name) in zemacs_core::calendar::holidays(year, month) {
+            all.push(format!(
+                "{} {} {name}",
+                &zemacs_core::calendar::MONTH_NAMES[(month - 1) as usize][..3],
+                day
+            ));
+        }
+    }
+    if all.is_empty() {
+        cx.editor
+            .set_status(format!("No holidays known for {year}"));
+    } else {
+        cx.editor
+            .set_status(format!("Holidays {year}: {}", all.join(" · ")));
+    }
+}
+
+/// `holidays`: alias for [`calendar_list_holidays`].
+fn holidays(cx: &mut Context) {
+    calendar_list_holidays(cx);
+}
+/// `holiday-list`: alias for [`calendar_list_holidays`].
+fn holiday_list(cx: &mut Context) {
+    calendar_list_holidays(cx);
+}
+/// `list-holidays`: alias for [`calendar_list_holidays`].
+fn list_holidays(cx: &mut Context) {
+    calendar_list_holidays(cx);
+}
+
+/// `calendar-lunar-phases`: list this month's principal moon phases (mean
+/// approximation; Emacs uses a fuller astronomical model).
+fn calendar_lunar_phases(cx: &mut Context) {
+    let d = cal_point();
+    let phases = zemacs_core::calendar::lunar_phases_in_month(d.year, d.month);
+    if phases.is_empty() {
+        cx.editor.set_status("No principal moon phase this month");
+    } else {
+        let listed = phases
+            .iter()
+            .map(|(pd, name)| format!("{name} {}", pd.day))
+            .collect::<Vec<_>>()
+            .join(" · ");
+        cx.editor.set_status(format!(
+            "Lunar phases {} {} (approx): {listed}",
+            zemacs_core::calendar::MONTH_NAMES[(d.month - 1) as usize],
+            d.year
+        ));
+    }
+}
+
+/// `calendar-sunrise-sunset`: sunrise/sunset for today (approximation, for a
+/// default location; Emacs uses the configured `calendar-latitude/longitude`).
+fn calendar_sunrise_sunset(cx: &mut Context) {
+    // Default location: New York City. zemacs has no calendar-latitude yet.
+    const LAT: f64 = 40.7128;
+    const LON: f64 = -74.0060;
+    let d = cal_point();
+    match zemacs_core::calendar::sunrise_sunset_utc(d, LAT, LON) {
+        Some((rise, set)) => cx.editor.set_status(format!(
+            "Sunrise {} UTC, sunset {} UTC at {LAT},{LON} (approx; set calendar-latitude/longitude)",
+            zemacs_core::calendar::format_hm(rise),
+            zemacs_core::calendar::format_hm(set),
+        )),
+        None => cx
+            .editor
+            .set_status("No sunrise/sunset today at the default location (polar day/night)"),
+    }
+}
+
+/// `calendar-other-month`: prompt for a month and year, open the Calendar grid
+/// there.
+fn calendar_other_month(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Month and year (M Y): ".into(),
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let nums: Vec<i64> = input
+                .split(|c: char| c == '/' || c == '-' || c == ',' || c.is_whitespace())
+                .filter(|t| !t.is_empty())
+                .filter_map(|t| t.parse::<i64>().ok())
+                .collect();
+            if nums.len() != 2 || !(1..=12).contains(&nums[0]) {
+                cx.editor.set_error("Need: month (1-12) and year");
+                return;
+            }
+            let d = zemacs_core::calendar::Date::new(nums[1] as i32, nums[0] as u32, 1);
+            let call = crate::job::Callback::EditorCompositor(Box::new(
+                move |_editor, compositor: &mut Compositor| {
+                    compositor.push(Box::new(crate::ui::calendar::Calendar::at(d)));
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        },
+    );
+}
+
+/// The calendar date style (Emacs `calendar-date-style`): how M/D/Y are ordered.
+static CALENDAR_DATE_STYLE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(2);
+
+/// `calendar-set-date-style`: cycle american/european/iso date ordering
+/// (partial: the style is recorded and reported but zemacs's echo output is
+/// already ISO-labelled).
+fn calendar_set_date_style(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let next = (CALENDAR_DATE_STYLE.load(Ordering::Relaxed) + 1) % 3;
+    CALENDAR_DATE_STYLE.store(next, Ordering::Relaxed);
+    let name = match next {
+        0 => "american (month/day/year)",
+        1 => "european (day/month/year)",
+        _ => "iso (year/month/day)",
+    };
+    cx.editor
+        .set_status(format!("Calendar date style: {name}"));
+}
+
+// --- goto-date variants: read an other-calendar date, echo the Gregorian one --
+
+/// Shared prompt for the `*-goto-date` commands: read `year month day` and map
+/// through `conv` (returns an R.D. fixed day number) to a Gregorian date.
+fn cal_goto_other(
+    cx: &mut Context,
+    label: &'static str,
+    conv: fn(i64, u32, u32) -> Option<i64>,
+) {
+    ui::prompt(
+        cx,
+        format!("{label} date (year month day): ").into(),
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let Some((y, m, d)) = cal_three_ints(input) else {
+                cx.editor
+                    .set_error(format!("{label}: need year month day"));
+                return;
+            };
+            if !(1..=32).contains(&m) || !(1..=40).contains(&d) {
+                cx.editor.set_error(format!("{label}: month/day out of range"));
+                return;
+            }
+            match conv(y, m as u32, d as u32) {
+                Some(f) => {
+                    let g = zemacs_core::calendar::from_rd(f);
+                    cx.editor.set_status(format!(
+                        "{label} {y}/{m}/{d} = {} {}, {} (Gregorian)",
+                        zemacs_core::calendar::MONTH_NAMES[(g.month - 1) as usize],
+                        g.day,
+                        g.year
+                    ));
+                }
+                None => cx.editor.set_error(format!("{label}: date out of range")),
+            }
+        },
+    );
+}
+
+fn calendar_hebrew_goto_date(cx: &mut Context) {
+    cal_goto_other(cx, "Hebrew", |y, m, d| {
+        Some(zemacs_core::calendar::fixed_from_hebrew(y, m, d))
+    });
+}
+fn calendar_islamic_goto_date(cx: &mut Context) {
+    cal_goto_other(cx, "Islamic", |y, m, d| {
+        Some(zemacs_core::calendar::fixed_from_islamic(y, m, d))
+    });
+}
+fn calendar_julian_goto_date(cx: &mut Context) {
+    cal_goto_other(cx, "Julian", |y, m, d| {
+        Some(zemacs_core::calendar::fixed_from_julian(y as i32, m, d))
+    });
+}
+fn calendar_persian_goto_date(cx: &mut Context) {
+    cal_goto_other(cx, "Persian", |y, m, d| {
+        Some(zemacs_core::calendar::fixed_from_persian(y, m, d))
+    });
+}
+fn calendar_coptic_goto_date(cx: &mut Context) {
+    cal_goto_other(cx, "Coptic", |y, m, d| {
+        Some(zemacs_core::calendar::fixed_from_coptic(y as i32, m, d))
+    });
+}
+fn calendar_ethiopic_goto_date(cx: &mut Context) {
+    cal_goto_other(cx, "Ethiopic", |y, m, d| {
+        Some(zemacs_core::calendar::fixed_from_ethiopic(y as i32, m, d))
+    });
+}
+fn calendar_french_goto_date(cx: &mut Context) {
+    cal_goto_other(cx, "French", |y, m, d| {
+        Some(zemacs_core::calendar::fixed_from_french(y, m, d))
+    });
+}
+fn calendar_bahai_goto_date(cx: &mut Context) {
+    cal_goto_other(cx, "Baha'i", |y, m, d| {
+        Some(zemacs_core::calendar::fixed_from_bahai(y, m, d))
+    });
+}
+
+/// `calendar-iso-goto-week` / `calendar-iso-goto-date`: read an ISO
+/// `year week weekday` and echo the Gregorian date.
+fn calendar_iso_goto_week(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "ISO year week weekday(1=Mon..7=Sun): ".into(),
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let Some((y, w, dow)) = cal_three_ints(input) else {
+                cx.editor.set_error("Need: year week weekday");
+                return;
+            };
+            if !(1..=53).contains(&w) || !(1..=7).contains(&dow) {
+                cx.editor.set_error("Week must be 1..53, weekday 1..7");
+                return;
+            }
+            let g = zemacs_core::calendar::date_from_iso(y as i32, w as u32, dow as u32);
+            cx.editor.set_status(format!(
+                "ISO {y}-W{w:02}-{dow} = {} {}, {} (Gregorian)",
+                zemacs_core::calendar::MONTH_NAMES[(g.month - 1) as usize],
+                g.day,
+                g.year
+            ));
+        },
+    );
+}
+
+/// `calendar-astro-goto-day-number`: read an astronomical (Julian) day number
+/// and echo the Gregorian date at that noon.
+fn calendar_astro_goto_day_number(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Astronomical (Julian) day number: ".into(),
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let jd: i64 = match input.trim().parse() {
+                Ok(n) => n,
+                Err(_) => {
+                    cx.editor.set_error("Not a number");
+                    return;
+                }
+            };
+            // astro_day_number = to_serial + 2440588; Gregorian = from_serial(jd - 2440588).
+            let g = zemacs_core::calendar::from_serial(jd - 2440588);
+            cx.editor.set_status(format!(
+                "Astro day {jd} = {} {}, {} (Gregorian noon)",
+                zemacs_core::calendar::MONTH_NAMES[(g.month - 1) as usize],
+                g.day,
+                g.year
+            ));
+        },
+    );
+}
+
+/// `calendar-mayan-goto-long-count`: read a Mayan long count `b k t u kin` and
+/// echo the Gregorian date.
+fn calendar_mayan_goto_long_count(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Mayan long count (baktun katun tun uinal kin): ".into(),
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let nums: Vec<i64> = input
+                .split(|c: char| c == '.' || c == ',' || c.is_whitespace())
+                .filter(|t| !t.is_empty())
+                .filter_map(|t| t.parse::<i64>().ok())
+                .collect();
+            if nums.len() != 5 {
+                cx.editor
+                    .set_error("Need five numbers: baktun katun tun uinal kin");
+                return;
+            }
+            let f = zemacs_core::calendar::fixed_from_mayan_long_count(
+                nums[0], nums[1], nums[2], nums[3], nums[4],
+            );
+            let g = zemacs_core::calendar::from_rd(f);
+            cx.editor.set_status(format!(
+                "Long count {}.{}.{}.{}.{} = {} {}, {} (Gregorian)",
+                nums[0], nums[1], nums[2], nums[3], nums[4],
+                zemacs_core::calendar::MONTH_NAMES[(g.month - 1) as usize],
+                g.day,
+                g.year
+            ));
+        },
+    );
 }
 
 /// Emacs `occur` (`M-s o`): read a regexp, then list every line in the current

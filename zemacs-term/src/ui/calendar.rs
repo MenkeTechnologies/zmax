@@ -67,10 +67,14 @@ pub struct Calendar {
 
 impl Calendar {
     pub fn new() -> Self {
-        let today = today();
+        Self::at(today())
+    }
+
+    /// Open the Calendar with point at `date` (Emacs `calendar-other-month`).
+    pub fn at(date: Date) -> Self {
         Calendar {
-            point: today,
-            today,
+            point: date,
+            today: today(),
             diary: crate::commands::diary_entries(),
             input: None,
         }
@@ -243,6 +247,26 @@ impl Component for Calendar {
             key!('p') => {
                 cx.editor
                     .set_status(format!("Day {} of {}", day_of_year(p), p.year));
+                return EventResult::Consumed(None);
+            }
+            key!('a') => {
+                // calendar-print-other-dates: point's date in every other calendar.
+                use zemacs_core::calendar as c;
+                let islamic = c::islamic_string(p).unwrap_or_else(|| "pre-Islamic".into());
+                let french = c::french_string(p).unwrap_or_else(|| "pre-Revolution".into());
+                cx.editor.set_status(format!(
+                    "Julian {} · Hebrew {} · Islamic {} · Persian {} · Coptic {} · Ethiopic {} · French {} · Baha'i {} · Astro {} · Mayan {}",
+                    c::julian_string(p),
+                    c::hebrew_string(p),
+                    islamic,
+                    c::persian_string(p),
+                    c::coptic_string(p),
+                    c::ethiopic_string(p),
+                    french,
+                    c::bahai_string(p),
+                    c::astro_day_number(p),
+                    c::mayan_string(p),
+                ));
                 return EventResult::Consumed(None);
             }
             _ => {}
