@@ -475,6 +475,18 @@ impl Theme {
         self.try_get(scope).unwrap_or_default()
     }
 
+    /// Override the style of a single `scope` at runtime (Emacs
+    /// `set-face-foreground` / `set-face-background`). Updates both the UI-styles
+    /// map consulted by `get` and, when the scope already has a tree-sitter
+    /// highlight index, the parallel `highlights` vector — so both UI chrome and
+    /// syntax rendering reflect the change immediately after `Editor::set_theme`.
+    pub fn set_style(&mut self, scope: String, style: Style) {
+        if let Some(hl) = self.scope_index.get(&scope).copied() {
+            self.highlights[hl.idx()] = style;
+        }
+        self.styles.insert(scope, style);
+    }
+
     /// Get the style of a scope, falling back to dot separated broader
     /// scopes. For example if `ui.text.focus` is not defined in the theme,
     /// `ui.text` is tried and then `ui` is tried.
