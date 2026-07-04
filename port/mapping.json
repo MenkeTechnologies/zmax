@@ -12360,14 +12360,6 @@
   "note": ""
  },
  {
-  "spec_id": "emacs.command.comment_kill",
-  "status": "ported",
-  "evidence": [
-   "static:comment_kill"
-  ],
-  "note": "Kills the comment on the current line (count kills that many lines) to the kill ring = emacs comment-kill; tree-sitter comment node with string-aware line-comment-token fallback."
- },
- {
   "spec_id": "emacs.command.indent_region",
   "status": "ported",
   "evidence": [
@@ -14930,38 +14922,12 @@
   "note": "emacs port (Step B)"
  },
  {
-  "spec_id": "emacs.command.abbrev_prefix_mark",
-  "status": "ported",
-  "evidence": [
-   "static:abbrev_prefix_mark",
-   "key:normal:space x e m"
-  ],
-  "note": "abbrev-prefix-mark (M-'): mark point as the start of an abbrev so the next expand-abbrev treats only the text after the mark as the abbrev, keeping any non-abbrev prefix. Faithful to lisp/abbrev.el: without a prefix arg it first expands any abbrev before point ((or arg (expand-abbrev))), then records the location (abbrev-start-location / ABBREV_START keyed on DocumentId) and inserts a hyphen ((insert \"-\")). expand_abbrev, refactored into abbrev_expand_impl, consults the location via take_abbrev_start and abbrev--before-point's logic: strip the hyphen, take text up to point minus trailing whitespace (abbrev_prefix_split) as the abbrev name, expand it, and remove a dangling hyphen when nothing matches. Bound at SPC x e m."
- },
- {
-  "spec_id": "emacs.command.unexpand_abbrev",
-  "status": "ported",
-  "evidence": [
-   "static:unexpand_abbrev"
-  ],
-  "note": "unexpand-abbrev: undo the last expand-abbrev, replacing the inserted expansion with the original abbrev text and moving point past it, then clearing the saved text so a repeat is a no-op. Faithful to lisp/abbrev.el (last-abbrev / last-abbrev-text / last-abbrev-location recorded by expand_abbrev; unexpand_span helper for the replace span + point-max guard). Bound at SPC x e u."
- },
- {
   "spec_id": "emacs.command.add_global_abbrev",
   "status": "ported",
   "evidence": [
    "static:define_abbrev"
   ],
   "note": "emacs port (Step B)"
- },
- {
-  "spec_id": "emacs.command.inverse_add_global_abbrev",
-  "status": "ported",
-  "evidence": [
-   "static:inverse_add_global_abbrev",
-   "key:insert:C-x a i g"
-  ],
-  "note": "inverse-add-global-abbrev: word before point becomes the abbrev name, prompt for expansion, define in the global table (reuses emacs_abbrev::define + shared abbrev_word_before helper)"
  },
  {
   "spec_id": "functionality.selection.true-rectangle-insert-replace",
@@ -28934,14 +28900,6 @@
   "note": "kmacro-set-format: set the printf format the counter is inserted with (%d, %03d, 0x%x)"
  },
  {
-  "spec_id": "emacs.command.kmacro_end_or_call_macro",
-  "status": "ported",
-  "evidence": [
-   "static:kmacro_end_or_call_macro"
-  ],
-  "note": "kmacro-end-or-call-macro (C-x e / F4): ends the macro if recording, else replays the last macro; bound to F4."
- },
- {
   "spec_id": "emacs.command.flyspell_auto_correct_word",
   "status": "ported",
   "evidence": [
@@ -29060,14 +29018,6 @@
    "static:backward_kill_sentence"
   ],
   "note": "backward-kill-sentence (C-x DEL): kill from start of sentence to point"
- },
- {
-  "spec_id": "emacs.command.append_next_kill",
-  "status": "ported",
-  "evidence": [
-   "static:append_next_kill"
-  ],
-  "note": "append-next-kill (C-M-w): the next kill joins the last kill-ring entry instead of starting a new one (appended for a forward kill, prepended for a backward kill via record_prepend); bound at SPC r a."
  },
  {
   "spec_id": "emacs.command.forward_page",
@@ -29340,222 +29290,6 @@
    "static:gud_watch"
   ],
   "note": "watch expr at point"
- },
- {
-  "spec_id": "emacs.command.comint_kill_input",
-  "status": "ported",
-  "evidence": [
-   "static:comint_kill_input"
-  ],
-  "note": "comint-kill-input (C-c C-u): clears the pending input line via Comint::kill_input"
- },
- {
-  "spec_id": "emacs.command.comint_bol_or_process_mark",
-  "status": "ported",
-  "evidence": [
-   "static:comint_bol_or_process_mark"
-  ],
-  "note": "comint-bol-or-process-mark (C-a): move to process mark / bol, via unit-tested bol_or_process_mark_target"
- },
- {
-  "spec_id": "emacs.command.comint_delchar_or_maybe_eof",
-  "status": "ported",
-  "evidence": [
-   "static:comint_delchar_or_maybe_eof"
-  ],
-  "note": "comint-delchar-or-maybe-eof (C-d): delete char, or close child stdin (EOF) on empty input"
- },
- {
-  "spec_id": "emacs.command.comint_magic_space",
-  "status": "ported",
-  "evidence": [
-   "static:comint_magic_space"
-  ],
-  "note": "comint-magic-space: expand !!/!$/!*/!-N/!str history designators (unit-tested expand_history) then insert a space"
- },
- {
-  "spec_id": "emacs.command.comint_insert_previous_argument",
-  "status": "ported",
-  "evidence": [
-   "static:comint_insert_previous_argument"
-  ],
-  "note": "comint-insert-previous-argument (M-.): insert last arg (!$) of previous command via unit-tested last_argument"
- },
- {
-  "spec_id": "emacs.command.comint_get_next_from_history",
-  "status": "partial",
-  "evidence": [
-   "static:comint_get_next_from_history"
-  ],
-  "note": "comint-get-next-from-history: yanks the next-forward input-ring entry (approximates the post-yank M-n step)"
- },
- {
-  "spec_id": "emacs.command.comint_next_prompt",
-  "status": "partial",
-  "evidence": [
-   "static:comint_next_prompt"
-  ],
-  "note": "comint-next-prompt (C-c C-n): scrolls to the next prompt line; comint scrollback has no separate point so this is a viewport move"
- },
- {
-  "spec_id": "emacs.command.comint_previous_prompt",
-  "status": "partial",
-  "evidence": [
-   "static:comint_previous_prompt"
-  ],
-  "note": "comint-previous-prompt (C-c C-p): scrolls to the previous prompt line (viewport move; no buffer point)"
- },
- {
-  "spec_id": "emacs.command.comint_show_output",
-  "status": "ported",
-  "evidence": [
-   "static:comint_show_output"
-  ],
-  "note": "comint-show-output (C-c C-r): scrolls the start of the last command's output to the top, via unit-tested last_prompt_line"
- },
- {
-  "spec_id": "emacs.command.comint_show_maximum_output",
-  "status": "ported",
-  "evidence": [
-   "static:comint_show_maximum_output"
-  ],
-  "note": "comint-show-maximum-output (C-c C-e): scrolls newest output to the bottom"
- },
- {
-  "spec_id": "emacs.command.comint_delete_output",
-  "status": "ported",
-  "evidence": [
-   "static:comint_delete_output"
-  ],
-  "note": "comint-delete-output (C-c C-o): deletes the last command's output lines via unit-tested last_output_range"
- },
- {
-  "spec_id": "emacs.command.comint_write_output",
-  "status": "ported",
-  "evidence": [
-   "static:comint_write_output"
-  ],
-  "note": "comint-write-output: writes the last command's output (last_output_range) to a prompted file"
- },
- {
-  "spec_id": "emacs.command.comint_copy_old_input",
-  "status": "partial",
-  "evidence": [
-   "static:comint_copy_old_input"
-  ],
-  "note": "comint-copy-old-input (C-c RET): copies the most recent submitted input onto the input line (comint has no buffer point to pick an arbitrary old input)"
- },
- {
-  "spec_id": "emacs.command.comint_truncate_buffer",
-  "status": "ported",
-  "evidence": [
-   "static:comint_truncate_buffer"
-  ],
-  "note": "comint-truncate-buffer: trims scrollback to comint-buffer-maximum-size (1024) keeping the newest lines"
- },
- {
-  "spec_id": "emacs.command.comint_strip_ctrl_m",
-  "status": "ported",
-  "evidence": [
-   "static:comint_strip_ctrl_m"
-  ],
-  "note": "comint-strip-ctrl-m: strips ^M (\\r) from scrollback lines via unit-tested strip_ctrl_m"
- },
- {
-  "spec_id": "emacs.command.comint_interrupt_subjob",
-  "status": "ported",
-  "evidence": [
-   "static:comint_interrupt_subjob"
-  ],
-  "note": "comint-interrupt-subjob (C-c C-c): sends real SIGINT to the child via libc::kill(child.id()) on unix; single direct child (no PTY process group)"
- },
- {
-  "spec_id": "emacs.command.comint_stop_subjob",
-  "status": "ported",
-  "evidence": [
-   "static:comint_stop_subjob"
-  ],
-  "note": "comint-stop-subjob (C-c C-z): sends real SIGTSTP to the child via libc::kill on unix"
- },
- {
-  "spec_id": "emacs.command.comint_continue_subjob",
-  "status": "ported",
-  "evidence": [
-   "static:comint_continue_subjob"
-  ],
-  "note": "comint-continue-subjob: sends real SIGCONT to the child via libc::kill on unix"
- },
- {
-  "spec_id": "emacs.command.comint_quit_subjob",
-  "status": "ported",
-  "evidence": [
-   "static:comint_quit_subjob"
-  ],
-  "note": "comint-quit-subjob: sends real SIGQUIT to the child via libc::kill on unix"
- },
- {
-  "spec_id": "emacs.command.comint_kill_subjob",
-  "status": "ported",
-  "evidence": [
-   "static:comint_kill_subjob"
-  ],
-  "note": "comint-kill-subjob: sends real SIGKILL to the child via libc::kill on unix"
- },
- {
-  "spec_id": "emacs.command.comint_dynamic_list_input_ring",
-  "status": "ported",
-  "evidence": [
-   "static:comint_dynamic_list_input_ring"
-  ],
-  "note": "comint-dynamic-list-input-ring: lists the input-ring history inline in the buffer (Emacs pops a *Input History* buffer)"
- },
- {
-  "spec_id": "emacs.command.comint_history_isearch_backward_regexp",
-  "status": "partial",
-  "evidence": [
-   "static:comint_history_isearch_backward_regexp"
-  ],
-  "note": "comint-history-isearch-backward-regexp: one-shot substring search of the input ring (previous_matching) rather than incremental regexp isearch"
- },
- {
-  "spec_id": "emacs.command.comint_run",
-  "status": "ported",
-  "evidence": [
-   "static:comint_run"
-  ],
-  "note": "comint-run: prompts for a program+args and opens it in a new comint buffer (Comint::with_program)"
- },
- {
-  "spec_id": "emacs.command.shell_forward_command",
-  "status": "ported",
-  "evidence": [
-   "static:shell_forward_command"
-  ],
-  "note": "shell-forward-command (M-f): move point forward over a ;|& -separated shell command on the input line, via unit-tested forward_command"
- },
- {
-  "spec_id": "emacs.command.shell_backward_command",
-  "status": "ported",
-  "evidence": [
-   "static:shell_backward_command"
-  ],
-  "note": "shell-backward-command (M-b): move point backward to the start of the shell command, via unit-tested backward_command"
- },
- {
-  "spec_id": "emacs.command.gud_jump",
-  "status": "ported",
-  "evidence": [
-   "static:gud_jump"
-  ],
-  "note": "gud-jump: sends 'jump FILE:LINE' to the inferior debugger running in the comint buffer"
- },
- {
-  "spec_id": "emacs.command.gud_refresh",
-  "status": "partial",
-  "evidence": [
-   "static:gud_refresh"
-  ],
-  "note": "gud-refresh (C-l): requests a redraw and scrolls the debugger output to newest (approximates recenter/redisplay)"
  },
  {
   "spec_id": "emacs.command.dired_flag_backup_files",
@@ -31144,6 +30878,272 @@
   "note": "emacs windmove-swap-states-down -> swap_view_down: swap_split_in_direction(Down)."
  },
  {
+  "spec_id": "emacs.command.comment_kill",
+  "status": "ported",
+  "evidence": [
+   "static:comment_kill"
+  ],
+  "note": "Kills the comment on the current line (count kills that many lines) to the kill ring = emacs comment-kill; tree-sitter comment node with string-aware line-comment-token fallback."
+ },
+ {
+  "spec_id": "emacs.command.abbrev_prefix_mark",
+  "status": "ported",
+  "evidence": [
+   "static:abbrev_prefix_mark",
+   "key:normal:space x e m"
+  ],
+  "note": "abbrev-prefix-mark (M-'): mark point as the start of an abbrev so the next expand-abbrev treats only the text after the mark as the abbrev, keeping any non-abbrev prefix. Faithful to lisp/abbrev.el: without a prefix arg it first expands any abbrev before point ((or arg (expand-abbrev))), then records the location (abbrev-start-location / ABBREV_START keyed on DocumentId) and inserts a hyphen ((insert \"-\")). expand_abbrev, refactored into abbrev_expand_impl, consults the location via take_abbrev_start and abbrev--before-point's logic: strip the hyphen, take text up to point minus trailing whitespace (abbrev_prefix_split) as the abbrev name, expand it, and remove a dangling hyphen when nothing matches. Bound at SPC x e m."
+ },
+ {
+  "spec_id": "emacs.command.unexpand_abbrev",
+  "status": "ported",
+  "evidence": [
+   "static:unexpand_abbrev"
+  ],
+  "note": "unexpand-abbrev: undo the last expand-abbrev, replacing the inserted expansion with the original abbrev text and moving point past it, then clearing the saved text so a repeat is a no-op. Faithful to lisp/abbrev.el (last-abbrev / last-abbrev-text / last-abbrev-location recorded by expand_abbrev; unexpand_span helper for the replace span + point-max guard). Bound at SPC x e u."
+ },
+ {
+  "spec_id": "emacs.command.inverse_add_global_abbrev",
+  "status": "ported",
+  "evidence": [
+   "static:inverse_add_global_abbrev",
+   "key:insert:C-x a i g"
+  ],
+  "note": "inverse-add-global-abbrev: word before point becomes the abbrev name, prompt for expansion, define in the global table (reuses emacs_abbrev::define + shared abbrev_word_before helper)"
+ },
+ {
+  "spec_id": "emacs.command.kmacro_end_or_call_macro",
+  "status": "ported",
+  "evidence": [
+   "static:kmacro_end_or_call_macro"
+  ],
+  "note": "kmacro-end-or-call-macro (C-x e / F4): ends the macro if recording, else replays the last macro; bound to F4."
+ },
+ {
+  "spec_id": "emacs.command.append_next_kill",
+  "status": "ported",
+  "evidence": [
+   "static:append_next_kill"
+  ],
+  "note": "append-next-kill (C-M-w): the next kill joins the last kill-ring entry instead of starting a new one (appended for a forward kill, prepended for a backward kill via record_prepend); bound at SPC r a."
+ },
+ {
+  "spec_id": "emacs.command.comint_kill_input",
+  "status": "ported",
+  "evidence": [
+   "static:comint_kill_input"
+  ],
+  "note": "comint-kill-input (C-c C-u): clears the pending input line via Comint::kill_input"
+ },
+ {
+  "spec_id": "emacs.command.comint_bol_or_process_mark",
+  "status": "ported",
+  "evidence": [
+   "static:comint_bol_or_process_mark"
+  ],
+  "note": "comint-bol-or-process-mark (C-a): move to process mark / bol, via unit-tested bol_or_process_mark_target"
+ },
+ {
+  "spec_id": "emacs.command.comint_delchar_or_maybe_eof",
+  "status": "ported",
+  "evidence": [
+   "static:comint_delchar_or_maybe_eof"
+  ],
+  "note": "comint-delchar-or-maybe-eof (C-d): delete char, or close child stdin (EOF) on empty input"
+ },
+ {
+  "spec_id": "emacs.command.comint_magic_space",
+  "status": "ported",
+  "evidence": [
+   "static:comint_magic_space"
+  ],
+  "note": "comint-magic-space: expand !!/!$/!*/!-N/!str history designators (unit-tested expand_history) then insert a space"
+ },
+ {
+  "spec_id": "emacs.command.comint_insert_previous_argument",
+  "status": "ported",
+  "evidence": [
+   "static:comint_insert_previous_argument"
+  ],
+  "note": "comint-insert-previous-argument (M-.): insert last arg (!$) of previous command via unit-tested last_argument"
+ },
+ {
+  "spec_id": "emacs.command.comint_get_next_from_history",
+  "status": "partial",
+  "evidence": [
+   "static:comint_get_next_from_history"
+  ],
+  "note": "comint-get-next-from-history: yanks the next-forward input-ring entry (approximates the post-yank M-n step)"
+ },
+ {
+  "spec_id": "emacs.command.comint_next_prompt",
+  "status": "partial",
+  "evidence": [
+   "static:comint_next_prompt"
+  ],
+  "note": "comint-next-prompt (C-c C-n): scrolls to the next prompt line; comint scrollback has no separate point so this is a viewport move"
+ },
+ {
+  "spec_id": "emacs.command.comint_previous_prompt",
+  "status": "partial",
+  "evidence": [
+   "static:comint_previous_prompt"
+  ],
+  "note": "comint-previous-prompt (C-c C-p): scrolls to the previous prompt line (viewport move; no buffer point)"
+ },
+ {
+  "spec_id": "emacs.command.comint_show_output",
+  "status": "ported",
+  "evidence": [
+   "static:comint_show_output"
+  ],
+  "note": "comint-show-output (C-c C-r): scrolls the start of the last command's output to the top, via unit-tested last_prompt_line"
+ },
+ {
+  "spec_id": "emacs.command.comint_show_maximum_output",
+  "status": "ported",
+  "evidence": [
+   "static:comint_show_maximum_output"
+  ],
+  "note": "comint-show-maximum-output (C-c C-e): scrolls newest output to the bottom"
+ },
+ {
+  "spec_id": "emacs.command.comint_delete_output",
+  "status": "ported",
+  "evidence": [
+   "static:comint_delete_output"
+  ],
+  "note": "comint-delete-output (C-c C-o): deletes the last command's output lines via unit-tested last_output_range"
+ },
+ {
+  "spec_id": "emacs.command.comint_write_output",
+  "status": "ported",
+  "evidence": [
+   "static:comint_write_output"
+  ],
+  "note": "comint-write-output: writes the last command's output (last_output_range) to a prompted file"
+ },
+ {
+  "spec_id": "emacs.command.comint_copy_old_input",
+  "status": "partial",
+  "evidence": [
+   "static:comint_copy_old_input"
+  ],
+  "note": "comint-copy-old-input (C-c RET): copies the most recent submitted input onto the input line (comint has no buffer point to pick an arbitrary old input)"
+ },
+ {
+  "spec_id": "emacs.command.comint_truncate_buffer",
+  "status": "ported",
+  "evidence": [
+   "static:comint_truncate_buffer"
+  ],
+  "note": "comint-truncate-buffer: trims scrollback to comint-buffer-maximum-size (1024) keeping the newest lines"
+ },
+ {
+  "spec_id": "emacs.command.comint_strip_ctrl_m",
+  "status": "ported",
+  "evidence": [
+   "static:comint_strip_ctrl_m"
+  ],
+  "note": "comint-strip-ctrl-m: strips ^M (\\r) from scrollback lines via unit-tested strip_ctrl_m"
+ },
+ {
+  "spec_id": "emacs.command.comint_interrupt_subjob",
+  "status": "ported",
+  "evidence": [
+   "static:comint_interrupt_subjob"
+  ],
+  "note": "comint-interrupt-subjob (C-c C-c): sends real SIGINT to the child via libc::kill(child.id()) on unix; single direct child (no PTY process group)"
+ },
+ {
+  "spec_id": "emacs.command.comint_stop_subjob",
+  "status": "ported",
+  "evidence": [
+   "static:comint_stop_subjob"
+  ],
+  "note": "comint-stop-subjob (C-c C-z): sends real SIGTSTP to the child via libc::kill on unix"
+ },
+ {
+  "spec_id": "emacs.command.comint_continue_subjob",
+  "status": "ported",
+  "evidence": [
+   "static:comint_continue_subjob"
+  ],
+  "note": "comint-continue-subjob: sends real SIGCONT to the child via libc::kill on unix"
+ },
+ {
+  "spec_id": "emacs.command.comint_quit_subjob",
+  "status": "ported",
+  "evidence": [
+   "static:comint_quit_subjob"
+  ],
+  "note": "comint-quit-subjob: sends real SIGQUIT to the child via libc::kill on unix"
+ },
+ {
+  "spec_id": "emacs.command.comint_kill_subjob",
+  "status": "ported",
+  "evidence": [
+   "static:comint_kill_subjob"
+  ],
+  "note": "comint-kill-subjob: sends real SIGKILL to the child via libc::kill on unix"
+ },
+ {
+  "spec_id": "emacs.command.comint_dynamic_list_input_ring",
+  "status": "ported",
+  "evidence": [
+   "static:comint_dynamic_list_input_ring"
+  ],
+  "note": "comint-dynamic-list-input-ring: lists the input-ring history inline in the buffer (Emacs pops a *Input History* buffer)"
+ },
+ {
+  "spec_id": "emacs.command.comint_history_isearch_backward_regexp",
+  "status": "partial",
+  "evidence": [
+   "static:comint_history_isearch_backward_regexp"
+  ],
+  "note": "comint-history-isearch-backward-regexp: one-shot substring search of the input ring (previous_matching) rather than incremental regexp isearch"
+ },
+ {
+  "spec_id": "emacs.command.comint_run",
+  "status": "ported",
+  "evidence": [
+   "static:comint_run"
+  ],
+  "note": "comint-run: prompts for a program+args and opens it in a new comint buffer (Comint::with_program)"
+ },
+ {
+  "spec_id": "emacs.command.shell_forward_command",
+  "status": "ported",
+  "evidence": [
+   "static:shell_forward_command"
+  ],
+  "note": "shell-forward-command (M-f): move point forward over a ;|& -separated shell command on the input line, via unit-tested forward_command"
+ },
+ {
+  "spec_id": "emacs.command.shell_backward_command",
+  "status": "ported",
+  "evidence": [
+   "static:shell_backward_command"
+  ],
+  "note": "shell-backward-command (M-b): move point backward to the start of the shell command, via unit-tested backward_command"
+ },
+ {
+  "spec_id": "emacs.command.gud_jump",
+  "status": "ported",
+  "evidence": [
+   "static:gud_jump"
+  ],
+  "note": "gud-jump: sends 'jump FILE:LINE' to the inferior debugger running in the comint buffer"
+ },
+ {
+  "spec_id": "emacs.command.gud_refresh",
+  "status": "partial",
+  "evidence": [
+   "static:gud_refresh"
+  ],
+  "note": "gud-refresh (C-l): requests a redraw and scrolls the debugger output to newest (approximates recenter/redisplay)"
+ },
+ {
   "spec_id": "emacs.command.diff_hunk_kill",
   "status": "ported",
   "evidence": [
@@ -31903,5 +31903,317 @@
    "static:indent_code_rigidly"
   ],
   "note": "indent-code-rigidly (= r): shift each region line by [count] columns, skipping lines that begin inside a string (tree-sitter string node), faithful to indent.el (in-string guard, blank lines emptied)."
+ },
+ {
+  "spec_id": "emacs.command.diary_list_entries",
+  "status": "ported",
+  "evidence": [
+   "static:diary_list_entries"
+  ],
+  "note": "diary-list-entries: list the current date's diary entries; the parser now evaluates %%(diary-...) sexp entries too (zemacs_core::diary)"
+ },
+ {
+  "spec_id": "emacs.command.diary_fancy_display",
+  "status": "partial",
+  "evidence": [
+   "static:diary_fancy_display"
+  ],
+  "note": "diary-fancy-display: reports the day's entries (dated header + text) in the echo area; zemacs has no separate *Fancy Diary Entries* buffer"
+ },
+ {
+  "spec_id": "emacs.command.diary_print_entries",
+  "status": "partial",
+  "evidence": [
+   "static:diary_print_entries"
+  ],
+  "note": "diary-print-entries: reports the day's entry count; zemacs has no lpr print subsystem"
+ },
+ {
+  "spec_id": "emacs.command.diary_day_of_year",
+  "status": "ported",
+  "evidence": [
+   "static:diary_day_of_year"
+  ],
+  "note": "diary-day-of-year: 'Day N of TOTAL; M days remaining' for today (zemacs_core::diary::day_of_year_string, unit-tested)"
+ },
+ {
+  "spec_id": "emacs.command.diary_anniversary",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_anniversary_entry"
+  ],
+  "note": "diary-anniversary predicate implemented + unit-tested (zemacs_core::diary::anniversary); evaluated from %%(diary-anniversary ...) entries and authored via diary-insert-anniversary-entry"
+ },
+ {
+  "spec_id": "emacs.command.diary_block",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_block_entry"
+  ],
+  "note": "diary-block predicate implemented + unit-tested (zemacs_core::diary::block); evaluated from %%(diary-block ...) entries and authored via diary-insert-block-entry"
+ },
+ {
+  "spec_id": "emacs.command.diary_cyclic",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_cyclic_entry"
+  ],
+  "note": "diary-cyclic predicate implemented + unit-tested (zemacs_core::diary::cyclic); evaluated from %%(diary-cyclic ...) entries and authored via diary-insert-cyclic-entry"
+ },
+ {
+  "spec_id": "emacs.command.diary_float",
+  "status": "ported",
+  "evidence": [
+   "static:diary_list_entries"
+  ],
+  "note": "diary-float (Nth weekday of month, +/-) implemented + unit-tested (zemacs_core::diary::float_match); genuinely evaluated by diary-list-entries from %%(diary-float ...) entries"
+ },
+ {
+  "spec_id": "emacs.command.diary_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_list_entries"
+  ],
+  "note": "diary-date wildcard match (t/* components) implemented + unit-tested (zemacs_core::diary::date_wildcard); evaluated by diary-list-entries from %%(diary-date ...) entries"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_date"
+  ],
+  "note": "diary-hebrew-date: today's Hebrew calendar date (reuses zemacs_core::calendar hebrew conversion)"
+ },
+ {
+  "spec_id": "emacs.command.diary_islamic_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_islamic_date"
+  ],
+  "note": "diary-islamic-date: today's Islamic (arithmetic/civil) date"
+ },
+ {
+  "spec_id": "emacs.command.diary_french_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_french_date"
+  ],
+  "note": "diary-french-date: today's French Revolutionary date"
+ },
+ {
+  "spec_id": "emacs.command.diary_bahai_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_bahai_date"
+  ],
+  "note": "diary-bahai-date: today's Baha'i calendar date"
+ },
+ {
+  "spec_id": "emacs.command.diary_coptic_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_coptic_date"
+  ],
+  "note": "diary-coptic-date: today's Coptic calendar date"
+ },
+ {
+  "spec_id": "emacs.command.diary_ethiopic_date",
+  "status": "ported",
+  "evidence": [
+   "static:diary_ethiopic_date"
+  ],
+  "note": "diary-ethiopic-date: today's Ethiopic calendar date"
+ },
+ {
+  "spec_id": "emacs.command.diary_astro_day_number",
+  "status": "ported",
+  "evidence": [
+   "static:diary_astro_day_number"
+  ],
+  "note": "diary-astro-day-number: today's astronomical (Julian) day number"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_omer",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_omer"
+  ],
+  "note": "diary-hebrew-omer: the Sefirat HaOmer count for today (zemacs_core::diary::hebrew_omer, unit-tested against the Hebrew calendar conversion)"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_rosh_hodesh",
+  "status": "partial",
+  "evidence": [
+   "static:diary_hebrew_rosh_hodesh"
+  ],
+  "note": "diary-hebrew-rosh-hodesh: detects Rosh Hodesh (1st/30th of a Hebrew month) and names it; Emacs additionally reports Shabbat Mevarchim / the molad, which need the parashah tables"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_birthday",
+  "status": "partial",
+  "evidence": [
+   "static:diary_hebrew_birthday"
+  ],
+  "note": "diary-hebrew-birthday: recurrence predicate implemented + unit-tested (zemacs_core::diary::hebrew_birthday); the command reports today's Hebrew date (the birth-date arg comes from the diary line). The 30-Heshvan/Adar-in-leap-year edge cases are not handled"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_monthly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_monthly_entry"
+  ],
+  "note": "diary-insert-monthly-entry: appends '* DAY ' (every month on today's day) to ~/diary and opens it"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_yearly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_yearly_entry"
+  ],
+  "note": "diary-insert-yearly-entry: appends 'Monthname Day ' (every year) to ~/diary"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_anniversary_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_anniversary_entry"
+  ],
+  "note": "diary-insert-anniversary-entry: appends '%%(diary-anniversary M D Y) ' for today"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_block_entry",
+  "status": "partial",
+  "evidence": [
+   "static:diary_insert_block_entry"
+  ],
+  "note": "diary-insert-block-entry: appends '%%(diary-block ...) '; standalone there is no calendar mark ring, so the range is today..today (edit the second date)"
+ },
+ {
+  "spec_id": "emacs.command.diary_insert_cyclic_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_insert_cyclic_entry"
+  ],
+  "note": "diary-insert-cyclic-entry: prompts for N and appends '%%(diary-cyclic N M D Y) ' for today"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_insert_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_insert_entry"
+  ],
+  "note": "diary-hebrew-insert-entry: appends 'H<Hebrew date> ' for today"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_insert_monthly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_insert_monthly_entry"
+  ],
+  "note": "diary-hebrew-insert-monthly-entry: appends 'H* DAY ' (Hebrew day-of-month, every Hebrew month)"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_insert_yearly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_insert_yearly_entry"
+  ],
+  "note": "diary-hebrew-insert-yearly-entry: appends 'H<Hebrew month> <day> ' (every Hebrew year)"
+ },
+ {
+  "spec_id": "emacs.command.diary_hebrew_insert_anniversary_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_hebrew_insert_anniversary_entry"
+  ],
+  "note": "diary-hebrew-insert-anniversary-entry: appends '%%(diary-hebrew-anniversary M D Y) '"
+ },
+ {
+  "spec_id": "emacs.command.diary_islamic_insert_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_islamic_insert_entry"
+  ],
+  "note": "diary-islamic-insert-entry: appends 'I<Islamic date> ' for today"
+ },
+ {
+  "spec_id": "emacs.command.diary_islamic_insert_monthly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_islamic_insert_monthly_entry"
+  ],
+  "note": "diary-islamic-insert-monthly-entry: appends 'I* DAY '"
+ },
+ {
+  "spec_id": "emacs.command.diary_islamic_insert_yearly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_islamic_insert_yearly_entry"
+  ],
+  "note": "diary-islamic-insert-yearly-entry: appends 'I<Islamic month> <day> '"
+ },
+ {
+  "spec_id": "emacs.command.diary_islamic_insert_anniversary_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_islamic_insert_anniversary_entry"
+  ],
+  "note": "diary-islamic-insert-anniversary-entry: appends '%%(diary-islamic-anniversary M D Y) '"
+ },
+ {
+  "spec_id": "emacs.command.diary_bahai_insert_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_bahai_insert_entry"
+  ],
+  "note": "diary-bahai-insert-entry: appends 'B<Baha'i date> ' for today"
+ },
+ {
+  "spec_id": "emacs.command.diary_bahai_insert_monthly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_bahai_insert_monthly_entry"
+  ],
+  "note": "diary-bahai-insert-monthly-entry: appends 'B* DAY '"
+ },
+ {
+  "spec_id": "emacs.command.diary_bahai_insert_yearly_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_bahai_insert_yearly_entry"
+  ],
+  "note": "diary-bahai-insert-yearly-entry: appends 'B<Baha'i month> <day> '"
+ },
+ {
+  "spec_id": "emacs.command.diary_bahai_insert_anniversary_entry",
+  "status": "ported",
+  "evidence": [
+   "static:diary_bahai_insert_anniversary_entry"
+  ],
+  "note": "diary-bahai-insert-anniversary-entry: appends '%%(diary-bahai-anniversary M D Y) '"
+ },
+ {
+  "spec_id": "emacs.command.appt_add",
+  "status": "ported",
+  "evidence": [
+   "static:appt_add"
+  ],
+  "note": "appt-add: prompts 'HH:MM message' and inserts into the sorted in-memory appointment list (zemacs_core::diary::appt_add, unit-tested)"
+ },
+ {
+  "spec_id": "emacs.command.appt_delete",
+  "status": "ported",
+  "evidence": [
+   "static:appt_delete"
+  ],
+  "note": "appt-delete: removes appointments whose message matches the typed text (zemacs_core::diary::appt_delete)"
+ },
+ {
+  "spec_id": "emacs.command.appt_activate",
+  "status": "partial",
+  "evidence": [
+   "static:appt_activate"
+  ],
+  "note": "appt-activate: toggles the appt-checking flag and reports the next appointment; zemacs has no idle timer, so no timed pop-up reminder is delivered"
  }
 ]
