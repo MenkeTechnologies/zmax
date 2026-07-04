@@ -1149,6 +1149,7 @@
 | `copy_remote_url` | Copy web permalink (host/blob/<sha>/path#Ln) for current line | normal: `` <space>glC ``, `` <space>glL ``, `` <space>glP ``, select: `` <space>glC ``, `` <space>glL ``, `` <space>glP `` |
 | `open_remote_url` | Open current line's web permalink in the browser | normal: `` <space>glc ``, `` <space>gll ``, `` <space>glp ``, select: `` <space>glc ``, `` <space>gll ``, `` <space>glp `` |
 | `open_url_under_cursor` | Open the URL under the cursor in the browser |  |
+| `goto_address_mode` | Report that URLs are always openable at point (emacs goto-address-mode) |  |
 | `duplicate_selection_down` | Duplicate current line(s) downward |  |
 | `duplicate_selection_up` | Duplicate current line(s) upward |  |
 | `move_text_line_down` | Move current line(s) down past the next line |  |

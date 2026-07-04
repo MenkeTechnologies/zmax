@@ -1461,6 +1461,7 @@ impl MappableCommand {
         copy_remote_url, "Copy web permalink (host/blob/<sha>/path#Ln) for current line",
         open_remote_url, "Open current line's web permalink in the browser",
         open_url_under_cursor, "Open the URL under the cursor in the browser",
+        goto_address_mode, "Report that URLs are always openable at point (emacs goto-address-mode)",
         duplicate_selection_down, "Duplicate current line(s) downward",
         duplicate_selection_up, "Duplicate current line(s) upward",
         move_text_line_down, "Move current line(s) down past the next line",
@@ -2742,6 +2743,17 @@ fn open_url_under_cursor(cx: &mut Context) {
         }
         None => cx.editor.set_error("no URL under cursor"),
     }
+}
+
+/// Emacs `goto-address-mode` (partial): in Emacs this minor mode makes URLs in a
+/// buffer clickable/highlighted. In zemacs, opening the URL at point is always
+/// available (`open-url-under-cursor` / `goto-address-at-point`) with no mode to
+/// enable; URL highlighting is not rendered, so this reports that rather than
+/// toggling a no-op flag.
+fn goto_address_mode(cx: &mut Context) {
+    cx.editor.set_status(
+        "goto-address: URLs are always openable at point (open-url-under-cursor); no mode needed",
+    );
 }
 
 // spacemacs `SPC x c`: count characters / words / lines in the selection.

@@ -34050,5 +34050,13 @@
    "key:normal:space t C"
   ],
   "note": "toggle_superword toggles super-word w/b/e motions: symbol-syntax characters (_, -, etc.) count as part of a word so a whole snake_case_symbol moves as one word, the inverse of subword-mode. Ports lisp/progmodes/subword.el superword-mode (which installs forward-symbol motion); reuses the long-word / WORD motion whose boundary rule joins alnum+punctuation and splits on whitespace. Mutually exclusive with subword-mode."
+ },
+ {
+  "spec_id": "emacs.command.goto_address_mode",
+  "status": "partial",
+  "evidence": [
+   "static:goto_address_mode"
+  ],
+  "note": "URL-at-point opening is always available; no mode to enable and URL highlighting isn't rendered"
  }
 ]
