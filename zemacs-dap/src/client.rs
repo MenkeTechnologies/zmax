@@ -570,6 +570,81 @@ impl Client {
         self.call::<requests::SetExceptionBreakpoints>(args)
     }
 
+    /// Set a variable's value in the given container (DAP `setVariable`), used
+    /// by `gdb-edit-value` on a locals/registers row. Requires the adapter's
+    /// `supportsSetVariable` capability.
+    pub async fn set_variable(
+        &self,
+        variables_reference: usize,
+        name: String,
+        value: String,
+    ) -> Result<requests::SetVariableResponse> {
+        let args = requests::SetVariableArguments {
+            variables_reference,
+            name,
+            value,
+            format: None,
+        };
+
+        self.request::<requests::SetVariable>(args).await
+    }
+
+    /// Assign to an lvalue expression in a frame (DAP `setExpression`), the
+    /// fallback for `gdb-edit-value` when the adapter advertises
+    /// `supportsSetExpression`.
+    pub async fn set_expression(
+        &self,
+        expression: String,
+        value: String,
+        frame_id: Option<usize>,
+    ) -> Result<requests::SetExpressionResponse> {
+        let args = requests::SetExpressionArguments {
+            expression,
+            value,
+            frame_id,
+            format: None,
+        };
+
+        self.request::<requests::SetExpression>(args).await
+    }
+
+    /// Read raw target memory (DAP `readMemory`) for the memory data buffer.
+    /// Requires the adapter's `supportsReadMemoryRequest` capability. `count`
+    /// bytes are read starting at `memory_reference` plus the optional `offset`.
+    pub async fn read_memory(
+        &self,
+        memory_reference: String,
+        offset: Option<i64>,
+        count: usize,
+    ) -> Result<requests::ReadMemoryResponse> {
+        let args = requests::ReadMemoryArguments {
+            memory_reference,
+            offset,
+            count,
+        };
+
+        self.request::<requests::ReadMemory>(args).await
+    }
+
+    /// Disassemble `instruction_count` instructions starting at
+    /// `memory_reference` (DAP `disassemble`) for the disassembly data buffer.
+    /// Requires the adapter's `supportsDisassembleRequest` capability.
+    pub async fn disassemble(
+        &self,
+        memory_reference: String,
+        instruction_count: usize,
+    ) -> Result<requests::DisassembleResponse> {
+        let args = requests::DisassembleArguments {
+            memory_reference,
+            offset: None,
+            instruction_offset: None,
+            instruction_count,
+            resolve_symbols: Some(true),
+        };
+
+        self.request::<requests::Disassemble>(args).await
+    }
+
     pub fn current_stack_frame(&self) -> Option<&StackFrame> {
         self.stack_frames
             .get(&self.thread_id?)?
