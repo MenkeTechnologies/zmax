@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-497dd109.js";
+            window.path_to_searchindex_js = "searchindex-56b46443.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -692,7 +692,7 @@
 <tr><td><code>:rev</code>, <code>:reverse-each-line</code></td><td>Reverse the characters of each selected line independently (Unix rev).</td></tr>
 <tr><td><code>:json-table</code>, <code>:json-tbl</code></td><td>Render the selected JSON array of objects as an aligned plain-text table.</td></tr>
 <tr><td><code>:hexdump</code>, <code>:xxd</code></td><td>Render the selection as an xxd-style hex dump (offset, hex bytes, ASCII).</td></tr>
-<tr><td><code>:dedup</code>, <code>:unique-lines</code></td><td>Remove all duplicate lines globally, keeping first occurrence and order.</td></tr>
+<tr><td><code>:dedup</code>, <code>:unique-lines</code>, <code>:delete-duplicate-lines</code></td><td>Remove all duplicate lines globally, keeping first occurrence and order. Emacs delete-duplicate-lines.</td></tr>
 <tr><td><code>:caesar</code>, <code>:shift-letters</code></td><td>Caesar-shift the selection’s letters by N (e.g. :caesar 13 = ROT13; N may be negative).</td></tr>
 <tr><td><code>:base32-encode</code>, <code>:base32</code></td><td>Base32-encode the selection (RFC 4648).</td></tr>
 <tr><td><code>:base32-decode</code>, <code>:unbase32</code></td><td>Base32-decode the selection (RFC 4648).</td></tr>
@@ -971,7 +971,7 @@
 <tr><td><code>:untabify</code></td><td>Expand tabs in the region to spaces at the buffer tab width (emacs untabify).</td></tr>
 <tr><td><code>:delete-blank-lines</code></td><td>Collapse consecutive blank lines down to a single blank line.</td></tr>
 <tr><td><code>:uniquify-lines</code>, <code>:uniq</code></td><td>Delete duplicate lines, keeping the first occurrence.</td></tr>
-<tr><td><code>:reverse</code>, <code>:reverse-lines</code>, <code>:tac</code></td><td>Reverse the order of the selected lines (or the whole buffer).</td></tr>
+<tr><td><code>:reverse</code>, <code>:reverse-lines</code>, <code>:reverse-region</code>, <code>:tac</code></td><td>Reverse the order of the selected lines (or the whole buffer). Emacs reverse-region.</td></tr>
 <tr><td><code>:uuid</code>, <code>:guid</code></td><td>Insert a random UUID v4 at each cursor (replaces any selection).</td></tr>
 <tr><td><code>:goto-offset</code>, <code>:goto-char</code></td><td>Move the cursor to an absolute character offset.</td></tr>
 <tr><td><code>:pad-numbers</code>, <code>:zero-pad</code></td><td>Zero-pad every integer in the selection to <width> digits.</width></td></tr>
@@ -995,7 +995,60 @@
 <tr><td><code>:sort-numeric-fields</code>, <code>:sortnf</code></td><td>Sort the selected lines by the numeric value of their Nth whitespace field (default 1).</td></tr>
 <tr><td><code>:sort-columns</code>, <code>:sortc</code></td><td>Sort the selected lines alphabetically by the character-column range [beg, end).</td></tr>
 <tr><td><code>:sort-paragraphs</code>, <code>:sortp</code></td><td>Sort the paragraphs (blank-line separated blocks) of the selection alphabetically.</td></tr>
+<tr><td><code>:fill-individual-paragraphs</code></td><td>Fill each paragraph of the selection separately, splitting on indentation changes and using each paragraph’s indentation as its fill prefix (emacs fill-individual-paragraphs).</td></tr>
+<tr><td><code>:fill-nonuniform-paragraphs</code></td><td>Fill each paragraph of the selection separately, splitting only on blank lines and using the smallest indentation of each paragraph as its fill prefix (emacs fill-nonuniform-paragraphs).</td></tr>
+<tr><td><code>:sort-pages</code></td><td>Sort the ^L-delimited pages in the selection (or buffer) alphabetically (emacs sort-pages).</td></tr>
 <tr><td><code>:sort-lines</code>, <code>:sortl</code></td><td>Sort the selected lines (or the whole buffer) — vim-style line sort.</td></tr>
+<tr><td><code>:highlight-regexp</code>, <code>:hi-lock</code></td><td>Add a persistent highlight for the regexp (emacs highlight-regexp).</td></tr>
+<tr><td><code>:highlight-phrase</code></td><td>Highlight the phrase, matching across whitespace/line breaks (emacs highlight-phrase).</td></tr>
+<tr><td><code>:highlight-lines-matching-regexp</code></td><td>Highlight whole lines matching the regexp (emacs highlight-lines-matching-regexp).</td></tr>
+<tr><td><code>:unhighlight-regexp</code></td><td>Remove the highlight for the regexp, or all highlights if none given (emacs unhighlight-regexp).</td></tr>
+<tr><td><code>:outline-hide-by-heading-regexp</code></td><td>Fold the subtree of every heading whose line matches the regexp (emacs outline-hide-by-heading-regexp).</td></tr>
+<tr><td><code>:outline-show-by-heading-regexp</code></td><td>Reveal the subtree of every heading whose line matches the regexp (emacs outline-show-by-heading-regexp).</td></tr>
+<tr><td><code>:set-fill-column</code></td><td>Set the fill width to N, or the current cursor column if omitted (emacs set-fill-column).</td></tr>
+<tr><td><code>:write-region</code></td><td>Write the region (or whole buffer) to a file, overwriting it (emacs write-region).</td></tr>
+<tr><td><code>:append-to-file</code></td><td>Append the region (or whole buffer) to the end of a file (emacs append-to-file).</td></tr>
+<tr><td><code>:set-justification-left</code></td><td>Flush the region’s lines to the left margin (emacs set-justification-left).</td></tr>
+<tr><td><code>:set-justification-right</code></td><td>Right-justify the region’s lines to the fill width (emacs set-justification-right).</td></tr>
+<tr><td><code>:set-justification-center</code></td><td>Centre the region’s lines within the fill width (emacs set-justification-center).</td></tr>
+<tr><td><code>:set-justification-full</code></td><td>Justify the region’s lines to both margins (emacs set-justification-full).</td></tr>
+<tr><td><code>:set-justification-none</code></td><td>Turn justification off for the region (emacs set-justification-none).</td></tr>
+<tr><td><code>:set-left-margin</code></td><td>Set the region’s left margin to a column of spaces (emacs set-left-margin).</td></tr>
+<tr><td><code>:increase-left-margin</code></td><td>Indent the region by standard-indent columns (emacs increase-left-margin).</td></tr>
+<tr><td><code>:decrease-left-margin</code></td><td>Outdent the region by standard-indent columns (emacs decrease-left-margin).</td></tr>
+<tr><td><code>:append-to-buffer</code></td><td>Insert the region at the end of another open buffer (emacs append-to-buffer).</td></tr>
+<tr><td><code>:prepend-to-buffer</code></td><td>Insert the region at the start of another open buffer (emacs prepend-to-buffer).</td></tr>
+<tr><td><code>:copy-to-buffer</code></td><td>Replace another open buffer’s contents with the region (emacs copy-to-buffer).</td></tr>
+<tr><td><code>:rename-buffer</code></td><td>Give the current buffer an explicit display name (emacs rename-buffer).</td></tr>
+<tr><td><code>:rename-uniquely</code></td><td>Rename the current buffer to a unique name with a numeric suffix (emacs rename-uniquely).</td></tr>
+<tr><td><code>:desktop-save</code></td><td>Save file-visiting buffers and point to a desktop file (emacs desktop-save).</td></tr>
+<tr><td><code>:desktop-read</code></td><td>Reopen the buffers recorded in a desktop file (emacs desktop-read).</td></tr>
+<tr><td><code>:desktop-change-dir</code></td><td>Switch to the desktop saved in another directory (emacs desktop-change-dir).</td></tr>
+<tr><td><code>:desktop-revert</code></td><td>Re-read the last loaded desktop (emacs desktop-revert).</td></tr>
+<tr><td><code>:desktop-clear</code></td><td>Close all buffers and erase the desktop file (emacs desktop-clear).</td></tr>
+<tr><td><code>:expand-region-abbrevs</code></td><td>Expand every abbrev found in the region (emacs expand-region-abbrevs).</td></tr>
+<tr><td><code>:getenv</code></td><td>Report the value of an environment variable (emacs getenv).</td></tr>
+<tr><td><code>:setenv</code></td><td>Set (or, with no value, unset) an environment variable (emacs setenv).</td></tr>
+<tr><td><code>:apropos-command</code></td><td>List commands whose name matches a regexp (emacs apropos-command).</td></tr>
+<tr><td><code>:apropos</code></td><td>List commands (by name or doc) and config variables matching a regexp (emacs apropos).</td></tr>
+<tr><td><code>:apropos-documentation</code></td><td>List commands whose documentation matches a regexp (emacs apropos-documentation).</td></tr>
+<tr><td><code>:apropos-variable</code></td><td>List config variables whose name matches a regexp (emacs apropos-variable).</td></tr>
+<tr><td><code>:apropos-user-option</code></td><td>List user-customizable options whose name matches a regexp (emacs apropos-user-option).</td></tr>
+<tr><td><code>:apropos-value</code></td><td>List config variables whose value matches a regexp (emacs apropos-value).</td></tr>
+<tr><td><code>:goto-line-relative</code></td><td>Go to a line counting from the narrowed region start (emacs goto-line-relative).</td></tr>
+<tr><td><code>:emacs-version</code></td><td>Report the running editor version (emacs emacs-version).</td></tr>
+<tr><td><code>:add-name-to-file</code></td><td>Hard-link the current buffer’s file to a new name (emacs add-name-to-file).</td></tr>
+<tr><td><code>:browse-url</code></td><td>Open a URL in the OS default browser (emacs browse-url).</td></tr>
+<tr><td><code>:set-visited-file-name</code></td><td>Change the file the current buffer is visiting (emacs set-visited-file-name).</td></tr>
+<tr><td><code>:make-symbolic-link</code></td><td>Create a symbolic link (emacs make-symbolic-link): <target> <linkname>, or <linkname> for the current file.</linkname></linkname></target></td></tr>
+<tr><td><code>:set-file-modes</code></td><td>Set the mode bits of a file, chmod-style, MODE as octal (emacs set-file-modes).</td></tr>
+<tr><td><code>:copy-directory</code></td><td>Recursively copy a directory to a destination (emacs copy-directory).</td></tr>
+<tr><td><code>:insert-file-literally</code></td><td>Insert the raw contents of a file at point (emacs insert-file-literally).</td></tr>
+<tr><td><code>:list-directory</code></td><td>Show a listing of a directory in a scratch buffer (emacs list-directory).</td></tr>
+<tr><td><code>:write-abbrev-file</code></td><td>Write every abbrev to the named file (emacs write-abbrev-file).</td></tr>
+<tr><td><code>:read-abbrev-file</code></td><td>Read abbrevs from the named file, merging them into the table (emacs read-abbrev-file).</td></tr>
+<tr><td><code>:bookmark-write</code></td><td>Write every bookmark to the named file (emacs bookmark-write).</td></tr>
+<tr><td><code>:bookmark-load</code></td><td>Load bookmarks from the named file, merging them into the store (emacs bookmark-load).</td></tr>
 <tr><td><code>:transpose-words</code></td><td>Transpose the word before the cursor with the word after it.</td></tr>
 <tr><td><code>:transpose-chars</code></td><td>Transpose the two characters around the cursor.</td></tr>
 <tr><td><code>:duplicate-line</code>, <code>:dup</code></td><td>Duplicate the current line below.</td></tr>
@@ -1461,6 +1514,7 @@
 <tr><td><code>type_hierarchy_subtypes</code></td><td>Type hierarchy: subtypes of the symbol</td><td></td></tr>
 <tr><td><code>goto_window_top</code></td><td>Goto window top</td><td>normal: <code>H</code></td></tr>
 <tr><td><code>what_line</code></td><td>Report the line number of point (emacs what-line)</td><td></td></tr>
+<tr><td><code>what_page</code></td><td>Report the page number and line within the page (emacs what-page)</td><td></td></tr>
 <tr><td><code>count_lines_page</code></td><td>Report lines on the current page, before + after point (emacs count-lines-page, C-x l)</td><td></td></tr>
 <tr><td><code>move_to_window_line_top_bottom</code></td><td>Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r)</td><td></td></tr>
 <tr><td><code>goto_window_center</code></td><td>Goto window center</td><td>normal: <code>M</code></td></tr>
@@ -1553,7 +1607,8 @@
 <tr><td><code>jump_to_register</code></td><td>Jump to the position in a register (emacs C-x r j)</td><td>normal: <code>&lt;C-x&gt;rj</code>, select: <code>&lt;C-x&gt;rj</code>, insert: <code>&lt;C-x&gt;rj</code></td></tr>
 <tr><td><code>number_to_register</code></td><td>Store the prefix count in a register (emacs C-x r n)</td><td>normal: <code>&lt;C-x&gt;rn</code>, select: <code>&lt;C-x&gt;rn</code>, insert: <code>&lt;C-x&gt;rn</code></td></tr>
 <tr><td><code>increment_register</code></td><td>Add the prefix count to a number register (emacs C-x r +)</td><td>normal: <code>&lt;C-x&gt;r+</code>, select: <code>&lt;C-x&gt;r+</code>, insert: <code>&lt;C-x&gt;r+</code></td></tr>
-<tr><td><code>emacs_insert_register</code></td><td>Insert a number register’s value as text (emacs C-x r i)</td><td>normal: <code>&lt;C-x&gt;ri</code>, select: <code>&lt;C-x&gt;ri</code>, insert: <code>&lt;C-x&gt;ri</code></td></tr>
+<tr><td><code>emacs_insert_register</code></td><td>Insert a number or rectangle register’s value at point (emacs C-x r i)</td><td>normal: <code>&lt;C-x&gt;ri</code>, select: <code>&lt;C-x&gt;ri</code>, insert: <code>&lt;C-x&gt;ri</code></td></tr>
+<tr><td><code>copy_rectangle_to_register</code></td><td>Copy the selected rectangle into a register (emacs C-x r r)</td><td></td></tr>
 <tr><td><code>kill_rectangle</code></td><td>Kill (cut) the rectangle, saving it for yank (emacs C-x r k)</td><td>normal: <code>&lt;C-x&gt;rk</code>, select: <code>&lt;C-x&gt;rk</code>, insert: <code>&lt;C-x&gt;rk</code></td></tr>
 <tr><td><code>delete_rectangle</code></td><td>Delete the rectangle without saving (emacs C-x r d)</td><td>normal: <code>&lt;C-x&gt;rd</code>, select: <code>&lt;C-x&gt;rd</code>, insert: <code>&lt;C-x&gt;rd</code></td></tr>
 <tr><td><code>clear_rectangle</code></td><td>Blank the rectangle with spaces (emacs C-x r c)</td><td>normal: <code>&lt;C-x&gt;rc</code>, <code>&lt;C-x&gt;ro</code>, <code>&lt;C-x&gt;rt</code>, select: <code>&lt;C-x&gt;rc</code>, <code>&lt;C-x&gt;ro</code>, <code>&lt;C-x&gt;rt</code>, insert: <code>&lt;C-x&gt;rc</code>, <code>&lt;C-x&gt;ro</code>, <code>&lt;C-x&gt;rt</code></td></tr>
@@ -1565,10 +1620,14 @@
 <tr><td><code>bookmark_set_no_overwrite</code></td><td>Set a bookmark, refusing to overwrite an existing name (emacs C-x r M)</td><td>normal: <code>&lt;C-x&gt;rM</code>, select: <code>&lt;C-x&gt;rM</code>, insert: <code>&lt;C-x&gt;rM</code></td></tr>
 <tr><td><code>bookmark_jump</code></td><td>Jump to a bookmark via a picker (emacs C-x r b)</td><td>normal: <code>&lt;C-x&gt;rb</code>, <code>&lt;space&gt;rj</code>, select: <code>&lt;C-x&gt;rb</code>, <code>&lt;space&gt;rj</code>, insert: <code>&lt;C-x&gt;rb</code></td></tr>
 <tr><td><code>list_bookmarks</code></td><td>List bookmarks in a picker; select to jump (emacs C-x r l / list-bookmarks)</td><td>normal: <code>&lt;C-x&gt;rl</code>, select: <code>&lt;C-x&gt;rl</code>, insert: <code>&lt;C-x&gt;rl</code></td></tr>
+<tr><td><code>bookmark_insert_location</code></td><td>Insert a bookmark’s file path at point (emacs bookmark-insert-location, C-x r I)</td><td></td></tr>
+<tr><td><code>bookmark_insert</code></td><td>Insert the contents of a bookmark’s file at point (emacs bookmark-insert)</td><td></td></tr>
 <tr><td><code>bookmark_delete</code></td><td>Delete a bookmark via a picker (emacs bookmark-delete)</td><td></td></tr>
 <tr><td><code>bookmark_rename</code></td><td>Rename a bookmark via a picker (emacs bookmark-rename)</td><td></td></tr>
 <tr><td><code>define_abbrev</code></td><td>Define a global abbrev: <name> <expansion> (emacs C-x a g)</expansion></name></td><td>normal: <code>&lt;C-x&gt;ag</code>, <code>&lt;C-x&gt;al</code>, <code>&lt;C-x&gt;aig</code>, <code>&lt;C-x&gt;ail</code>, select: <code>&lt;C-x&gt;ag</code>, <code>&lt;C-x&gt;al</code>, <code>&lt;C-x&gt;aig</code>, <code>&lt;C-x&gt;ail</code>, insert: <code>&lt;C-x&gt;ag</code>, <code>&lt;C-x&gt;al</code>, <code>&lt;C-x&gt;aig</code>, <code>&lt;C-x&gt;ail</code></td></tr>
 <tr><td><code>expand_abbrev</code></td><td>Expand the abbrev before point (emacs C-x ’)</td><td>normal: <code>&lt;C-x&gt;'</code>, select: <code>&lt;C-x&gt;'</code>, insert: <code>&lt;C-x&gt;'</code></td></tr>
+<tr><td><code>insert_abbrevs</code></td><td>Insert a description of every defined abbrev at point (emacs insert-abbrevs)</td><td></td></tr>
+<tr><td><code>define_abbrevs</code></td><td>Define abbrevs from the buffer text after point (emacs define-abbrevs)</td><td></td></tr>
 <tr><td><code>paste_clipboard_after</code></td><td>Paste clipboard after selections</td><td></td></tr>
 <tr><td><code>paste_clipboard_before</code></td><td>Paste clipboard before selections</td><td></td></tr>
 <tr><td><code>paste_primary_clipboard_after</code></td><td>Paste primary clipboard after selections</td><td></td></tr>
@@ -1782,6 +1841,14 @@
 <tr><td><code>dashboard</code></td><td>Open the system-stats Dashboard (Preferences)</td><td>normal: <code>&lt;space&gt;bh</code>, select: <code>&lt;space&gt;bh</code></td></tr>
 <tr><td><code>search_in_files</code></td><td>Open the project-wide Find in Files panel</td><td></td></tr>
 <tr><td><code>terminal</code></td><td>Open an integrated terminal (PTY shell)</td><td>normal: <code>&lt;space&gt;p'</code>, select: <code>&lt;space&gt;p'</code></td></tr>
+<tr><td><code>comint_shell</code></td><td>Open a comint line-oriented shell buffer (emacs M-x shell)</td><td></td></tr>
+<tr><td><code>gud_gdb</code></td><td>Run gdb in a comint buffer (emacs gud-gdb)</td><td></td></tr>
+<tr><td><code>gud_up</code></td><td>Select the stack frame one level up (emacs gud-up)</td><td></td></tr>
+<tr><td><code>gud_down</code></td><td>Select the stack frame one level down (emacs gud-down)</td><td></td></tr>
+<tr><td><code>gud_stepi</code></td><td>Step one machine instruction (emacs gud-stepi)</td><td></td></tr>
+<tr><td><code>gud_tbreak</code></td><td>Set a temporary breakpoint at the current line (emacs gud-tbreak)</td><td></td></tr>
+<tr><td><code>gud_print</code></td><td>Print the expression at point in the debugger (emacs gud-print)</td><td></td></tr>
+<tr><td><code>gud_watch</code></td><td>Watch the expression at point in the debugger (emacs gud-watch)</td><td></td></tr>
 <tr><td><code>run_config_manager</code></td><td>Manage run/debug configurations</td><td>normal: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code>, select: <code>&lt;space&gt;Rc</code>, <code>&lt;space&gt;Re</code>, <code>&lt;space&gt;cm</code>, <code>&lt;space&gt;pi</code></td></tr>
 <tr><td><code>run_active_config</code></td><td>Run the active run configuration</td><td>normal: <code>&lt;F5&gt;</code>, <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code>, select: <code>&lt;space&gt;Rr</code>, <code>&lt;space&gt;cC</code>, <code>&lt;space&gt;pc</code>, <code>&lt;space&gt;pu</code>, <code>&lt;C-c&gt;&lt;C-c&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-c&gt;</code></td></tr>
 <tr><td><code>clear_run_output</code></td><td>Clear the Run tool window output</td><td>normal: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code>, select: <code>&lt;space&gt;Rl</code>, <code>&lt;space&gt;Rx</code>, <code>&lt;space&gt;ck</code></td></tr>
@@ -1834,6 +1901,12 @@
 <tr><td><code>outline_show_entry</code></td><td>Reveal this heading’s body (emacs outline-show-entry)</td><td></td></tr>
 <tr><td><code>outline_hide_body</code></td><td>Fold all bodies, showing only headings (emacs outline-hide-body)</td><td></td></tr>
 <tr><td><code>outline_show_all</code></td><td>Reveal all outline body text (emacs outline-show-all)</td><td></td></tr>
+<tr><td><code>outline_hide_sublevels</code></td><td>Show only the top N levels of headings (emacs outline-hide-sublevels)</td><td></td></tr>
+<tr><td><code>outline_hide_leaves</code></td><td>Fold bodies in the current subtree, keeping subheadings (emacs outline-hide-leaves)</td><td></td></tr>
+<tr><td><code>outline_show_children</code></td><td>Reveal the immediate subheadings of the heading at point (emacs outline-show-children)</td><td></td></tr>
+<tr><td><code>outline_show_branches</code></td><td>Reveal every subheading in the subtree at point (emacs outline-show-branches)</td><td></td></tr>
+<tr><td><code>outline_cycle</code></td><td>Cycle the heading at point folded -&gt; children -&gt; subtree (emacs outline-cycle)</td><td></td></tr>
+<tr><td><code>outline_cycle_buffer</code></td><td>Cycle the whole buffer show-all -&gt; overview -&gt; contents (emacs outline-cycle-buffer)</td><td></td></tr>
 <tr><td><code>fold_create</code></td><td>Create a fold over the selection (zf)</td><td></td></tr>
 <tr><td><code>fold_toggle</code></td><td>Toggle fold under cursor (za)</td><td>normal: <code>zA</code>, <code>za</code>, <code>zi</code>, <code>&lt;C-c&gt;@&lt;C-c&gt;</code>, select: <code>&lt;C-c&gt;@&lt;C-c&gt;</code>, insert: <code>&lt;C-c&gt;@&lt;C-c&gt;</code></td></tr>
 <tr><td><code>fold_open</code></td><td>Open fold under cursor (zo)</td><td>normal: <code>zO</code>, <code>zo</code>, <code>zv</code>, <code>zx</code>, <code>&lt;C-c&gt;&lt;C-z&gt;</code>, <code>&lt;C-c&gt;@&lt;C-r&gt;</code>, <code>&lt;C-c&gt;@&lt;C-s&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-z&gt;</code>, <code>&lt;C-c&gt;@&lt;C-r&gt;</code>, <code>&lt;C-c&gt;@&lt;C-s&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-z&gt;</code>, <code>&lt;C-c&gt;@&lt;C-r&gt;</code>, <code>&lt;C-c&gt;@&lt;C-s&gt;</code></td></tr>
@@ -1956,6 +2029,13 @@
 <tr><td><code>zone</code></td><td>Run the zone screen-saver (emacs zone)</td><td></td></tr>
 <tr><td><code>decipher</code></td><td>Solve a cryptogram (emacs decipher)</td><td></td></tr>
 <tr><td><code>dunnet</code></td><td>Play the dunnet text adventure (emacs dunnet)</td><td></td></tr>
+<tr><td><code>animate_birthday_present</code></td><td>Animate a birthday-present message (emacs animate-birthday-present)</td><td></td></tr>
+<tr><td><code>dissociated_press</code></td><td>Scramble the buffer with the travesty generator (emacs dissociated-press)</td><td></td></tr>
+<tr><td><code>spook</code></td><td>Insert random NSA-bait phrases (emacs spook)</td><td></td></tr>
+<tr><td><code>studlify_region</code></td><td>StudlyCaps the selected region (emacs studlify-region)</td><td></td></tr>
+<tr><td><code>studlify_buffer</code></td><td>StudlyCaps the whole buffer (emacs studlify-buffer)</td><td></td></tr>
+<tr><td><code>studlify_word</code></td><td>StudlyCaps the word after point (emacs studlify-word)</td><td></td></tr>
+<tr><td><code>indent_relative</code></td><td>Indent to under the next indent point in the previous line (emacs indent-relative)</td><td></td></tr>
 <tr><td><code>delete_find_char_backward</code></td><td>Delete to prev char (dF)</td><td>normal: <code>dF</code></td></tr>
 <tr><td><code>delete_till_char_backward</code></td><td>Delete till prev char (dT)</td><td>normal: <code>dT</code></td></tr>
 <tr><td><code>change_find_char_forward</code></td><td>Change to next char (cf)</td><td>normal: <code>cf</code></td></tr>
