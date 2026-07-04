@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-01a44280.js";
+            window.path_to_searchindex_js = "searchindex-beb61fce.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -3102,6 +3102,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>define_abbrev</code></td><td>Define a global abbrev: <name> <expansion> (emacs C-x a g)</expansion></name></td><td>normal: <code>&lt;C-x&gt;ag</code>, <code>&lt;C-x&gt;al</code>, <code>&lt;C-x&gt;ail</code>, select: <code>&lt;C-x&gt;ag</code>, <code>&lt;C-x&gt;al</code>, <code>&lt;C-x&gt;ail</code>, insert: <code>&lt;C-x&gt;ag</code>, <code>&lt;C-x&gt;al</code>, <code>&lt;C-x&gt;ail</code></td></tr>
 <tr><td><code>inverse_add_global_abbrev</code></td><td>Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g)</td><td>normal: <code>&lt;C-x&gt;aig</code>, select: <code>&lt;C-x&gt;aig</code>, insert: <code>&lt;C-x&gt;aig</code></td></tr>
 <tr><td><code>expand_abbrev</code></td><td>Expand the abbrev before point (emacs C-x ’)</td><td>normal: <code>&lt;C-x&gt;'</code>, select: <code>&lt;C-x&gt;'</code>, insert: <code>&lt;C-x&gt;'</code></td></tr>
+<tr><td><code>abbrev_prefix_mark</code></td><td>Mark point as an abbrev prefix boundary; insert a hyphen the next expand-abbrev removes (emacs abbrev-prefix-mark, M-’)</td><td>normal: <code>&lt;space&gt;xem</code>, select: <code>&lt;space&gt;xem</code></td></tr>
+<tr><td><code>unexpand_abbrev</code></td><td>Undo the last abbrev expansion, restoring the original abbrev text (emacs unexpand-abbrev)</td><td>normal: <code>&lt;space&gt;xeu</code>, select: <code>&lt;space&gt;xeu</code></td></tr>
 <tr><td><code>insert_abbrevs</code></td><td>Insert a description of every defined abbrev at point (emacs insert-abbrevs)</td><td></td></tr>
 <tr><td><code>define_abbrevs</code></td><td>Define abbrevs from the buffer text after point (emacs define-abbrevs)</td><td></td></tr>
 <tr><td><code>paste_clipboard_after</code></td><td>Paste clipboard after selections</td><td></td></tr>
@@ -6847,11 +6849,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>3343</strong> (48.8%)</li>
+<li>Ported: <strong>3344</strong> (48.8%)</li>
 <li>Partial: <strong>589</strong> (8.6%)</li>
-<li>Absent: <strong>2915</strong></li>
+<li>Absent: <strong>2914</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1271 static commands, 1641 typable <code>:</code> commands, 2880 default keybindings</li>
+<li>zemacs source surface: 1272 static commands, 1641 typable <code>:</code> commands, 2881 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -6907,7 +6909,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">940</td><td style="text-align: right">221</td><td style="text-align: right">31.2%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">941</td><td style="text-align: right">221</td><td style="text-align: right">31.3%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
@@ -6928,7 +6930,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">729</td><td style="text-align: right">136</td><td style="text-align: right">38.7%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">730</td><td style="text-align: right">136</td><td style="text-align: right">38.7%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
