@@ -14,12 +14,20 @@
 //!   t           toggle full vs pruned headers
 //!   C-c C-n/C-p next / previous message with the same subject
 //!   r / f / m   reply / forward / compose new mail (opens a message-mode draft)
+//!   R           resend (bounce) the current message as a new draft
+//!   e           edit the current message body (M-c commit, M-k abort)
+//!   M-d/j/a/r/e/l/b  sort mailbox by date/subject/author/recipient/
+//!               correspondent/lines/labels
+//!   S/T/B/G     summary by senders / recipients / subject-topic / regexp
+//!   C-n/C-p     next / previous message carrying a prompted label
+//!   U           undelete every deleted message
+//!   O           output the message as-seen;  z  bury (close) the reader
 //!   q / Esc     quit the reader
 
 use std::path::PathBuf;
 
 use tui::buffer::Buffer as Surface;
-use zemacs_core::rmail::{forward_fields, reply_fields, Mailbox};
+use zemacs_core::rmail::{forward_fields, reply_fields, resend_fields, Mailbox};
 use zemacs_view::graphics::Rect;
 
 use crate::{
@@ -45,9 +53,16 @@ enum PromptAction {
     AddLabel,
     KillLabel,
     SummaryByLabel,
+    SummaryBySenders,
+    SummaryByRecipients,
+    SummaryByTopic,
+    SummaryByRegexp,
+    NextLabeled,
+    PrevLabeled,
     Input,
     Output,
     OutputBody,
+    OutputAsSeen,
 }
 
 /// An inline minibuffer: a labelled single-line text field the Component owns,
@@ -77,6 +92,9 @@ pub struct Rmail {
     sum_cursor: usize,
     /// Active inline prompt, if any.
     prompt: Option<Prompt>,
+    /// When editing the current message body (`e`, `rmail-edit-current-message`),
+    /// the working copy of the body text. `None` means not editing.
+    edit: Option<String>,
 }
 
 /// Headers Rmail shows by default when `full_headers` is off.
@@ -95,6 +113,7 @@ impl Rmail {
             sum: Vec::new(),
             sum_cursor: 0,
             prompt: None,
+            edit: None,
         }
     }
 
@@ -157,6 +176,48 @@ impl Rmail {
         EventResult::Consumed(None)
     }
 
+    /// Handle a key while editing the current message body (`rmail-edit-mode`).
+    /// `M-c` finishes and commits (`rmail-cease-edit`); `M-k` discards
+    /// (`rmail-abort-edit`); other keys type into the working body.
+    fn edit_key(&mut self, key: zemacs_view::input::KeyEvent) {
+        match key {
+            // rmail-cease-edit: commit the edited body back to the message.
+            alt!('c') => {
+                if let (Some(text), Some(msg)) = (
+                    self.edit.take(),
+                    self.mailbox.msgs.get_mut(self.mailbox.current),
+                ) {
+                    msg.body = text;
+                    self.status = "edit committed".to_string();
+                }
+            }
+            // rmail-abort-edit: throw the edit away.
+            alt!('k') | key!(Esc) => {
+                self.edit = None;
+                self.status = "edit aborted".to_string();
+            }
+            key!(Enter) => {
+                if let Some(t) = self.edit.as_mut() {
+                    t.push('\n');
+                }
+            }
+            key!(Backspace) | key!(Delete) => {
+                if let Some(t) = self.edit.as_mut() {
+                    t.pop();
+                }
+            }
+            zemacs_view::input::KeyEvent {
+                code: zemacs_view::keyboard::KeyCode::Char(c),
+                ..
+            } => {
+                if let Some(t) = self.edit.as_mut() {
+                    t.push(c);
+                }
+            }
+            _ => {}
+        }
+    }
+
     /// Feed a key into the active inline prompt. Returns true if the prompt
     /// consumed the key (so the caller stops processing it).
     fn prompt_key(&mut self, key: zemacs_view::input::KeyEvent) -> bool {
@@ -216,6 +277,38 @@ impl Rmail {
                     self.open_summary(hits);
                 }
             }
+            PromptAction::SummaryBySenders => {
+                self.open_filtered_summary(zemacs_core::rmail::filter_by_senders(
+                    &self.mailbox.msgs,
+                    &arg,
+                ));
+            }
+            PromptAction::SummaryByRecipients => {
+                self.open_filtered_summary(zemacs_core::rmail::filter_by_recipients(
+                    &self.mailbox.msgs,
+                    &arg,
+                ));
+            }
+            PromptAction::SummaryByTopic => {
+                self.open_filtered_summary(zemacs_core::rmail::filter_by_topic(
+                    &self.mailbox.msgs,
+                    &arg,
+                ));
+            }
+            PromptAction::SummaryByRegexp => {
+                self.open_filtered_summary(zemacs_core::rmail::filter_by_regexp(
+                    &self.mailbox.msgs,
+                    &arg,
+                ));
+            }
+            PromptAction::NextLabeled => {
+                self.mailbox.next_labeled(&arg);
+                self.scroll = 0;
+            }
+            PromptAction::PrevLabeled => {
+                self.mailbox.prev_labeled(&arg);
+                self.scroll = 0;
+            }
             PromptAction::Input => {
                 let path = expand_tilde(&arg);
                 match std::fs::read_to_string(&path) {
@@ -248,6 +341,58 @@ impl Rmail {
                     Err(e) => self.status = format!("cannot write {arg}: {e}"),
                 }
             }
+            PromptAction::OutputAsSeen => {
+                // rmail-output-as-seen writes exactly what the reader shows: the
+                // currently visible (pruned or full) header set plus the body.
+                let entry = self.as_seen_text();
+                match append_file(&expand_tilde(&arg), &entry) {
+                    Ok(()) => self.status = format!("output (as seen) to {arg}"),
+                    Err(e) => self.status = format!("cannot write {arg}: {e}"),
+                }
+            }
+        }
+    }
+
+    /// The message rendered exactly as shown (an mbox entry using only the
+    /// headers currently visible — pruned or full — plus the body), for
+    /// `rmail-output-as-seen`.
+    fn as_seen_text(&self) -> String {
+        let Some(msg) = self.mailbox.current() else {
+            return String::new();
+        };
+        let mut out = format!("From {}\n", msg.envelope);
+        let shown: Vec<(&str, &str)> = if self.full_headers {
+            msg.headers
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.as_str()))
+                .collect()
+        } else {
+            PRUNED
+                .iter()
+                .filter_map(|name| msg.header(name).map(|v| (*name, v)))
+                .collect()
+        };
+        for (k, v) in shown {
+            out.push_str(&format!("{k}: {v}\n"));
+        }
+        out.push('\n');
+        for line in msg.body.split('\n') {
+            if line.starts_with("From ") {
+                out.push('>');
+            }
+            out.push_str(line);
+            out.push('\n');
+        }
+        out.push('\n');
+        out
+    }
+
+    /// Open a summary over `indices`, or report when nothing matched.
+    fn open_filtered_summary(&mut self, indices: Vec<usize>) {
+        if indices.is_empty() {
+            self.status = "no matching messages".to_string();
+        } else {
+            self.open_summary(indices);
         }
     }
 
@@ -281,7 +426,16 @@ impl Rmail {
             lines.push(format!("Labels: {}", msg.labels.join(", ")));
         }
         lines.push(String::new());
-        for line in msg.body.split('\n') {
+        // When editing, show the working copy (with a caret) instead of the
+        // stored body.
+        let body = match &self.edit {
+            Some(text) => {
+                lines.push("-- editing (M-c commit, M-k abort) --".to_string());
+                format!("{text}\u{2588}")
+            }
+            None => msg.body.clone(),
+        };
+        for line in body.split('\n') {
             lines.push(line.to_string());
         }
         lines
@@ -330,6 +484,12 @@ impl Component for Rmail {
         // An active inline prompt swallows keys until RET/Esc.
         if self.prompt.is_some() {
             self.prompt_key(key);
+            return EventResult::Consumed(None);
+        }
+
+        // Editing the message body swallows keys until M-c/M-k.
+        if self.edit.is_some() {
+            self.edit_key(key);
             return EventResult::Consumed(None);
         }
 
@@ -417,6 +577,73 @@ impl Component for Rmail {
             }
             key!('g') => self.reload(),
 
+            // Sorting (rmail-sort-by-*). Reorders the whole mailbox in place,
+            // keeping the cursor on the current message.
+            alt!('d') => {
+                self.mailbox.sort_by_date();
+                self.scroll = 0;
+                self.status = "sorted by date".to_string();
+            }
+            alt!('j') => {
+                self.mailbox.sort_by_subject();
+                self.scroll = 0;
+                self.status = "sorted by subject".to_string();
+            }
+            alt!('a') => {
+                self.mailbox.sort_by_author();
+                self.scroll = 0;
+                self.status = "sorted by author".to_string();
+            }
+            alt!('r') => {
+                self.mailbox.sort_by_recipient();
+                self.scroll = 0;
+                self.status = "sorted by recipient".to_string();
+            }
+            alt!('e') => {
+                self.mailbox.sort_by_correspondent();
+                self.scroll = 0;
+                self.status = "sorted by correspondent".to_string();
+            }
+            alt!('l') => {
+                self.mailbox.sort_by_lines();
+                self.scroll = 0;
+                self.status = "sorted by lines".to_string();
+            }
+            alt!('b') => {
+                self.mailbox.sort_by_labels();
+                self.scroll = 0;
+                self.status = "sorted by labels".to_string();
+            }
+
+            // Labeled-message navigation (rmail-next/previous-labeled-message).
+            ctrl!('n') => self.ask(
+                "Move to next message with label: ",
+                PromptAction::NextLabeled,
+            ),
+            ctrl!('p') => self.ask(
+                "Move to previous message with label: ",
+                PromptAction::PrevLabeled,
+            ),
+
+            // Undelete every deleted message (rmail-summary-undelete-many).
+            key!('U') => {
+                let n = self.mailbox.undelete_all();
+                self.status = format!("{n} message(s) undeleted");
+            }
+
+            // Bury the reader (rmail-bury / rmail-summary-bury) — no persistent
+            // buffer stack, so this simply closes the reader overlay.
+            key!('z') => return EventResult::Consumed(Some(close)),
+
+            // Edit the current message body (rmail-edit-current-message).
+            key!('e') => {
+                self.edit = self.mailbox.current().map(|m| m.body.clone());
+                self.scroll = 0;
+                if self.edit.is_some() {
+                    self.status = "editing: M-c commit, M-k abort".to_string();
+                }
+            }
+
             // Display.
             key!('t') => self.full_headers = !self.full_headers,
             key!('h') => self.open_summary((0..self.mailbox.len()).collect()),
@@ -425,9 +652,14 @@ impl Component for Rmail {
             key!('a') => self.ask("Add label: ", PromptAction::AddLabel),
             key!('k') => self.ask("Kill label: ", PromptAction::KillLabel),
             key!('l') => self.ask("Labels to summarize by: ", PromptAction::SummaryByLabel),
+            key!('S') => self.ask("Summary by senders: ", PromptAction::SummaryBySenders),
+            key!('T') => self.ask("Summary by recipients: ", PromptAction::SummaryByRecipients),
+            key!('B') => self.ask("Summary by subject/topic: ", PromptAction::SummaryByTopic),
+            key!('G') => self.ask("Summary by regexp: ", PromptAction::SummaryByRegexp),
             alt!('s') => self.ask("Search: ", PromptAction::Search),
             key!('i') => self.ask("Run rmail on file: ", PromptAction::Input),
             key!('o') => self.ask("Output message to file: ", PromptAction::Output),
+            key!('O') => self.ask("Output (as seen) to file: ", PromptAction::OutputAsSeen),
             key!('w') => self.ask("Output body to file: ", PromptAction::OutputBody),
 
             // Reply / forward / new mail — open a message-mode draft.
@@ -438,6 +670,12 @@ impl Component for Rmail {
             }
             key!('f') => {
                 if let Some((to, subject, body)) = self.mailbox.current().map(forward_fields) {
+                    return EventResult::Consumed(Some(self.compose(to, subject, body)));
+                }
+            }
+            // rmail-resend: open a bounce/resend draft of the current message.
+            key!('R') => {
+                if let Some((to, subject, body)) = self.mailbox.current().map(resend_fields) {
                     return EventResult::Consumed(Some(self.compose(to, subject, body)));
                 }
             }
