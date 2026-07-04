@@ -17,6 +17,7 @@ pub mod compilation;
 pub mod completion;
 pub mod config;
 pub mod diagnostic;
+pub mod desktop;
 pub mod diary;
 pub mod diff;
 pub mod dired;

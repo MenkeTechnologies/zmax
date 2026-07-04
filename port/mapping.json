@@ -29459,5 +29459,45 @@
    "typable:rename-uniquely"
   ],
   "note": "rename-uniquely -> :rename-uniquely: rename the current buffer to a similar name carrying the lowest free <N> numeric suffix (strips any existing suffix first)"
+ },
+ {
+  "spec_id": "emacs.command.desktop_save",
+  "status": "ported",
+  "evidence": [
+   "typable:desktop-save"
+  ],
+  "note": "desktop-save -> :desktop-save [DIR]: record every file-visiting buffer plus its point into DIR/.zemacs.desktop (DIR defaults to the last desktop dir, else ~); the current buffer is flagged so a later read restores focus to it"
+ },
+ {
+  "spec_id": "emacs.command.desktop_read",
+  "status": "ported",
+  "evidence": [
+   "typable:desktop-read"
+  ],
+  "note": "desktop-read -> :desktop-read [DIR]: reopen every file listed in DIR/.zemacs.desktop, restoring focus and point to the buffer flagged current; missing files are skipped"
+ },
+ {
+  "spec_id": "emacs.command.desktop_change_dir",
+  "status": "ported",
+  "evidence": [
+   "typable:desktop-change-dir"
+  ],
+  "note": "desktop-change-dir -> :desktop-change-dir DIR: switch to the desktop saved in DIR, reading its recorded buffer set"
+ },
+ {
+  "spec_id": "emacs.command.desktop_revert",
+  "status": "ported",
+  "evidence": [
+   "typable:desktop-revert"
+  ],
+  "note": "desktop-revert -> :desktop-revert: re-read the last loaded desktop, discarding edits to the recorded buffer set"
+ },
+ {
+  "spec_id": "emacs.command.desktop_clear",
+  "status": "ported",
+  "evidence": [
+   "typable:desktop-clear"
+  ],
+  "note": "desktop-clear -> :desktop-clear: close every open buffer and erase the desktop file in the active directory (modified buffers block the close and are reported)"
  }
 ]
