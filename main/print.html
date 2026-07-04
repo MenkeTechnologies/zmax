@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-44f4dfb1.js";
+            window.path_to_searchindex_js = "searchindex-2cb45beb.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -3581,6 +3581,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>toggle_readonly</code></td><td>Toggle the buffer’s read-only (writable) state (SPC b w)</td><td>normal: <code>&lt;space&gt;bw</code>, <code>&lt;C-x&gt;&lt;C-q&gt;</code>, select: <code>&lt;space&gt;bw</code>, <code>&lt;C-x&gt;&lt;C-q&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-q&gt;</code></td></tr>
 <tr><td><code>toggle_window_dedication</code></td><td>Toggle window dedication (spacemacs SPC w t)</td><td>normal: <code>&lt;C-w&gt;t</code>, <code>&lt;space&gt;wt</code>, select: <code>&lt;space&gt;wt</code></td></tr>
 <tr><td><code>toggle_subword</code></td><td>Toggle sub-word w/b/e motions (spacemacs SPC t c)</td><td>normal: <code>&lt;space&gt;tc</code>, select: <code>&lt;space&gt;tc</code></td></tr>
+<tr><td><code>toggle_superword</code></td><td>Toggle super-word w/b/e motions: symbols join words (emacs superword-mode, SPC t C)</td><td>normal: <code>&lt;space&gt;tC</code>, select: <code>&lt;space&gt;tC</code></td></tr>
 <tr><td><code>toggle_auto_fill</code></td><td>Toggle auto-fill: wrap at text-width while typing (spacemacs SPC t F)</td><td>normal: <code>&lt;space&gt;tF</code>, select: <code>&lt;space&gt;tF</code></td></tr>
 <tr><td><code>toggle_follow_mode</code></td><td>Toggle follow mode: windows on the same doc scroll together (spacemacs SPC w f)</td><td>normal: <code>&lt;C-w&gt;f</code>, <code>&lt;space&gt;wf</code>, select: <code>&lt;space&gt;wf</code></td></tr>
 <tr><td><code>subword_w</code></td><td>Next word start, sub-word aware (w)</td><td>normal: <code>w</code></td></tr>
@@ -3827,6 +3828,15 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>c_show_syntactic_information</code></td><td>Report the tree-sitter node kind at point (emacs c-show-syntactic-information)</td><td></td></tr>
 <tr><td><code>c_macro_expand</code></td><td>Expand C preprocessor macros in the region via cpp (emacs c-macro-expand)</td><td></td></tr>
 <tr><td><code>c_set_style</code></td><td>Report the C indentation style (emacs c-set-style)</td><td></td></tr>
+<tr><td><code>ps_print_buffer</code></td><td>Print the buffer as PostScript via lpr (emacs ps-print-buffer)</td><td></td></tr>
+<tr><td><code>ps_print_region</code></td><td>Print the region as PostScript via lpr (emacs ps-print-region)</td><td></td></tr>
+<tr><td><code>ps_print_buffer_with_faces</code></td><td>Print the buffer as PostScript (plain, no faces) (emacs ps-print-buffer-with-faces)</td><td></td></tr>
+<tr><td><code>ps_print_region_with_faces</code></td><td>Print the region as PostScript (plain, no faces) (emacs ps-print-region-with-faces)</td><td></td></tr>
+<tr><td><code>ps_spool_buffer</code></td><td>Spool the buffer as PostScript for later printing (emacs ps-spool-buffer)</td><td></td></tr>
+<tr><td><code>ps_spool_region</code></td><td>Spool the region as PostScript for later printing (emacs ps-spool-region)</td><td></td></tr>
+<tr><td><code>ps_spool_buffer_with_faces</code></td><td>Spool the buffer as PostScript (plain, no faces) (emacs ps-spool-buffer-with-faces)</td><td></td></tr>
+<tr><td><code>ps_spool_region_with_faces</code></td><td>Spool the region as PostScript (plain, no faces) (emacs ps-spool-region-with-faces)</td><td></td></tr>
+<tr><td><code>ps_despool</code></td><td>Print the accumulated PostScript spool via lpr (emacs ps-despool)</td><td></td></tr>
 <tr><td><code>delete_find_char_backward</code></td><td>Delete to prev char (dF)</td><td>normal: <code>dF</code></td></tr>
 <tr><td><code>delete_till_char_backward</code></td><td>Delete till prev char (dT)</td><td>normal: <code>dT</code></td></tr>
 <tr><td><code>change_find_char_forward</code></td><td>Change to next char (cf)</td><td>normal: <code>cf</code></td></tr>
@@ -7029,11 +7039,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>3524</strong> (51.5%)</li>
-<li>Partial: <strong>659</strong> (9.6%)</li>
-<li>Absent: <strong>2664</strong></li>
+<li>Ported: <strong>3531</strong> (51.6%)</li>
+<li>Partial: <strong>663</strong> (9.7%)</li>
+<li>Absent: <strong>2653</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1443 static commands, 1657 typable <code>:</code> commands, 2943 default keybindings</li>
+<li>zemacs source surface: 1452 static commands, 1657 typable <code>:</code> commands, 2943 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -7089,7 +7099,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">1121</td><td style="text-align: right">291</td><td style="text-align: right">37.2%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">1128</td><td style="text-align: right">295</td><td style="text-align: right">37.5%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
@@ -7110,7 +7120,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">910</td><td style="text-align: right">206</td><td style="text-align: right">48.3%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">917</td><td style="text-align: right">210</td><td style="text-align: right">48.7%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
