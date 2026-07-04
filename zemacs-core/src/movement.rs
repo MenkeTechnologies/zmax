@@ -165,6 +165,31 @@ pub fn move_vertically(
     new_range
 }
 
+/// Move the cursor to the start (`to_end` false) or end (`to_end` true) of the
+/// *visual* (on-screen) line containing it, honoring soft-wrap: under wrapping a
+/// single logical line spans several visual rows and this stops at the wrap
+/// boundary, not the logical line boundary. With soft-wrap off a visual line is
+/// a logical line, so it degenerates to logical line start/end. Implements Emacs
+/// `beginning-of-visual-line` / `end-of-visual-line`.
+///
+/// Column `0` selects the first grapheme of the current visual row; a saturated
+/// column clamps to the last grapheme of that row. Reuses the same
+/// `char_idx_at_visual_offset` machinery as `move_vertically_visual`.
+pub fn goto_visual_line(
+    slice: RopeSlice,
+    range: Range,
+    to_end: bool,
+    behaviour: Movement,
+    text_fmt: &TextFormat,
+    annotations: &mut TextAnnotations,
+) -> Range {
+    annotations.clear_line_annotations();
+    let pos = range.cursor(slice);
+    let column = if to_end { usize::MAX } else { 0 };
+    let (new_pos, _) = char_idx_at_visual_offset(slice, pos, 0, column, text_fmt, annotations);
+    range.put_cursor(slice, new_pos, behaviour == Movement::Extend)
+}
+
 pub fn move_next_word_start(slice: RopeSlice, range: Range, count: usize) -> Range {
     word_move(slice, range, count, WordMotionTarget::NextWordStart)
 }
@@ -2365,6 +2390,55 @@ mod test {
         assert_eq!(prev_sentence_boundary(s, 5), 0);
         // Within the first sentence -> paragraph start (0).
         assert_eq!(prev_sentence_boundary(s, 2), 0);
+    }
+
+    #[test]
+    fn test_goto_visual_line() {
+        // Soft-wrap off: a visual line is a logical line, so this matches
+        // logical line start/end.
+        let text = Rope::from("hello\nworld");
+        let s = text.slice(..);
+        let tf = TextFormat::default();
+        let mut ann = TextAnnotations::default();
+        // From column 3 of line 0: start -> char 0; end -> char 5 (just past the
+        // last visible grapheme "hello", i.e. before the newline).
+        assert_eq!(
+            goto_visual_line(s, Range::point(3), false, Movement::Move, &tf, &mut ann).cursor(s),
+            0
+        );
+        assert_eq!(
+            goto_visual_line(s, Range::point(3), true, Movement::Move, &tf, &mut ann).cursor(s),
+            5
+        );
+        // Extend moves only the head to the row start; the anchor stays behind
+        // (put_cursor widens it to 4 to keep the original grapheme selected).
+        let ext = goto_visual_line(s, Range::point(3), false, Movement::Extend, &tf, &mut ann);
+        assert_eq!((ext.anchor, ext.head), (4, 0));
+
+        // Soft-wrap on (default viewport_width 17): "aaaa bbbb cccc " fills the
+        // first visual row and "dddd" word-wraps to the second (char 15).
+        let long = Rope::from("aaaa bbbb cccc dddd eeee");
+        let ls = long.slice(..);
+        let mut tf2 = TextFormat::default();
+        tf2.soft_wrap = true;
+        // A cursor inside "cccc" (char 12) snaps to the visual row's start (0) or
+        // end (14, the space before the wrap) — NOT the logical line boundaries.
+        assert_eq!(
+            goto_visual_line(ls, Range::point(12), false, Movement::Move, &tf2, &mut ann)
+                .cursor(ls),
+            0
+        );
+        assert_eq!(
+            goto_visual_line(ls, Range::point(12), true, Movement::Move, &tf2, &mut ann).cursor(ls),
+            14
+        );
+        // A cursor on the second visual row (char 16, inside "dddd") snaps to
+        // that row's start (char 15), proving the stop is per visual row.
+        assert_eq!(
+            goto_visual_line(ls, Range::point(16), false, Movement::Move, &tf2, &mut ann)
+                .cursor(ls),
+            15
+        );
     }
 
     #[test]

@@ -29539,5 +29539,37 @@
    "typable:apropos-value"
   ],
   "note": "apropos-value -> :apropos-value: list config variables whose current value matches a regexp"
+ },
+ {
+  "spec_id": "emacs.command.beginning_of_visual_line",
+  "status": "ported",
+  "evidence": [
+   "static:goto_visual_line_start"
+  ],
+  "note": "Move to start of the on-screen (visual) line; soft-wrap aware, degenerates to logical line start when wrapping is off."
+ },
+ {
+  "spec_id": "emacs.command.end_of_visual_line",
+  "status": "ported",
+  "evidence": [
+   "static:goto_visual_line_end"
+  ],
+  "note": "Move to end of the on-screen (visual) line; soft-wrap aware."
+ },
+ {
+  "spec_id": "emacs.command.next_logical_line",
+  "status": "ported",
+  "evidence": [
+   "static:move_line_down"
+  ],
+  "note": "Move down one logical line ignoring soft-wrap = move_line_down (move_vertically)."
+ },
+ {
+  "spec_id": "emacs.command.previous_logical_line",
+  "status": "ported",
+  "evidence": [
+   "static:move_line_up"
+  ],
+  "note": "Move up one logical line ignoring soft-wrap = move_line_up (move_vertically)."
  }
 ]

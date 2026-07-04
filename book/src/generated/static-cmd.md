@@ -459,6 +459,10 @@
 | `goto_last_change` | Goto last change | normal: `` <space>jc ``, select: `` <space>jc `` |
 | `goto_line_start` | Goto line start | normal: `` 0 ``, `` g0 ``, `` <home> ``, `` g<home> ``, `` <space>j0 ``, select: `` <space>j0 ``, insert: `` <home> `` |
 | `goto_line_end` | Goto line end | normal: `` $ ``, `` g$ ``, `` gl ``, `` <end> ``, `` g<end> ``, `` <space>j$ ``, select: `` <space>j$ `` |
+| `goto_visual_line_start` | Goto visual line start (soft-wrap aware) |  |
+| `goto_visual_line_end` | Goto visual line end (soft-wrap aware) |  |
+| `extend_to_visual_line_start` | Extend to visual line start |  |
+| `extend_to_visual_line_end` | Extend to visual line end |  |
 | `goto_column` | Goto column | normal: `` \| `` |
 | `extend_to_column` | Extend to column |  |
 | `goto_next_buffer` | Goto next buffer | normal: `` ]b ``, `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, select: `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, insert: `` <C-x><right> `` |

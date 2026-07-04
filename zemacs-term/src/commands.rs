@@ -771,6 +771,10 @@ impl MappableCommand {
         goto_last_change, "Goto last change",
         goto_line_start, "Goto line start",
         goto_line_end, "Goto line end",
+        goto_visual_line_start, "Goto visual line start (soft-wrap aware)",
+        goto_visual_line_end, "Goto visual line end (soft-wrap aware)",
+        extend_to_visual_line_start, "Extend to visual line start",
+        extend_to_visual_line_end, "Extend to visual line end",
         goto_column, "Goto column",
         extend_to_column, "Extend to column",
         goto_next_buffer, "Goto next buffer",
@@ -1688,6 +1692,51 @@ fn goto_line_start(cx: &mut Context) {
             Movement::Move
         },
     )
+}
+
+/// Move to the start (`to_end` false) or end (`to_end` true) of the *visual*
+/// (on-screen) line, honoring soft-wrap. Emacs `beginning-of-visual-line` /
+/// `end-of-visual-line`. Delegates to the tested `movement::goto_visual_line`.
+fn goto_visual_line_impl(cx: &mut Context, to_end: bool, movement: Movement) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let text_fmt = doc.text_format(view.inner_area(doc).width, None, Some(view.id));
+    let mut annotations = view.text_annotations(doc, None);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        movement::goto_visual_line(text, range, to_end, movement, &text_fmt, &mut annotations)
+    });
+    drop(annotations);
+    doc.set_selection(view.id, selection);
+}
+
+/// C-a under visual-line-mode: `beginning-of-visual-line`.
+fn goto_visual_line_start(cx: &mut Context) {
+    let movement = if cx.editor.mode == Mode::Select {
+        Movement::Extend
+    } else {
+        Movement::Move
+    };
+    goto_visual_line_impl(cx, false, movement);
+}
+
+/// Extending variant of [`goto_visual_line_start`] for explicit binding.
+fn extend_to_visual_line_start(cx: &mut Context) {
+    goto_visual_line_impl(cx, false, Movement::Extend);
+}
+
+/// C-e under visual-line-mode: `end-of-visual-line`.
+fn goto_visual_line_end(cx: &mut Context) {
+    let movement = if cx.editor.mode == Mode::Select {
+        Movement::Extend
+    } else {
+        Movement::Move
+    };
+    goto_visual_line_impl(cx, true, movement);
+}
+
+/// Extending variant of [`goto_visual_line_end`] for explicit binding.
+fn extend_to_visual_line_end(cx: &mut Context) {
+    goto_visual_line_impl(cx, true, Movement::Extend);
 }
 
 fn goto_next_buffer(cx: &mut Context) {
