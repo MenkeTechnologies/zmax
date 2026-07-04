@@ -16,6 +16,7 @@ pub mod comment;
 pub mod compilation;
 pub mod completion;
 pub mod config;
+pub mod cursor_info;
 pub mod diagnostic;
 pub mod desktop;
 pub mod diary;

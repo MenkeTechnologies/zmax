@@ -90,7 +90,7 @@ fn cx_prefix() -> KeyTrie {
             "C-u" => switch_to_uppercase,   // C-x C-u: upcase-region
             "C-;" => toggle_comments,       // C-x C-;: comment-line
             "tab" => indent,                // C-x TAB: indent-rigidly
-            "=" => file_info,               // C-x =: what-cursor-position
+            "=" => what_cursor_position,    // C-x =: what-cursor-position
             "n" => { "Narrow"
                 "n" => narrow_to_region,    // C-x n n: narrow-to-region
                 "w" => widen,               // C-x n w: widen
