@@ -930,6 +930,7 @@ impl MappableCommand {
         comment_to_line, "Comment/uncomment from the cursor line to a prompted line (SPC c t)",
         invert_comment_to_line, "Invert comments per line from the cursor to a prompted line (SPC c T)",
         toggle_block_comments, "Block comment/uncomment selections",
+        comment_kill, "Kill the comment on the current line to the kill ring (emacs comment-kill; count kills that many lines)",
         rotate_selections_forward, "Rotate selections forward",
         rotate_selections_backward, "Rotate selections backward",
         rotate_selection_contents_forward, "Rotate selection contents forward",
@@ -20124,6 +20125,137 @@ fn toggle_block_comments(cx: &mut Context) {
     });
 }
 
+/// Byte offset within `line` where a line comment begins, scanning left to right
+/// while skipping `"`- and `'`-delimited string literals (honouring `\` escapes)
+/// so a comment leader inside a string is not mistaken for a comment. Returns
+/// `None` when the line carries no comment. `tokens` are the language's
+/// line-comment leaders; the first that matches at a position wins.
+fn comment_start_in_line(line: &str, tokens: &[&str]) -> Option<usize> {
+    let mut chars = line.char_indices();
+    let mut in_str: Option<char> = None;
+    while let Some((i, c)) = chars.next() {
+        match in_str {
+            Some(quote) => {
+                if c == '\\' {
+                    chars.next(); // skip the escaped character
+                } else if c == quote {
+                    in_str = None;
+                }
+            }
+            None => {
+                if c == '"' || c == '\'' {
+                    in_str = Some(c);
+                } else if tokens
+                    .iter()
+                    .any(|t| !t.is_empty() && line[i..].starts_with(t))
+                {
+                    return Some(i);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Char range of the comment on `line` (including the whitespace immediately
+/// before the comment leader, matching Emacs' `skip-syntax-backward " "`), or
+/// `None` when the line has no comment. Prefers a tree-sitter `comment` node;
+/// falls back to a string-aware scan for the language's line-comment token.
+fn line_comment_span(
+    doc: &Document,
+    loader: &zemacs_core::syntax::Loader,
+    line: usize,
+) -> Option<(usize, usize)> {
+    let slice = doc.text().slice(..);
+    if line >= slice.len_lines() {
+        return None;
+    }
+    let line_start = slice.line_to_char(line);
+    let line_end = line_end_char_index(&slice, line);
+    if line_end <= line_start {
+        return None;
+    }
+
+    // 1) tree-sitter comment node overlapping this line.
+    let mut comment_from: Option<usize> = None;
+    if let Some(syntax) = doc.syntax() {
+        let mut ch = line_start;
+        while ch < line_end {
+            let byte = slice.char_to_byte(ch) as u32;
+            if let Some(node) = syntax.descendant_for_byte_range(byte, byte) {
+                if node.kind().contains("comment") {
+                    let start = slice.byte_to_char(node.byte_range().start as usize);
+                    comment_from = Some(start.max(line_start));
+                    break;
+                }
+            }
+            ch += 1;
+        }
+    }
+
+    // 2) fallback: scan for the language's line-comment token outside strings.
+    if comment_from.is_none() {
+        let byte = slice.char_to_byte(line_start);
+        let tokens = doc
+            .language_config_at(loader, byte)
+            .and_then(|c| c.comment_tokens.as_deref())
+            .unwrap_or(&[]);
+        if !tokens.is_empty() {
+            let toks: Vec<&str> = tokens.iter().map(String::as_str).collect();
+            let content = slice.slice(line_start..line_end).to_string();
+            if let Some(off) = comment_start_in_line(&content, &toks) {
+                let col = content[..off].chars().count();
+                comment_from = Some(line_start + col);
+            }
+        }
+    }
+
+    let mut from = comment_from?;
+    // Absorb the whitespace immediately preceding the comment leader.
+    while from > line_start && matches!(slice.char(from - 1), ' ' | '\t') {
+        from -= 1;
+    }
+    Some((from, line_end))
+}
+
+/// Emacs `comment-kill` (`M-x comment-kill`): kill the comment on the current
+/// line, saving it to the kill ring. With a count, kill comments on that many
+/// lines starting with the current one (Emacs' prefix-ARG behaviour).
+fn comment_kill(cx: &mut Context) {
+    let count = cx.count();
+    let loader = cx.editor.syn_loader.load();
+    let (spans, killed) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let start_line = slice.char_to_line(cursor);
+        let last_line = (start_line + count - 1).min(slice.len_lines().saturating_sub(1));
+        let mut spans: Vec<(usize, usize)> = Vec::new();
+        for line in start_line..=last_line {
+            if let Some((from, to)) = line_comment_span(doc, &loader, line) {
+                if to > from {
+                    spans.push((from, to));
+                }
+            }
+        }
+        let killed = spans
+            .iter()
+            .map(|&(f, t)| slice.slice(f..t).to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        (spans, killed)
+    };
+    if spans.is_empty() {
+        cx.editor.set_status("no comment on this line");
+        return;
+    }
+    crate::emacs_kill::record(killed);
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(doc.text(), spans.into_iter().map(|(f, t)| (f, t, None)));
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
 fn rotate_selections(cx: &mut Context, direction: Direction) {
     let count = cx.count();
     let (view, doc) = current!(cx.editor);
@@ -26224,6 +26356,63 @@ mod quickfix_tests {
         assert_eq!(qf_advance_index(Some(1), 3, -1), Some(0));
         // saturate at start
         assert_eq!(qf_advance_index(Some(0), 3, -1), Some(0));
+    }
+}
+
+#[cfg(test)]
+mod comment_kill_tests {
+    use super::comment_start_in_line;
+
+    #[test]
+    fn finds_trailing_line_comment() {
+        assert_eq!(
+            comment_start_in_line("let x = 1; // set x", &["//"]),
+            Some(11)
+        );
+    }
+
+    #[test]
+    fn finds_whole_line_comment() {
+        // Offset is of the token itself; the caller absorbs leading whitespace.
+        assert_eq!(comment_start_in_line("    # a note", &["#"]), Some(4));
+    }
+
+    #[test]
+    fn ignores_token_inside_double_quoted_string() {
+        assert_eq!(comment_start_in_line(r#"puts "http://x" # real"#, &["#"]), Some(16));
+        assert_eq!(comment_start_in_line(r#"s = "a // b""#, &["//"]), None);
+    }
+
+    #[test]
+    fn ignores_token_inside_single_quoted_string() {
+        assert_eq!(comment_start_in_line("c = '#'; # tail", &["#"]), Some(9));
+    }
+
+    #[test]
+    fn respects_escaped_quote_in_string() {
+        // The escaped `\"` must not close the string, so the `#` inside stays quoted.
+        assert_eq!(comment_start_in_line(r##"x = "a\"# b""##, &["#"]), None);
+    }
+
+    #[test]
+    fn no_comment_returns_none() {
+        assert_eq!(comment_start_in_line("plain code line", &["//"]), None);
+        assert_eq!(comment_start_in_line("anything", &[]), None);
+    }
+
+    #[test]
+    fn longest_matching_token_position_wins() {
+        // Rust `///` doc comment: the scan reports the first `/` position regardless
+        // of which token matched; both `//` and `///` start at the same offset.
+        assert_eq!(comment_start_in_line("a; /// doc", &["///", "//"]), Some(3));
+    }
+
+    #[test]
+    fn multibyte_before_comment_offsets_are_byte_indices() {
+        // "é" is two bytes; the `#` sits at byte 4 (2 for é, "b", " ").
+        let line = "éb #x";
+        assert_eq!(comment_start_in_line(line, &["#"]), Some(4));
+        assert_eq!(&line[4..], "#x");
     }
 }
 
