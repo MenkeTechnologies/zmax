@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-10290337.js";
+            window.path_to_searchindex_js = "searchindex-77eb7a7b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -574,8 +574,9 @@ can be accessed via the command <code>hx --tutor</code> or <code>:tutor</code>.<
 </ul>
 <h2 id="buffers"><a class="header" href="#buffers">Buffers</a></h2>
 <p>Buffers are in-memory representations of files. You can have multiple buffers open at once. Use <a href="#pickers">pickers</a> or commands like <code>:buffer-next</code> and <code>:buffer-previous</code> to open buffers or switch between them.</p>
-<h2 id="selection-first-editing"><a class="header" href="#selection-first-editing">Selection-first editing</a></h2>
-<p>Inspired by <a href="http://kakoune.org/">Kakoune</a>, Zemacs follows the <code>selection → action</code> model. This means that whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action itself (delete, change, yank, etc.) comes second. A cursor is simply a single width selection.</p>
+<h2 id="editing-model"><a class="header" href="#editing-model">Editing model</a></h2>
+<p>Zemacs ships several <a href="#keymap-presets">keymap presets</a>. The default (<code>spacemacs</code>) and the <code>vim</code> preset use Vim’s <strong>operator → motion</strong> model: you press an action such as <code>d</code>, <code>c</code> or <code>y</code> and then the motion or text object it applies to (<code>dw</code>, <code>ciw</code>, <code>yy</code>). If you come from Vim, see <a href="#migrating-from-vim">Migrating from Vim</a>.</p>
+<p>The <code>helix</code> preset instead uses the Kakoune-inspired <strong>selection → action</strong> model: whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action (delete, change, yank, …) comes second. A cursor is simply a single-width selection.</p>
 <h2 id="multiple-selections"><a class="header" href="#multiple-selections">Multiple selections</a></h2>
 <p>Also inspired by Kakoune, multiple selections are a core mode of interaction in Zemacs. For example, the standard way of replacing multiple instances of a word is to first select all instances (so there is one selection per instance) and then use the change action (<code>c</code>) to edit them all at the same time.</p>
 <h2 id="motions"><a class="header" href="#motions">Motions</a></h2>
@@ -2552,7 +2553,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>repeat_last_motion</code></td><td>Repeat last motion</td><td>normal: <code>;</code>, <code>&lt;C-x&gt;z</code>, select: <code>;</code>, <code>&lt;C-x&gt;z</code>, insert: <code>&lt;C-x&gt;z</code></td></tr>
 <tr><td><code>repeat_find_char_reverse</code></td><td>Repeat last find in opposite direction (,)</td><td>normal: <code>,</code>, select: <code>,</code></td></tr>
 <tr><td><code>replace</code></td><td>Replace with new char</td><td>normal: <code>r</code>, select: <code>r</code></td></tr>
-<tr><td><code>switch_case</code></td><td>Switch (toggle) case</td><td>normal: <code>~</code>, select: <code>~</code></td></tr>
+<tr><td><code>switch_case</code></td><td>Switch (toggle) case</td><td>select: <code>~</code></td></tr>
+<tr><td><code>switch_case_forward</code></td><td>Toggle case and advance cursor (vim ~)</td><td>normal: <code>~</code></td></tr>
 <tr><td><code>switch_to_uppercase</code></td><td>Switch to uppercase</td><td>normal: <code>&lt;space&gt;xU</code>, <code>&lt;C-x&gt;&lt;C-u&gt;</code>, select: <code>&lt;space&gt;xU</code>, <code>&lt;C-x&gt;&lt;C-u&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-u&gt;</code></td></tr>
 <tr><td><code>switch_to_lowercase</code></td><td>Switch to lowercase</td><td>normal: <code>&lt;space&gt;xu</code>, <code>&lt;C-x&gt;&lt;C-l&gt;</code>, select: <code>&lt;space&gt;xu</code>, <code>&lt;C-x&gt;&lt;C-l&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-l&gt;</code></td></tr>
 <tr><td><code>upcase_word</code></td><td>Upper-case the word after point (emacs upcase-word, M-u)</td><td></td></tr>
@@ -2767,7 +2769,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>select_line_below</code></td><td>Select current line, if already selected, extend or shrink line below based on the anchor</td><td></td></tr>
 <tr><td><code>extend_to_line_bounds</code></td><td>Extend selection to line bounds</td><td>select: <code>V</code></td></tr>
 <tr><td><code>shrink_to_line_bounds</code></td><td>Shrink selection to line bounds</td><td></td></tr>
-<tr><td><code>delete_selection</code></td><td>Delete selection</td><td>normal: <code>x</code>, <code>&lt;del&gt;</code></td></tr>
+<tr><td><code>delete_selection</code></td><td>Delete selection</td><td></td></tr>
 <tr><td><code>delete_selection_noyank</code></td><td>Delete selection without yanking</td><td></td></tr>
 <tr><td><code>change_selection</code></td><td>Change selection</td><td>select: <code>c</code>, <code>s</code></td></tr>
 <tr><td><code>change_selection_noyank</code></td><td>Change selection without yanking</td><td></td></tr>
@@ -2955,8 +2957,10 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>insert_newline</code></td><td>Insert newline char</td><td>normal: <code>&lt;C-x&gt;6&lt;ret&gt;</code>, select: <code>&lt;C-x&gt;6&lt;ret&gt;</code>, insert: <code>&lt;C-j&gt;</code>, <code>&lt;ret&gt;</code>, <code>&lt;C-x&gt;6&lt;ret&gt;</code></td></tr>
 <tr><td><code>insert_char_interactive</code></td><td>Insert an interactively-chosen char</td><td>insert: <code>&lt;C-q&gt;</code>, <code>&lt;C-v&gt;</code></td></tr>
 <tr><td><code>append_char_interactive</code></td><td>Append an interactively-chosen char</td><td></td></tr>
-<tr><td><code>delete_char_backward</code></td><td>Delete previous char</td><td>normal: <code>X</code>, insert: <code>&lt;backspace&gt;</code></td></tr>
+<tr><td><code>delete_char_backward</code></td><td>Delete previous char</td><td>insert: <code>&lt;backspace&gt;</code></td></tr>
 <tr><td><code>delete_char_forward</code></td><td>Delete next char</td><td>insert: <code>&lt;del&gt;</code></td></tr>
+<tr><td><code>delete_chars_forward_vim</code></td><td>Delete char(s) under cursor, line-bounded (vim x)</td><td>normal: <code>x</code>, <code>&lt;del&gt;</code></td></tr>
+<tr><td><code>delete_chars_backward_vim</code></td><td>Delete char(s) before cursor, no line join (vim X)</td><td>normal: <code>X</code></td></tr>
 <tr><td><code>delete_word_backward</code></td><td>Delete previous word</td><td>normal: <code>&lt;C-x&gt;&lt;backspace&gt;</code>, select: <code>&lt;C-x&gt;&lt;backspace&gt;</code>, insert: <code>&lt;C-w&gt;</code>, <code>&lt;A-backspace&gt;</code>, <code>&lt;C-x&gt;&lt;backspace&gt;</code></td></tr>
 <tr><td><code>delete_word_forward</code></td><td>Delete next word</td><td>normal: <code>&lt;A-d&gt;</code>, insert: <code>&lt;A-d&gt;</code></td></tr>
 <tr><td><code>kill_to_line_start</code></td><td>Delete till start of line</td><td>insert: <code>&lt;C-u&gt;</code></td></tr>
@@ -3012,11 +3016,13 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>paste_clipboard_before</code></td><td>Paste clipboard before selections</td><td></td></tr>
 <tr><td><code>paste_primary_clipboard_after</code></td><td>Paste primary clipboard after selections</td><td></td></tr>
 <tr><td><code>paste_primary_clipboard_before</code></td><td>Paste primary clipboard before selections</td><td></td></tr>
-<tr><td><code>indent</code></td><td>Indent selection</td><td>normal: <code>==</code>, <code>&lt;gt&gt;&lt;gt&gt;</code>, <code>&lt;C-x&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, select: <code>&lt;C-x&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, insert: <code>&lt;C-t&gt;</code>, <code>&lt;C-x&gt;&lt;tab&gt;</code></td></tr>
-<tr><td><code>unindent</code></td><td>Unindent selection</td><td>normal: <code>&lt;lt&gt;&lt;lt&gt;</code>, insert: <code>&lt;C-d&gt;</code></td></tr>
+<tr><td><code>indent</code></td><td>Indent selection</td><td>normal: <code>==</code>, <code>&lt;C-x&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, select: <code>&lt;C-x&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, insert: <code>&lt;C-t&gt;</code>, <code>&lt;C-x&gt;&lt;tab&gt;</code></td></tr>
+<tr><td><code>unindent</code></td><td>Unindent selection</td><td>insert: <code>&lt;C-d&gt;</code></td></tr>
 <tr><td><code>format_selections</code></td><td>Format selection</td><td>normal: <code>&lt;A-q&gt;</code>, <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code>, select: <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code></td></tr>
-<tr><td><code>join_selections</code></td><td>Join lines inside selection</td><td>normal: <code>J</code>, <code>&lt;A-^&gt;</code>, <code>&lt;space&gt;kJ</code>, select: <code>&lt;space&gt;kJ</code></td></tr>
+<tr><td><code>join_selections</code></td><td>Join lines inside selection</td><td>normal: <code>&lt;A-^&gt;</code>, <code>&lt;space&gt;kJ</code>, select: <code>&lt;space&gt;kJ</code></td></tr>
 <tr><td><code>join_selections_space</code></td><td>Join lines inside selection and select spaces</td><td></td></tr>
+<tr><td><code>join_lines_vim</code></td><td>Join line(s) with a space, cursor at join (vim J)</td><td>normal: <code>J</code></td></tr>
+<tr><td><code>join_lines_vim_nospace</code></td><td>Join line(s) without a space (vim gJ)</td><td></td></tr>
 <tr><td><code>keep_selections</code></td><td>Keep selections matching regex</td><td></td></tr>
 <tr><td><code>remove_selections</code></td><td>Remove selections matching regex</td><td></td></tr>
 <tr><td><code>align_selections</code></td><td>Align selections in column</td><td>normal: <code>&lt;space&gt;xaa</code>, select: <code>&lt;space&gt;xaa</code></td></tr>
@@ -3412,6 +3418,36 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>frogger</code></td><td>Play Frogger, cross the traffic</td><td></td></tr>
 <tr><td><code>twenty_forty_eight</code></td><td>Play 2048, the sliding-tile puzzle</td><td></td></tr>
 <tr><td><code>minesweeper</code></td><td>Play Minesweeper</td><td></td></tr>
+<tr><td><code>tic_tac_toe</code></td><td>Play Tic-Tac-Toe against the computer</td><td></td></tr>
+<tr><td><code>connect_four</code></td><td>Play Connect Four against the computer</td><td></td></tr>
+<tr><td><code>reversi</code></td><td>Play Reversi / Othello against the computer</td><td></td></tr>
+<tr><td><code>sokoban</code></td><td>Play Sokoban, push the boxes onto the goals</td><td></td></tr>
+<tr><td><code>sudoku</code></td><td>Play Sudoku</td><td></td></tr>
+<tr><td><code>fifteen</code></td><td>Play the 15-puzzle sliding tiles</td><td></td></tr>
+<tr><td><code>hangman</code></td><td>Play Hangman, guess the word</td><td></td></tr>
+<tr><td><code>wordle</code></td><td>Play Wordle, guess the five-letter word</td><td></td></tr>
+<tr><td><code>mastermind</code></td><td>Play Mastermind, crack the code</td><td></td></tr>
+<tr><td><code>pacman</code></td><td>Play Pac-Man</td><td></td></tr>
+<tr><td><code>landmark</code></td><td>Play landmark, find the hidden tree (emacs landmark)</td><td></td></tr>
+<tr><td><code>centipede</code></td><td>Play Centipede</td><td></td></tr>
+<tr><td><code>missile_command</code></td><td>Play Missile Command, defend the cities</td><td></td></tr>
+<tr><td><code>tron</code></td><td>Play Tron light-cycles against the computer</td><td></td></tr>
+<tr><td><code>flappy</code></td><td>Play Flappy, flap through the pipes</td><td></td></tr>
+<tr><td><code>checkers</code></td><td>Play Checkers / draughts against the computer</td><td></td></tr>
+<tr><td><code>battleship</code></td><td>Play Battleship against the computer</td><td></td></tr>
+<tr><td><code>blackjack</code></td><td>Play Blackjack against the dealer</td><td></td></tr>
+<tr><td><code>yahtzee</code></td><td>Play Yahtzee</td><td></td></tr>
+<tr><td><code>simon</code></td><td>Play Simon, the memory game</td><td></td></tr>
+<tr><td><code>galaga</code></td><td>Play Galaga</td><td></td></tr>
+<tr><td><code>dig_dug</code></td><td>Play Dig Dug</td><td></td></tr>
+<tr><td><code>donkey_kong</code></td><td>Play Donkey Kong</td><td></td></tr>
+<tr><td><code>bomberman</code></td><td>Play Bomberman</td><td></td></tr>
+<tr><td><code>lunar_lander</code></td><td>Play Lunar Lander</td><td></td></tr>
+<tr><td><code>chess</code></td><td>Play chess against the computer</td><td></td></tr>
+<tr><td><code>mancala</code></td><td>Play Mancala / Kalah against the computer</td><td></td></tr>
+<tr><td><code>video_poker</code></td><td>Play Jacks-or-Better video poker</td><td></td></tr>
+<tr><td><code>klondike</code></td><td>Play Klondike solitaire</td><td></td></tr>
+<tr><td><code>nonogram</code></td><td>Play nonogram / picross</td><td></td></tr>
 <tr><td><code>zone</code></td><td>Run the zone screen-saver (emacs zone)</td><td></td></tr>
 <tr><td><code>decipher</code></td><td>Solve a cryptogram (emacs decipher)</td><td></td></tr>
 <tr><td><code>dunnet</code></td><td>Play the dunnet text adventure (emacs dunnet)</td><td></td></tr>
@@ -4123,151 +4159,91 @@ you happen to own is still treated as untrusted until you run
 <p>This section has information related to the wider Zemacs ecosystem.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="migrating-from-vim"><a class="header" href="#migrating-from-vim">Migrating from Vim</a></h1>
+<p>Zemacs’s default keymap (<code>spacemacs</code>) and its dedicated <code>vim</code> preset are built
+around Vim muscle memory: the <strong>operator → motion</strong> model you already know works
+as-is, so most of what you type in Vim does the same thing here. Pick a preset in
+<code>config.toml</code> (see <a href="#keymap-presets">Configuration</a>):</p>
+<pre><code class="language-toml">keymap = "vim"   # or the default "spacemacs" (vim base + an emacs C-x prefix)
+</code></pre>
+<p>The rest of this page assumes one of those Vim-family presets. If you instead set
+<code>keymap = "helix"</code> you get the original Kakoune-style <em>selection → action</em> model —
+see <a href="#the-helix-preset">The <code>helix</code> preset</a> at the bottom.</p>
+<h2 id="what-works-exactly-like-vim"><a class="header" href="#what-works-exactly-like-vim">What works exactly like Vim</a></h2>
 <ul>
-<li><a href="#deletechange-commands">Delete/Change Commands</a></li>
-<li><a href="#navigation">Navigation</a></li>
-<li><a href="#line-deletes">Line Deletes</a></li>
-<li><a href="#comment-lines-completion-search">Comment lines, Completion, Search</a></li>
-<li><a href="#file-actions">File actions</a></li>
+<li><strong>Operators + motions / text objects</strong> (verb → noun): <code>dw</code>, <code>de</code>, <code>db</code>, <code>d$</code>,
+<code>diw</code>, <code>ci(</code>, <code>ca"</code>, <code>yy</code>, <code>cc</code>, <code>dd</code>, <code>&gt;&gt;</code>, <code>&lt;&lt;</code>, <code>gU</code>/<code>gu</code>, <code>df&lt;char&gt;</code> …</li>
+<li><strong>Delete / change:</strong> <code>x</code> deletes the character under the cursor (<code>3x</code> for a
+count), <code>X</code> the one before it, <code>D</code>/<code>C</code> to the end of the line, <code>cw</code> changes to
+the end of the word.</li>
+<li><strong>Motions:</strong> <code>w</code>/<code>e</code>/<code>b</code>/<code>ge</code>, <code>f</code>/<code>t</code>/<code>F</code>/<code>T</code> with <code>;</code>/<code>,</code>, <code>0</code>/<code>^</code>/<code>$</code>,
+<code>gg</code>/<code>G</code>/<code>{n}G</code> (landing on the first non-blank), <code>{</code>/<code>}</code>, <code>%</code>, <code>H</code>/<code>M</code>/<code>L</code>.</li>
+<li><strong>Lines:</strong> <code>dd</code>, <code>yy</code>, <code>p</code>/<code>P</code>, <code>J</code> (join with a space), <code>gJ</code> (join without),
+<code>o</code>/<code>O</code>, <code>&gt;&gt;</code>/<code>&lt;&lt;</code>.</li>
+<li><strong>Insert entry &amp; misc:</strong> <code>i</code>/<code>a</code>/<code>I</code>/<code>A</code>, <code>s</code>/<code>S</code>, <code>r</code>/<code>R</code>, <code>~</code> (toggle case and
+advance).</li>
+<li><strong>Search:</strong> <code>/</code>, <code>?</code>, <code>n</code>, <code>N</code>, <code>*</code>, <code>#</code>.</li>
+<li><strong>Visual:</strong> <code>v</code>, <code>V</code>, <code>&lt;C-v&gt;</code> (blockwise); operators apply to the selection.</li>
+<li><strong>Jumps &amp; marks:</strong> <code>&lt;C-o&gt;</code>/<code>&lt;C-i&gt;</code> walk the jumplist; <code>`{mark}</code>/<code>'{mark}</code>
+jump to a mark.</li>
 </ul>
-<p>Zemacs’s editing model is strongly inspired from Vim and Kakoune, and a notable
-difference from Vim (and the most striking similarity to Kakoune) is that Zemacs
-follows the <code>selection → action</code> model. This means that whatever you are
-going to act on (a word, a paragraph, a line, etc.) is selected first and the
-action itself (delete, change, yank, etc.) comes second. A cursor is simply a
-single width selection.</p>
-<p><em>Note:</em> As Zemacs is inspired by Vim and <a href="https://github.com/mawww/kakoune">Kakoune</a>, the keybindings are similar but also have some differences. The content of this page is inspired by <a href="https://github.com/mawww/kakoune/wiki/Migrating-from-Vim">Kakoune Wiki</a>.</p>
-<p>NOTE: Unlike vim, <code>f</code>, <code>F</code>, <code>t</code> and <code>T</code> are not confined to the current line.</p>
-<h2 id="deletechange-commands"><a class="header" href="#deletechange-commands">Delete/Change Commands</a></h2>
-<p>delete a word:</p>
+<p>For the authoritative, always-current list of every bound key and every
+<code>:</code>-command, see the generated <a href="#keymap-1">keymap</a>,
+<a href="generated/static-cmd.html">static commands</a> and
+<a href="generated/typable-cmd.html">typable commands</a> references.</p>
+<h2 id="intentional-differences-from-vim"><a class="header" href="#intentional-differences-from-vim">Intentional differences from Vim</a></h2>
 <ul>
-<li>vim: <code>dw</code></li>
-<li>zemacs: <code>wd</code></li>
-</ul>
-<p>change a word:</p>
-<ul>
-<li>vim: <code>cw</code></li>
-<li>zemacs: <code>ec</code> or <code>wc</code> (includes the whitespace after the word)</li>
-</ul>
-<p>delete a character:</p>
-<ul>
-<li>vim: <code>x</code></li>
-<li>zemacs: <code>d</code> or <code>;d</code> (<code>;</code> reduces the selection to a single char)</li>
-</ul>
-<p>copy a line:</p>
-<ul>
-<li>vim: <code>yy</code></li>
-<li>zemacs: <code>Xy</code> (<code>X</code> extends all selections to whole lines)</li>
-</ul>
-<p>global replace:</p>
-<ul>
-<li>vim: <code>:%s/word/replacement/g&lt;ret&gt;</code></li>
-<li>zemacs: <code>%sword&lt;ret&gt;creplacement&lt;esc&gt;</code></li>
-</ul>
-<p>Explanation: <code>%</code> selects the entire buffer, <code>s</code> opens a prompt for a regex, <code>&lt;ret&gt;</code> validates the regex and reduces the selection to each match (hence, all occurrences of word are selected). <code>c</code> deletes the selection contents and enter insert mode, replacement is typed and then <code>&lt;esc&gt;</code> goes back to normal mode.</p>
-<h2 id="navigation"><a class="header" href="#navigation">Navigation</a></h2>
-<p>go to first line:</p>
-<ul>
-<li>vim: <code>gg</code></li>
-<li>zemacs: <code>gg</code></li>
-</ul>
-<p>go to last line:</p>
-<ul>
-<li>vim: <code>G</code></li>
-<li>zemacs: <code>ge</code></li>
-</ul>
-<p>go to line start:</p>
-<ul>
-<li>vim: <code>0</code></li>
-<li>zemacs: <code>gh</code></li>
-</ul>
-<p>go to line first non-blank character:</p>
-<ul>
-<li>vim: <code>^</code></li>
-<li>zemacs: <code>gs</code></li>
-</ul>
-<p>go to line end:</p>
-<ul>
-<li>vim: <code>$</code></li>
-<li>zemacs: <code>gl</code></li>
-</ul>
-<p>jump to matching bracket:</p>
-<ul>
-<li>vim: <code>%</code></li>
-<li>zemacs: <code>mm</code></li>
-</ul>
-<h2 id="line-deletes"><a class="header" href="#line-deletes">Line Deletes</a></h2>
-<p>delete to line end:</p>
-<ul>
-<li>vim: <code>D</code></li>
-<li>zemacs: <code>vgld</code> or <code>t&lt;ret&gt;d</code></li>
-</ul>
-<p>Note: <code>v</code> is used along with <code>gl</code> (go to line end), because <a href="https://github.com/MenkeTechnologies/zemacs/issues/1630"><code>gl</code> does not select text</a>.
-<code>t&lt;ret&gt;</code> selects “’til” the newline represented by <code>&lt;ret&gt;</code>.</p>
-<p>delete entire line:</p>
-<ul>
-<li>vim: <code>dd</code></li>
-<li>zemacs: <code>xd</code></li>
-</ul>
-<p>Note: <code>x</code> selects the entire line under the cursor</p>
-<h2 id="comment-lines-completion-search"><a class="header" href="#comment-lines-completion-search">Comment lines, Completion, Search</a></h2>
-<p>auto complete:</p>
-<ul>
-<li>vim: <code>C-p</code></li>
-<li>zemacs: <code>C-x</code></li>
-</ul>
-<p>comment lines:</p>
-<ul>
-<li>vim: <code>gc</code></li>
-<li>zemacs: <code>Space-c</code></li>
-</ul>
-<p>search for the word under the cursor:</p>
-<ul>
-<li>vim: <code>*</code></li>
-<li>zemacs: <code>A-o*n</code> (if there’s a tree-sitter grammar or LSP) or <code>be*n</code></li>
-</ul>
-<p>Explanation: if there’s a grammar or LSP, <code>A-o</code> expands selection to the parent syntax node (which would be the word in our case). Then <code>*</code> uses the current selection as the search pattern, and <code>n</code> goes to the next occurrence. <code>b</code> selects to the beginning of the word, and <code>e</code> selects to the end of the word, effectively selecting the whole word.</p>
-<p>block selection:</p>
-<ul>
-<li>vim: <code>C-v</code>, then expand your selection vertically and horizontally</li>
-<li>zemacs: There’s no “block selection” mode, so instead you’d use multiple cursors. Expand your block selection vertically by adding new cursors on the line below with <code>C</code>, and horizontally using standard movements</li>
-</ul>
-<p>search “foo” and replace with “bar” in the current selection:</p>
-<ul>
-<li>vim: <code>:s/foo/bar/g&lt;ret&gt;</code></li>
-<li>zemacs: <code>sfoo&lt;ret&gt;cbar&lt;esc&gt;,</code></li>
-</ul>
-<p>Explanation: <code>s</code> will open a prompt in the command line for a regex, and select all matches inside the selection (effectively adding a new cursor on each match). Pressing enter will then finalise this step, and allow the <code>c</code> to change the selections to “bar”. When done, go back to normal mode with <code>&lt;esc&gt;</code>, and keep only the primary selection with <code>,</code> (remove all the additional cursors).</p>
-<h2 id="file-actions"><a class="header" href="#file-actions">File actions</a></h2>
-<p>select the whole file:</p>
-<ul>
-<li>vim: <code>ggVG</code></li>
-<li>zemacs: <code>%</code></li>
-</ul>
-<p>reload a file from disk:</p>
-<ul>
-<li>vim: <code>:e&lt;ret&gt;</code></li>
-<li>zemacs: <code>:reload&lt;ret&gt;</code> (or <code>:reload-all&lt;ret&gt;</code> to reload all the buffers)</li>
-</ul>
-<p>run shell command:</p>
-<ul>
-<li>vim: <code>:!command</code></li>
-<li>zemacs: <code>:sh command</code> (or <code>!command</code> to insert its output into the buffer)</li>
-</ul>
-<p>setting a bookmark (bookmarking a location):</p>
-<ul>
-<li>vim: <code>ma</code> to set bookmark with name a. Use <code>`a</code> to go back to this bookmarked location.</li>
-<li>zemacs: there are no named bookmarks, but you can save a location in the jumplist with <code>C-s</code>, then jump back to that location by opening the jumplist picker with <code>&lt;space&gt;-j</code>, or back in the jumplist with <code>C-o</code> and forward with <code>C-i</code></li>
-</ul>
-<p>zemacs allows <a href="#insert-mode">some limited movement in <code>insert</code> mode</a> without switching to <code>normal</code> mode.</p>
-<p>Unlike Vim, under Zemacs, the cursor shape is the same (block) in insert mode and normal mode by default.
-This can be adjusted in configuration:</p>
+<li>
+<p>The cursor is a <strong>block</strong> in every mode by default (including insert). Change it
+with:</p>
 <pre><code class="language-toml">[editor.cursor-shape]
 insert = "bar"
 </code></pre>
-<blockquote>
-<p>TODO: Mention textobjects, surround, registers</p>
-</blockquote>
+</li>
+<li>
+<p><code>f</code>/<code>t</code>/<code>F</code>/<code>T</code> are <strong>not confined to the current line</strong>.</p>
+</li>
+<li>
+<p>Some Ex commands are named differently (e.g. re-read a file, run a shell
+command). Browse <a href="generated/typable-cmd.html">typable commands</a> or type <code>:</code> and
+use the completion menu.</p>
+</li>
+<li>
+<p>Zemacs adds first-class <strong>multiple cursors</strong>, syntax-aware
+<a href="#textobjects">text objects</a>, <a href="#surround-1">surround</a>, an integrated LSP,
+and tree-sitter selections — capabilities Vim reaches for plugins to provide.</p>
+</li>
+</ul>
+<p>Zemacs also allows <a href="#insert-mode">some limited movement in <code>insert</code> mode</a>
+without switching to <code>normal</code> mode.</p>
+<h2 id="the-helix-preset"><a class="header" href="#the-helix-preset">The <code>helix</code> preset</a></h2>
+<p>Setting <code>keymap = "helix"</code> switches to the Kakoune-inspired <strong>selection → action</strong>
+model: whatever you are going to act on is selected first and the action comes
+second, and a cursor is simply a single-width selection. Under that preset the
+common Vim keystrokes map differently — a few examples:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Action</th><th>Vim</th><th>Zemacs (<code>helix</code> preset)</th></tr>
+</thead>
+<tbody>
+<tr><td>delete a word</td><td><code>dw</code></td><td><code>wd</code></td></tr>
+<tr><td>change a word</td><td><code>cw</code></td><td><code>wc</code> / <code>ec</code> (includes trailing whitespace)</td></tr>
+<tr><td>delete a character</td><td><code>x</code></td><td><code>d</code> (or <code>;d</code> to reduce to a single char first)</td></tr>
+<tr><td>copy a line</td><td><code>yy</code></td><td><code>Xy</code> (<code>X</code> extends selections to whole lines)</td></tr>
+<tr><td>delete a line</td><td><code>dd</code></td><td><code>xd</code> (<code>x</code> selects the whole line)</td></tr>
+<tr><td>go to last line</td><td><code>G</code></td><td><code>ge</code></td></tr>
+<tr><td>line start / first non-blank</td><td><code>0</code> / <code>^</code></td><td><code>gh</code> / <code>gs</code></td></tr>
+<tr><td>line end</td><td><code>$</code></td><td><code>gl</code></td></tr>
+<tr><td>matching bracket</td><td><code>%</code></td><td><code>mm</code></td></tr>
+<tr><td>global replace</td><td><code>:%s/foo/bar/g</code></td><td><code>%sfoo&lt;ret&gt;cbar&lt;esc&gt;</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Here <code>%</code> selects the whole buffer, <code>s</code> opens a regex prompt and reduces the
+selection to each match (one cursor per match), and <code>c</code> changes them all at once.
+The <code>helix</code> preset content mirrors the
+<a href="https://github.com/mawww/kakoune/wiki/Migrating-from-Vim">Kakoune “Migrating from Vim” wiki</a>,
+since Zemacs’s selection-first mode descends from the same lineage.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="configuration-2"><a class="header" href="#configuration-2">Configuration</a></h1>
 <p>Zemacs keeps all of its configuration under a single dotted home directory:</p>
@@ -6670,11 +6646,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>3129</strong> (45.7%)</li>
+<li>Ported: <strong>3203</strong> (46.8%)</li>
 <li>Partial: <strong>537</strong> (7.8%)</li>
-<li>Absent: <strong>3181</strong></li>
+<li>Absent: <strong>3107</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1034 static commands, 1641 typable <code>:</code> commands, 2666 default keybindings</li>
+<li>zemacs source surface: 1077 static commands, 1641 typable <code>:</code> commands, 2869 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -6730,7 +6706,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">726</td><td style="text-align: right">169</td><td style="text-align: right">24.1%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">800</td><td style="text-align: right">169</td><td style="text-align: right">26.6%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
@@ -6751,7 +6727,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">515</td><td style="text-align: right">84</td><td style="text-align: right">27.3%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">589</td><td style="text-align: right">84</td><td style="text-align: right">31.3%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
