@@ -589,6 +589,25 @@ impl MappableCommand {
         describe_language_environment, "Describe the language environment / locale (C-h L)",
         describe_syntax, "Describe the buffer's syntax / tree-sitter status (C-h s)",
         view_lossage, "Show the recently pressed keys (C-h l)",
+        describe_char, "Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =)",
+        view_hello_file, "Show a multi-script greeting sample (emacs view-hello-file, C-h h)",
+        view_echo_area_messages, "Show the last echo-area message (emacs view-echo-area-messages, C-h e)",
+        describe_copying, "Show zemacs's copying license, the GPL (emacs describe-copying, C-h C-c)",
+        describe_distribution, "How to get zemacs / GNU software (emacs describe-distribution, C-h C-d)",
+        describe_gnu_project, "Open the GNU project page (emacs describe-gnu-project, C-h g)",
+        describe_no_warranty, "Show the GPL no-warranty sections (emacs describe-no-warranty, C-h C-w)",
+        view_emacs_faq, "Open the GNU Emacs FAQ (emacs view-emacs-FAQ, C-h C-f)",
+        view_emacs_todo, "Open the Emacs TODO list (emacs view-emacs-todo)",
+        view_emacs_problems, "Open the Emacs known-problems file (emacs view-emacs-problems)",
+        view_emacs_debugging, "Open the Emacs debugging manual (emacs view-emacs-debugging)",
+        view_order_manuals, "Open where to get the GNU manuals (emacs view-order-manuals)",
+        view_external_packages, "Open GNU ELPA / external packages (emacs view-external-packages)",
+        describe_keymap, "List every binding of the current mode's keymap (emacs describe-keymap)",
+        describe_prefix_bindings, "List the sub-bindings of a prefix (emacs describe-prefix-bindings)",
+        describe_categories, "List the character categories zemacs recognises (emacs describe-categories)",
+        list_character_sets, "List the Unicode blocks zemacs knows (emacs list-character-sets)",
+        list_charset_chars, "List the printable characters of each Unicode block (emacs list-charset-chars)",
+        list_coding_systems, "List the coding systems / encodings zemacs supports (emacs list-coding-systems)",
         describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
         package_search, "Search configured language packages and describe one (SPC h p)",
         config_variable_search, "Search editor config variables, copy path on select (SPC h .)",
@@ -16322,6 +16341,291 @@ fn view_lossage(cx: &mut Context) {
             .join(" ");
         show_text_in_scratch(cx.editor, &format!("Recent keys (lossage)\n\n{keys}\n"));
     }));
+}
+
+/// C-u C-x =: describe-char — the character after point in full: its glyph and
+/// key description, decimal/octal/hex code, U+ codepoint, Unicode general category
+/// and block, and its buffer position. Fuller than `what-cursor-position`; the
+/// report string is built (and unit tested) in `zemacs_core::cursor_info`.
+#[allow(deprecated)] // mirrors `what_cursor_position`'s column computation
+fn describe_char(cx: &mut Context) {
+    use zemacs_core::visual_coords_at_pos;
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let total = text.len_chars();
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let point = cursor + 1;
+    let column = visual_coords_at_pos(slice, cursor, doc.tab_width()).col;
+    let char_at_point = (cursor < total).then(|| text.char(cursor));
+    let report = zemacs_core::cursor_info::describe_char(char_at_point, point, total, column);
+    show_text_in_scratch(cx.editor, &format!("{report}\n"));
+}
+
+/// C-h h: view-hello-file — a short multi-script sample so you can confirm your
+/// fonts render the world's scripts. A bundled static string (zemacs has no
+/// installed etc/HELLO file); the greetings and their scripts match GNU Emacs's.
+const HELLO_FILE: &str = "\
+This is a list of ways to say hello in various languages.  If your
+font and terminal support the script, each greeting should render.
+
+Arabic (العربية)\tالسّلام عليكم\nBengali (বাংলা)\tনমস্কার\nChinese (中文,普通话,汉语)\t你好\nEnglish (English)\tHello\nEsperanto\tSaluton\nFrench (Français)\tBonjour, Salut\nGeorgian (ქართული)\tგამარჯობა\nGerman (Deutsch)\tGuten Tag\nGreek (Ελληνικά)\tΓειά σας\nHebrew (עברית)\tשלום\nHindi (हिन्दी)\tनमस्ते, नमस्कार\nJapanese (日本語)\tこんにちは, ｺﾝﾆﾁﾊ\nKorean (한국어)\t안녕하세요, 안녕하십니까\nRussian (Русский)\tЗдравствуйте!\nSpanish (Español)\t¡Hola!\nThai (ภาษาไทย)\tสวัสดีครับ, สวัสดีค่ะ\nVietnamese (Tiếng Việt)\tChào bạn\n\nEmoji\t😀 👋 🌍 🎉 λ ∑ → ★\n";
+
+fn view_hello_file(cx: &mut Context) {
+    show_text_in_scratch(cx.editor, HELLO_FILE);
+    cx.editor.set_status("HELLO — multi-script greeting sample");
+}
+
+/// Open a GNU documentation URL in the OS browser (the terminal analogue of the
+/// Emacs `view-emacs-*` / `describe-gnu-project` commands, which pop the info /
+/// browser). Reports what it opened, or the failure.
+fn open_gnu_doc(cx: &mut Context, label: &str, url: &str) {
+    match open_in_browser(url) {
+        Ok(()) => cx.editor.set_status(format!("Opening {label}: {url}")),
+        Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
+    }
+}
+
+/// C-h C-c: describe-copying — show zemacs's copying license (GPL, bundled).
+fn describe_copying(cx: &mut Context) {
+    const COPYING: &str = include_str!("../../LICENSE");
+    show_text_in_scratch(cx.editor, COPYING);
+    cx.editor.set_status("Copying — the GNU General Public License");
+}
+
+/// C-h C-d: describe-distribution — how to get zemacs / GNU software.
+fn describe_distribution(cx: &mut Context) {
+    open_gnu_doc(cx, "distribution", "https://www.gnu.org/order/order.html");
+}
+
+/// C-h g: describe-gnu-project — the GNU project page.
+fn describe_gnu_project(cx: &mut Context) {
+    open_gnu_doc(cx, "GNU project", "https://www.gnu.org/gnu/thegnuproject.html");
+}
+
+/// C-h C-w: describe-no-warranty — the GPL's no-warranty sections.
+fn describe_no_warranty(cx: &mut Context) {
+    open_gnu_doc(
+        cx,
+        "no warranty",
+        "https://www.gnu.org/licenses/gpl-3.0.html#section15",
+    );
+}
+
+/// C-h C-f: view-emacs-FAQ — the GNU Emacs FAQ.
+fn view_emacs_faq(cx: &mut Context) {
+    open_gnu_doc(
+        cx,
+        "Emacs FAQ",
+        "https://www.gnu.org/software/emacs/manual/html_mono/efaq.html",
+    );
+}
+
+/// view-emacs-todo — the Emacs TODO / roadmap.
+fn view_emacs_todo(cx: &mut Context) {
+    open_gnu_doc(
+        cx,
+        "Emacs TODO",
+        "https://git.savannah.gnu.org/cgit/emacs.git/tree/etc/TODO",
+    );
+}
+
+/// view-emacs-problems — the known-problems (PROBLEMS) file.
+fn view_emacs_problems(cx: &mut Context) {
+    open_gnu_doc(
+        cx,
+        "Emacs PROBLEMS",
+        "https://git.savannah.gnu.org/cgit/emacs.git/tree/etc/PROBLEMS",
+    );
+}
+
+/// view-emacs-debugging — the debugging section of the Emacs FAQ / manual.
+fn view_emacs_debugging(cx: &mut Context) {
+    open_gnu_doc(
+        cx,
+        "Emacs debugging",
+        "https://www.gnu.org/software/emacs/manual/html_node/elisp/Debugging.html",
+    );
+}
+
+/// view-order-manuals — where to buy / download the printed GNU manuals.
+fn view_order_manuals(cx: &mut Context) {
+    open_gnu_doc(cx, "GNU manuals", "https://www.gnu.org/doc/doc.html");
+}
+
+/// view-external-packages — where to find add-on packages (GNU ELPA).
+fn view_external_packages(cx: &mut Context) {
+    open_gnu_doc(cx, "external packages", "https://elpa.gnu.org/");
+}
+
+/// C-h e: view-echo-area-messages — show the last echo-area message. zemacs keeps
+/// only the current status line, not a persistent *Messages* ring, so this is a
+/// reduced view (there is a separate `view-lossage` for the recent key history).
+fn view_echo_area_messages(cx: &mut Context) {
+    let msg = cx
+        .editor
+        .get_status()
+        .map(|(s, _)| s.to_string())
+        .unwrap_or_default();
+    let body = if msg.is_empty() {
+        "*Messages*\n\n(no message in the echo area)\n\nzemacs shows only the current \
+         echo-area message, not a persistent message log.\nUse view-lossage (C-h l) for the \
+         recent key history."
+            .to_string()
+    } else {
+        format!(
+            "*Messages*\n\n{msg}\n\n(zemacs keeps only the current echo-area message, \
+             not a persistent log.)"
+        )
+    };
+    show_text_in_scratch(cx.editor, &body);
+}
+
+/// Render the current mode's whole keymap as sorted "chord  command" lines.
+fn dump_mode_keymap(compositor: &mut Compositor, cx: &mut compositor::Context, header: &str) {
+    let rmap = compositor.find::<ui::EditorView>().unwrap().keymaps.map()[&cx.editor.mode]
+        .reverse_map();
+    let mut rows: Vec<(String, String)> = rmap
+        .iter()
+        .flat_map(|(name, binds)| {
+            let name = name.clone();
+            binds.iter().map(move |b| {
+                (
+                    b.iter().map(|k| k.key_sequence_format()).collect::<String>(),
+                    name.clone(),
+                )
+            })
+        })
+        .collect();
+    rows.sort();
+    let mut out = format!("{header}\n\n");
+    for (keys, name) in rows {
+        out.push_str(&format!("{keys:<18} {name}\n"));
+    }
+    show_text_in_scratch(cx.editor, &out);
+}
+
+/// describe-keymap — list every binding of a keymap. zemacs keymaps are per-mode
+/// (Normal/Select/Insert), not named Emacs keymap variables, so this describes the
+/// current mode's keymap in full.
+fn describe_keymap(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let header = format!("Keymap — {:?} mode", cx.editor.mode);
+        dump_mode_keymap(compositor, cx, &header);
+    }));
+}
+
+/// C-x <help>: describe-prefix-bindings — list the sub-bindings of a prefix. zemacs
+/// does not track the pending prefix from within a command, so this lists the
+/// current mode's full keymap (grouped by leading chord) for you to scan.
+fn describe_prefix_bindings(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let header = format!(
+            "Prefix bindings — {:?} mode (full keymap; scan by leading key)",
+            cx.editor.mode
+        );
+        dump_mode_keymap(compositor, cx, &header);
+    }));
+}
+
+/// describe-categories — the character categories zemacs recognises. Emacs has a
+/// per-buffer category table with dozens of syntax categories; zemacs classifies a
+/// char into a small fixed set (see `zemacs_core::chars::categorize_char`), so this
+/// is a reduced listing of that set.
+fn describe_categories(cx: &mut Context) {
+    let body = "Character categories (zemacs)\n\n\
+        zemacs classifies each character into one of these categories\n\
+        (zemacs_core::chars::CharCategory) rather than Emacs's full,\n\
+        per-buffer syntax-category table:\n\n\
+        \tWord\t\tletters, digits and _  (\\w)\n\
+        \tPunctuation\tpunctuation, math, currency and modifier symbols\n\
+        \tWhitespace\tspaces and other non-breaking blanks\n\
+        \tEol\t\tline-ending characters\n\
+        \tUnknown\t\tanything not in the above\n\n\
+        The Unicode general-category of the character at point is shown by\n\
+        describe-char (C-u C-x =).\n";
+    show_text_in_scratch(cx.editor, body);
+}
+
+/// list-character-sets — the character "sets" zemacs can name. zemacs is a UTF-8
+/// editor with no legacy charset registry, so instead of Emacs's charset list this
+/// lists the Unicode blocks it knows, with their codepoint ranges.
+fn list_character_sets(cx: &mut Context) {
+    let mut out = String::from(
+        "Unicode blocks (zemacs is UTF-8; it has no legacy charset registry)\n\n",
+    );
+    out.push_str(&format!("{:<12} {:<12} {}\n", "Start", "End", "Block"));
+    for &(start, end, name) in zemacs_core::chars::unicode_blocks() {
+        out.push_str(&format!("U+{start:04X}       U+{end:04X}       {name}\n"));
+    }
+    show_text_in_scratch(cx.editor, &out);
+}
+
+/// list-charset-chars — the characters of a "charset". zemacs lists the printable
+/// characters of each named Unicode block it knows (a reduced analogue of Emacs's
+/// per-charset listing).
+fn list_charset_chars(cx: &mut Context) {
+    let mut out = String::from("Characters by Unicode block (printable subset)\n\n");
+    for &(start, end, name) in zemacs_core::chars::unicode_blocks() {
+        // Cap each block so the buffer stays readable.
+        let span = (end - start + 1).min(256);
+        out.push_str(&format!("\n== {name} (U+{start:04X}..U+{end:04X}) ==\n"));
+        let mut shown = 0;
+        for cp in start..start + span {
+            if let Some(ch) = char::from_u32(cp) {
+                if ch.is_control() || !zemacs_core::chars::unicode_block(ch).eq(name) {
+                    continue;
+                }
+                out.push_str(&format!("U+{cp:04X} {ch}   "));
+                shown += 1;
+                if shown % 8 == 0 {
+                    out.push('\n');
+                }
+            }
+        }
+        if shown % 8 != 0 {
+            out.push('\n');
+        }
+    }
+    show_text_in_scratch(cx.editor, &out);
+}
+
+/// list-coding-systems — the coding systems zemacs supports. zemacs decodes via
+/// encoding_rs (a wide set of encodings) and writes one of a fixed set of line
+/// endings; Emacs's coding-system model (with EOL and newline conversions per
+/// system) is richer, so this is a truthful listing of what zemacs actually offers.
+fn list_coding_systems(cx: &mut Context) {
+    let encodings = [
+        "UTF-8",
+        "UTF-16LE",
+        "UTF-16BE",
+        "windows-1252 (Latin-1 superset)",
+        "ISO-8859-2..15",
+        "windows-1250/1251/1253..1258",
+        "Shift_JIS",
+        "EUC-JP",
+        "ISO-2022-JP",
+        "GBK / GB18030",
+        "Big5",
+        "EUC-KR",
+        "KOI8-R / KOI8-U",
+        "IBM866",
+        "macintosh",
+    ];
+    let mut out = String::from(
+        "Coding systems (zemacs decodes via encoding_rs; default is UTF-8)\n\n\
+         Encodings:\n",
+    );
+    for e in encodings {
+        out.push_str(&format!("  {e}\n"));
+    }
+    out.push_str(
+        "\nLine endings (end-of-line conversion):\n  \
+         LF   (\\n, Unix)\n  CRLF (\\r\\n, DOS/Windows)\n  CR   (\\r, classic Mac)\n\n\
+         Set the buffer's line ending with :set-line-ending; the encoding is detected \
+         on load.\n",
+    );
+    show_text_in_scratch(cx.editor, &out);
 }
 
 fn last_picker(cx: &mut Context) {
