@@ -20,7 +20,7 @@
 //!   Enter/Space                  — keep the previewed state and close
 //!   q/Esc/C-c                    — restore the original state and close (cancel)
 //!
-//! All history mutation goes through [`Document::jump_to_revision`], which
+//! All history mutation goes through `Document::jump_to_revision`, which
 //! follows the shortest tree path from the current state to the target, so
 //! previewing across branches restores exactly that state and cancelling puts
 //! the buffer back where it started.
