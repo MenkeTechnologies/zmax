@@ -1007,6 +1007,8 @@ impl MappableCommand {
         earlier, "Move backward in history",
         later, "Move forward in history",
         undo_tree, "Browse the branching undo history (vim undotree)",
+        edit_injected_fragment, "Edit the injected-language fragment at point in its own buffer",
+        apply_injected_fragment, "Write the fragment buffer back into its host string",
         commit_undo_checkpoint, "Commit changes to new checkpoint",
         yank, "Yank selection",
         yank_to_clipboard, "Yank selections to clipboard",
@@ -22100,6 +22102,163 @@ fn undo_tree(cx: &mut Context) {
         Ok(Box::new(crate::ui::undotree::UndoTree::new(doc_id, view_id, current))
             as Box<dyn Component>)
     });
+}
+
+/// Where an "Edit Fragment" buffer came from, so its text can be written back
+/// (with correct escaping) into the host string.
+#[derive(Clone)]
+pub(crate) struct FragmentOrigin {
+    host: DocumentId,
+    start: usize,
+    end: usize,
+    /// Up to 3 chars immediately before the fragment (the opening delimiter),
+    /// used to pick an escaping mode.
+    before: String,
+    host_lang: Option<String>,
+}
+
+std::thread_local! {
+    /// Maps a fragment scratch buffer -> its host origin.
+    static FRAGMENT_ORIGINS: std::cell::RefCell<
+        std::collections::HashMap<DocumentId, FragmentOrigin>,
+    > = std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// Escape `text` so it can be written back inside a host string whose opening
+/// delimiter is captured by `before` (the few chars before the fragment).
+/// Conservative: triple-quoted / raw strings are left verbatim; single/double
+/// quotes and JS/TS template literals get their delimiter + backslash escaped.
+pub fn escape_fragment(text: &str, host_lang: Option<&str>, before: &str) -> String {
+    let triple = before.ends_with("\"\"\"") || before.ends_with("'''");
+    if triple {
+        return text.to_string(); // text blocks / raw triple strings: no escaping
+    }
+    match before.chars().last() {
+        Some('`') if host_lang == Some("go") => text.to_string(), // Go raw string
+        Some('`') => text
+            .replace('\\', "\\\\")
+            .replace('`', "\\`")
+            .replace("${", "\\${"), // JS/TS template literal
+        Some('"') => text
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\\n"),
+        Some('\'') => text
+            .replace('\\', "\\\\")
+            .replace('\'', "\\'")
+            .replace('\n', "\\n"),
+        _ => text.to_string(), // unknown / raw delimiter
+    }
+}
+
+/// The injected fragment at char `byte` (byte offset): `(guest language id,
+/// start char, end char)`, or `None` when the cursor is in the host language
+/// (no injection). Backs `edit_injected_fragment` and is exercised by the
+/// injection tests.
+pub fn injected_fragment_at(
+    doc: &Document,
+    loader: &zemacs_core::syntax::Loader,
+    byte: usize,
+) -> Option<(String, usize, usize)> {
+    let syntax = doc.syntax()?;
+    let guest = doc
+        .language_config_at(loader, byte)
+        .map(|c| c.language_id.clone())?;
+    if Some(guest.as_str()) == doc.language_name() {
+        return None; // host language — not an injection
+    }
+    let tree = syntax.tree_for_byte_range(byte as u32, byte as u32);
+    let node = tree.root_node();
+    let text = doc.text();
+    let len_bytes = text.len_bytes();
+    let start = text.byte_to_char((node.start_byte() as usize).min(len_bytes));
+    let end = text.byte_to_char((node.end_byte() as usize).min(len_bytes));
+    Some((guest, start, end))
+}
+
+/// JetBrains "Edit Fragment": open the injected region at point in a fresh
+/// buffer of the guest language (so it gets that language's highlighting,
+/// completion and LSP), remembering where to write it back.
+fn edit_injected_fragment(cx: &mut Context) {
+    edit_injected_fragment_impl(cx.editor);
+}
+
+/// Core of `:edit-fragment` (takes `&mut Editor` so both the static command and
+/// the typable `:edit-fragment` can share it).
+pub(crate) fn edit_injected_fragment_impl(editor: &mut Editor) {
+    let extracted = {
+        let loader = editor.syn_loader.load();
+        let (view, doc) = current_ref!(editor);
+        let text = doc.text();
+        let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+        let byte = text.char_to_byte(cursor);
+        injected_fragment_at(doc, &loader, byte).map(|(guest, s, e)| {
+            let frag: String = text.slice(s..e).chars().collect();
+            let before: String = text.slice(s.saturating_sub(3)..s).chars().collect();
+            let origin = FragmentOrigin {
+                host: doc.id(),
+                start: s,
+                end: e,
+                before,
+                host_lang: doc.language_name().map(str::to_string),
+            };
+            (guest, frag, origin)
+        })
+    };
+    let Some((guest, fragment, origin)) = extracted else {
+        editor.set_status("no injected fragment at point (:injection-info shows the language)");
+        return;
+    };
+
+    let frag_id = editor.new_file(zemacs_view::editor::Action::Replace);
+    {
+        let (view, doc) = current!(editor);
+        let tx = Transaction::insert(doc.text(), &Selection::point(0), fragment.as_str().into());
+        doc.apply(&tx, view.id);
+        doc.append_changes_to_history(view);
+    }
+    {
+        let loader = editor.syn_loader.load();
+        let _ = doc_mut!(editor).set_language_by_language_id(&guest, &loader);
+    }
+    FRAGMENT_ORIGINS.with(|m| m.borrow_mut().insert(frag_id, origin));
+    editor.set_status(format!(
+        "editing {guest} fragment — :apply-fragment writes it back to the host string"
+    ));
+}
+
+/// Write the current fragment buffer's text back into its host string range.
+fn apply_injected_fragment(cx: &mut Context) {
+    apply_injected_fragment_impl(cx.editor);
+}
+
+pub(crate) fn apply_injected_fragment_impl(editor: &mut Editor) {
+    let frag_id = doc!(editor).id();
+    let Some(origin) = FRAGMENT_ORIGINS.with(|m| m.borrow().get(&frag_id).cloned()) else {
+        editor.set_status("not an injection fragment buffer (open one with :edit-fragment)");
+        return;
+    };
+    let mut new_text = doc!(editor).text().to_string();
+    // A fresh buffer often carries a trailing newline the host string didn't.
+    if new_text.ends_with('\n') {
+        new_text.pop();
+    }
+    // Escape for the host string's delimiter so we don't corrupt the host code.
+    let new_text = escape_fragment(&new_text, origin.host_lang.as_deref(), &origin.before);
+    editor.switch(origin.host, zemacs_view::editor::Action::Replace);
+    let (view, doc) = current!(editor);
+    let len = doc.text().len_chars();
+    let (s, e) = (origin.start.min(len), origin.end.min(len));
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((s, e, Some(new_text.as_str().into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    FRAGMENT_ORIGINS.with(|m| {
+        m.borrow_mut().remove(&frag_id);
+    });
+    editor.set_status("fragment written back to host string");
 }
 
 // Yank / Paste

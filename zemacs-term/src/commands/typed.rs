@@ -1789,6 +1789,143 @@ fn scratch(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     Ok(())
 }
 
+/// `:injections` — list the active language-injection rules (built-in defaults +
+/// merged `injections.toml`) in a scratch buffer.
+fn injections(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let lines = {
+        let guard = cx.editor.syn_loader.load();
+        let loader: &zemacs_core::syntax::Loader = &guard;
+        loader.injection_engine().describe()
+    };
+    let mut body = format!("Language injection rules ({}):\n\n", lines.len());
+    for l in &lines {
+        body.push_str(l);
+        body.push('\n');
+    }
+    body.push_str(
+        "\nHosts `*` = every host with a string template. Edit rules in\n\
+         ~/.zemacs/injections.toml (global) or <project>/.zemacs/injections.toml,\n\
+         then restart to reload.\n",
+    );
+    cx.editor.new_file(Action::Replace);
+    let (view, doc) = current!(cx.editor);
+    let insert = Transaction::insert(
+        doc.text(),
+        &zemacs_core::Selection::point(0),
+        body.as_str().into(),
+    );
+    doc.apply(&insert, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// `:injection-info` — report the effective (possibly injected) language at the
+/// cursor, i.e. what `language_config_at` resolves.
+fn injection_info(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (at, root) = {
+        let loader = cx.editor.syn_loader.load();
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+        let byte = text.char_to_byte(cursor);
+        let at = doc
+            .language_config_at(&loader, byte)
+            .map(|c| c.language_id.clone());
+        (at, doc.language_name().map(|s| s.to_string()))
+    };
+    match (at, root) {
+        (Some(lang), root) if Some(&lang) != root.as_ref() => {
+            cx.editor
+                .set_status(format!("injected language at point: {lang}"));
+        }
+        (_, Some(root)) => {
+            cx.editor
+                .set_status(format!("no injection here — host language: {root}"));
+        }
+        _ => cx.editor.set_status("no syntax / plain buffer at point"),
+    }
+    Ok(())
+}
+
+/// `:edit-fragment` — edit the injected fragment at point in its own buffer.
+fn edit_fragment(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        super::edit_injected_fragment_impl(cx.editor);
+    }
+    Ok(())
+}
+
+/// `:apply-fragment` — write the fragment buffer back into its host string.
+fn apply_fragment(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        super::apply_injected_fragment_impl(cx.editor);
+    }
+    Ok(())
+}
+
+/// `:inject-language <lang>` — JetBrains "Inject language here": insert a
+/// `/* language=<lang> */` hint comment before the string at point, so the
+/// engine injects `<lang>` into it. Block-comment hosts only.
+fn inject_language(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(lang) = args.first().map(|s| s.to_string()) else {
+        anyhow::bail!("usage: :inject-language <language>");
+    };
+    let pos = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+        let byte = text.char_to_byte(cursor);
+        let syntax = doc
+            .syntax()
+            .ok_or_else(|| anyhow!("no syntax tree for this buffer"))?;
+        let mut node = syntax.descendant_for_byte_range(byte as u32, byte as u32);
+        let mut start = None;
+        while let Some(n) = node {
+            let k = n.kind();
+            if k.contains("string") || k.contains("template") {
+                start = Some(text.byte_to_char(n.start_byte() as usize));
+                break;
+            }
+            node = n.parent();
+        }
+        start
+    };
+    let Some(pos) = pos else {
+        cx.editor
+            .set_error("place the cursor inside a string literal to inject a language");
+        return Ok(());
+    };
+    let hint = format!("/* language={lang} */ ");
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::insert(
+        doc.text(),
+        &zemacs_core::Selection::point(pos),
+        hint.as_str().into(),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor
+        .set_status(format!("inject {lang}: added hint comment"));
+    Ok(())
+}
+
 /// `:RevealInFinder` — reveal the current file in the OS file manager (JetBrains
 /// "Reveal in Finder"). macOS `open -R`; elsewhere open the parent directory.
 fn reveal_in_finder(
@@ -28860,6 +28997,61 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "injections",
+        aliases: &["injection-rules"],
+        doc: "List the active language-injection rules (defaults + injections.toml).",
+        fun: injections,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "injection-info",
+        aliases: &["what-injection"],
+        doc: "Report the effective (possibly injected) language at the cursor.",
+        fun: injection_info,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "edit-fragment",
+        aliases: &["edit-injected-fragment"],
+        doc: "Edit the injected-language fragment at point in its own buffer (JetBrains Edit Fragment).",
+        fun: edit_fragment,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "apply-fragment",
+        aliases: &["apply-injected-fragment"],
+        doc: "Write the fragment buffer back into its host string.",
+        fun: apply_fragment,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "inject-language",
+        aliases: &["inject-lang"],
+        doc: "Inject a language into the string at point via a /* language=… */ hint (JetBrains inject-here).",
+        fun: inject_language,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },

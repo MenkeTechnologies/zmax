@@ -77,7 +77,7 @@ impl LanguageData {
         let highlight_query_text = read_query(name, "highlights.scm");
         let mut injection_query_text = read_query(name, "injections.scm");
         // Append config-driven injection rules (the injection engine) for this host.
-        injection_query_text.push_str(&crate::injection::generate(name, loader.injection_rules()));
+        injection_query_text.push_str(&loader.injection_engine().generate(name));
         let local_query_text = read_query(name, "locals.scm");
         let config = SyntaxConfig::new(
             grammar,
@@ -273,22 +273,12 @@ pub fn read_query(lang: &str, query_filename: &str) -> String {
     })
 }
 
-/// Build the active injection-rule set: built-in defaults, then a global
-/// `~/.zemacs/injections.toml`, then a project `.zemacs/injections.toml` (later
-/// scopes append). Missing/malformed files are ignored.
-fn load_injection_rules() -> Vec<crate::injection::InjectionRule> {
-    let mut rules = crate::injection::default_rules();
-    let global = zemacs_loader::config_dir().join("injections.toml");
-    let project = zemacs_loader::find_workspace()
-        .0
-        .join(".zemacs")
-        .join("injections.toml");
-    for path in [global, project] {
-        if let Ok(text) = std::fs::read_to_string(&path) {
-            rules = crate::injection::merge_user_config(rules, &text);
-        }
-    }
-    rules
+/// Build the injection engine from built-in defaults + global/project TOML.
+fn load_injection_engine() -> crate::injection::InjectionEngine {
+    crate::injection::InjectionEngine::load(
+        &zemacs_loader::config_dir(),
+        &zemacs_loader::find_workspace().0,
+    )
 }
 
 #[derive(Debug, Default)]
@@ -299,9 +289,9 @@ pub struct Loader {
     languages_glob_matcher: FileTypeGlobMatcher,
     language_server_configs: HashMap<String, LanguageServerConfiguration>,
     scopes: ArcSwap<Vec<String>>,
-    /// Config-driven language-injection rules (built-in defaults + user TOML),
-    /// expanded into per-host injection queries at grammar-compile time.
-    injection_rules: Vec<crate::injection::InjectionRule>,
+    /// The config-driven language-injection engine (built-in defaults + user
+    /// TOML), expanded into per-host injection queries at grammar-compile time.
+    injection_engine: crate::injection::InjectionEngine,
 }
 
 pub type LoaderError = globset::Error;
@@ -341,14 +331,15 @@ impl Loader {
             languages_glob_matcher: FileTypeGlobMatcher::new(file_type_globs)?,
             language_server_configs: config.language_server,
             scopes: ArcSwap::from_pointee(Vec::new()),
-            injection_rules: load_injection_rules(),
+            injection_engine: load_injection_engine(),
         })
     }
 
-    /// The active language-injection rules (built-in defaults plus any merged
-    /// from `injections.toml`).
-    pub fn injection_rules(&self) -> &[crate::injection::InjectionRule] {
-        &self.injection_rules
+    /// The language-injection engine (built-in defaults plus any merged from
+    /// `injections.toml`). Rebuilt whenever the whole `Loader` is (e.g. on
+    /// `:config-reload`), which re-reads `injections.toml`.
+    pub fn injection_engine(&self) -> &crate::injection::InjectionEngine {
+        &self.injection_engine
     }
 
     pub fn languages(&self) -> impl ExactSizeIterator<Item = (Language, &LanguageData)> {
