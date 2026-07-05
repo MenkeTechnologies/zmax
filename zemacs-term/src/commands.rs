@@ -2074,11 +2074,14 @@ fn extend_visual_line_down(cx: &mut Context) {
     )
 }
 
-fn goto_line_end_impl(view: &mut View, doc: &mut Document, movement: Movement) {
+fn goto_line_end_impl(view: &mut View, doc: &mut Document, count: usize, movement: Movement) {
     let text = doc.text().slice(..);
+    let last_line = text.len_lines().saturating_sub(1);
 
     let selection = doc.selection(view.id).clone().transform(|range| {
-        let line = range.cursor_line(text);
+        // vim `$` is count-aware: `3$` targets the end of the line `count`-1
+        // below (so `D`/`C`/`d$` inherit `3D`/`3C`/`d3$`). count=1 = current line.
+        let line = (range.cursor_line(text) + count.saturating_sub(1)).min(last_line);
         let line_start = text.line_to_char(line);
 
         let pos = graphemes::prev_grapheme_boundary(text, line_end_char_index(&text, line))
@@ -2090,10 +2093,12 @@ fn goto_line_end_impl(view: &mut View, doc: &mut Document, movement: Movement) {
 }
 
 fn goto_line_end(cx: &mut Context) {
+    let count = cx.count();
     let (view, doc) = current!(cx.editor);
     goto_line_end_impl(
         view,
         doc,
+        count,
         if cx.editor.mode == Mode::Select {
             Movement::Extend
         } else {
@@ -2103,8 +2108,9 @@ fn goto_line_end(cx: &mut Context) {
 }
 
 fn extend_to_line_end(cx: &mut Context) {
+    let count = cx.count();
     let (view, doc) = current!(cx.editor);
-    goto_line_end_impl(view, doc, Movement::Extend)
+    goto_line_end_impl(view, doc, count, Movement::Extend)
 }
 
 fn goto_line_end_newline_impl(view: &mut View, doc: &mut Document, movement: Movement) {
@@ -4450,8 +4456,28 @@ fn sneak_or_substitute_char(cx: &mut Context) {
     if cx.editor.config().vim_sneak {
         sneak_forward(cx);
     } else {
-        change_selection(cx);
+        substitute_chars_vim(cx);
     }
+}
+
+/// vim `{count}s`: substitute `count` characters — delete them (line-bounded,
+/// like `x`) and enter insert mode. Equivalent to vim `{count}cl`; count-blind
+/// `change_selection` only ever changed the single block-cursor character.
+fn substitute_chars_vim(cx: &mut Context) {
+    let count = cx.count();
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let extended = doc.selection(view.id).clone().transform(|range| {
+            let cursor = range.cursor(text);
+            let line = text.char_to_line(cursor);
+            let line_end = line_end_char_index(&text, line);
+            let to = graphemes::nth_next_grapheme_boundary(text, cursor, count).min(line_end);
+            Range::new(cursor, to.max(cursor))
+        });
+        doc.set_selection(view.id, extended);
+    }
+    change_selection(cx);
 }
 
 /// `S`: vim-sneak backward when `editor.vim-sneak` is on, else vim substitute-line.

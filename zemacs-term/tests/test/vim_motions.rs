@@ -482,6 +482,79 @@ async fn count_r_aborts_when_line_too_short() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// vim `{count}s`: `3sZ` substitutes 3 chars (delete + insert), like `3cl`.
+/// Guards the count-blind `change_selection` that only changed one char.
+#[tokio::test(flavor = "multi_thread")]
+async fn count_s_substitutes_count_chars() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "abcdef\n")?;
+    file.flush()?;
+    // Disable vim-sneak so `s` keeps its substitute-char meaning.
+    let mut cfg = Config {
+        keys: zemacs_term::keymap::vim::default(),
+        ..Default::default()
+    };
+    cfg.editor.vim_sneak = false;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(cfg)
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("3sZ<esc>"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "Zdef\n",
+                    doc.text().to_string(),
+                    "`3sZ` deletes abc and inserts Z"
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// vim `{count}D`: `2D` deletes to end of line plus `count`-1 more lines
+/// (count-aware `$`). Guards the count-blind `extend_to_line_end`.
+#[tokio::test(flavor = "multi_thread")]
+async fn count_d_capital_deletes_count_lines_to_eol() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "l1\nl2\nl3\nl4\n")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("2D"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "\nl3\nl4\n",
+                    doc.text().to_string(),
+                    "`2D` deletes l1 through end of l2"
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
 /// Spacemacs auto-fill (SPC t F): typing past text_width wraps the line at the
 /// last whitespace.
 #[tokio::test(flavor = "multi_thread")]
