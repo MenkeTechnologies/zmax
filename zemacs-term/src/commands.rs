@@ -4247,6 +4247,16 @@ fn vim_replay_macro(cx: &mut Context) {
                 typed::repeat_last_command_line(cx);
                 return;
             }
+            // vim `@@` repeats the most recently replayed macro register.
+            if ch == '@' {
+                let Some(reg) = cx.editor.last_macro_register else {
+                    cx.editor.set_error("No previously replayed macro");
+                    return;
+                };
+                cx.register = Some(reg);
+                replay_macro(cx);
+                return;
+            }
             cx.register = Some(ch);
             replay_macro(cx);
         }
@@ -32469,6 +32479,8 @@ fn replay_macro(cx: &mut Context) {
     // Once the macro has been fully validated, it's marked as being under replay
     // to ensure we don't fall into infinite recursion.
     cx.editor.macro_replaying.push(reg);
+    // Remember the register so vim `@@` can repeat this macro.
+    cx.editor.last_macro_register = Some(reg);
 
     let count = cx.count();
     cx.callback.push(Box::new(move |compositor, cx| {
