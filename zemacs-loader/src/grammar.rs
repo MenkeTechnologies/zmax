@@ -501,7 +501,13 @@ enum BuildStatus {
 
 fn build_grammar(grammar: GrammarConfiguration, target: Option<&str>) -> Result<BuildStatus> {
     let grammar_dir = if let GrammarSource::Local { path } = &grammar.source {
-        PathBuf::from(&path)
+        // Canonicalize to an absolute path: the compile step below `cd`s into the
+        // grammar's `src/` dir, after which a *relative* path (e.g. one starting
+        // with `../`) would resolve against the wrong base and the parser file
+        // would not be found. Git sources sidestep this because `runtime_dirs()`
+        // is already absolute.
+        let p = PathBuf::from(&path);
+        std::fs::canonicalize(&p).unwrap_or(p)
     } else {
         crate::runtime_dirs()
             .first()

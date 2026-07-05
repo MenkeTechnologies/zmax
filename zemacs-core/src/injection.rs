@@ -582,6 +582,45 @@ arg = 0
     }
 
     #[test]
+    fn generates_hint_rules() {
+        let rules = default_rules();
+        // ecma: adjacent `/* language=sql */ "…"` comment-hint form.
+        let ecma = generate("typescript", &rules);
+        assert!(ecma.contains("comment-hint rule"), "no ecma hint rule");
+        assert!(ecma.contains("(comment)"), "ecma hint missing comment node");
+        assert!(ecma.contains("@_hint"), "ecma hint missing capture");
+        assert!(ecma.contains("#match? @_hint"), "hint missing content match");
+        assert!(ecma.contains("language"), "hint regex missing 'language'");
+        // python: the hint sits on the line BEFORE the assignment.
+        let py = generate("python", &rules);
+        assert!(
+            py.contains("expression_statement (assignment right:"),
+            "python hint must use prev-line assignment form"
+        );
+        // java: split comment node.
+        let java = generate("java", &rules);
+        assert!(java.contains("[(line_comment) (block_comment)]"), "java comment node");
+    }
+
+    #[test]
+    fn fragment_view_edges() {
+        // Empty fragment.
+        let e = FragmentView::new("json", 10, "");
+        assert!(e.is_empty());
+        assert_eq!(e.len(), 0);
+        assert_eq!(e.host_range(), 10..10);
+        assert_eq!(e.from_host(10), Some(0)); // start==end, still maps
+        assert_eq!(e.from_host(9), None);
+        assert_eq!(e.from_host(11), None);
+        // Multi-byte chars are counted as chars, not bytes.
+        let u = FragmentView::new("sql", 3, "héllo"); // 5 chars
+        assert_eq!(u.len(), 5);
+        assert_eq!(u.host_range(), 3..8);
+        assert_eq!(u.to_host(5), 8);
+        assert_eq!(u.from_host(8), Some(5));
+    }
+
+    #[test]
     fn fragment_view_offset_mapping() {
         // Host: `q = "SELECT 1";` — fragment "SELECT 1" starts at host char 5.
         let f = FragmentView::new("sql", 5, "SELECT 1");

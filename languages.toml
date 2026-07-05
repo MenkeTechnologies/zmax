@@ -1285,10 +1285,16 @@ file-types = ["stk"]
 comment-token = "#"
 indent = { tab-width = 4, unit = "    " }
 language-servers = ["stryke-lsp"]
-# Grammar: prebuilt at runtime/grammars/stryke.dylib from the source in
-# runtime/grammars/sources/stryke (regenerate: `tree-sitter generate` there,
-# then compile src/parser.c to that dylib). Not registered as a `[[grammar]]`
-# build target so the standard grammar-build/fetch step leaves it alone.
+
+# stryke's tree-sitter grammar is vendored in-repo (not fetched from a git URL)
+# under runtime/grammars/sources/stryke. The build appends `src/` to the Local
+# source path itself, so it points at the grammar root. build.rs compiles the
+# parser per-target into runtime/grammars/stryke.dylib on every platform (incl.
+# CI/Linux), so no committed platform dylib is relied on. Regenerate with
+# `tree-sitter generate` inside runtime/grammars/sources/stryke.
+[[grammar]]
+name = "stryke"
+source = { path = "../runtime/grammars/sources/stryke" }
 
 [[language]]
 name = "bash"

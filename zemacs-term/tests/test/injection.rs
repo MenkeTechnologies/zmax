@@ -177,6 +177,62 @@ const n6 = \"just some label\";
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn content_sniffers_across_hosts() -> anyhow::Result<()> {
+    // The JSON/HTML/GraphQL sniffers are host-agnostic (all string hosts), not
+    // just JS. Verify in Python, Go, and Java — with a negative each.
+    // (ext, source, [(needle, expected)])
+    let py = "\
+cfg = '{\"host\": \"x\", \"port\": 8080}'
+tpl = '''<section id=\"a\"><b>hi</b></section>'''
+gql = '''query Q { pyField { id } }'''
+plain = 'just a python label'
+";
+    let got = langs_at("py", py, &["host", "section id", "pyField", "just a python"]).await?;
+    assert_eq!(got[0].as_deref(), Some("json"), "py json");
+    assert_eq!(got[1].as_deref(), Some("html"), "py html");
+    assert_eq!(got[2].as_deref(), Some("graphql"), "py graphql");
+    assert!(
+        !matches!(got[3].as_deref(), Some("json") | Some("html") | Some("graphql")),
+        "py plain string false positive"
+    );
+
+    let go = "package p\nvar j = `{\"a\": 1}`\nvar h = `<div><p>x</p></div>`\nvar s = \"plain go text\"\n";
+    let got = langs_at("go", go, &["\"a\": 1", "<div>", "plain go text"]).await?;
+    assert_eq!(got[0].as_deref(), Some("json"), "go json raw string");
+    assert_eq!(got[1].as_deref(), Some("html"), "go html raw string");
+    assert_ne!(got[2].as_deref(), Some("json"), "go plain");
+
+    // Java text block. JSON would work too but embedded `"` split the fragment
+    // into pieces; HTML (quote-free here) stays a single multiline fragment.
+    let java = "class C { String h = \"\"\"\n<div><p>x</p></div>\n\"\"\"; String s = \"plain\"; }\n";
+    let got = langs_at("java", java, &["<div>", "plain"]).await?;
+    assert_eq!(got[0].as_deref(), Some("html"), "java html text block");
+    assert_ne!(got[1].as_deref(), Some("html"), "java plain");
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn comment_hint_block_comment_hosts() -> anyhow::Result<()> {
+    // `/* language=X */` immediately before a string forces X. Verified in Java
+    // and C#, where the block comment anchors as a sibling of the string literal.
+    // (Go attaches an inline comment to the statement rather than the expression,
+    // so its `.`-anchored hint does not fire — content/call-site rules cover Go.)
+    let java = "class C { String q = /* language=graphql */ \"whatever\"; }\n";
+    assert_eq!(
+        langs_at("java", java, &["whatever"]).await?[0].as_deref(),
+        Some("graphql"),
+        "java /* language=graphql */"
+    );
+    let cs = "class C { void M() { var q = /* language=sql */ \"plain text here\"; } }\n";
+    assert_eq!(
+        langs_at("cs", cs, &["plain text here"]).await?[0].as_deref(),
+        Some("sql"),
+        "c# /* language=sql */"
+    );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn language_injection_sql_autodetect_js() -> anyhow::Result<()> {
     // No tag, no hint, no query method — detected purely from content.
     let js = "\
@@ -362,6 +418,71 @@ fn embedded_interpreter_language_servers() {
             "{ext} not served by zshrs-lsp"
         );
     }
+}
+
+/// Count `ERROR` nodes in a document's tree-sitter parse (0 = clean parse).
+fn tree_error_count(doc: &zemacs_view::Document) -> usize {
+    let syntax = doc.syntax().expect("no syntax tree");
+    let mut stack = vec![syntax.tree().root_node()];
+    let mut errors = 0;
+    while let Some(n) = stack.pop() {
+        if n.kind() == "ERROR" {
+            errors += 1;
+        }
+        for i in 0..n.child_count() {
+            if let Some(c) = n.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    errors
+}
+
+async fn open_stk(src: &str) -> anyhow::Result<helpers::AppBuilder> {
+    let file = tempfile::Builder::new().suffix(".stk").tempfile()?;
+    std::fs::write(file.path(), src)?;
+    Ok(helpers::AppBuilder::new().with_file(file.path(), None))
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn stryke_parses_common_constructs_without_errors() -> anyhow::Result<()> {
+    let src = "\
+my $x = 1;
+my $y = \"hello\";
+my $z = 'raw';
+my $n = 0x1F;
+sub double { return $x * 2; }
+$obj->call(1, 2);
+$x |> double;
+$x ~> pmap;
+print \"v: \", $x, $y;
+# a comment
+";
+    let app = open_stk(src).await?.build()?;
+    let doc = app.editor.documents().next().unwrap();
+    assert_eq!(doc.language_name(), Some("stryke"));
+    assert_eq!(tree_error_count(doc), 0, "stryke program must parse with no ERROR nodes");
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn stryke_all_pipe_operators_parse_clean() -> anyhow::Result<()> {
+    // Every stryke pipe/thread operator (from strykelang token.rs) must tokenize
+    // and parse as an operator — no ERROR fallback.
+    for op in [
+        "|>", "~>", "~>>", "~s>", "~s>>", "~p>", "~p>>", "~d>", "~d>>", "->>",
+        "~|>", "||>", "|then|",
+    ] {
+        let src = format!("$a {op} $b;\n");
+        let app = open_stk(&src).await?.build()?;
+        let doc = app.editor.documents().next().unwrap();
+        assert_eq!(
+            tree_error_count(doc),
+            0,
+            "operator {op:?} did not parse cleanly"
+        );
+    }
+    Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
