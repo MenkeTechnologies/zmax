@@ -123,6 +123,19 @@ pub struct DocumentSavedEvent {
 pub type DocumentSavedEventResult = Result<DocumentSavedEvent, anyhow::Error>;
 pub type DocumentSavedEventFuture = BoxFuture<'static, DocumentSavedEventResult>;
 
+/// A read-only view of a document's branching undo history, for the undo-tree
+/// UI (the port of vim's `undotree`). See [`Document::undo_tree_snapshot`].
+#[derive(Debug, Clone)]
+pub struct UndoTreeSnapshot {
+    /// `(parent revision index, commit time)` for every revision, indexed by
+    /// revision id. Index 0 is the empty root (its parent is itself).
+    pub nodes: Vec<(usize, std::time::Instant)>,
+    /// The revision currently displayed in the buffer.
+    pub current: usize,
+    /// The revision that matches the on-disk file (last saved).
+    pub saved: usize,
+}
+
 #[derive(Debug)]
 pub struct SavePoint {
     /// The view this savepoint is associated with
@@ -2020,6 +2033,47 @@ impl Document {
     /// Redo modifications to the [`Document`] according to `uk`.
     pub fn later(&mut self, view: &mut View, uk: UndoKind) -> bool {
         self.earlier_later_impl(view, uk, false)
+    }
+
+    /// Snapshot of the undo-history tree for the undo-tree UI: for every
+    /// revision, its parent index and commit [`Instant`], plus the current and
+    /// last-saved revision indices. Reads through the `Cell<History>` by
+    /// take/set, so it does not disturb the stored history.
+    pub fn undo_tree_snapshot(&self) -> UndoTreeSnapshot {
+        let history = self.history.take();
+        let n = history.revision_count();
+        let nodes = (0..n)
+            .map(|i| (history.parent_of(i), history.revision_timestamp(i)))
+            .collect();
+        let current = history.current_revision();
+        self.history.set(history);
+        UndoTreeSnapshot {
+            nodes,
+            current,
+            saved: self.last_saved_revision,
+        }
+    }
+
+    /// Jump the document to an arbitrary revision in its undo history (undo-tree
+    /// "go to state"). Mirrors [`Self::earlier`]/[`Self::later`] but targets a
+    /// specific revision index rather than a step/time delta. Returns whether
+    /// the buffer changed (false when already at `to`).
+    pub fn jump_to_revision(&mut self, view: &mut View, to: usize) -> bool {
+        self.append_changes_to_history(view);
+        let txns = self.history.get_mut().jump_to_revision(to);
+        let mut success = false;
+        for txn in txns {
+            if self.apply_impl(&txn, view.id, true) {
+                success = true;
+            }
+        }
+        if success {
+            // reset changeset to fix len
+            self.changes = ChangeSet::new(self.text().slice(..));
+            // Sync changes with the jumplist selections.
+            view.sync_changes(self);
+        }
+        success
     }
 
     /// Commit pending changes to history

@@ -388,6 +388,7 @@ impl MappableCommand {
         extend_till_prev_char, "Extend till previous occurrence of char",
         extend_prev_char, "Extend to previous occurrence of char",
         repeat_last_motion, "Repeat last motion",
+        repeat_find_char, "Repeat last find in same direction (;)",
         repeat_find_char_reverse, "Repeat last find in opposite direction (,)",
         replace, "Replace with new char",
         switch_case, "Switch (toggle) case",
@@ -1005,6 +1006,7 @@ impl MappableCommand {
         redo, "Redo change",
         earlier, "Move backward in history",
         later, "Move forward in history",
+        undo_tree, "Browse the branching undo history (vim undotree)",
         commit_undo_checkpoint, "Commit changes to new checkpoint",
         yank, "Yank selection",
         yank_to_clipboard, "Yank selections to clipboard",
@@ -2897,48 +2899,36 @@ fn align_selections(cx: &mut Context) {
 
 fn goto_window(cx: &mut Context, align: Align) {
     let count = cx.count() - 1;
-    let config = cx.editor.config();
     let (view, doc) = current!(cx.editor);
     let view_offset = doc.view_offset(view.id);
 
-    let height = view.inner_height();
-
-    // respect user given count if any
-    // - 1 so we have at least one gap in the middle.
-    // a height of 6 with padding of 3 on each side will keep shifting the view back and forth
-    // as we type
-    let scrolloff = config.scrolloff.min(height.saturating_sub(1) / 2);
-
     let last_visual_line = view.last_visual_line(doc);
 
-    // Vim (`H`/`L`) only keeps the `scrolloff` gap when there is off-screen text to
-    // scroll past: at the very top of the buffer `H` reaches the first line, and at
-    // the bottom `L` reaches the last line, regardless of `scrolloff`. Helix applied
-    // the gap unconditionally, leaving H/L an offset short of the true top/bottom, so
-    // suppress it at whichever document edge is currently on screen.
+    // Vim's `H`/`L` (default `scrolloff` = 0) land on the literal top/bottom visible
+    // row. Helix's goto_window applies its own `scrolloff` gap unconditionally, so
+    // `H`/`L` stopped several rows short of the edge ("fake" behaviour). Reach the
+    // true top/bottom visual line instead, honouring only the user-given count.
     let text = doc.text().slice(..);
-    let last_doc_line = text.len_lines().saturating_sub(1);
-    let at_doc_top = view_offset.vertical_offset == 0;
-    let at_doc_bottom = view
-        .pos_at_visual_coords(doc, last_visual_line as u16, 0, false)
-        .is_some_and(|pos| text.char_to_line(pos) >= last_doc_line);
-    let top_scrolloff = if at_doc_top { 0 } else { scrolloff };
-    let bottom_scrolloff = if at_doc_bottom { 0 } else { scrolloff };
 
     let visual_line = match align {
-        Align::Top => view_offset.vertical_offset + top_scrolloff + count,
+        Align::Top => view_offset.vertical_offset + count,
         Align::Center => view_offset.vertical_offset + (last_visual_line / 2),
-        Align::Bottom => {
-            view_offset.vertical_offset + last_visual_line.saturating_sub(bottom_scrolloff + count)
-        }
+        Align::Bottom => view_offset.vertical_offset + last_visual_line.saturating_sub(count),
     };
     let visual_line = visual_line
-        .max(view_offset.vertical_offset + top_scrolloff)
-        .min(view_offset.vertical_offset + last_visual_line.saturating_sub(bottom_scrolloff));
+        .max(view_offset.vertical_offset)
+        .min(view_offset.vertical_offset + last_visual_line);
 
     let pos = view
         .pos_at_visual_coords(doc, visual_line as u16, 0, false)
         .expect("visual_line was constrained to the view area");
+    // Vim's `H`/`M`/`L` leave the cursor on the first non-blank character of the
+    // target line (like `^`), not at column 0 the way Helix's goto_window does.
+    let line = text.char_to_line(pos);
+    let pos = text
+        .line(line)
+        .first_non_whitespace_char()
+        .map_or(pos, |col| text.line_to_char(line) + col);
     let selection = doc
         .selection(view.id)
         .clone()
@@ -4499,6 +4489,23 @@ fn apply_find_char(
             })
     });
     doc.set_selection(view.id, selection);
+}
+
+// vim `;`: repeat the last f/t/F/T find in the SAME direction. Works across
+// lines (`find_nth_char` scans the whole buffer), matching the easymotion f/t/F/T
+// that populate `last_find`.
+fn repeat_find_char(cx: &mut Context) {
+    let count = cx.count();
+    let Some((ch, inclusive, forward)) = cx.editor.last_find else {
+        return;
+    };
+    let direction = if forward {
+        Direction::Forward
+    } else {
+        Direction::Backward
+    };
+    let extend = cx.editor.mode == Mode::Select;
+    apply_find_char(cx.editor, ch, inclusive, direction, extend, count);
 }
 
 // vim `,`: repeat the last f/t/F/T find in the OPPOSITE direction.
@@ -22081,6 +22088,20 @@ fn commit_undo_checkpoint(cx: &mut Context) {
     doc.append_changes_to_history(view);
 }
 
+/// Vim `undotree` (`:UndotreeToggle`): open the branching undo-history browser
+/// over the current buffer.
+fn undo_tree(cx: &mut Context) {
+    let view_id = cx.editor.tree.focus;
+    let (doc_id, current) = {
+        let doc = doc!(cx.editor);
+        (doc.id(), doc.undo_tree_snapshot().current)
+    };
+    open_overlay(cx, move |_editor| {
+        Ok(Box::new(crate::ui::undotree::UndoTree::new(doc_id, view_id, current))
+            as Box<dyn Component>)
+    });
+}
+
 // Yank / Paste
 
 fn yank(cx: &mut Context) {
@@ -22530,21 +22551,32 @@ fn marks_picker(cx: &mut Context) {
     }
 }
 
-/// Build the marks picker (shared by the static command and `:marks`). `None` when no marks set.
+/// Build the marks picker (shared by the static command and `:marks`). `None`
+/// when no marks set. Shows the current buffer's local marks (`a`–`z` and the
+/// structural/auto marks) *and* the editor's global marks (`A`–`Z`, which point
+/// to a file + line that may live in another, possibly-unopened buffer) — the
+/// latter were previously omitted, so `:Marks` never listed them.
 pub(crate) fn build_marks_picker(editor: &mut Editor) -> Option<Box<dyn Component>> {
+    enum MarkKind {
+        /// A buffer-local mark in the current document.
+        Local { doc_id: DocumentId, pos: usize },
+        /// A global mark referencing a file on disk.
+        Global { path: PathBuf, col: usize },
+    }
     struct MarkMeta {
         mark: char,
-        doc_id: DocumentId,
-        pos: usize,
         line: usize,
+        /// Preview/description text: the line's contents for locals, the file
+        /// path for globals.
         text: String,
+        kind: MarkKind,
     }
 
+    // Local marks of the focused buffer.
     let (_, doc) = current_ref!(editor);
     let doc_id = doc.id();
     let text = doc.text().slice(..);
     let len = text.len_chars();
-
     let mut items: Vec<MarkMeta> = doc
         .marks_iter()
         .map(|(mark, pos)| {
@@ -22553,13 +22585,26 @@ pub(crate) fn build_marks_picker(editor: &mut Editor) -> Option<Box<dyn Componen
             let contents = text.line(line).to_string();
             MarkMeta {
                 mark,
-                doc_id,
-                pos,
                 line,
                 text: contents.trim_end().to_string(),
+                kind: MarkKind::Local { doc_id, pos },
             }
         })
         .collect();
+
+    // Global marks (A–Z), stored on the editor with a file + position.
+    for (&mark, gm) in editor.global_marks.iter() {
+        items.push(MarkMeta {
+            mark,
+            line: gm.line,
+            text: gm.path.display().to_string(),
+            kind: MarkKind::Global {
+                path: gm.path.clone(),
+                col: gm.col,
+            },
+        });
+    }
+
     // letters first, then the structural/auto marks, for a stable, vim-like order
     items.sort_by_key(|m| (!m.mark.is_ascii_alphabetic(), m.mark));
 
@@ -22575,13 +22620,41 @@ pub(crate) fn build_marks_picker(editor: &mut Editor) -> Option<Box<dyn Componen
         ui::PickerColumn::new("text", |m: &MarkMeta, _: &()| m.text.as_str().into()),
     ];
 
-    let picker = Picker::new(columns, 2, items, (), |cx, meta, _action| {
-        let (view, doc) = current!(cx.editor);
-        push_jump(view, doc);
-        let pos = meta.pos.min(doc.text().len_chars());
-        doc.set_selection(view.id, Selection::point(pos));
+    let picker = Picker::new(columns, 2, items, (), |cx, meta, _action| match &meta.kind {
+        MarkKind::Local { pos, .. } => {
+            let (view, doc) = current!(cx.editor);
+            push_jump(view, doc);
+            let pos = (*pos).min(doc.text().len_chars());
+            doc.set_selection(view.id, Selection::point(pos));
+        }
+        MarkKind::Global { path, col } => {
+            {
+                let (view, doc) = current!(cx.editor);
+                push_jump(view, doc);
+            }
+            if let Err(e) = cx.editor.open(path, Action::Replace) {
+                cx.editor
+                    .set_error(format!("mark: cannot open {}: {e}", path.display()));
+                return;
+            }
+            let line = meta.line;
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text();
+            let line = line.min(text.len_lines().saturating_sub(1));
+            let line_start = text.line_to_char(line);
+            let line_len = text.line(line).len_chars().saturating_sub(1);
+            let c = (*col).min(line_len);
+            let pos = (line_start + c).min(text.len_chars());
+            doc.set_selection(view.id, Selection::point(pos));
+        }
     })
-    .with_preview(|_editor, meta| Some((meta.doc_id.into(), Some((meta.line, meta.line)))));
+    .with_preview(|_editor, meta| {
+        let loc = match &meta.kind {
+            MarkKind::Local { doc_id, .. } => (*doc_id).into(),
+            MarkKind::Global { path, .. } => path.as_path().into(),
+        };
+        Some((loc, Some((meta.line, meta.line))))
+    });
     Some(Box::new(overlaid(picker)))
 }
 
@@ -32036,15 +32109,9 @@ fn try_user_snippet_expand(cx: &mut Context) -> bool {
 /// Attempt emmet expansion at the primary cursor. Returns `true` if an
 /// abbreviation was expanded (and the document mutated), `false` otherwise.
 fn try_emmet_expand(cx: &mut Context) -> bool {
+    let loader = cx.editor.syn_loader.load();
     let (view, doc) = current!(cx.editor);
     let view_id = view.id;
-
-    let lang = doc.language_id();
-    let is_css = crate::emmet::is_css_like(lang);
-    let is_html = crate::emmet::is_html_like(lang);
-    if !is_css && !is_html {
-        return false;
-    }
 
     // Gather everything we need from immutable borrows first.
     let (from, cursor, snippet_str, selection) = {
@@ -32056,6 +32123,23 @@ fn try_emmet_expand(cx: &mut Context) -> bool {
             return false;
         }
         let cursor = selection.primary().cursor(slice);
+
+        // Effective language *at the cursor*. In HTML this follows tree-sitter
+        // injections into `<style>` (CSS) and `<script>` (JS) blocks, so emmet
+        // expands with the embedded language — the JetBrains-style context
+        // switch — instead of always treating the whole file as HTML. Detect at
+        // the char just before the cursor (the abbreviation text), which is
+        // unambiguously inside the injected layer.
+        let detect_at = slice.char_to_byte(cursor.saturating_sub(1));
+        let lang = doc
+            .language_config_at(&loader, detect_at)
+            .map(|c| c.language_id.as_str());
+        let is_css = crate::emmet::is_css_like(lang);
+        let is_html = crate::emmet::is_html_like(lang);
+        if !is_css && !is_html {
+            return false;
+        }
+
         let line = text.char_to_line(cursor);
         let line_start = text.line_to_char(line);
         let before: String = slice.slice(line_start..cursor).chars().collect();
@@ -32268,6 +32352,12 @@ fn jump_to_char_label(
 ) {
     cx.on_next_key(move |cx, event| {
         let Some(ch) = event.char() else { return };
+        // Record directional f/t/F/T so vim `;`/`,` can repeat it (across lines).
+        // The bidirectional `s` (dir == None) is not a repeatable vim find.
+        if let Some(direction) = dir {
+            cx.editor.last_find =
+                Some((ch, inclusive, matches!(direction, Direction::Forward)));
+        }
         let alphabet = &cx.editor.config().jump_label_alphabet;
         if alphabet.is_empty() {
             return;

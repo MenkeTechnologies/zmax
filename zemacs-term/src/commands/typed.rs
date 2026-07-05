@@ -1986,6 +1986,26 @@ fn later(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
     Ok(())
 }
 
+fn undotree(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let view_id = cx.editor.tree.focus;
+    let (doc_id, current) = {
+        let doc = doc!(cx.editor);
+        (doc.id(), doc.undo_tree_snapshot().current)
+    };
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(crate::ui::undotree::UndoTree::new(
+                doc_id, view_id, current,
+            )));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 fn write_quit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -18546,26 +18566,80 @@ fn fzf_marks(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let cands: Vec<String> = {
+    // Emit every mark as `file:line:col: <mark>  <text>` and jump with the
+    // `fzf-goto` sink, so both the current buffer's local marks (a–z) and the
+    // editor's global marks (A–Z, persisted in .zemacsinfo, possibly in other
+    // files) are listed and jumpable. Previously only local marks were shown, so
+    // with only global marks set the candidate list was empty and fzf fell back
+    // to its default command (listing files).
+    let mut cands: Vec<String> = Vec::new();
+
+    // Local marks of the current buffer (need its on-disk path for cross-file goto).
+    {
         let (_, doc) = current_ref!(cx.editor);
-        let text = doc.text();
-        let mut m: Vec<(usize, char)> = doc.marks().iter().map(|(&ch, &pos)| (pos, ch)).collect();
-        m.sort();
-        m.iter()
-            .map(|&(pos, ch)| {
+        if let Some(path) = doc.path() {
+            let path = path.to_string_lossy().into_owned();
+            let text = doc.text().slice(..);
+            let mut m: Vec<(usize, char)> =
+                doc.marks().iter().map(|(&ch, &pos)| (pos, ch)).collect();
+            m.sort();
+            for (pos, ch) in m {
                 let p = pos.min(text.len_chars());
-                let line = text.char_to_line(p) + 1;
-                let ltext = text.line(line - 1).to_string();
-                format!("{line}: {ch}  {}", ltext.trim_end())
-            })
-            .collect()
-    };
+                let coords = zemacs_core::coords_at_pos(text, p);
+                let ltext = text.line(coords.row).to_string();
+                // `file:line:col:` prefix is required by the `fzf-goto` sink but
+                // hidden from the display via `--with-nth` (below); field 4 is
+                // `<mark>  L<line>  <text>` so the mark name stays visible.
+                cands.push(format!(
+                    "{path}:{}:{}:{ch}  L{}  {}",
+                    coords.row + 1,
+                    coords.col + 1,
+                    coords.row + 1,
+                    ltext.trim_end()
+                ));
+            }
+        }
+    }
+
+    // Global marks (A–Z), stored on the editor and persisted in .zemacsinfo.
+    {
+        let mut g: Vec<(char, zemacs_view::GlobalMark)> = cx
+            .editor
+            .global_marks
+            .iter()
+            .map(|(&c, m)| (c, m.clone()))
+            .collect();
+        g.sort_by_key(|(c, _)| *c);
+        for (ch, m) in g {
+            let path = m.path.to_string_lossy().into_owned();
+            // Global marks show the mark, its line, and the file they point to.
+            cands.push(format!(
+                "{path}:{}:{}:{ch}  L{}  {path}",
+                m.line + 1,
+                m.col + 1,
+                m.line + 1
+            ));
+        }
+    }
+
+    if cands.is_empty() {
+        cx.editor.set_status("No marks set");
+        return Ok(());
+    }
+
+    // Display only field 4+ (`<mark>  L<line>  <text>`) so the mark name is
+    // visible instead of a long `file:line:col:` prefix; the sink still receives
+    // the full line and `fzf-goto` parses the leading location.
     queue_fzf(
         cx,
         "Marks",
-        "fzf-line {}",
+        "fzf-goto {}",
         cands,
-        vec!["--no-sort".into()],
+        vec![
+            "--no-sort".into(),
+            "--delimiter=:".into(),
+            "--with-nth=4..".into(),
+        ],
         false,
     );
     Ok(())
@@ -28775,6 +28849,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "undotree",
+        aliases: &["undo-tree", "UndotreeToggle"],
+        doc: "Open the branching undo-history browser (vim undotree).",
+        fun: undotree,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

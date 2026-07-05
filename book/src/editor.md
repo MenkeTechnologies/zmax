@@ -29,7 +29,7 @@
 
 | Key | Description | Default |
 |--|--|---------|
-| `scrolloff` | Number of lines of padding around the edge of the screen when scrolling | `5` |
+| `scrolloff` | Number of lines of padding around the edge of the screen when scrolling. `0` (default) matches vim/spacemacs — `H`/`L` reach the literal top/bottom row; set to e.g. `5` for Helix-style scroll margins | `0` |
 | `mouse` | Enable mouse mode | `true` |
 | `mouse-yank-register` | Which register to use for mouse yanks. | `*` |
 | `middle-click-paste` | Middle click paste support | `true` |

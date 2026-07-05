@@ -299,7 +299,9 @@ where
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case", default, deny_unknown_fields)]
 pub struct Config {
-    /// Padding to keep between the edge of the screen and the cursor when scrolling. Defaults to 5.
+    /// Padding to keep between the edge of the screen and the cursor when
+    /// scrolling. Defaults to 0 (vim/spacemacs: `H`/`L` reach the literal top/
+    /// bottom row). Set to e.g. 5 for Helix-style scroll margins.
     pub scrolloff: usize,
     /// Number of lines to scroll at once. Defaults to 3
     pub scroll_lines: isize,
@@ -1311,7 +1313,7 @@ impl Default for WordCompletion {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            scrolloff: 5,
+            scrolloff: 0,
             scroll_lines: 3,
             mouse: true,
             mouse_yank_register: '*',

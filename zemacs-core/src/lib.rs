@@ -33,6 +33,7 @@ pub mod fortran;
 pub mod fuzzy;
 pub mod graphemes;
 pub mod history;
+pub mod injection;
 pub mod increment;
 pub mod indent;
 pub mod ispell;
