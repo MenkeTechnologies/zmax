@@ -27611,33 +27611,59 @@ fn git_fetch(cx: &mut Context) {
     );
 }
 
+/// Run `git -C <dir> <args>` with `GIT_TERMINAL_PROMPT=0` (auth prompts fail
+/// fast instead of hanging). Returns trimmed stdout (falling back to stderr) on
+/// success, or the error text on failure. Dir-parameterized so the acp chain is
+/// testable against a throwaway repo. Blocking.
+fn git_in(dir: &std::path::Path, args: &[&str]) -> Result<String, String> {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(args)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .output()
+        .map_err(|e| e.to_string())?;
+    let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+    if out.status.success() {
+        Ok(if stdout.is_empty() { stderr } else { stdout })
+    } else {
+        Err(if stderr.is_empty() { stdout } else { stderr })
+    }
+}
+
+/// The add-commit-push chain: `git add -A` → `git commit -m <msg>` → `git push`,
+/// then read back the branch and short SHA. Returns a deterministic, always
+/// non-empty confirmation line (`pushed <branch> <sha>`) on success, or the
+/// failing git output on error. Blocking — call off-thread.
+fn acp_run(dir: &std::path::Path, msg: &str) -> Result<String, String> {
+    git_in(dir, &["add", "-A"])?;
+    git_in(dir, &["commit", "-m", msg])?;
+    git_in(dir, &["push"])?;
+    let branch =
+        git_in(dir, &["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_else(|_| "HEAD".into());
+    let sha = git_in(dir, &["rev-parse", "--short", "HEAD"]).unwrap_or_default();
+    Ok(format!("pushed {branch} {sha}").trim().to_string())
+}
+
 /// C-x v c: stage every change, commit, and push in one shot ("acp" =
 /// add-commit-push). Prompts for a one-line message (empty aborts), then runs
-/// `git add -A` → `git commit -m <msg>` → `git push` off-thread, reporting the
-/// final line in the status bar. `add`/`commit` are local; `push` is network —
-/// all three run in one blocking task so the TUI stays responsive.
+/// [`acp_run`] off-thread and confirms `git acp: pushed <branch> <sha>` in the
+/// status bar (or reports the failing git line as an error). `add`/`commit` are
+/// local; `push` is network — all three run in one blocking task so the TUI
+/// stays responsive.
 fn git_acp(cx: &mut Context) {
     prompt_then(cx, "acp (commit message): ", |cx, msg| {
         let msg = msg.to_string();
+        let dir = find_workspace().0;
         cx.editor.set_status("git: add → commit → push…");
         cx.jobs.callback(async move {
-            let res = tokio::task::spawn_blocking(move || {
-                git_exec(&["add", "-A"])?;
-                git_exec(&["commit", "-m", &msg])?;
-                git_exec(&["push"])
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("git acp task: {e}"))?;
+            let res = tokio::task::spawn_blocking(move || acp_run(&dir, &msg))
+                .await
+                .map_err(|e| anyhow::anyhow!("git acp task: {e}"))?;
             Ok(crate::job::Callback::Editor(Box::new(
                 move |editor: &mut Editor| match res {
-                    Ok(out) => {
-                        let tail = out
-                            .lines()
-                            .last()
-                            .filter(|l| !l.is_empty())
-                            .unwrap_or("pushed");
-                        editor.set_status(format!("git acp: {tail}"));
-                    }
+                    Ok(out) => editor.set_status(format!("git acp: {out}")),
                     Err(e) => {
                         let tail = e
                             .lines()
@@ -34912,5 +34938,107 @@ mod wildfire_tests {
         assert_eq!(p.len(), 1227);
         assert_eq!(p[0], "$400 million in gold bullion");
         assert!(p.iter().all(|s| !s.is_empty()));
+    }
+}
+
+#[cfg(test)]
+mod acp_tests {
+    use super::{acp_run, git_in};
+    use std::path::Path;
+
+    fn git(dir: &Path, args: &[&str]) {
+        let out = std::process::Command::new("git")
+            .arg("-C")
+            .arg(dir)
+            .args(args)
+            .env("GIT_TERMINAL_PROMPT", "0")
+            .output()
+            .expect("run git");
+        assert!(
+            out.status.success(),
+            "git {args:?}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+
+    /// End-to-end: acp stages a new file, commits it, pushes to a local bare
+    /// remote, and returns a non-empty `pushed <branch> <sha>` confirmation.
+    /// Also asserts the commit actually landed on the remote.
+    #[test]
+    fn acp_stages_commits_and_pushes() {
+        // Needs a real `git`; skip cleanly where the sandbox has none.
+        if std::process::Command::new("git")
+            .arg("--version")
+            .output()
+            .is_err()
+        {
+            return;
+        }
+        let base = std::env::temp_dir().join(format!("zemacs-acp-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let bare = base.join("remote.git");
+        let work = base.join("work");
+        std::fs::create_dir_all(&work).expect("mkdir work");
+
+        git(&base, &["init", "--bare", "-b", "main", "remote.git"]);
+        git(&base, &["init", "-b", "main", "work"]);
+        git(&work, &["config", "user.email", "t@t.t"]);
+        git(&work, &["config", "user.name", "t"]);
+        git(&work, &["remote", "add", "origin", bare.to_str().unwrap()]);
+        // Initial commit + upstream so a bare `git push` (no -u) works, matching
+        // an already-tracking real repo.
+        std::fs::write(work.join("a.txt"), "1\n").unwrap();
+        git(&work, &["add", "-A"]);
+        git(&work, &["commit", "-m", "init"]);
+        git(&work, &["push", "-u", "origin", "main"]);
+
+        // The change acp is meant to ship.
+        std::fs::write(work.join("b.txt"), "2\n").unwrap();
+        let confirm = acp_run(&work, "add b").expect("acp succeeds");
+        assert!(
+            confirm.starts_with("pushed main "),
+            "confirmation must name branch + sha, got: {confirm:?}"
+        );
+        assert!(confirm.len() > "pushed main ".len(), "sha must be present");
+
+        // The remote received exactly the acp commit with our message.
+        let subject = git_in(&bare, &["log", "-1", "--pretty=%s"]).expect("remote log");
+        assert_eq!(subject, "add b");
+        // And b.txt is tracked at HEAD on the remote.
+        let tree = git_in(&bare, &["ls-tree", "--name-only", "HEAD"]).expect("remote tree");
+        assert!(
+            tree.lines().any(|l| l == "b.txt"),
+            "b.txt on remote: {tree}"
+        );
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// With nothing staged, the commit step fails and acp surfaces the error
+    /// instead of a false "pushed" confirmation.
+    #[test]
+    fn acp_reports_nothing_to_commit() {
+        if std::process::Command::new("git")
+            .arg("--version")
+            .output()
+            .is_err()
+        {
+            return;
+        }
+        let dir = std::env::temp_dir().join(format!("zemacs-acp-clean-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        git(&dir, &["init", "-b", "main", "."]);
+        git(&dir, &["config", "user.email", "t@t.t"]);
+        git(&dir, &["config", "user.name", "t"]);
+        std::fs::write(dir.join("a.txt"), "1\n").unwrap();
+        git(&dir, &["add", "-A"]);
+        git(&dir, &["commit", "-m", "init"]);
+
+        // Clean tree, no remote — acp must Err, not claim success.
+        let err = acp_run(&dir, "noop").expect_err("clean tree must fail");
+        assert!(!err.is_empty(), "error text must be non-empty");
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

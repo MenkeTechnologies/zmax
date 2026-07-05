@@ -611,6 +611,7 @@
 | `git_push` | Push the current branch to its remote (SPC g P) | normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP ``, insert: `` <C-x>vP `` |
 | `git_pull` | Fast-forward pull from upstream (SPC g u) | normal: `` <C-x>v+ ``, `` <space>gu ``, select: `` <C-x>v+ ``, `` <space>gu ``, insert: `` <C-x>v+ `` |
 | `git_fetch` | Fetch all remotes (SPC g F) | normal: `` <space>gF ``, select: `` <space>gF `` |
+| `git_acp` | Stage all, commit, and push in one shot (C-x v c) | normal: `` <C-x>vc ``, select: `` <C-x>vc ``, insert: `` <C-x>vc `` |
 | `vc_print_log` | VC log for the current file (emacs vc-print-log) |  |
 | `vc_print_root_log` | VC log for the whole repository (emacs vc-print-root-log) |  |
 | `vc_print_branch_log` | VC log for a named branch (emacs vc-print-branch-log) |  |

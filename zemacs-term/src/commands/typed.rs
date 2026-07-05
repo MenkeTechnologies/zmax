@@ -20836,7 +20836,11 @@ fn substitute(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
 /// cursor across the whole file. The word is matched literally (regex-escaped)
 /// with `\b` word boundaries, so `:replace-word bar` on `foo` runs
 /// `:%s/\bfoo\b/bar/g`. Append `i` as a second arg for case-insensitive.
-fn replace_word(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn replace_word(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }

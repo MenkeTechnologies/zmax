@@ -549,7 +549,10 @@ mod tests {
         // C-x v c under the emacs VCS prefix is the one-shot add-commit-push
         // (git_acp); the VCS node it lives under must stay a real prefix.
         let km = default();
-        assert!(is_prefix(&km, Mode::Normal, "C-x v"), "C-x v is the VCS prefix");
+        assert!(
+            is_prefix(&km, Mode::Normal, "C-x v"),
+            "C-x v is the VCS prefix"
+        );
         assert_eq!(
             cmd(&km, Mode::Normal, "C-x v c").as_deref(),
             Some("git_acp"),

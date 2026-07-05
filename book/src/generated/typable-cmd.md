@@ -772,6 +772,7 @@
 | `:global` | Run a command on matching lines: :g/pattern/d (delete). Also :g!/pat/d. |
 | `:vglobal` | Run a command on non-matching lines: :v/pattern/d (delete). |
 | `:substitute`, `:s` | Substitute: :s/pattern/replacement/[flags]. Also :%s/.../.../g for the whole file. |
+| `:replace-word`, `:rw`, `:subword` | Global replace of the word under the cursor across the file: :replace-word bar → :%s/\bfoo\b/bar/g. Add `i` as a 2nd arg for case-insensitive. |
 | `:Subvert`, `:S` | vim-abolish case-preserving substitute: :S/foo/bar/g rewrites foo/Foo/FOO → bar/Bar/BAR. |
 | `:Thesaurus`, `:thesaurus` | Look up synonyms for the word under the cursor (or :Thesaurus word) and replace it. |
 | `:split-line` | Split the current line at the cursor, keeping the cursor in place. |
