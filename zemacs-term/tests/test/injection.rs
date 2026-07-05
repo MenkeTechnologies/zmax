@@ -325,6 +325,69 @@ async fn language_injection_polyglot_corpus() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[test]
+fn embedded_interpreter_language_servers() {
+    // `.stk` -> stryke --lsp, `.sh`/`.zsh` -> zshrs --lsp (the stryke/zshrs
+    // binaries are their own LSP servers over stdio).
+    let loader = helpers::test_syntax_loader(None);
+
+    // Server definitions.
+    let servers = loader.language_server_configs();
+    let stryke = servers.get("stryke-lsp").expect("stryke-lsp server def");
+    assert_eq!(stryke.command, "stryke");
+    assert_eq!(stryke.args, vec!["--lsp".to_string()]);
+    let zshrs = servers.get("zshrs-lsp").expect("zshrs-lsp server def");
+    assert_eq!(zshrs.command, "zshrs");
+    assert_eq!(zshrs.args, vec!["--lsp".to_string()]);
+
+    // `.stk` is the stryke language, served by stryke-lsp.
+    let stk = loader
+        .language_for_filename(std::path::Path::new("script.stk"))
+        .expect(".stk unmapped");
+    let stk_cfg = loader.language(stk).config();
+    assert_eq!(stk_cfg.language_id, "stryke");
+    assert!(
+        stk_cfg.language_servers.iter().any(|s| s.name == "stryke-lsp"),
+        "stryke not served by stryke-lsp"
+    );
+
+    // `.sh` and `.zsh` (the bash language) are served by zshrs-lsp.
+    for ext in ["x.sh", "x.zsh"] {
+        let lang = loader
+            .language_for_filename(std::path::Path::new(ext))
+            .unwrap_or_else(|| panic!("{ext} unmapped"));
+        let cfg = loader.language(lang).config();
+        assert!(
+            cfg.language_servers.iter().any(|s| s.name == "zshrs-lsp"),
+            "{ext} not served by zshrs-lsp"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn stryke_grammar_highlights() -> anyhow::Result<()> {
+    // `.stk` has its own tree-sitter grammar (incl. stryke pipe ops |> ~>).
+    // A present syntax tree proves the grammar dylib loaded AND highlights.scm
+    // compiled against it.
+    let stk = "my $x = [1, 2, 3];\n$x |> pmap { $_ * 2 } ~> psort;\nsub greet { print \"hi\", $x; }\n# comment\n";
+    let file = tempfile::Builder::new().suffix(".stk").tempfile()?;
+    std::fs::write(file.path(), stk)?;
+    let app = helpers::AppBuilder::new()
+        .with_file(file.path(), None)
+        .build()?;
+    let doc = app
+        .editor
+        .documents()
+        .find(|d| d.path().is_some_and(|p| p.extension().is_some_and(|e| e == "stk")))
+        .expect("stk doc");
+    assert_eq!(doc.language_name(), Some("stryke"));
+    assert!(
+        doc.syntax().is_some(),
+        "stryke grammar must load and parse (also validates highlights.scm)"
+    );
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn language_injection_follows_style_and_script() -> anyhow::Result<()> {
     let html = "\
