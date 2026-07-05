@@ -421,7 +421,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "Y" => [extend_to_line_bounds, yank, collapse_selection],
         "s" => sneak_or_substitute_char,    // vim-sneak (editor.vim-sneak=true) else substitute char
         "S" => sneak_or_substitute_line,    // vim-sneak backward, else substitute line
-        "r" => replace,
+        "r" => replace_chars_vim,          // replace count char(s), line-bounded (vim r)
         "R" => replace_mode,                // enter Replace mode (overtype)
         "J" => join_lines_vim,              // join line(s) with a space, cursor at join
         "~" => switch_case_forward,         // toggle case and advance cursor

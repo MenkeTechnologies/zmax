@@ -1002,6 +1002,7 @@ impl MappableCommand {
         delete_char_forward, "Delete next char",
         delete_chars_forward_vim, "Delete char(s) under cursor, line-bounded (vim x)",
         delete_chars_backward_vim, "Delete char(s) before cursor, no line join (vim X)",
+        replace_chars_vim, "Replace char(s) under cursor, line-bounded (vim r)",
         delete_word_backward, "Delete previous word",
         delete_word_forward, "Delete next word",
         kill_to_line_start, "Delete till start of line",
@@ -13997,6 +13998,9 @@ fn select_line_impl(cx: &mut Context, extend: Extend) {
 }
 
 fn extend_to_line_bounds(cx: &mut Context) {
+    // Honor the numeric prefix: `5dd`/`3yy`/`2cc` etc. select `count` whole
+    // lines starting at the current line (count=1 keeps the single-line bounds).
+    let count = cx.count();
     let (view, doc) = current!(cx.editor);
 
     doc.set_selection(
@@ -14006,7 +14010,7 @@ fn extend_to_line_bounds(cx: &mut Context) {
 
             let (start_line, end_line) = range.line_range(text.slice(..));
             let start = text.line_to_char(start_line);
-            let end = text.line_to_char((end_line + 1).min(text.len_lines()));
+            let end = text.line_to_char((end_line + count).min(text.len_lines()));
 
             Range::new(start, end).with_direction(range.direction())
         }),
@@ -23586,6 +23590,101 @@ fn delete_chars_backward_vim(cx: &mut Context) {
         doc.set_selection(view.id, extended);
     }
     delete_selection(cx);
+}
+
+/// vim `{count}r{char}`: replace `count` characters starting at the cursor with
+/// `char`, bounded to the current line. If fewer than `count` characters remain
+/// on the line the command aborts without changing the buffer (vim's bell). The
+/// cursor is left on the last replaced character. `<Enter>` collapses the run to
+/// a single line break; `<Tab>` replaces with tabs.
+fn replace_chars_vim(cx: &mut Context) {
+    let count = cx.count();
+    let mut buf = [0u8; 4]; // holds the utf8-encoded replacement char
+    cx.on_next_key(move |cx, event| {
+        let (view, doc) = current!(cx.editor);
+        let newline = matches!(
+            event,
+            KeyEvent {
+                code: KeyCode::Enter,
+                ..
+            }
+        );
+        let ch: &str = match event {
+            KeyEvent {
+                code: KeyCode::Char(c),
+                ..
+            } => c.encode_utf8(&mut buf[..]),
+            KeyEvent {
+                code: KeyCode::Enter,
+                ..
+            } => doc.line_ending.as_str(),
+            KeyEvent {
+                code: KeyCode::Tab, ..
+            } => "\t",
+            _ => return,
+        };
+
+        let text = doc.text().slice(..);
+        // Extend each cursor over `count` graphemes, bounded to the line end. A
+        // range with fewer than `count` graphemes left on the line stays a point
+        // so it is skipped, matching vim's abort-on-short-line behavior.
+        let ranges = doc.selection(view.id).clone().transform(|range| {
+            let cursor = range.cursor(text);
+            let line = text.char_to_line(cursor);
+            let line_end = line_end_char_index(&text, line);
+            // Count graphemes available from the cursor to the line end. Using a
+            // grapheme walk (not just clamping `nth_next` to the line) is what
+            // distinguishes "enough chars" from "clamped by the buffer end".
+            let mut avail = 0;
+            let mut p = cursor;
+            while p < line_end {
+                p = graphemes::next_grapheme_boundary(text, p);
+                avail += 1;
+            }
+            if avail < count {
+                Range::point(cursor)
+            } else {
+                Range::new(
+                    cursor,
+                    graphemes::nth_next_grapheme_boundary(text, cursor, count),
+                )
+            }
+        });
+
+        // Build the edit straight from the extended ranges. Empty ranges (short
+        // lines) produce no change, so those cursors are left untouched — going
+        // through `set_selection` first would re-expand them to a block cursor
+        // and wrongly replace a character.
+        let transaction = Transaction::change_by_selection(doc.text(), &ranges, |range| {
+            if range.is_empty() {
+                return (range.from(), range.to(), None);
+            }
+            let replacement: Tendril = if newline {
+                Tendril::from(ch)
+            } else {
+                doc.text()
+                    .slice(range.from()..range.to())
+                    .graphemes()
+                    .map(|_| ch)
+                    .collect()
+            };
+            (range.from(), range.to(), Some(replacement))
+        });
+        doc.apply(&transaction, view.id);
+
+        // Map the extended ranges through the edit and leave the block cursor on
+        // the last replaced character (vim), not past it.
+        let mapped = ranges.map(transaction.changes());
+        let text = doc.text().slice(..);
+        let placed = mapped.transform(|range| {
+            if range.is_empty() {
+                return range;
+            }
+            let last = graphemes::prev_grapheme_boundary(text, range.to());
+            Range::new(last, range.to())
+        });
+        doc.set_selection(view.id, placed);
+    })
 }
 
 /// Shared implementation of vim `J` (with a separating space) and `gJ` (raw).

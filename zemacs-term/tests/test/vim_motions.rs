@@ -334,6 +334,154 @@ async fn superword_dw_deletes_whole_symbol() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// vim `{count}dd`: `5dd` deletes 5 whole lines from the cursor line, not 1.
+/// Regression guard for the count-blind `extend_to_line_bounds` that made every
+/// `Ndd`/`Nyy`/`Ncc` collapse to a single line.
+#[tokio::test(flavor = "multi_thread")]
+async fn count_dd_deletes_count_lines() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\n")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("5dd"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "l6\nl7\nl8\n",
+                    doc.text().to_string(),
+                    "`5dd` deletes lines l1..l5, leaving l6..l8"
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// vim `dd` with no count still deletes exactly one line (pins the count=1 path
+/// so the count fix can't regress the common case).
+#[tokio::test(flavor = "multi_thread")]
+async fn plain_dd_deletes_one_line() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "l1\nl2\nl3\n")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("dd"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "l2\nl3\n",
+                    doc.text().to_string(),
+                    "`dd` deletes only the current line"
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// vim `{count}r{char}`: `3rx` replaces 3 characters and leaves the cursor on the
+/// last replaced one (index 2). Guards the count-blind Helix `replace` that
+/// replaced only the single block-cursor char.
+#[tokio::test(flavor = "multi_thread")]
+async fn count_r_replaces_count_chars() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "abcdef\n")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("3rx"),
+            Some(&|app| {
+                let view = app.editor.tree.get(app.editor.tree.focus);
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "xxxdef\n",
+                    doc.text().to_string(),
+                    "`3rx` replaces the first 3 chars with x"
+                );
+                let cursor = doc
+                    .selection(view.id)
+                    .primary()
+                    .cursor(doc.text().slice(..));
+                assert_eq!(2, cursor, "cursor rests on the last replaced char");
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// vim `r` aborts (no change) when the line has fewer characters than the count,
+/// matching vim's bell-and-do-nothing.
+#[tokio::test(flavor = "multi_thread")]
+async fn count_r_aborts_when_line_too_short() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "abc\n")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("5rx"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "abc\n",
+                    doc.text().to_string(),
+                    "`5rx` on a 3-char line changes nothing"
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
 /// Spacemacs auto-fill (SPC t F): typing past text_width wraps the line at the
 /// last whitespace.
 #[tokio::test(flavor = "multi_thread")]

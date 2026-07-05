@@ -78,7 +78,7 @@
 | `repeat_last_motion` | Repeat last motion | normal: `` <C-x>z ``, select: `` <C-x>z ``, insert: `` <C-x>z `` |
 | `repeat_find_char` | Repeat last find in same direction (;) | normal: `` ; ``, select: `` ; `` |
 | `repeat_find_char_reverse` | Repeat last find in opposite direction (,) | normal: `` , ``, select: `` , `` |
-| `replace` | Replace with new char | normal: `` r ``, select: `` r `` |
+| `replace` | Replace with new char | select: `` r `` |
 | `switch_case` | Switch (toggle) case | select: `` ~ `` |
 | `switch_case_forward` | Toggle case and advance cursor (vim ~) | normal: `` ~ `` |
 | `switch_to_uppercase` | Switch to uppercase | normal: `` <space>xU ``, `` <C-x><C-u> ``, select: `` <space>xU ``, `` <C-x><C-u> ``, insert: `` <C-x><C-u> `` |
@@ -686,6 +686,7 @@
 | `delete_char_forward` | Delete next char | insert: `` <del> `` |
 | `delete_chars_forward_vim` | Delete char(s) under cursor, line-bounded (vim x) | normal: `` x ``, `` <del> `` |
 | `delete_chars_backward_vim` | Delete char(s) before cursor, no line join (vim X) | normal: `` X `` |
+| `replace_chars_vim` | Replace char(s) under cursor, line-bounded (vim r) | normal: `` r `` |
 | `delete_word_backward` | Delete previous word | normal: `` <C-x><backspace> ``, select: `` <C-x><backspace> ``, insert: `` <C-w> ``, `` <A-backspace> ``, `` <C-x><backspace> `` |
 | `delete_word_forward` | Delete next word | normal: `` <A-d> ``, insert: `` <A-d> `` |
 | `kill_to_line_start` | Delete till start of line | insert: `` <C-u> `` |
