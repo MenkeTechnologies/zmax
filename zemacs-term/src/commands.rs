@@ -927,6 +927,7 @@ impl MappableCommand {
         git_push, "Push the current branch to its remote (SPC g P)",
         git_pull, "Fast-forward pull from upstream (SPC g u)",
         git_fetch, "Fetch all remotes (SPC g F)",
+        git_acp, "Stage all, commit, and push in one shot (C-x v c)",
         vc_print_log, "VC log for the current file (emacs vc-print-log)",
         vc_print_root_log, "VC log for the whole repository (emacs vc-print-root-log)",
         vc_print_branch_log, "VC log for a named branch (emacs vc-print-branch-log)",
@@ -27608,6 +27609,47 @@ fn git_fetch(cx: &mut Context) {
         vec!["fetch".into(), "--all".into()],
         "fetched",
     );
+}
+
+/// C-x v c: stage every change, commit, and push in one shot ("acp" =
+/// add-commit-push). Prompts for a one-line message (empty aborts), then runs
+/// `git add -A` → `git commit -m <msg>` → `git push` off-thread, reporting the
+/// final line in the status bar. `add`/`commit` are local; `push` is network —
+/// all three run in one blocking task so the TUI stays responsive.
+fn git_acp(cx: &mut Context) {
+    prompt_then(cx, "acp (commit message): ", |cx, msg| {
+        let msg = msg.to_string();
+        cx.editor.set_status("git: add → commit → push…");
+        cx.jobs.callback(async move {
+            let res = tokio::task::spawn_blocking(move || {
+                git_exec(&["add", "-A"])?;
+                git_exec(&["commit", "-m", &msg])?;
+                git_exec(&["push"])
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("git acp task: {e}"))?;
+            Ok(crate::job::Callback::Editor(Box::new(
+                move |editor: &mut Editor| match res {
+                    Ok(out) => {
+                        let tail = out
+                            .lines()
+                            .last()
+                            .filter(|l| !l.is_empty())
+                            .unwrap_or("pushed");
+                        editor.set_status(format!("git acp: {tail}"));
+                    }
+                    Err(e) => {
+                        let tail = e
+                            .lines()
+                            .last()
+                            .filter(|l| !l.is_empty())
+                            .unwrap_or("failed");
+                        editor.set_error(format!("git acp failed: {tail}"));
+                    }
+                },
+            )))
+        });
+    });
 }
 
 // ===========================================================================

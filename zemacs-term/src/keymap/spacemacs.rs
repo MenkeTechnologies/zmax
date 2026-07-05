@@ -328,6 +328,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x v b c", "VCS", "git_branch_picker"),
     ("C-x v b l", "VCS", "git_repo_log_picker"),
     ("C-x v b s", "VCS", "git_branch_picker"),
+    ("C-x v c", "VCS", "git_acp"),
     ("C-x v D", "VCS", "git_diff"),
     ("C-x v d", "VCS", "git_status"),
     ("C-x v g", "VCS", "git_blame_line"),
@@ -540,6 +541,19 @@ mod tests {
         assert_eq!(
             cmd(&km, Mode::Normal, "C-h C-p").as_deref(),
             Some("browse_faq")
+        );
+    }
+
+    #[test]
+    fn cx_v_c_is_add_commit_push() {
+        // C-x v c under the emacs VCS prefix is the one-shot add-commit-push
+        // (git_acp); the VCS node it lives under must stay a real prefix.
+        let km = default();
+        assert!(is_prefix(&km, Mode::Normal, "C-x v"), "C-x v is the VCS prefix");
+        assert_eq!(
+            cmd(&km, Mode::Normal, "C-x v c").as_deref(),
+            Some("git_acp"),
+            "C-x v c must stage-all, commit and push"
         );
     }
 }
