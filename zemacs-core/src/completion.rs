@@ -17,6 +17,8 @@ pub enum CompletionProvider {
     Lsp(LanguageServerId),
     Path,
     Word,
+    /// SQL keyword completion inside an injected SQL string (language injection).
+    Sql,
 }
 
 impl From<LanguageServerId> for CompletionProvider {

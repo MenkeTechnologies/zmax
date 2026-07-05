@@ -103,6 +103,7 @@ pub mod theme_editor;
 pub mod tictactoe;
 pub mod tron;
 pub mod twentyfortyeight;
+pub mod undotree;
 pub mod videopoker;
 pub mod wordle;
 pub mod xref;

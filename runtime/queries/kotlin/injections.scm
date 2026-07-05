@@ -40,3 +40,16 @@
 				(string_literal
 					(string_content) @injection.content)))))
 	(#set! injection.language "regex"))
+
+; ---------------------------------------------------------------------------
+; SQL language injection: query strings passed to Android/JDBC query methods.
+; Capture the inner string_content.
+((call_expression
+  (navigation_expression
+    (navigation_suffix (simple_identifier) @_method))
+  (call_suffix
+    (value_arguments
+      . (value_argument (string_literal (string_content) @injection.content)))))
+ (#any-of? @_method "rawQuery" "execSQL" "query" "prepareStatement"
+                    "createStatement" "createQuery" "createNativeQuery")
+ (#set! injection.language "sql"))

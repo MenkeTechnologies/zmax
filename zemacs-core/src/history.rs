@@ -119,6 +119,36 @@ impl History {
         self.current == 0
     }
 
+    /// Number of revisions in the history, including the empty root at index 0.
+    /// Used by the undo-tree UI to enumerate every state.
+    #[inline]
+    pub fn revision_count(&self) -> usize {
+        self.revisions.len()
+    }
+
+    /// Parent revision index of revision `i`. The root (index 0) is its own
+    /// parent. Panics if `i` is out of range.
+    #[inline]
+    pub fn parent_of(&self, i: usize) -> usize {
+        self.revisions[i].parent
+    }
+
+    /// The [`Instant`] at which revision `i` was committed. The root carries the
+    /// history's creation time. Panics if `i` is out of range.
+    #[inline]
+    pub fn revision_timestamp(&self, i: usize) -> Instant {
+        self.revisions[i].timestamp
+    }
+
+    /// Create a [`Transaction`] list that jumps to an arbitrary revision `to`
+    /// (clamped to the valid range), following the shortest tree path from the
+    /// current revision. Backs the undo-tree "go to state" action. Returns an
+    /// empty list when already at `to`.
+    pub fn jump_to_revision(&mut self, to: usize) -> Vec<Transaction> {
+        let to = to.min(self.revisions.len().saturating_sub(1));
+        self.jump_to(to)
+    }
+
     /// Returns the changes since the given revision composed into a transaction.
     /// Returns None if there are no changes between the current and given revisions.
     pub fn changes_since(&self, revision: usize) -> Option<Transaction> {

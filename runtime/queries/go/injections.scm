@@ -90,3 +90,32 @@
     . (interpreted_string_literal) @injection.content))
   (#any-of? @_func "Printf" "Fatalf" "Panicf")
   (#set! injection.language "go-format-string"))
+
+; ---------------------------------------------------------------------------
+; SQL language injection: query strings passed to database/sql & sqlx methods.
+; Capture the string's inner content node (not the delimiters), matched on the
+; full selector text like the regexp rule above. Query is the first argument:
+; db.Query(`SELECT ...`), db.Exec("...").
+(call_expression
+  (selector_expression) @_fn
+  (#match? @_fn "\\.(Query|QueryRow|Exec|Prepare|NamedExec|NamedQuery|MustExec)$")
+  (argument_list
+    .
+    [
+      (raw_string_literal (raw_string_literal_content) @injection.content)
+      (interpreted_string_literal (interpreted_string_literal_content) @injection.content)
+    ]
+    (#set! injection.language "sql")))
+
+; Context variants take the query as the second argument: conn.ExecContext(ctx, "...").
+(call_expression
+  (selector_expression) @_fn
+  (#match? @_fn "\\.(QueryContext|QueryRowContext|ExecContext|PrepareContext)$")
+  (argument_list
+    (_)
+    .
+    [
+      (raw_string_literal (raw_string_literal_content) @injection.content)
+      (interpreted_string_literal (interpreted_string_literal_content) @injection.content)
+    ]
+    (#set! injection.language "sql")))

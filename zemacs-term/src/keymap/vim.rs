@@ -376,7 +376,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "F" => find_char_backward_label,
         "t" => till_char_forward_label,
         "T" => till_char_backward_label,
-        ";" => repeat_last_motion,
+        ";" => repeat_find_char,         // vim ; : repeat last f/t/F/T (same dir, across lines)
 
         // --- search ---------------------------------------------------------
         "/" => search,
@@ -1023,6 +1023,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "g" => toggle_ai_autocomplete,     // SPC a g : toggle real-time ghost-text autocomplete
                 "k" => ai_terminal_command,        // SPC a k : generate a shell command
                 "u" => ai_generate_tests,          // SPC a u : AI generate unit tests
+                "U" => undo_tree,                  // SPC a U : browse branching undo history (vim undotree)
                 "c" => ai_commit_message,          // SPC a c : AI git commit message
                 "r" => repl,                       // SPC a r : embedded-language REPL (elisp/viml/stryke/awk/zsh)
                 "d" => file_explorer,              // SPC a d : dired (file manager)
@@ -1811,7 +1812,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "F" => [extend_prev_char, block_reproject],
         "t" => [extend_till_char, block_reproject],
         "T" => [extend_till_prev_char, block_reproject],
-        ";" => repeat_last_motion,
+        ";" => repeat_find_char,
         "," => repeat_find_char_reverse,
 
         // search in Visual mode extends the selection to the match (vim v_/, v_n)

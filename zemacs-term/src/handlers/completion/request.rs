@@ -28,6 +28,7 @@ use crate::job::{dispatch, dispatch_blocking};
 use crate::ui;
 use crate::ui::editor::InsertEvent;
 
+use super::sql;
 use super::word;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -247,6 +248,11 @@ fn request_completions(
         savepoint.clone(),
     ) {
         requests.spawn_blocking(path_completion_request);
+    }
+    if let Some(sql_completion_request) =
+        sql::completion(editor, trigger, handle.clone(), savepoint.clone())
+    {
+        requests.spawn_blocking(sql_completion_request);
     }
     if let Some(word_completion_request) =
         word::completion(editor, trigger, handle.clone(), savepoint)

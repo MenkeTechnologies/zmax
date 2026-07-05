@@ -123,3 +123,33 @@
     function: (identifier) @_styled (#eq? @_styled "styled"))
   arguments: (template_string (string_fragment) @injection.content)
   (#set! injection.language "css"))
+
+; ---------------------------------------------------------------------------
+; SQL language injection (JetBrains-style). `sql`-tagged template literals are
+; already handled by the tag-inferred rule at the top of this file; the rules
+; below add the two other common signals: an explicit `/* sql */` comment hint
+; and strings/templates passed to well-known query methods.
+
+; Explicit hint: a `/* sql */` (any case) comment immediately before a string or
+; template literal — mirrors the `/* GraphQL */` rule above.
+(
+  ((comment) @_sql_comment) . [
+    (string (string_fragment) @injection.content)
+    (template_string (string_fragment) @injection.content)
+    (call_expression
+      arguments: (template_string (string_fragment) @injection.content))
+  ]
+  (#match? @_sql_comment "(?i)^/\\*\\s*sql\\s*\\*/$")
+  (#set! injection.language "sql"))
+
+; Strings/templates passed to common SQL query methods, e.g.
+; `db.query("SELECT …")`, `conn.execute(`…`)`, `client.prepare("…")`.
+(call_expression
+  function: (member_expression
+    property: (property_identifier) @_method
+      (#any-of? @_method "query" "execute" "prepare" "unprepared" "raw"))
+  arguments: (arguments . [
+    (string (string_fragment) @injection.content)
+    (template_string (string_fragment) @injection.content)
+  ])
+  (#set! injection.language "sql"))
