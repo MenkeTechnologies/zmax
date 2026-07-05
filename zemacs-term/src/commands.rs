@@ -4456,28 +4456,8 @@ fn sneak_or_substitute_char(cx: &mut Context) {
     if cx.editor.config().vim_sneak {
         sneak_forward(cx);
     } else {
-        substitute_chars_vim(cx);
+        change_selection(cx);
     }
-}
-
-/// vim `{count}s`: substitute `count` characters — delete them (line-bounded,
-/// like `x`) and enter insert mode. Equivalent to vim `{count}cl`; count-blind
-/// `change_selection` only ever changed the single block-cursor character.
-fn substitute_chars_vim(cx: &mut Context) {
-    let count = cx.count();
-    {
-        let (view, doc) = current!(cx.editor);
-        let text = doc.text().slice(..);
-        let extended = doc.selection(view.id).clone().transform(|range| {
-            let cursor = range.cursor(text);
-            let line = text.char_to_line(cursor);
-            let line_end = line_end_char_index(&text, line);
-            let to = graphemes::nth_next_grapheme_boundary(text, cursor, count).min(line_end);
-            Range::new(cursor, to.max(cursor))
-        });
-        doc.set_selection(view.id, extended);
-    }
-    change_selection(cx);
 }
 
 /// `S`: vim-sneak backward when `editor.vim-sneak` is on, else vim substitute-line.
