@@ -1627,6 +1627,8 @@ pub struct Editor {
     pub registers: Registers,
     pub macro_recording: Option<(char, Vec<KeyEvent>)>,
     pub macro_replaying: Vec<char>,
+    /// Register of the most recently replayed macro, for vim `@@` repeat.
+    pub last_macro_register: Option<char>,
     /// Bounded ring of the most recently pressed keys (for "copy last keys"). Newest at the back.
     pub last_keys: std::collections::VecDeque<KeyEvent>,
     pub language_servers: zemacs_lsp::Registry,
@@ -1899,6 +1901,7 @@ impl Editor {
             last_substitute: None,
             macro_recording: None,
             macro_replaying: Vec::new(),
+            last_macro_register: None,
             last_keys: std::collections::VecDeque::new(),
             theme: theme_loader.default(),
             language_servers,
