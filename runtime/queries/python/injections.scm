@@ -13,17 +13,8 @@
         (string_content) @injection.content))
   (#set! injection.language "regex"))
 
-; ---------------------------------------------------------------------------
-; SQL language injection (JetBrains-style): strings passed to DB-API `execute*`
-; methods and SQLAlchemy's `text()` are highlighted and offered SQL completion.
-(call
-  function: (attribute
-    attribute: (identifier) @_method
-      (#any-of? @_method "execute" "executemany" "executescript" "execute_batch"))
-  arguments: (argument_list
-    . (string (string_content) @injection.content))
-  (#set! injection.language "sql"))
-
+; SQLAlchemy `text("…")` -> SQL. (DB-API `execute*` call-site rules now come
+; from the config-driven injection engine; see docs/LANGUAGE_INJECTION.md.)
 (call
   function: (identifier) @_fn (#eq? @_fn "text")
   arguments: (argument_list

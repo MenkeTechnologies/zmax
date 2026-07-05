@@ -141,15 +141,3 @@
   ]
   (#match? @_sql_comment "(?i)^/\\*\\s*sql\\s*\\*/$")
   (#set! injection.language "sql"))
-
-; Strings/templates passed to common SQL query methods, e.g.
-; `db.query("SELECT …")`, `conn.execute(`…`)`, `client.prepare("…")`.
-(call_expression
-  function: (member_expression
-    property: (property_identifier) @_method
-      (#any-of? @_method "query" "execute" "prepare" "unprepared" "raw"))
-  arguments: (arguments . [
-    (string (string_fragment) @injection.content)
-    (template_string (string_fragment) @injection.content)
-  ])
-  (#set! injection.language "sql"))

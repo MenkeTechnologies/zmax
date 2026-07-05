@@ -37,6 +37,120 @@ injection.language "css"`), dynamic (`@injection.language` captured from text �
 markdown code fences, tagged-template tags), and predicate-gated
 (`#match?`/`#any-of?`/`#eq?`) injection.
 
+## The injection engine (config-driven rules)
+
+Most detection is expressed as tree-sitter injection queries in
+`runtime/queries/<host>/injections.scm` (structural: `<script>` → js, `sql`
+tagged templates, `@Language("SQL")`, `.query()` call sites). Those are precise
+but baked into grammar files and not end-user-editable.
+
+On top of them there is a small **config-driven rule engine** (`zemacs-core/src/injection.rs`),
+modelled on JetBrains' IntelliLang "Language Injections" registry. Rules live in
+TOML and merge from two scopes on top of built-in defaults:
+
+- built-in defaults (`injection::default_rules()`)
+- global `~/.zemacs/injections.toml`
+- project `.zemacs/injections.toml` (VCS-shareable, like JetBrains'
+  `.idea/IntelliLang.xml`)
+
+At grammar-compile time the engine expands the rules that apply to a host into
+tree-sitter injection-query text and appends it to that host's `injections.scm`
+(`Loader::injection_rules()` → `injection::generate()` in
+`syntax.rs::compile_syntax_config`). Reusing tree-sitter for the actual matching
+means engine-injected regions get highlighting for free and flow through the same
+`language_config_at` path.
+
+```toml
+# ~/.zemacs/injections.toml or <project>/.zemacs/injections.toml
+[[injection]]
+language = "sql"            # guest language id
+hosts    = ["python", "go"] # host grammars (omit = all supported)
+content  = "(?i)^\\s*SELECT\\s+\\*"   # content trigger (regex; #match? semantics)
+enabled  = true            # turn a rule off without deleting it
+
+[[injection]]
+language = "graphql"
+hosts    = ["typescript"]
+content  = "(?i)^\\s*(query|mutation)\\s"
+```
+
+Three triggers are generated:
+
+- **`content`** — the tunable form of "sniffing": a `#match?` regex on a
+  string's inner text. Built-in classifiers ship for **SQL, JSON, HTML/XML,
+  GraphQL, and CSS** (`injection::{SQL,JSON,HTML,GRAPHQL,CSS}_CONTENT_REGEX`), each tuned
+  against a positive+negative battery to keep false positives on
+  prose/JS-object/placeholder strings low. Each is a normal `content` rule, so
+  you can disable one (`enabled = false`) or add your own.
+- **`methods` / `arg`** — the IntelliLang core trigger: inject the `arg`-th
+  string argument of a call to one of `methods` (e.g. `db.query("…")`,
+  `createNativeQuery("…")`, Go's `ExecContext(ctx, "…")` with `arg = 1`). The
+  built-in SQL query-method sets (JDBC/JPA/Spring, ADO.NET/Dapper/EF, DB-API,
+  `database/sql`/sqlx) ship as defaults.
+
+```toml
+[[injection]]
+language = "sql"
+hosts    = ["go"]
+methods  = ["MyQuery", "MyExec"]   # inject the string arg of these calls
+arg      = 0
+
+[[injection]]
+language = "json"
+hint     = true    # `/* language=json */ "…"` comment hint forces json
+```
+
+- **`hint`** — the manual/JetBrains form: a `language=<lang>` /
+  `@Language("<lang>")` comment immediately before a string injects `<lang>`
+  (block-comment hosts). Built-in hint rules ship for ~15 common languages; the
+  `:inject-language` command inserts the comment for you.
+
+### Engine API and commands
+
+The rule set and its operations are wrapped in `injection::InjectionEngine`
+(`with_rules`/`load`/`generate`/`describe`/`rules`), owned by the syntax
+`Loader`. Inspect it at runtime:
+
+- **`:injections`** — list the active rules (language, trigger, hosts, enabled)
+  in a scratch buffer.
+- **`:injection-info`** — report the effective (possibly injected) language at
+  the cursor.
+- **`:edit-fragment`** — JetBrains "Edit Fragment": open the injected region at
+  point in a fresh buffer of the **guest language**, so it gets that language's
+  highlighting, completion, and LSP. `commands::injected_fragment_at` finds the
+  region via the injection layer's tree
+  (`syntax.tree_for_byte_range(byte,byte).root_node()` span).
+- **`:apply-fragment`** — write the fragment buffer's text back into its host
+  string, **escaping for the host delimiter** (`commands::escape_fragment`):
+  backslash/quote/newline for `"`/`'` strings, backtick + `${` for JS/TS template
+  literals; triple-quoted text blocks and Go raw strings are written verbatim.
+
+- **`:inject-language <lang>`** — JetBrains "Inject language here": insert a
+  `/* language=<lang> */` hint before the string at point (block-comment hosts),
+  which the engine's `hint` trigger then injects. Persisted in source, so it
+  survives reopen/VCS.
+
+**Reloading rules:** editing `injections.toml` takes effect on `:config-reload`
+(which rebuilds the whole syntax loader, re-reading the file) — no separate
+command needed.
+
+The default content-sniff and query-method rules live in `default_rules()`
+(no longer hand-written in the grammar files). Only genuinely *structural* rules
+stay in `injections.scm`: tagged templates (`` sql`…` ``), the `/* sql */`
+comment hint, the Java `@Language("SQL")` annotation, HTML `<script>`/`<style>`
+and inline attributes, `<script type>` differentiation. `annotation`/`tag`
+triggers and `prefix`/`suffix` wrapping are the next increment.
+
+### Design note: why not free-form sniffing?
+
+Researching JetBrains (IntelliLang) confirmed it **does not sniff string content
+to guess a language** — its engine is a registry of *injection places*
+(class+method+arg, annotation, tag → language) with an optional `value-pattern`
+regex that only *filters* an already-matched place. We follow the same shape: the
+engine's real leverage is a user-editable, call-site/annotation-keyed rule table;
+content matching is kept as an explicit, conservative, per-rule filter — never a
+standalone "guess the language" pass.
+
 ## Feature consumers
 
 Features that already switch on the injected language at the cursor:
@@ -88,8 +202,9 @@ The classifier is deliberately conservative to avoid false-positives on prose:
   `"select an option from the settings menu"` is **not** matched, while
   `"SELECT id, name FROM users WHERE …"` is.
 
-It's a single `#match?` regex on `@injection.content` per host (see
-`runtime/queries/<host>/injections.scm`). Bare `SELECT … FROM table` with no
+This is now emitted by the **injection engine** (a built-in `content` rule with
+`injection::SQL_CONTENT_REGEX`), not hand-written per grammar — so it can be
+tuned or disabled in `injections.toml`. Bare `SELECT … FROM table` with no
 clause is intentionally *not* auto-detected (too English-ambiguous); those are
 still caught by the query-method/tag/`@Language` signals.
 
@@ -169,12 +284,22 @@ To confirm a grammar's node names, add a temporary test that walks
 the `.kind()` chain.
 
 ## Gaps / roadmap
-- **Auto-detection is SQL-only.** SQL has a distinctive enough statement grammar
-  to classify from content at low false-positive risk. JSON/HTML/regex/GraphQL
-  do not (a `{…}` or `<…>` string is too ambiguous), so those still rely on
-  structural signals (tags, attributes, injections) rather than content sniffing.
-- **SQL hosts not yet content-autodetected:** Ruby/PHP/Rust/Scala use upstream
-  structural rules only; the content classifier could be added there too.
+- **Engine triggers.** `content`, `methods`/`arg` (call-site), and `hint`
+  (comment) are generated; the SQL defaults have migrated out of the grammar
+  `.scm` files. Call-site matching is name+arg only (no receiver-type/import
+  resolution) — most of IntelliLang's value without a type system. Still
+  optional: a `tag`/attribute trigger and `prefix`/`suffix` fragment wrapping.
+  Comment-hint insertion (`:inject-language`) targets block-comment hosts;
+  line-comment-only hosts (Python) need prev-line adjacency, not yet wired.
+- **Content sniffers cover SQL, JSON, HTML/XML, GraphQL, CSS.** Regex classifiers
+  are inherently heuristic — the built-ins are conservative (require distinctive
+  structure: `{"key":` for JSON, a matching `</tag>` for HTML, an operation
+  header + `{` for GraphQL, a `{ … : … }` block for CSS) but not perfect.
+  `regex`/`YAML`/`TOML` are omitted: their content is too ambiguous to sniff
+  safely. Tune or disable any of them in `injections.toml`.
+- **Content sniffers run on the code-string hosts** (js/ts, python, go, java, c#,
+  kotlin); Ruby/PHP/Rust/Scala use upstream structural rules only — a `hosts`
+  override adds them.
 - **SQL hosts not yet covered:** Dart (its `selector`/`argument_part` call
   grammar is awkward; low priority).
 - **Generalize `@Language("…")`** — Java's annotation hint is wired for SQL only;

@@ -55,6 +55,124 @@ async fn language_injection_sql_autodetect_multihost() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[test]
+fn fragment_writeback_escaping() {
+    use zemacs_term::commands::escape_fragment;
+    // double-quoted host: escape backslash, quote, newline
+    assert_eq!(
+        escape_fragment("a\"b\\c\nd", Some("javascript"), "= \""),
+        "a\\\"b\\\\c\\nd"
+    );
+    // single-quoted host
+    assert_eq!(escape_fragment("it's", Some("python"), "('"), "it\\'s");
+    // JS/TS template literal: escape backtick and ${
+    assert_eq!(
+        escape_fragment("a`b${c}", Some("typescript"), "= `"),
+        "a\\`b\\${c}"
+    );
+    // triple-quoted (Java text block / Python) — no escaping
+    assert_eq!(escape_fragment("a\"b\nc", Some("java"), "\"\"\""), "a\"b\nc");
+    // Go raw string (backtick) — no escaping
+    assert_eq!(escape_fragment("a\\b", Some("go"), "(`"), "a\\b");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn language_injection_comment_hint() -> anyhow::Result<()> {
+    // A `/* language=… */` hint forces a language the content sniffers would NOT
+    // detect (plain text), proving hint detection is independent of content.
+    let ts = "\
+const a = /* language=json */ \"plain text not json\";
+const b = /* language=graphql */ \"whatever text\";
+const c = \"ordinary string\";
+";
+    let got = langs_at("ts", ts, &["plain text", "whatever text", "ordinary string"]).await?;
+    assert_eq!(got[0].as_deref(), Some("json"), "language=json hint");
+    assert_eq!(got[1].as_deref(), Some("graphql"), "language=graphql hint");
+    assert_ne!(got[2].as_deref(), Some("json"), "no hint → not forced");
+
+    // Python: the hint is on the line BEFORE the assignment (no inline block comment).
+    let py = "# language=sql\nq = \"whatever text goes here\"\nplain = \"nope\"\n";
+    let pygot = langs_at("py", py, &["whatever text", "nope"]).await?;
+    assert_eq!(pygot[0].as_deref(), Some("sql"), "python prev-line # language=sql");
+    assert_ne!(pygot[1].as_deref(), Some("sql"), "python unhinted");
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn injected_fragment_extraction() -> anyhow::Result<()> {
+    // The core of "Edit Fragment": at a byte inside an injected SQL string,
+    // `injected_fragment_at` returns the guest language + the char range that
+    // spans exactly the injected content.
+    let ts = "const q = sql`SELECT frag_a, frag_b FROM fragtbl`;\n";
+    let file = tempfile::Builder::new().suffix(".ts").tempfile()?;
+    std::fs::write(file.path(), ts)?;
+    let app = helpers::AppBuilder::new().with_file(file.path(), None).build()?;
+    let loader = app.editor.syn_loader.load();
+    let doc = app
+        .editor
+        .documents()
+        .find(|d| d.path().is_some_and(|p| p.extension().is_some_and(|e| e == "ts")))
+        .unwrap();
+    let text = doc.text();
+    let inside = text.to_string().find("frag_a").unwrap();
+    let byte = text.char_to_byte(text.byte_to_char(inside));
+
+    let (lang, start, end) =
+        zemacs_term::commands::injected_fragment_at(doc, &loader, byte).expect("fragment");
+    assert_eq!(lang, "sql");
+    let fragment: String = text.slice(start..end).chars().collect();
+    assert_eq!(fragment, "SELECT frag_a, frag_b FROM fragtbl", "fragment span");
+
+    // A byte in the host (the `const q` declaration) is NOT an injection.
+    let host_byte = text.char_to_byte(text.byte_to_char(text.to_string().find("const").unwrap()));
+    assert!(
+        zemacs_term::commands::injected_fragment_at(doc, &loader, host_byte).is_none(),
+        "host code must not be reported as a fragment"
+    );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn language_injection_content_sniffers() -> anyhow::Result<()> {
+    // The multi-language content sniffers (JSON / HTML / GraphQL / SQL) with a
+    // battery of tricky negatives (prose, JS-objects, placeholders, `<3`).
+    let ts = "\
+const j = '{\"aaa\": 1, \"bbb\": [2, 3]}';
+const h = `<section id=\"x\">hi</section>`;
+const g = \"query GetUser { gqlfield { id } }\";
+const s = \"SELECT sniff_col FROM t WHERE id = 1\";
+const css = `.btncss { color: cssred; padding: 4px; }`;
+const arr = \"[1, 2, 3]\";
+const n1 = \"{ not really json }\";
+const n2 = \"<3 love this\";
+const n3 = \"<placeholder text here\";
+const n4 = \"query the results carefully { maybe }\";
+const n5 = \"please pick a plan from the list\";
+const n6 = \"just some label\";
+";
+    let needles = [
+        "aaa", "section id", "gqlfield", "SELECT sniff_col", "cssred", "[1, 2, 3]",
+        "not really json", "<3 love", "placeholder text", "query the results", "please pick", "just some label",
+    ];
+    let got = langs_at("ts", ts, &needles).await?;
+    // positives
+    assert_eq!(got[0].as_deref(), Some("json"), "json object");
+    assert_eq!(got[1].as_deref(), Some("html"), "html element");
+    assert_eq!(got[2].as_deref(), Some("graphql"), "graphql query");
+    assert_eq!(got[3].as_deref(), Some("sql"), "sql");
+    assert_eq!(got[4].as_deref(), Some("css"), "css block");
+    assert_eq!(got[5].as_deref(), Some("json"), "json array");
+    // negatives — none of these may be a sniffed guest language
+    for (i, needle) in needles.iter().enumerate().skip(6) {
+        let g = got[i].as_deref();
+        assert!(
+            !matches!(g, Some("json") | Some("html") | Some("graphql") | Some("sql") | Some("css")),
+            "false positive: {needle:?} sniffed as {g:?}"
+        );
+    }
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn language_injection_sql_autodetect_js() -> anyhow::Result<()> {
     // No tag, no hint, no query method — detected purely from content.
