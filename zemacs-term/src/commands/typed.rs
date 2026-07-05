@@ -24810,6 +24810,11 @@ pub const ZWIRE_CRAWL_SIGNATURE: Signature = Signature {
     positionals: (1, Some(2)),
     ..Signature::DEFAULT
 };
+/// `:zwire-job-output [id]` — zero or one positional.
+pub const ZWIRE_OPT_SIGNATURE: Signature = Signature {
+    positionals: (0, Some(1)),
+    ..Signature::DEFAULT
+};
 
 /// Insert `text` at the current document's primary cursor and record it in the
 /// undo history — the shared insertion path for `:zwire-exec` / `:zwire-crawl`.
@@ -24941,6 +24946,64 @@ fn zwire_crawl(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
                 .set_status(format!("zwire-crawl: {count} path(s) under {path}"));
         }
         Err(err) => cx.editor.set_error(format!("zwire-host: {err}")),
+    }
+    Ok(())
+}
+
+/// `:zwire-job <command>` — ship a long-running command to the daemon as a
+/// background job. Returns immediately; when it finishes you get a status-line
+/// notice (and a desktop notification), and its output is kept for
+/// `:zwire-job-output`.
+fn zwire_job(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cmdline = args.join(" ");
+    if cmdline.trim().is_empty() {
+        cx.editor.set_error("usage: :zwire-job <command> [args...]");
+        return Ok(());
+    }
+    match crate::commands::host::submit(cmdline.trim()) {
+        Ok(id) => cx.editor.set_status(format!(
+            "zwire-job #{id} started — you'll be notified when it finishes"
+        )),
+        Err(err) => cx.editor.set_error(format!("zwire-host: {err}")),
+    }
+    Ok(())
+}
+
+/// `:zwire-jobs` — show background jobs still running plus recent completions.
+fn zwire_jobs(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match crate::commands::host::jobs_overview() {
+        Ok(line) => cx.editor.set_status(line),
+        Err(err) => cx.editor.set_error(format!("zwire-host: {err}")),
+    }
+    Ok(())
+}
+
+/// `:zwire-job-output [id]` — insert a finished job's captured output at the
+/// cursor (the most recent completion when no id is given).
+fn zwire_job_output(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let id = args.join(" ").trim().parse::<u64>().ok();
+    match crate::commands::host::take_output(id) {
+        Some(out) if !out.is_empty() => {
+            zwire_insert_at_cursor(cx, &out);
+            cx.editor.set_status("zwire-job: inserted output");
+        }
+        Some(_) => cx.editor.set_status("zwire-job: that job produced no output"),
+        None => cx
+            .editor
+            .set_error("zwire-job: no matching finished job (none collected yet?)"),
     }
     Ok(())
 }
@@ -34103,6 +34166,30 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: zwire_crawl,
         completer: CommandCompleter::none(),
         signature: ZWIRE_CRAWL_SIGNATURE,
+    },
+    TypableCommand {
+        name: "zwire-job",
+        aliases: &["zj"],
+        doc: "Ship a long-running command to the zwire-host daemon; get notified on the status line when it finishes.",
+        fun: zwire_job,
+        completer: CommandCompleter::none(),
+        signature: ZWIRE_RAW_SIGNATURE,
+    },
+    TypableCommand {
+        name: "zwire-jobs",
+        aliases: &["jobs", "zjs"],
+        doc: "List background zwire-host jobs still running, plus recent completions.",
+        fun: zwire_jobs,
+        completer: CommandCompleter::none(),
+        signature: ZWIRE_NOARG_SIGNATURE,
+    },
+    TypableCommand {
+        name: "zwire-job-output",
+        aliases: &["zjo"],
+        doc: "Insert a finished background job's output at the cursor (most recent, or a given id).",
+        fun: zwire_job_output,
+        completer: CommandCompleter::none(),
+        signature: ZWIRE_OPT_SIGNATURE,
     },
     TypableCommand {
         name: "repl",

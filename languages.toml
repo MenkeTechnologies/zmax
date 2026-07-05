@@ -5,6 +5,11 @@ use-grammars = { except = [ "wren", "gemini" ] }
 
 [language-server]
 
+# Embedded-interpreter language servers (the `stryke` / `zshrs` binaries double
+# as their own LSP servers over stdio).
+stryke-lsp = { command = "stryke", args = ["--lsp"] }
+zshrs-lsp = { command = "zshrs", args = ["--lsp"] }
+
 ada-gpr-language-server = {command = "ada_language_server", args = ["--language-gpr"]}
 ada-language-server = { command = "ada_language_server" }
 als = { command = "als" }
@@ -1269,6 +1274,22 @@ indent = { tab-width = 2, unit = "  " }
 name = "rshtml"
 source = { git = "https://github.com/rshtml/tree-sitter-rshtml", rev = "89ae0f3a5e221a83aad243def85e822616d3b3c2" }
 
+# strykelang: `.stk` files. Own tree-sitter grammar (Perl-family base + stryke
+# pipe operators |> ~> ~p> ~s> ~d>) for highlighting, and the stryke binary's
+# built-in LSP (`stryke --lsp`) for completion/diagnostics.
+[[language]]
+name = "stryke"
+scope = "source.stryke"
+injection-regex = "stryke"
+file-types = ["stk"]
+comment-token = "#"
+indent = { tab-width = 4, unit = "    " }
+language-servers = ["stryke-lsp"]
+# Grammar: prebuilt at runtime/grammars/stryke.dylib from the source in
+# runtime/grammars/sources/stryke (regenerate: `tree-sitter generate` there,
+# then compile src/parser.c to that dylib). Not registered as a `[[grammar]]`
+# build target so the standard grammar-build/fetch step leaves it alone.
+
 [[language]]
 name = "bash"
 scope = "source.bash"
@@ -1333,7 +1354,7 @@ file-types = [
 ]
 shebangs = ["sh", "bash", "dash", "zsh"]
 comment-token = "#"
-language-servers = [ "bash-language-server" ]
+language-servers = [ "zshrs-lsp" ]
 indent = { tab-width = 2, unit = "  " }
 
 [[grammar]]
