@@ -24797,6 +24797,154 @@ pub const AWK_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const ZSH_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const STRYKE_SIGNATURE: Signature = ELISP_SIGNATURE;
 
+// `:zwire-host` / `:zwire-exec` take the whole remainder verbatim (one raw
+// positional) so JSON braces / quoted args survive tokenization.
+pub const ZWIRE_RAW_SIGNATURE: Signature = ELISP_SIGNATURE;
+/// `:zwire-sysinfo` / `:zwire-hostinfo` take no arguments.
+pub const ZWIRE_NOARG_SIGNATURE: Signature = Signature {
+    positionals: (0, Some(0)),
+    ..Signature::DEFAULT
+};
+/// `:zwire-crawl <path> [ext]`.
+pub const ZWIRE_CRAWL_SIGNATURE: Signature = Signature {
+    positionals: (1, Some(2)),
+    ..Signature::DEFAULT
+};
+
+/// Insert `text` at the current document's primary cursor and record it in the
+/// undo history — the shared insertion path for `:zwire-exec` / `:zwire-crawl`.
+fn zwire_insert_at_cursor(cx: &mut compositor::Context, text: &str) {
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((pos, pos, Some(Tendril::from(text)))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    view.ensure_cursor_in_view(doc, scrolloff);
+}
+
+/// `:zwire-host <json>` — send a raw request to the zwire-host daemon and show
+/// the reply on the status line. The universal escape hatch for any host command
+/// (kv, open, clipboard, notify, fs_*, …).
+fn zwire_host_call(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let body = args.join(" ");
+    if body.trim().is_empty() {
+        cx.editor.set_error("usage: :zwire-host <json>");
+        return Ok(());
+    }
+    let request: Value = match serde_json::from_str(body.trim()) {
+        Ok(v) => v,
+        Err(e) => {
+            cx.editor.set_error(format!("zwire-host: invalid JSON: {e}"));
+            return Ok(());
+        }
+    };
+    match crate::commands::host::call(&request) {
+        Ok(reply) => cx.editor.set_status(reply.to_string()),
+        Err(err) => cx.editor.set_error(format!("zwire-host: {err}")),
+    }
+    Ok(())
+}
+
+/// `:zwire-sysinfo` — live system stats from the shared host on the status line.
+fn zwire_sysinfo(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match crate::commands::host::sysinfo_summary() {
+        Ok(line) => cx.editor.set_status(line),
+        Err(err) => cx.editor.set_error(format!("zwire-host: {err}")),
+    }
+    Ok(())
+}
+
+/// `:zwire-hostinfo` — machine facts from the shared host on the status line.
+fn zwire_hostinfo(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match crate::commands::host::hostinfo_summary() {
+        Ok(line) => cx.editor.set_status(line),
+        Err(err) => cx.editor.set_error(format!("zwire-host: {err}")),
+    }
+    Ok(())
+}
+
+/// `:zwire-exec <command>` — run a command through the shared host and insert its
+/// stdout at the cursor (like `:r !cmd`, but routed through the privileged host).
+fn zwire_exec(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cmdline = args.join(" ");
+    if cmdline.trim().is_empty() {
+        cx.editor.set_error("usage: :zwire-exec <command> [args...]");
+        return Ok(());
+    }
+    match crate::commands::host::exec(cmdline.trim()) {
+        Ok((code, stdout, stderr)) => {
+            if !stdout.is_empty() {
+                zwire_insert_at_cursor(cx, &stdout);
+            }
+            let msg = if stderr.trim().is_empty() {
+                format!("zwire-exec: exit {code}")
+            } else {
+                format!("zwire-exec: exit {code}: {}", stderr.trim())
+            };
+            cx.editor.set_status(msg);
+        }
+        Err(err) => cx.editor.set_error(format!("zwire-host: {err}")),
+    }
+    Ok(())
+}
+
+/// `:zwire-crawl <path> [ext]` — recursively crawl the filesystem via the shared
+/// host and insert the matching file paths (one per line) at the cursor.
+fn zwire_crawl(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined = args.join(" ");
+    let mut fields = joined.split_whitespace();
+    let Some(path) = fields.next() else {
+        cx.editor.set_error("usage: :zwire-crawl <path> [ext]");
+        return Ok(());
+    };
+    let ext = fields.next();
+    match crate::commands::host::crawl(path, ext) {
+        Ok(paths) => {
+            let count = paths.len();
+            if !paths.is_empty() {
+                let mut text = paths.join("\n");
+                text.push('\n');
+                zwire_insert_at_cursor(cx, &text);
+            }
+            cx.editor
+                .set_status(format!("zwire-crawl: {count} path(s) under {path}"));
+        }
+        Err(err) => cx.editor.set_error(format!("zwire-host: {err}")),
+    }
+    Ok(())
+}
+
 pub const SHELL_COMPLETER: CommandCompleter = CommandCompleter::positional(&[
     // Command name
     completers::program,
@@ -33915,6 +34063,46 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: stryke_eval,
         completer: CommandCompleter::none(),
         signature: STRYKE_SIGNATURE,
+    },
+    TypableCommand {
+        name: "zwire-host",
+        aliases: &["zh"],
+        doc: "Send a raw JSON request to the zwire-host daemon; show the reply (e.g. {\"cmd\":\"hostinfo\"}).",
+        fun: zwire_host_call,
+        completer: CommandCompleter::none(),
+        signature: ZWIRE_RAW_SIGNATURE,
+    },
+    TypableCommand {
+        name: "zwire-sysinfo",
+        aliases: &["zsys"],
+        doc: "Show live system stats (cpu/mem/load) from the shared zwire-host daemon.",
+        fun: zwire_sysinfo,
+        completer: CommandCompleter::none(),
+        signature: ZWIRE_NOARG_SIGNATURE,
+    },
+    TypableCommand {
+        name: "zwire-hostinfo",
+        aliases: &[],
+        doc: "Show machine facts (os/arch/cpus/hostname) from the shared zwire-host daemon.",
+        fun: zwire_hostinfo,
+        completer: CommandCompleter::none(),
+        signature: ZWIRE_NOARG_SIGNATURE,
+    },
+    TypableCommand {
+        name: "zwire-exec",
+        aliases: &["zx"],
+        doc: "Run a command through the zwire-host daemon and insert its output at the cursor.",
+        fun: zwire_exec,
+        completer: CommandCompleter::none(),
+        signature: ZWIRE_RAW_SIGNATURE,
+    },
+    TypableCommand {
+        name: "zwire-crawl",
+        aliases: &["zwc"],
+        doc: "Recursively crawl the filesystem via zwire-host and insert matching paths at the cursor.",
+        fun: zwire_crawl,
+        completer: CommandCompleter::none(),
+        signature: ZWIRE_CRAWL_SIGNATURE,
     },
     TypableCommand {
         name: "repl",

@@ -108,6 +108,9 @@ toml.workspace = true
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 
+# Decodes base64 stdout/stderr from zwire-host `exec` replies (commands::host).
+base64 = "0.22"
+
 # CI status panel: GitHub Actions REST API over HTTP (blocking; called on a
 # spawn_blocking task). Already in the graph transitively, so no new TLS stack.
 # `json` feature is required for `.send_json()` in src/ai/*. Declare it here so

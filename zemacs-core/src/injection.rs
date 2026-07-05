@@ -69,6 +69,59 @@ pub struct InjectionConfig {
     pub rules: Vec<InjectionRule>,
 }
 
+/// A contiguous injected fragment viewed as a virtual document: its guest
+/// language + text, plus the bidirectional mapping to host coordinates. This is
+/// the single-range analogue of IntelliJ's `DocumentWindow` — the foundation for
+/// running the guest language's tools (LSP, formatting) over the fragment and
+/// translating positions/edits back to the host.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FragmentView {
+    /// Guest language id (e.g. `"sql"`).
+    pub language: String,
+    /// Host char offset where the fragment begins.
+    pub host_start: usize,
+    /// The fragment's text (the injected content).
+    pub text: String,
+}
+
+impl FragmentView {
+    pub fn new(language: impl Into<String>, host_start: usize, text: impl Into<String>) -> Self {
+        Self {
+            language: language.into(),
+            host_start,
+            text: text.into(),
+        }
+    }
+
+    /// Length of the fragment in chars.
+    pub fn len(&self) -> usize {
+        self.text.chars().count()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.text.is_empty()
+    }
+
+    /// Host char offset for a fragment char offset.
+    pub fn to_host(&self, frag: usize) -> usize {
+        self.host_start + frag
+    }
+
+    /// Fragment char offset for a host char offset, or `None` if the host offset
+    /// is outside this fragment. The end boundary is inclusive so a cursor at the
+    /// fragment's end still maps.
+    pub fn from_host(&self, host: usize) -> Option<usize> {
+        (self.host_start..=self.host_start + self.len())
+            .contains(&host)
+            .then(|| host - self.host_start)
+    }
+
+    /// The fragment's char range in the host document.
+    pub fn host_range(&self) -> std::ops::Range<usize> {
+        self.host_start..self.host_start + self.len()
+    }
+}
+
 /// The language-injection engine: the active rule set plus the operations over
 /// it. One is owned by the syntax [`Loader`](crate::syntax::Loader); it expands
 /// the rules that apply to a host grammar into injection-query text at compile
@@ -526,6 +579,24 @@ arg = 0
         let q = generate("python", &merged);
         assert!(q.contains("myCustomQuery"), "user call-site method not generated");
         assert!(q.contains("(attribute attribute: (identifier) @_m)"), "python call shape wrong");
+    }
+
+    #[test]
+    fn fragment_view_offset_mapping() {
+        // Host: `q = "SELECT 1";` — fragment "SELECT 1" starts at host char 5.
+        let f = FragmentView::new("sql", 5, "SELECT 1");
+        assert_eq!(f.len(), 8);
+        assert_eq!(f.host_range(), 5..13);
+        // fragment -> host
+        assert_eq!(f.to_host(0), 5);
+        assert_eq!(f.to_host(8), 13);
+        // host -> fragment, round-trips
+        assert_eq!(f.from_host(5), Some(0));
+        assert_eq!(f.from_host(9), Some(4));
+        assert_eq!(f.from_host(13), Some(8)); // end boundary inclusive
+        // outside the fragment
+        assert_eq!(f.from_host(4), None);
+        assert_eq!(f.from_host(14), None);
     }
 
     #[test]

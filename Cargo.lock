@@ -9237,6 +9237,7 @@ dependencies = [
  "anyhow",
  "arc-swap",
  "awkrs",
+ "base64",
  "crossterm 0.28.1",
  "dashmap",
  "elisprs",

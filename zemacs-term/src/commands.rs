@@ -1,4 +1,8 @@
 pub(crate) mod dap;
+/// Client bridge to the `zwire-host` universal local host (system stats,
+/// filesystem crawl, command exec, kv store, …). The `:zwire-*` commands in
+/// [`typed`] route through here to the shared daemon.
+pub(crate) mod host;
 pub(crate) mod lsp;
 pub(crate) mod org;
 /// Embedded scripting host. The real `scripting/` module (which pulls the
@@ -22151,15 +22155,15 @@ pub fn escape_fragment(text: &str, host_lang: Option<&str>, before: &str) -> Str
     }
 }
 
-/// The injected fragment at char `byte` (byte offset): `(guest language id,
-/// start char, end char)`, or `None` when the cursor is in the host language
-/// (no injection). Backs `edit_injected_fragment` and is exercised by the
-/// injection tests.
+/// The injected fragment at `byte` as a [`FragmentView`](zemacs_core::injection::FragmentView)
+/// (guest language + host offset + text, with host<->fragment mapping), or `None`
+/// when the cursor is in the host language. Backs "Edit Fragment" and is the
+/// entry point a future LSP-on-fragment layer would use to route requests.
 pub fn injected_fragment_at(
     doc: &Document,
     loader: &zemacs_core::syntax::Loader,
     byte: usize,
-) -> Option<(String, usize, usize)> {
+) -> Option<zemacs_core::injection::FragmentView> {
     let syntax = doc.syntax()?;
     let guest = doc
         .language_config_at(loader, byte)
@@ -22173,7 +22177,8 @@ pub fn injected_fragment_at(
     let len_bytes = text.len_bytes();
     let start = text.byte_to_char((node.start_byte() as usize).min(len_bytes));
     let end = text.byte_to_char((node.end_byte() as usize).min(len_bytes));
-    Some((guest, start, end))
+    let fragment: String = text.slice(start..end).chars().collect();
+    Some(zemacs_core::injection::FragmentView::new(guest, start, fragment))
 }
 
 /// JetBrains "Edit Fragment": open the injected region at point in a fresh
@@ -22192,17 +22197,17 @@ pub(crate) fn edit_injected_fragment_impl(editor: &mut Editor) {
         let text = doc.text();
         let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
         let byte = text.char_to_byte(cursor);
-        injected_fragment_at(doc, &loader, byte).map(|(guest, s, e)| {
-            let frag: String = text.slice(s..e).chars().collect();
-            let before: String = text.slice(s.saturating_sub(3)..s).chars().collect();
+        injected_fragment_at(doc, &loader, byte).map(|frag| {
+            let range = frag.host_range();
+            let before: String = text.slice(range.start.saturating_sub(3)..range.start).chars().collect();
             let origin = FragmentOrigin {
                 host: doc.id(),
-                start: s,
-                end: e,
+                start: range.start,
+                end: range.end,
                 before,
                 host_lang: doc.language_name().map(str::to_string),
             };
-            (guest, frag, origin)
+            (frag.language, frag.text, origin)
         })
     };
     let Some((guest, fragment, origin)) = extracted else {

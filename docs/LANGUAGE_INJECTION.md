@@ -289,8 +289,9 @@ the `.kind()` chain.
   `.scm` files. Call-site matching is name+arg only (no receiver-type/import
   resolution) — most of IntelliLang's value without a type system. Still
   optional: a `tag`/attribute trigger and `prefix`/`suffix` fragment wrapping.
-  Comment-hint insertion (`:inject-language`) targets block-comment hosts;
-  line-comment-only hosts (Python) need prev-line adjacency, not yet wired.
+  The `:inject-language` *command* inserts a `/* … */` comment, so it targets
+  block-comment hosts; Python hint *detection* works (a `# language=…` on the
+  line above the assignment), but you write that comment by hand.
 - **Content sniffers cover SQL, JSON, HTML/XML, GraphQL, CSS.** Regex classifiers
   are inherently heuristic — the built-ins are conservative (require distinctive
   structure: `{"key":` for JSON, a matching `</tag>` for HTML, an operation
@@ -305,9 +306,15 @@ the `.kind()` chain.
 - **Generalize `@Language("…")`** — Java's annotation hint is wired for SQL only;
   it could inject any named language (JSON/HTML/RegExp), and Kotlin/C# have
   equivalent annotation/comment idioms not yet wired.
-- **Injected LSP** — real, schema-aware completion/diagnostics for the injected
-  fragment (virtual documents + position mapping) is a much larger subsystem;
-  today injected regions get highlighting + keyword completion only.
+- **Injected LSP** — `injection::FragmentView` (guest language + host offset +
+  text, with `to_host`/`from_host` mapping) is the built, unit-tested *foundation*
+  — the single-range analogue of IntelliJ's `DocumentWindow`. `commands::injected_fragment_at`
+  returns one. What remains is the **transport layer** on top: `didOpen` the
+  fragment to the guest language server under a synthetic URI, translate the
+  request position with `from_host`, and map results back with `to_host`. That
+  needs zemacs-lsp client plumbing + a live server to verify, so it's the one
+  piece not yet wired. In the meantime `:edit-fragment` gives the guest
+  language's full LSP by opening a real buffer.
 - **Comment-hint injection** (`// language=sql`) is only wired for JS/TS
   (`/* sql */`); generalizing it per host is straightforward but per-grammar.
 

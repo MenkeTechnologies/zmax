@@ -117,11 +117,14 @@ async fn injected_fragment_extraction() -> anyhow::Result<()> {
     let inside = text.to_string().find("frag_a").unwrap();
     let byte = text.char_to_byte(text.byte_to_char(inside));
 
-    let (lang, start, end) =
+    let frag =
         zemacs_term::commands::injected_fragment_at(doc, &loader, byte).expect("fragment");
-    assert_eq!(lang, "sql");
-    let fragment: String = text.slice(start..end).chars().collect();
-    assert_eq!(fragment, "SELECT frag_a, frag_b FROM fragtbl", "fragment span");
+    assert_eq!(frag.language, "sql");
+    assert_eq!(frag.text, "SELECT frag_a, frag_b FROM fragtbl", "fragment span");
+    // host<->fragment offset mapping round-trips at the cursor
+    let host_cursor = text.byte_to_char(byte);
+    let in_frag = frag.from_host(host_cursor).expect("cursor inside fragment");
+    assert_eq!(frag.to_host(in_frag), host_cursor, "offset round-trip");
 
     // A byte in the host (the `const q` declaration) is NOT an injection.
     let host_byte = text.char_to_byte(text.byte_to_char(text.to_string().find("const").unwrap()));
