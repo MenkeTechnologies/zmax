@@ -74,7 +74,7 @@ quickcheck = { version = "1", default-features = false }
 [workspace.package]
 version = "0.2.24"
 edition = "2021"
-authors = ["MenkeTechnologies"]
+authors = ["MenkeTechnologies <linux.dev25@gmail.com>"]
 categories = ["editor"]
 repository = "https://github.com/MenkeTechnologies/zemacs"
 homepage = "https://github.com/MenkeTechnologies/zemacs"
