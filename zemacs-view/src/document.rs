@@ -2036,7 +2036,7 @@ impl Document {
     }
 
     /// Snapshot of the undo-history tree for the undo-tree UI: for every
-    /// revision, its parent index and commit [`Instant`], plus the current and
+    /// revision, its parent index and commit `Instant`, plus the current and
     /// last-saved revision indices. Reads through the `Cell<History>` by
     /// take/set, so it does not disturb the stored history.
     pub fn undo_tree_snapshot(&self) -> UndoTreeSnapshot {
