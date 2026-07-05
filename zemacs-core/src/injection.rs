@@ -299,38 +299,78 @@ pub fn default_rules() -> Vec<InjectionRule> {
         ),
         sql(
             &["go"],
-            &["Query", "QueryRow", "Exec", "Prepare", "NamedExec", "NamedQuery", "MustExec"],
+            &[
+                "Query",
+                "QueryRow",
+                "Exec",
+                "Prepare",
+                "NamedExec",
+                "NamedQuery",
+                "MustExec",
+            ],
             0,
         ),
         sql(
             &["go"],
-            &["QueryContext", "QueryRowContext", "ExecContext", "PrepareContext"],
+            &[
+                "QueryContext",
+                "QueryRowContext",
+                "ExecContext",
+                "PrepareContext",
+            ],
             1,
         ),
         sql(
             &["java"],
             &[
-                "executeQuery", "executeUpdate", "execute", "prepareStatement", "prepareCall",
-                "createQuery", "createNativeQuery", "query", "queryForObject", "queryForList",
-                "queryForMap", "update", "batchUpdate",
+                "executeQuery",
+                "executeUpdate",
+                "execute",
+                "prepareStatement",
+                "prepareCall",
+                "createQuery",
+                "createNativeQuery",
+                "query",
+                "queryForObject",
+                "queryForList",
+                "queryForMap",
+                "update",
+                "batchUpdate",
             ],
             0,
         ),
         sql(
             &["c-sharp"],
             &[
-                "ExecuteReader", "ExecuteNonQuery", "ExecuteScalar", "ExecuteReaderAsync",
-                "ExecuteNonQueryAsync", "ExecuteScalarAsync", "FromSqlRaw", "FromSqlInterpolated",
-                "ExecuteSqlRaw", "Query", "QueryAsync", "QueryFirst", "QueryFirstOrDefault",
-                "QuerySingle", "Execute", "ExecuteAsync",
+                "ExecuteReader",
+                "ExecuteNonQuery",
+                "ExecuteScalar",
+                "ExecuteReaderAsync",
+                "ExecuteNonQueryAsync",
+                "ExecuteScalarAsync",
+                "FromSqlRaw",
+                "FromSqlInterpolated",
+                "ExecuteSqlRaw",
+                "Query",
+                "QueryAsync",
+                "QueryFirst",
+                "QueryFirstOrDefault",
+                "QuerySingle",
+                "Execute",
+                "ExecuteAsync",
             ],
             0,
         ),
         sql(
             &["kotlin"],
             &[
-                "rawQuery", "execSQL", "query", "prepareStatement", "createStatement",
-                "createQuery", "createNativeQuery",
+                "rawQuery",
+                "execSQL",
+                "query",
+                "prepareStatement",
+                "createStatement",
+                "createQuery",
+                "createNativeQuery",
             ],
             0,
         ),
@@ -405,9 +445,7 @@ fn hint_query(host: &str, lang: &str) -> Option<String> {
     // Python has no inline block comment, so a `# language=…` hint sits on the
     // line *before* the assignment rather than immediately before the string.
     let pattern = if host == "python" {
-        format!(
-            "((({comment}) @_hint) . (expression_statement (assignment right: {cap}))"
-        )
+        format!("((({comment}) @_hint) . (expression_statement (assignment right: {cap}))")
     } else {
         format!("((({comment}) @_hint) . {cap}")
     };
@@ -460,7 +498,9 @@ fn method_query(host: &str, methods: &[String], arg: usize, lang: &str) -> Optio
         }
         _ => return None,
     };
-    Some(format!("\n; [injection-engine] call-site rule -> {lang}\n{body}"))
+    Some(format!(
+        "\n; [injection-engine] call-site rule -> {lang}\n{body}"
+    ))
 }
 
 /// Generate tree-sitter injection-query text for `host` from `rules`. Returns an
@@ -519,7 +559,10 @@ mod tests {
         for host in ["python", "go", "java", "c-sharp", "kotlin", "typescript"] {
             let q = generate(host, &rules);
             assert!(q.contains("injection.content"), "no capture for {host}");
-            assert!(q.contains("injection.language \"sql\""), "no sql set for {host}");
+            assert!(
+                q.contains("injection.language \"sql\""),
+                "no sql set for {host}"
+            );
             assert!(q.contains("#match?"), "no content filter for {host}");
         }
         // Unknown host -> nothing.
@@ -549,8 +592,14 @@ mod tests {
             },
         ];
         assert!(generate("python", &rules).contains("^SELECT"));
-        assert!(!generate("go", &rules).contains("^SELECT"), "host scoping ignored");
-        assert!(!generate("python", &rules).contains("^INSERT"), "disabled rule emitted");
+        assert!(
+            !generate("go", &rules).contains("^SELECT"),
+            "host scoping ignored"
+        );
+        assert!(
+            !generate("python", &rules).contains("^INSERT"),
+            "disabled rule emitted"
+        );
     }
 
     #[test]
@@ -560,10 +609,19 @@ mod tests {
         let go = generate("go", &rules);
         assert!(go.contains("call-site rule"), "no go call-site rule");
         assert!(go.contains("QueryContext"), "missing go context method");
-        assert!(go.contains("(_) ."), "arg=1 anchor missing for go context methods");
+        assert!(
+            go.contains("(_) ."),
+            "arg=1 anchor missing for go context methods"
+        );
         let java = generate("java", &rules);
-        assert!(java.contains("method_invocation"), "java call-site shape wrong");
-        assert!(java.contains("createNativeQuery"), "java method set incomplete");
+        assert!(
+            java.contains("method_invocation"),
+            "java call-site shape wrong"
+        );
+        assert!(
+            java.contains("createNativeQuery"),
+            "java method set incomplete"
+        );
     }
 
     #[test]
@@ -577,8 +635,14 @@ arg = 0
 "#;
         let merged = merge_user_config(Vec::new(), toml);
         let q = generate("python", &merged);
-        assert!(q.contains("myCustomQuery"), "user call-site method not generated");
-        assert!(q.contains("(attribute attribute: (identifier) @_m)"), "python call shape wrong");
+        assert!(
+            q.contains("myCustomQuery"),
+            "user call-site method not generated"
+        );
+        assert!(
+            q.contains("(attribute attribute: (identifier) @_m)"),
+            "python call shape wrong"
+        );
     }
 
     #[test]
@@ -589,7 +653,10 @@ arg = 0
         assert!(ecma.contains("comment-hint rule"), "no ecma hint rule");
         assert!(ecma.contains("(comment)"), "ecma hint missing comment node");
         assert!(ecma.contains("@_hint"), "ecma hint missing capture");
-        assert!(ecma.contains("#match? @_hint"), "hint missing content match");
+        assert!(
+            ecma.contains("#match? @_hint"),
+            "hint missing content match"
+        );
         assert!(ecma.contains("language"), "hint regex missing 'language'");
         // python: the hint sits on the line BEFORE the assignment.
         let py = generate("python", &rules);
@@ -599,7 +666,10 @@ arg = 0
         );
         // java: split comment node.
         let java = generate("java", &rules);
-        assert!(java.contains("[(line_comment) (block_comment)]"), "java comment node");
+        assert!(
+            java.contains("[(line_comment) (block_comment)]"),
+            "java comment node"
+        );
     }
 
     #[test]
@@ -633,7 +703,7 @@ arg = 0
         assert_eq!(f.from_host(5), Some(0));
         assert_eq!(f.from_host(9), Some(4));
         assert_eq!(f.from_host(13), Some(8)); // end boundary inclusive
-        // outside the fragment
+                                              // outside the fragment
         assert_eq!(f.from_host(4), None);
         assert_eq!(f.from_host(14), None);
     }

@@ -379,6 +379,12 @@
 | `:line-ending` | Set the document's default line ending. Options: crlf, lf. |
 | `:earlier`, `:ear` | Jump back to an earlier point in edit history. Accepts a number of steps or a time span. |
 | `:later`, `:lat` | Jump to a later point in edit history. Accepts a number of steps or a time span. |
+| `:undotree`, `:undo-tree`, `:UndotreeToggle` | Open the branching undo-history browser (vim undotree). |
+| `:injections`, `:injection-rules` | List the active language-injection rules (defaults + injections.toml). |
+| `:injection-info`, `:what-injection` | Report the effective (possibly injected) language at the cursor. |
+| `:edit-fragment`, `:edit-injected-fragment` | Edit the injected-language fragment at point in its own buffer (JetBrains Edit Fragment). |
+| `:apply-fragment`, `:apply-injected-fragment` | Write the fragment buffer back into its host string. |
+| `:inject-language`, `:inject-lang` | Inject a language into the string at point via a /* language=… */ hint (JetBrains inject-here). |
 | `:write-quit`, `:wq` | Write changes to disk and close the current view. Accepts an optional path (:wq some/path.txt) |
 | `:write-quit!`, `:wq!` | Write changes to disk and close the current view forcefully. Accepts an optional path (:wq! some/path.txt) |
 | `:write-all`, `:wa` | Write changes from all buffers to disk. |
@@ -889,6 +895,14 @@
 | `:awk`, `:awk-filter` | Filter the selection (or whole buffer) through an awk program (embedded awkrs). |
 | `:zsh`, `:zshell` | Run a command in the embedded zsh shell (state persists); output shown in a popup. |
 | `:stryke`, `:st` | Evaluate stryke (strykelang) source via the embedded interpreter (state persists). |
+| `:zwire-host`, `:zh` | Send a raw JSON request to the zwire-host daemon; show the reply (e.g. {"cmd":"hostinfo"}). |
+| `:zwire-sysinfo`, `:zsys` | Show live system stats (cpu/mem/load) from the shared zwire-host daemon. |
+| `:zwire-hostinfo` | Show machine facts (os/arch/cpus/hostname) from the shared zwire-host daemon. |
+| `:zwire-exec`, `:zx` | Run a command through the zwire-host daemon and insert its output at the cursor. |
+| `:zwire-crawl`, `:zwc` | Recursively crawl the filesystem via zwire-host and insert matching paths at the cursor. |
+| `:zwire-job`, `:zj` | Ship a long-running command to the zwire-host daemon; get notified on the status line when it finishes. |
+| `:zwire-jobs`, `:jobs`, `:zjs` | List background zwire-host jobs still running, plus recent completions. |
+| `:zwire-job-output`, `:zjo` | Insert a finished background job's output at the cursor (most recent, or a given id). |
 | `:repl` | Open the embedded-language REPL (elisp/viml/stryke/awk/zsh); optional starting language. |
 | `:reset-diff-change`, `:diffget`, `:diffg` | Reset the diff change at the cursor position. |
 | `:clear-register` | Clear given register. If no argument is provided, clear all registers. |

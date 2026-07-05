@@ -1858,7 +1858,11 @@ fn injection_info(
 }
 
 /// `:edit-fragment` — edit the injected fragment at point in its own buffer.
-fn edit_fragment(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn edit_fragment(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
         super::edit_injected_fragment_impl(cx.editor);
     }
@@ -1866,7 +1870,11 @@ fn edit_fragment(cx: &mut compositor::Context, _args: Args, event: PromptEvent) 
 }
 
 /// `:apply-fragment` — write the fragment buffer back into its host string.
-fn apply_fragment(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn apply_fragment(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event == PromptEvent::Validate {
         super::apply_injected_fragment_impl(cx.editor);
     }
@@ -24821,7 +24829,10 @@ pub const ZWIRE_OPT_SIGNATURE: Signature = Signature {
 fn zwire_insert_at_cursor(cx: &mut compositor::Context, text: &str) {
     let scrolloff = cx.editor.config().scrolloff;
     let (view, doc) = current!(cx.editor);
-    let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let pos = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
     let transaction = Transaction::change(
         doc.text(),
         std::iter::once((pos, pos, Some(Tendril::from(text)))),
@@ -24850,7 +24861,8 @@ fn zwire_host_call(
     let request: Value = match serde_json::from_str(body.trim()) {
         Ok(v) => v,
         Err(e) => {
-            cx.editor.set_error(format!("zwire-host: invalid JSON: {e}"));
+            cx.editor
+                .set_error(format!("zwire-host: invalid JSON: {e}"));
             return Ok(());
         }
     };
@@ -24901,7 +24913,8 @@ fn zwire_exec(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     }
     let cmdline = args.join(" ");
     if cmdline.trim().is_empty() {
-        cx.editor.set_error("usage: :zwire-exec <command> [args...]");
+        cx.editor
+            .set_error("usage: :zwire-exec <command> [args...]");
         return Ok(());
     }
     match crate::commands::host::exec(cmdline.trim()) {
@@ -25000,7 +25013,9 @@ fn zwire_job_output(
             zwire_insert_at_cursor(cx, &out);
             cx.editor.set_status("zwire-job: inserted output");
         }
-        Some(_) => cx.editor.set_status("zwire-job: that job produced no output"),
+        Some(_) => cx
+            .editor
+            .set_status("zwire-job: that job produced no output"),
         None => cx
             .editor
             .set_error("zwire-job: no matching finished job (none collected yet?)"),

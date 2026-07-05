@@ -22103,8 +22103,10 @@ fn undo_tree(cx: &mut Context) {
         (doc.id(), doc.undo_tree_snapshot().current)
     };
     open_overlay(cx, move |_editor| {
-        Ok(Box::new(crate::ui::undotree::UndoTree::new(doc_id, view_id, current))
-            as Box<dyn Component>)
+        Ok(
+            Box::new(crate::ui::undotree::UndoTree::new(doc_id, view_id, current))
+                as Box<dyn Component>,
+        )
     });
 }
 
@@ -22178,7 +22180,9 @@ pub fn injected_fragment_at(
     let start = text.byte_to_char((node.start_byte() as usize).min(len_bytes));
     let end = text.byte_to_char((node.end_byte() as usize).min(len_bytes));
     let fragment: String = text.slice(start..end).chars().collect();
-    Some(zemacs_core::injection::FragmentView::new(guest, start, fragment))
+    Some(zemacs_core::injection::FragmentView::new(
+        guest, start, fragment,
+    ))
 }
 
 /// JetBrains "Edit Fragment": open the injected region at point in a fresh
@@ -22199,7 +22203,10 @@ pub(crate) fn edit_injected_fragment_impl(editor: &mut Editor) {
         let byte = text.char_to_byte(cursor);
         injected_fragment_at(doc, &loader, byte).map(|frag| {
             let range = frag.host_range();
-            let before: String = text.slice(range.start.saturating_sub(3)..range.start).chars().collect();
+            let before: String = text
+                .slice(range.start.saturating_sub(3)..range.start)
+                .chars()
+                .collect();
             let origin = FragmentOrigin {
                 host: doc.id(),
                 start: range.start,
@@ -22784,32 +22791,34 @@ pub(crate) fn build_marks_picker(editor: &mut Editor) -> Option<Box<dyn Componen
         ui::PickerColumn::new("text", |m: &MarkMeta, _: &()| m.text.as_str().into()),
     ];
 
-    let picker = Picker::new(columns, 2, items, (), |cx, meta, _action| match &meta.kind {
-        MarkKind::Local { pos, .. } => {
-            let (view, doc) = current!(cx.editor);
-            push_jump(view, doc);
-            let pos = (*pos).min(doc.text().len_chars());
-            doc.set_selection(view.id, Selection::point(pos));
-        }
-        MarkKind::Global { path, col } => {
-            {
+    let picker = Picker::new(columns, 2, items, (), |cx, meta, _action| {
+        match &meta.kind {
+            MarkKind::Local { pos, .. } => {
                 let (view, doc) = current!(cx.editor);
                 push_jump(view, doc);
+                let pos = (*pos).min(doc.text().len_chars());
+                doc.set_selection(view.id, Selection::point(pos));
             }
-            if let Err(e) = cx.editor.open(path, Action::Replace) {
-                cx.editor
-                    .set_error(format!("mark: cannot open {}: {e}", path.display()));
-                return;
+            MarkKind::Global { path, col } => {
+                {
+                    let (view, doc) = current!(cx.editor);
+                    push_jump(view, doc);
+                }
+                if let Err(e) = cx.editor.open(path, Action::Replace) {
+                    cx.editor
+                        .set_error(format!("mark: cannot open {}: {e}", path.display()));
+                    return;
+                }
+                let line = meta.line;
+                let (view, doc) = current!(cx.editor);
+                let text = doc.text();
+                let line = line.min(text.len_lines().saturating_sub(1));
+                let line_start = text.line_to_char(line);
+                let line_len = text.line(line).len_chars().saturating_sub(1);
+                let c = (*col).min(line_len);
+                let pos = (line_start + c).min(text.len_chars());
+                doc.set_selection(view.id, Selection::point(pos));
             }
-            let line = meta.line;
-            let (view, doc) = current!(cx.editor);
-            let text = doc.text();
-            let line = line.min(text.len_lines().saturating_sub(1));
-            let line_start = text.line_to_char(line);
-            let line_len = text.line(line).len_chars().saturating_sub(1);
-            let c = (*col).min(line_len);
-            let pos = (line_start + c).min(text.len_chars());
-            doc.set_selection(view.id, Selection::point(pos));
         }
     })
     .with_preview(|_editor, meta| {
@@ -32519,8 +32528,7 @@ fn jump_to_char_label(
         // Record directional f/t/F/T so vim `;`/`,` can repeat it (across lines).
         // The bidirectional `s` (dir == None) is not a repeatable vim find.
         if let Some(direction) = dir {
-            cx.editor.last_find =
-                Some((ch, inclusive, matches!(direction, Direction::Forward)));
+            cx.editor.last_find = Some((ch, inclusive, matches!(direction, Direction::Forward)));
         }
         let alphabet = &cx.editor.config().jump_label_alphabet;
         if alphabet.is_empty() {

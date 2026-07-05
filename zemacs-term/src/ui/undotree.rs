@@ -107,12 +107,7 @@ fn fmt_ago(secs: u64) -> String {
 /// revisions newest→oldest, each lane holds the revision it is waiting to draw
 /// (a parent referenced by an already-drawn child). A branch point shows up as
 /// two lanes collapsing into one at the parent's row.
-fn build_rows(
-    nodes: &[(usize, Instant)],
-    current: usize,
-    saved: usize,
-    now: Instant,
-) -> Vec<Row> {
+fn build_rows(nodes: &[(usize, Instant)], current: usize, saved: usize, now: Instant) -> Vec<Row> {
     let count = nodes.len();
     let mut rows = Vec::with_capacity(count);
     // lanes[c] = the revision index this lane will draw next, if any.
@@ -246,12 +241,7 @@ impl Component for UndoTree {
         if area.width < 20 || area.height < 3 {
             return;
         }
-        let panel = Rect::new(
-            area.x + area.width - panel_w,
-            area.y,
-            panel_w,
-            area.height,
-        );
+        let panel = Rect::new(area.x + area.width - panel_w, area.y, panel_w, area.height);
 
         let theme = &ctx.editor.theme;
         let bg = theme.get("ui.menu");
@@ -314,7 +304,11 @@ impl Component for UndoTree {
         }
 
         // Widest gutter, so the labels line up in a single column.
-        let gutter_w = rows.iter().map(|r| r.gutter.chars().count()).max().unwrap_or(0);
+        let gutter_w = rows
+            .iter()
+            .map(|r| r.gutter.chars().count())
+            .max()
+            .unwrap_or(0);
 
         for (offset, row) in rows.iter().enumerate().skip(self.scroll).take(list_h) {
             let y = body_y + (offset - self.scroll) as u16;
@@ -329,7 +323,10 @@ impl Component for UndoTree {
                 text_style
             };
             if selected {
-                surface.clear_with(Rect::new(inner_x, y, panel.width.saturating_sub(2), 1), sel_style);
+                surface.clear_with(
+                    Rect::new(inner_x, y, panel.width.saturating_sub(2), 1),
+                    sel_style,
+                );
             }
             let line = format!("{:<gw$} {}", row.gutter, row.label, gw = gutter_w);
             surface.set_stringn(inner_x, y, &line, inner_w, base);
@@ -359,7 +356,9 @@ mod tests {
         assert!(rows[1].gutter.starts_with('@'));
         assert!(rows[3].label.contains("(original)"));
         // Linear history uses a single lane.
-        assert!(rows.iter().all(|r| r.gutter.trim_end().chars().count() == 1));
+        assert!(rows
+            .iter()
+            .all(|r| r.gutter.trim_end().chars().count() == 1));
     }
 
     #[test]

@@ -15,22 +15,34 @@ fn byte_of(text: &zemacs_core::Rope, needle: &str) -> usize {
 
 /// Open `contents` as a file with the given extension and return the language id
 /// reported by `language_config_at` at each of `needles` (in order).
-async fn langs_at(ext: &str, contents: &str, needles: &[&str]) -> anyhow::Result<Vec<Option<String>>> {
-    let file = tempfile::Builder::new().suffix(&format!(".{ext}")).tempfile()?;
+async fn langs_at(
+    ext: &str,
+    contents: &str,
+    needles: &[&str],
+) -> anyhow::Result<Vec<Option<String>>> {
+    let file = tempfile::Builder::new()
+        .suffix(&format!(".{ext}"))
+        .tempfile()?;
     std::fs::write(file.path(), contents)?;
-    let app = helpers::AppBuilder::new().with_file(file.path(), None).build()?;
+    let app = helpers::AppBuilder::new()
+        .with_file(file.path(), None)
+        .build()?;
     let loader = app.editor.syn_loader.load();
     let doc = app
         .editor
         .documents()
-        .find(|d| d.path().is_some_and(|p| p.extension().is_some_and(|e| e == ext)))
+        .find(|d| {
+            d.path()
+                .is_some_and(|p| p.extension().is_some_and(|e| e == ext))
+        })
         .expect("document open");
     let text = doc.text();
     Ok(needles
         .iter()
         .map(|n| {
             let b = byte_of(text, n);
-            doc.language_config_at(&loader, b).map(|c| c.language_id.clone())
+            doc.language_config_at(&loader, b)
+                .map(|c| c.language_id.clone())
         })
         .collect())
 }
@@ -45,13 +57,41 @@ async fn language_injection_sql_autodetect_multihost() -> anyhow::Result<()> {
     let cs = "class C { string q = \"\"\"\nUPDATE t SET a = 1 WHERE id = 2\n\"\"\"; }\n";
     let kt = "val q = \"\"\"\nDELETE FROM t WHERE id = 3\n\"\"\"\n";
 
-    assert_eq!(langs_at("py", py, &["SELECT id"]).await?[0].as_deref(), Some("sql"), "py multiline");
-    assert_ne!(langs_at("py", py, &["pick one"]).await?[0].as_deref(), Some("sql"), "py english");
-    assert_eq!(langs_at("go", go, &["INSERT INTO"]).await?[0].as_deref(), Some("sql"), "go raw string");
-    assert_ne!(langs_at("go", go, &["hello world"]).await?[0].as_deref(), Some("sql"), "go plain");
-    assert_eq!(langs_at("java", java, &["SELECT a"]).await?[0].as_deref(), Some("sql"), "java text block");
-    assert_eq!(langs_at("cs", cs, &["UPDATE t"]).await?[0].as_deref(), Some("sql"), "c# raw string");
-    assert_eq!(langs_at("kt", kt, &["DELETE FROM"]).await?[0].as_deref(), Some("sql"), "kotlin multiline");
+    assert_eq!(
+        langs_at("py", py, &["SELECT id"]).await?[0].as_deref(),
+        Some("sql"),
+        "py multiline"
+    );
+    assert_ne!(
+        langs_at("py", py, &["pick one"]).await?[0].as_deref(),
+        Some("sql"),
+        "py english"
+    );
+    assert_eq!(
+        langs_at("go", go, &["INSERT INTO"]).await?[0].as_deref(),
+        Some("sql"),
+        "go raw string"
+    );
+    assert_ne!(
+        langs_at("go", go, &["hello world"]).await?[0].as_deref(),
+        Some("sql"),
+        "go plain"
+    );
+    assert_eq!(
+        langs_at("java", java, &["SELECT a"]).await?[0].as_deref(),
+        Some("sql"),
+        "java text block"
+    );
+    assert_eq!(
+        langs_at("cs", cs, &["UPDATE t"]).await?[0].as_deref(),
+        Some("sql"),
+        "c# raw string"
+    );
+    assert_eq!(
+        langs_at("kt", kt, &["DELETE FROM"]).await?[0].as_deref(),
+        Some("sql"),
+        "kotlin multiline"
+    );
     Ok(())
 }
 
@@ -71,7 +111,10 @@ fn fragment_writeback_escaping() {
         "a\\`b\\${c}"
     );
     // triple-quoted (Java text block / Python) — no escaping
-    assert_eq!(escape_fragment("a\"b\nc", Some("java"), "\"\"\""), "a\"b\nc");
+    assert_eq!(
+        escape_fragment("a\"b\nc", Some("java"), "\"\"\""),
+        "a\"b\nc"
+    );
     // Go raw string (backtick) — no escaping
     assert_eq!(escape_fragment("a\\b", Some("go"), "(`"), "a\\b");
 }
@@ -85,7 +128,12 @@ const a = /* language=json */ \"plain text not json\";
 const b = /* language=graphql */ \"whatever text\";
 const c = \"ordinary string\";
 ";
-    let got = langs_at("ts", ts, &["plain text", "whatever text", "ordinary string"]).await?;
+    let got = langs_at(
+        "ts",
+        ts,
+        &["plain text", "whatever text", "ordinary string"],
+    )
+    .await?;
     assert_eq!(got[0].as_deref(), Some("json"), "language=json hint");
     assert_eq!(got[1].as_deref(), Some("graphql"), "language=graphql hint");
     assert_ne!(got[2].as_deref(), Some("json"), "no hint → not forced");
@@ -93,7 +141,11 @@ const c = \"ordinary string\";
     // Python: the hint is on the line BEFORE the assignment (no inline block comment).
     let py = "# language=sql\nq = \"whatever text goes here\"\nplain = \"nope\"\n";
     let pygot = langs_at("py", py, &["whatever text", "nope"]).await?;
-    assert_eq!(pygot[0].as_deref(), Some("sql"), "python prev-line # language=sql");
+    assert_eq!(
+        pygot[0].as_deref(),
+        Some("sql"),
+        "python prev-line # language=sql"
+    );
     assert_ne!(pygot[1].as_deref(), Some("sql"), "python unhinted");
     Ok(())
 }
@@ -106,21 +158,28 @@ async fn injected_fragment_extraction() -> anyhow::Result<()> {
     let ts = "const q = sql`SELECT frag_a, frag_b FROM fragtbl`;\n";
     let file = tempfile::Builder::new().suffix(".ts").tempfile()?;
     std::fs::write(file.path(), ts)?;
-    let app = helpers::AppBuilder::new().with_file(file.path(), None).build()?;
+    let app = helpers::AppBuilder::new()
+        .with_file(file.path(), None)
+        .build()?;
     let loader = app.editor.syn_loader.load();
     let doc = app
         .editor
         .documents()
-        .find(|d| d.path().is_some_and(|p| p.extension().is_some_and(|e| e == "ts")))
+        .find(|d| {
+            d.path()
+                .is_some_and(|p| p.extension().is_some_and(|e| e == "ts"))
+        })
         .unwrap();
     let text = doc.text();
     let inside = text.to_string().find("frag_a").unwrap();
     let byte = text.char_to_byte(text.byte_to_char(inside));
 
-    let frag =
-        zemacs_term::commands::injected_fragment_at(doc, &loader, byte).expect("fragment");
+    let frag = zemacs_term::commands::injected_fragment_at(doc, &loader, byte).expect("fragment");
     assert_eq!(frag.language, "sql");
-    assert_eq!(frag.text, "SELECT frag_a, frag_b FROM fragtbl", "fragment span");
+    assert_eq!(
+        frag.text, "SELECT frag_a, frag_b FROM fragtbl",
+        "fragment span"
+    );
     // host<->fragment offset mapping round-trips at the cursor
     let host_cursor = text.byte_to_char(byte);
     let in_frag = frag.from_host(host_cursor).expect("cursor inside fragment");
@@ -154,8 +213,18 @@ const n5 = \"please pick a plan from the list\";
 const n6 = \"just some label\";
 ";
     let needles = [
-        "aaa", "section id", "gqlfield", "SELECT sniff_col", "cssred", "[1, 2, 3]",
-        "not really json", "<3 love", "placeholder text", "query the results", "please pick", "just some label",
+        "aaa",
+        "section id",
+        "gqlfield",
+        "SELECT sniff_col",
+        "cssred",
+        "[1, 2, 3]",
+        "not really json",
+        "<3 love",
+        "placeholder text",
+        "query the results",
+        "please pick",
+        "just some label",
     ];
     let got = langs_at("ts", ts, &needles).await?;
     // positives
@@ -169,7 +238,10 @@ const n6 = \"just some label\";
     for (i, needle) in needles.iter().enumerate().skip(6) {
         let g = got[i].as_deref();
         assert!(
-            !matches!(g, Some("json") | Some("html") | Some("graphql") | Some("sql") | Some("css")),
+            !matches!(
+                g,
+                Some("json") | Some("html") | Some("graphql") | Some("sql") | Some("css")
+            ),
             "false positive: {needle:?} sniffed as {g:?}"
         );
     }
@@ -187,12 +259,20 @@ tpl = '''<section id=\"a\"><b>hi</b></section>'''
 gql = '''query Q { pyField { id } }'''
 plain = 'just a python label'
 ";
-    let got = langs_at("py", py, &["host", "section id", "pyField", "just a python"]).await?;
+    let got = langs_at(
+        "py",
+        py,
+        &["host", "section id", "pyField", "just a python"],
+    )
+    .await?;
     assert_eq!(got[0].as_deref(), Some("json"), "py json");
     assert_eq!(got[1].as_deref(), Some("html"), "py html");
     assert_eq!(got[2].as_deref(), Some("graphql"), "py graphql");
     assert!(
-        !matches!(got[3].as_deref(), Some("json") | Some("html") | Some("graphql")),
+        !matches!(
+            got[3].as_deref(),
+            Some("json") | Some("html") | Some("graphql")
+        ),
         "py plain string false positive"
     );
 
@@ -204,7 +284,8 @@ plain = 'just a python label'
 
     // Java text block. JSON would work too but embedded `"` split the fragment
     // into pieces; HTML (quote-free here) stays a single multiline fragment.
-    let java = "class C { String h = \"\"\"\n<div><p>x</p></div>\n\"\"\"; String s = \"plain\"; }\n";
+    let java =
+        "class C { String h = \"\"\"\n<div><p>x</p></div>\n\"\"\"; String s = \"plain\"; }\n";
     let got = langs_at("java", java, &["<div>", "plain"]).await?;
     assert_eq!(got[0].as_deref(), Some("html"), "java html text block");
     assert_ne!(got[1].as_deref(), Some("html"), "java plain");
@@ -246,14 +327,29 @@ const f = \"SELECT * FROM logs\";
     let got = langs_at(
         "js",
         js,
-        &["SELECT id", "INSERT INTO", "UPDATE users", "select an option", "Please choose", "SELECT * FROM"],
+        &[
+            "SELECT id",
+            "INSERT INTO",
+            "UPDATE users",
+            "select an option",
+            "Please choose",
+            "SELECT * FROM",
+        ],
     )
     .await?;
     assert_eq!(got[0].as_deref(), Some("sql"), "SELECT … FROM … WHERE");
     assert_eq!(got[1].as_deref(), Some("sql"), "INSERT INTO");
     assert_eq!(got[2].as_deref(), Some("sql"), "UPDATE … SET");
-    assert_ne!(got[3].as_deref(), Some("sql"), "English 'select … from …' must NOT match");
-    assert_ne!(got[4].as_deref(), Some("sql"), "plain English must NOT match");
+    assert_ne!(
+        got[3].as_deref(),
+        Some("sql"),
+        "English 'select … from …' must NOT match"
+    );
+    assert_ne!(
+        got[4].as_deref(),
+        Some("sql"),
+        "plain English must NOT match"
+    );
     assert_eq!(got[5].as_deref(), Some("sql"), "SELECT *");
     Ok(())
 }
@@ -270,9 +366,17 @@ class Repo {
 }
 ";
     let got = langs_at("java", java, &["SELECT id", "not a query", "DELETE FROM"]).await?;
-    assert_eq!(got[0].as_deref(), Some("sql"), "@Language(\"SQL\") on field");
+    assert_eq!(
+        got[0].as_deref(),
+        Some("sql"),
+        "@Language(\"SQL\") on field"
+    );
     assert_ne!(got[1].as_deref(), Some("sql"), "unannotated field");
-    assert_eq!(got[2].as_deref(), Some("sql"), "@Language(\"SQL\") on local var");
+    assert_eq!(
+        got[2].as_deref(),
+        Some("sql"),
+        "@Language(\"SQL\") on local var"
+    );
     Ok(())
 }
 
@@ -294,7 +398,8 @@ async fn fixture_langs(name: &str, needles: &[&str]) -> anyhow::Result<Vec<Optio
         .iter()
         .map(|n| {
             let b = byte_of(text, n);
-            doc.language_config_at(&loader, b).map(|c| c.language_id.clone())
+            doc.language_config_at(&loader, b)
+                .map(|c| c.language_id.clone())
         })
         .collect())
 }
@@ -305,59 +410,86 @@ async fn fixture_langs(name: &str, needles: &[&str]) -> anyhow::Result<Vec<Optio
 async fn language_injection_polyglot_corpus() -> anyhow::Result<()> {
     // (fixture, [(needle, Some(expected) | None=must-not-be-sql)])
     let cases: &[(&str, &[(&str, Option<&str>)])] = &[
-        ("polyglot.html", &[
-            ("margin: 0", Some("css")),
-            ("env", Some("json")),
-            ("hello world", Some("javascript")),
-            ("display: flex", Some("css")),
-            ("handleClick", Some("javascript")),
-        ]),
-        ("app.ts", &[
-            ("SELECT tag_col", Some("sql")),
-            ("UPDATE hint_tbl", Some("sql")),
-            ("DELETE FROM method_tbl", Some("sql")),
-            ("SELECT auto_a", Some("sql")),
-            ("styledblue", Some("css")),
-            ("graphField", Some("graphql")),
-            ("please select a plan", None),
-        ]),
-        ("dao.py", &[
-            ("SELECT exec_col", Some("sql")),
-            ("UPDATE text_tbl", Some("sql")),
-            ("SELECT auto_py_a", Some("sql")),
-            ("select an item from the dropdown", None),
-        ]),
-        ("store.go", &[
-            ("SELECT go_col", Some("sql")),
-            ("DELETE FROM go_ctx", Some("sql")),
-            ("INSERT INTO go_auto", Some("sql")),
-            ("row %d of goplain", None),
-        ]),
-        ("UserRepo.java", &[
-            ("SELECT ann_col", Some("sql")),
-            ("SELECT jm_col", Some("sql")),
-            ("SELECT jb_a", Some("sql")),
-            ("choose an option", None),
-        ]),
-        ("Repo.cs", &[
-            ("SELECT cs_col", Some("sql")),
-            ("INSERT INTO cs_auto", Some("sql")),
-            ("select a report", None),
-        ]),
-        ("Dao.kt", &[
-            ("SELECT kt_col", Some("sql")),
-            ("UPDATE kt_auto", Some("sql")),
-            ("pick a theme", None),
-        ]),
-        ("notes.md", &[
-            ("md_col", Some("sql")),
-            ("md_func", Some("python")),
-            ("md_rust", Some("rust")),
-        ]),
-        ("Component.vue", &[
-            ("vue label", Some("typescript")),
-            ("vuegreen", Some("scss")),
-        ]),
+        (
+            "polyglot.html",
+            &[
+                ("margin: 0", Some("css")),
+                ("env", Some("json")),
+                ("hello world", Some("javascript")),
+                ("display: flex", Some("css")),
+                ("handleClick", Some("javascript")),
+            ],
+        ),
+        (
+            "app.ts",
+            &[
+                ("SELECT tag_col", Some("sql")),
+                ("UPDATE hint_tbl", Some("sql")),
+                ("DELETE FROM method_tbl", Some("sql")),
+                ("SELECT auto_a", Some("sql")),
+                ("styledblue", Some("css")),
+                ("graphField", Some("graphql")),
+                ("please select a plan", None),
+            ],
+        ),
+        (
+            "dao.py",
+            &[
+                ("SELECT exec_col", Some("sql")),
+                ("UPDATE text_tbl", Some("sql")),
+                ("SELECT auto_py_a", Some("sql")),
+                ("select an item from the dropdown", None),
+            ],
+        ),
+        (
+            "store.go",
+            &[
+                ("SELECT go_col", Some("sql")),
+                ("DELETE FROM go_ctx", Some("sql")),
+                ("INSERT INTO go_auto", Some("sql")),
+                ("row %d of goplain", None),
+            ],
+        ),
+        (
+            "UserRepo.java",
+            &[
+                ("SELECT ann_col", Some("sql")),
+                ("SELECT jm_col", Some("sql")),
+                ("SELECT jb_a", Some("sql")),
+                ("choose an option", None),
+            ],
+        ),
+        (
+            "Repo.cs",
+            &[
+                ("SELECT cs_col", Some("sql")),
+                ("INSERT INTO cs_auto", Some("sql")),
+                ("select a report", None),
+            ],
+        ),
+        (
+            "Dao.kt",
+            &[
+                ("SELECT kt_col", Some("sql")),
+                ("UPDATE kt_auto", Some("sql")),
+                ("pick a theme", None),
+            ],
+        ),
+        (
+            "notes.md",
+            &[
+                ("md_col", Some("sql")),
+                ("md_func", Some("python")),
+                ("md_rust", Some("rust")),
+            ],
+        ),
+        (
+            "Component.vue",
+            &[
+                ("vue label", Some("typescript")),
+                ("vuegreen", Some("scss")),
+            ],
+        ),
     ];
 
     let mut failures = Vec::new();
@@ -377,7 +509,11 @@ async fn language_injection_polyglot_corpus() -> anyhow::Result<()> {
             }
         }
     }
-    assert!(failures.is_empty(), "injection corpus mismatches:\n{}", failures.join("\n"));
+    assert!(
+        failures.is_empty(),
+        "injection corpus mismatches:\n{}",
+        failures.join("\n")
+    );
     Ok(())
 }
 
@@ -403,7 +539,10 @@ fn embedded_interpreter_language_servers() {
     let stk_cfg = loader.language(stk).config();
     assert_eq!(stk_cfg.language_id, "stryke");
     assert!(
-        stk_cfg.language_servers.iter().any(|s| s.name == "stryke-lsp"),
+        stk_cfg
+            .language_servers
+            .iter()
+            .any(|s| s.name == "stryke-lsp"),
         "stryke not served by stryke-lsp"
     );
 
@@ -461,7 +600,11 @@ print \"v: \", $x, $y;
     let app = open_stk(src).await?.build()?;
     let doc = app.editor.documents().next().unwrap();
     assert_eq!(doc.language_name(), Some("stryke"));
-    assert_eq!(tree_error_count(doc), 0, "stryke program must parse with no ERROR nodes");
+    assert_eq!(
+        tree_error_count(doc),
+        0,
+        "stryke program must parse with no ERROR nodes"
+    );
     Ok(())
 }
 
@@ -470,8 +613,8 @@ async fn stryke_all_pipe_operators_parse_clean() -> anyhow::Result<()> {
     // Every stryke pipe/thread operator (from strykelang token.rs) must tokenize
     // and parse as an operator — no ERROR fallback.
     for op in [
-        "|>", "~>", "~>>", "~s>", "~s>>", "~p>", "~p>>", "~d>", "~d>>", "->>",
-        "~|>", "||>", "|then|",
+        "|>", "~>", "~>>", "~s>", "~s>>", "~p>", "~p>>", "~d>", "~d>>", "->>", "~|>", "||>",
+        "|then|",
     ] {
         let src = format!("$a {op} $b;\n");
         let app = open_stk(&src).await?.build()?;
@@ -499,7 +642,10 @@ async fn stryke_grammar_highlights() -> anyhow::Result<()> {
     let doc = app
         .editor
         .documents()
-        .find(|d| d.path().is_some_and(|p| p.extension().is_some_and(|e| e == "stk")))
+        .find(|d| {
+            d.path()
+                .is_some_and(|p| p.extension().is_some_and(|e| e == "stk"))
+        })
         .expect("stk doc");
     assert_eq!(doc.language_name(), Some("stryke"));
     assert!(
@@ -536,8 +682,16 @@ let x = 1;
 async fn language_injection_html_inline_attributes() -> anyhow::Result<()> {
     let html = "<div style=\"color: red\" onclick=\"doThing()\">hi</div>\n";
     let got = langs_at("html", html, &["color: red", "doThing()", "hi</div"]).await?;
-    assert_eq!(got[0].as_deref(), Some("css"), "inline style= attribute -> css");
-    assert_eq!(got[1].as_deref(), Some("javascript"), "on*= handler -> javascript");
+    assert_eq!(
+        got[0].as_deref(),
+        Some("css"),
+        "inline style= attribute -> css"
+    );
+    assert_eq!(
+        got[1].as_deref(),
+        Some("javascript"),
+        "on*= handler -> javascript"
+    );
     assert_eq!(got[2].as_deref(), Some("html"), "element text stays html");
     Ok(())
 }
@@ -550,9 +704,21 @@ async fn language_injection_html_script_type() -> anyhow::Result<()> {
 <script>let zzz = 3;</script>
 ";
     let got = langs_at("html", html, &["aaa", "yyy", "zzz"]).await?;
-    assert_eq!(got[0].as_deref(), Some("json"), "type=application/json -> json");
-    assert_eq!(got[1].as_deref(), Some("typescript"), "type=text/typescript -> typescript");
-    assert_eq!(got[2].as_deref(), Some("javascript"), "plain <script> -> javascript");
+    assert_eq!(
+        got[0].as_deref(),
+        Some("json"),
+        "type=application/json -> json"
+    );
+    assert_eq!(
+        got[1].as_deref(),
+        Some("typescript"),
+        "type=text/typescript -> typescript"
+    );
+    assert_eq!(
+        got[2].as_deref(),
+        Some("javascript"),
+        "plain <script> -> javascript"
+    );
     Ok(())
 }
 
@@ -564,11 +730,20 @@ const b = /* sql */ \"UPDATE t SET x=1\";
 db.query(\"DELETE FROM t WHERE id=1\");
 const plain = \"just a string\";
 ";
-    let got = langs_at("js", js, &["SELECT 1", "UPDATE t", "DELETE FROM", "just a string"]).await?;
+    let got = langs_at(
+        "js",
+        js,
+        &["SELECT 1", "UPDATE t", "DELETE FROM", "just a string"],
+    )
+    .await?;
     assert_eq!(got[0].as_deref(), Some("sql"), "sql`` tagged template");
     assert_eq!(got[1].as_deref(), Some("sql"), "/* sql */ comment hint");
     assert_eq!(got[2].as_deref(), Some("sql"), "db.query() method");
-    assert_ne!(got[3].as_deref(), Some("sql"), "plain string must not be SQL");
+    assert_ne!(
+        got[3].as_deref(),
+        Some("sql"),
+        "plain string must not be SQL"
+    );
     Ok(())
 }
 
@@ -646,7 +821,11 @@ func run() {
 ";
     let got = langs_at("go", go, &["echo hello", "SELECT id", "DELETE FROM"]).await?;
     // //go:generate injects bash — proves Go injections load at all.
-    assert_eq!(got[0].as_deref(), Some("bash"), "go injections load (go:generate -> bash)");
+    assert_eq!(
+        got[0].as_deref(),
+        Some("bash"),
+        "go injections load (go:generate -> bash)"
+    );
     assert_eq!(got[1].as_deref(), Some("sql"), "db.Query(`...`)");
     assert_eq!(got[2].as_deref(), Some("sql"), "conn.ExecContext(ctx, ...)");
     Ok(())

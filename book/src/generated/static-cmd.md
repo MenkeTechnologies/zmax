@@ -75,7 +75,8 @@
 | `sneak_or_substitute_line` | Sneak backward, or substitute line when vim-sneak is off | normal: `` S `` |
 | `extend_till_prev_char` | Extend till previous occurrence of char |  |
 | `extend_prev_char` | Extend to previous occurrence of char |  |
-| `repeat_last_motion` | Repeat last motion | normal: `` ; ``, `` <C-x>z ``, select: `` ; ``, `` <C-x>z ``, insert: `` <C-x>z `` |
+| `repeat_last_motion` | Repeat last motion | normal: `` <C-x>z ``, select: `` <C-x>z ``, insert: `` <C-x>z `` |
+| `repeat_find_char` | Repeat last find in same direction (;) | normal: `` ; ``, select: `` ; `` |
 | `repeat_find_char_reverse` | Repeat last find in opposite direction (,) | normal: `` , ``, select: `` , `` |
 | `replace` | Replace with new char | normal: `` r ``, select: `` r `` |
 | `switch_case` | Switch (toggle) case | select: `` ~ `` |
@@ -693,6 +694,9 @@
 | `redo` | Redo change | normal: `` <C-r> ``, `` <space>k<C-r> ``, select: `` <space>k<C-r> `` |
 | `earlier` | Move backward in history | normal: `` g<minus> `` |
 | `later` | Move forward in history | normal: `` g+ `` |
+| `undo_tree` | Browse the branching undo history (vim undotree) | normal: `` <space>aU ``, select: `` <space>aU `` |
+| `edit_injected_fragment` | Edit the injected-language fragment at point in its own buffer |  |
+| `apply_injected_fragment` | Write the fragment buffer back into its host string |  |
 | `commit_undo_checkpoint` | Commit changes to new checkpoint | insert: `` <C-g>U ``, `` <C-g>u `` |
 | `yank` | Yank selection | normal: `` <A-w> `` |
 | `yank_to_clipboard` | Yank selections to clipboard |  |
@@ -816,6 +820,7 @@
 | `mark_sexp` | Set the region over the following s-expression (emacs mark-sexp, C-M-SPC) |  |
 | `forward_sexp` | Move forward over the next s-expression (emacs forward-sexp, C-M-f) |  |
 | `backward_sexp` | Move backward over the previous s-expression (emacs backward-sexp, C-M-b) |  |
+| `prog_indent_sexp` | Re-indent the s-expression after point, or the enclosing defun with a prefix (emacs prog-indent-sexp, C-M-q; here = s) | normal: `` =s `` |
 | `copy_region_as_kill` | Copy the region to the kill ring without deleting (emacs copy-region-as-kill, M-w) |  |
 | `mark_word` | Set the region over the next word (emacs mark-word, M-@) |  |
 | `mark_paragraph` | Select the paragraph around point (emacs mark-paragraph, M-h) |  |
