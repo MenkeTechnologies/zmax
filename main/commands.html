@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-56ff300f.js";
+            window.path_to_searchindex_js = "searchindex-0b827c90.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -574,6 +574,12 @@
 <tr><td><code>:line-ending</code></td><td>Set the document’s default line ending. Options: crlf, lf.</td></tr>
 <tr><td><code>:earlier</code>, <code>:ear</code></td><td>Jump back to an earlier point in edit history. Accepts a number of steps or a time span.</td></tr>
 <tr><td><code>:later</code>, <code>:lat</code></td><td>Jump to a later point in edit history. Accepts a number of steps or a time span.</td></tr>
+<tr><td><code>:undotree</code>, <code>:undo-tree</code>, <code>:UndotreeToggle</code></td><td>Open the branching undo-history browser (vim undotree).</td></tr>
+<tr><td><code>:injections</code>, <code>:injection-rules</code></td><td>List the active language-injection rules (defaults + injections.toml).</td></tr>
+<tr><td><code>:injection-info</code>, <code>:what-injection</code></td><td>Report the effective (possibly injected) language at the cursor.</td></tr>
+<tr><td><code>:edit-fragment</code>, <code>:edit-injected-fragment</code></td><td>Edit the injected-language fragment at point in its own buffer (JetBrains Edit Fragment).</td></tr>
+<tr><td><code>:apply-fragment</code>, <code>:apply-injected-fragment</code></td><td>Write the fragment buffer back into its host string.</td></tr>
+<tr><td><code>:inject-language</code>, <code>:inject-lang</code></td><td>Inject a language into the string at point via a /* language=… */ hint (JetBrains inject-here).</td></tr>
 <tr><td><code>:write-quit</code>, <code>:wq</code></td><td>Write changes to disk and close the current view. Accepts an optional path (:wq some/path.txt)</td></tr>
 <tr><td><code>:write-quit!</code>, <code>:wq!</code></td><td>Write changes to disk and close the current view forcefully. Accepts an optional path (:wq! some/path.txt)</td></tr>
 <tr><td><code>:write-all</code>, <code>:wa</code></td><td>Write changes from all buffers to disk.</td></tr>
@@ -1090,6 +1096,14 @@
 <tr><td><code>:awk</code>, <code>:awk-filter</code></td><td>Filter the selection (or whole buffer) through an awk program (embedded awkrs).</td></tr>
 <tr><td><code>:zsh</code>, <code>:zshell</code></td><td>Run a command in the embedded zsh shell (state persists); output shown in a popup.</td></tr>
 <tr><td><code>:stryke</code>, <code>:st</code></td><td>Evaluate stryke (strykelang) source via the embedded interpreter (state persists).</td></tr>
+<tr><td><code>:zwire-host</code>, <code>:zh</code></td><td>Send a raw JSON request to the zwire-host daemon; show the reply (e.g. {“cmd”:“hostinfo”}).</td></tr>
+<tr><td><code>:zwire-sysinfo</code>, <code>:zsys</code></td><td>Show live system stats (cpu/mem/load) from the shared zwire-host daemon.</td></tr>
+<tr><td><code>:zwire-hostinfo</code></td><td>Show machine facts (os/arch/cpus/hostname) from the shared zwire-host daemon.</td></tr>
+<tr><td><code>:zwire-exec</code>, <code>:zx</code></td><td>Run a command through the zwire-host daemon and insert its output at the cursor.</td></tr>
+<tr><td><code>:zwire-crawl</code>, <code>:zwc</code></td><td>Recursively crawl the filesystem via zwire-host and insert matching paths at the cursor.</td></tr>
+<tr><td><code>:zwire-job</code>, <code>:zj</code></td><td>Ship a long-running command to the zwire-host daemon; get notified on the status line when it finishes.</td></tr>
+<tr><td><code>:zwire-jobs</code>, <code>:jobs</code>, <code>:zjs</code></td><td>List background zwire-host jobs still running, plus recent completions.</td></tr>
+<tr><td><code>:zwire-job-output</code>, <code>:zjo</code></td><td>Insert a finished background job’s output at the cursor (most recent, or a given id).</td></tr>
 <tr><td><code>:repl</code></td><td>Open the embedded-language REPL (elisp/viml/stryke/awk/zsh); optional starting language.</td></tr>
 <tr><td><code>:reset-diff-change</code>, <code>:diffget</code>, <code>:diffg</code></td><td>Reset the diff change at the cursor position.</td></tr>
 <tr><td><code>:clear-register</code></td><td>Clear given register. If no argument is provided, clear all registers.</td></tr>
@@ -1193,7 +1207,8 @@
 <tr><td><code>sneak_or_substitute_line</code></td><td>Sneak backward, or substitute line when vim-sneak is off</td><td>normal: <code>S</code></td></tr>
 <tr><td><code>extend_till_prev_char</code></td><td>Extend till previous occurrence of char</td><td></td></tr>
 <tr><td><code>extend_prev_char</code></td><td>Extend to previous occurrence of char</td><td></td></tr>
-<tr><td><code>repeat_last_motion</code></td><td>Repeat last motion</td><td>normal: <code>;</code>, <code>&lt;C-x&gt;z</code>, select: <code>;</code>, <code>&lt;C-x&gt;z</code>, insert: <code>&lt;C-x&gt;z</code></td></tr>
+<tr><td><code>repeat_last_motion</code></td><td>Repeat last motion</td><td>normal: <code>&lt;C-x&gt;z</code>, select: <code>&lt;C-x&gt;z</code>, insert: <code>&lt;C-x&gt;z</code></td></tr>
+<tr><td><code>repeat_find_char</code></td><td>Repeat last find in same direction (;)</td><td>normal: <code>;</code>, select: <code>;</code></td></tr>
 <tr><td><code>repeat_find_char_reverse</code></td><td>Repeat last find in opposite direction (,)</td><td>normal: <code>,</code>, select: <code>,</code></td></tr>
 <tr><td><code>replace</code></td><td>Replace with new char</td><td>normal: <code>r</code>, select: <code>r</code></td></tr>
 <tr><td><code>switch_case</code></td><td>Switch (toggle) case</td><td>select: <code>~</code></td></tr>
@@ -1811,6 +1826,9 @@
 <tr><td><code>redo</code></td><td>Redo change</td><td>normal: <code>&lt;C-r&gt;</code>, <code>&lt;space&gt;k&lt;C-r&gt;</code>, select: <code>&lt;space&gt;k&lt;C-r&gt;</code></td></tr>
 <tr><td><code>earlier</code></td><td>Move backward in history</td><td>normal: <code>g&lt;minus&gt;</code></td></tr>
 <tr><td><code>later</code></td><td>Move forward in history</td><td>normal: <code>g+</code></td></tr>
+<tr><td><code>undo_tree</code></td><td>Browse the branching undo history (vim undotree)</td><td>normal: <code>&lt;space&gt;aU</code>, select: <code>&lt;space&gt;aU</code></td></tr>
+<tr><td><code>edit_injected_fragment</code></td><td>Edit the injected-language fragment at point in its own buffer</td><td></td></tr>
+<tr><td><code>apply_injected_fragment</code></td><td>Write the fragment buffer back into its host string</td><td></td></tr>
 <tr><td><code>commit_undo_checkpoint</code></td><td>Commit changes to new checkpoint</td><td>insert: <code>&lt;C-g&gt;U</code>, <code>&lt;C-g&gt;u</code></td></tr>
 <tr><td><code>yank</code></td><td>Yank selection</td><td>normal: <code>&lt;A-w&gt;</code></td></tr>
 <tr><td><code>yank_to_clipboard</code></td><td>Yank selections to clipboard</td><td></td></tr>
@@ -1934,6 +1952,7 @@
 <tr><td><code>mark_sexp</code></td><td>Set the region over the following s-expression (emacs mark-sexp, C-M-SPC)</td><td></td></tr>
 <tr><td><code>forward_sexp</code></td><td>Move forward over the next s-expression (emacs forward-sexp, C-M-f)</td><td></td></tr>
 <tr><td><code>backward_sexp</code></td><td>Move backward over the previous s-expression (emacs backward-sexp, C-M-b)</td><td></td></tr>
+<tr><td><code>prog_indent_sexp</code></td><td>Re-indent the s-expression after point, or the enclosing defun with a prefix (emacs prog-indent-sexp, C-M-q; here = s)</td><td>normal: <code>=s</code></td></tr>
 <tr><td><code>copy_region_as_kill</code></td><td>Copy the region to the kill ring without deleting (emacs copy-region-as-kill, M-w)</td><td></td></tr>
 <tr><td><code>mark_word</code></td><td>Set the region over the next word (emacs mark-word, M-@)</td><td></td></tr>
 <tr><td><code>mark_paragraph</code></td><td>Select the paragraph around point (emacs mark-paragraph, M-h)</td><td></td></tr>
