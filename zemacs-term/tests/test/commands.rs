@@ -1130,6 +1130,31 @@ async fn substitute_whole_file() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn replace_word_whole_file() -> anyhow::Result<()> {
+    // `:replace-word` rewrites every whole-word occurrence of the word under the
+    // cursor across the file; `foozoo` is left alone thanks to the `\b` bounds.
+    test((
+        "#[|f]#oo bar\nfoozoo\nfoo baz\n",
+        ":replace-word qux<ret>",
+        "#[q|]#ux bar\nfoozoo\nqux baz\n",
+    ))
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn replace_word_case_insensitive() -> anyhow::Result<()> {
+    // A second `i` arg folds case: `Foo` under the cursor also rewrites `foo`.
+    test((
+        "#[|F]#oo\nfoo\n",
+        ":replace-word bar i<ret>",
+        "#[b|]#ar\nbar\n",
+    ))
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn substitute_backreference() -> anyhow::Result<()> {
     test(("#[|f]#oozoo\n", ":s/(o+)/[\\1]/<ret>", "#[f|]#[oo]zoo\n")).await?;
     Ok(())

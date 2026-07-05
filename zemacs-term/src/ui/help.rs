@@ -93,6 +93,7 @@ const TOPICS: &[(&str, &str)] = &[
         "/  search forward, ?  search backward, n / N  next / previous.\n\
       *  / #  search the word under the cursor.\n\
       :%s/old/new/g  substitute in the file;  &  repeats the last substitute.\n\
+      :replace-word NEW  global-replace the word under the cursor with NEW.\n\
       gn selects the next match (then c / d operates on it).",
     ),
     (

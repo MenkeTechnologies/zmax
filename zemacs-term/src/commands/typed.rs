@@ -20832,6 +20832,27 @@ fn substitute(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     do_substitute(cx.editor, false, pattern, replacement, flags)
 }
 
+/// `:replace-word <replacement>` — global replace of the word under the primary
+/// cursor across the whole file. The word is matched literally (regex-escaped)
+/// with `\b` word boundaries, so `:replace-word bar` on `foo` runs
+/// `:%s/\bfoo\b/bar/g`. Append `i` as a second arg for case-insensitive.
+fn replace_word(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let word = word_under_cursor(cx.editor);
+    if word.is_empty() {
+        bail!("no word under cursor");
+    }
+    let replacement = args.first().unwrap_or("");
+    let flags = match args.get(1) {
+        Some(f) if f.contains('i') => "gi",
+        _ => "g",
+    };
+    let pattern = format!(r"\b{}\b", regex::escape(&word));
+    do_substitute(cx.editor, true, &pattern, replacement, flags)
+}
+
 /// `:Subvert /pat/rep/flags` (space form). The no-space vim form `:S/p/r/g` is
 /// handled earlier in execute_command_line.
 fn subvert(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -32750,6 +32771,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "replace-word",
+        aliases: &["rw", "subword"],
+        doc: "Global replace of the word under the cursor across the file: :replace-word bar → :%s/\\bfoo\\b/bar/g. Add `i` as a 2nd arg for case-insensitive.",
+        fun: replace_word,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(2)),
             ..Signature::DEFAULT
         },
     },
