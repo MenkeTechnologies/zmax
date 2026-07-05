@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-7d52564b.js";
+            window.path_to_searchindex_js = "searchindex-ecfc8aed.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -2340,6 +2340,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:global</code></td><td>Run a command on matching lines: :g/pattern/d (delete). Also :g!/pat/d.</td></tr>
 <tr><td><code>:vglobal</code></td><td>Run a command on non-matching lines: :v/pattern/d (delete).</td></tr>
 <tr><td><code>:substitute</code>, <code>:s</code></td><td>Substitute: :s/pattern/replacement/[flags]. Also :%s/…/…/g for the whole file.</td></tr>
+<tr><td><code>:replace-word</code>, <code>:rw</code>, <code>:subword</code></td><td>Global replace of the word under the cursor across the file: :replace-word bar → :%s/\bfoo\b/bar/g. Add <code>i</code> as a 2nd arg for case-insensitive.</td></tr>
 <tr><td><code>:Subvert</code>, <code>:S</code></td><td>vim-abolish case-preserving substitute: :S/foo/bar/g rewrites foo/Foo/FOO → bar/Bar/BAR.</td></tr>
 <tr><td><code>:Thesaurus</code>, <code>:thesaurus</code></td><td>Look up synonyms for the word under the cursor (or :Thesaurus word) and replace it.</td></tr>
 <tr><td><code>:split-line</code></td><td>Split the current line at the cursor, keeping the cursor in place.</td></tr>
@@ -3110,6 +3111,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>git_push</code></td><td>Push the current branch to its remote (SPC g P)</td><td>normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, insert: <code>&lt;C-x&gt;vP</code></td></tr>
 <tr><td><code>git_pull</code></td><td>Fast-forward pull from upstream (SPC g u)</td><td>normal: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, select: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, insert: <code>&lt;C-x&gt;v+</code></td></tr>
 <tr><td><code>git_fetch</code></td><td>Fetch all remotes (SPC g F)</td><td>normal: <code>&lt;space&gt;gF</code>, select: <code>&lt;space&gt;gF</code></td></tr>
+<tr><td><code>git_acp</code></td><td>Stage all, commit, and push in one shot (C-x v c)</td><td>normal: <code>&lt;C-x&gt;vc</code>, select: <code>&lt;C-x&gt;vc</code>, insert: <code>&lt;C-x&gt;vc</code></td></tr>
 <tr><td><code>vc_print_log</code></td><td>VC log for the current file (emacs vc-print-log)</td><td></td></tr>
 <tr><td><code>vc_print_root_log</code></td><td>VC log for the whole repository (emacs vc-print-root-log)</td><td></td></tr>
 <tr><td><code>vc_print_branch_log</code></td><td>VC log for a named branch (emacs vc-print-branch-log)</td><td></td></tr>
@@ -7065,7 +7067,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>664</strong> (9.7%)</li>
 <li>Absent: <strong>2651</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1458 static commands, 1686 typable <code>:</code> commands, 2945 default keybindings</li>
+<li>zemacs source surface: 1460 static commands, 1689 typable <code>:</code> commands, 2948 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
