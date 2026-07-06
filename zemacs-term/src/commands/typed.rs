@@ -19007,6 +19007,9 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     let mut indent_width: Option<u8> = None;
     let mut tab_width: Option<u8> = None;
     let mut doc_readonly: Option<bool> = None;
+    // vim `foldenable`/`foldlevel` drive the existing fold commands: Some(true)
+    // opens all folds, Some(false) closes them.
+    let mut fold_open: Option<bool> = None;
     for tok in &tokens {
         // `:set opt?` reports the option's value; `:set opt&` resets it. These
         // read/clear the option store and don't change config.
@@ -19071,6 +19074,21 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                 };
                 config_set_key(&mut config, "bufferline", Value::String(mode.into()))?;
                 changed = true;
+            }
+            continue;
+        }
+        // `foldenable`/`foldlevel` drive folding: `nofoldenable` and a high
+        // `foldlevel` open all folds; `foldlevel=0` closes them (vim folding).
+        if value.is_none() && matches!(name, "foldenable" | "fen") {
+            // `nofoldenable` (neg) opens all folds (shows all text).
+            if neg {
+                fold_open = Some(true);
+            }
+            continue;
+        }
+        if matches!(name, "foldlevel" | "fdl") {
+            if let Some(n) = value.and_then(|v| v.parse::<usize>().ok()) {
+                fold_open = Some(n > 0);
             }
             continue;
         }
@@ -19245,6 +19263,15 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     if let Some(ro) = doc_readonly {
         let (_view, doc) = current!(cx.editor);
         doc.readonly = ro;
+    }
+    // Drive folding (vim `foldenable`/`foldlevel`) via the fold commands.
+    if let Some(open) = fold_open {
+        let mut ecx = editor_context(cx);
+        if open {
+            super::fold_open_all(&mut ecx);
+        } else {
+            super::fold_close_all(&mut ecx);
+        }
     }
     // Apply buffer-local indentation to the current document.
     if indent_expand.is_some() || indent_width.is_some() || tab_width.is_some() {
