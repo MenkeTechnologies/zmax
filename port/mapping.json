@@ -35406,11 +35406,11 @@
   },
   {
     "spec_id": "neovim.option.foldenable",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldenable is accepted, stored and queryable (:set foldenable?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "typable:set: nofoldenable opens all folds (fold_open_all)"
   },
   {
     "spec_id": "neovim.option.foldexpr",
@@ -35434,7 +35434,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldlevel is accepted, stored and queryable (:set foldlevel?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "typable:set: foldlevel 0 closes / nonzero opens all folds (binary approx of vim depth)"
   },
   {
     "spec_id": "neovim.option.foldlevelstart",

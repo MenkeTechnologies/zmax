@@ -1191,3 +1191,29 @@ async fn set_laststatus_toggles_statusline() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_foldenable_foldlevel_drive_folding() -> anyhow::Result<()> {
+    // vim `:set nofoldenable` opens all folds; `:set foldlevel=0`/`=99` close/open
+    // them. They drive the existing fold commands without error.
+    test_key_sequences(
+        &mut AppBuilder::new().build()?,
+        vec![
+            (
+                Some(":set nofoldenable<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                } as _),
+            ),
+            (
+                Some(":set foldlevel=0<ret>:set foldlevel=99<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                } as _),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
