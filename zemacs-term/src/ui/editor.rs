@@ -57,6 +57,13 @@ pub struct EditorView {
     /// vim dot-repeat (`.`): the key sequence of the last buffer-changing command
     /// in normal/select mode, including any insert session that followed it.
     last_change: Vec<KeyEvent>,
+    /// The count that prefixed `last_change` (vim reuses it when `.` is pressed
+    /// without an explicit count: `2x` then `.` deletes two, not one). `1` when
+    /// the change had no count.
+    last_change_count: usize,
+    /// Count captured at the start of the in-progress change, promoted to
+    /// `last_change_count` alongside `change_buf`.
+    change_count: usize,
     /// Keys accumulated for the in-progress command; promoted to `last_change`
     /// once the command modifies the buffer (or after the insert session it began).
     change_buf: Vec<KeyEvent>,
@@ -118,6 +125,8 @@ impl EditorView {
             spinners: ProgressSpinners::default(),
             terminal_focused: true,
             last_change: Vec::new(),
+            last_change_count: 1,
+            change_count: 1,
             change_buf: Vec::new(),
             recording_insert_change: false,
             replaying: false,
@@ -2058,13 +2067,25 @@ impl EditorView {
         self.replaying = true;
         for _ in 0..count {
             for &key in &keys {
-                match cx.editor.mode() {
-                    Mode::Insert => {
-                        self.insert_mode(cx, key);
-                        self.last_insert.1.push(InsertEvent::Key(key));
+                // Mirror `handle_event`'s dispatch order so on_next_key commands
+                // replay faithfully: text objects (`ci"`, `da(`), finds
+                // (`cf x`, `ct x`) and replace (`r x`) register a callback that
+                // claims the *next* key. `command_mode` alone never consults
+                // that callback, so a naive replay would run the recorded `"`
+                // through the keymap (as a register prefix) instead of
+                // completing the text object — the change would silently no-op.
+                if !self.on_next_key(OnKeyCallbackKind::PseudoPending, cx, key) {
+                    match cx.editor.mode() {
+                        Mode::Insert => {
+                            self.insert_mode(cx, key);
+                            self.last_insert.1.push(InsertEvent::Key(key));
+                        }
+                        m => self.command_mode(m, cx, key),
                     }
-                    m => self.command_mode(m, cx, key),
                 }
+                // Carry any callback a command just registered to the next key,
+                // exactly as `handle_event` does after each dispatch.
+                self.on_next_key = cx.on_next_key_callback.take();
             }
         }
         self.replaying = false;
@@ -2088,10 +2109,15 @@ impl EditorView {
             }
             // vim dot-repeat: replay the keys of the last buffer-changing command.
             // Unlike the old insert-only repeat, this replays the whole change
-            // (operator + motion + any insert session), so `dd`, `x`, `dw`, `p`,
-            // `cwfoo<Esc>`, etc. all repeat. `{count}.` repeats `count` times.
+            // (operator + motion/text-object + any insert session), so `dd`, `x`,
+            // `dw`, `p`, `cwfoo<Esc>`, `ci"bar<Esc>`, `di(`, `r x`, … all repeat.
             (key!('.'), _) if self.keymaps.pending().is_empty() => {
-                let count = cxt.editor.count.map_or(1, NonZeroUsize::into);
+                // vim: `[count].` replaces the change's count; a bare `.` reuses
+                // the original one (`2x` then `.` deletes two, not one).
+                let count = cxt
+                    .editor
+                    .count
+                    .map_or(self.last_change_count, NonZeroUsize::get);
                 cxt.editor.count = None;
                 self.replay_last_change(cxt, count);
             }
@@ -3093,7 +3119,45 @@ impl Component for EditorView {
 
                 let mode = cx.editor.mode();
 
-                if !self.on_next_key(OnKeyCallbackKind::PseudoPending, &mut cx, key) {
+                // Document version before dispatch, so the on_next_key branch
+                // below can tell whether the consumed key made a change.
+                let dot_pre_version = cx
+                    .editor
+                    .tree
+                    .try_get(cx.editor.tree.focus)
+                    .map(|_| doc!(cx.editor).version());
+                if self.on_next_key(OnKeyCallbackKind::PseudoPending, &mut cx, key) {
+                    // A pending on_next_key callback consumed this key: the object
+                    // char of `ci"`/`da(`, the target of `cf<c>`/`ct<c>`, the
+                    // replacement of `r<c>`, and so on. These are dispatched here
+                    // rather than through the keymap path below, so the dot-repeat
+                    // recorder never sees them. Without mirroring the recording
+                    // here, text-object (and other on_next_key) operators never
+                    // populate `last_change`, so `.` silently does nothing — the
+                    // reported `ci".` bug. The keymap prefix (`c`,`i`) is already
+                    // in `change_buf`; append the argument key and then, exactly
+                    // as the keymap arm does, either arm the insert-session
+                    // recorder (`ci"`, `cf x`) or finalize a completed normal-mode
+                    // change (`di"`, `da(`, `r x`).
+                    if !self.replaying && key != key!('.') {
+                        if !self.recording_insert_change {
+                            self.change_buf.push(key);
+                        }
+                        if cx.editor.mode() == Mode::Insert {
+                            self.recording_insert_change = true;
+                        } else if let Some(pre) = dot_pre_version {
+                            let post = cx
+                                .editor
+                                .tree
+                                .try_get(cx.editor.tree.focus)
+                                .map(|_| doc!(cx.editor).version());
+                            if post.is_some_and(|post| post != pre) {
+                                self.last_change = self.change_buf.clone();
+                                self.last_change_count = self.change_count;
+                            }
+                        }
+                    }
+                } else {
                     match mode {
                         Mode::Insert => {
                             // let completion swallow the event if necessary
@@ -3151,6 +3215,7 @@ impl Component for EditorView {
                                     self.change_buf.push(key);
                                     if cx.editor.mode() != Mode::Insert {
                                         self.last_change = take(&mut self.change_buf);
+                                        self.last_change_count = self.change_count;
                                         self.recording_insert_change = false;
                                     }
                                 }
@@ -3163,6 +3228,11 @@ impl Component for EditorView {
                                     && !self.recording_insert_change;
                                 if at_boundary {
                                     self.change_buf.clear();
+                                    // Capture the count now, at the first key of the
+                                    // change, before the command consumes and clears
+                                    // it — vim reuses it for a later count-less `.`.
+                                    self.change_count =
+                                        cx.editor.count.map_or(1, NonZeroUsize::get);
                                 }
                                 if !self.is_count_key(mode, cx.editor.count, key) {
                                     self.change_buf.push(key);
@@ -3196,6 +3266,7 @@ impl Component for EditorView {
                                     if post_version.is_some_and(|post| post != pre) {
                                         // a normal/select-mode change (dd, x, p, J, >>, ...)
                                         self.last_change = self.change_buf.clone();
+                                        self.last_change_count = self.change_count;
                                     }
                                 }
                             }
