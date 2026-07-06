@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-4b529d95.js";
+            window.path_to_searchindex_js = "searchindex-f68f5e5a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -225,7 +225,7 @@
 <tr><td><code>:zen</code></td><td>Toggle the IDE workbench (Zen / focus mode).</td></tr>
 <tr><td><code>:emmet</code>, <code>:zencode</code></td><td>Expand the emmet/zen HTML abbreviation before the cursor.</td></tr>
 <tr><td><code>:quit!</code>, <code>:q!</code></td><td>Force close the current view, ignoring unsaved changes.</td></tr>
-<tr><td><code>:open</code>, <code>:o</code>, <code>:edit</code>, <code>:e</code></td><td>Open a file from disk into the current view.</td></tr>
+<tr><td><code>:open</code>, <code>:o</code>, <code>:edit</code>, <code>:e</code>, <code>:ex</code>, <code>:visual</code></td><td>Open a file from disk into the current view (vim :edit; :ex/:visual have no separate Ex mode here).</td></tr>
 <tr><td><code>:args</code>, <code>:ar</code></td><td>Show the argument list, or set it to the given files and edit the first (vim :args).</td></tr>
 <tr><td><code>:argadd</code>, <code>:arga</code></td><td>Add files to the argument list after the current entry (vim :argadd).</td></tr>
 <tr><td><code>:argedit</code>, <code>:arge</code></td><td>Add a file to the argument list and edit it (vim :argedit).</td></tr>
@@ -928,6 +928,7 @@
 <tr><td><code>:foldopen</code>, <code>:foldo</code></td><td>Open the fold under the cursor (vim :foldopen).</td></tr>
 <tr><td><code>:foldclose</code>, <code>:foldc</code></td><td>Close the fold under the cursor (vim :foldclose).</td></tr>
 <tr><td><code>:&amp;</code>, <code>:&amp;&amp;</code>, <code>:s-repeat</code></td><td>Repeat the last :substitute on the current line (vim :&amp; / :&amp;&amp;).</td></tr>
+<tr><td><code>:sleep</code>, <code>:sl</code></td><td>Do nothing for {count} seconds (vim :sleep).</td></tr>
 <tr><td><code>:redrawstatus</code></td><td>Redraw the status line (vim :redrawstatus; approximated by a full redraw).</td></tr>
 <tr><td><code>:redrawtabline</code></td><td>Redraw the tab line (vim :redrawtabline; approximated by a full redraw).</td></tr>
 <tr><td><code>:silent</code>, <code>:sil</code></td><td>Run {cmd} silently (vim :silent[!]); message suppression is best-effort.</td></tr>
