@@ -637,3 +637,38 @@ async fn viml_statement_commands_eval_without_error() -> anyhow::Result<()> {
     }
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn snext_splits_window_and_edits_next_arg() -> anyhow::Result<()> {
+    // :snext is `:split | :next` — with a two-file arg list, it splits the
+    // window (1 -> 2 views) and edits the second file in the new split.
+    let f1 = tempfile::NamedTempFile::new()?;
+    let f2 = tempfile::NamedTempFile::new()?;
+    let keys = format!(
+        ":args {} {}<ret>:snext<ret>",
+        f1.path().display(),
+        f2.path().display()
+    );
+    // Step 1 splits and asserts 2 views; step 2 collapses back to one window so
+    // the app can exit cleanly on teardown (leaving a split open deadlocks it).
+    test_key_sequences(
+        &mut AppBuilder::new().build()?,
+        vec![
+            (
+                Some(keys.as_str()),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(
+                        app.editor.tree.views().count(),
+                        2,
+                        "snext should split the window"
+                    );
+                } as _),
+            ),
+            (Some(":wincmd o<ret>"), None),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

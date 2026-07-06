@@ -203,9 +203,80 @@ fn with_arglist<R>(f: impl FnOnce(&mut zemacs_core::arglist::ArgList) -> R) -> R
 
 /// Open a file named in the argument list (expanding a leading `~`).
 fn edit_arg_file(cx: &mut compositor::Context, file: &str) -> anyhow::Result<()> {
+    edit_arg_file_with(cx, file, Action::Replace)
+}
+
+/// Open an arg-list file with a specific action — `Replace` for `:next`/`:prev`
+/// etc., `HorizontalSplit` for the split variants (`:snext`/`:sprevious`/…).
+fn edit_arg_file_with(
+    cx: &mut compositor::Context,
+    file: &str,
+    action: Action,
+) -> anyhow::Result<()> {
     let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(file));
-    cx.editor.open(&path, Action::Replace)?;
+    cx.editor.open(&path, action)?;
     Ok(())
+}
+
+/// The `:s…` split variants of the arg-list navigators: split the window, then
+/// edit the target argument in the new split (vim `:split | :next`, etc.).
+fn arg_snext(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let count = arg_count(&args);
+    match with_arglist(|a| a.next(count).map(str::to_string)) {
+        Some(f) => edit_arg_file_with(cx, &f, Action::HorizontalSplit),
+        None => bail!("Cannot go beyond last file"),
+    }
+}
+
+fn arg_sprev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let count = arg_count(&args);
+    match with_arglist(|a| a.prev(count).map(str::to_string)) {
+        Some(f) => edit_arg_file_with(cx, &f, Action::HorizontalSplit),
+        None => bail!("Cannot go before first file"),
+    }
+}
+
+fn arg_sfirst(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match with_arglist(|a| a.first().map(str::to_string)) {
+        Some(f) => edit_arg_file_with(cx, &f, Action::HorizontalSplit),
+        None => bail!("argument list is empty"),
+    }
+}
+
+fn arg_slast(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match with_arglist(|a| a.last().map(str::to_string)) {
+        Some(f) => edit_arg_file_with(cx, &f, Action::HorizontalSplit),
+        None => bail!("argument list is empty"),
+    }
+}
+
+fn arg_sargument(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(n) = args.first().and_then(|s| s.parse::<usize>().ok()) else {
+        bail!("sargument: needs a number");
+    };
+    match with_arglist(|a| a.goto(n).map(str::to_string)) {
+        Some(f) => edit_arg_file_with(cx, &f, Action::HorizontalSplit),
+        None => bail!("argument out of range"),
+    }
 }
 
 /// Optional leading count argument (`:next 2`); defaults to 1.
@@ -26313,6 +26384,47 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
+    },
+    // Split variants of the arg-list navigators (vim `:split | :next`, …).
+    TypableCommand {
+        name: "snext",
+        aliases: &["sn"],
+        doc: "Split the window and edit the next argument (vim :snext).",
+        fun: arg_snext,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "sprevious",
+        aliases: &["sprev", "sNext", "sN"],
+        doc: "Split the window and edit the previous argument (vim :sprevious / :sNext).",
+        fun: arg_sprev,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "srewind",
+        aliases: &["sre", "sfirst", "sfir"],
+        doc: "Split the window and edit the first argument (vim :srewind / :sfirst).",
+        fun: arg_sfirst,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "slast",
+        aliases: &["sla"],
+        doc: "Split the window and edit the last argument (vim :slast).",
+        fun: arg_slast,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "sargument",
+        aliases: &["sa"],
+        doc: "Split the window and edit the Nth argument (vim :sargument).",
+        fun: arg_sargument,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "argdo",
