@@ -615,6 +615,9 @@ impl EditorView {
                             .output()
                         {
                             Ok(o) if o.status.success() => {
+                                // HEAD moved: refresh open buffers' gutter hunks
+                                // (base-only — working tree bytes are unchanged).
+                                crate::commands::refresh_all_diff_bases(cx.editor);
                                 let out = String::from_utf8_lossy(&o.stdout);
                                 let first = out.lines().next().unwrap_or("committed").to_owned();
                                 cx.editor.set_status(format!("git: {first}"));

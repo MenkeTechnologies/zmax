@@ -85,6 +85,27 @@ fn modified_file() {
     );
 }
 
+/// After a second commit (the add-commit-push case), `get_diff_base` must
+/// return the *new* HEAD content, not the first commit's. This pins the
+/// no-memoization behavior the gutter refresh in `git_acp` depends on: it
+/// re-fetches each buffer's base after committing to clear stale hunks, which
+/// only works if `get_diff_base` reads live HEAD every call.
+#[test]
+fn diff_base_follows_new_commit() {
+    let temp_git = empty_git_repo();
+    let file = temp_git.path().join("file.txt");
+    File::create(&file).unwrap().write_all(b"foo").unwrap();
+    create_commit(temp_git.path(), true);
+
+    // Working tree diverges from HEAD ("foo"); base is still the first commit.
+    File::create(&file).unwrap().write_all(b"bar").unwrap();
+    assert_eq!(git::get_diff_base(&file, true).unwrap(), b"foo".to_vec());
+
+    // acp commits the change; base must now track the new HEAD ("bar").
+    create_commit(temp_git.path(), true);
+    assert_eq!(git::get_diff_base(&file, true).unwrap(), b"bar".to_vec());
+}
+
 /// Test that `get_file_head` does not return content for a directory.
 /// This is important to correctly cover cases where a directory is removed and replaced by a file.
 /// If the contents of the directory object were returned a diff between a path and the directory children would be produced.

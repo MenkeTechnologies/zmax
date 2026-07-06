@@ -659,7 +659,12 @@ impl MagitStatus {
             self.run_git(&["checkout", "--", &entry.path])
         };
         match result {
-            Ok(()) => cx.editor.set_status(format!("discarded {}", entry.path)),
+            Ok(()) => {
+                // Working-tree bytes reverted to HEAD: reload so the buffer and
+                // its gutter drop the discarded changes.
+                crate::commands::reload_all_open_docs(cx.editor);
+                cx.editor.set_status(format!("discarded {}", entry.path));
+            }
             Err(e) => cx.editor.set_error(format!("discard failed: {e}")),
         }
         self.refresh();
@@ -722,6 +727,11 @@ impl MagitStatus {
             msg
         };
         if ok {
+            // A pull can fast-forward HEAD and rewrite tracked files; push/fetch
+            // leave the working tree. Reload buffers only when the tree moved.
+            if args.first() == Some(&"pull") {
+                crate::commands::reload_all_open_docs(cx.editor);
+            }
             cx.editor.set_status(format!("{label}: {msg}"));
         } else {
             cx.editor.set_error(format!("{label}: {msg}"));
@@ -772,6 +782,8 @@ impl MagitStatus {
             msg
         };
         if ok {
+            // Rebase advanced HEAD and rewrote the working tree: reload buffers.
+            crate::commands::reload_all_open_docs(cx.editor);
             cx.editor.set_status(format!("rebase: {msg}"));
         } else {
             cx.editor.set_error(format!("rebase: {msg}"));
@@ -793,6 +805,8 @@ impl MagitStatus {
             msg
         };
         if ok {
+            // Abort restored the pre-rebase HEAD and working tree: reload buffers.
+            crate::commands::reload_all_open_docs(cx.editor);
             cx.editor.set_status(format!("rebase: {msg}"));
         } else {
             cx.editor.set_error(format!("rebase: {msg}"));
@@ -1473,6 +1487,10 @@ impl MagitCommit {
         let _ = std::fs::remove_file(&tmp);
         match out {
             Ok(o) if o.status.success() => {
+                // HEAD moved: re-fetch every open buffer's diff base so gutter
+                // hunks reflect the just-committed tree (worktree bytes unchanged,
+                // so base-only — never clobbers unsaved edits).
+                crate::commands::refresh_all_diff_bases(cx.editor);
                 let summary = String::from_utf8_lossy(&o.stdout);
                 let first = summary.lines().next().unwrap_or("committed");
                 cx.editor.set_status(format!("commit: {}", first.trim()));
@@ -2273,6 +2291,9 @@ impl MagitBranch {
     fn run_checkout(&self, cx: &mut Context, args: &[&str], label: String) -> Option<Callback> {
         match git_run(&self.repo_dir, args) {
             Ok(()) => {
+                // Branch/tag checkout rewrites the working tree and moves HEAD:
+                // reload open buffers so their content and gutters follow.
+                crate::commands::reload_all_open_docs(cx.editor);
                 cx.editor.set_status(label);
                 schedule_status_refresh(cx);
                 Some(Box::new(|compositor: &mut Compositor, _cx| {
@@ -2503,7 +2524,13 @@ impl MagitStash {
     /// report the outcome. Stays open.
     fn run_stash(&mut self, cx: &mut Context, args: &[&str], label: &str) {
         match git_run(&self.repo_dir, args) {
-            Ok(()) => cx.editor.set_status(format!("stash: {label}")),
+            Ok(()) => {
+                // push/pop/apply rewrite the working tree; drop doesn't, but
+                // reloading is a cheap no-op then (disk == buffer). Reload so
+                // buffer content and gutters follow the stash operation.
+                crate::commands::reload_all_open_docs(cx.editor);
+                cx.editor.set_status(format!("stash: {label}"));
+            }
             Err(e) => cx.editor.set_error(format!("git stash: {e}")),
         }
         self.reload();
