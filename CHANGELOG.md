@@ -100,6 +100,14 @@ Commands:
   window (CTRL-W) command by key.
 * `:make [args]` — run make, collect errors into the quickfix list (shared with
   `:cnext`/`:cc`/`:copen`), and jump to the first error.
+* `:messages` / `:mes` — a session message log (every status/error/warning
+  shown), displayed newest-last like vim `:messages` / the emacs `*Messages*`
+  buffer. Backed by a capped ring on the editor.
+* `:redir @a` / `:redir > file` / `:redir >> file` … `:redir END` — capture the
+  message output between start and END into a register or file (vim `:redir`).
+* Neovim command names: `:Inspect` / `:InspectTree` (the tree-sitter highlight
+  capture / syntax subtree under the cursor) and `:Man {topic}` (open a man page
+  in the run console).
 * Vim tag stack over a ctags `tags` file: `:tag {name}` jumps to a definition
   and pushes the stack, `:tnext`/`:tprevious`/`:tfirst`/`:tlast` cycle matches,
   `:pop` returns, `:tags` shows the stack, `:tselect`/`:tjump` pick among matches

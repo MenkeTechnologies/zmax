@@ -949,6 +949,135 @@ fn tags_stack_list(
     Ok(())
 }
 
+/// neovim `:Man {topic}` — open a man page in the run console (formatting
+/// stripped with `col -bx`). `:Man 3 printf` selects a section.
+fn man_topic(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let topic = args.join(" ");
+    let topic = topic.trim();
+    if topic.is_empty() {
+        bail!("usage: :Man <topic>  (e.g. :Man ls, :Man 3 printf)");
+    }
+    spawn_into_run_console(cx, format!("man {topic} | col -bx"));
+    Ok(())
+}
+
+/// vim `:messages` / `:mes` — show the message log (every status/error/warning
+/// shown this session, newest last), the way emacs shows its `*Messages*` buffer.
+fn messages_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if cx.editor.messages.is_empty() {
+        cx.editor.set_status("no messages");
+        return Ok(());
+    }
+    let rows: Vec<(&'static str, String)> = cx
+        .editor
+        .messages
+        .iter()
+        .map(|(m, sev)| {
+            let tag = match sev {
+                zemacs_core::diagnostic::Severity::Error => "E",
+                zemacs_core::diagnostic::Severity::Warning => "W",
+                _ => " ",
+            };
+            (tag, m.to_string())
+        })
+        .collect();
+    cx.editor.autoinfo = Some(zemacs_view::info::Info::new("Messages", &rows));
+    Ok(())
+}
+
+/// Where a `:redir` capture is sent.
+enum RedirTarget {
+    Register(char),
+    File {
+        path: std::path::PathBuf,
+        append: bool,
+    },
+}
+
+thread_local! {
+    /// Active `:redir` capture: the target plus the message-log length when it
+    /// started (everything logged since is captured at `:redir END`).
+    static REDIR: std::cell::RefCell<Option<(RedirTarget, usize)>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// vim `:redir` — capture subsequent message output into a register or file:
+/// `:redir @a` (register), `:redir > file` / `:redir >> file` (truncate/append),
+/// then `:redir END` to stop and flush. The captured stream is the message log
+/// (echoes, command statuses) — the same stream `:messages` shows.
+fn redir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let arg = args.join(" ");
+    let arg = arg.trim();
+    if arg.is_empty() {
+        bail!("usage: :redir @{{reg}} | :redir > file | :redir >> file | :redir END");
+    }
+    if arg.eq_ignore_ascii_case("end") {
+        let (target, start) = REDIR
+            .with(|r| r.borrow_mut().take())
+            .ok_or_else(|| anyhow!("redir: not currently redirecting"))?;
+        let msgs = &cx.editor.messages;
+        let start = start.min(msgs.len());
+        let captured: String = msgs[start..]
+            .iter()
+            .map(|(m, _)| m.as_ref())
+            .collect::<Vec<_>>()
+            .join("\n");
+        match target {
+            RedirTarget::Register(reg) => {
+                cx.editor.registers.write(reg, vec![captured])?;
+                cx.editor.set_status(format!("redirection ended (@{reg})"));
+            }
+            RedirTarget::File { path, append } => {
+                use std::io::Write as _;
+                std::fs::OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .append(append)
+                    .truncate(!append)
+                    .open(&path)
+                    .and_then(|mut f| writeln!(f, "{captured}"))
+                    .map_err(|e| anyhow!("redir: {}: {e}", path.display()))?;
+                cx.editor
+                    .set_status(format!("redirection ended ({})", path.display()));
+            }
+        }
+        return Ok(());
+    }
+    let expand = |s: &str| {
+        zemacs_stdx::path::expand_tilde(std::path::Path::new(s.trim())).into_owned()
+    };
+    let target = if let Some(rest) = arg.strip_prefix('@') {
+        let reg = rest
+            .trim()
+            .chars()
+            .next()
+            .ok_or_else(|| anyhow!("redir: expected @{{reg}}"))?;
+        RedirTarget::Register(reg)
+    } else if let Some(rest) = arg.strip_prefix(">>") {
+        RedirTarget::File { path: expand(rest), append: true }
+    } else if let Some(rest) = arg.strip_prefix('>') {
+        RedirTarget::File { path: expand(rest), append: false }
+    } else {
+        bail!("redir: expected @{{reg}}, > file, >> file, or END");
+    };
+    let start = cx.editor.messages.len();
+    REDIR.with(|r| *r.borrow_mut() = Some((target, start)));
+    Ok(())
+}
+
 /// `:next-error` — Emacs `next-error` (`M-g n`): visit the next error's location.
 fn next_error(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -26193,6 +26322,31 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "messages",
+        aliases: &["mes"],
+        doc: "Show the message log — every status/error shown this session (vim :messages).",
+        fun: messages_list,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "Man",
+        aliases: &["man"],
+        doc: "Open a man page in the run console (neovim :Man).",
+        fun: man_topic,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "redir",
+        aliases: &[],
+        doc: "Capture message output to a register/file: :redir @a | > file | >> file | END (vim :redir).",
+        fun: redir,
+        completer: CommandCompleter::none(),
+        // Raw tail so `@a`, `>`/`>>` and paths pass through unparsed.
+        signature: Signature { positionals: (0, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "arduino-compile",
         aliases: &["averify", "arduino-verify"],
         doc: "Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify).",
@@ -33052,8 +33206,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "tree-sitter-highlight-name",
-        aliases: &[],
-        doc: "Display name of tree-sitter highlight scope under the cursor.",
+        aliases: &["Inspect"],
+        doc: "Display the tree-sitter highlight capture under the cursor (neovim :Inspect).",
         fun: tree_sitter_highlight_name,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -34685,8 +34839,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "tree-sitter-subtree",
-        aliases: &["ts-subtree"],
-        doc: "Display the smallest tree-sitter subtree that spans the primary selection, primarily for debugging queries.",
+        aliases: &["ts-subtree", "InspectTree"],
+        doc: "Display the smallest tree-sitter subtree that spans the primary selection (neovim :InspectTree).",
         fun: tree_sitter_subtree,
         completer: CommandCompleter::none(),
         signature: Signature {

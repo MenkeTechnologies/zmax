@@ -514,6 +514,7 @@
 | `change_signature` | Change signature refactor via LSP |  |
 | `pull_members_up` | Pull members up refactor via LSP (IntelliJ) |  |
 | `push_members_down` | Push members down refactor via LSP (IntelliJ) |  |
+| `safe_delete` | Safe Delete: delete the symbol under the cursor only if unused, else show its usages (JetBrains Safe Delete) |  |
 | `buffer_picker` | Open buffer picker | normal: `` <C-x>b ``, `` <C-x>4b ``, `` <C-x>6b ``, `` <C-x>wd ``, `` <C-x>xi ``, `` <space>bb ``, `` <space>lb ``, `` <space>lt ``, `` <space>pb ``, `` <C-x><C-b> ``, `` <space>b.b ``, select: `` <C-x>b ``, `` <C-x>4b ``, `` <C-x>6b ``, `` <C-x>wd ``, `` <C-x>xi ``, `` <space>bb ``, `` <space>lb ``, `` <space>lt ``, `` <space>pb ``, `` <C-x><C-b> ``, `` <space>b.b ``, insert: `` <C-x>b ``, `` <C-x>4b ``, `` <C-x>6b ``, `` <C-x>wd ``, `` <C-x>xi ``, `` <C-x><C-b> `` |
 | `jumplist_picker` | Open jumplist picker | normal: `` <space>jj ``, select: `` <space>jj `` |
 | `register_picker` | Browse registers and paste the chosen one | normal: `` <space>re ``, `` <space>rr ``, `` <space>ry ``, select: `` <space>re ``, `` <space>rr ``, `` <space>ry `` |

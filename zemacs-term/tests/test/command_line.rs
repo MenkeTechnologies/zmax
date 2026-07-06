@@ -458,3 +458,106 @@ async fn tag_tselect_picker_and_errors() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+// `:messages` shows the session message log; a status set via the vimlrs
+// passthrough (`:echon`) is captured and appears in the popup.
+#[tokio::test(flavor = "multi_thread")]
+async fn messages_log_captures_status() -> anyhow::Result<()> {
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(r#":echon "msgtest99"<ret>:messages<ret>"#),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let info = app.editor.autoinfo.as_ref().expect(":messages popup");
+            assert!(
+                info.text.contains("msgtest99"),
+                "message log missing the status: {}",
+                info.text
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+// `:redir @a` … `:redir END` captures the intervening message output into
+// register a, readable back via the `%reg{a}` expansion.
+#[tokio::test(flavor = "multi_thread")]
+async fn redir_captures_to_register() -> anyhow::Result<()> {
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(r#":redir @a<ret>:echon "captured7"<ret>:redir END<ret>:echo %reg{a}<ret>"#),
+        Some(&|app| {
+            let (status, _) = app.editor.get_status().unwrap();
+            assert!(
+                status.as_ref().contains("captured7"),
+                "register a should hold the captured output: {}",
+                status.as_ref()
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+// `:redir > file` … `:redir END` writes the captured output to a file.
+#[tokio::test(flavor = "multi_thread")]
+async fn redir_captures_to_file() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let out = dir.path().join("cap.txt");
+    // `<gt>` is the key-macro escape for `>` (a bare `>` confuses parse_macro).
+    let seq = format!(
+        r#":redir <gt>{}<ret>:echon "fileword"<ret>:redir END<ret>"#,
+        out.display()
+    );
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(&seq),
+        Some(&|app| assert!(!app.editor.is_err(), "{:?}", app.editor.get_status()) as _),
+        false,
+    )
+    .await?;
+    let written = std::fs::read_to_string(&out)?;
+    assert!(written.contains("fileword"), "file capture: {written:?}");
+    Ok(())
+}
+
+// neovim `:Man` with no topic reports usage rather than spawning a bare `man`.
+#[tokio::test(flavor = "multi_thread")]
+async fn man_no_topic_errors() -> anyhow::Result<()> {
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":Man<ret>"),
+        Some(&|app| assert!(app.editor.is_err(), "bare :Man should report usage") as _),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+// neovim `:Inspect` / `:InspectTree` are recognized command names (aliases of the
+// tree-sitter inspection commands) — they dispatch without error on a real file,
+// rather than falling through to the vimlrs "not a command" path.
+#[tokio::test(flavor = "multi_thread")]
+async fn neovim_inspect_aliases_recognized() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let src = dir.path().join("m.rs");
+    std::fs::write(&src, "fn main() { let x = 1; }\n")?;
+    let mut app = helpers::AppBuilder::new().with_file(&src, None).build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":InspectTree<ret>:Inspect<ret>"),
+        Some(&|app| {
+            assert!(
+                !app.editor.is_err(),
+                "neovim inspect aliases should be recognized: {:?}",
+                app.editor.get_status()
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

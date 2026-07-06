@@ -45,6 +45,17 @@
 | `:all`, `:sall` | Open a window for each file in the argument list (vim :all / :sall). |
 | `:compile` | Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile). |
 | `:recompile` | Re-run the last compile command (emacs recompile). |
+| `:make` | Run `make [args]`, collect errors into the quickfix list, jump to the first (vim :make). |
+| `:tag`, `:ta` | Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag). |
+| `:tselect`, `:ts` | List every matching tag in a picker; select one to jump (vim :tselect). |
+| `:tjump`, `:tj` | Jump to the tag if unique, else show the tag picker (vim :tjump). |
+| `:stag` | Open the tag's definition in a new horizontal split (vim :stag). |
+| `:tnext`, `:tn` | Jump to the next matching tag (vim :tnext). |
+| `:tprevious`, `:tp`, `:tNext`, `:tN` | Jump to the previous matching tag (vim :tprevious). |
+| `:tfirst`, `:trewind`, `:tr` | Jump to the first matching tag (vim :tfirst). |
+| `:tlast` | Jump to the last matching tag (vim :tlast). |
+| `:pop`, `:po` | Pop the tag stack, returning to where the last :tag jumped from (vim :pop). |
+| `:tags` | Show the tag stack depth and the current matching tag (vim :tags). |
 | `:arduino-compile`, `:averify`, `:arduino-verify` | Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify). |
 | `:arduino-upload`, `:aupload` | Compile and flash the sketch to the connected board (arduino-cli compile --upload), live in a terminal panel. |
 | `:arduino-monitor`, `:amonitor`, `:serial-monitor` | Open the serial monitor for the selected port/baud (arduino-cli monitor). |
@@ -456,6 +467,9 @@
 | `:tablast` | Go to the last tabpage. |
 | `:tabmove`, `:tabm` | Move the current tabpage to position [N] (default: last). |
 | `:tabdo` | Run an ex-command in every tabpage. |
+| `:windo` | Run an ex-command in every window of the current tabpage. |
+| `:wincmd` | Run a window (CTRL-W) command by key, e.g. :wincmd h focuses left. |
+| `:source`, `:so` | Source a Vimscript file through the embedded vimlrs interpreter. |
 | `:tabs` | List the tabpages and switch to the selected one. |
 | `:cdo` | Run an ex-command on each quickfix entry. |
 | `:cfdo` | Run an ex-command on the first quickfix entry of each file. |
@@ -472,7 +486,7 @@
 | `:laddfile` | Append a file of error lines to the location list. |
 | `:lpfile`, `:lpf` | Jump to the last location entry in the previous file. |
 | `:shell-quote`, `:sh-quote` | Wrap the selection in safe shell single-quotes. |
-| `:wrap-tag`, `:tag` | Wrap each selection in <tag>…</tag>. |
+| `:wrap-tag` | Wrap each selection in <tag>…</tag>. |
 | `:csv-column`, `:csv-col` | Replace the selected CSV/TSV with just its Nth column (1-based). |
 | `:code-fence`, `:fence` | Wrap the selection in a fenced Markdown code block with optional language. |
 | `:md-table`, `:table-fmt` | Align the selected Markdown pipe table (pad columns, rebuild separator row). |

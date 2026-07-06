@@ -1681,6 +1681,9 @@ pub struct Editor {
     pub last_selection: Option<Selection>,
 
     pub status_msg: Option<(Cow<'static, str>, Severity)>,
+    /// Log of every status/error/warning shown, newest last — backs `:messages`
+    /// (vim) / the emacs `*Messages*` buffer. Capped to the most recent entries.
+    pub messages: Vec<(Cow<'static, str>, Severity)>,
     pub autoinfo: Option<Info>,
     /// A pending external-`fzf` request (fzf.vim `:Files`/`:Colors`/`:Maps`/…).
     /// A command fills this; the terminal layer (which owns the TTY) drains it,
@@ -1926,6 +1929,7 @@ impl Editor {
                 |config: &Config| &config.clipboard_provider,
             ))),
             status_msg: None,
+            messages: Vec::new(),
             autoinfo: None,
             pending_fzf: None,
             lsp_progress: None,
@@ -2014,9 +2018,20 @@ impl Editor {
     }
 
     #[inline]
+    /// Append a message to the `:messages` log, capping it to the most recent
+    /// entries so a long session never grows the ring without bound.
+    fn log_message(&mut self, msg: Cow<'static, str>, severity: Severity) {
+        const MAX_MESSAGES: usize = 1000;
+        self.messages.push((msg, severity));
+        if self.messages.len() > MAX_MESSAGES {
+            self.messages.drain(..self.messages.len() - MAX_MESSAGES);
+        }
+    }
+
     pub fn set_status<T: Into<Cow<'static, str>>>(&mut self, status: T) {
         let status = status.into();
         log::debug!("editor status: {}", status);
+        self.log_message(status.clone(), Severity::Info);
         self.status_msg = Some((status, Severity::Info));
     }
 
@@ -2024,6 +2039,7 @@ impl Editor {
     pub fn set_error<T: Into<Cow<'static, str>>>(&mut self, error: T) {
         let error = error.into();
         log::debug!("editor error: {}", error);
+        self.log_message(error.clone(), Severity::Error);
         self.status_msg = Some((error, Severity::Error));
     }
 
@@ -2031,6 +2047,7 @@ impl Editor {
     pub fn set_warning<T: Into<Cow<'static, str>>>(&mut self, warning: T) {
         let warning = warning.into();
         log::warn!("editor warning: {}", warning);
+        self.log_message(warning.clone(), Severity::Warning);
         self.status_msg = Some((warning, Severity::Warning));
     }
 
