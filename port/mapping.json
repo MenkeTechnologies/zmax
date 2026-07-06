@@ -34626,5 +34626,14 @@
       "static:insert_command_normal"
     ],
     "note": "i_CTRL-O run one Normal-mode command then return to Insert (one-shot; integration-tested)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_amp",
+    "status": "ported",
+    "evidence": [
+      "static:repeat_substitute",
+      "typable:s-repeat"
+    ],
+    "note": ":& / :&& repeat last :substitute on current line (typable :& plus the :s-repeat alias; backed by repeat_substitute)"
   }
 ]

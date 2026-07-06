@@ -726,6 +726,7 @@
 | `:fold`, `:fo` | Create a fold over the selected/current lines (vim :fold). |
 | `:foldopen`, `:foldo` | Open the fold under the cursor (vim :foldopen). |
 | `:foldclose`, `:foldc` | Close the fold under the cursor (vim :foldclose). |
+| `:&`, `:&&`, `:s-repeat` | Repeat the last :substitute on the current line (vim :& / :&&). |
 | `:redrawstatus` | Redraw the status line (vim :redrawstatus; approximated by a full redraw). |
 | `:redrawtabline` | Redraw the tab line (vim :redrawtabline; approximated by a full redraw). |
 | `:silent`, `:sil` | Run {cmd} silently (vim :silent[!]); message suppression is best-effort. |

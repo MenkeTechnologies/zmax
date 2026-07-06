@@ -19828,6 +19828,7 @@ macro_rules! ex_static_cmd {
 ex_static_cmd!(ex_fold, super::fold_create);
 ex_static_cmd!(ex_foldopen, super::fold_open);
 ex_static_cmd!(ex_foldclose, super::fold_close);
+ex_static_cmd!(ex_repeat_substitute, super::repeat_substitute);
 
 /// A vim command *modifier* (`:silent`, `:verbose N`, `:noautocmd`, `:keepjumps`,
 /// `:vertical`, `:lockmarks`, …): strip the modifier word (and an optional
@@ -33193,6 +33194,16 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["foldc"],
         doc: "Close the fold under the cursor (vim :foldclose).",
         fun: ex_foldclose,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    // Vim :& / :&& — repeat the last :substitute on the current line (`:&` drops
+    // flags, `:&&` keeps them; both reuse the stored pattern/replacement/flags).
+    TypableCommand {
+        name: "&",
+        aliases: &["&&", "s-repeat"],
+        doc: "Repeat the last :substitute on the current line (vim :& / :&&).",
+        fun: ex_repeat_substitute,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
