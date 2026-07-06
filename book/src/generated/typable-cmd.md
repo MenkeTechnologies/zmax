@@ -728,6 +728,8 @@
 | `:foldclose`, `:foldc` | Close the fold under the cursor (vim :foldclose). |
 | `:&`, `:&&`, `:s-repeat` | Repeat the last :substitute on the current line (vim :& / :&&). |
 | `:sleep`, `:sl` | Do nothing for {count} seconds (vim :sleep). |
+| `:version`, `:ver` | Show the zemacs version and compiled feature summary (vim :version). |
+| `:intro`, `:int` | Show the introductory message (vim :intro). |
 | `:redrawstatus` | Redraw the status line (vim :redrawstatus; approximated by a full redraw). |
 | `:redrawtabline` | Redraw the tab line (vim :redrawtabline; approximated by a full redraw). |
 | `:silent`, `:sil` | Run {cmd} silently (vim :silent[!]); message suppression is best-effort. |

@@ -34683,5 +34683,21 @@
       "typable:tnext"
     ],
     "note": ":tnext jump to next matching tag"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_version",
+    "status": "ported",
+    "evidence": [
+      "typable:version"
+    ],
+    "note": ":version show version + compiled feature summary in a scratch buffer"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_intro",
+    "status": "ported",
+    "evidence": [
+      "typable:intro"
+    ],
+    "note": ":intro show the introductory message in a scratch buffer"
   }
 ]
