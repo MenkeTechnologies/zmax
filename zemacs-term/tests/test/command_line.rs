@@ -770,3 +770,57 @@ async fn number_command_shows_numbered_lines_in_scratch() -> anyhow::Result<()> 
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_number_toggles_line_numbers_gutter() -> anyhow::Result<()> {
+    // :set nonumber hides the line-numbers gutter; :set number brings it back.
+    // Unknown vim options (a real ~/.vimrc sets dozens) are accepted silently,
+    // not errored — so sourcing never aborts.
+    fn has_line_numbers(app: &zemacs_term::application::Application) -> bool {
+        app.editor
+            .config()
+            .gutters
+            .layout
+            .iter()
+            .any(|g| matches!(g, zemacs_view::editor::GutterType::LineNumbers))
+    }
+    test_key_sequences(
+        &mut AppBuilder::new().build()?,
+        vec![
+            (
+                Some(":set nonumber<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert!(!has_line_numbers(app), "nonumber hides the gutter");
+                } as _),
+            ),
+            (
+                Some(":set backupdir=~/tmp<ret>:set number<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "unknown option must not error");
+                    assert!(has_line_numbers(app), "number shows the gutter again");
+                } as _),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_mouse_with_value_enables_mouse() -> anyhow::Result<()> {
+    // vim `:set mouse=a` is a string option upstream but maps to a zemacs bool;
+    // a non-empty value enables it rather than erroring on the parse.
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":set mouse=a<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert!(app.editor.config().mouse, "mouse=a enables the mouse");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
