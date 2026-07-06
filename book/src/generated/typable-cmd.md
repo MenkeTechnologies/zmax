@@ -56,6 +56,9 @@
 | `:tlast` | Jump to the last matching tag (vim :tlast). |
 | `:pop`, `:po` | Pop the tag stack, returning to where the last :tag jumped from (vim :pop). |
 | `:tags` | Show the tag stack depth and the current matching tag (vim :tags). |
+| `:messages`, `:mes` | Show the message log — every status/error shown this session (vim :messages). |
+| `:Man`, `:man` | Open a man page in the run console (neovim :Man). |
+| `:redir` | Capture message output to a register/file: :redir @a | > file | >> file | END (vim :redir). |
 | `:arduino-compile`, `:averify`, `:arduino-verify` | Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify). |
 | `:arduino-upload`, `:aupload` | Compile and flash the sketch to the connected board (arduino-cli compile --upload), live in a terminal panel. |
 | `:arduino-monitor`, `:amonitor`, `:serial-monitor` | Open the serial monitor for the selected port/baud (arduino-cli monitor). |
@@ -748,7 +751,7 @@
 | `:botright`, `:bo` | Run {cmd} placing a new split at the bottom/right (vim :botright; best-effort). |
 | `:lsp-stop` | Stops the given language servers, or all language servers that are used by the current file if no arguments are supplied |
 | `:tree-sitter-scopes` | Display tree sitter scopes, primarily for theming and development. |
-| `:tree-sitter-highlight-name` | Display name of tree-sitter highlight scope under the cursor. |
+| `:tree-sitter-highlight-name`, `:Inspect` | Display the tree-sitter highlight capture under the cursor (neovim :Inspect). |
 | `:tree-sitter-layers` | Display language names of tree-sitter injection layers under the cursor. |
 | `:debug-start`, `:dbg` | Start a debug session from a given template with given parameters. |
 | `:debug-remote`, `:dbg-tcp` | Connect to a debug adapter by TCP address and start a debugging session from a given template with given parameters. |
@@ -894,7 +897,7 @@
 | `:delete-trailing-whitespace`, `:dtw` | Delete trailing whitespace from every line in the buffer. |
 | `:sort` | Sort ranges in selection. |
 | `:reflow` | Hard-wrap the current selection of lines to a given width. |
-| `:tree-sitter-subtree`, `:ts-subtree` | Display the smallest tree-sitter subtree that spans the primary selection, primarily for debugging queries. |
+| `:tree-sitter-subtree`, `:ts-subtree`, `:InspectTree` | Display the smallest tree-sitter subtree that spans the primary selection (neovim :InspectTree). |
 | `:config-reload` | Refresh user config. |
 | `:keymap` | Switch the active keymap preset: spacemacs, vim, helix, or emacs. |
 | `:config-open` | Open the user config.toml file. |

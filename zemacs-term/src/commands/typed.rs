@@ -640,7 +640,10 @@ fn parse_tag_address(rest: &str) -> TagAddress {
     let bytes = field.as_bytes();
     if bytes.len() >= 2 && (bytes[0] == b'/' || bytes[0] == b'?') {
         let delim = bytes[0] as char;
-        let end = field[1..].rfind(delim).map(|i| i + 1).unwrap_or(field.len());
+        let end = field[1..]
+            .rfind(delim)
+            .map(|i| i + 1)
+            .unwrap_or(field.len());
         let inner = &field[1..end];
         let inner = inner.trim_start_matches('^').trim_end_matches('$');
         let inner = inner.replace("\\/", "/").replace("\\\\", "\\");
@@ -669,7 +672,12 @@ fn jump_to_tag_action(
     let line_idx = match &entry.address {
         TagAddress::Line(n) => n.saturating_sub(1).min(last_line),
         TagAddress::Pattern(pat) => (0..text.len_lines())
-            .find(|&i| text.line(i).chars().collect::<String>().contains(pat.as_str()))
+            .find(|&i| {
+                text.line(i)
+                    .chars()
+                    .collect::<String>()
+                    .contains(pat.as_str())
+            })
             .unwrap_or(0),
     };
     let pos = text.line_to_char(line_idx);
@@ -695,7 +703,11 @@ fn push_tag_from(cx: &compositor::Context) {
 /// `:tag {name}` — jump to the definition of `name` from the `tags` file,
 /// pushing the current location on the tag stack. Bare `:tag` re-jumps to the
 /// current match.
-fn tag_jump_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn tag_jump_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -941,9 +953,9 @@ fn tags_stack_list(
         m.get(idx).map(|e| (e.name.clone(), idx + 1, m.len()))
     });
     match cur {
-        Some((name, i, n)) => cx
-            .editor
-            .set_status(format!("tag stack {depth} deep; current: {name} ({i} of {n})")),
+        Some((name, i, n)) => cx.editor.set_status(format!(
+            "tag stack {depth} deep; current: {name} ({i} of {n})"
+        )),
         None => cx.editor.set_status(format!("tag stack {depth} deep")),
     }
     Ok(())
@@ -1056,9 +1068,8 @@ fn redir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
         }
         return Ok(());
     }
-    let expand = |s: &str| {
-        zemacs_stdx::path::expand_tilde(std::path::Path::new(s.trim())).into_owned()
-    };
+    let expand =
+        |s: &str| zemacs_stdx::path::expand_tilde(std::path::Path::new(s.trim())).into_owned();
     let target = if let Some(rest) = arg.strip_prefix('@') {
         let reg = rest
             .trim()
@@ -1067,9 +1078,15 @@ fn redir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
             .ok_or_else(|| anyhow!("redir: expected @{{reg}}"))?;
         RedirTarget::Register(reg)
     } else if let Some(rest) = arg.strip_prefix(">>") {
-        RedirTarget::File { path: expand(rest), append: true }
+        RedirTarget::File {
+            path: expand(rest),
+            append: true,
+        }
     } else if let Some(rest) = arg.strip_prefix('>') {
-        RedirTarget::File { path: expand(rest), append: false }
+        RedirTarget::File {
+            path: expand(rest),
+            append: false,
+        }
     } else {
         bail!("redir: expected @{{reg}}, > file, >> file, or END");
     };
@@ -2785,6 +2802,34 @@ fn undotree(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
         },
     ));
     cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// vim `:undolist` — list the undo states as a text popup (number, age, and a
+/// `>` on the current one). The visual tree is `:undotree`; this is the terse
+/// textual list vim shows.
+fn undo_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let snapshot = doc!(cx.editor).undo_tree_snapshot();
+    if snapshot.nodes.len() <= 1 {
+        cx.editor.set_status("no undo history");
+        return Ok(());
+    }
+    let rows: Vec<(String, String)> = snapshot
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(i, (parent, ts))| {
+            let marker = if i == snapshot.current { ">" } else { " " };
+            (
+                format!("{marker}{i}"),
+                format!("from {parent}, {}s ago", ts.elapsed().as_secs()),
+            )
+        })
+        .collect();
+    cx.editor.autoinfo = Some(zemacs_view::info::Info::new("Undo list", &rows));
     Ok(())
 }
 
@@ -30026,6 +30071,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["undo-tree", "UndotreeToggle"],
         doc: "Open the branching undo-history browser (vim undotree).",
         fun: undotree,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "undolist",
+        aliases: &["undol"],
+        doc: "List the undo states as a text popup (vim :undolist).",
+        fun: undo_list,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
