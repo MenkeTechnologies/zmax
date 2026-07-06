@@ -34883,5 +34883,13 @@
       "typable:list"
     ],
     "note": ":list display lines, marking line ends with $"
+  },
+  {
+    "spec_id": "neovim.option.softtabstop",
+    "status": "ported",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set softtabstop=N sets the document indent width (with expandtab, Spaces(N))"
   }
 ]
