@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-27f894fa.js";
+            window.path_to_searchindex_js = "searchindex-4b04a62f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1603,6 +1603,11 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:first</code>, <code>:rewind</code>, <code>:rew</code></td><td>Edit the first file in the argument list (vim :first / :rewind).</td></tr>
 <tr><td><code>:last</code>, <code>:la</code></td><td>Edit the last file in the argument list (vim :last).</td></tr>
 <tr><td><code>:argument</code>, <code>:argu</code></td><td>Edit the Nth file in the argument list (vim :argument).</td></tr>
+<tr><td><code>:snext</code>, <code>:sn</code></td><td>Split the window and edit the next argument (vim :snext).</td></tr>
+<tr><td><code>:sprevious</code>, <code>:sprev</code>, <code>:sNext</code>, <code>:sN</code></td><td>Split the window and edit the previous argument (vim :sprevious / :sNext).</td></tr>
+<tr><td><code>:srewind</code>, <code>:sre</code>, <code>:sfirst</code>, <code>:sfir</code></td><td>Split the window and edit the first argument (vim :srewind / :sfirst).</td></tr>
+<tr><td><code>:slast</code>, <code>:sla</code></td><td>Split the window and edit the last argument (vim :slast).</td></tr>
+<tr><td><code>:sargument</code>, <code>:sa</code></td><td>Split the window and edit the Nth argument (vim :sargument).</td></tr>
 <tr><td><code>:argdo</code></td><td>Run an Ex command on each file in the argument list (vim :argdo).</td></tr>
 <tr><td><code>:all</code>, <code>:sall</code></td><td>Open a window for each file in the argument list (vim :all / :sall).</td></tr>
 <tr><td><code>:compile</code></td><td>Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile).</td></tr>
@@ -7096,11 +7101,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>3592</strong> (52.5%)</li>
+<li>Ported: <strong>3599</strong> (52.6%)</li>
 <li>Partial: <strong>684</strong> (10.0%)</li>
-<li>Absent: <strong>2571</strong></li>
+<li>Absent: <strong>2564</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1465 static commands, 1743 typable <code>:</code> commands, 2958 default keybindings</li>
+<li>zemacs source surface: 1465 static commands, 1757 typable <code>:</code> commands, 2958 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -7160,7 +7165,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">185</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">204</td><td style="text-align: right">14</td><td style="text-align: right">93.6%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1297</td><td style="text-align: right">215</td><td style="text-align: right">62.4%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1304</td><td style="text-align: right">215</td><td style="text-align: right">62.8%</td></tr>
 <tr><td>spacemacs</td><td style="text-align: right">1296</td><td style="text-align: right">718</td><td style="text-align: right">158</td><td style="text-align: right">55.4%</td></tr>
 </tbody>
 </table>
@@ -7224,7 +7229,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">35</td><td style="text-align: right">6</td><td style="text-align: right">66.0%</td></tr>
-<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">249</td><td style="text-align: right">60</td><td style="text-align: right">44.4%</td></tr>
+<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">256</td><td style="text-align: right">60</td><td style="text-align: right">45.6%</td></tr>
 <tr><td>neovim</td><td>function</td><td style="text-align: right">451</td><td style="text-align: right">431</td><td style="text-align: right">0</td><td style="text-align: right">95.6%</td></tr>
 <tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">62</td><td style="text-align: right">25</td><td style="text-align: right">63.3%</td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">422</td><td style="text-align: right">38</td><td style="text-align: right">88.1%</td></tr>
