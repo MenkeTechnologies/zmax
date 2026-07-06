@@ -613,6 +613,16 @@ pub mod completers {
             let mut keys = Vec::new();
             let json = serde_json::json!(Config::default());
             get_keys(&json, &mut keys, None);
+            // Vim option names (and `no…` for booleans) so `:set number<tab>`,
+            // `:set nonu<tab>`, `:set expandtab<tab>`, … complete.
+            for (name, is_bool, _) in crate::commands::vim_options_data::VIM_OPTION_TABLE {
+                keys.push((*name).to_string());
+                if *is_bool {
+                    keys.push(format!("no{name}"));
+                }
+            }
+            keys.sort();
+            keys.dedup();
             keys
         });
 
