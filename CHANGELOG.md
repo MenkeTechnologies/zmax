@@ -100,6 +100,11 @@ Commands:
   window (CTRL-W) command by key.
 * `:make [args]` — run make, collect errors into the quickfix list (shared with
   `:cnext`/`:cc`/`:copen`), and jump to the first error.
+* Vim tag stack over a ctags `tags` file: `:tag {name}` jumps to a definition
+  and pushes the stack, `:tnext`/`:tprevious`/`:tfirst`/`:tlast` cycle matches,
+  `:pop` returns, `:tags` shows the stack, `:tselect`/`:tjump` pick among matches
+  and `:stag` opens the definition in a split — LSP-independent navigation,
+  distinct from the `:Tags`/`:BTags` fzf pickers.
 * `safe_delete` — JetBrains-style Safe Delete: remove the symbol under the
   cursor only if it has no other references, else show the usages.
 

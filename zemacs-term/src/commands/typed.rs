@@ -652,7 +652,17 @@ fn parse_tag_address(rest: &str) -> TagAddress {
 /// Open the entry's file and move the cursor to its address — the line number,
 /// or the first line containing the pattern. Reused by every tag-jump command.
 fn jump_to_tag(cx: &mut compositor::Context, entry: &TagEntry) -> anyhow::Result<()> {
-    cx.editor.open(&entry.file, Action::Replace)?;
+    jump_to_tag_action(cx, entry, Action::Replace)
+}
+
+/// As [`jump_to_tag`] but opening with a chosen `Action` (e.g. a split for
+/// `:stag`).
+fn jump_to_tag_action(
+    cx: &mut compositor::Context,
+    entry: &TagEntry,
+    action: Action,
+) -> anyhow::Result<()> {
+    cx.editor.open(&entry.file, action)?;
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let last_line = text.len_lines().saturating_sub(1);
@@ -698,6 +708,21 @@ fn tag_jump_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
             None => bail!("no current tag"),
         };
     }
+    let matches = resolve_tag_matches(cx, name)?;
+    push_tag_from(cx);
+    let n = matches.len();
+    let first = matches[0].clone();
+    TAG_MATCHES.with(|m| *m.borrow_mut() = matches);
+    TAG_IDX.with(|i| i.set(0));
+    jump_to_tag(cx, &first)?;
+    cx.editor.set_status(format!("tag 1 of {n}: {name}"));
+    Ok(())
+}
+
+/// Read the `tags` file and return every entry whose name is exactly `name`.
+/// Errors if there is no tags file or no match — shared by `:tag`/`:tselect`/
+/// `:tjump`/`:stag`.
+fn resolve_tag_matches(cx: &compositor::Context, name: &str) -> anyhow::Result<Vec<TagEntry>> {
     let (file, base) =
         find_tags_file(cx).ok_or_else(|| anyhow!("no tags file found (run `ctags -R`)"))?;
     let matches: Vec<TagEntry> = parse_tags_file(&file, &base)
@@ -707,12 +732,110 @@ fn tag_jump_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) ->
     if matches.is_empty() {
         bail!("tag not found: {name}");
     }
+    Ok(matches)
+}
+
+/// Push a picker over `matches`; selecting one pushes the tag stack and jumps.
+fn push_tag_picker(cx: &mut compositor::Context, matches: Vec<TagEntry>) {
+    TAG_MATCHES.with(|m| *m.borrow_mut() = matches.clone());
+    TAG_IDX.with(|i| i.set(0));
+    let callback = async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                let columns = [
+                    ui::PickerColumn::new("tag", |e: &TagEntry, _: &()| e.name.as_str().into()),
+                    ui::PickerColumn::new("file", |e: &TagEntry, _: &()| {
+                        e.file.to_string_lossy().into_owned().into()
+                    }),
+                    ui::PickerColumn::new("where", |e: &TagEntry, _: &()| match &e.address {
+                        TagAddress::Line(n) => n.to_string().into(),
+                        TagAddress::Pattern(p) => p.as_str().into(),
+                    }),
+                ];
+                let picker = ui::Picker::new(
+                    columns,
+                    0,
+                    matches,
+                    (),
+                    move |cx, entry: &TagEntry, _action| {
+                        push_tag_from(cx);
+                        if let Err(e) = jump_to_tag(cx, entry) {
+                            cx.editor.set_error(e.to_string());
+                        }
+                    },
+                );
+                compositor.push(Box::new(overlaid(picker)));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+}
+
+/// `:tselect {name}` — list every matching tag in a picker; selecting one pushes
+/// the tag stack and jumps to it.
+fn tag_select(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :tselect <name>");
+    }
+    let matches = resolve_tag_matches(cx, name)?;
+    push_tag_picker(cx, matches);
+    Ok(())
+}
+
+/// `:tjump {name}` — jump straight to the tag if there is a single match, else
+/// present the `:tselect` picker (vim :tjump).
+fn tag_jump_or_select(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :tjump <name>");
+    }
+    let matches = resolve_tag_matches(cx, name)?;
+    if matches.len() == 1 {
+        push_tag_from(cx);
+        let first = matches[0].clone();
+        TAG_MATCHES.with(|m| *m.borrow_mut() = matches);
+        TAG_IDX.with(|i| i.set(0));
+        jump_to_tag(cx, &first)?;
+        cx.editor.set_status(format!("tag: {name}"));
+        Ok(())
+    } else {
+        push_tag_picker(cx, matches);
+        Ok(())
+    }
+}
+
+/// `:stag {name}` — open the tag's definition in a new horizontal split
+/// (vim :stag).
+fn tag_split(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :stag <name>");
+    }
+    let matches = resolve_tag_matches(cx, name)?;
     push_tag_from(cx);
     let n = matches.len();
     let first = matches[0].clone();
     TAG_MATCHES.with(|m| *m.borrow_mut() = matches);
     TAG_IDX.with(|i| i.set(0));
-    jump_to_tag(cx, &first)?;
+    jump_to_tag_action(cx, &first, Action::HorizontalSplit)?;
     cx.editor.set_status(format!("tag 1 of {n}: {name}"));
     Ok(())
 }
@@ -25998,6 +26121,30 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "tselect",
+        aliases: &["ts"],
+        doc: "List every matching tag in a picker; select one to jump (vim :tselect).",
+        fun: tag_select,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tjump",
+        aliases: &["tj"],
+        doc: "Jump to the tag if unique, else show the tag picker (vim :tjump).",
+        fun: tag_jump_or_select,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "stag",
+        aliases: &[],
+        doc: "Open the tag's definition in a new horizontal split (vim :stag).",
+        fun: tag_split,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "tnext",
         aliases: &["tn"],
         doc: "Jump to the next matching tag (vim :tnext).",
@@ -30593,7 +30740,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "wrap-tag",
-        aliases: &["tag"],
+        aliases: &[],
         doc: "Wrap each selection in <tag>…</tag>.",
         fun: wrap_tag_cmd,
         completer: CommandCompleter::none(),

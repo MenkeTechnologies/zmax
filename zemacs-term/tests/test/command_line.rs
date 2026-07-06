@@ -296,3 +296,165 @@ async fn make_runs_and_reports() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+// Vim tag stack over a real ctags `tags` file: `:tag` jumps to the first match
+// and pushes the stack, `:tnext` cycles to the second match, `:pop` returns.
+#[tokio::test(flavor = "multi_thread")]
+async fn tag_stack_jump_next_pop() -> anyhow::Result<()> {
+    use std::io::Write;
+    let dir = tempfile::tempdir()?;
+    let src = dir.path().join("unit.c");
+    let mut f = std::fs::File::create(&src)?;
+    // foo is defined on line 2 (idx 1) and line 4 (idx 3).
+    writeln!(f, "int other() {{}}")?;
+    writeln!(f, "int foo() {{ return 1; }}")?;
+    writeln!(f, "void bar() {{}}")?;
+    writeln!(f, "int foo() {{ return 2; }}")?;
+    f.flush()?;
+    let mut tags = std::fs::File::create(dir.path().join("tags"))?;
+    write!(tags, "foo\tunit.c\t/^int foo() {{ return 1; }}$/\n")?;
+    write!(tags, "foo\tunit.c\t/^int foo() {{ return 2; }}$/\n")?;
+    tags.flush()?;
+
+    fn cur_line(app: &zemacs_term::application::Application) -> usize {
+        let view = app.editor.tree.get(app.editor.tree.focus);
+        let doc = app.editor.document(view.doc).unwrap();
+        let text = doc.text();
+        text.char_to_line(doc.selection(view.id).primary().cursor(text.slice(..)))
+    }
+
+    let mut app = helpers::AppBuilder::new().with_file(&src, None).build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":tag foo<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(cur_line(app), 1, "first match on line idx 1");
+                } as _),
+            ),
+            (
+                Some(":tnext<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(cur_line(app), 3, "second match on line idx 3");
+                } as _),
+            ),
+            (
+                Some(":pop<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(cur_line(app), 0, "popped back to the start line");
+                } as _),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+fn tag_cur_line(app: &zemacs_term::application::Application) -> usize {
+    let view = app.editor.tree.get(app.editor.tree.focus);
+    let doc = app.editor.document(view.doc).unwrap();
+    let text = doc.text();
+    text.char_to_line(doc.selection(view.id).primary().cursor(text.slice(..)))
+}
+
+// `:tjump {name}` with a unique match jumps straight to it, no picker.
+#[tokio::test(flavor = "multi_thread")]
+async fn tag_tjump_unique_jumps() -> anyhow::Result<()> {
+    use std::io::Write;
+    let dir = tempfile::tempdir()?;
+    let src = dir.path().join("u.c");
+    let mut f = std::fs::File::create(&src)?;
+    writeln!(f, "int a() {{}}")?;
+    writeln!(f, "int uniq() {{ return 0; }}")?;
+    f.flush()?;
+    let mut tags = std::fs::File::create(dir.path().join("tags"))?;
+    write!(tags, "uniq\tu.c\t/^int uniq() {{ return 0; }}$/\n")?;
+    tags.flush()?;
+    let mut app = helpers::AppBuilder::new().with_file(&src, None).build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":tjump uniq<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(tag_cur_line(app), 1);
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+// `:stag {name}` opens the definition in a new split (numeric tag address).
+#[tokio::test(flavor = "multi_thread")]
+async fn tag_stag_opens_split() -> anyhow::Result<()> {
+    use std::io::Write;
+    let dir = tempfile::tempdir()?;
+    let src = dir.path().join("u.c");
+    let mut f = std::fs::File::create(&src)?;
+    writeln!(f, "int a() {{}}")?;
+    writeln!(f, "int foo() {{}}")?;
+    f.flush()?;
+    let mut tags = std::fs::File::create(dir.path().join("tags"))?;
+    write!(tags, "foo\tu.c\t2\n")?;
+    tags.flush()?;
+    let mut app = helpers::AppBuilder::new().with_file(&src, None).build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":stag foo<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(app.editor.tree.views().count(), 2, "split opened");
+                    assert_eq!(tag_cur_line(app), 1, "cursor on the tag line");
+                } as _),
+            ),
+            (Some(":wincmd o<ret>"), None),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+// `:tselect {name}` opens the match picker without error when matches exist, and
+// errors on an unknown name. (The picker's on-select jump reuses `jump_to_tag`,
+// covered by the `:tag`/`:tjump` tests.)
+#[tokio::test(flavor = "multi_thread")]
+async fn tag_tselect_picker_and_errors() -> anyhow::Result<()> {
+    use std::io::Write;
+    let dir = tempfile::tempdir()?;
+    let src = dir.path().join("u.c");
+    let mut f = std::fs::File::create(&src)?;
+    writeln!(f, "int foo() {{ return 1; }}")?;
+    writeln!(f, "int foo() {{ return 2; }}")?;
+    f.flush()?;
+    let mut tags = std::fs::File::create(dir.path().join("tags"))?;
+    write!(tags, "foo\tu.c\t1\n")?;
+    write!(tags, "foo\tu.c\t2\n")?;
+    tags.flush()?;
+    let mut app = helpers::AppBuilder::new().with_file(&src, None).build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":tselect nope<ret>"),
+                Some(&|app| assert!(app.editor.is_err(), "unknown tag should error") as _),
+            ),
+            (
+                Some("<esc>:tselect foo<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                } as _),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

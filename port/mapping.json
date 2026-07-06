@@ -34246,5 +34246,93 @@
       "typable:make"
     ],
     "note": "runs make, collects quickfix, jumps to first error"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tag",
+    "status": "ported",
+    "evidence": [
+      "typable:tag"
+    ],
+    "note": "jump to ctags def, push tag stack"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tnext",
+    "status": "ported",
+    "evidence": [
+      "typable:tnext"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tprevious",
+    "status": "ported",
+    "evidence": [
+      "typable:tprevious"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tfirst",
+    "status": "ported",
+    "evidence": [
+      "typable:tfirst"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_trewind",
+    "status": "ported",
+    "evidence": [
+      "typable:trewind"
+    ],
+    "note": "alias of :tfirst"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tlast",
+    "status": "ported",
+    "evidence": [
+      "typable:tlast"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_pop",
+    "status": "ported",
+    "evidence": [
+      "typable:pop"
+    ],
+    "note": "pop the tag stack"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tags",
+    "status": "partial",
+    "evidence": [
+      "typable:tags"
+    ],
+    "note": "stack depth + current tag summary (not the full vim table)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tselect",
+    "status": "ported",
+    "evidence": [
+      "typable:tselect"
+    ],
+    "note": "picker of matching tags"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tjump",
+    "status": "ported",
+    "evidence": [
+      "typable:tjump"
+    ],
+    "note": "jump if unique else picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_stag",
+    "status": "ported",
+    "evidence": [
+      "typable:stag"
+    ],
+    "note": "open tag def in a split"
   }
 ]
