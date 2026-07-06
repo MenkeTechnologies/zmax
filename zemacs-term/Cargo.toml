@@ -138,7 +138,7 @@ crossterm = { version = "0.28", features = ["event-stream"] }
 [target.'cfg(not(windows))'.dependencies]  # https://github.com/vorner/signal-hook/issues/100
 signal-hook-tokio = { version = "0.4", features = ["futures-v0_3"] }
 libc = "0.2.186"
-vimlrs = { path = "../vendor/vimlrs", package = "zemacs-viml", optional = true }    # Vimscript (VimL); pulls nix (unix only)
+vimlrs = { path = "../vendor/vimlrs", optional = true }    # Vimscript (VimL); pulls nix (unix only)
 awkrs = { path = "../vendor/awkrs", optional = true }                              # AWK; pulls nix + rug/gmp-mpfr-sys (unix only)
 zsh = { path = "../vendor/zshrs", package = "zshrs", optional = true }            # embedded zsh shell (unix only)
 stryke = { path = "../vendor/strykelang", package = "strykelang", optional = true } # embedded Perl (unix only; pulls zshrs)

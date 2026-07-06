@@ -830,6 +830,7 @@ impl MappableCommand {
         change_signature, "Change signature refactor via LSP",
         pull_members_up, "Pull members up refactor via LSP (IntelliJ)",
         push_members_down, "Push members down refactor via LSP (IntelliJ)",
+        safe_delete, "Safe Delete: delete the symbol under the cursor only if unused, else show its usages (JetBrains Safe Delete)",
         buffer_picker, "Open buffer picker",
         jumplist_picker, "Open jumplist picker",
         register_picker, "Browse registers and paste the chosen one",

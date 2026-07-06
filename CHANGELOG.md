@@ -89,6 +89,19 @@ Commands:
   (`SPC g m`, `SPC g c r`), `conflict_take_all_ours`/`conflict_take_all_theirs`
   (`SPC g c O`/`SPC g c T`)
 * `wildfire`/`wildfire_shrink` (`<ret>`/`<backspace>`)
+* Vimscript passthrough: any `:` command zemacs does not define is run by the
+  embedded vimlrs interpreter, so `:call`/`:execute`/`:if …|…|endif`/`:for`/
+  `:while`/`:function`/`:return`/`:try`/`:throw`/`:break`/`:continue`/`:unlet`
+  and other VimL statements work at the command prompt — Vim's `:` prompt is the
+  Vimscript engine.
+* `:source`/`:so <file>` — source a Vimscript file through vimlrs with script
+  context (`s:` scope, `<SID>`, line continuations).
+* `:windo <cmd>` — run an ex-command in each window; `:wincmd <key>` — run a
+  window (CTRL-W) command by key.
+* `:make [args]` — run make, collect errors into the quickfix list (shared with
+  `:cnext`/`:cc`/`:copen`), and jump to the first error.
+* `safe_delete` — JetBrains-style Safe Delete: remove the symbol under the
+  cursor only if it has no other references, else show the usages.
 
 Usability improvements:
 

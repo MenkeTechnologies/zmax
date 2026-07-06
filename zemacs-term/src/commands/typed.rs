@@ -506,6 +506,326 @@ fn recompile(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     }
 }
 
+/// vim `:make [args]` — run the make program (default `make`) with `args`,
+/// collect its output into the error/quickfix list (shared with `:compile` and
+/// `:cnext`/`:cc`/`:copen`), then jump to the first error, like vim. zemacs has
+/// no `'makeprg'` option, so the program is `make`.
+fn make(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let extra = args.join(" ");
+    let extra = extra.trim();
+    let command = if extra.is_empty() {
+        "make".to_string()
+    } else {
+        format!("make {extra}")
+    };
+    run_compile(cx, &command)?;
+    // vim jumps to the first error after `:make`; only if the build reported any.
+    if let Some(entry) = with_compilation(|c| c.first().cloned()) {
+        goto_compile_entry(cx, &entry)?;
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Vim tag stack: `:tag`, `:tnext`/`:tprevious`/`:tfirst`/`:tlast`, `:pop`,
+// `:tags` over a ctags `tags` file. Distinct from the `:Tags`/`:BTags` fzf
+// pickers — this is exact-name jump-to-definition with a navigable stack,
+// LSP-independent (works on any tree with a generated `tags` file).
+// ---------------------------------------------------------------------------
+
+/// One parsed `tags`-file entry: a symbol, the file defining it, and the ctags
+/// address locating the definition inside that file.
+#[derive(Clone)]
+struct TagEntry {
+    name: String,
+    file: std::path::PathBuf,
+    address: TagAddress,
+}
+
+#[derive(Clone)]
+enum TagAddress {
+    /// A 1-based line number (numeric `tags` address).
+    Line(usize),
+    /// A `/pattern/` address, reduced to the literal line body to search for.
+    Pattern(String),
+}
+
+/// A location jumped *from*, pushed on `:tag` and restored by `:pop`.
+#[derive(Clone)]
+struct TagFrom {
+    file: std::path::PathBuf,
+    pos: usize,
+}
+
+enum TagMove {
+    Next,
+    Prev,
+    First,
+    Last,
+}
+
+thread_local! {
+    /// The vim tag stack — locations pushed by `:tag`, popped by `:pop`.
+    static TAG_STACK: std::cell::RefCell<Vec<TagFrom>> = const { std::cell::RefCell::new(Vec::new()) };
+    /// Matches for the most recent `:tag {name}`, cycled by `:tnext`/`:tprevious`.
+    static TAG_MATCHES: std::cell::RefCell<Vec<TagEntry>> = const { std::cell::RefCell::new(Vec::new()) };
+    /// Index into `TAG_MATCHES` of the currently-shown match.
+    static TAG_IDX: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// Locate the `tags` file like vim's default `tags=./tags,tags`: first `tags`
+/// beside the current buffer, then `tags` in the working directory. Returns the
+/// file and the directory relative entry paths resolve against.
+fn find_tags_file(cx: &compositor::Context) -> Option<(std::path::PathBuf, std::path::PathBuf)> {
+    let mut dirs: Vec<std::path::PathBuf> = Vec::new();
+    let (_view, doc) = current_ref!(cx.editor);
+    if let Some(parent) = doc.path().and_then(|p| p.parent()).map(|p| p.to_path_buf()) {
+        dirs.push(parent);
+    }
+    if let Ok(cwd) = std::env::current_dir() {
+        dirs.push(cwd);
+    }
+    for dir in dirs {
+        let f = dir.join("tags");
+        if f.is_file() {
+            return Some((f, dir));
+        }
+    }
+    None
+}
+
+/// Parse a ctags `tags` file into entries, skipping `!_TAG_` metadata lines.
+/// Relative entry paths are resolved against `base`.
+fn parse_tags_file(path: &std::path::Path, base: &std::path::Path) -> Vec<TagEntry> {
+    let text = match std::fs::read_to_string(path) {
+        Ok(t) => t,
+        Err(_) => return Vec::new(),
+    };
+    let mut out = Vec::new();
+    for line in text.lines() {
+        if line.is_empty() || line.starts_with("!_TAG_") {
+            continue;
+        }
+        let mut it = line.splitn(3, '\t');
+        let (name, file, rest) = match (it.next(), it.next(), it.next()) {
+            (Some(n), Some(f), Some(r)) => (n, f, r),
+            _ => continue,
+        };
+        let p = std::path::Path::new(file);
+        let file_path = if p.is_absolute() {
+            p.to_path_buf()
+        } else {
+            base.join(p)
+        };
+        out.push(TagEntry {
+            name: name.to_string(),
+            file: file_path,
+            address: parse_tag_address(rest),
+        });
+    }
+    out
+}
+
+/// Reduce a ctags address field (`42;"…`, `/^pattern$/;"…`, `?pattern?`) to a
+/// line number or the literal text to search for.
+fn parse_tag_address(rest: &str) -> TagAddress {
+    // Drop the trailing `;"` extension field ctags appends.
+    let field = rest.split(";\"").next().unwrap_or(rest).trim();
+    if let Ok(n) = field.parse::<usize>() {
+        return TagAddress::Line(n);
+    }
+    let bytes = field.as_bytes();
+    if bytes.len() >= 2 && (bytes[0] == b'/' || bytes[0] == b'?') {
+        let delim = bytes[0] as char;
+        let end = field[1..].rfind(delim).map(|i| i + 1).unwrap_or(field.len());
+        let inner = &field[1..end];
+        let inner = inner.trim_start_matches('^').trim_end_matches('$');
+        let inner = inner.replace("\\/", "/").replace("\\\\", "\\");
+        return TagAddress::Pattern(inner);
+    }
+    TagAddress::Pattern(field.to_string())
+}
+
+/// Open the entry's file and move the cursor to its address — the line number,
+/// or the first line containing the pattern. Reused by every tag-jump command.
+fn jump_to_tag(cx: &mut compositor::Context, entry: &TagEntry) -> anyhow::Result<()> {
+    cx.editor.open(&entry.file, Action::Replace)?;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let last_line = text.len_lines().saturating_sub(1);
+    let line_idx = match &entry.address {
+        TagAddress::Line(n) => n.saturating_sub(1).min(last_line),
+        TagAddress::Pattern(pat) => (0..text.len_lines())
+            .find(|&i| text.line(i).chars().collect::<String>().contains(pat.as_str()))
+            .unwrap_or(0),
+    };
+    let pos = text.line_to_char(line_idx);
+    doc.set_selection(view.id, Selection::point(pos));
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    view.ensure_cursor_in_view(doc, scrolloff);
+    Ok(())
+}
+
+/// Push the current cursor location on the tag stack (the `:tag` "from").
+fn push_tag_from(cx: &compositor::Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    if let Some(file) = doc.path().map(|p| p.to_path_buf()) {
+        let pos = doc
+            .selection(view.id)
+            .primary()
+            .cursor(doc.text().slice(..));
+        TAG_STACK.with(|s| s.borrow_mut().push(TagFrom { file, pos }));
+    }
+}
+
+/// `:tag {name}` — jump to the definition of `name` from the `tags` file,
+/// pushing the current location on the tag stack. Bare `:tag` re-jumps to the
+/// current match.
+fn tag_jump_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        let cur = TAG_MATCHES.with(|m| m.borrow().get(TAG_IDX.with(|i| i.get())).cloned());
+        return match cur {
+            Some(e) => jump_to_tag(cx, &e),
+            None => bail!("no current tag"),
+        };
+    }
+    let (file, base) =
+        find_tags_file(cx).ok_or_else(|| anyhow!("no tags file found (run `ctags -R`)"))?;
+    let matches: Vec<TagEntry> = parse_tags_file(&file, &base)
+        .into_iter()
+        .filter(|e| e.name == name)
+        .collect();
+    if matches.is_empty() {
+        bail!("tag not found: {name}");
+    }
+    push_tag_from(cx);
+    let n = matches.len();
+    let first = matches[0].clone();
+    TAG_MATCHES.with(|m| *m.borrow_mut() = matches);
+    TAG_IDX.with(|i| i.set(0));
+    jump_to_tag(cx, &first)?;
+    cx.editor.set_status(format!("tag 1 of {n}: {name}"));
+    Ok(())
+}
+
+/// Shared mover for `:tnext`/`:tprevious`/`:tfirst`/`:tlast` over the current
+/// tag's match list.
+fn tag_move(cx: &mut compositor::Context, to: TagMove) -> anyhow::Result<()> {
+    let n = TAG_MATCHES.with(|m| m.borrow().len());
+    if n == 0 {
+        bail!("no tags");
+    }
+    let cur = TAG_IDX.with(|i| i.get());
+    let idx = match to {
+        TagMove::Next => {
+            if cur + 1 >= n {
+                bail!("tag: at last match");
+            }
+            cur + 1
+        }
+        TagMove::Prev => {
+            if cur == 0 {
+                bail!("tag: at first match");
+            }
+            cur - 1
+        }
+        TagMove::First => 0,
+        TagMove::Last => n - 1,
+    };
+    let entry = TAG_MATCHES.with(|m| m.borrow()[idx].clone());
+    TAG_IDX.with(|i| i.set(idx));
+    jump_to_tag(cx, &entry)?;
+    cx.editor
+        .set_status(format!("tag {} of {}: {}", idx + 1, n, entry.name));
+    Ok(())
+}
+
+fn tag_next(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    tag_move(cx, TagMove::Next)
+}
+
+fn tag_previous(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    tag_move(cx, TagMove::Prev)
+}
+
+fn tag_first(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    tag_move(cx, TagMove::First)
+}
+
+fn tag_last(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    tag_move(cx, TagMove::Last)
+}
+
+/// `:pop` — pop the tag stack, returning to where the last `:tag` jumped from.
+fn tag_pop(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let frame = TAG_STACK.with(|s| s.borrow_mut().pop());
+    match frame {
+        None => bail!("at bottom of tag stack"),
+        Some(f) => {
+            cx.editor.open(&f.file, Action::Replace)?;
+            let (view, doc) = current!(cx.editor);
+            let pos = f.pos.min(doc.text().len_chars());
+            doc.set_selection(view.id, Selection::point(pos));
+            let scrolloff = cx.editor.config().scrolloff;
+            let (view, doc) = current!(cx.editor);
+            view.ensure_cursor_in_view(doc, scrolloff);
+            Ok(())
+        }
+    }
+}
+
+/// `:tags` — summarise the tag stack (depth) and the current match.
+fn tags_stack_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let depth = TAG_STACK.with(|s| s.borrow().len());
+    let cur = TAG_MATCHES.with(|m| {
+        let m = m.borrow();
+        let idx = TAG_IDX.with(|i| i.get());
+        m.get(idx).map(|e| (e.name.clone(), idx + 1, m.len()))
+    });
+    match cur {
+        Some((name, i, n)) => cx
+            .editor
+            .set_status(format!("tag stack {depth} deep; current: {name} ({i} of {n})")),
+        None => cx.editor.set_status(format!("tag stack {depth} deep")),
+    }
+    Ok(())
+}
+
 /// `:next-error` — Emacs `next-error` (`M-g n`): visit the next error's location.
 fn next_error(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -913,6 +1233,71 @@ fn buffer_do(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     for id in buffer_ids(cx.editor) {
         cx.editor.switch(id, Action::Replace);
         run_command_line(cx, &cmd);
+    }
+    Ok(())
+}
+
+/// `:windo {cmd}` — run an Ex command in each window (view) of the current
+/// tabpage, ending in the last window. Verified against Vim 9.2: `:windo` visits
+/// every window in order and does not restore focus to the starting window.
+fn window_do(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cmd = args.join(" ");
+    if cmd.trim().is_empty() {
+        bail!("usage: :windo <command>");
+    }
+    let views: Vec<_> = cx.editor.tree.views().map(|(v, _)| v.id).collect();
+    for view_id in views {
+        // A prior `{cmd}` (e.g. `:windo q`) may have closed this window — skip
+        // any id that is no longer in the tree so focus never panics.
+        if cx.editor.tree.views().any(|(v, _)| v.id == view_id) {
+            cx.editor.focus(view_id);
+            run_command_line(cx, &cmd);
+        }
+    }
+    Ok(())
+}
+
+/// `:wincmd {arg}` — run a window (CTRL-W) command by its key, e.g. `:wincmd h`
+/// focuses the window to the left. Covers the focus / split / move / close set;
+/// resize (`+`/`-`/`<`/`>`/`=`), rotate (`r`/`R`) and previous-window (`p`) are
+/// not supported yet and report an error rather than silently no-op.
+fn wincmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    use zemacs_view::tree::Direction;
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let arg = args.first().map(|a| a.as_ref()).unwrap_or("");
+    match arg {
+        "h" | "C-h" | "left" => cx.editor.focus_direction(Direction::Left),
+        "j" | "C-j" | "down" => cx.editor.focus_direction(Direction::Down),
+        "k" | "C-k" | "up" => cx.editor.focus_direction(Direction::Up),
+        "l" | "C-l" | "right" => cx.editor.focus_direction(Direction::Right),
+        "w" | "C-w" => cx.editor.focus_next(),
+        "s" | "S" | "C-s" => split(cx.editor, Action::HorizontalSplit),
+        "v" | "C-v" => split(cx.editor, Action::VerticalSplit),
+        "H" => cx.editor.swap_split_in_direction(Direction::Left),
+        "J" => cx.editor.swap_split_in_direction(Direction::Down),
+        "K" => cx.editor.swap_split_in_direction(Direction::Up),
+        "L" => cx.editor.swap_split_in_direction(Direction::Right),
+        "q" | "c" | "C-q" | "C-c" => cx.editor.close(view!(cx.editor).id),
+        "o" | "C-o" => {
+            let keep = cx.editor.tree.focus;
+            let others: Vec<_> = cx
+                .editor
+                .tree
+                .views()
+                .map(|(v, _)| v.id)
+                .filter(|&id| id != keep)
+                .collect();
+            for id in others {
+                cx.editor.close(id);
+            }
+        }
+        "" => bail!("wincmd: needs an argument (e.g. :wincmd h)"),
+        other => bail!("wincmd: unsupported argument '{other}'"),
     }
     Ok(())
 }
@@ -18062,6 +18447,31 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     Ok(())
 }
 
+/// vim `:source {file}` / `:so` — source a Vimscript file through the embedded
+/// vimlrs interpreter, with script context (`s:` scope, `<SID>`, line
+/// continuations). This is how a real `~/.vimrc`/plugin is loaded on demand.
+fn source_file(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let raw = args.join(" ");
+    let raw = raw.trim();
+    if raw.is_empty() {
+        bail!("usage: :source <file>");
+    }
+    let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(raw)).into_owned();
+    if !path.exists() {
+        bail!("source: {} does not exist", path.display());
+    }
+    match crate::commands::scripting::source_viml_file(cx, &path) {
+        Ok(()) => {
+            cx.editor.set_status(format!("sourced {}", path.display()));
+            Ok(())
+        }
+        Err(e) => Err(anyhow!("{e}")),
+    }
+}
+
 /// vim `:let {name} = {expr}` — evaluate the assignment in the embedded vimlrs
 /// interpreter, so the variable persists (readable by `:echo`, sourced plugins,
 /// `&opt` bridges, etc.). Bare `:let` lists variables (vimlrs handles it).
@@ -25566,6 +25976,76 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "make",
+        aliases: &[],
+        doc: "Run `make [args]`, collect errors into the quickfix list, jump to the first (vim :make).",
+        fun: make,
+        completer: CommandCompleter::none(),
+        // Take the argument tail verbatim so make flags/targets (`--version`,
+        // `-j4`, `all`) pass through instead of being parsed as `:make` flags.
+        signature: Signature {
+            positionals: (0, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tag",
+        aliases: &["ta"],
+        doc: "Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag).",
+        fun: tag_jump_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tnext",
+        aliases: &["tn"],
+        doc: "Jump to the next matching tag (vim :tnext).",
+        fun: tag_next,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tprevious",
+        aliases: &["tp", "tNext", "tN"],
+        doc: "Jump to the previous matching tag (vim :tprevious).",
+        fun: tag_previous,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tfirst",
+        aliases: &["trewind", "tr"],
+        doc: "Jump to the first matching tag (vim :tfirst).",
+        fun: tag_first,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tlast",
+        aliases: &[],
+        doc: "Jump to the last matching tag (vim :tlast).",
+        fun: tag_last,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "pop",
+        aliases: &["po"],
+        doc: "Pop the tag stack, returning to where the last :tag jumped from (vim :pop).",
+        fun: tag_pop,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tags",
+        aliases: &[],
+        doc: "Show the tag stack depth and the current matching tag (vim :tags).",
+        fun: tags_stack_list,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "arduino-compile",
         aliases: &["averify", "arduino-verify"],
         doc: "Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify).",
@@ -29954,6 +30434,30 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: tab_do,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "windo",
+        aliases: &[],
+        doc: "Run an ex-command in every window of the current tabpage.",
+        fun: window_do,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "wincmd",
+        aliases: &[],
+        doc: "Run a window (CTRL-W) command by key, e.g. :wincmd h focuses left.",
+        fun: wincmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "source",
+        aliases: &["so"],
+        doc: "Source a Vimscript file through the embedded vimlrs interpreter.",
+        fun: source_file,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "tabs",
@@ -34504,7 +35008,24 @@ fn execute_command_line(
 
     match typed::TYPABLE_COMMAND_MAP.get(command) {
         Some(cmd) => execute_command(cx, cmd, rest, event),
-        None if event == PromptEvent::Validate => Err(anyhow!("no such command: '{command}'")),
+        // Unknown to zemacs: route the whole line through the embedded vimlrs
+        // interpreter, the way Vim's own `:` prompt IS the Vimscript command
+        // engine. This makes `:call`/`:execute`/`:if …|…|endif`/`:for`/`:while`/
+        // `:function`/`:try`/`:throw`/`:unlet`/… and any other VimL statement
+        // work without hand-wiring each as a typable. A genuine typo surfaces
+        // vimlrs's own "not an editor command" error — also Vim-faithful.
+        None if event == PromptEvent::Validate => {
+            match crate::commands::scripting::eval_viml(cx, input) {
+                Ok(out) => {
+                    let out = out.trim();
+                    if !out.is_empty() {
+                        cx.editor.set_status(out.to_string());
+                    }
+                    Ok(())
+                }
+                Err(e) => Err(anyhow!("{e}")),
+            }
+        }
         None => Ok(()),
     }
 }

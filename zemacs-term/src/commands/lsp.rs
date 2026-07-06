@@ -15,7 +15,7 @@ use super::{push_jump, Context, Editor};
 
 use zemacs_core::{
     diagnostic::DiagnosticProvider, syntax::config::LanguageServerFeature,
-    text_annotations::InlineAnnotation, Selection, Uri,
+    text_annotations::InlineAnnotation, Selection, Transaction, Uri,
 };
 use zemacs_stdx::path;
 use zemacs_view::{
@@ -1386,6 +1386,83 @@ pub fn goto_reference(cx: &mut Context) {
                 editor.set_error("No references found.");
             } else {
                 goto_impl(editor, compositor, locations);
+            }
+        };
+        Ok(Callback::EditorCompositor(Box::new(call)))
+    });
+}
+
+/// JetBrains "Safe Delete" (⌘⌫): before removing the symbol under the cursor,
+/// query its references (declaration excluded). If any usage remains, the delete
+/// is refused and the usages open in the jump picker for review; only when the
+/// symbol is unused is its range deleted. The usage check is the point — a blind
+/// delete can silently orphan call sites, this one cannot.
+pub fn safe_delete(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+
+    // Expand a bare cursor to the word under it so the whole identifier is the
+    // delete target; an existing selection is taken as-is.
+    let primary = doc.selection(view.id).primary();
+    let (from, to) = if primary.from() == primary.to() {
+        let w = zemacs_core::textobject::textobject_word(
+            doc.text().slice(..),
+            primary,
+            zemacs_core::textobject::TextObject::Inside,
+            1,
+            false,
+        );
+        (w.from(), w.to())
+    } else {
+        (primary.from(), primary.to())
+    };
+
+    let mut futures: FuturesUnordered<_> = doc
+        .language_servers_with_feature(LanguageServerFeature::GotoReference)
+        .map(|language_server| {
+            let offset_encoding = language_server.offset_encoding();
+            let pos = doc.position(view.id, offset_encoding);
+            // `false`: exclude the declaration — only real usages block the delete.
+            let future = language_server
+                .goto_reference(doc.identifier(), pos, false, None)
+                .unwrap();
+            async move { anyhow::Ok((future.await?, offset_encoding)) }
+        })
+        .collect();
+
+    if futures.is_empty() {
+        cx.editor
+            .set_error("Safe Delete needs a language server with reference support");
+        return;
+    }
+
+    cx.jobs.callback(async move {
+        let mut locations = Vec::new();
+        while let Some(response) = futures.next().await {
+            match response {
+                Ok((lsp_locations, offset_encoding)) => locations.extend(
+                    lsp_locations
+                        .into_iter()
+                        .flatten()
+                        .flat_map(|location| lsp_location_to_location(location, offset_encoding)),
+                ),
+                Err(err) => log::error!("Error requesting references: {err}"),
+            }
+        }
+        let call = move |editor: &mut Editor, compositor: &mut Compositor| {
+            if locations.is_empty() {
+                let (view, doc) = current!(editor);
+                let sel = Selection::single(from, to);
+                let transaction = Transaction::delete_by_selection(doc.text(), &sel, |range| {
+                    (range.from(), range.to())
+                });
+                doc.apply(&transaction, view.id);
+                editor.set_status("Safe Delete: symbol unused — deleted");
+            } else {
+                let n = locations.len();
+                goto_impl(editor, compositor, locations);
+                editor.set_error(format!(
+                    "Safe Delete: {n} usage(s) remain — review before deleting"
+                ));
             }
         };
         Ok(Callback::EditorCompositor(Box::new(call)))

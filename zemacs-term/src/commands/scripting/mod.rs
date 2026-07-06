@@ -476,6 +476,30 @@ pub fn eval_viml(cx: &mut compositor::Context, src: &str) -> Result<String, Stri
     out
 }
 
+/// Source a Vimscript file through the embedded vimlrs interpreter (the vim
+/// `:source` ex-command). Uses vimlrs's file evaluator so the script runs with
+/// script context (`s:` scope, `<SID>`, line continuations) rather than
+/// string-eval, then flushes any theme a sourced `:colorscheme`/`:highlight`
+/// defined. Same host-hook wiring as `load_init_scripts`' vimrc pass.
+pub fn source_viml_file(
+    cx: &mut compositor::Context,
+    path: &std::path::Path,
+) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        let _guard = CxGuard::new(cx);
+        install_viml_host_hooks();
+        let res = vimlrs::fusevm_bridge::eval_file(path).map_err(|e| e.0);
+        let _ = with_cx(flush_viml_theme);
+        res
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (cx, path);
+        Err("vimlrs (`:source`) is only available on unix".to_string())
+    }
+}
+
 /// Filter the primary selection (or the whole buffer, if the selection is
 /// empty) through an awk `program`, replacing it with the program's output as
 /// one undo step. Returns a short status message.
