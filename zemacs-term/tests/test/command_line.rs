@@ -1328,3 +1328,32 @@ async fn set_opt_query_reads_effective_config() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_completes_vim_option_names() -> anyhow::Result<()> {
+    // `:set number<tab>` and `:set no<tab>` complete vim option names + no-forms.
+    let app = AppBuilder::new().build()?;
+    let names = |input: &str| -> Vec<String> {
+        zemacs_term::ui::completers::setting(&app.editor, input)
+            .into_iter()
+            .map(|(_, span)| span.content.to_string())
+            .collect()
+    };
+    assert!(
+        names("number").iter().any(|n| n == "number"),
+        "completes `number`"
+    );
+    assert!(
+        names("expandt").iter().any(|n| n == "expandtab"),
+        "completes `expandtab`"
+    );
+    assert!(
+        names("nonu").iter().any(|n| n == "nonumber"),
+        "completes `nonumber`"
+    );
+    assert!(
+        names("noexpand").iter().any(|n| n == "noexpandtab"),
+        "completes `noexpandtab`"
+    );
+    Ok(())
+}
