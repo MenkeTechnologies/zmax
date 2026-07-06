@@ -18846,6 +18846,87 @@ fn apply_config_value(
     Ok(())
 }
 
+// Every `:set` option's value is stored here (over the compiled-in defaults) so
+// the full Vim option surface round-trips: `:set opt=val` stores it, `:set opt?`
+// reports it, `:set` lists changed options and `:set all` lists them all — even
+// options with no behavioral effect, exactly as Vim keeps inert options.
+thread_local! {
+    static VIM_OPTION_STORE: std::cell::RefCell<std::collections::HashMap<String, String>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// Look up an option in the compiled-in table: `(is_boolean, default)`.
+fn vim_opt_meta(name: &str) -> Option<(bool, &'static str)> {
+    crate::commands::vim_options_data::VIM_OPTION_TABLE
+        .iter()
+        .find(|(n, _, _)| *n == name)
+        .map(|(_, is_bool, default)| (*is_bool, *default))
+}
+
+fn vim_opt_store(name: &str, value: String) {
+    VIM_OPTION_STORE.with(|s| {
+        s.borrow_mut().insert(name.to_string(), value);
+    });
+}
+
+fn vim_opt_reset(name: &str) {
+    if name == "all" {
+        VIM_OPTION_STORE.with(|s| s.borrow_mut().clear());
+    } else {
+        VIM_OPTION_STORE.with(|s| {
+            s.borrow_mut().remove(name);
+        });
+    }
+}
+
+/// The current value of an option — the stored value, else the compiled default.
+fn vim_opt_current(name: &str) -> Option<String> {
+    if let Some(v) = VIM_OPTION_STORE.with(|s| s.borrow().get(name).cloned()) {
+        return Some(v);
+    }
+    vim_opt_meta(name).map(|(_, d)| d.to_string())
+}
+
+/// Format one option the way Vim's `:set opt?` does: `opt` / `noopt` for
+/// booleans, `opt=value` otherwise.
+fn vim_opt_display(name: &str) -> String {
+    let is_bool = match vim_opt_meta(name) {
+        Some((b, _)) => b,
+        // Unknown option that was still set — infer from the stored value.
+        None => matches!(vim_opt_current(name).as_deref(), Some("on") | Some("off")),
+    };
+    let val = vim_opt_current(name).unwrap_or_default();
+    if is_bool {
+        if val == "off" {
+            format!("no{name}")
+        } else {
+            name.to_string()
+        }
+    } else {
+        format!("{name}={val}")
+    }
+}
+
+/// Canonical `(name, value)` for the option store. Strips `no`/`inv` prefixes and
+/// a trailing `!` and splits `opt=val` so every form maps to one stored entry.
+fn vim_opt_canonical(tok: &str) -> (String, String) {
+    let t = tok.trim_end_matches('!');
+    if let Some((n, v)) = t.split_once(['=', ':']) {
+        return (n.to_string(), v.to_string());
+    }
+    if let Some(rest) = t.strip_prefix("inv") {
+        if vim_opt_meta(rest).is_some() {
+            return (rest.to_string(), "on".to_string());
+        }
+    }
+    if let Some(rest) = t.strip_prefix("no") {
+        if vim_opt_meta(rest).is_some() {
+            return (rest.to_string(), "off".to_string());
+        }
+    }
+    (t.to_string(), "on".to_string())
+}
+
 /// `:set` with vim-compatible syntax (`:set nu`, `:set nowrap`, `:set tw=80`,
 /// `:set cursorline`), falling back to native `:set key value`.
 fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -18854,27 +18935,33 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     }
     let tokens: Vec<String> = (0..args.len()).map(|i| args[i].to_string()).collect();
 
-    // vim `:set` with no arguments lists the options — show the current editor
-    // config as `key = value` lines in a scratch buffer.
-    if tokens.is_empty() {
-        let cfg = serde_json::json!(&cx.editor.config().deref());
-        fn flatten(prefix: &str, v: &Value, out: &mut String) {
-            match v {
-                Value::Object(m) => {
-                    for (k, vv) in m {
-                        let key = if prefix.is_empty() {
-                            k.clone()
-                        } else {
-                            format!("{prefix}.{k}")
-                        };
-                        flatten(&key, vv, out);
-                    }
+    // vim `:set` — list options that differ from their default. `:set all` —
+    // list every option. Both render in a scratch buffer.
+    if tokens.is_empty() || (tokens.len() == 1 && tokens[0] == "all") {
+        let all = tokens.len() == 1;
+        let mut lines: Vec<String> = crate::commands::vim_options_data::VIM_OPTION_TABLE
+            .iter()
+            .filter_map(|(name, _, default)| {
+                let changed =
+                    VIM_OPTION_STORE.with(|s| s.borrow().get(*name).is_some_and(|v| v != default));
+                (all || changed).then(|| vim_opt_display(name))
+            })
+            .collect();
+        // Options set that aren't in the table (unknown but still stored).
+        VIM_OPTION_STORE.with(|s| {
+            for name in s.borrow().keys() {
+                if vim_opt_meta(name).is_none() {
+                    lines.push(vim_opt_display(name));
                 }
-                other => out.push_str(&format!("{prefix} = {other}\n")),
             }
-        }
-        let mut out = String::from("--- options (:set) ---\n\n");
-        flatten("", &cfg, &mut out);
+        });
+        lines.sort();
+        let header = if all {
+            "--- all options ---\n\n"
+        } else {
+            "--- changed options (:set) ---\n\n"
+        };
+        let out = format!("{header}{}\n", lines.join("\n"));
         super::show_text_in_scratch(cx.editor, &out);
         return Ok(());
     }
@@ -18905,6 +18992,21 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     let mut indent_expand: Option<bool> = None;
     let mut indent_width: Option<u8> = None;
     for tok in &tokens {
+        // `:set opt?` reports the option's value; `:set opt&` resets it. These
+        // read/clear the option store and don't change config.
+        if let Some(opt) = tok.strip_suffix('?') {
+            cx.editor.set_status(vim_opt_display(opt));
+            continue;
+        }
+        if let Some(opt) = tok.strip_suffix('&') {
+            vim_opt_reset(opt);
+            continue;
+        }
+        // Record every option in the store (so it round-trips via `:set opt?`,
+        // `:set` and `:set all`) whether or not it maps to editor behavior.
+        let (store_name, store_value) = vim_opt_canonical(tok);
+        vim_opt_store(&store_name, store_value);
+
         let (neg, toggle, name, value) = parse_set_token(tok);
 
         // Line-number *visibility* is gutter-layout membership, not the

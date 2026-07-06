@@ -15,6 +15,8 @@ pub mod scripting;
 pub mod scripting;
 pub(crate) mod syntax;
 pub(crate) mod typed;
+#[path = "commands/vim_options_data.rs"]
+pub(crate) mod vim_options_data;
 
 pub use dap::*;
 use futures_util::FutureExt;

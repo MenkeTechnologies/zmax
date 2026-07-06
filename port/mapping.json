@@ -34891,5 +34891,1989 @@
       "typable:set"
     ],
     "note": ":set softtabstop=N sets the document indent width (with expandtab, Spaces(N))"
+  },
+  {
+    "spec_id": "neovim.option.allowrevins",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set allowrevins is accepted, stored and queryable (:set allowrevins?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.ambiwidth",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set ambiwidth is accepted, stored and queryable (:set ambiwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.arabic",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set arabic is accepted, stored and queryable (:set arabic?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.arabicshape",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set arabicshape is accepted, stored and queryable (:set arabicshape?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.autochdir",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set autochdir is accepted, stored and queryable (:set autochdir?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.background",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set background is accepted, stored and queryable (:set background?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.backspace",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set backspace is accepted, stored and queryable (:set backspace?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.backupcopy",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set backupcopy is accepted, stored and queryable (:set backupcopy?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.backupdir",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set backupdir is accepted, stored and queryable (:set backupdir?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.backupext",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set backupext is accepted, stored and queryable (:set backupext?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.backupskip",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set backupskip is accepted, stored and queryable (:set backupskip?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.belloff",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set belloff is accepted, stored and queryable (:set belloff?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.binary",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set binary is accepted, stored and queryable (:set binary?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.bomb",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set bomb is accepted, stored and queryable (:set bomb?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.breakat",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set breakat is accepted, stored and queryable (:set breakat?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.bufhidden",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set bufhidden is accepted, stored and queryable (:set bufhidden?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.buflisted",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set buflisted is accepted, stored and queryable (:set buflisted?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.buftype",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set buftype is accepted, stored and queryable (:set buftype?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.busy",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set busy is accepted, stored and queryable (:set busy?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.casemap",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set casemap is accepted, stored and queryable (:set casemap?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.cdhome",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set cdhome is accepted, stored and queryable (:set cdhome?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.cdpath",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set cdpath is accepted, stored and queryable (:set cdpath?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.cedit",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set cedit is accepted, stored and queryable (:set cedit?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.channel",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set channel is accepted, stored and queryable (:set channel?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.charconvert",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set charconvert is accepted, stored and queryable (:set charconvert?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.chistory",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set chistory is accepted, stored and queryable (:set chistory?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.cmdheight",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set cmdheight is accepted, stored and queryable (:set cmdheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.cmdwinheight",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set cmdwinheight is accepted, stored and queryable (:set cmdwinheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.columns",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set columns is accepted, stored and queryable (:set columns?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.comments",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set comments is accepted, stored and queryable (:set comments?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.commentstring",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set commentstring is accepted, stored and queryable (:set commentstring?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.completetimeout",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set completetimeout is accepted, stored and queryable (:set completetimeout?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.concealcursor",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set concealcursor is accepted, stored and queryable (:set concealcursor?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.conceallevel",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set conceallevel is accepted, stored and queryable (:set conceallevel?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.confirm",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set confirm is accepted, stored and queryable (:set confirm?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.cpoptions",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set cpoptions is accepted, stored and queryable (:set cpoptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.cursorbind",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set cursorbind is accepted, stored and queryable (:set cursorbind?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.debug",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set debug is accepted, stored and queryable (:set debug?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.define",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set define is accepted, stored and queryable (:set define?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.delcombine",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set delcombine is accepted, stored and queryable (:set delcombine?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.diff",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set diff is accepted, stored and queryable (:set diff?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.diffanchors",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set diffanchors is accepted, stored and queryable (:set diffanchors?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.diffexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set diffexpr is accepted, stored and queryable (:set diffexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.diffopt",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set diffopt is accepted, stored and queryable (:set diffopt?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.digraph",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set digraph is accepted, stored and queryable (:set digraph?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.directory",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set directory is accepted, stored and queryable (:set directory?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.display",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set display is accepted, stored and queryable (:set display?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.eadirection",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set eadirection is accepted, stored and queryable (:set eadirection?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.emoji",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set emoji is accepted, stored and queryable (:set emoji?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.endoffile",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set endoffile is accepted, stored and queryable (:set endoffile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.equalalways",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set equalalways is accepted, stored and queryable (:set equalalways?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.equalprg",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set equalprg is accepted, stored and queryable (:set equalprg?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.errorbells",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set errorbells is accepted, stored and queryable (:set errorbells?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.errorfile",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set errorfile is accepted, stored and queryable (:set errorfile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.errorformat",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set errorformat is accepted, stored and queryable (:set errorformat?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.eventignore",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set eventignore is accepted, stored and queryable (:set eventignore?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.eventignorewin",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set eventignorewin is accepted, stored and queryable (:set eventignorewin?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.exrc",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set exrc is accepted, stored and queryable (:set exrc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.fileencodings",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set fileencodings is accepted, stored and queryable (:set fileencodings?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.fileignorecase",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set fileignorecase is accepted, stored and queryable (:set fileignorecase?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.filetype",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set filetype is accepted, stored and queryable (:set filetype?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.fillchars",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set fillchars is accepted, stored and queryable (:set fillchars?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.findfunc",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set findfunc is accepted, stored and queryable (:set findfunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldclose",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldclose is accepted, stored and queryable (:set foldclose?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldenable",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldenable is accepted, stored and queryable (:set foldenable?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldexpr is accepted, stored and queryable (:set foldexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldignore",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldignore is accepted, stored and queryable (:set foldignore?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldlevel",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldlevel is accepted, stored and queryable (:set foldlevel?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldlevelstart",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldlevelstart is accepted, stored and queryable (:set foldlevelstart?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldmarker",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldmarker is accepted, stored and queryable (:set foldmarker?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldmethod",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldmethod is accepted, stored and queryable (:set foldmethod?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldminlines",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldminlines is accepted, stored and queryable (:set foldminlines?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldnestmax",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldnestmax is accepted, stored and queryable (:set foldnestmax?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldopen",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldopen is accepted, stored and queryable (:set foldopen?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.foldtext",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set foldtext is accepted, stored and queryable (:set foldtext?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.formatexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set formatexpr is accepted, stored and queryable (:set formatexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.formatlistpat",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set formatlistpat is accepted, stored and queryable (:set formatlistpat?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.formatprg",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set formatprg is accepted, stored and queryable (:set formatprg?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.fsync",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set fsync is accepted, stored and queryable (:set fsync?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.grepformat",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set grepformat is accepted, stored and queryable (:set grepformat?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.grepprg",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set grepprg is accepted, stored and queryable (:set grepprg?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.guifont",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set guifont is accepted, stored and queryable (:set guifont?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.guifontwide",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set guifontwide is accepted, stored and queryable (:set guifontwide?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.helpfile",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set helpfile is accepted, stored and queryable (:set helpfile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.helpheight",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set helpheight is accepted, stored and queryable (:set helpheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.helplang",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set helplang is accepted, stored and queryable (:set helplang?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.hidden",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set hidden is accepted, stored and queryable (:set hidden?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.history",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set history is accepted, stored and queryable (:set history?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.hlsearch",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set hlsearch is accepted, stored and queryable (:set hlsearch?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.icon",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set icon is accepted, stored and queryable (:set icon?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.iconstring",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set iconstring is accepted, stored and queryable (:set iconstring?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.iminsert",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set iminsert is accepted, stored and queryable (:set iminsert?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.imsearch",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set imsearch is accepted, stored and queryable (:set imsearch?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.inccommand",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set inccommand is accepted, stored and queryable (:set inccommand?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.include",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set include is accepted, stored and queryable (:set include?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.includeexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set includeexpr is accepted, stored and queryable (:set includeexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.isfname",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set isfname is accepted, stored and queryable (:set isfname?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.isident",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set isident is accepted, stored and queryable (:set isident?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.iskeyword",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set iskeyword is accepted, stored and queryable (:set iskeyword?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.isprint",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set isprint is accepted, stored and queryable (:set isprint?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.joinspaces",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set joinspaces is accepted, stored and queryable (:set joinspaces?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.jumpoptions",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set jumpoptions is accepted, stored and queryable (:set jumpoptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.keymap",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set keymap is accepted, stored and queryable (:set keymap?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.keymodel",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set keymodel is accepted, stored and queryable (:set keymodel?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.keywordprg",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set keywordprg is accepted, stored and queryable (:set keywordprg?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.langmap",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set langmap is accepted, stored and queryable (:set langmap?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.langmenu",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set langmenu is accepted, stored and queryable (:set langmenu?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.langremap",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set langremap is accepted, stored and queryable (:set langremap?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.lazyredraw",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set lazyredraw is accepted, stored and queryable (:set lazyredraw?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.lhistory",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set lhistory is accepted, stored and queryable (:set lhistory?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.lines",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set lines is accepted, stored and queryable (:set lines?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.linespace",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set linespace is accepted, stored and queryable (:set linespace?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.loadplugins",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set loadplugins is accepted, stored and queryable (:set loadplugins?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.makeef",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set makeef is accepted, stored and queryable (:set makeef?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.makeencoding",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set makeencoding is accepted, stored and queryable (:set makeencoding?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.makeprg",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set makeprg is accepted, stored and queryable (:set makeprg?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.matchpairs",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set matchpairs is accepted, stored and queryable (:set matchpairs?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.matchtime",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set matchtime is accepted, stored and queryable (:set matchtime?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.maxfuncdepth",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set maxfuncdepth is accepted, stored and queryable (:set maxfuncdepth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.maxmapdepth",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set maxmapdepth is accepted, stored and queryable (:set maxmapdepth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.maxmempattern",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set maxmempattern is accepted, stored and queryable (:set maxmempattern?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.maxsearchcount",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set maxsearchcount is accepted, stored and queryable (:set maxsearchcount?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.menuitems",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set menuitems is accepted, stored and queryable (:set menuitems?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.messagesopt",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set messagesopt is accepted, stored and queryable (:set messagesopt?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.mkspellmem",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set mkspellmem is accepted, stored and queryable (:set mkspellmem?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.modeline",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set modeline is accepted, stored and queryable (:set modeline?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.modelineexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set modelineexpr is accepted, stored and queryable (:set modelineexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.modelines",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set modelines is accepted, stored and queryable (:set modelines?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.modifiable",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set modifiable is accepted, stored and queryable (:set modifiable?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.modified",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set modified is accepted, stored and queryable (:set modified?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.more",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set more is accepted, stored and queryable (:set more?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.nrformats",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set nrformats is accepted, stored and queryable (:set nrformats?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.omnifunc",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set omnifunc is accepted, stored and queryable (:set omnifunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.operatorfunc",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set operatorfunc is accepted, stored and queryable (:set operatorfunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.packpath",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set packpath is accepted, stored and queryable (:set packpath?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.paragraphs",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set paragraphs is accepted, stored and queryable (:set paragraphs?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.patchexpr",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set patchexpr is accepted, stored and queryable (:set patchexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.patchmode",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set patchmode is accepted, stored and queryable (:set patchmode?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.path",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set path is accepted, stored and queryable (:set path?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.previewheight",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set previewheight is accepted, stored and queryable (:set previewheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.previewwindow",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set previewwindow is accepted, stored and queryable (:set previewwindow?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.pumblend",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set pumblend is accepted, stored and queryable (:set pumblend?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.pumheight",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set pumheight is accepted, stored and queryable (:set pumheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.pummaxwidth",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set pummaxwidth is accepted, stored and queryable (:set pummaxwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.pumwidth",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set pumwidth is accepted, stored and queryable (:set pumwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.pyxversion",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set pyxversion is accepted, stored and queryable (:set pyxversion?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.quickfixtextfunc",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set quickfixtextfunc is accepted, stored and queryable (:set quickfixtextfunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.quoteescape",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set quoteescape is accepted, stored and queryable (:set quoteescape?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.readonly",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set readonly is accepted, stored and queryable (:set readonly?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.redrawdebug",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set redrawdebug is accepted, stored and queryable (:set redrawdebug?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.redrawtime",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set redrawtime is accepted, stored and queryable (:set redrawtime?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.regexpengine",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set regexpengine is accepted, stored and queryable (:set regexpengine?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.report",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set report is accepted, stored and queryable (:set report?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.revins",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set revins is accepted, stored and queryable (:set revins?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.rightleft",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set rightleft is accepted, stored and queryable (:set rightleft?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.rightleftcmd",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set rightleftcmd is accepted, stored and queryable (:set rightleftcmd?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.rulerformat",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set rulerformat is accepted, stored and queryable (:set rulerformat?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.runtimepath",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set runtimepath is accepted, stored and queryable (:set runtimepath?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.scrollback",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set scrollback is accepted, stored and queryable (:set scrollback?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.scrollbind",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set scrollbind is accepted, stored and queryable (:set scrollbind?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.scrolloffpad",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set scrolloffpad is accepted, stored and queryable (:set scrolloffpad?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.scrollopt",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set scrollopt is accepted, stored and queryable (:set scrollopt?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.sections",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set sections is accepted, stored and queryable (:set sections?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.selection",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set selection is accepted, stored and queryable (:set selection?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.selectmode",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set selectmode is accepted, stored and queryable (:set selectmode?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.sessionoptions",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set sessionoptions is accepted, stored and queryable (:set sessionoptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.shada",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set shada is accepted, stored and queryable (:set shada?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.shadafile",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set shadafile is accepted, stored and queryable (:set shadafile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.shortmess",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set shortmess is accepted, stored and queryable (:set shortmess?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.showcmd",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set showcmd is accepted, stored and queryable (:set showcmd?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.showcmdloc",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set showcmdloc is accepted, stored and queryable (:set showcmdloc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.showfulltag",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set showfulltag is accepted, stored and queryable (:set showfulltag?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.showmatch",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set showmatch is accepted, stored and queryable (:set showmatch?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.spell",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set spell is accepted, stored and queryable (:set spell?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.spellcapcheck",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set spellcapcheck is accepted, stored and queryable (:set spellcapcheck?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.spellfile",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set spellfile is accepted, stored and queryable (:set spellfile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.spelllang",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set spelllang is accepted, stored and queryable (:set spelllang?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.spelloptions",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set spelloptions is accepted, stored and queryable (:set spelloptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.spellsuggest",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set spellsuggest is accepted, stored and queryable (:set spellsuggest?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.splitbelow",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set splitbelow is accepted, stored and queryable (:set splitbelow?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.splitkeep",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set splitkeep is accepted, stored and queryable (:set splitkeep?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.splitright",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set splitright is accepted, stored and queryable (:set splitright?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.startofline",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set startofline is accepted, stored and queryable (:set startofline?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.suffixes",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set suffixes is accepted, stored and queryable (:set suffixes?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.suffixesadd",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set suffixesadd is accepted, stored and queryable (:set suffixesadd?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.swapfile",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set swapfile is accepted, stored and queryable (:set swapfile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.switchbuf",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set switchbuf is accepted, stored and queryable (:set switchbuf?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.synmaxcol",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set synmaxcol is accepted, stored and queryable (:set synmaxcol?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.syntax",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set syntax is accepted, stored and queryable (:set syntax?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.tabclose",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set tabclose is accepted, stored and queryable (:set tabclose?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.tabpagemax",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set tabpagemax is accepted, stored and queryable (:set tabpagemax?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.tagbsearch",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set tagbsearch is accepted, stored and queryable (:set tagbsearch?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.tagcase",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set tagcase is accepted, stored and queryable (:set tagcase?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.tagfunc",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set tagfunc is accepted, stored and queryable (:set tagfunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.taglength",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set taglength is accepted, stored and queryable (:set taglength?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.tagrelative",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set tagrelative is accepted, stored and queryable (:set tagrelative?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.tags",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set tags is accepted, stored and queryable (:set tags?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.tagstack",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set tagstack is accepted, stored and queryable (:set tagstack?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.termbidi",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set termbidi is accepted, stored and queryable (:set termbidi?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.termpastefilter",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set termpastefilter is accepted, stored and queryable (:set termpastefilter?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.termsync",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set termsync is accepted, stored and queryable (:set termsync?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.thesaurusfunc",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set thesaurusfunc is accepted, stored and queryable (:set thesaurusfunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.tildeop",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set tildeop is accepted, stored and queryable (:set tildeop?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.timeout",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set timeout is accepted, stored and queryable (:set timeout?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.timeoutlen",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set timeoutlen is accepted, stored and queryable (:set timeoutlen?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.title",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set title is accepted, stored and queryable (:set title?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.titlelen",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set titlelen is accepted, stored and queryable (:set titlelen?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.titleold",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set titleold is accepted, stored and queryable (:set titleold?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.titlestring",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set titlestring is accepted, stored and queryable (:set titlestring?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.ttimeout",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set ttimeout is accepted, stored and queryable (:set ttimeout?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.ttimeoutlen",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set ttimeoutlen is accepted, stored and queryable (:set ttimeoutlen?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.ttyfast",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set ttyfast is accepted, stored and queryable (:set ttyfast?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.undodir",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set undodir is accepted, stored and queryable (:set undodir?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.undofile",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set undofile is accepted, stored and queryable (:set undofile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.undolevels",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set undolevels is accepted, stored and queryable (:set undolevels?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.undoreload",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set undoreload is accepted, stored and queryable (:set undoreload?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.updatecount",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set updatecount is accepted, stored and queryable (:set updatecount?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.varsofttabstop",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set varsofttabstop is accepted, stored and queryable (:set varsofttabstop?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.vartabstop",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set vartabstop is accepted, stored and queryable (:set vartabstop?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.verbose",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set verbose is accepted, stored and queryable (:set verbose?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.verbosefile",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set verbosefile is accepted, stored and queryable (:set verbosefile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.viewdir",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set viewdir is accepted, stored and queryable (:set viewdir?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.viewoptions",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set viewoptions is accepted, stored and queryable (:set viewoptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.virtualedit",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set virtualedit is accepted, stored and queryable (:set virtualedit?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.visualbell",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set visualbell is accepted, stored and queryable (:set visualbell?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.warn",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set warn is accepted, stored and queryable (:set warn?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.whichwrap",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set whichwrap is accepted, stored and queryable (:set whichwrap?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.wildchar",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set wildchar is accepted, stored and queryable (:set wildchar?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.wildcharm",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set wildcharm is accepted, stored and queryable (:set wildcharm?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.wildignore",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set wildignore is accepted, stored and queryable (:set wildignore?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.wildmode",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set wildmode is accepted, stored and queryable (:set wildmode?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.wildoptions",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set wildoptions is accepted, stored and queryable (:set wildoptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winaltkeys",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winaltkeys is accepted, stored and queryable (:set winaltkeys?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winbar",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winbar is accepted, stored and queryable (:set winbar?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winblend",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winblend is accepted, stored and queryable (:set winblend?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.window",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set window is accepted, stored and queryable (:set window?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winfixbuf",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winfixbuf is accepted, stored and queryable (:set winfixbuf?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winfixheight",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winfixheight is accepted, stored and queryable (:set winfixheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winfixwidth",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winfixwidth is accepted, stored and queryable (:set winfixwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winheight",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winheight is accepted, stored and queryable (:set winheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winhighlight",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winhighlight is accepted, stored and queryable (:set winhighlight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winminheight",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winminheight is accepted, stored and queryable (:set winminheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winminwidth",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winminwidth is accepted, stored and queryable (:set winminwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winpinned",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winpinned is accepted, stored and queryable (:set winpinned?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.winwidth",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set winwidth is accepted, stored and queryable (:set winwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.write",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set write is accepted, stored and queryable (:set write?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.writeany",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set writeany is accepted, stored and queryable (:set writeany?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.option.writedelay",
+    "status": "partial",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": ":set writedelay is accepted, stored and queryable (:set writedelay?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
   }
 ]
