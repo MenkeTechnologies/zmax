@@ -1247,3 +1247,26 @@ async fn set_hlsearch_highlights_search_matches() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn incsearch_previews_match_while_typing() -> anyhow::Result<()> {
+    // Typing /foo (no <ret>) incrementally jumps the selection to the next match
+    // (vim incsearch) — verified before the search is even confirmed.
+    test_key_sequence(
+        &mut AppBuilder::new()
+            .with_input_text("#[b|]#ar foo baz")
+            .build()?,
+        Some("/foo"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (view, doc) = zemacs_view::current_ref!(app.editor);
+            let sel = doc.selection(view.id).primary();
+            let text = doc.text().slice(..);
+            let matched = text.slice(sel.from()..sel.to()).to_string();
+            assert_eq!(matched, "foo", "incsearch jumps to the match while typing");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
