@@ -1981,6 +1981,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-right" => ghost_text_accept_word, // partial-accept: take the next word of the suggestion
 
         "C-r"   => insert_register,
+        "C-o"   => insert_command_normal,         // i_CTRL-O: run one Normal command, return to Insert
         "C-]"   => expand_abbrev,                 // i_CTRL-]: trigger abbreviation before point
         "C-a"   => insert_last_inserted_text,    // i_CTRL-A: insert previously inserted text
         "C-@"   => insert_last_inserted_and_stop, // i_CTRL-@: insert previously inserted text, stop insert

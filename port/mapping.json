@@ -34617,5 +34617,14 @@
       "key:command:C-r"
     ],
     "note": "c_CTRL-R CTRL-O {reg} insert register/object ≈ c_CTRL-R"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_o",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-o",
+      "static:insert_command_normal"
+    ],
+    "note": "i_CTRL-O run one Normal-mode command then return to Insert (one-shot; integration-tested)"
   }
 ]

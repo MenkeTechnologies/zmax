@@ -644,3 +644,18 @@ async fn test_indent_with_spaces() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn insert_ctrl_o_runs_one_normal_command_then_returns_to_insert() -> anyhow::Result<()> {
+    // Uses the shipped vim keymap (where i_CTRL-O is bound). `i abc` types "abc"
+    // in insert mode; `<C-o>0` runs exactly ONE normal-mode command (go to line
+    // start) and returns to insert; `X` is then inserted at column 0 — proving
+    // the one-shot dropped to Normal and came back (a stuck-in-normal or ignored
+    // CTRL-O would instead yield "abco0X" or leave X unentered).
+    test_with_config(
+        AppBuilder::new().with_config(Config::default()),
+        ("#[|]#", "iabc<C-o>0X", "X#[a|]#bc"),
+    )
+    .await?;
+    Ok(())
+}

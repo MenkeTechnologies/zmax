@@ -1832,6 +1832,13 @@ impl EditorView {
             None
         };
 
+        // vim i_CTRL-O one-shot: if the flag was already armed when this event
+        // began, the command about to run is the "one command" that should be
+        // followed by a return to Insert. Reading it before the executing closure
+        // borrows `cxt` excludes the arming CTRL-O press itself (which arms the
+        // flag mid-execution).
+        let oneshot_armed = cxt.editor.insert_oneshot;
+
         let mut execute_command = |command: &commands::MappableCommand| {
             command.execute(cxt);
             zemacs_event::dispatch(PostCommand { command, cx: cxt });
@@ -1899,6 +1906,25 @@ impl EditorView {
                 }
             }
             KeymapResult::NotFound | KeymapResult::Cancelled(_) => return Some(key_result),
+        }
+
+        // Complete the vim i_CTRL-O one-shot: a command that was matched (not a
+        // still-pending prefix) has now run in the temporary Normal mode, so
+        // return to Insert. Only fires when the flag was armed before this event,
+        // so the CTRL-O press itself and any following multi-key prefix are
+        // skipped. If the one command itself changed the mode (e.g. `A`/`i`),
+        // honor that instead of forcing Insert.
+        if oneshot_armed
+            && cxt.editor.insert_oneshot
+            && matches!(
+                key_result,
+                KeymapResult::Matched(_) | KeymapResult::MatchedSequence(_)
+            )
+        {
+            cxt.editor.insert_oneshot = false;
+            if cxt.editor.mode() == Mode::Normal {
+                cxt.editor.mode = Mode::Insert;
+            }
         }
         None
     }

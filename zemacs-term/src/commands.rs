@@ -1169,6 +1169,7 @@ impl MappableCommand {
         insert_char_by_code, "Insert a character by Unicode code point (emacs insert-char, C-x 8 RET)",
         backward_delete_char_untabify, "Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify)",
         insert_last_inserted_text, "Insert the previously inserted text (vim i_CTRL-A)",
+        insert_command_normal, "Run one Normal-mode command, then return to Insert (vim i_CTRL-O)",
         insert_last_inserted_and_stop, "Insert previously inserted text and stop insert (vim i_CTRL-@)",
         copy_between_registers, "Copy between two registers",
         copy_to_register, "Copy the region into a register (emacs copy-to-register, C-x r s)",
@@ -15802,6 +15803,16 @@ fn enter_insert_mode(cx: &mut Context) {
         .primary()
         .cursor(doc.text().slice(..));
     INSERT_ANCHOR.store(pos, std::sync::atomic::Ordering::Relaxed);
+}
+
+// vim insert `CTRL-O`: drop to Normal mode for exactly one command, then return
+// to Insert. Arms a one-shot flag the dispatch loop consumes once the following
+// command completes (so multi-key commands like `dw` run fully before returning).
+fn insert_command_normal(cx: &mut Context) {
+    if cx.editor.mode == Mode::Insert {
+        cx.editor.mode = Mode::Normal;
+        cx.editor.insert_oneshot = true;
+    }
 }
 
 // inserts at the start of each selection

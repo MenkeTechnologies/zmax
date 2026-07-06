@@ -853,6 +853,7 @@
 | `insert_char_by_code` | Insert a character by Unicode code point (emacs insert-char, C-x 8 RET) |  |
 | `backward_delete_char_untabify` | Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify) |  |
 | `insert_last_inserted_text` | Insert the previously inserted text (vim i_CTRL-A) | insert: `` <C-a> `` |
+| `insert_command_normal` | Run one Normal-mode command, then return to Insert (vim i_CTRL-O) | insert: `` <C-o> `` |
 | `insert_last_inserted_and_stop` | Insert previously inserted text and stop insert (vim i_CTRL-@) | insert: `` <C-@> `` |
 | `copy_between_registers` | Copy between two registers |  |
 | `copy_to_register` | Copy the region into a register (emacs copy-to-register, C-x r s) |  |
