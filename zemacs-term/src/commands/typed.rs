@@ -18895,7 +18895,106 @@ fn vim_opt_reset(name: &str) {
 }
 
 /// The current value of an option — the stored value, else the compiled default.
-fn vim_opt_current(name: &str) -> Option<String> {
+/// The option's *effective* value read from the real editor config (`cfg` is the
+/// serialized `Config`), so `:set opt?` / `:set all` reflect the live editor
+/// state — not just what was `:set` this session. `None` for options with no
+/// global-config equivalent (buffer-local / command-driven) — those fall back to
+/// the session store.
+fn vim_opt_effective(cfg: &Value, name: &str) -> Option<String> {
+    let get = |key: &str| cfg.pointer(&format!("/{}", key.replace('.', "/")));
+    match name {
+        "number" | "nu" => {
+            return Some(bool_word(config_gutter_present(cfg, "line-numbers")));
+        }
+        "relativenumber" | "rnu" => {
+            return Some(bool_word(get("line-number")?.as_str() == Some("relative")));
+        }
+        "signcolumn" | "scl" => {
+            return Some(
+                if config_gutter_present(cfg, "diagnostics") {
+                    "auto"
+                } else {
+                    "no"
+                }
+                .into(),
+            );
+        }
+        "showtabline" | "stal" => {
+            return Some(
+                match get("bufferline")?.as_str() {
+                    Some("always") => "2",
+                    Some("multiple") => "1",
+                    _ => "0",
+                }
+                .into(),
+            );
+        }
+        "fileformat" | "ff" => {
+            return Some(
+                if get("default-line-ending")?.as_str() == Some("crlf") {
+                    "dos"
+                } else {
+                    "unix"
+                }
+                .into(),
+            );
+        }
+        "laststatus" | "ls" => {
+            return Some(
+                if get("render-statusline")?.as_bool()? {
+                    "2"
+                } else {
+                    "0"
+                }
+                .into(),
+            );
+        }
+        "colorcolumn" | "cc" => {
+            let a = get("rulers")?.as_array()?;
+            return Some(
+                a.iter()
+                    .filter_map(Value::as_u64)
+                    .map(|n| n.to_string())
+                    .collect::<Vec<_>>()
+                    .join(","),
+            );
+        }
+        "shell" => {
+            let a = get("shell")?.as_array()?;
+            return Some(
+                a.iter()
+                    .filter_map(Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            );
+        }
+        "showbreak" | "sbr" => {
+            return get("soft-wrap.wrap-indicator")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+        }
+        _ => {}
+    }
+    // Generic VIM_OPTIONS-table mapping.
+    let (key, kind) = lookup_vim_option(name)?;
+    let v = get(key)?;
+    Some(match kind {
+        VimOptKind::Bool => bool_word(v.as_bool()?),
+        VimOptKind::Num => v.as_i64()?.to_string(),
+        VimOptKind::Enum(on, _) => bool_word(v.as_str() == Some(on)),
+    })
+}
+
+fn bool_word(b: bool) -> String {
+    if b { "on" } else { "off" }.to_string()
+}
+
+/// The value to show: effective editor config first, then the session store,
+/// then the compiled default.
+fn vim_opt_current(cfg: &Value, name: &str) -> Option<String> {
+    if let Some(v) = vim_opt_effective(cfg, name) {
+        return Some(v);
+    }
     if let Some(v) = VIM_OPTION_STORE.with(|s| s.borrow().get(name).cloned()) {
         return Some(v);
     }
@@ -18904,13 +19003,16 @@ fn vim_opt_current(name: &str) -> Option<String> {
 
 /// Format one option the way Vim's `:set opt?` does: `opt` / `noopt` for
 /// booleans, `opt=value` otherwise.
-fn vim_opt_display(name: &str) -> String {
+fn vim_opt_display(cfg: &Value, name: &str) -> String {
     let is_bool = match vim_opt_meta(name) {
         Some((b, _)) => b,
         // Unknown option that was still set — infer from the stored value.
-        None => matches!(vim_opt_current(name).as_deref(), Some("on") | Some("off")),
+        None => matches!(
+            vim_opt_current(cfg, name).as_deref(),
+            Some("on") | Some("off")
+        ),
     };
-    let val = vim_opt_current(name).unwrap_or_default();
+    let val = vim_opt_current(cfg, name).unwrap_or_default();
     if is_bool {
         if val == "off" {
             format!("no{name}")
@@ -18954,19 +19056,21 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     // list every option. Both render in a scratch buffer.
     if tokens.is_empty() || (tokens.len() == 1 && tokens[0] == "all") {
         let all = tokens.len() == 1;
+        // Read the live editor config so the listing reflects the effective state
+        // (config.toml + defaults + this session's `:set`), not just the store.
+        let cfg = serde_json::json!(&cx.editor.config().deref());
         let mut lines: Vec<String> = crate::commands::vim_options_data::VIM_OPTION_TABLE
             .iter()
             .filter_map(|(name, _, default)| {
-                let changed =
-                    VIM_OPTION_STORE.with(|s| s.borrow().get(*name).is_some_and(|v| v != default));
-                (all || changed).then(|| vim_opt_display(name))
+                let changed = vim_opt_current(&cfg, name).as_deref() != Some(*default);
+                (all || changed).then(|| vim_opt_display(&cfg, name))
             })
             .collect();
         // Options set that aren't in the table (unknown but still stored).
         VIM_OPTION_STORE.with(|s| {
             for name in s.borrow().keys() {
                 if vim_opt_meta(name).is_none() {
-                    lines.push(vim_opt_display(name));
+                    lines.push(vim_opt_display(&cfg, name));
                 }
             }
         });
@@ -19015,7 +19119,7 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
         // `:set opt?` reports the option's value; `:set opt&` resets it. These
         // read/clear the option store and don't change config.
         if let Some(opt) = tok.strip_suffix('?') {
-            cx.editor.set_status(vim_opt_display(opt));
+            cx.editor.set_status(vim_opt_display(&config, opt));
             continue;
         }
         if let Some(opt) = tok.strip_suffix('&') {

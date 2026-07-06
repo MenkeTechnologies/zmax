@@ -964,7 +964,7 @@ async fn set_option_store_round_trips() -> anyhow::Result<()> {
                 } as _),
             ),
             (
-                Some(":set nonumber<ret>:set number?<ret>"),
+                Some(":set nonumber number?<ret>"),
                 Some(&|app| {
                     let (s, _) = app.editor.get_status().unwrap();
                     assert_eq!(s.as_ref(), "nonumber");
@@ -1265,6 +1265,64 @@ async fn incsearch_previews_match_while_typing() -> anyhow::Result<()> {
             let matched = text.slice(sel.from()..sel.to()).to_string();
             assert_eq!(matched, "foo", "incsearch jumps to the match while typing");
         }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_noarg_lists_changed_options() -> anyhow::Result<()> {
+    // After `:set number shiftwidth=4`, a bare `:set` must list those changed
+    // options in the scratch buffer.
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":set number shiftwidth=4<ret>:set<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let text = zemacs_view::doc!(app.editor).text().to_string();
+            assert!(
+                text.contains("number"),
+                "bare :set should list `number`, got: {text:?}"
+            );
+            assert!(text.contains("shiftwidth=4"), "should list shiftwidth=4");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_opt_query_reads_effective_config() -> anyhow::Result<()> {
+    // :set number? reflects the REAL gutter state (linked to the editor config),
+    // not just what was :set this session. Default shows line numbers.
+    test_key_sequences(
+        &mut AppBuilder::new().build()?,
+        vec![
+            (
+                Some(":set number?<ret>"),
+                Some(&|app| {
+                    let (s, _) = app.editor.get_status().unwrap();
+                    assert_eq!(
+                        s.as_ref(),
+                        "number",
+                        "number? reflects the default-on gutter"
+                    );
+                } as _),
+            ),
+            (
+                Some(":set nonumber number?<ret>"),
+                Some(&|app| {
+                    let (s, _) = app.editor.get_status().unwrap();
+                    assert_eq!(
+                        s.as_ref(),
+                        "nonumber",
+                        "after nonumber the effective value is nonumber"
+                    );
+                } as _),
+            ),
+        ],
         false,
     )
     .await?;
