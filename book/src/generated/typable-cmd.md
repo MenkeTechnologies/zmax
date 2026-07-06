@@ -30,7 +30,7 @@
 | `:zen` | Toggle the IDE workbench (Zen / focus mode). |
 | `:emmet`, `:zencode` | Expand the emmet/zen HTML abbreviation before the cursor. |
 | `:quit!`, `:q!` | Force close the current view, ignoring unsaved changes. |
-| `:open`, `:o`, `:edit`, `:e` | Open a file from disk into the current view. |
+| `:open`, `:o`, `:edit`, `:e`, `:ex`, `:visual` | Open a file from disk into the current view (vim :edit; :ex/:visual have no separate Ex mode here). |
 | `:args`, `:ar` | Show the argument list, or set it to the given files and edit the first (vim :args). |
 | `:argadd`, `:arga` | Add files to the argument list after the current entry (vim :argadd). |
 | `:argedit`, `:arge` | Add a file to the argument list and edit it (vim :argedit). |
@@ -727,6 +727,7 @@
 | `:foldopen`, `:foldo` | Open the fold under the cursor (vim :foldopen). |
 | `:foldclose`, `:foldc` | Close the fold under the cursor (vim :foldclose). |
 | `:&`, `:&&`, `:s-repeat` | Repeat the last :substitute on the current line (vim :& / :&&). |
+| `:sleep`, `:sl` | Do nothing for {count} seconds (vim :sleep). |
 | `:redrawstatus` | Redraw the status line (vim :redrawstatus; approximated by a full redraw). |
 | `:redrawtabline` | Redraw the tab line (vim :redrawtabline; approximated by a full redraw). |
 | `:silent`, `:sil` | Run {cmd} silently (vim :silent[!]); message suppression is best-effort. |

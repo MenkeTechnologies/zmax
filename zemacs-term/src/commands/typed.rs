@@ -19829,6 +19829,7 @@ ex_static_cmd!(ex_fold, super::fold_create);
 ex_static_cmd!(ex_foldopen, super::fold_open);
 ex_static_cmd!(ex_foldclose, super::fold_close);
 ex_static_cmd!(ex_repeat_substitute, super::repeat_substitute);
+ex_static_cmd!(ex_sleep, super::vim_sleep);
 
 /// A vim command *modifier* (`:silent`, `:verbose N`, `:noautocmd`, `:keepjumps`,
 /// `:vertical`, `:lockmarks`, …): strip the modifier word (and an optional
@@ -26110,8 +26111,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "open",
-        aliases: &["o", "edit", "e"],
-        doc: "Open a file from disk into the current view.",
+        aliases: &["o", "edit", "e", "ex", "visual"],
+        doc: "Open a file from disk into the current view (vim :edit; :ex/:visual have no separate Ex mode here).",
         fun: open,
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
@@ -33204,6 +33205,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["&&", "s-repeat"],
         doc: "Repeat the last :substitute on the current line (vim :& / :&&).",
         fun: ex_repeat_substitute,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    // Vim :sleep[!] {N} — do nothing for a few seconds. The optional bang
+    // (hide the cursor) and count argument are accepted; the pause runs on the
+    // shared vim_sleep (count-based, default 1s).
+    TypableCommand {
+        name: "sleep",
+        aliases: &["sl"],
+        doc: "Do nothing for {count} seconds (vim :sleep).",
+        fun: ex_sleep,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },

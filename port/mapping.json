@@ -34635,5 +34635,37 @@
       "typable:s-repeat"
     ],
     "note": ":& / :&& repeat last :substitute on current line (typable :& plus the :s-repeat alias; backed by repeat_substitute)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sleep",
+    "status": "ported",
+    "evidence": [
+      "typable:sleep"
+    ],
+    "note": ":sleep do nothing for {count} seconds"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sleep_bang",
+    "status": "ported",
+    "evidence": [
+      "typable:sleep"
+    ],
+    "note": ":sleep! do nothing for {count} seconds (bang hides cursor)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ex",
+    "status": "partial",
+    "evidence": [
+      "typable:ex"
+    ],
+    "note": ":ex same as :edit (no separate Ex mode)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_visual",
+    "status": "partial",
+    "evidence": [
+      "typable:visual"
+    ],
+    "note": ":visual same as :edit (no separate Ex mode)"
   }
 ]
