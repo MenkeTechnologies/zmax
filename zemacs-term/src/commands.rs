@@ -27554,8 +27554,17 @@ fn git_exec(args: &[&str]) -> Result<String, String> {
     }
 }
 
-/// Run a (network) git command off-thread and report the last output line in the status bar.
-fn git_async(cx: &mut Context, busy: &'static str, args: Vec<String>, label: &'static str) {
+/// Run a (network) git command off-thread and report the last output line in the
+/// status bar. When `reload_worktree` is set, open buffers are reloaded from disk
+/// on success so their content and gutters reflect the new tree (e.g. a pull that
+/// fast-forwards HEAD); push/fetch leave the working tree, so they pass `false`.
+fn git_async(
+    cx: &mut Context,
+    busy: &'static str,
+    args: Vec<String>,
+    label: &'static str,
+    reload_worktree: bool,
+) {
     cx.editor.set_status(format!("git: {busy}"));
     cx.jobs.callback(async move {
         let res = tokio::task::spawn_blocking(move || {
@@ -27567,6 +27576,9 @@ fn git_async(cx: &mut Context, busy: &'static str, args: Vec<String>, label: &'s
         Ok(crate::job::Callback::Editor(Box::new(
             move |editor: &mut Editor| match res {
                 Ok(out) => {
+                    if reload_worktree {
+                        reload_all_open_docs(editor);
+                    }
                     let tail = out
                         .lines()
                         .last()
@@ -27589,7 +27601,7 @@ fn git_async(cx: &mut Context, busy: &'static str, args: Vec<String>, label: &'s
 
 /// SPC g P: push the current branch to its upstream remote.
 fn git_push(cx: &mut Context) {
-    git_async(cx, "pushing…", vec!["push".into()], "pushed");
+    git_async(cx, "pushing…", vec!["push".into()], "pushed", false);
 }
 
 /// SPC g u ("Update Project"): fast-forward pull from upstream.
@@ -27599,6 +27611,7 @@ fn git_pull(cx: &mut Context) {
         "pulling…",
         vec!["pull".into(), "--ff-only".into()],
         "pulled",
+        true,
     );
 }
 
@@ -27609,6 +27622,7 @@ fn git_fetch(cx: &mut Context) {
         "fetching…",
         vec!["fetch".into(), "--all".into()],
         "fetched",
+        false,
     );
 }
 
@@ -27664,7 +27678,12 @@ fn git_acp(cx: &mut Context) {
                 .map_err(|e| anyhow::anyhow!("git acp task: {e}"))?;
             Ok(crate::job::Callback::Editor(Box::new(
                 move |editor: &mut Editor| match res {
-                    Ok(out) => editor.set_status(format!("git acp: {out}")),
+                    Ok(out) => {
+                        // HEAD moved: re-fetch every open buffer's diff base so
+                        // the gutter hunks reflect the just-committed tree.
+                        refresh_all_diff_bases(editor);
+                        editor.set_status(format!("git acp: {out}"));
+                    }
                     Err(e) => {
                         let tail = e
                             .lines()
@@ -28011,6 +28030,52 @@ fn vc_refresh_state(cx: &mut Context) {
 /// `vc-state-refresh`: alias of [`vc_refresh_state`].
 fn vc_state_refresh(cx: &mut Context) {
     vc_refresh_state(cx);
+}
+
+/// Reload every open buffer's content *and* diff base from disk. Editor-only
+/// wrapper over [`reload_docs_for_paths`] covering all open files — for git ops
+/// that change the working tree (checkout, stash pop, rebase, discard, pull), so
+/// both the buffer text and its gutter hunks reflect the new tree. Use
+/// [`refresh_all_diff_bases`] instead for ops that only move HEAD (commit/amend)
+/// and leave the working tree — that path never clobbers unsaved edits.
+pub(crate) fn reload_all_open_docs(editor: &mut Editor) {
+    let paths: Vec<std::path::PathBuf> = editor
+        .documents()
+        .filter_map(|d| d.path().map(ToOwned::to_owned))
+        .collect();
+    reload_docs_for_paths(editor, &paths);
+}
+
+/// Recompute the diff base (gutter hunks) and VC head for *every* open buffer
+/// from git. Editor-only — no view/content reload — because a commit leaves the
+/// working tree bytes untouched and only moves the git base HEAD points at, so
+/// each doc's `diff_handle` just needs its base re-fetched. Called after an
+/// off-thread commit (e.g. [`git_acp`]) whose callback only holds an `Editor`.
+pub(crate) fn refresh_all_diff_bases(editor: &mut Editor) {
+    let ids: Vec<DocumentId> = editor.documents().map(Document::id).collect();
+    for id in ids {
+        let Some((path, root)) = editor.document(id).and_then(|doc| {
+            doc.path()
+                .map(|p| (p.to_path_buf(), doc.workspace_root().to_path_buf()))
+        }) else {
+            continue;
+        };
+        let trust_full = editor
+            .workspace_trust
+            .query(&root, zemacs_loader::workspace_trust::TrustQuery::Git)
+            .is_trusted();
+        let base = editor.diff_providers.get_diff_base(&path, trust_full);
+        let head = editor
+            .diff_providers
+            .get_current_head_name(&path, trust_full);
+        let Some(doc) = editor.document_mut(id) else {
+            continue;
+        };
+        if let Some(base) = base {
+            doc.set_diff_base(base);
+        }
+        doc.set_version_control_head(head);
+    }
 }
 
 /// `vc-pull`: fast-forward pull from upstream.
