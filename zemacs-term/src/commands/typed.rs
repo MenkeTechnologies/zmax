@@ -18689,6 +18689,7 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     (&["ignorecase", "ic"],        "search.smart-case",  VimOptKind::Bool),
     (&["smartcase", "scs"],        "search.smart-case",  VimOptKind::Bool),
     (&["wrapscan", "ws"],          "search.wrap-around", VimOptKind::Bool),
+    (&["hlsearch", "hls"],         "search-highlight",   VimOptKind::Bool),
     (&["cursorline", "cul"],       "cursorline",         VimOptKind::Bool),
     (&["cursorcolumn", "cuc"],     "cursorcolumn",       VimOptKind::Bool),
     (&["scrolloff", "so"],         "scrolloff",          VimOptKind::Num),

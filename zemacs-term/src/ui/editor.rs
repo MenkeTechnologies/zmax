@@ -766,6 +766,11 @@ impl EditorView {
         // Emacs Hi-Lock: persistent user regexp highlights (all windows).
         overlays.extend(Self::doc_hilock_highlights(doc, view, theme));
 
+        // vim `hlsearch`: highlight all matches of the last search pattern.
+        if let Some(overlay) = Self::doc_search_highlights(editor, doc, view, theme) {
+            overlays.push(overlay);
+        }
+
         if is_focused {
             if config.lsp.auto_document_highlight {
                 if let Some(overlay) = Self::doc_document_highlights(doc, view, theme) {
@@ -1260,6 +1265,68 @@ impl EditorView {
             }
         }
         out
+    }
+
+    /// vim `hlsearch`: highlight every match of the last search pattern (register
+    /// `/`) in the visible viewport. Off unless `editor.search_highlight` is set.
+    pub fn doc_search_highlights(
+        editor: &Editor,
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+    ) -> Option<OverlayHighlights> {
+        use zemacs_stdx::rope::{Config, RegexBuilder, RopeSliceExt};
+        if !editor.config().search_highlight {
+            return None;
+        }
+        let pattern = editor.registers.first('/', editor)?;
+        if pattern.is_empty() {
+            return None;
+        }
+        let text = doc.text().slice(..);
+        if text.len_chars() == 0 {
+            return None;
+        }
+        let case_insensitive = if editor.config().search.smart_case {
+            !pattern.chars().any(char::is_uppercase)
+        } else {
+            false
+        };
+        let is_crlf = doc.line_ending == zemacs_core::LineEnding::Crlf;
+        let regex = RegexBuilder::new()
+            .syntax(
+                Config::new()
+                    .case_insensitive(case_insensitive)
+                    .multi_line(true)
+                    .crlf(is_crlf),
+            )
+            .build(&pattern)
+            .ok()?;
+
+        let view_offset = doc.view_offset(view.id);
+        let height = view.inner_area(doc).height as usize;
+        let first_line = text.char_to_line(view_offset.anchor.min(text.len_chars()));
+        let last_line = (first_line + height + 1).min(text.len_lines());
+        let start_byte = text.char_to_byte(text.line_to_char(first_line));
+        let end_byte = text.char_to_byte(text.line_to_char(last_line));
+
+        let mut ranges = Vec::new();
+        for m in regex.find_iter(text.regex_input_at_bytes(start_byte..end_byte)) {
+            if m.start() == m.end() {
+                continue; // skip zero-width matches
+            }
+            ranges.push(text.byte_to_char(m.start())..text.byte_to_char(m.end()));
+            if ranges.len() >= 10_000 {
+                break; // viewport safety cap
+            }
+        }
+        if ranges.is_empty() {
+            return None;
+        }
+        let highlight = theme
+            .find_highlight_exact("ui.cursor.match")
+            .or_else(|| theme.find_highlight_exact("ui.highlight"))?;
+        Some(OverlayHighlights::Homogeneous { highlight, ranges })
     }
 
     pub fn doc_word_occurrence_highlights(

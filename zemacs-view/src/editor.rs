@@ -321,6 +321,9 @@ pub struct Config {
     /// visible viewport (like vim-illuminate / JetBrains identifier-under-caret).
     /// Defaults to true.
     pub highlight_word_under_cursor: bool,
+    /// Highlight all matches of the last search pattern (vim `hlsearch`).
+    /// Defaults to `false`.
+    pub search_highlight: bool,
     #[serde(deserialize_with = "deserialize_gutter_seq_or_struct")]
     pub gutters: GutterConfig,
     /// Middle click paste support. Defaults to true.
@@ -1335,6 +1338,7 @@ impl Default for Config {
             cursorline: false,
             cursorcolumn: false,
             highlight_word_under_cursor: true,
+            search_highlight: false,
             gutters: GutterConfig::default(),
             middle_click_paste: true,
             auto_pairs: AutoPairConfig::default(),

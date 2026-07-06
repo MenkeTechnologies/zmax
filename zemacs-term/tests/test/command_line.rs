@@ -1217,3 +1217,33 @@ async fn set_foldenable_foldlevel_drive_folding() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_hlsearch_highlights_search_matches() -> anyhow::Result<()> {
+    // With hlsearch on and a search for "foo", the search-highlight overlay finds
+    // the matches in the visible buffer.
+    test_key_sequence(
+        &mut AppBuilder::new()
+            .with_input_text("#[f|]#oo foo bar")
+            .build()?,
+        Some(":set hlsearch<ret>/foo<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert!(app.editor.config().search_highlight, "hlsearch enabled");
+            let (view, doc) = zemacs_view::current_ref!(app.editor);
+            let overlay = zemacs_term::ui::EditorView::doc_search_highlights(
+                &app.editor,
+                doc,
+                view,
+                &app.editor.theme,
+            );
+            assert!(
+                overlay.is_some(),
+                "hlsearch must produce a search-match overlay for 'foo'"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

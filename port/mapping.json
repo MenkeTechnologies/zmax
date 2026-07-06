@@ -35598,11 +35598,11 @@
   },
   {
     "spec_id": "neovim.option.hlsearch",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set hlsearch is accepted, stored and queryable (:set hlsearch?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "typable:set -> search-highlight config; renderer overlays all matches of register / (EditorView::doc_search_highlights)"
   },
   {
     "spec_id": "neovim.option.icon",
