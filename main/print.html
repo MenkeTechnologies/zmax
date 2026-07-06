@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-44362628.js";
+            window.path_to_searchindex_js = "searchindex-2868b2b7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1607,6 +1607,17 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:all</code>, <code>:sall</code></td><td>Open a window for each file in the argument list (vim :all / :sall).</td></tr>
 <tr><td><code>:compile</code></td><td>Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile).</td></tr>
 <tr><td><code>:recompile</code></td><td>Re-run the last compile command (emacs recompile).</td></tr>
+<tr><td><code>:make</code></td><td>Run <code>make [args]</code>, collect errors into the quickfix list, jump to the first (vim :make).</td></tr>
+<tr><td><code>:tag</code>, <code>:ta</code></td><td>Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag).</td></tr>
+<tr><td><code>:tselect</code>, <code>:ts</code></td><td>List every matching tag in a picker; select one to jump (vim :tselect).</td></tr>
+<tr><td><code>:tjump</code>, <code>:tj</code></td><td>Jump to the tag if unique, else show the tag picker (vim :tjump).</td></tr>
+<tr><td><code>:stag</code></td><td>Open the tag’s definition in a new horizontal split (vim :stag).</td></tr>
+<tr><td><code>:tnext</code>, <code>:tn</code></td><td>Jump to the next matching tag (vim :tnext).</td></tr>
+<tr><td><code>:tprevious</code>, <code>:tp</code>, <code>:tNext</code>, <code>:tN</code></td><td>Jump to the previous matching tag (vim :tprevious).</td></tr>
+<tr><td><code>:tfirst</code>, <code>:trewind</code>, <code>:tr</code></td><td>Jump to the first matching tag (vim :tfirst).</td></tr>
+<tr><td><code>:tlast</code></td><td>Jump to the last matching tag (vim :tlast).</td></tr>
+<tr><td><code>:pop</code>, <code>:po</code></td><td>Pop the tag stack, returning to where the last :tag jumped from (vim :pop).</td></tr>
+<tr><td><code>:tags</code></td><td>Show the tag stack depth and the current matching tag (vim :tags).</td></tr>
 <tr><td><code>:arduino-compile</code>, <code>:averify</code>, <code>:arduino-verify</code></td><td>Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify).</td></tr>
 <tr><td><code>:arduino-upload</code>, <code>:aupload</code></td><td>Compile and flash the sketch to the connected board (arduino-cli compile –upload), live in a terminal panel.</td></tr>
 <tr><td><code>:arduino-monitor</code>, <code>:amonitor</code>, <code>:serial-monitor</code></td><td>Open the serial monitor for the selected port/baud (arduino-cli monitor).</td></tr>
@@ -2018,6 +2029,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:tablast</code></td><td>Go to the last tabpage.</td></tr>
 <tr><td><code>:tabmove</code>, <code>:tabm</code></td><td>Move the current tabpage to position [N] (default: last).</td></tr>
 <tr><td><code>:tabdo</code></td><td>Run an ex-command in every tabpage.</td></tr>
+<tr><td><code>:windo</code></td><td>Run an ex-command in every window of the current tabpage.</td></tr>
+<tr><td><code>:wincmd</code></td><td>Run a window (CTRL-W) command by key, e.g. :wincmd h focuses left.</td></tr>
+<tr><td><code>:source</code>, <code>:so</code></td><td>Source a Vimscript file through the embedded vimlrs interpreter.</td></tr>
 <tr><td><code>:tabs</code></td><td>List the tabpages and switch to the selected one.</td></tr>
 <tr><td><code>:cdo</code></td><td>Run an ex-command on each quickfix entry.</td></tr>
 <tr><td><code>:cfdo</code></td><td>Run an ex-command on the first quickfix entry of each file.</td></tr>
@@ -2034,7 +2048,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:laddfile</code></td><td>Append a file of error lines to the location list.</td></tr>
 <tr><td><code>:lpfile</code>, <code>:lpf</code></td><td>Jump to the last location entry in the previous file.</td></tr>
 <tr><td><code>:shell-quote</code>, <code>:sh-quote</code></td><td>Wrap the selection in safe shell single-quotes.</td></tr>
-<tr><td><code>:wrap-tag</code>, <code>:tag</code></td><td>Wrap each selection in <tag>…</tag>.</td></tr>
+<tr><td><code>:wrap-tag</code></td><td>Wrap each selection in <tag>…</tag>.</td></tr>
 <tr><td><code>:csv-column</code>, <code>:csv-col</code></td><td>Replace the selected CSV/TSV with just its Nth column (1-based).</td></tr>
 <tr><td><code>:code-fence</code>, <code>:fence</code></td><td>Wrap the selection in a fenced Markdown code block with optional language.</td></tr>
 <tr><td><code>:md-table</code>, <code>:table-fmt</code></td><td>Align the selected Markdown pipe table (pad columns, rebuild separator row).</td></tr>
@@ -3014,6 +3028,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>change_signature</code></td><td>Change signature refactor via LSP</td><td></td></tr>
 <tr><td><code>pull_members_up</code></td><td>Pull members up refactor via LSP (IntelliJ)</td><td></td></tr>
 <tr><td><code>push_members_down</code></td><td>Push members down refactor via LSP (IntelliJ)</td><td></td></tr>
+<tr><td><code>safe_delete</code></td><td>Safe Delete: delete the symbol under the cursor only if unused, else show its usages (JetBrains Safe Delete)</td><td></td></tr>
 <tr><td><code>buffer_picker</code></td><td>Open buffer picker</td><td>normal: <code>&lt;C-x&gt;b</code>, <code>&lt;C-x&gt;4b</code>, <code>&lt;C-x&gt;6b</code>, <code>&lt;C-x&gt;wd</code>, <code>&lt;C-x&gt;xi</code>, <code>&lt;space&gt;bb</code>, <code>&lt;space&gt;lb</code>, <code>&lt;space&gt;lt</code>, <code>&lt;space&gt;pb</code>, <code>&lt;C-x&gt;&lt;C-b&gt;</code>, <code>&lt;space&gt;b.b</code>, select: <code>&lt;C-x&gt;b</code>, <code>&lt;C-x&gt;4b</code>, <code>&lt;C-x&gt;6b</code>, <code>&lt;C-x&gt;wd</code>, <code>&lt;C-x&gt;xi</code>, <code>&lt;space&gt;bb</code>, <code>&lt;space&gt;lb</code>, <code>&lt;space&gt;lt</code>, <code>&lt;space&gt;pb</code>, <code>&lt;C-x&gt;&lt;C-b&gt;</code>, <code>&lt;space&gt;b.b</code>, insert: <code>&lt;C-x&gt;b</code>, <code>&lt;C-x&gt;4b</code>, <code>&lt;C-x&gt;6b</code>, <code>&lt;C-x&gt;wd</code>, <code>&lt;C-x&gt;xi</code>, <code>&lt;C-x&gt;&lt;C-b&gt;</code></td></tr>
 <tr><td><code>jumplist_picker</code></td><td>Open jumplist picker</td><td>normal: <code>&lt;space&gt;jj</code>, select: <code>&lt;space&gt;jj</code></td></tr>
 <tr><td><code>register_picker</code></td><td>Browse registers and paste the chosen one</td><td>normal: <code>&lt;space&gt;re</code>, <code>&lt;space&gt;rr</code>, <code>&lt;space&gt;ry</code>, select: <code>&lt;space&gt;re</code>, <code>&lt;space&gt;rr</code>, <code>&lt;space&gt;ry</code></td></tr>
@@ -7063,11 +7078,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>3568</strong> (52.1%)</li>
+<li>Ported: <strong>3570</strong> (52.1%)</li>
 <li>Partial: <strong>661</strong> (9.7%)</li>
-<li>Absent: <strong>2618</strong></li>
+<li>Absent: <strong>2616</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1461 static commands, 1713 typable <code>:</code> commands, 2948 default keybindings</li>
+<li>zemacs source surface: 1461 static commands, 1720 typable <code>:</code> commands, 2948 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -7123,11 +7138,11 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">1129</td><td style="text-align: right">296</td><td style="text-align: right">37.5%</td></tr>
+<tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">1130</td><td style="text-align: right">295</td><td style="text-align: right">37.5%</td></tr>
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">185</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">204</td><td style="text-align: right">14</td><td style="text-align: right">93.6%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1274</td><td style="text-align: right">191</td><td style="text-align: right">61.3%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1275</td><td style="text-align: right">192</td><td style="text-align: right">61.4%</td></tr>
 <tr><td>spacemacs</td><td style="text-align: right">1296</td><td style="text-align: right">718</td><td style="text-align: right">158</td><td style="text-align: right">55.4%</td></tr>
 </tbody>
 </table>
@@ -7144,7 +7159,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>cursor</td><td>chat</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>edit</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>cursor</td><td>misc</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">918</td><td style="text-align: right">211</td><td style="text-align: right">48.7%</td></tr>
+<tr><td>emacs</td><td>command</td><td style="text-align: right">1884</td><td style="text-align: right">919</td><td style="text-align: right">210</td><td style="text-align: right">48.8%</td></tr>
 <tr><td>emacs</td><td>keybinding</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>functionality</td><td>clipboard</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>debug</td><td style="text-align: right">9</td><td style="text-align: right">9</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -7191,7 +7206,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">35</td><td style="text-align: right">1</td><td style="text-align: right">66.0%</td></tr>
-<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">238</td><td style="text-align: right">56</td><td style="text-align: right">42.4%</td></tr>
+<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">239</td><td style="text-align: right">57</td><td style="text-align: right">42.6%</td></tr>
 <tr><td>neovim</td><td>function</td><td style="text-align: right">451</td><td style="text-align: right">431</td><td style="text-align: right">0</td><td style="text-align: right">95.6%</td></tr>
 <tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">58</td><td style="text-align: right">18</td><td style="text-align: right">59.2%</td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">414</td><td style="text-align: right">30</td><td style="text-align: right">86.4%</td></tr>
