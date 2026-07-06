@@ -3019,27 +3019,27 @@
   },
   {
     "spec_id": "neovim.option.shiftwidth",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim ':set shiftwidth' partially works (off-state/value/semantic caveat)"
+    "note": "typable:set sets the document indent width"
   },
   {
     "spec_id": "neovim.option.tabstop",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim ':set tabstop' partially works (off-state/value/semantic caveat)"
+    "note": "typable:set sets the document tab display width (Document::set_tab_width)"
   },
   {
     "spec_id": "neovim.option.expandtab",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim ':set expandtab' partially works (off-state/value/semantic caveat)"
+    "note": "typable:set sets the document indent style to spaces (Document::indent_style)"
   },
   {
     "spec_id": "neovim.option.wildmenu",

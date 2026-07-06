@@ -1000,3 +1000,19 @@ async fn set_all_lists_the_full_option_surface() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_tabstop_sets_document_tab_width() -> anyhow::Result<()> {
+    // vim `:set tabstop=8` sets the current buffer's tab display width.
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":set tabstop=8<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(zemacs_view::doc!(app.editor).tab_width(), 8);
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
