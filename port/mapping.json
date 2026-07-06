@@ -35918,11 +35918,11 @@
   },
   {
     "spec_id": "neovim.option.modifiable",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set modifiable is accepted, stored and queryable (:set modifiable?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "typable:set clears/sets the document read-only flag (modifiable = !readonly)"
   },
   {
     "spec_id": "neovim.option.modified",
@@ -36078,11 +36078,11 @@
   },
   {
     "spec_id": "neovim.option.readonly",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set readonly is accepted, stored and queryable (:set readonly?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "typable:set sets the document read-only flag (Document.readonly)"
   },
   {
     "spec_id": "neovim.option.redrawdebug",

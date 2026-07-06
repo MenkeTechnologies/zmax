@@ -18992,6 +18992,7 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     let mut indent_expand: Option<bool> = None;
     let mut indent_width: Option<u8> = None;
     let mut tab_width: Option<u8> = None;
+    let mut doc_readonly: Option<bool> = None;
     for tok in &tokens {
         // `:set opt?` reports the option's value; `:set opt&` resets it. These
         // read/clear the option store and don't change config.
@@ -19103,6 +19104,21 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
+        // `readonly`/`modifiable` set the document's read-only flag (opposites;
+        // not in the VIM_OPTIONS table, so their `no` forms are matched here).
+        if value.is_none() {
+            let ro = match name {
+                "readonly" | "ro" => Some(true),
+                "noreadonly" | "noro" => Some(false),
+                "modifiable" | "ma" => Some(false),
+                "nomodifiable" | "noma" => Some(true),
+                _ => None,
+            };
+            if let Some(ro) = ro {
+                doc_readonly = Some(ro);
+                continue;
+            }
+        }
 
         let current_bool = |key: &str| -> bool {
             config
@@ -19129,6 +19145,11 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             .config_events
             .0
             .send(ConfigEvent::Update(config))?;
+    }
+    // Buffer-local read-only flag (vim `readonly`/`modifiable`).
+    if let Some(ro) = doc_readonly {
+        let (_view, doc) = current!(cx.editor);
+        doc.readonly = ro;
     }
     // Apply buffer-local indentation to the current document.
     if indent_expand.is_some() || indent_width.is_some() || tab_width.is_some() {
