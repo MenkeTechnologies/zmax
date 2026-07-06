@@ -1196,6 +1196,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "i" | "C-i" => goto_declaration,
                 "p" | "C-p" => rotate_view,
                 "z" => recenter_other_window,     // SPC w z : recenter point in the other window (emacs recenter-other-window)
+                "C-z" => recenter_other_window,   // SPC w C-z: same as SPC w z (parity with C-w)
+                "C-c" => no_op,                   // SPC w C-c: no-op (parity with C-w)
+                "P" => rotate_view,               // SPC w P: go to preview window (parity with C-w)
                 "C-t" => jump_view_up,
                 "t" => toggle_window_dedication,  // SPC w t : toggle window dedication (spacemacs)
                 "b" | "C-b" => jump_view_down,
