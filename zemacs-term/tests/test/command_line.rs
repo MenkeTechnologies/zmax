@@ -1142,3 +1142,19 @@ async fn set_listchars_sets_whitespace_characters() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_shell_sets_shell_config() -> anyhow::Result<()> {
+    // vim `:set shell=/bin/zsh` sets the shell used for :! / :sh.
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":set shell=/bin/zsh<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(app.editor.config().shell, vec!["/bin/zsh".to_string()]);
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

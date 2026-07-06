@@ -19074,6 +19074,22 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
+        // `shell` sets the shell used by `:!`/`:sh` (vim `:set shell=/bin/zsh`).
+        if matches!(name, "shell") {
+            if let Some(v) = value {
+                config_set_key(
+                    &mut config,
+                    "shell",
+                    Value::Array(
+                        v.split_whitespace()
+                            .map(|s| Value::String(s.into()))
+                            .collect(),
+                    ),
+                )?;
+                changed = true;
+            }
+            continue;
+        }
         // `listchars` (`tab:>-,space:.,eol:$,nbsp:+`) maps onto the whitespace
         // render characters (vim `:set list` toggles rendering via `whitespace.render`).
         if matches!(name, "listchars" | "lcs") {

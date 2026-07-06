@@ -7352,7 +7352,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> zemacs :set shell"
+    "note": "typable:set maps shell (split on whitespace) onto the shell config Vec"
   },
   {
     "spec_id": "neovim.option.statusline",
