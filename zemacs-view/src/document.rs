@@ -2402,6 +2402,14 @@ impl Document {
             })
     }
 
+    /// Override this document's tab display width (vim `:set tabstop=N`). Clamped
+    /// to a valid `NonZeroU8`; `0` is ignored.
+    pub fn set_tab_width(&mut self, width: u8) {
+        if let Some(n) = std::num::NonZeroU8::new(width) {
+            self.editor_config.tab_width = Some(n);
+        }
+    }
+
     // The width (in spaces) of a level of indentation.
     pub fn indent_width(&self) -> usize {
         self.indent_style.indent_width(self.tab_width())

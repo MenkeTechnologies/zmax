@@ -18991,6 +18991,7 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     // not global config — collect across the tokens and apply to the current doc.
     let mut indent_expand: Option<bool> = None;
     let mut indent_width: Option<u8> = None;
+    let mut tab_width: Option<u8> = None;
     for tok in &tokens {
         // `:set opt?` reports the option's value; `:set opt&` resets it. These
         // read/clear the option store and don't change config.
@@ -19093,6 +19094,15 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
+        // `tabstop` sets the document's tab display width (buffer-local).
+        if matches!(name, "tabstop" | "ts") {
+            if let Some(n) = value.and_then(|v| v.parse::<u8>().ok()) {
+                if n > 0 {
+                    tab_width = Some(n);
+                }
+            }
+            continue;
+        }
 
         let current_bool = |key: &str| -> bool {
             config
@@ -19121,9 +19131,15 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             .send(ConfigEvent::Update(config))?;
     }
     // Apply buffer-local indentation to the current document.
-    if indent_expand.is_some() || indent_width.is_some() {
+    if indent_expand.is_some() || indent_width.is_some() || tab_width.is_some() {
         use zemacs_core::indent::{IndentStyle, MAX_INDENT};
         let (_view, doc) = current!(cx.editor);
+        if let Some(tw) = tab_width {
+            doc.set_tab_width(tw);
+        }
+        if indent_expand.is_none() && indent_width.is_none() {
+            return Ok(());
+        }
         let cur_width = match doc.indent_style {
             IndentStyle::Spaces(n) => n,
             IndentStyle::Tabs => doc.tab_width() as u8,
