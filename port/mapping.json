@@ -34723,5 +34723,61 @@
       "typable:const"
     ],
     "note": ":const create a constant variable"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_snext_1",
+    "status": "ported",
+    "evidence": [
+      "typable:snext"
+    ],
+    "note": ":snext split window and edit next argument"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_snext",
+    "status": "ported",
+    "evidence": [
+      "typable:sprevious"
+    ],
+    "note": ":sNext split window and edit previous argument"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sprevious",
+    "status": "ported",
+    "evidence": [
+      "typable:sprevious"
+    ],
+    "note": ":sprevious split window and edit previous argument"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_srewind",
+    "status": "ported",
+    "evidence": [
+      "typable:srewind"
+    ],
+    "note": ":srewind split window and edit first argument"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sfirst",
+    "status": "ported",
+    "evidence": [
+      "typable:srewind"
+    ],
+    "note": ":sfirst split window and edit first argument"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_slast",
+    "status": "ported",
+    "evidence": [
+      "typable:slast"
+    ],
+    "note": ":slast split window and edit last argument"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sargument",
+    "status": "ported",
+    "evidence": [
+      "typable:sargument"
+    ],
+    "note": ":sargument split window and edit Nth argument"
   }
 ]

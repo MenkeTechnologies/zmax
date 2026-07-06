@@ -41,6 +41,11 @@
 | `:first`, `:rewind`, `:rew` | Edit the first file in the argument list (vim :first / :rewind). |
 | `:last`, `:la` | Edit the last file in the argument list (vim :last). |
 | `:argument`, `:argu` | Edit the Nth file in the argument list (vim :argument). |
+| `:snext`, `:sn` | Split the window and edit the next argument (vim :snext). |
+| `:sprevious`, `:sprev`, `:sNext`, `:sN` | Split the window and edit the previous argument (vim :sprevious / :sNext). |
+| `:srewind`, `:sre`, `:sfirst`, `:sfir` | Split the window and edit the first argument (vim :srewind / :sfirst). |
+| `:slast`, `:sla` | Split the window and edit the last argument (vim :slast). |
+| `:sargument`, `:sa` | Split the window and edit the Nth argument (vim :sargument). |
 | `:argdo` | Run an Ex command on each file in the argument list (vim :argdo). |
 | `:all`, `:sall` | Open a window for each file in the argument list (vim :all / :sall). |
 | `:compile` | Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile). |
