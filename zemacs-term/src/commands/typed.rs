@@ -19831,6 +19831,48 @@ ex_static_cmd!(ex_foldclose, super::fold_close);
 ex_static_cmd!(ex_repeat_substitute, super::repeat_substitute);
 ex_static_cmd!(ex_sleep, super::vim_sleep);
 
+/// vim `:version` — show the editor version and a compiled-feature summary in a
+/// scratch buffer (vim opens a pager; zemacs uses a read-only scratch buffer).
+/// The version is `CARGO_PKG_VERSION` (build-time), never a hardcoded literal.
+fn ex_version(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let scripting = if cfg!(feature = "scripting") {
+        "elisp, vimscript, awk, zsh, stryke"
+    } else {
+        "disabled (built without the `scripting` feature)"
+    };
+    let content = format!(
+        "zemacs {ver}\n\n\
+         A modal IDE in Rust — a vim/neovim/emacs/spacemacs/jetbrains superset.\n\n\
+         Architecture:       {arch}\n\
+         Embedded scripting: {scripting}\n",
+        ver = env!("CARGO_PKG_VERSION"),
+        arch = std::env::consts::ARCH,
+    );
+    super::show_text_in_scratch(cx.editor, &content);
+    Ok(())
+}
+
+/// vim `:intro` — show the introductory message (name, version, and a pointer to
+/// help/quit) in a scratch buffer.
+fn ex_intro(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let content = format!(
+        "zemacs {ver}\n\n\
+         A maximally powerful CLI IDE with zero configuration.\n\n\
+         type  :help          for help\n\
+         type  :q<Enter>      to quit\n\
+         press SPC (or C-x)   to open the leader menu\n",
+        ver = env!("CARGO_PKG_VERSION"),
+    );
+    super::show_text_in_scratch(cx.editor, &content);
+    Ok(())
+}
+
 /// A vim command *modifier* (`:silent`, `:verbose N`, `:noautocmd`, `:keepjumps`,
 /// `:vertical`, `:lockmarks`, …): strip the modifier word (and an optional
 /// leading count for `:verbose 9 …`), then run the remaining command line through
@@ -33218,6 +33260,23 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_sleep,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    // Vim :version / :intro — informational displays in a scratch buffer.
+    TypableCommand {
+        name: "version",
+        aliases: &["ver"],
+        doc: "Show the zemacs version and compiled feature summary (vim :version).",
+        fun: ex_version,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "intro",
+        aliases: &["int"],
+        doc: "Show the introductory message (vim :intro).",
+        fun: ex_intro,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     // Vim :redraw variants (approximated by a full redraw).
     TypableCommand {

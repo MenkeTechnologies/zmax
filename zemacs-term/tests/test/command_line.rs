@@ -583,3 +583,27 @@ async fn undolist_shows_states() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn version_command_shows_version_in_scratch() -> anyhow::Result<()> {
+    // :version opens a scratch buffer whose first line is the build-time version
+    // (never a hardcoded literal) plus the feature summary.
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":version<ret>"),
+        Some(&|app| {
+            let text = zemacs_view::doc!(app.editor).text().to_string();
+            assert!(
+                text.contains(&format!("zemacs {}", env!("CARGO_PKG_VERSION"))),
+                "scratch should contain the build-time zemacs version line, got: {text:?}"
+            );
+            assert!(
+                text.contains("superset"),
+                "version output should include the feature summary"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
