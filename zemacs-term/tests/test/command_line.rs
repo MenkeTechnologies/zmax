@@ -912,3 +912,37 @@ async fn set_maps_showtabline_fileformat_autoread() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_expandtab_shiftwidth_sets_document_indent() -> anyhow::Result<()> {
+    // vim `:set expandtab shiftwidth=2` makes the current buffer indent with two
+    // spaces; `:set noexpandtab` switches it back to tabs (buffer-local).
+    use zemacs_core::indent::IndentStyle;
+    test_key_sequences(
+        &mut AppBuilder::new().build()?,
+        vec![
+            (
+                Some(":set expandtab shiftwidth=2<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(
+                        zemacs_view::doc!(app.editor).indent_style,
+                        IndentStyle::Spaces(2)
+                    );
+                } as _),
+            ),
+            (
+                Some(":set noexpandtab<ret>"),
+                Some(&|app| {
+                    assert_eq!(
+                        zemacs_view::doc!(app.editor).indent_style,
+                        IndentStyle::Tabs
+                    );
+                } as _),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

@@ -18900,6 +18900,10 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     // previous one's full-config update.
     let mut config = serde_json::json!(&cx.editor.config().deref());
     let mut changed = false;
+    // Per-document indentation (`expandtab`/`shiftwidth`) is buffer-local in vim,
+    // not global config — collect across the tokens and apply to the current doc.
+    let mut indent_expand: Option<bool> = None;
+    let mut indent_width: Option<u8> = None;
     for tok in &tokens {
         let (neg, toggle, name, value) = parse_set_token(tok);
 
@@ -18967,6 +18971,26 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
+        // `expandtab`/`noexpandtab` and `shiftwidth`/`softtabstop` set the current
+        // document's indent style (buffer-local in vim). `expandtab` is not in the
+        // VIM_OPTIONS table (it maps to a document, not a config key), so
+        // `parse_set_token` doesn't strip its `no` prefix — match it explicitly.
+        if value.is_none() && matches!(name, "expandtab" | "et") {
+            indent_expand = Some(!neg);
+            continue;
+        }
+        if value.is_none() && matches!(name, "noexpandtab" | "noet") {
+            indent_expand = Some(false);
+            continue;
+        }
+        if matches!(name, "shiftwidth" | "sw" | "softtabstop" | "sts") {
+            if let Some(n) = value.and_then(|v| v.parse::<u8>().ok()) {
+                if n > 0 {
+                    indent_width = Some(n);
+                }
+            }
+            continue;
+        }
 
         let current_bool = |key: &str| -> bool {
             config
@@ -18993,6 +19017,26 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             .config_events
             .0
             .send(ConfigEvent::Update(config))?;
+    }
+    // Apply buffer-local indentation to the current document.
+    if indent_expand.is_some() || indent_width.is_some() {
+        use zemacs_core::indent::{IndentStyle, MAX_INDENT};
+        let (_view, doc) = current!(cx.editor);
+        let cur_width = match doc.indent_style {
+            IndentStyle::Spaces(n) => n,
+            IndentStyle::Tabs => doc.tab_width() as u8,
+        };
+        let width = indent_width.unwrap_or(cur_width).clamp(1, MAX_INDENT);
+        doc.indent_style = match indent_expand {
+            Some(true) => IndentStyle::Spaces(width),
+            Some(false) => IndentStyle::Tabs,
+            // Only `shiftwidth` changed: keep tabs-vs-spaces, adjust the width
+            // when indenting with spaces.
+            None => match doc.indent_style {
+                IndentStyle::Spaces(_) => IndentStyle::Spaces(width),
+                IndentStyle::Tabs => IndentStyle::Tabs,
+            },
+        };
     }
     Ok(())
 }
