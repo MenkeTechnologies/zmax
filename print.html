@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-7d52564b.js";
+            window.path_to_searchindex_js = "searchindex-44362628.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -2340,6 +2340,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:global</code></td><td>Run a command on matching lines: :g/pattern/d (delete). Also :g!/pat/d.</td></tr>
 <tr><td><code>:vglobal</code></td><td>Run a command on non-matching lines: :v/pattern/d (delete).</td></tr>
 <tr><td><code>:substitute</code>, <code>:s</code></td><td>Substitute: :s/pattern/replacement/[flags]. Also :%s/…/…/g for the whole file.</td></tr>
+<tr><td><code>:replace-word</code>, <code>:rw</code>, <code>:subword</code></td><td>Global replace of the word under the cursor across the file: :replace-word bar → :%s/\bfoo\b/bar/g. Add <code>i</code> as a 2nd arg for case-insensitive.</td></tr>
 <tr><td><code>:Subvert</code>, <code>:S</code></td><td>vim-abolish case-preserving substitute: :S/foo/bar/g rewrites foo/Foo/FOO → bar/Bar/BAR.</td></tr>
 <tr><td><code>:Thesaurus</code>, <code>:thesaurus</code></td><td>Look up synonyms for the word under the cursor (or :Thesaurus word) and replace it.</td></tr>
 <tr><td><code>:split-line</code></td><td>Split the current line at the cursor, keeping the cursor in place.</td></tr>
@@ -3110,6 +3111,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>git_push</code></td><td>Push the current branch to its remote (SPC g P)</td><td>normal: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, select: <code>&lt;C-x&gt;vP</code>, <code>&lt;space&gt;gP</code>, insert: <code>&lt;C-x&gt;vP</code></td></tr>
 <tr><td><code>git_pull</code></td><td>Fast-forward pull from upstream (SPC g u)</td><td>normal: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, select: <code>&lt;C-x&gt;v+</code>, <code>&lt;space&gt;gu</code>, insert: <code>&lt;C-x&gt;v+</code></td></tr>
 <tr><td><code>git_fetch</code></td><td>Fetch all remotes (SPC g F)</td><td>normal: <code>&lt;space&gt;gF</code>, select: <code>&lt;space&gt;gF</code></td></tr>
+<tr><td><code>git_acp</code></td><td>Stage all, commit, and push in one shot (C-x v c)</td><td>normal: <code>&lt;C-x&gt;vc</code>, select: <code>&lt;C-x&gt;vc</code>, insert: <code>&lt;C-x&gt;vc</code></td></tr>
 <tr><td><code>vc_print_log</code></td><td>VC log for the current file (emacs vc-print-log)</td><td></td></tr>
 <tr><td><code>vc_print_root_log</code></td><td>VC log for the whole repository (emacs vc-print-root-log)</td><td></td></tr>
 <tr><td><code>vc_print_branch_log</code></td><td>VC log for a named branch (emacs vc-print-branch-log)</td><td></td></tr>
@@ -7061,19 +7063,19 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>3532</strong> (51.6%)</li>
-<li>Partial: <strong>664</strong> (9.7%)</li>
-<li>Absent: <strong>2651</strong></li>
+<li>Ported: <strong>3568</strong> (52.1%)</li>
+<li>Partial: <strong>661</strong> (9.7%)</li>
+<li>Absent: <strong>2618</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1458 static commands, 1686 typable <code>:</code> commands, 2945 default keybindings</li>
+<li>zemacs source surface: 1461 static commands, 1713 typable <code>:</code> commands, 2948 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
 <ul>
 <li>Capabilities tracked: <strong>186</strong></li>
-<li>Implemented (ported): <strong>176</strong> (94.6%)</li>
-<li>Partial / different model: <strong>5</strong></li>
-<li>Absent (genuine gaps): <strong>5</strong></li>
+<li>Implemented (ported): <strong>185</strong> (99.5%)</li>
+<li>Partial / different model: <strong>1</strong></li>
+<li>Absent (genuine gaps): <strong>0</strong></li>
 </ul>
 <div class="table-wrapper">
 <table>
@@ -7088,16 +7090,16 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>editing</td><td style="text-align: right">21</td><td style="text-align: right">20</td><td style="text-align: right">1</td><td style="text-align: right">95.2%</td></tr>
 <tr><td>files</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>folding</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>lsp</td><td style="text-align: right">12</td><td style="text-align: right">11</td><td style="text-align: right">0</td><td style="text-align: right">91.7%</td></tr>
+<tr><td>lsp</td><td style="text-align: right">12</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>macros</td><td style="text-align: right">2</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>marks</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>motion</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>org</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>project</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>refactoring</td><td style="text-align: right">5</td><td style="text-align: right">1</td><td style="text-align: right">1</td><td style="text-align: right">20.0%</td></tr>
+<tr><td>refactoring</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>scripting</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>search</td><td style="text-align: right">8</td><td style="text-align: right">7</td><td style="text-align: right">1</td><td style="text-align: right">87.5%</td></tr>
-<tr><td>selection</td><td style="text-align: right">7</td><td style="text-align: right">5</td><td style="text-align: right">2</td><td style="text-align: right">71.4%</td></tr>
+<tr><td>search</td><td style="text-align: right">8</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>selection</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>snippets</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>spell</td><td style="text-align: right">3</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>structural</td><td style="text-align: right">2</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -7106,7 +7108,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>transforms</td><td style="text-align: right">10</td><td style="text-align: right">10</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>ui</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>vcs</td><td style="text-align: right">11</td><td style="text-align: right">11</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>windows</td><td style="text-align: right">6</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">83.3%</td></tr>
+<tr><td>windows</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 </tbody>
 </table>
 </div>
@@ -7122,10 +7124,10 @@ languages. It is only necessary when the node that increments the nesting level
 <tbody>
 <tr><td>cursor</td><td style="text-align: right">33</td><td style="text-align: right">33</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>emacs</td><td style="text-align: right">3011</td><td style="text-align: right">1129</td><td style="text-align: right">296</td><td style="text-align: right">37.5%</td></tr>
-<tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">176</td><td style="text-align: right">5</td><td style="text-align: right">94.6%</td></tr>
-<tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
-<tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1252</td><td style="text-align: right">189</td><td style="text-align: right">60.3%</td></tr>
+<tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">185</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
+<tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
+<tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">204</td><td style="text-align: right">14</td><td style="text-align: right">93.6%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1274</td><td style="text-align: right">191</td><td style="text-align: right">61.3%</td></tr>
 <tr><td>spacemacs</td><td style="text-align: right">1296</td><td style="text-align: right">718</td><td style="text-align: right">158</td><td style="text-align: right">55.4%</td></tr>
 </tbody>
 </table>
@@ -7151,16 +7153,16 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td>editing</td><td style="text-align: right">21</td><td style="text-align: right">20</td><td style="text-align: right">1</td><td style="text-align: right">95.2%</td></tr>
 <tr><td>functionality</td><td>files</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>folding</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>functionality</td><td>lsp</td><td style="text-align: right">12</td><td style="text-align: right">11</td><td style="text-align: right">0</td><td style="text-align: right">91.7%</td></tr>
+<tr><td>functionality</td><td>lsp</td><td style="text-align: right">12</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>macros</td><td style="text-align: right">2</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>marks</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>motion</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>org</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>project</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>functionality</td><td>refactoring</td><td style="text-align: right">5</td><td style="text-align: right">1</td><td style="text-align: right">1</td><td style="text-align: right">20.0%</td></tr>
+<tr><td>functionality</td><td>refactoring</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>scripting</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>functionality</td><td>search</td><td style="text-align: right">8</td><td style="text-align: right">7</td><td style="text-align: right">1</td><td style="text-align: right">87.5%</td></tr>
-<tr><td>functionality</td><td>selection</td><td style="text-align: right">7</td><td style="text-align: right">5</td><td style="text-align: right">2</td><td style="text-align: right">71.4%</td></tr>
+<tr><td>functionality</td><td>search</td><td style="text-align: right">8</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>functionality</td><td>selection</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>snippets</td><td style="text-align: right">4</td><td style="text-align: right">4</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>spell</td><td style="text-align: right">3</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>structural</td><td style="text-align: right">2</td><td style="text-align: right">2</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -7169,8 +7171,8 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td>transforms</td><td style="text-align: right">10</td><td style="text-align: right">10</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>ui</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>functionality</td><td>vcs</td><td style="text-align: right">11</td><td style="text-align: right">11</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
-<tr><td>functionality</td><td>windows</td><td style="text-align: right">6</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">83.3%</td></tr>
-<tr><td>fzf.vim</td><td>command</td><td style="text-align: right">26</td><td style="text-align: right">21</td><td style="text-align: right">1</td><td style="text-align: right">80.8%</td></tr>
+<tr><td>functionality</td><td>windows</td><td style="text-align: right">6</td><td style="text-align: right">6</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
+<tr><td>fzf.vim</td><td>command</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td>caret-navigation</td><td style="text-align: right">18</td><td style="text-align: right">18</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>code-analysis</td><td style="text-align: right">4</td><td style="text-align: right">3</td><td style="text-align: right">1</td><td style="text-align: right">75.0%</td></tr>
 <tr><td>jetbrains</td><td>code-folding</td><td style="text-align: right">8</td><td style="text-align: right">8</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -7180,7 +7182,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>multiple-carets</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>navigate-from-symbol</td><td style="text-align: right">10</td><td style="text-align: right">9</td><td style="text-align: right">1</td><td style="text-align: right">90.0%</td></tr>
 <tr><td>jetbrains</td><td>navigation</td><td style="text-align: right">21</td><td style="text-align: right">18</td><td style="text-align: right">3</td><td style="text-align: right">85.7%</td></tr>
-<tr><td>jetbrains</td><td>refactoring</td><td style="text-align: right">13</td><td style="text-align: right">11</td><td style="text-align: right">2</td><td style="text-align: right">84.6%</td></tr>
+<tr><td>jetbrains</td><td>refactoring</td><td style="text-align: right">13</td><td style="text-align: right">12</td><td style="text-align: right">1</td><td style="text-align: right">92.3%</td></tr>
 <tr><td>jetbrains</td><td>run-debug</td><td style="text-align: right">21</td><td style="text-align: right">18</td><td style="text-align: right">3</td><td style="text-align: right">85.7%</td></tr>
 <tr><td>jetbrains</td><td>search</td><td style="text-align: right">12</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>selection</td><td style="text-align: right">3</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
@@ -7189,7 +7191,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">35</td><td style="text-align: right">1</td><td style="text-align: right">66.0%</td></tr>
-<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">216</td><td style="text-align: right">54</td><td style="text-align: right">38.5%</td></tr>
+<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">238</td><td style="text-align: right">56</td><td style="text-align: right">42.4%</td></tr>
 <tr><td>neovim</td><td>function</td><td style="text-align: right">451</td><td style="text-align: right">431</td><td style="text-align: right">0</td><td style="text-align: right">95.6%</td></tr>
 <tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">58</td><td style="text-align: right">18</td><td style="text-align: right">59.2%</td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">414</td><td style="text-align: right">30</td><td style="text-align: right">86.4%</td></tr>
@@ -7207,8 +7209,8 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline-1"><a class="header" href="#headline-1">Headline</a></h2>
 <ul>
 <li>Cited keybindings (denominator): <strong>3113</strong></li>
-<li>Ported: <strong>1715</strong> (55.1%)</li>
-<li>Partial: <strong>299</strong> (9.6%)</li>
+<li>Ported: <strong>1716</strong> (55.1%)</li>
+<li>Partial: <strong>298</strong> (9.6%)</li>
 <li>Absent: <strong>1099</strong></li>
 </ul>
 <h2 id="by-source"><a class="header" href="#by-source">By source</a></h2>
@@ -7219,7 +7221,7 @@ languages. It is only necessary when the node that increments the nesting level
 </thead>
 <tbody>
 <tr><td>emacs</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
-<tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">203</td><td style="text-align: right">15</td><td style="text-align: right">93.1%</td></tr>
+<tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">204</td><td style="text-align: right">14</td><td style="text-align: right">93.6%</td></tr>
 <tr><td>neovim</td><td style="text-align: right">715</td><td style="text-align: right">588</td><td style="text-align: right">51</td><td style="text-align: right">82.2%</td></tr>
 <tr><td>spacemacs</td><td style="text-align: right">1053</td><td style="text-align: right">713</td><td style="text-align: right">148</td><td style="text-align: right">67.7%</td></tr>
 </tbody>
@@ -7242,7 +7244,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>multiple-carets</td><td style="text-align: right">7</td><td style="text-align: right">7</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>navigate-from-symbol</td><td style="text-align: right">10</td><td style="text-align: right">9</td><td style="text-align: right">1</td><td style="text-align: right">90.0%</td></tr>
 <tr><td>jetbrains</td><td>navigation</td><td style="text-align: right">21</td><td style="text-align: right">18</td><td style="text-align: right">3</td><td style="text-align: right">85.7%</td></tr>
-<tr><td>jetbrains</td><td>refactoring</td><td style="text-align: right">13</td><td style="text-align: right">11</td><td style="text-align: right">2</td><td style="text-align: right">84.6%</td></tr>
+<tr><td>jetbrains</td><td>refactoring</td><td style="text-align: right">13</td><td style="text-align: right">12</td><td style="text-align: right">1</td><td style="text-align: right">92.3%</td></tr>
 <tr><td>jetbrains</td><td>run-debug</td><td style="text-align: right">21</td><td style="text-align: right">18</td><td style="text-align: right">3</td><td style="text-align: right">85.7%</td></tr>
 <tr><td>jetbrains</td><td>search</td><td style="text-align: right">12</td><td style="text-align: right">12</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>selection</td><td style="text-align: right">3</td><td style="text-align: right">3</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
