@@ -1403,3 +1403,29 @@ async fn buffer_close_closes_scratch_without_force() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn spc_b_capital_x_force_closes_modified_buffer() -> anyhow::Result<()> {
+    // SPC b X force-closes the current buffer, discarding unsaved changes
+    // (spacemacs-style force kill; capital-X variant of SPC b x).
+    let f = tempfile::NamedTempFile::new()?;
+    std::fs::write(f.path(), "orig\n")?;
+    let mut app = AppBuilder::new()
+        .with_config(Config::default())
+        .with_file(f.path(), None)
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some("ixyz<esc><space>bX"),
+        Some(&|app| {
+            assert!(
+                !app.editor.is_err(),
+                "SPC b X should force-close a modified buffer, got: {:?}",
+                app.editor.get_status()
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

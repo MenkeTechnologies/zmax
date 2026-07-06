@@ -114,6 +114,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space f D", "Files",   ":delete-file"),      // SPC f D : delete file + buffer
     ("space b M", "Buffers", "buffer_menu"),       // SPC b M : Buffer Menu (emacs buffer-menu)
     ("space b d", "Buffers", ":buffer-close"),     // SPC b d : kill buffer
+    ("space b X", "Buffers", ":buffer-close!"),    // SPC b X : FORCE kill buffer (discard unsaved)
+    ("space b K", "Buffers", ":buffer-close-all!"), // SPC b K : FORCE kill ALL buffers
     ("space b D", "Buffers", ":buffer-close-others"), // SPC b C-d / others
     ("space b R", "Buffers", ":reload"),           // SPC b R : revert
     ("space b N n", "Buffers", ":new"),            // SPC b N n : new buffer, current window
