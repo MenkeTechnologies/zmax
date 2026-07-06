@@ -34851,5 +34851,37 @@
       "typable:startgreplace"
     ],
     "note": ":startgreplace start Virtual Replace mode"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_print",
+    "status": "ported",
+    "evidence": [
+      "typable:print"
+    ],
+    "note": ":print display selected/current lines in a scratch buffer"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_number",
+    "status": "ported",
+    "evidence": [
+      "typable:number"
+    ],
+    "note": ":number display lines with line numbers"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_hash",
+    "status": "ported",
+    "evidence": [
+      "typable:number"
+    ],
+    "note": ":# same as :number"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_list",
+    "status": "ported",
+    "evidence": [
+      "typable:list"
+    ],
+    "note": ":list display lines, marking line ends with $"
   }
 ]

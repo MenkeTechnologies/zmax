@@ -747,3 +747,24 @@ async fn startgreplace_enters_virtual_replace_mode() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn number_command_shows_numbered_lines_in_scratch() -> anyhow::Result<()> {
+    // With the cursor on the first line, :number prints that line, numbered,
+    // into a scratch buffer.
+    test_key_sequence(
+        &mut AppBuilder::new().with_input_text("#[a|]#lpha\nbeta\n").build()?,
+        Some(":number<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let text = zemacs_view::doc!(app.editor).text().to_string();
+            assert!(
+                text.contains("1  alpha"),
+                "scratch should contain the numbered first line, got: {text:?}"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

@@ -745,6 +745,9 @@
 | `:ptlast`, `:ptl` | Show the last matching tag in a preview split (vim :ptlast). |
 | `:pclose`, `:pc` | Close the preview window (vim :pclose). |
 | `:startgreplace`, `:startg` | Start Virtual Replace mode (vim :startgreplace). |
+| `:print`, `:p` | Display the selected lines (or current line) in a scratch buffer (vim :print). |
+| `:number`, `:nu`, `:#` | Like :print, with line numbers (vim :number / :#). |
+| `:list`, `:l` | Like :print, marking each line end with $ (vim :list). |
 | `:version`, `:ver` | Show the zemacs version and compiled feature summary (vim :version). |
 | `:intro`, `:int` | Show the introductory message (vim :intro). |
 | `:redrawstatus` | Redraw the status line (vim :redrawstatus; approximated by a full redraw). |

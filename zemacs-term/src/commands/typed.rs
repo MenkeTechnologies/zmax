@@ -25253,6 +25253,66 @@ viml_cmd!(ex_execute, "execute");
 viml_cmd!(ex_const, "const");
 viml_cmd!(ex_unlet, "unlet");
 
+#[derive(Clone, Copy)]
+enum PrintStyle {
+    Plain,
+    Numbered,
+    List,
+}
+
+/// Vim `:print` / `:number` / `:list` — display the selected lines (or the
+/// current line) in a scratch buffer. `:number` prefixes line numbers; `:list`
+/// marks each line end with `$` (so trailing whitespace is visible).
+fn print_lines(
+    cx: &mut compositor::Context,
+    style: PrintStyle,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let out = {
+        let (view, doc) = zemacs_view::current!(cx.editor);
+        let text = doc.text().slice(..);
+        let sel = doc.selection(view.id).primary();
+        let from_line = text.char_to_line(sel.from());
+        let to_line = if sel.to() > sel.from() {
+            text.char_to_line(sel.to() - 1)
+        } else {
+            from_line
+        };
+        let mut out = String::new();
+        for line in from_line..=to_line {
+            let raw = text.line(line).to_string();
+            let content = raw.strip_suffix('\n').unwrap_or(&raw);
+            match style {
+                PrintStyle::Plain => out.push_str(content),
+                PrintStyle::Numbered => {
+                    out.push_str(&format!("{:>6}  {}", line + 1, content));
+                }
+                PrintStyle::List => {
+                    out.push_str(content);
+                    out.push('$');
+                }
+            }
+            out.push('\n');
+        }
+        out
+    };
+    super::show_text_in_scratch(cx.editor, &out);
+    Ok(())
+}
+
+fn ex_print(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    print_lines(cx, PrintStyle::Plain, event)
+}
+fn ex_number(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    print_lines(cx, PrintStyle::Numbered, event)
+}
+fn ex_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    print_lines(cx, PrintStyle::List, event)
+}
+
 /// `:awk <program>` — filter the selection (or whole buffer if no selection)
 /// through an awk program via the embedded awkrs interpreter, replacing it with
 /// the program's output.
@@ -33561,6 +33621,31 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_startreplace,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    // Vim :print / :number / :list — display selected lines in a scratch buffer.
+    TypableCommand {
+        name: "print",
+        aliases: &["p"],
+        doc: "Display the selected lines (or current line) in a scratch buffer (vim :print).",
+        fun: ex_print,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "number",
+        aliases: &["nu", "#"],
+        doc: "Like :print, with line numbers (vim :number / :#).",
+        fun: ex_number,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "list",
+        aliases: &["l"],
+        doc: "Like :print, marking each line end with $ (vim :list).",
+        fun: ex_list,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     // Vim :version / :intro — informational displays in a scratch buffer.
     TypableCommand {
