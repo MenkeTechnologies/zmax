@@ -1570,6 +1570,11 @@ pub struct Editor {
     /// of being inserted. Only meaningful while `mode == Insert`; cleared on
     /// return to Normal.
     pub overwrite: bool,
+    /// vim insert-mode `CTRL-O` one-shot: when armed, the editor is temporarily
+    /// in Normal mode for exactly one command, after which the dispatch loop
+    /// returns to Insert. Set by `insert_command_normal`, consumed in
+    /// `EditorView::handle_keymap_event` once the following command completes.
+    pub insert_oneshot: bool,
     /// vim visual-block selection state, when the current Select is a block.
     pub block: Option<BlockSelect>,
     /// Spacemacs subword-mode (`SPC t c`): when set, the `w`/`b`/`e` word
@@ -1883,6 +1888,7 @@ impl Editor {
         Self {
             mode: Mode::Normal,
             overwrite: false,
+            insert_oneshot: false,
             block: None,
             subword: false,
             superword: false,
