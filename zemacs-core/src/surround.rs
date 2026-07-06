@@ -7,7 +7,7 @@ use crate::{
         is_open_bracket,
     },
     movement::Direction,
-    search, Range, Selection, Syntax,
+    Range, Selection, Syntax,
 };
 use ropey::RopeSlice;
 
@@ -154,6 +154,97 @@ fn find_nth_closest_pairs_plain(
     Err(Error::PairNotFound)
 }
 
+/// Like [`crate::search::find_nth_char`] but confined to the cursor's own line:
+/// the scan stops at a line boundary (`\n`/`\r`) instead of crossing into
+/// adjacent lines, returning `None` if the nth match isn't reached first.
+///
+/// Used for quote text objects (`i"`, `a'`, …), which in Vim only match a pair
+/// on the current line. The unbounded scan would otherwise let dot-repeating
+/// `ci"` on a quote-less line reach back to a previous line's quotes. The
+/// nth-match semantics are preserved, so nested quotes (`n = 2` selecting the
+/// outer pair) still work — only the line boundary is added.
+fn find_nth_char_on_line(
+    mut n: usize,
+    text: RopeSlice,
+    ch: char,
+    mut pos: usize,
+    direction: Direction,
+) -> Option<usize> {
+    if n == 0 {
+        return None;
+    }
+
+    let mut chars = text.get_chars_at(pos)?;
+
+    match direction {
+        Direction::Forward => loop {
+            let c = chars.next()?;
+            if c == '\n' || c == '\r' {
+                return None;
+            }
+            if c == ch {
+                n -= 1;
+                if n == 0 {
+                    return Some(pos);
+                }
+            }
+            pos += 1;
+        },
+        Direction::Backward => loop {
+            let c = chars.prev()?;
+            if c == '\n' || c == '\r' {
+                return None;
+            }
+            pos -= 1;
+            if c == ch {
+                n -= 1;
+                if n == 0 {
+                    return Some(pos);
+                }
+            }
+        },
+    }
+}
+
+/// Vim `i"`/`a'`/… pairing for the quote character `ch`, restricted to the
+/// cursor's own line. Quotes on the line pair up left-to-right — `(q0,q1)`,
+/// `(q2,q3)`, … — and this returns the `(open, close)` char positions of the
+/// first pair whose closing quote is at or after `pos`, i.e. the pair the cursor
+/// is inside, or the next quoted string to the right when the cursor is outside
+/// one. A trailing unmatched quote is ignored. Returns `None` when the line has
+/// no usable pair. The caller handles the "cursor directly on a quote" case
+/// separately, so `pos` here is never on `ch`.
+fn find_quote_pair_on_line(text: RopeSlice, ch: char, pos: usize) -> Option<(usize, usize)> {
+    let len = text.len_chars();
+    let line = text.char_to_line(pos.min(len.saturating_sub(1)));
+    let line_start = text.line_to_char(line);
+
+    // Positions of `ch` on this line, in order, stopping at the line boundary.
+    let mut quotes = Vec::new();
+    let mut i = line_start;
+    while i < len {
+        let c = text.char(i);
+        if c == '\n' || c == '\r' {
+            break;
+        }
+        if c == ch {
+            quotes.push(i);
+        }
+        i += 1;
+    }
+
+    // Pair left-to-right; take the first pair not entirely before the cursor.
+    let mut k = 0;
+    while k + 1 < quotes.len() {
+        let (open, close) = (quotes[k], quotes[k + 1]);
+        if close >= pos {
+            return Some((open, close));
+        }
+        k += 2;
+    }
+    None
+}
+
 /// Find the position of surround pairs of `ch` which can be either a closing
 /// or opening pair. `n` will skip n - 1 pairs (eg. n=2 will discard (only)
 /// the first pair found and keep looking)
@@ -194,10 +285,26 @@ pub fn find_nth_pairs_pos(
                     }
                 })
                 .ok_or(Error::CursorOnAmbiguousPair)?
+        } else if n == 1 {
+            // Same open/close char (a quote: `"`, `'`, `` ` ``) and the cursor is
+            // not sitting on one. Match Vim's `i"`/`a'`/…: quotes pair up
+            // left-to-right *within the cursor's line*, and the target is the pair
+            // the cursor is inside or — if it's outside any pair — the next quoted
+            // string to the right on that line. This both stops the scan from
+            // crossing newlines (dot-repeating `ci"` on a quote-less line used to
+            // walk back to a previous line's quotes) and picks the forward pair
+            // when the cursor sits before the quotes, as Vim does.
+            match find_quote_pair_on_line(text, open, pos) {
+                Some((o, c)) => (Some(o), Some(c)),
+                None => (None, None),
+            }
         } else {
+            // `{count}i"` (a Helix extension: expand outward by `count` nesting
+            // levels). Keep the nth-outward scan, but still bounded to the line so
+            // it can't cross into another line's quotes.
             (
-                search::find_nth_char(n, text, open, pos, Direction::Backward),
-                search::find_nth_char(n, text, close, pos, Direction::Forward),
+                find_nth_char_on_line(n, text, open, pos, Direction::Backward),
+                find_nth_char_on_line(n, text, close, pos, Direction::Forward),
             )
         }
     } else {
@@ -443,6 +550,84 @@ mod test {
         assert_eq!(
             find_nth_pairs_pos(None, doc.slice(..), '\'', selection.primary(), 1),
             Err(Error::CursorOnAmbiguousPair)
+        )
+    }
+
+    #[test]
+    fn test_find_nth_pairs_pos_quote_does_not_cross_line() {
+        // A previous line has a quote pair; the cursor sits on a later,
+        // quote-less line. Vim's `i"` only matches on the cursor's own line, so
+        // this must not reach back to the earlier line (the dot-repeat `ci"`
+        // "jumps to the original line" bug).
+        #[rustfmt::skip]
+        let (doc, selection, _) =
+            rope_with_selections_and_expectations(
+                "say 'hi' here\nplain line no quotes",
+                "             \n      ^             "
+            );
+
+        assert_eq!(
+            find_nth_pairs_pos(None, doc.slice(..), '\'', selection.primary(), 1),
+            Err(Error::PairNotFound)
+        )
+    }
+
+    #[test]
+    fn test_find_nth_pairs_pos_quote_same_line_still_found() {
+        // The line-restriction must not break the normal case: a quote pair on
+        // the cursor's own line is still found, even when an earlier line also
+        // has quotes.
+        #[rustfmt::skip]
+        let (doc, selection, expectations) =
+            rope_with_selections_and_expectations(
+                "first 'line'\nsecond 'here' ok",
+                "            \n       _^   _   "
+            );
+
+        assert_eq!(2, expectations.len());
+        assert_eq!(
+            find_nth_pairs_pos(None, doc.slice(..), '\'', selection.primary(), 1)
+                .expect("find should succeed"),
+            (expectations[0], expectations[1])
+        )
+    }
+
+    #[test]
+    fn test_find_nth_pairs_pos_quote_forward_when_cursor_before() {
+        // Cursor is before the quotes on its line (not inside any pair). Vim's
+        // `i"` grabs the next quoted string to the right on the line, so this
+        // must find the forward pair rather than failing.
+        #[rustfmt::skip]
+        let (doc, selection, expectations) =
+            rope_with_selections_and_expectations(
+                "foo 'bar' baz",
+                "^   _   _    "
+            );
+
+        assert_eq!(2, expectations.len());
+        assert_eq!(
+            find_nth_pairs_pos(None, doc.slice(..), '\'', selection.primary(), 1)
+                .expect("find should succeed"),
+            (expectations[0], expectations[1])
+        )
+    }
+
+    #[test]
+    fn test_find_nth_pairs_pos_quote_second_string_on_line() {
+        // Cursor sits in the gap between two quoted strings; Vim selects the
+        // second (forward) string, not the first.
+        #[rustfmt::skip]
+        let (doc, selection, expectations) =
+            rope_with_selections_and_expectations(
+                "'a' X 'bb' Y",
+                "    ^ _  _  "
+            );
+
+        assert_eq!(2, expectations.len());
+        assert_eq!(
+            find_nth_pairs_pos(None, doc.slice(..), '\'', selection.primary(), 1)
+                .expect("find should succeed"),
+            (expectations[0], expectations[1])
         )
     }
 
