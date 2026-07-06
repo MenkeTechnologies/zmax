@@ -18699,6 +18699,8 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     (&["autoread", "ar"],          "auto-reload",        VimOptKind::Bool),
     (&["endofline", "eol"],        "insert-final-newline", VimOptKind::Bool),
     (&["fixendofline", "fixeol"],  "insert-final-newline", VimOptKind::Bool),
+    (&["splitright", "spr"],       "split-right",        VimOptKind::Bool),
+    (&["splitbelow", "sb"],        "split-below",        VimOptKind::Bool),
 ];
 
 fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {

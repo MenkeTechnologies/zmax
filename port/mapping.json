@@ -36326,11 +36326,11 @@
   },
   {
     "spec_id": "neovim.option.splitbelow",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set splitbelow is accepted, stored and queryable (:set splitbelow?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "typable:set -> split-below config; Tree::split_with places the hsplit above/below"
   },
   {
     "spec_id": "neovim.option.splitkeep",
@@ -36342,11 +36342,11 @@
   },
   {
     "spec_id": "neovim.option.splitright",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set splitright is accepted, stored and queryable (:set splitright?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "typable:set -> split-right config; new tree substrate (Tree::split_with) places the vsplit left/right"
   },
   {
     "spec_id": "neovim.option.startofline",

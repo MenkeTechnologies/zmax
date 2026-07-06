@@ -300,6 +300,13 @@ impl Tree {
     }
 
     pub fn split(&mut self, view: View, layout: Layout) -> ViewId {
+        self.split_with(view, layout, false)
+    }
+
+    /// Split, placing the new view before (left/above) or after (right/below) the
+    /// focused one. `before` backs vim `nosplitright`/`nosplitbelow`; the default
+    /// (`false`, after) preserves the historical behavior.
+    pub fn split_with(&mut self, view: View, layout: Layout, before: bool) -> ViewId {
         let focus = self.focus;
         let parent = self.nodes[focus].parent;
 
@@ -315,7 +322,7 @@ impl Tree {
             _ => unreachable!(),
         };
         if container.layout == layout {
-            // insert node after the current item if there is children already
+            // insert node before/after the current item, if there are children.
             let pos = if container.children.is_empty() {
                 0
             } else {
@@ -324,7 +331,11 @@ impl Tree {
                     .iter()
                     .position(|&child| child == focus)
                     .unwrap();
-                pos + 1
+                if before {
+                    pos
+                } else {
+                    pos + 1
+                }
             };
             container.children.insert(pos, node);
             self.nodes[node].parent = parent;
@@ -340,8 +351,13 @@ impl Tree {
                 } => container,
                 _ => unreachable!(),
             };
-            container.children.push(focus);
-            container.children.push(node);
+            if before {
+                container.children.push(node);
+                container.children.push(focus);
+            } else {
+                container.children.push(focus);
+                container.children.push(node);
+            }
             self.nodes[focus].parent = split;
             self.nodes[node].parent = split;
 
@@ -1043,6 +1059,45 @@ mod test {
     use super::*;
     use crate::editor::GutterConfig;
     use crate::DocumentId;
+
+    // vim `splitright`/`splitbelow` substrate: `split_with(before)` places the new
+    // view to the left/above (before) or right/below (after, the default) of the
+    // focused window.
+    #[test]
+    fn split_with_places_new_view_before_or_after_focus() {
+        let area = Rect::new(0, 0, 180, 80);
+        let docs = |tree: &Tree| -> Vec<DocumentId> {
+            tree.leaf_ids().iter().map(|&id| tree.get(id).doc).collect()
+        };
+
+        // Default (after): new view goes to the right.
+        let mut tree = Tree::new(area);
+        tree.insert(View::new(DocumentId::new(10), GutterConfig::default()));
+        tree.split_with(
+            View::new(DocumentId::new(20), GutterConfig::default()),
+            Layout::Vertical,
+            false,
+        );
+        assert_eq!(
+            docs(&tree),
+            vec![DocumentId::new(10), DocumentId::new(20)],
+            "before=false places the new view after (to the right)"
+        );
+
+        // `nosplitright` (before): new view goes to the left.
+        let mut tree = Tree::new(area);
+        tree.insert(View::new(DocumentId::new(10), GutterConfig::default()));
+        tree.split_with(
+            View::new(DocumentId::new(20), GutterConfig::default()),
+            Layout::Vertical,
+            true,
+        );
+        assert_eq!(
+            docs(&tree),
+            vec![DocumentId::new(20), DocumentId::new(10)],
+            "before=true places the new view before (to the left)"
+        );
+    }
 
     // Collect (doc, focused) for each leaf of a shape, left-to-right.
     fn shape_leaves(shape: &TreeShape) -> Vec<(DocumentId, bool)> {

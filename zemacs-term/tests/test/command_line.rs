@@ -1074,3 +1074,31 @@ async fn set_colorcolumn_sets_rulers() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_splitright_splitbelow_configure_split_placement() -> anyhow::Result<()> {
+    // vim `splitright`/`splitbelow` (and the `no` forms) toggle the new split
+    // placement config, which the window tree honors via split_with.
+    test_key_sequences(
+        &mut AppBuilder::new().build()?,
+        vec![
+            (
+                Some(":set nosplitright<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert!(!app.editor.config().split_right, "nosplitright clears it");
+                } as _),
+            ),
+            (
+                Some(":set splitright nosplitbelow<ret>"),
+                Some(&|app| {
+                    assert!(app.editor.config().split_right, "splitright sets it");
+                    assert!(!app.editor.config().split_below, "nosplitbelow clears it");
+                } as _),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

@@ -451,6 +451,12 @@ pub struct Config {
     pub whitespace: WhitespaceConfig,
     /// Persistently display open buffers along the top
     pub bufferline: BufferLine,
+    /// Place a new vertical split to the right of the current window (vim
+    /// `splitright`). Defaults to `true`.
+    pub split_right: bool,
+    /// Place a new horizontal split below the current window (vim `splitbelow`).
+    /// Defaults to `true`.
+    pub split_below: bool,
     /// Vertical indent width guides.
     pub indent_guides: IndentGuidesConfig,
     /// Whether to color modes with different colors. Defaults to `false`.
@@ -1363,6 +1369,8 @@ impl Default for Config {
             rulers: Vec::new(),
             whitespace: WhitespaceConfig::default(),
             bufferline: BufferLine::default(),
+            split_right: true,
+            split_below: true,
             indent_guides: IndentGuidesConfig::default(),
             color_modes: false,
             soft_wrap: SoftWrap {
@@ -2554,14 +2562,14 @@ impl Editor {
                     .filter(|v| id == v.doc) // Different Document
                     .cloned()
                     .unwrap_or_else(|| View::new(id, self.config().gutters.clone()));
-                let view_id = self.tree.split(
-                    view,
-                    match action {
-                        Action::HorizontalSplit => Layout::Horizontal,
-                        Action::VerticalSplit => Layout::Vertical,
-                        _ => unreachable!(),
-                    },
-                );
+                let (layout, before) = match action {
+                    // vim `nosplitbelow` puts the new horizontal split above.
+                    Action::HorizontalSplit => (Layout::Horizontal, !self.config().split_below),
+                    // vim `nosplitright` puts the new vertical split to the left.
+                    Action::VerticalSplit => (Layout::Vertical, !self.config().split_right),
+                    _ => unreachable!(),
+                };
+                let view_id = self.tree.split_with(view, layout, before);
                 // initialize selection for view
                 let doc = doc_mut!(self, &id);
                 doc.ensure_view_init(view_id);
