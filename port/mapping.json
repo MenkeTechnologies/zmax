@@ -3011,11 +3011,11 @@
   },
   {
     "spec_id": "neovim.option.colorcolumn",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim ':set colorcolumn' partially works (off-state/value/semantic caveat)"
+    "note": "typable:set maps colorcolumn to the rulers config (vertical guide lines)"
   },
   {
     "spec_id": "neovim.option.shiftwidth",

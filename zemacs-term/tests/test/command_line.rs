@@ -1058,3 +1058,19 @@ async fn set_readonly_modifiable_toggles_document_flag() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_colorcolumn_sets_rulers() -> anyhow::Result<()> {
+    // vim `:set colorcolumn=80,100` renders vertical guides at columns 80 & 100.
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":set colorcolumn=80,100<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(app.editor.config().rulers, vec![80u16, 100u16]);
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

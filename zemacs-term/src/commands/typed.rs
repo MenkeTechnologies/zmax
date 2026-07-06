@@ -19060,6 +19060,19 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
+        // `colorcolumn` (comma-separated columns) maps onto `rulers` — the
+        // vertical guide lines (vim `:set colorcolumn=80,100`).
+        if matches!(name, "colorcolumn" | "cc") {
+            let cols: Vec<Value> = value
+                .unwrap_or("")
+                .split(',')
+                .filter_map(|s| s.trim().parse::<u64>().ok())
+                .map(|n| Value::Number(n.into()))
+                .collect();
+            config_set_key(&mut config, "rulers", Value::Array(cols))?;
+            changed = true;
+            continue;
+        }
         // `fileformat` (unix/dos/mac) maps onto the default line ending.
         if matches!(name, "fileformat" | "ff") {
             if let Some(v) = value {
