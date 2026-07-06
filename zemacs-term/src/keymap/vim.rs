@@ -1839,6 +1839,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
         "d" | "x" => [delete_selection, normal_mode],
         "c" | "s" => change_selection,
+        "\"" => select_register, // "{reg} in Visual: pick the register for the next y/d/p (e.g. "+y)
         "y"       => [yank, collapse_selection, normal_mode],
         "p"       => replace_with_yanked,
         "r"       => replace,

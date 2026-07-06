@@ -1357,3 +1357,29 @@ async fn set_completes_vim_option_names() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_register_select_yank_to_named_register() -> anyhow::Result<()> {
+    // In Visual mode, `"ay` picks register a then yanks the selection into it.
+    // (Previously `"` was unbound in Visual, so `"ay`/`"+y` silently no-op'd.)
+    test_key_sequence(
+        &mut AppBuilder::new().with_input_text("#[f|]#oo bar").build()?,
+        Some("vll\"ay"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let content = app
+                .editor
+                .registers
+                .first('a', &app.editor)
+                .map(|c| c.to_string());
+            assert_eq!(
+                content.as_deref(),
+                Some("foo"),
+                "\"ay yanks selection to register a"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
