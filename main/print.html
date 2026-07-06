@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-2868b2b7.js";
+            window.path_to_searchindex_js = "searchindex-5c3f4783.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1618,6 +1618,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:tlast</code></td><td>Jump to the last matching tag (vim :tlast).</td></tr>
 <tr><td><code>:pop</code>, <code>:po</code></td><td>Pop the tag stack, returning to where the last :tag jumped from (vim :pop).</td></tr>
 <tr><td><code>:tags</code></td><td>Show the tag stack depth and the current matching tag (vim :tags).</td></tr>
+<tr><td><code>:messages</code>, <code>:mes</code></td><td>Show the message log — every status/error shown this session (vim :messages).</td></tr>
+<tr><td><code>:Man</code>, <code>:man</code></td><td>Open a man page in the run console (neovim :Man).</td></tr>
+<tr><td><code>:redir</code></td><td>Capture message output to a register/file: :redir @a</td></tr>
 <tr><td><code>:arduino-compile</code>, <code>:averify</code>, <code>:arduino-verify</code></td><td>Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify).</td></tr>
 <tr><td><code>:arduino-upload</code>, <code>:aupload</code></td><td>Compile and flash the sketch to the connected board (arduino-cli compile –upload), live in a terminal panel.</td></tr>
 <tr><td><code>:arduino-monitor</code>, <code>:amonitor</code>, <code>:serial-monitor</code></td><td>Open the serial monitor for the selected port/baud (arduino-cli monitor).</td></tr>
@@ -2316,7 +2319,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:botright</code>, <code>:bo</code></td><td>Run {cmd} placing a new split at the bottom/right (vim :botright; best-effort).</td></tr>
 <tr><td><code>:lsp-stop</code></td><td>Stops the given language servers, or all language servers that are used by the current file if no arguments are supplied</td></tr>
 <tr><td><code>:tree-sitter-scopes</code></td><td>Display tree sitter scopes, primarily for theming and development.</td></tr>
-<tr><td><code>:tree-sitter-highlight-name</code></td><td>Display name of tree-sitter highlight scope under the cursor.</td></tr>
+<tr><td><code>:tree-sitter-highlight-name</code>, <code>:Inspect</code></td><td>Display the tree-sitter highlight capture under the cursor (neovim :Inspect).</td></tr>
 <tr><td><code>:tree-sitter-layers</code></td><td>Display language names of tree-sitter injection layers under the cursor.</td></tr>
 <tr><td><code>:debug-start</code>, <code>:dbg</code></td><td>Start a debug session from a given template with given parameters.</td></tr>
 <tr><td><code>:debug-remote</code>, <code>:dbg-tcp</code></td><td>Connect to a debug adapter by TCP address and start a debugging session from a given template with given parameters.</td></tr>
@@ -2462,7 +2465,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:delete-trailing-whitespace</code>, <code>:dtw</code></td><td>Delete trailing whitespace from every line in the buffer.</td></tr>
 <tr><td><code>:sort</code></td><td>Sort ranges in selection.</td></tr>
 <tr><td><code>:reflow</code></td><td>Hard-wrap the current selection of lines to a given width.</td></tr>
-<tr><td><code>:tree-sitter-subtree</code>, <code>:ts-subtree</code></td><td>Display the smallest tree-sitter subtree that spans the primary selection, primarily for debugging queries.</td></tr>
+<tr><td><code>:tree-sitter-subtree</code>, <code>:ts-subtree</code>, <code>:InspectTree</code></td><td>Display the smallest tree-sitter subtree that spans the primary selection (neovim :InspectTree).</td></tr>
 <tr><td><code>:config-reload</code></td><td>Refresh user config.</td></tr>
 <tr><td><code>:keymap</code></td><td>Switch the active keymap preset: spacemacs, vim, helix, or emacs.</td></tr>
 <tr><td><code>:config-open</code></td><td>Open the user config.toml file.</td></tr>
