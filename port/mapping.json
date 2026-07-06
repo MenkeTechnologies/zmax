@@ -34667,5 +34667,21 @@
       "typable:visual"
     ],
     "note": ":visual same as :edit (no separate Ex mode)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sall",
+    "status": "ported",
+    "evidence": [
+      "typable:sall"
+    ],
+    "note": ":sall open a window for each file in the argument list (:all/:sall)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tnext_1",
+    "status": "ported",
+    "evidence": [
+      "typable:tnext"
+    ],
+    "note": ":tnext jump to next matching tag"
   }
 ]
