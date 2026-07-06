@@ -18788,11 +18788,23 @@ fn translate_vim_option(
 /// Set a dotted config key inside an in-memory config JSON (no send). Used to
 /// accumulate several `:set` changes before one `ConfigEvent::Update`.
 fn config_set_key(config: &mut Value, zemacs_key: &str, new_value: Value) -> anyhow::Result<()> {
-    let pointer = format!("/{}", zemacs_key.replace('.', "/"));
-    let slot = config
-        .pointer_mut(&pointer)
-        .ok_or_else(|| anyhow!("Unknown key `{zemacs_key}`"))?;
-    *slot = new_value;
+    // Walk the dotted path, creating intermediate objects as needed. serde omits
+    // `None` Option fields (e.g. `soft-wrap.wrap-indicator`) from the serialized
+    // config, so a plain `pointer_mut` can't find them — build the path instead.
+    let parts: Vec<&str> = zemacs_key.split('.').collect();
+    let (leaf, parents) = parts.split_last().unwrap();
+    let mut cur = config;
+    for part in parents {
+        let obj = cur
+            .as_object_mut()
+            .ok_or_else(|| anyhow!("Unknown key `{zemacs_key}`"))?;
+        cur = obj
+            .entry((*part).to_string())
+            .or_insert_with(|| Value::Object(serde_json::Map::new()));
+    }
+    cur.as_object_mut()
+        .ok_or_else(|| anyhow!("Unknown key `{zemacs_key}`"))?
+        .insert((*leaf).to_string(), new_value);
     Ok(())
 }
 
@@ -19060,6 +19072,17 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                 config_set_key(&mut config, "bufferline", Value::String(mode.into()))?;
                 changed = true;
             }
+            continue;
+        }
+        // `showbreak` maps onto the soft-wrap wrap indicator — the marker shown
+        // at the start of a wrapped line (vim `:set showbreak=-->`).
+        if matches!(name, "showbreak" | "sbr") {
+            config_set_key(
+                &mut config,
+                "soft-wrap.wrap-indicator",
+                Value::String(value.unwrap_or("").to_string()),
+            )?;
+            changed = true;
             continue;
         }
         // `colorcolumn` (comma-separated columns) maps onto `rulers` — the
@@ -36835,6 +36858,23 @@ fn exclude_workspace(
 #[cfg(test)]
 mod vim_set_tests {
     use super::*;
+
+    #[test]
+    fn config_set_key_sets_nested_none_option_field() {
+        // soft_wrap.wrap_indicator is a None-default Option serde omits from the
+        // serialized config; the dotted-path setter must create the path and the
+        // config must still deserialize. Isolates the :set showbreak plumbing.
+        let mut cfg = serde_json::json!(&zemacs_view::editor::Config::default());
+        config_set_key(
+            &mut cfg,
+            "soft-wrap.wrap-indicator",
+            Value::String("-->".into()),
+        )
+        .expect("config_set_key");
+        let config: zemacs_view::editor::Config =
+            serde_json::from_value(cfg).expect("config must deserialize after set");
+        assert_eq!(config.soft_wrap.wrap_indicator.as_deref(), Some("-->"));
+    }
 
     #[test]
     fn buffer_name_matches_full_and_basename() {

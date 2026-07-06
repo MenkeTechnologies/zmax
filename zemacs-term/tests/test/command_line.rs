@@ -1102,3 +1102,22 @@ async fn set_splitright_splitbelow_configure_split_placement() -> anyhow::Result
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_showbreak_sets_wrap_indicator() -> anyhow::Result<()> {
+    // vim `:set showbreak=-->` sets the marker shown at the start of wrapped lines.
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":set showbreak=+<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(
+                app.editor.config().soft_wrap.wrap_indicator.as_deref(),
+                Some("+")
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

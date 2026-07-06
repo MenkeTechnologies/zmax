@@ -7780,11 +7780,11 @@
   },
   {
     "spec_id": "neovim.option.showbreak",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set soft-wrap"
+    "note": "typable:set maps showbreak to soft-wrap.wrap-indicator (config_set_key builds the None-Option path)"
   },
   {
     "spec_id": "neovim.option.statuscolumn",
