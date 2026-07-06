@@ -34699,5 +34699,29 @@
       "typable:intro"
     ],
     "note": ":intro show the introductory message in a scratch buffer"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_eval",
+    "status": "ported",
+    "evidence": [
+      "typable:eval"
+    ],
+    "note": ":eval evaluate an expression, discard result (vimlrs engine)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_echomsg",
+    "status": "ported",
+    "evidence": [
+      "typable:echomsg"
+    ],
+    "note": ":echomsg echo an expression to the message history"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_const",
+    "status": "ported",
+    "evidence": [
+      "typable:const"
+    ],
+    "note": ":const create a constant variable"
   }
 ]

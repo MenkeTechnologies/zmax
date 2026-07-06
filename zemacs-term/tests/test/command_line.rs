@@ -607,3 +607,33 @@ async fn version_command_shows_version_in_scratch() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn viml_statement_commands_eval_without_error() -> anyhow::Result<()> {
+    // Each first-class VimL ex-command forwards to the vimlrs engine; a valid
+    // statement must not leave the editor in an error state. Related commands are
+    // chained in one app so variables exist for the later statements.
+    let cases: &[&str] = &[
+        ":eval 1 + 1<ret>",
+        ":echomsg 'hi'<ret>",
+        ":call type(0)<ret>",
+        ":let g:e = 1<ret>:execute 'let g:e = 2'<ret>",
+        ":const g:c = 3<ret>:unlet g:c<ret>",
+    ];
+    for keys in cases {
+        test_key_sequence(
+            &mut AppBuilder::new().build()?,
+            Some(keys),
+            Some(&|app| {
+                let status = app.editor.get_status().map(|(s, _)| s.to_string());
+                assert!(
+                    !app.editor.is_err(),
+                    "VimL ex-command {keys:?} errored: {status:?}"
+                );
+            }),
+            false,
+        )
+        .await?;
+    }
+    Ok(())
+}

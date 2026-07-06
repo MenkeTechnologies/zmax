@@ -25096,6 +25096,48 @@ fn viml_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+/// Run a single VimL statement `{keyword} {rest}` through the embedded vimlrs
+/// interpreter. Backs the first-class VimL ex-commands (`:echomsg`, `:eval`,
+/// `:call`, …) — Vim's `:` prompt IS the Vimscript engine, so these are thin
+/// forwarders over the same `eval_viml` the unknown-command fallback uses. The
+/// raw remainder (`VIML_SIGNATURE`) preserves quotes and expressions verbatim.
+fn viml_stmt(
+    cx: &mut compositor::Context,
+    keyword: &str,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = format!("{} {}", keyword, args.join(" "));
+    let code = code.trim();
+    if code == keyword {
+        return Ok(());
+    }
+    match crate::commands::scripting::eval_viml(cx, code) {
+        Ok(result) if result.trim().is_empty() => cx.editor.set_status("ok"),
+        Ok(result) => cx.editor.set_status(result),
+        Err(err) => cx.editor.set_error(format!("viml: {err}")),
+    }
+    Ok(())
+}
+
+macro_rules! viml_cmd {
+    ($fn:ident, $kw:literal) => {
+        fn $fn(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+            viml_stmt(cx, $kw, args, event)
+        }
+    };
+}
+
+viml_cmd!(ex_echomsg, "echomsg");
+viml_cmd!(ex_eval, "eval");
+viml_cmd!(ex_call, "call");
+viml_cmd!(ex_execute, "execute");
+viml_cmd!(ex_const, "const");
+viml_cmd!(ex_unlet, "unlet");
+
 /// `:awk <program>` — filter the selection (or whole buffer if no selection)
 /// through an awk program via the embedded awkrs interpreter, replacing it with
 /// the program's output.
@@ -33260,6 +33302,58 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_sleep,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    // Vim VimL-statement ex-commands — first-class wrappers over the embedded
+    // vimlrs interpreter (Vim's `:` prompt is the Vimscript engine; unknown `:`
+    // commands already fall through to it, these give the common statements a
+    // real command entry with completion/help).
+    TypableCommand {
+        name: "echomsg",
+        aliases: &["echom"],
+        doc: "Echo an expression and save it in the message history (vim :echomsg).",
+        fun: ex_echomsg,
+        completer: CommandCompleter::none(),
+        signature: VIML_SIGNATURE,
+    },
+    TypableCommand {
+        name: "eval",
+        aliases: &["ev"],
+        doc: "Evaluate an expression and discard the result (vim :eval).",
+        fun: ex_eval,
+        completer: CommandCompleter::none(),
+        signature: VIML_SIGNATURE,
+    },
+    TypableCommand {
+        name: "call",
+        aliases: &["cal"],
+        doc: "Call a function (vim :call).",
+        fun: ex_call,
+        completer: CommandCompleter::none(),
+        signature: VIML_SIGNATURE,
+    },
+    TypableCommand {
+        name: "execute",
+        aliases: &["exe"],
+        doc: "Execute the string result of an expression as an Ex command (vim :execute).",
+        fun: ex_execute,
+        completer: CommandCompleter::none(),
+        signature: VIML_SIGNATURE,
+    },
+    TypableCommand {
+        name: "const",
+        aliases: &["cons"],
+        doc: "Create a variable as a constant (vim :const).",
+        fun: ex_const,
+        completer: CommandCompleter::none(),
+        signature: VIML_SIGNATURE,
+    },
+    TypableCommand {
+        name: "unlet",
+        aliases: &["unl"],
+        doc: "Delete a variable (vim :unlet).",
+        fun: ex_unlet,
+        completer: CommandCompleter::none(),
+        signature: VIML_SIGNATURE,
     },
     // Vim :version / :intro — informational displays in a scratch buffer.
     TypableCommand {

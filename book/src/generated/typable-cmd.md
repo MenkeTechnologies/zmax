@@ -728,6 +728,12 @@
 | `:foldclose`, `:foldc` | Close the fold under the cursor (vim :foldclose). |
 | `:&`, `:&&`, `:s-repeat` | Repeat the last :substitute on the current line (vim :& / :&&). |
 | `:sleep`, `:sl` | Do nothing for {count} seconds (vim :sleep). |
+| `:echomsg`, `:echom` | Echo an expression and save it in the message history (vim :echomsg). |
+| `:eval`, `:ev` | Evaluate an expression and discard the result (vim :eval). |
+| `:call`, `:cal` | Call a function (vim :call). |
+| `:execute`, `:exe` | Execute the string result of an expression as an Ex command (vim :execute). |
+| `:const`, `:cons` | Create a variable as a constant (vim :const). |
+| `:unlet`, `:unl` | Delete a variable (vim :unlet). |
 | `:version`, `:ver` | Show the zemacs version and compiled feature summary (vim :version). |
 | `:intro`, `:int` | Show the introductory message (vim :intro). |
 | `:redrawstatus` | Redraw the status line (vim :redrawstatus; approximated by a full redraw). |
