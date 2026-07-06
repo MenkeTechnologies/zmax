@@ -3051,11 +3051,11 @@
   },
   {
     "spec_id": "neovim.option.incsearch",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:set"
+      "static:search"
     ],
-    "note": "vim ':set incsearch' partially works (off-state/value/semantic caveat)"
+    "note": "the search command previews matches on each keystroke (regex_prompt Update -> search_impl); integration-tested"
   },
   {
     "spec_id": "neovim.ex-command.colon_join",
