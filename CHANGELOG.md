@@ -108,6 +108,8 @@ Commands:
 * Neovim command names: `:Inspect` / `:InspectTree` (the tree-sitter highlight
   capture / syntax subtree under the cursor) and `:Man {topic}` (open a man page
   in the run console).
+* `:undolist` — a terse text list of undo states (number, age, current marker),
+  the textual companion to the visual `:undotree` (vim `:undolist`).
 * Vim tag stack over a ctags `tags` file: `:tag {name}` jumps to a definition
   and pushes the stack, `:tnext`/`:tprevious`/`:tfirst`/`:tlast` cycle matches,
   `:pop` returns, `:tags` shows the stack, `:tselect`/`:tjump` pick among matches

@@ -34350,5 +34350,13 @@
       "typable:redir"
     ],
     "note": "captures the message log (echoes/statuses) to a register or file; not raw multi-line command output streams"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_undolist",
+    "status": "partial",
+    "evidence": [
+      "typable:undolist"
+    ],
+    "note": "text list of undo states with current marker; not vim's full seq/changes/time/saved table"
   }
 ]

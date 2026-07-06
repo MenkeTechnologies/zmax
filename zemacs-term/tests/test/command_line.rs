@@ -561,3 +561,25 @@ async fn neovim_inspect_aliases_recognized() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+// `:undolist` lists the undo states in a popup after a couple of edits, marking
+// the current one with `>`.
+#[tokio::test(flavor = "multi_thread")]
+async fn undolist_shows_states() -> anyhow::Result<()> {
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some("iabc<esc>oxyz<esc>:undolist<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let info = app.editor.autoinfo.as_ref().expect(":undolist popup");
+            assert!(
+                info.text.contains('>'),
+                "undo list should mark the current state: {}",
+                info.text
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
