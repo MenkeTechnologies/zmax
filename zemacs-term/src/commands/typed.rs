@@ -18807,26 +18807,30 @@ fn line_numbers_gutter_present(cx: &compositor::Context) -> bool {
         .is_some_and(|a| a.iter().any(|v| v.as_str() == Some("line-numbers")))
 }
 
-/// Show or hide line numbers by adding/removing the `line-numbers` gutter from
-/// `gutters.layout` (vim `:set number` / `:set nonumber` — visibility is gutter
-/// membership, not the `line-number` absolute/relative enum).
-fn set_line_numbers_gutter(cx: &mut compositor::Context, show: bool) -> anyhow::Result<()> {
+/// Add or remove a gutter from `gutters.layout`. Backs the vim options whose
+/// visibility is gutter membership rather than a scalar (`:set number` →
+/// `line-numbers`, `:set signcolumn=no` → `diagnostics`).
+fn set_gutter(cx: &mut compositor::Context, gutter: &str, show: bool) -> anyhow::Result<()> {
     let mut config = serde_json::json!(&cx.editor.config().deref());
     let layout = config
         .pointer_mut("/gutters/layout")
         .and_then(Value::as_array_mut)
         .ok_or_else(|| anyhow!("gutters.layout is not configured"))?;
-    let present = layout.iter().any(|v| v.as_str() == Some("line-numbers"));
+    let present = layout.iter().any(|v| v.as_str() == Some(gutter));
     if show && !present {
-        // Vim renders numbers at the left; place the gutter right after any
-        // diagnostics gutter, else at the front.
-        let pos = layout
-            .iter()
-            .position(|v| v.as_str() == Some("diagnostics"))
-            .map_or(0, |i| i + 1);
-        layout.insert(pos, Value::String("line-numbers".into()));
+        // Numbers render left of signs; put `line-numbers` right after any
+        // `diagnostics` gutter, and other gutters at the front.
+        let pos = if gutter == "line-numbers" {
+            layout
+                .iter()
+                .position(|v| v.as_str() == Some("diagnostics"))
+                .map_or(0, |i| i + 1)
+        } else {
+            0
+        };
+        layout.insert(pos, Value::String(gutter.into()));
     } else if !show && present {
-        layout.retain(|v| v.as_str() != Some("line-numbers"));
+        layout.retain(|v| v.as_str() != Some(gutter));
     } else {
         return Ok(());
     }
@@ -18836,6 +18840,11 @@ fn set_line_numbers_gutter(cx: &mut compositor::Context, show: bool) -> anyhow::
         .0
         .send(ConfigEvent::Update(config))?;
     Ok(())
+}
+
+/// vim `:set number` / `:set nonumber` — line-number gutter visibility.
+fn set_line_numbers_gutter(cx: &mut compositor::Context, show: bool) -> anyhow::Result<()> {
+    set_gutter(cx, "line-numbers", show)
 }
 
 /// `:set` with vim-compatible syntax (`:set nu`, `:set nowrap`, `:set tw=80`,
@@ -18911,6 +18920,16 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                 set_line_numbers_gutter(cx, true)?;
                 apply_config_value(cx, "line-number", Value::String("relative".into()))?;
             }
+            continue;
+        }
+        // `signcolumn` toggles the sign/diagnostics gutter: `no` hides it, any
+        // other value (`yes`/`auto`/`number`) shows it (vim `signcolumn`).
+        if matches!(name, "signcolumn" | "scl") {
+            let show = match value {
+                Some(v) => !v.eq_ignore_ascii_case("no"),
+                None => !neg,
+            };
+            set_gutter(cx, "diagnostics", show)?;
             continue;
         }
 
