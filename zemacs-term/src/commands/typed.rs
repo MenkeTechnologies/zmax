@@ -18696,6 +18696,9 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     (&["termguicolors", "tgc"],    "true-color",         VimOptKind::Bool),
     (&["mouse"],                   "mouse",              VimOptKind::Bool),
     (&["list"],                    "whitespace.render",  VimOptKind::Enum("all", Some("none"))),
+    (&["autoread", "ar"],          "auto-reload",        VimOptKind::Bool),
+    (&["endofline", "eol"],        "insert-final-newline", VimOptKind::Bool),
+    (&["fixendofline", "fixeol"],  "insert-final-newline", VimOptKind::Bool),
 ];
 
 fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {
@@ -18780,42 +18783,35 @@ fn translate_vim_option(
     Some(result)
 }
 
-fn apply_config_value(
-    cx: &mut compositor::Context,
-    zemacs_key: &str,
-    new_value: Value,
-) -> anyhow::Result<()> {
-    let mut config = serde_json::json!(&cx.editor.config().deref());
+/// Set a dotted config key inside an in-memory config JSON (no send). Used to
+/// accumulate several `:set` changes before one `ConfigEvent::Update`.
+fn config_set_key(config: &mut Value, zemacs_key: &str, new_value: Value) -> anyhow::Result<()> {
     let pointer = format!("/{}", zemacs_key.replace('.', "/"));
     let slot = config
         .pointer_mut(&pointer)
         .ok_or_else(|| anyhow!("Unknown key `{zemacs_key}`"))?;
     *slot = new_value;
-    let config = serde_json::from_value(config).map_err(|e| anyhow!("{e}"))?;
-    cx.editor
-        .config_events
-        .0
-        .send(ConfigEvent::Update(config))?;
     Ok(())
 }
 
-/// Whether the `line-numbers` gutter is currently in the layout.
-fn line_numbers_gutter_present(cx: &compositor::Context) -> bool {
-    let cfg = serde_json::json!(&cx.editor.config().deref());
-    cfg.pointer("/gutters/layout")
+/// Whether `gutter` is in the config's `gutters.layout`.
+fn config_gutter_present(config: &Value, gutter: &str) -> bool {
+    config
+        .pointer("/gutters/layout")
         .and_then(Value::as_array)
-        .is_some_and(|a| a.iter().any(|v| v.as_str() == Some("line-numbers")))
+        .is_some_and(|a| a.iter().any(|v| v.as_str() == Some(gutter)))
 }
 
-/// Add or remove a gutter from `gutters.layout`. Backs the vim options whose
-/// visibility is gutter membership rather than a scalar (`:set number` →
-/// `line-numbers`, `:set signcolumn=no` → `diagnostics`).
-fn set_gutter(cx: &mut compositor::Context, gutter: &str, show: bool) -> anyhow::Result<()> {
-    let mut config = serde_json::json!(&cx.editor.config().deref());
-    let layout = config
+/// Add or remove `gutter` from the config's `gutters.layout` (no send). Backs the
+/// vim options whose visibility is gutter membership rather than a scalar
+/// (`:set number` → `line-numbers`, `:set signcolumn=no` → `diagnostics`).
+fn config_set_gutter(config: &mut Value, gutter: &str, show: bool) {
+    let Some(layout) = config
         .pointer_mut("/gutters/layout")
         .and_then(Value::as_array_mut)
-        .ok_or_else(|| anyhow!("gutters.layout is not configured"))?;
+    else {
+        return;
+    };
     let present = layout.iter().any(|v| v.as_str() == Some(gutter));
     if show && !present {
         // Numbers render left of signs; put `line-numbers` right after any
@@ -18831,20 +18827,23 @@ fn set_gutter(cx: &mut compositor::Context, gutter: &str, show: bool) -> anyhow:
         layout.insert(pos, Value::String(gutter.into()));
     } else if !show && present {
         layout.retain(|v| v.as_str() != Some(gutter));
-    } else {
-        return Ok(());
     }
+}
+
+/// Set a single config key and push the update (for callers outside `:set`).
+fn apply_config_value(
+    cx: &mut compositor::Context,
+    zemacs_key: &str,
+    new_value: Value,
+) -> anyhow::Result<()> {
+    let mut config = serde_json::json!(&cx.editor.config().deref());
+    config_set_key(&mut config, zemacs_key, new_value)?;
     let config = serde_json::from_value(config).map_err(|e| anyhow!("{e}"))?;
     cx.editor
         .config_events
         .0
         .send(ConfigEvent::Update(config))?;
     Ok(())
-}
-
-/// vim `:set number` / `:set nonumber` — line-number gutter visibility.
-fn set_line_numbers_gutter(cx: &mut compositor::Context, show: bool) -> anyhow::Result<()> {
-    set_gutter(cx, "line-numbers", show)
 }
 
 /// `:set` with vim-compatible syntax (`:set nu`, `:set nowrap`, `:set tw=80`,
@@ -18896,6 +18895,11 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
         }
     }
 
+    // Accumulate every option into a single config value and push one update, so
+    // `:set a b c` (as a real vimrc does) doesn't have each option clobber the
+    // previous one's full-config update.
+    let mut config = serde_json::json!(&cx.editor.config().deref());
+    let mut changed = false;
     for tok in &tokens {
         let (neg, toggle, name, value) = parse_set_token(tok);
 
@@ -18904,22 +18908,24 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
         // `:set nonumber` hides it (vim `number`).
         if value.is_none() && matches!(name, "number" | "nu") {
             let show = if toggle {
-                !line_numbers_gutter_present(cx)
+                !config_gutter_present(&config, "line-numbers")
             } else {
                 !neg
             };
-            set_line_numbers_gutter(cx, show)?;
+            config_set_gutter(&mut config, "line-numbers", show);
+            changed = true;
             continue;
         }
         // `relativenumber` controls the style (and shows the gutter); `no`
         // switches back to absolute without hiding the gutter (vim semantics).
         if value.is_none() && matches!(name, "relativenumber" | "rnu") {
             if neg {
-                apply_config_value(cx, "line-number", Value::String("absolute".into()))?;
+                config_set_key(&mut config, "line-number", Value::String("absolute".into()))?;
             } else {
-                set_line_numbers_gutter(cx, true)?;
-                apply_config_value(cx, "line-number", Value::String("relative".into()))?;
+                config_set_gutter(&mut config, "line-numbers", true);
+                config_set_key(&mut config, "line-number", Value::String("relative".into()))?;
             }
+            changed = true;
             continue;
         }
         // `signcolumn` toggles the sign/diagnostics gutter: `no` hides it, any
@@ -18929,18 +18935,50 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                 Some(v) => !v.eq_ignore_ascii_case("no"),
                 None => !neg,
             };
-            set_gutter(cx, "diagnostics", show)?;
+            config_set_gutter(&mut config, "diagnostics", show);
+            changed = true;
+            continue;
+        }
+        // `showtabline` (0/1/2) maps onto the bufferline render mode.
+        if matches!(name, "showtabline" | "stal") {
+            if let Some(v) = value {
+                let mode = match v {
+                    "0" => "never",
+                    "1" => "multiple",
+                    _ => "always",
+                };
+                config_set_key(&mut config, "bufferline", Value::String(mode.into()))?;
+                changed = true;
+            }
+            continue;
+        }
+        // `fileformat` (unix/dos/mac) maps onto the default line ending.
+        if matches!(name, "fileformat" | "ff") {
+            if let Some(v) = value {
+                let le = match v.to_ascii_lowercase().as_str() {
+                    "dos" => Some("crlf"),
+                    "unix" => Some("lf"),
+                    _ => None, // `mac` (CR) has no zemacs equivalent — leave as-is
+                };
+                if let Some(le) = le {
+                    config_set_key(&mut config, "default-line-ending", Value::String(le.into()))?;
+                    changed = true;
+                }
+            }
             continue;
         }
 
         let current_bool = |key: &str| -> bool {
-            let cfg = serde_json::json!(&cx.editor.config().deref());
-            cfg.pointer(&format!("/{}", key.replace('.', "/")))
+            config
+                .pointer(&format!("/{}", key.replace('.', "/")))
                 .and_then(Value::as_bool)
                 .unwrap_or(false)
         };
         match translate_vim_option(tok, current_bool) {
-            Some(Ok((hkey, val))) => apply_config_value(cx, &hkey, val)?,
+            Some(Ok((hkey, val))) => {
+                config_set_key(&mut config, &hkey, val)?;
+                changed = true;
+            }
             Some(Err(e)) => return Err(e),
             // Unknown to zemacs: accept silently. Vim has hundreds of options a
             // real `~/.vimrc` sets (`backupdir`, `packpath`, `runtimepath`,
@@ -18948,6 +18986,13 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             // erroring would abort sourcing the vimrc. Logged, not surfaced.
             None => log::debug!("vim :set: ignoring unsupported option `{tok}`"),
         }
+    }
+    if changed {
+        let config = serde_json::from_value(config).map_err(|e| anyhow!("{e}"))?;
+        cx.editor
+            .config_events
+            .0
+            .send(ConfigEvent::Update(config))?;
     }
     Ok(())
 }

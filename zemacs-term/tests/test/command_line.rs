@@ -809,16 +809,28 @@ async fn set_number_toggles_line_numbers_gutter() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn set_mouse_with_value_enables_mouse() -> anyhow::Result<()> {
-    // vim `:set mouse=a` is a string option upstream but maps to a zemacs bool;
-    // a non-empty value enables it rather than erroring on the parse.
-    test_key_sequence(
+async fn set_mouse_string_value_applies() -> anyhow::Result<()> {
+    // vim `:set mouse=...` is a string option upstream but maps to a zemacs bool.
+    // mouse defaults to true, so drive a real change: `:set mouse=` disables it
+    // (empty value), then `:set mouse=a` re-enables — neither errors on parse.
+    test_key_sequences(
         &mut AppBuilder::new().build()?,
-        Some(":set mouse=a<ret>"),
-        Some(&|app| {
-            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert!(app.editor.config().mouse, "mouse=a enables the mouse");
-        }),
+        vec![
+            (
+                Some(":set mouse=<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert!(!app.editor.config().mouse, "mouse= disables the mouse");
+                } as _),
+            ),
+            (
+                Some(":set mouse=a<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err());
+                    assert!(app.editor.config().mouse, "mouse=a enables the mouse");
+                } as _),
+            ),
+        ],
         false,
     )
     .await?;
@@ -866,6 +878,34 @@ async fn set_signcolumn_no_hides_diagnostics_gutter() -> anyhow::Result<()> {
                 .iter()
                 .any(|g| matches!(g, zemacs_view::editor::GutterType::Diagnostics));
             assert!(!has_diag, "signcolumn=no hides the diagnostics gutter");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_maps_showtabline_fileformat_autoread() -> anyhow::Result<()> {
+    // Options with real editor equivalents take effect, not just no-op.
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":set showtabline=2 fileformat=unix autoread<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let c = app.editor.config();
+            assert!(
+                matches!(c.bufferline, zemacs_view::editor::BufferLine::Always),
+                "showtabline=2 -> bufferline always"
+            );
+            assert!(
+                matches!(
+                    c.default_line_ending,
+                    zemacs_view::editor::LineEndingConfig::LF
+                ),
+                "fileformat=unix -> line ending lf"
+            );
+            assert!(c.auto_reload, "autoread enables auto-reload");
         }),
         false,
     )
