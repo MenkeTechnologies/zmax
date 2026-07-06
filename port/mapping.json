@@ -7516,11 +7516,11 @@
   },
   {
     "spec_id": "neovim.option.laststatus",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> zemacs :set statusline"
+    "note": "typable:set -> render-statusline config; the render path skips statusline::render when off (substrate: new config field + render guard)"
   },
   {
     "spec_id": "neovim.option.ruler",
