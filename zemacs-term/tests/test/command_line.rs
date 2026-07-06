@@ -1121,3 +1121,24 @@ async fn set_showbreak_sets_wrap_indicator() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_listchars_sets_whitespace_characters() -> anyhow::Result<()> {
+    // vim `:set listchars=tab:>-,space:.,eol:$` maps onto the whitespace render
+    // characters (avoiding `-`/`>` which trip the harness key parser).
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":set listchars=tab:x_,space:.,eol:$<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let ws = &app.editor.config().whitespace.characters;
+            assert_eq!(ws.tab, 'x');
+            assert_eq!(ws.tabpad, '_');
+            assert_eq!(ws.space, '.');
+            assert_eq!(ws.newline, '$');
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

@@ -19074,6 +19074,38 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
+        // `listchars` (`tab:>-,space:.,eol:$,nbsp:+`) maps onto the whitespace
+        // render characters (vim `:set list` toggles rendering via `whitespace.render`).
+        if matches!(name, "listchars" | "lcs") {
+            for item in value.unwrap_or("").split(',') {
+                let Some((k, v)) = item.split_once(':') else {
+                    continue;
+                };
+                let mut chars = v.chars();
+                let Some(c1) = chars.next() else { continue };
+                let set = |cfg: &mut Value, field: &str, c: char| {
+                    config_set_key(
+                        cfg,
+                        &format!("whitespace.characters.{field}"),
+                        Value::String(c.to_string()),
+                    )
+                };
+                match k {
+                    "tab" => {
+                        set(&mut config, "tab", c1)?;
+                        if let Some(c2) = chars.next() {
+                            set(&mut config, "tabpad", c2)?;
+                        }
+                    }
+                    "space" | "lead" | "trail" => set(&mut config, "space", c1)?,
+                    "nbsp" => set(&mut config, "nbsp", c1)?,
+                    "eol" => set(&mut config, "newline", c1)?,
+                    _ => {}
+                }
+            }
+            changed = true;
+            continue;
+        }
         // `showbreak` maps onto the soft-wrap wrap indicator — the marker shown
         // at the start of a wrapped line (vim `:set showbreak=-->`).
         if matches!(name, "showbreak" | "sbr") {

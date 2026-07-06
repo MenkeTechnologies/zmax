@@ -7468,11 +7468,11 @@
   },
   {
     "spec_id": "neovim.option.listchars",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> zemacs :set whitespace"
+    "note": "typable:set parses listchars (tab/space/eol/nbsp) onto whitespace.characters"
   },
   {
     "spec_id": "neovim.option.wrapmargin",
