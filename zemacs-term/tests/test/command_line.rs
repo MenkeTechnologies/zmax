@@ -946,3 +946,57 @@ async fn set_expandtab_shiftwidth_sets_document_indent() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_option_store_round_trips() -> anyhow::Result<()> {
+    // Every option round-trips through the store, whether or not it has an editor
+    // effect: set it, then `:set opt?` reports the value back (vim behavior for
+    // inert options too).
+    test_key_sequences(
+        &mut AppBuilder::new().build()?,
+        vec![
+            (
+                Some(":set backupdir=~/tmp<ret>:set backupdir?<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err());
+                    let (s, _) = app.editor.get_status().unwrap();
+                    assert_eq!(s.as_ref(), "backupdir=~/tmp");
+                } as _),
+            ),
+            (
+                Some(":set nonumber<ret>:set number?<ret>"),
+                Some(&|app| {
+                    let (s, _) = app.editor.get_status().unwrap();
+                    assert_eq!(s.as_ref(), "nonumber");
+                } as _),
+            ),
+            (
+                Some(":set shiftwidth=4<ret>:set shiftwidth?<ret>"),
+                Some(&|app| {
+                    let (s, _) = app.editor.get_status().unwrap();
+                    assert_eq!(s.as_ref(), "shiftwidth=4");
+                } as _),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_all_lists_the_full_option_surface() -> anyhow::Result<()> {
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":set all<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err());
+            let text = zemacs_view::doc!(app.editor).text().to_string();
+            assert!(text.contains("autoindent"), "should list a boolean option");
+            assert!(text.contains("backupdir="), "should list a valued option");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
