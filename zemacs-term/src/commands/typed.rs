@@ -926,6 +926,17 @@ fn tag_split(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
 /// Shared mover for `:tnext`/`:tprevious`/`:tfirst`/`:tlast` over the current
 /// tag's match list.
 fn tag_move(cx: &mut compositor::Context, to: TagMove) -> anyhow::Result<()> {
+    tag_move_action(cx, to, Action::Replace)
+}
+
+/// `tag_move` with an explicit action — `Replace` for `:tnext`/`:tprevious`,
+/// `HorizontalSplit` for the preview variants (`:ptnext`/`:ptprevious`/…), which
+/// show the match in a split ("preview window") instead of replacing the buffer.
+fn tag_move_action(
+    cx: &mut compositor::Context,
+    to: TagMove,
+    action: Action,
+) -> anyhow::Result<()> {
     let n = TAG_MATCHES.with(|m| m.borrow().len());
     if n == 0 {
         bail!("no tags");
@@ -949,10 +960,41 @@ fn tag_move(cx: &mut compositor::Context, to: TagMove) -> anyhow::Result<()> {
     };
     let entry = TAG_MATCHES.with(|m| m.borrow()[idx].clone());
     TAG_IDX.with(|i| i.set(idx));
-    jump_to_tag(cx, &entry)?;
+    jump_to_tag_action(cx, &entry, action)?;
     cx.editor
         .set_status(format!("tag {} of {}: {}", idx + 1, n, entry.name));
     Ok(())
+}
+
+/// Preview-window variants of the tag navigators — show the tag match in a
+/// horizontal split (zemacs has no dedicated preview window; a split is the
+/// faithful approximation).
+fn ptag_next(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    tag_move_action(cx, TagMove::Next, Action::HorizontalSplit)
+}
+
+fn ptag_prev(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    tag_move_action(cx, TagMove::Prev, Action::HorizontalSplit)
+}
+
+fn ptag_first(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    tag_move_action(cx, TagMove::First, Action::HorizontalSplit)
+}
+
+fn ptag_last(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    tag_move_action(cx, TagMove::Last, Action::HorizontalSplit)
 }
 
 fn tag_next(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -19901,6 +19943,8 @@ ex_static_cmd!(ex_foldopen, super::fold_open);
 ex_static_cmd!(ex_foldclose, super::fold_close);
 ex_static_cmd!(ex_repeat_substitute, super::repeat_substitute);
 ex_static_cmd!(ex_sleep, super::vim_sleep);
+ex_static_cmd!(ex_startreplace, super::replace_mode);
+ex_static_cmd!(ex_pclose, super::wclose);
 
 /// vim `:version` — show the editor version and a compiled-feature summary in a
 /// scratch buffer (vim opens a pager; zemacs uses a read-only scratch buffer).
@@ -33466,6 +33510,57 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_unlet,
         completer: CommandCompleter::none(),
         signature: VIML_SIGNATURE,
+    },
+    // Vim preview-window tag navigators — show the match in a split.
+    TypableCommand {
+        name: "ptnext",
+        aliases: &["ptn"],
+        doc: "Show the next matching tag in a preview split (vim :ptnext).",
+        fun: ptag_next,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "ptprevious",
+        aliases: &["ptp", "ptNext", "ptN"],
+        doc: "Show the previous matching tag in a preview split (vim :ptprevious / :ptNext).",
+        fun: ptag_prev,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "ptfirst",
+        aliases: &["ptrewind", "ptr"],
+        doc: "Show the first matching tag in a preview split (vim :ptfirst / :ptrewind).",
+        fun: ptag_first,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "ptlast",
+        aliases: &["ptl"],
+        doc: "Show the last matching tag in a preview split (vim :ptlast).",
+        fun: ptag_last,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    // Vim :pclose — close the preview window (here: the current split).
+    TypableCommand {
+        name: "pclose",
+        aliases: &["pc"],
+        doc: "Close the preview window (vim :pclose).",
+        fun: ex_pclose,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    // Vim :startgreplace — start Virtual Replace mode (zemacs replace/overtype).
+    TypableCommand {
+        name: "startgreplace",
+        aliases: &["startg"],
+        doc: "Start Virtual Replace mode (vim :startgreplace).",
+        fun: ex_startreplace,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     // Vim :version / :intro — informational displays in a scratch buffer.
     TypableCommand {
