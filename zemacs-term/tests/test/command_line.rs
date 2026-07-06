@@ -1383,3 +1383,23 @@ async fn visual_register_select_yank_to_named_register() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn buffer_close_closes_scratch_without_force() -> anyhow::Result<()> {
+    // A scratch buffer (no file) with typed content closes on plain :buffer-close
+    // — no `!` needed, because scratch buffers are disposable.
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some("iscratch text<esc>:buffer-close<ret>"),
+        Some(&|app| {
+            assert!(
+                !app.editor.is_err(),
+                ":buffer-close should close a modified scratch buffer, got: {:?}",
+                app.editor.get_status()
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

@@ -1789,6 +1789,15 @@ fn buffer_close_by_ids_impl(
     let (modified_ids, modified_names): (Vec<_>, Vec<_>) = doc_ids
         .iter()
         .filter_map(|&doc_id| {
+            // Scratch buffers (no backing file) are disposable — closing one only
+            // discards throwaway text, so never block on them the way an unsaved
+            // *file* is blocked. This lets `SPC b x` / `:buffer-close` close a
+            // `[scratch]` buffer without needing the `!` force form.
+            let is_scratch = cx
+                .editor
+                .document(doc_id)
+                .is_some_and(|d| d.path().is_none());
+            let force = force || is_scratch;
             if let Err(CloseError::BufferModified(name)) = cx.editor.close_document(doc_id, force) {
                 Some((doc_id, name))
             } else {
