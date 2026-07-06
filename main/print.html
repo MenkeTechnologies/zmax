@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-71eefc4e.js";
+            window.path_to_searchindex_js = "searchindex-0f1bb5f7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -3371,6 +3371,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>insert_char_by_code</code></td><td>Insert a character by Unicode code point (emacs insert-char, C-x 8 RET)</td><td></td></tr>
 <tr><td><code>backward_delete_char_untabify</code></td><td>Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify)</td><td></td></tr>
 <tr><td><code>insert_last_inserted_text</code></td><td>Insert the previously inserted text (vim i_CTRL-A)</td><td>insert: <code>&lt;C-a&gt;</code></td></tr>
+<tr><td><code>insert_command_normal</code></td><td>Run one Normal-mode command, then return to Insert (vim i_CTRL-O)</td><td>insert: <code>&lt;C-o&gt;</code></td></tr>
 <tr><td><code>insert_last_inserted_and_stop</code></td><td>Insert previously inserted text and stop insert (vim i_CTRL-@)</td><td>insert: <code>&lt;C-@&gt;</code></td></tr>
 <tr><td><code>copy_between_registers</code></td><td>Copy between two registers</td><td></td></tr>
 <tr><td><code>copy_to_register</code></td><td>Copy the region into a register (emacs copy-to-register, C-x r s)</td><td></td></tr>
@@ -7085,11 +7086,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>3581</strong> (52.3%)</li>
+<li>Ported: <strong>3582</strong> (52.3%)</li>
 <li>Partial: <strong>682</strong> (10.0%)</li>
-<li>Absent: <strong>2584</strong></li>
+<li>Absent: <strong>2583</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1464 static commands, 1722 typable <code>:</code> commands, 2957 default keybindings</li>
+<li>zemacs source surface: 1465 static commands, 1722 typable <code>:</code> commands, 2958 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -7149,7 +7150,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">185</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">204</td><td style="text-align: right">14</td><td style="text-align: right">93.6%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1286</td><td style="text-align: right">213</td><td style="text-align: right">61.9%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1287</td><td style="text-align: right">213</td><td style="text-align: right">62.0%</td></tr>
 <tr><td>spacemacs</td><td style="text-align: right">1296</td><td style="text-align: right">718</td><td style="text-align: right">158</td><td style="text-align: right">55.4%</td></tr>
 </tbody>
 </table>
@@ -7215,7 +7216,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">35</td><td style="text-align: right">6</td><td style="text-align: right">66.0%</td></tr>
 <tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">239</td><td style="text-align: right">58</td><td style="text-align: right">42.6%</td></tr>
 <tr><td>neovim</td><td>function</td><td style="text-align: right">451</td><td style="text-align: right">431</td><td style="text-align: right">0</td><td style="text-align: right">95.6%</td></tr>
-<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">61</td><td style="text-align: right">25</td><td style="text-align: right">62.2%</td></tr>
+<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">62</td><td style="text-align: right">25</td><td style="text-align: right">63.3%</td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">422</td><td style="text-align: right">38</td><td style="text-align: right">88.1%</td></tr>
 <tr><td>neovim</td><td>option</td><td style="text-align: right">350</td><td style="text-align: right">17</td><td style="text-align: right">84</td><td style="text-align: right">4.9%</td></tr>
 <tr><td>neovim</td><td>visual-mode</td><td style="text-align: right">85</td><td style="text-align: right">81</td><td style="text-align: right">2</td><td style="text-align: right">95.3%</td></tr>
@@ -7231,9 +7232,9 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline-1"><a class="header" href="#headline-1">Headline</a></h2>
 <ul>
 <li>Cited keybindings (denominator): <strong>3113</strong></li>
-<li>Ported: <strong>1727</strong> (55.5%)</li>
+<li>Ported: <strong>1728</strong> (55.5%)</li>
 <li>Partial: <strong>318</strong> (10.2%)</li>
-<li>Absent: <strong>1068</strong></li>
+<li>Absent: <strong>1067</strong></li>
 </ul>
 <h2 id="by-source"><a class="header" href="#by-source">By source</a></h2>
 <div class="table-wrapper">
@@ -7244,7 +7245,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tbody>
 <tr><td>emacs</td><td style="text-align: right">1127</td><td style="text-align: right">211</td><td style="text-align: right">85</td><td style="text-align: right">18.7%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">204</td><td style="text-align: right">14</td><td style="text-align: right">93.6%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">715</td><td style="text-align: right">599</td><td style="text-align: right">71</td><td style="text-align: right">83.8%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">715</td><td style="text-align: right">600</td><td style="text-align: right">71</td><td style="text-align: right">83.9%</td></tr>
 <tr><td>spacemacs</td><td style="text-align: right">1053</td><td style="text-align: right">713</td><td style="text-align: right">148</td><td style="text-align: right">67.7%</td></tr>
 </tbody>
 </table>
@@ -7275,7 +7276,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">35</td><td style="text-align: right">6</td><td style="text-align: right">66.0%</td></tr>
-<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">61</td><td style="text-align: right">25</td><td style="text-align: right">62.2%</td></tr>
+<tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">62</td><td style="text-align: right">25</td><td style="text-align: right">63.3%</td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">422</td><td style="text-align: right">38</td><td style="text-align: right">88.1%</td></tr>
 <tr><td>neovim</td><td>visual-mode</td><td style="text-align: right">85</td><td style="text-align: right">81</td><td style="text-align: right">2</td><td style="text-align: right">95.3%</td></tr>
 <tr><td>spacemacs</td><td>emacs-prefix</td><td style="text-align: right">271</td><td style="text-align: right">114</td><td style="text-align: right">144</td><td style="text-align: right">42.1%</td></tr>
