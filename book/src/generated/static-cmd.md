@@ -741,7 +741,7 @@
 | `bookmark_rename` | Rename a bookmark via a picker (emacs bookmark-rename) |  |
 | `define_abbrev` | Define a global abbrev: <name> <expansion> (emacs C-x a g) | normal: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>ail ``, select: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>ail ``, insert: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>ail `` |
 | `inverse_add_global_abbrev` | Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g) | normal: `` <C-x>aig ``, select: `` <C-x>aig ``, insert: `` <C-x>aig `` |
-| `expand_abbrev` | Expand the abbrev before point (emacs C-x ') | normal: `` <C-x>' ``, select: `` <C-x>' ``, insert: `` <C-x>' `` |
+| `expand_abbrev` | Expand the abbrev before point (emacs C-x ') | normal: `` <C-x>' ``, select: `` <C-x>' ``, insert: `` <C-]> ``, `` <C-x>' `` |
 | `abbrev_prefix_mark` | Mark point as an abbrev prefix boundary; insert a hyphen the next expand-abbrev removes (emacs abbrev-prefix-mark, M-') | normal: `` <space>xem ``, select: `` <space>xem `` |
 | `unexpand_abbrev` | Undo the last abbrev expansion, restoring the original abbrev text (emacs unexpand-abbrev) | normal: `` <space>xeu ``, select: `` <space>xeu `` |
 | `insert_abbrevs` | Insert a description of every defined abbrev at point (emacs insert-abbrevs) |  |

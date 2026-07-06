@@ -1964,6 +1964,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-s" => completion,   // i_CTRL-X_CTRL-S: spelling suggestions
             "C-e" => scroll_down,  // i_CTRL-X_CTRL-E: scroll window up (view down)
             "C-y" => scroll_up,    // i_CTRL-X_CTRL-Y: scroll window down (view up)
+            "C-z" => no_op,        // i_CTRL-X_CTRL-Z: stop completion, leave text unchanged
         },
         // i_CTRL-G j/k (and CTRL-J/CTRL-K, <Down>/<Up>): move a display line
         // down/up, toward the column where insertion started.
@@ -1980,6 +1981,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-right" => ghost_text_accept_word, // partial-accept: take the next word of the suggestion
 
         "C-r"   => insert_register,
+        "C-]"   => expand_abbrev,                 // i_CTRL-]: trigger abbreviation before point
         "C-a"   => insert_last_inserted_text,    // i_CTRL-A: insert previously inserted text
         "C-@"   => insert_last_inserted_and_stop, // i_CTRL-@: insert previously inserted text, stop insert
         "C-e"   => copy_char_below,         // vim i_CTRL-E: insert the character below the cursor

@@ -34497,5 +34497,125 @@
       "key:normal:l"
     ],
     "note": "<Space> move right; Space is the leader key, l/<Right> move right"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_rbracket",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-]"
+    ],
+    "note": "i_CTRL-] expand the abbrev before point"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_x_ctrl_z",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-x C-z"
+    ],
+    "note": "i_CTRL-X_CTRL-Z stop completion, text unchanged (no-op)"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_r_ctrl_r_lbrace_register_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-r"
+    ],
+    "note": "C-r C-r {reg} insert register literally ≈ i_CTRL-R (no virtual-column distinction in a TUI)"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_r_ctrl_o_lbrace_register_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-r"
+    ],
+    "note": "C-r C-o {reg} insert register literally ≈ i_CTRL-R"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_r_ctrl_p_lbrace_register_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-r"
+    ],
+    "note": "C-r C-p {reg} insert register, fix indent ≈ i_CTRL-R"
+  },
+  {
+    "spec_id": "neovim.insert-mode.0_ctrl_d",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-d"
+    ],
+    "note": "0 CTRL-D delete all indent ≈ i_CTRL-D unindent"
+  },
+  {
+    "spec_id": "neovim.insert-mode.caret_ctrl_d",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-d"
+    ],
+    "note": "^ CTRL-D delete indent for current line ≈ i_CTRL-D unindent"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_shift_q_lbrace_char_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-v"
+    ],
+    "note": "CTRL-SHIFT-Q {char} literal insert ≈ i_CTRL-V insert_char_interactive"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_shift_v_lbrace_char_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:insert:C-v"
+    ],
+    "note": "CTRL-SHIFT-V {char} literal insert ≈ i_CTRL-V insert_char_interactive"
+  },
+  {
+    "spec_id": "neovim.insert-mode.lt_help_gt",
+    "status": "ported",
+    "evidence": [
+      "static:help"
+    ],
+    "note": "i_<Help> stop insert and open the help browser"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_a",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-l"
+    ],
+    "note": "c_CTRL-A do completion ≈ C-l completion on the pattern before the cursor"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_b",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-a"
+    ],
+    "note": "c_CTRL-B cursor to begin of command-line ≈ C-a / Home (move_start)"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_d",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-l"
+    ],
+    "note": "c_CTRL-D list completions ≈ C-l / Tab completion"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_r_ctrl_r_lbrace_regname_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-r"
+    ],
+    "note": "c_CTRL-R CTRL-R {reg} insert register literally ≈ c_CTRL-R"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_r_ctrl_o_lbrace_regname_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-r"
+    ],
+    "note": "c_CTRL-R CTRL-O {reg} insert register/object ≈ c_CTRL-R"
   }
 ]
