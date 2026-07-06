@@ -34358,5 +34358,144 @@
       "typable:undolist"
     ],
     "note": "text list of undo states with current marker; not vim's full seq/changes/time/saved table"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_hash",
+    "status": "ported",
+    "evidence": [
+      "key:normal:[ #",
+      "static:goto_prev_preproc"
+    ],
+    "note": "[# jump to previous unmatched #if/#else (nesting-aware preprocessor scan)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_hash",
+    "status": "ported",
+    "evidence": [
+      "key:normal:] #",
+      "static:goto_next_preproc"
+    ],
+    "note": "]# jump to next unmatched #endif/#else (nesting-aware preprocessor scan)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gs",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g s",
+      "static:vim_sleep"
+    ],
+    "note": "gs sleep for {count} seconds"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gv",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g V",
+      "static:no_op"
+    ],
+    "note": "gV don't reselect the previous Visual area (no-op)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_lt",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g <",
+      "static:view_echo_area_messages"
+    ],
+    "note": "g< display previous command output (echo-area message log)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_ctrl_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w C-c",
+      "static:no_op"
+    ],
+    "note": "C-w C-c no-op"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_ctrl_z",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w C-z",
+      "static:recenter_other_window"
+    ],
+    "note": "C-w C-z same as C-w z"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_p",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-w P",
+      "static:rotate_view"
+    ],
+    "note": "C-w P go to preview window (approx: previous/last-accessed window)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lt_help_gt",
+    "status": "ported",
+    "evidence": [
+      "static:help"
+    ],
+    "note": "<Help> opens the help browser (SPC h h / :help)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.gr_lbrace_char_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:normal:r",
+      "static:replace_chars_vim"
+    ],
+    "note": "gr{char} virtual replace ≈ r{char}; monospace TUI has no virtual columns to distinguish them"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lbracket_d_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:[ C-d",
+      "static:goto_declaration"
+    ],
+    "note": "[d show first #define ≈ jump to declaration of word under cursor"
+  },
+  {
+    "spec_id": "neovim.normal-mode.rbracket_d_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:] C-d",
+      "static:goto_definition"
+    ],
+    "note": "]d show first #define ≈ jump to definition of word under cursor"
+  },
+  {
+    "spec_id": "neovim.normal-mode.q_colon",
+    "status": "partial",
+    "evidence": [
+      "static:command_history_picker"
+    ],
+    "note": "q: edit command-line history ≈ fuzzy command-history picker"
+  },
+  {
+    "spec_id": "neovim.normal-mode.q_slash",
+    "status": "partial",
+    "evidence": [
+      "static:search_history_picker"
+    ],
+    "note": "q/ edit search history ≈ fuzzy search-history picker"
+  },
+  {
+    "spec_id": "neovim.normal-mode.q_question",
+    "status": "partial",
+    "evidence": [
+      "static:search_history_picker"
+    ],
+    "note": "q? edit search history ≈ fuzzy search-history picker"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lt_space_gt",
+    "status": "partial",
+    "evidence": [
+      "key:normal:l"
+    ],
+    "note": "<Space> move right; Space is the leader key, l/<Right> move right"
   }
 ]

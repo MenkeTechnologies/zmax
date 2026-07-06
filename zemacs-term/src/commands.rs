@@ -1461,6 +1461,9 @@ impl MappableCommand {
         goto_prev_unmatched_brace, "Goto previous unmatched { ([{)",
         goto_next_unmatched_paren, "Goto next unmatched ) (])",
         goto_next_unmatched_brace, "Goto next unmatched } (]})",
+        goto_prev_preproc, "Goto previous unmatched #if/#else ([#)",
+        goto_next_preproc, "Goto next unmatched #endif/#else (]#)",
+        vim_sleep, "Sleep for {count} seconds (vim gs)",
         goto_prev_mark, "Goto previous lowercase mark ([`)",
         goto_next_mark, "Goto next lowercase mark (]`)",
         goto_prev_mark_line, "Goto previous lowercase mark, line start (['])",
@@ -2464,6 +2467,125 @@ fn goto_next_unmatched_paren(cx: &mut Context) {
 }
 fn goto_next_unmatched_brace(cx: &mut Context) {
     goto_unmatched_bracket(cx, '{', '}', true);
+}
+
+// vim `[#` / `]#`: jump to the {count}th previous/next *unmatched* C preprocessor
+// conditional, honoring nesting the way `[(`/`])` do for brackets. An opener
+// (`#if`/`#ifdef`/`#ifndef`) and a branch (`#else`/`#elif`) are both targets when
+// unmatched; `#endif` closes a level. Line-directive based, no syntax needed.
+#[derive(PartialEq, Debug, Clone, Copy)]
+enum Preproc {
+    Open,
+    Branch,
+    Close,
+    None,
+}
+
+fn classify_preproc(line: RopeSlice) -> Preproc {
+    let mut it = line.chars().skip_while(|c| c.is_whitespace());
+    if it.next() != Some('#') {
+        return Preproc::None;
+    }
+    let kw: String = it
+        .skip_while(|c| c.is_whitespace())
+        .take_while(|c| c.is_ascii_alphabetic())
+        .collect();
+    match kw.as_str() {
+        "if" | "ifdef" | "ifndef" => Preproc::Open,
+        "else" | "elif" | "elifdef" | "elifndef" => Preproc::Branch,
+        "endif" => Preproc::Close,
+        _ => Preproc::None,
+    }
+}
+
+// Pure nesting-aware scan for `[#`/`]#`. Returns the target line index, or None
+// when there is no {count}th unmatched directive in that direction. Split out so
+// the nesting logic is unit-testable without an Editor.
+fn find_preproc(text: RopeSlice, cur_line: usize, forward: bool, count: usize) -> Option<usize> {
+    let mut depth = 0i32;
+    let mut remaining = count.max(1);
+    if forward {
+        for i in (cur_line + 1)..text.len_lines() {
+            match classify_preproc(text.line(i)) {
+                Preproc::Open => depth += 1,
+                Preproc::Close => {
+                    if depth == 0 {
+                        remaining -= 1;
+                        if remaining == 0 {
+                            return Some(i);
+                        }
+                    } else {
+                        depth -= 1;
+                    }
+                }
+                Preproc::Branch if depth == 0 => {
+                    remaining -= 1;
+                    if remaining == 0 {
+                        return Some(i);
+                    }
+                }
+                _ => {}
+            }
+        }
+    } else {
+        for i in (0..cur_line).rev() {
+            match classify_preproc(text.line(i)) {
+                Preproc::Close => depth += 1,
+                Preproc::Open => {
+                    if depth == 0 {
+                        remaining -= 1;
+                        if remaining == 0 {
+                            return Some(i);
+                        }
+                    } else {
+                        depth -= 1;
+                    }
+                }
+                Preproc::Branch if depth == 0 => {
+                    remaining -= 1;
+                    if remaining == 0 {
+                        return Some(i);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
+fn goto_preproc(cx: &mut Context, forward: bool) {
+    let count = cx.count().max(1);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let cur_line = text.char_to_line(cursor);
+    let Some(line) = find_preproc(text, cur_line, forward, count) else {
+        cx.editor.set_error("No unmatched preprocessor directive");
+        return;
+    };
+    let pos = text.line_to_char(line);
+    let extend = cx.editor.mode == Mode::Select;
+    let selection = doc
+        .selection(view.id)
+        .clone()
+        .transform(|range| range.put_cursor(text, pos, extend));
+    push_jump(view, doc);
+    doc.set_selection(view.id, selection);
+}
+
+fn goto_prev_preproc(cx: &mut Context) {
+    goto_preproc(cx, false);
+}
+fn goto_next_preproc(cx: &mut Context) {
+    goto_preproc(cx, true);
+}
+
+// vim `gs`: sleep for {count} seconds (default 1). Vim blocks the editor for the
+// duration; zemacs does the same faithfully.
+fn vim_sleep(cx: &mut Context) {
+    let secs = cx.count().max(1) as u64;
+    std::thread::sleep(std::time::Duration::from_secs(secs));
 }
 
 // vim `[`` ` `` / `]`` ` `` (and the `['` / `]'` line variants): jump to the
@@ -33431,6 +33553,60 @@ mod abbrev_tests {
         // Unset store also yields None.
         *ABBREV_START.lock().unwrap() = None;
         assert_eq!(take_abbrev_start(id), None);
+    }
+}
+
+#[cfg(test)]
+mod preproc_nav_tests {
+    use super::*;
+
+    // A nested block:  0 #if A / 1 body / 2 #if B / 3 body / 4 #else / 5 #endif
+    // / 6 #else / 7 #endif
+    const SRC: &str = "#if A\nbody\n  #ifdef B\nbody\n#else\n#endif\n#elif C\n#endif\n";
+
+    #[test]
+    fn forward_scan_skips_nested_block_to_next_unmatched() {
+        let rope = Rope::from(SRC);
+        let text = rope.slice(..);
+        // From line 1 (inside outer #if), the next unmatched directive is the
+        // inner #ifdef's own close? No — the inner #if opens a level, so scanning
+        // forward the first *unmatched* (depth-0) target is the outer `#elif` (6),
+        // because the inner #if..#endif (2..5) is balanced and skipped.
+        assert_eq!(find_preproc(text, 1, true, 1), Some(6));
+        // Second unmatched forward from line 1 is the outer `#endif` (7).
+        assert_eq!(find_preproc(text, 1, true, 2), Some(7));
+    }
+
+    #[test]
+    fn backward_scan_finds_enclosing_opener() {
+        let rope = Rope::from(SRC);
+        let text = rope.slice(..);
+        // From line 3 (inside the inner #ifdef), scanning back the first unmatched
+        // opener is the inner `#ifdef B` (2).
+        assert_eq!(find_preproc(text, 3, false, 1), Some(2));
+        // From line 6 (the outer #elif) scanning back, the enclosing opener is the
+        // outer `#if A` (0); the inner balanced block is skipped.
+        assert_eq!(find_preproc(text, 6, false, 1), Some(0));
+    }
+
+    #[test]
+    fn classify_recognizes_directive_keywords_with_spacing() {
+        let rope = Rope::from("  #  ifndef GUARD\n#endif\nint x;\n# else\n");
+        let text = rope.slice(..);
+        assert_eq!(classify_preproc(text.line(0)), Preproc::Open); // leading + inner space
+        assert_eq!(classify_preproc(text.line(1)), Preproc::Close);
+        assert_eq!(classify_preproc(text.line(2)), Preproc::None); // plain code
+        assert_eq!(classify_preproc(text.line(3)), Preproc::Branch);
+    }
+
+    #[test]
+    fn scan_returns_none_past_the_ends() {
+        let rope = Rope::from(SRC);
+        let text = rope.slice(..);
+        // Backward from the very first line: nothing before it.
+        assert_eq!(find_preproc(text, 0, false, 1), None);
+        // A count larger than the number of unmatched directives ahead.
+        assert_eq!(find_preproc(text, 1, true, 9), None);
     }
 }
 

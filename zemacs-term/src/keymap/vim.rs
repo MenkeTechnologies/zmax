@@ -622,6 +622,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "i" => insert_at_last_insert,      // gi insert at last insert position
             "R" => replace_mode,               // gR virtual replace ≈ replace mode
             "v" => reselect_visual,            // gv reselect last visual area
+            "V" => no_op,                      // gV: don't reselect the previous Visual area (no-op)
+            "s" => vim_sleep,                  // gs: sleep for {count} seconds
+            "<" => view_echo_area_messages,    // g<: display previous command output (echo-area log)
             "f" => goto_file,
             "x" => goto_file,                 // gx: open file/URL under cursor (goto_file opens URLs externally)
             // ga (print char ascii/unicode value) is bound via VIM_TYPABLE to
@@ -749,6 +752,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "s" => goto_prev_spell_error,     // [s: previous misspelled word
             "(" => goto_prev_unmatched_paren, // [( previous unmatched (
             "{" => goto_prev_unmatched_brace, // [{ previous unmatched {
+            "#" => goto_prev_preproc,         // [# previous unmatched #if/#else
             "`" => goto_prev_mark,            // [` previous lowercase mark
             "'" => goto_prev_mark_line,       // ['  previous lowercase mark (line)
         },
@@ -777,6 +781,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "s" => goto_next_spell_error,     // ]s: next misspelled word
             ")" => goto_next_unmatched_paren, // ]) next unmatched )
             "}" => goto_next_unmatched_brace, // ]} next unmatched }
+            "#" => goto_next_preproc,         // ]# next unmatched #endif/#else
             "`" => goto_next_mark,            // ]` next lowercase mark
             "'" => goto_next_mark_line,       // ]'  next lowercase mark (line)
         },
@@ -815,6 +820,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "i" | "C-i" => goto_declaration,  // C-w i / C-w C-i: split + jump to declaration (no split)
             "p" | "C-p" => rotate_view,       // C-w p: go to previous (last accessed) window
             "z" => recenter_other_window,     // C-w z: recenter point in the other window (emacs recenter-other-window)
+            "C-z" => recenter_other_window,   // C-w C-z: same as C-w z
+            "C-c" => no_op,                   // C-w C-c: no-op (vim)
+            "P" => rotate_view,               // C-w P: go to preview window (approx: previous window)
             "C-t" => jump_view_up,            // C-w C-t: go to top window
             "t" => toggle_window_dedication,  // C-w t / SPC w t: toggle window dedication (spacemacs)
             "b" | "C-b" => jump_view_down,    // C-w b: go to bottom window

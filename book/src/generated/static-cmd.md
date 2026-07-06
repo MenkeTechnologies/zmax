@@ -285,7 +285,7 @@
 | `view_lossage` | Show the recently pressed keys (C-h l) | normal: `` <C-h>l ``, select: `` <C-h>l ``, insert: `` <C-h>l `` |
 | `describe_char` | Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =) |  |
 | `view_hello_file` | Show a multi-script greeting sample (emacs view-hello-file, C-h h) | normal: `` <C-h>h ``, select: `` <C-h>h ``, insert: `` <C-h>h `` |
-| `view_echo_area_messages` | Show the last echo-area message (emacs view-echo-area-messages, C-h e) | normal: `` <C-h>e ``, select: `` <C-h>e ``, insert: `` <C-h>e `` |
+| `view_echo_area_messages` | Show the last echo-area message (emacs view-echo-area-messages, C-h e) | normal: `` g<lt> ``, `` <C-h>e ``, select: `` <C-h>e ``, insert: `` <C-h>e `` |
 | `describe_copying` | Show zemacs's copying license, the GPL (emacs describe-copying, C-h C-c) | normal: `` <C-h><C-c> ``, select: `` <C-h><C-c> ``, insert: `` <C-h><C-c> `` |
 | `describe_distribution` | How to get zemacs / GNU software (emacs describe-distribution, C-h C-d) | normal: `` <C-h><C-d> ``, select: `` <C-h><C-d> ``, insert: `` <C-h><C-d> `` |
 | `describe_gnu_project` | Open the GNU project page (emacs describe-gnu-project, C-h g) | normal: `` <C-h>g ``, select: `` <C-h>g ``, insert: `` <C-h>g `` |
@@ -835,11 +835,11 @@
 | `backward_page` | Move to the previous form-feed page (emacs backward-page, C-x [) |  |
 | `mark_page` | Select the current form-feed page (emacs mark-page, C-x C-p) |  |
 | `move_to_opposite_group` | Move the current editor to the opposite split group (JetBrains) |  |
-| `rotate_view` | Goto next window | normal: `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-x>o ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, select: `` <C-x>o ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, insert: `` <C-x>o `` |
+| `rotate_view` | Goto next window | normal: `` <C-w>P ``, `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-x>o ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, select: `` <C-x>o ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, insert: `` <C-x>o `` |
 | `rotate_view_reverse` | Goto previous window | normal: `` <C-w>R ``, `` <C-w>W ``, `` <C-w>.R ``, `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, select: `` <space>wR ``, `` <space>wW ``, `` <space>w.R `` |
 | `scroll_other_window` | Scroll the other window forward (emacs scroll-other-window, C-M-v) |  |
 | `scroll_other_window_down` | Scroll the other window backward (emacs scroll-other-window-down, C-M-S-v) |  |
-| `recenter_other_window` | Recenter point in the other window (emacs recenter-other-window, C-M-S-l) | normal: `` <C-w>z ``, `` <space>wz ``, select: `` <space>wz `` |
+| `recenter_other_window` | Recenter point in the other window (emacs recenter-other-window, C-M-S-l) | normal: `` <C-w>z ``, `` <space>wz ``, `` <C-w><C-z> ``, select: `` <space>wz `` |
 | `hsplit` | Horizontal bottom split | normal: `` <C-w>S ``, `` <C-w>s ``, `` <C-x>2 ``, `` <C-w>.S ``, `` <C-w>.s ``, `` <space>wS ``, `` <space>ws ``, `` <C-w><C-s> ``, `` <space>w.S ``, `` <space>w.s ``, `` <C-w>.<minus> ``, `` <space>w<C-s> ``, `` <space>w.<minus> ``, select: `` <C-x>2 ``, `` <space>wS ``, `` <space>ws ``, `` <space>w.S ``, `` <space>w.s ``, `` <space>w<C-s> ``, `` <space>w.<minus> ``, insert: `` <C-x>2 `` |
 | `hsplit_new` | Horizontal bottom split scratch buffer | normal: `` <C-w>n ``, `` <space>wn ``, `` <C-w><C-n> ``, `` <space>bNj ``, `` <space>bNk ``, `` <space>w<C-n> ``, select: `` <space>wn ``, `` <space>bNj ``, `` <space>bNk ``, `` <space>w<C-n> `` |
 | `vsplit` | Vertical right split | normal: `` <C-w>/ ``, `` <C-w>2 ``, `` <C-w>V ``, `` <C-w>v ``, `` <C-x>3 ``, `` <C-x>5 ``, `` <C-w>./ ``, `` <C-w>.V ``, `` <C-w>.v ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <C-w><C-v> ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, select: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, insert: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s `` |
@@ -1145,6 +1145,9 @@
 | `goto_prev_unmatched_brace` | Goto previous unmatched { ([{) | normal: `` [{ `` |
 | `goto_next_unmatched_paren` | Goto next unmatched ) (]) | normal: `` ]) `` |
 | `goto_next_unmatched_brace` | Goto next unmatched } (]}) | normal: `` ]} `` |
+| `goto_prev_preproc` | Goto previous unmatched #if/#else ([#) | normal: `` [# `` |
+| `goto_next_preproc` | Goto next unmatched #endif/#else (]#) | normal: `` ]# `` |
+| `vim_sleep` | Sleep for {count} seconds (vim gs) | normal: `` gs `` |
 | `goto_prev_mark` | Goto previous lowercase mark ([`) | normal: `` [` `` |
 | `goto_next_mark` | Goto next lowercase mark (]`) | normal: `` ]` `` |
 | `goto_prev_mark_line` | Goto previous lowercase mark, line start ([']) | normal: `` [' `` |

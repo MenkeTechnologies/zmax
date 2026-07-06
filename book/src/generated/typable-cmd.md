@@ -394,6 +394,7 @@
 | `:earlier`, `:ear` | Jump back to an earlier point in edit history. Accepts a number of steps or a time span. |
 | `:later`, `:lat` | Jump to a later point in edit history. Accepts a number of steps or a time span. |
 | `:undotree`, `:undo-tree`, `:UndotreeToggle` | Open the branching undo-history browser (vim undotree). |
+| `:undolist`, `:undol` | List the undo states as a text popup (vim :undolist). |
 | `:injections`, `:injection-rules` | List the active language-injection rules (defaults + injections.toml). |
 | `:injection-info`, `:what-injection` | Report the effective (possibly injected) language at the cursor. |
 | `:edit-fragment`, `:edit-injected-fragment` | Edit the injected-language fragment at point in its own buffer (JetBrains Edit Fragment). |
