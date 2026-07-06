@@ -672,3 +672,78 @@ async fn snext_splits_window_and_edits_next_arg() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ptnext_shows_next_tag_in_preview_split() -> anyhow::Result<()> {
+    // :ptnext shows the next tag match in a "preview" split. With two `foo`
+    // matches, :tag selects the first; :ptnext opens the second in a split.
+    use std::io::Write;
+    let dir = tempfile::tempdir()?;
+    let src = dir.path().join("u.c");
+    let mut f = std::fs::File::create(&src)?;
+    writeln!(f, "int foo() {{}}")?;
+    writeln!(f, "int foo() {{}}")?;
+    f.flush()?;
+    let mut tags = std::fs::File::create(dir.path().join("tags"))?;
+    write!(tags, "foo\tu.c\t1\n")?;
+    write!(tags, "foo\tu.c\t2\n")?;
+    tags.flush()?;
+    let mut app = helpers::AppBuilder::new().with_file(&src, None).build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":tag foo<ret>:ptnext<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(
+                        app.editor.tree.views().count(),
+                        2,
+                        "ptnext opens a preview split"
+                    );
+                } as _),
+            ),
+            (Some(":wincmd o<ret>"), None),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn pclose_closes_a_split() -> anyhow::Result<()> {
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":vsplit<ret>:pclose<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(
+                app.editor.tree.views().count(),
+                1,
+                "pclose closes the split"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn startgreplace_enters_virtual_replace_mode() -> anyhow::Result<()> {
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":startgreplace<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err());
+            assert!(
+                app.editor.overwrite,
+                "virtual replace mode overtypes existing characters"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

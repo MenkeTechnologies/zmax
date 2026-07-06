@@ -739,6 +739,12 @@
 | `:execute`, `:exe` | Execute the string result of an expression as an Ex command (vim :execute). |
 | `:const`, `:cons` | Create a variable as a constant (vim :const). |
 | `:unlet`, `:unl` | Delete a variable (vim :unlet). |
+| `:ptnext`, `:ptn` | Show the next matching tag in a preview split (vim :ptnext). |
+| `:ptprevious`, `:ptp`, `:ptNext`, `:ptN` | Show the previous matching tag in a preview split (vim :ptprevious / :ptNext). |
+| `:ptfirst`, `:ptrewind`, `:ptr` | Show the first matching tag in a preview split (vim :ptfirst / :ptrewind). |
+| `:ptlast`, `:ptl` | Show the last matching tag in a preview split (vim :ptlast). |
+| `:pclose`, `:pc` | Close the preview window (vim :pclose). |
+| `:startgreplace`, `:startg` | Start Virtual Replace mode (vim :startgreplace). |
 | `:version`, `:ver` | Show the zemacs version and compiled feature summary (vim :version). |
 | `:intro`, `:int` | Show the introductory message (vim :intro). |
 | `:redrawstatus` | Redraw the status line (vim :redrawstatus; approximated by a full redraw). |

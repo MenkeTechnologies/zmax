@@ -34779,5 +34779,77 @@
       "typable:sargument"
     ],
     "note": ":sargument split window and edit Nth argument"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ptnext_1",
+    "status": "ported",
+    "evidence": [
+      "typable:ptnext"
+    ],
+    "note": ":ptnext show next matching tag in a preview split"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ptnext",
+    "status": "ported",
+    "evidence": [
+      "typable:ptprevious"
+    ],
+    "note": ":ptNext show previous matching tag in a preview split"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ptprevious",
+    "status": "ported",
+    "evidence": [
+      "typable:ptprevious"
+    ],
+    "note": ":ptprevious show previous matching tag in a preview split"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ptfirst",
+    "status": "ported",
+    "evidence": [
+      "typable:ptfirst"
+    ],
+    "note": ":ptfirst show first matching tag in a preview split"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ptrewind",
+    "status": "ported",
+    "evidence": [
+      "typable:ptfirst"
+    ],
+    "note": ":ptrewind show first matching tag in a preview split"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ptlast",
+    "status": "ported",
+    "evidence": [
+      "typable:ptlast"
+    ],
+    "note": ":ptlast show last matching tag in a preview split"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ptag",
+    "status": "partial",
+    "evidence": [
+      "typable:stag"
+    ],
+    "note": ":ptag show tag in preview window (approximated by :stag split-tag)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_pclose",
+    "status": "partial",
+    "evidence": [
+      "typable:pclose"
+    ],
+    "note": ":pclose close the preview window (closes the current split)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_startgreplace",
+    "status": "ported",
+    "evidence": [
+      "typable:startgreplace"
+    ],
+    "note": ":startgreplace start Virtual Replace mode"
   }
 ]
