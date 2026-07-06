@@ -434,6 +434,9 @@ pub struct Config {
     pub file_explorer: FileExplorerConfig,
     /// Configuration of the statusline elements
     pub statusline: StatusLineConfig,
+    /// Render the per-window status line. `false` hides it (vim `laststatus=0`).
+    /// Defaults to `true`.
+    pub render_statusline: bool,
     /// Shape for cursor in each mode
     pub cursor_shape: CursorShapeConfig,
     /// Set to `true` to override automatic detection of terminal truecolor support in the event of a false negative. Defaults to `false`.
@@ -1360,6 +1363,7 @@ impl Default for Config {
             file_picker: FilePickerConfig::default(),
             file_explorer: FileExplorerConfig::default(),
             statusline: StatusLineConfig::default(),
+            render_statusline: true,
             cursor_shape: CursorShapeConfig::default(),
             true_color: false,
             undercurl: false,

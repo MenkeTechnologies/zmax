@@ -19074,6 +19074,15 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
+        // `laststatus` (0 = never, otherwise show) toggles the per-window status
+        // line (vim `:set laststatus=0`).
+        if matches!(name, "laststatus" | "ls") {
+            if let Some(v) = value {
+                config_set_key(&mut config, "render-statusline", Value::Bool(v != "0"))?;
+                changed = true;
+            }
+            continue;
+        }
         // `shell` sets the shell used by `:!`/`:sh` (vim `:set shell=/bin/zsh`).
         if matches!(name, "shell") {
             if let Some(v) = value {

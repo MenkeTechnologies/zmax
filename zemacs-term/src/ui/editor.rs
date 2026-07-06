@@ -867,15 +867,18 @@ impl EditorView {
             Self::render_diagnostics(doc, view, inner, surface, theme);
         }
 
-        let statusline_area = view
-            .area
-            .clip_top(view.area.height.saturating_sub(1))
-            .clip_bottom(1); // -1 from bottom to remove commandline
+        // vim `laststatus=0`: skip the per-window status line entirely.
+        if config.render_statusline {
+            let statusline_area = view
+                .area
+                .clip_top(view.area.height.saturating_sub(1))
+                .clip_bottom(1); // -1 from bottom to remove commandline
 
-        let mut context =
-            statusline::RenderContext::new(editor, doc, view, is_focused, &self.spinners);
+            let mut context =
+                statusline::RenderContext::new(editor, doc, view, is_focused, &self.spinners);
 
-        statusline::render(&mut context, statusline_area, surface);
+            statusline::render(&mut context, statusline_area, surface);
+        }
     }
 
     /// Sticky scroll: overlay the enclosing scope header lines (function/class

@@ -1158,3 +1158,36 @@ async fn set_shell_sets_shell_config() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_laststatus_toggles_statusline() -> anyhow::Result<()> {
+    // vim `:set laststatus=0` hides the status line; nonzero shows it. The render
+    // path skips statusline::render when render_statusline is false.
+    test_key_sequences(
+        &mut AppBuilder::new().build()?,
+        vec![
+            (
+                Some(":set laststatus=0<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert!(
+                        !app.editor.config().render_statusline,
+                        "laststatus=0 hides it"
+                    );
+                } as _),
+            ),
+            (
+                Some(":set laststatus=2<ret>"),
+                Some(&|app| {
+                    assert!(
+                        app.editor.config().render_statusline,
+                        "laststatus=2 shows it"
+                    );
+                } as _),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
