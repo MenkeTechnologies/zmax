@@ -824,3 +824,51 @@ async fn set_mouse_with_value_enables_mouse() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_accepts_full_vimrc_option_surface() -> anyhow::Result<()> {
+    // A real `:set all` / ~/.vimrc mixes options with editor equivalents and many
+    // without; none may error, or sourcing the vimrc would abort.
+    let opts = "autoindent expandtab ignorecase noswapfile nobackup smartcase \
+                backspace=2 shiftwidth=4 tabstop=4 backupdir=~/tmp fileformat=unix \
+                foldmethod=manual number relativenumber mouse=a signcolumn=no \
+                laststatus=2 showtabline=2 updatetime=150 cpoptions=aAceFs_B \
+                termguicolors linebreak scrolloff=0";
+    let keys = format!(":set {opts}<ret>");
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(&keys),
+        Some(&|app| {
+            assert!(
+                !app.editor.is_err(),
+                "':set' over a full vimrc option surface errored: {:?}",
+                app.editor.get_status()
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn set_signcolumn_no_hides_diagnostics_gutter() -> anyhow::Result<()> {
+    test_key_sequence(
+        &mut AppBuilder::new().build()?,
+        Some(":set signcolumn=no<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let has_diag = app
+                .editor
+                .config()
+                .gutters
+                .layout
+                .iter()
+                .any(|g| matches!(g, zemacs_view::editor::GutterType::Diagnostics));
+            assert!(!has_diag, "signcolumn=no hides the diagnostics gutter");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
