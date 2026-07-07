@@ -196,6 +196,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ar_archive_writer"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4087686b4b0a3427190bae57a1d9a478dbb2d40c5dc1bd6e2b6d797913bdd348"
+dependencies = [
+ "object 0.37.3",
+]
+
+[[package]]
 name = "arbitrary"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -282,7 +291,7 @@ dependencies = [
 
 [[package]]
 name = "awkrs"
-version = "0.4.15"
+version = "0.4.16"
 dependencies = [
  "bincode",
  "chrono",
@@ -1160,7 +1169,7 @@ dependencies = [
  "cranelift-control",
  "cranelift-module",
  "log",
- "object",
+ "object 0.38.1",
  "target-lexicon",
 ]
 
@@ -1804,10 +1813,11 @@ checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 
 [[package]]
 name = "elisprs"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "bincode",
  "fancy-regex",
+ "flate2",
  "fusevm",
  "libc",
  "lsp-server",
@@ -1815,6 +1825,7 @@ dependencies = [
  "rkyv 0.7.46",
  "serde",
  "serde_json",
+ "stacker",
 ]
 
 [[package]]
@@ -4866,6 +4877,15 @@ dependencies = [
 
 [[package]]
 name = "object"
+version = "0.37.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff76201f031d8863c38aa7f905eca4f53abbfa15f609db4277d44cd8938f33fe"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "object"
 version = "0.38.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "271638cd5fa9cca89c4c304675ca658efc4e64a66c716b7cfe1afb4b9611dbbc"
@@ -5477,6 +5497,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "962200e2d7d551451297d9fdce85138374019ada198e30ea9ede38034e27604c"
 dependencies = [
  "parking_lot",
+]
+
+[[package]]
+name = "psm"
+version = "0.1.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "645dbe486e346d9b5de3ef16ede18c26e6c70ad97418f4874b8b1889d6e761ea"
+dependencies = [
+ "ar_archive_writer",
+ "cc",
 ]
 
 [[package]]
@@ -6840,6 +6870,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
+name = "stacker"
+version = "0.1.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "640c8cdd92b6b12f5bcb1803ca3bbf5ab96e5e6b6b96b9ab77dabe9e880b3190"
+dependencies = [
+ "cc",
+ "cfg-if",
+ "libc",
+ "psm",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6973,7 +7016,7 @@ dependencies = [
 
 [[package]]
 name = "strykelang"
-version = "0.17.33"
+version = "0.17.37"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -7108,7 +7151,7 @@ dependencies = [
  "xxhash-rust",
  "xz2",
  "zip",
- "zshrs 0.12.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zshrs 0.12.5",
  "zstd",
 ]
 
@@ -9311,7 +9354,7 @@ dependencies = [
  "zemacs-tui",
  "zemacs-vcs",
  "zemacs-view",
- "zshrs 0.12.5",
+ "zshrs 0.12.8",
 ]
 
 [[package]]
@@ -9537,6 +9580,8 @@ dependencies = [
 [[package]]
 name = "zshrs"
 version = "0.12.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9ec52b9b77c13f8673de157d23d89ea208a42eee19a992d33b2e90efad6fdc5"
 dependencies = [
  "atty",
  "bincode",
@@ -9586,9 +9631,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs"
-version = "0.12.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9ec52b9b77c13f8673de157d23d89ea208a42eee19a992d33b2e90efad6fdc5"
+version = "0.12.8"
 dependencies = [
  "atty",
  "bincode",
@@ -9632,13 +9675,15 @@ dependencies = [
  "tracing-subscriber",
  "unicode-width 0.2.0",
  "walkdir",
- "zshrs-daemon 0.12.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zshrs-daemon 0.12.8",
  "zstd",
 ]
 
 [[package]]
 name = "zshrs-daemon"
 version = "0.12.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be6b15d4c1651832e235d0d5143dc47ca058a8748c2b5515073821167ce11036"
 dependencies = [
  "atty",
  "axum",
@@ -9675,9 +9720,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs-daemon"
-version = "0.12.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be6b15d4c1651832e235d0d5143dc47ca058a8748c2b5515073821167ce11036"
+version = "0.12.8"
 dependencies = [
  "atty",
  "axum",
