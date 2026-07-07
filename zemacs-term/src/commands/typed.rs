@@ -22907,6 +22907,95 @@ fn cycle_spacing(
     Ok(())
 }
 
+/// The `(start, end, content)` of each line in the buffer, `content` being the
+/// line text without its line ending. Used by the line-set operations below.
+fn buffer_lines(slice: &zemacs_core::ropey::RopeSlice) -> Vec<(usize, usize, String)> {
+    let total = slice.len_lines();
+    let len = slice.len_chars();
+    (0..total)
+        .map(|line| {
+            let start = slice.line_to_char(line);
+            let del_end = if line + 1 < total {
+                slice.line_to_char(line + 1)
+            } else {
+                len
+            };
+            let text_end = line_ending::line_end_char_index(slice, line);
+            (start, del_end, slice.slice(start..text_end).to_string())
+        })
+        .collect()
+}
+
+/// emacs `delete-duplicate-lines`: remove later lines whose text duplicates an
+/// earlier one, keeping the first occurrence.
+fn delete_duplicate_lines(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let mut seen = std::collections::HashSet::new();
+    let mut changes = Vec::new();
+    for (start, end, content) in buffer_lines(&slice) {
+        if !seen.insert(content) && start < end {
+            changes.push((start, end, None));
+        }
+    }
+    if changes.is_empty() {
+        return Ok(());
+    }
+    let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+    Ok(())
+}
+
+/// emacs `flush-lines` (`keep_matching=false`) / `keep-lines`
+/// (`keep_matching=true`): delete lines by whether they match a regexp.
+fn filter_lines_by_regex(
+    cx: &mut compositor::Context,
+    args: &Args,
+    keep_matching: bool,
+) -> anyhow::Result<()> {
+    let pattern = args.join(" ");
+    if pattern.trim().is_empty() {
+        bail!("usage: pattern required");
+    }
+    let re = regex::Regex::new(&pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let mut changes = Vec::new();
+    for (start, end, content) in buffer_lines(&slice) {
+        // flush: delete matching lines; keep: delete non-matching lines.
+        if (re.is_match(&content) != keep_matching) && start < end {
+            changes.push((start, end, None));
+        }
+    }
+    if changes.is_empty() {
+        return Ok(());
+    }
+    let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+    Ok(())
+}
+
+fn flush_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    filter_lines_by_regex(cx, &args, false)
+}
+
+fn keep_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    filter_lines_by_regex(cx, &args, true)
+}
+
 fn delete_blank_lines(
     cx: &mut compositor::Context,
     _args: Args,
@@ -35138,6 +35227,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "delete-duplicate-lines",
+        aliases: &[],
+        doc: "Delete duplicate lines, keeping the first occurrence (emacs delete-duplicate-lines).",
+        fun: delete_duplicate_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "flush-lines",
+        aliases: &["delete-matching-lines"],
+        doc: "Delete lines matching a regexp (emacs flush-lines / vim :g//d).",
+        fun: flush_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "keep-lines",
+        aliases: &["delete-non-matching-lines"],
+        doc: "Keep only lines matching a regexp, deleting the rest (emacs keep-lines).",
+        fun: keep_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },

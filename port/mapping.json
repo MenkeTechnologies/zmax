@@ -14231,7 +14231,7 @@
     "evidence": [
       "typable:delete-duplicate-lines"
     ],
-    "note": "emacs delete-duplicate-lines -> dedup (exact-name alias delete-duplicate-lines): keep first of each line, drop later duplicates."
+    "note": "implemented line command"
   },
   {
     "spec_id": "emacs.command.split_line",
@@ -14501,17 +14501,17 @@
     "spec_id": "emacs.command.flush_lines",
     "status": "ported",
     "evidence": [
-      "typable:reject"
+      "typable:flush-lines"
     ],
-    "note": ""
+    "note": "implemented line command"
   },
   {
     "spec_id": "emacs.command.keep_lines",
     "status": "ported",
     "evidence": [
-      "typable:filter"
+      "typable:keep-lines"
     ],
-    "note": ""
+    "note": "implemented line command"
   },
   {
     "spec_id": "emacs.command.how_many",
@@ -37499,5 +37499,21 @@
       "key:normal:right"
     ],
     "note": ""
+  },
+  {
+    "spec_id": "emacs.command.delete_matching_lines",
+    "status": "ported",
+    "evidence": [
+      "typable:flush-lines"
+    ],
+    "note": "implemented line command"
+  },
+  {
+    "spec_id": "emacs.command.delete_non_matching_lines",
+    "status": "ported",
+    "evidence": [
+      "typable:keep-lines"
+    ],
+    "note": "implemented line command"
   }
 ]
