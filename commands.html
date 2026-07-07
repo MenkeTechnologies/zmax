@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-de74ca28.js";
+            window.path_to_searchindex_js = "searchindex-4d979151.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -233,7 +233,14 @@
 <tr><td><code>:argdedupe</code></td><td>Remove duplicate entries from the argument list (vim :argdedupe).</td></tr>
 <tr><td><code>:next</code>, <code>:argnext</code></td><td>Edit the next file in the argument list (vim :next).</td></tr>
 <tr><td><code>:previous</code>, <code>:Next</code>, <code>:prev</code>, <code>:argprev</code></td><td>Edit the previous file in the argument list (vim :previous / :Next).</td></tr>
+<tr><td><code>:wnext</code>, <code>:wn</code></td><td>Write the current buffer, then edit the next file in the argument list (vim :wnext).</td></tr>
+<tr><td><code>:wprevious</code>, <code>:wp</code>, <code>:wNext</code>, <code>:wN</code></td><td>Write the current buffer, then edit the previous file in the argument list (vim :wprevious / :wNext).</td></tr>
+<tr><td><code>:find</code>, <code>:fin</code></td><td>Find a file in the ‘path’ (buffer dir, cwd, then a recursive cwd walk) and edit it (vim :find).</td></tr>
+<tr><td><code>:sfind</code>, <code>:sf</code></td><td>Split the window and edit a file found in the ‘path’ (vim :sfind).</td></tr>
 <tr><td><code>:first</code>, <code>:rewind</code>, <code>:rew</code></td><td>Edit the first file in the argument list (vim :first / :rewind).</td></tr>
+<tr><td><code>:view</code>, <code>:vie</code>, <code>:find-file-read-only</code></td><td>Edit a file read-only (vim :view / emacs find-file-read-only).</td></tr>
+<tr><td><code>:sview</code>, <code>:svie</code>, <code>:find-file-read-only-other-window</code></td><td>Split and edit a file read-only (vim :sview / emacs find-file-read-only-other-window).</td></tr>
+<tr><td><code>:autocmd</code>, <code>:au</code></td><td>Register an autocommand: :autocmd {events} {pattern} {command} (<code>:autocmd !</code> clears).</td></tr>
 <tr><td><code>:last</code>, <code>:la</code></td><td>Edit the last file in the argument list (vim :last).</td></tr>
 <tr><td><code>:argument</code>, <code>:argu</code></td><td>Edit the Nth file in the argument list (vim :argument).</td></tr>
 <tr><td><code>:snext</code>, <code>:sn</code></td><td>Split the window and edit the next argument (vim :snext).</td></tr>
@@ -246,6 +253,7 @@
 <tr><td><code>:compile</code></td><td>Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile).</td></tr>
 <tr><td><code>:recompile</code></td><td>Re-run the last compile command (emacs recompile).</td></tr>
 <tr><td><code>:make</code></td><td>Run <code>make [args]</code>, collect errors into the quickfix list, jump to the first (vim :make).</td></tr>
+<tr><td><code>:lmake</code>, <code>:lmak</code></td><td>Run <code>make [args]</code> and collect errors, like :make (vim :lmake targets the location list; zemacs uses one unified results console).</td></tr>
 <tr><td><code>:tag</code>, <code>:ta</code></td><td>Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag).</td></tr>
 <tr><td><code>:tselect</code>, <code>:ts</code></td><td>List every matching tag in a picker; select one to jump (vim :tselect).</td></tr>
 <tr><td><code>:tjump</code>, <code>:tj</code></td><td>Jump to the tag if unique, else show the tag picker (vim :tjump).</td></tr>
@@ -528,6 +536,9 @@
 <tr><td><code>:kill-all-abbrevs</code></td><td>Remove all defined abbreviations (emacs kill-all-abbrevs).</td></tr>
 <tr><td><code>:iabbrev</code>, <code>:ia</code></td><td>List or define an Insert-mode abbreviation (vim :iabbrev).</td></tr>
 <tr><td><code>:cabbrev</code>, <code>:ca</code></td><td>List or define a Command-line-mode abbreviation (vim :cabbrev).</td></tr>
+<tr><td><code>:noreabbrev</code>, <code>:norea</code></td><td>List or define a non-recursive Insert+Command-line abbreviation (vim :noreabbrev).</td></tr>
+<tr><td><code>:inoreabbrev</code>, <code>:inorea</code></td><td>List or define a non-recursive Insert-mode abbreviation (vim :inoreabbrev).</td></tr>
+<tr><td><code>:cnoreabbrev</code>, <code>:cnorea</code></td><td>List or define a non-recursive Command-line-mode abbreviation (vim :cnoreabbrev).</td></tr>
 <tr><td><code>:unabbreviate</code>, <code>:una</code></td><td>Remove an abbreviation for both modes (vim :unabbreviate).</td></tr>
 <tr><td><code>:iunabbreviate</code>, <code>:iuna</code></td><td>Remove an Insert-mode abbreviation (vim :iunabbreviate).</td></tr>
 <tr><td><code>:cunabbreviate</code>, <code>:cuna</code></td><td>Remove a Command-line-mode abbreviation (vim :cunabbreviate).</td></tr>
@@ -559,6 +570,8 @@
 <tr><td><code>:sblast</code>, <code>:sbl</code></td><td>Split window and go to the last buffer (vim :sblast).</td></tr>
 <tr><td><code>:sbmodified</code>, <code>:sbm</code></td><td>Split window and go to the next modified buffer (vim :sbmodified).</td></tr>
 <tr><td><code>:sbuffer</code>, <code>:sb</code></td><td>Split window and go to the buffer whose path contains {name} (vim :sbuffer / :sb).</td></tr>
+<tr><td><code>:pedit</code>, <code>:ped</code></td><td>Edit {file} in a preview (horizontal split) window (vim :pedit).</td></tr>
+<tr><td><code>:pbuffer</code>, <code>:pb</code></td><td>Show the buffer whose path contains {name} in a preview (split) window (vim :pbuffer).</td></tr>
 <tr><td><code>:nohlsearch</code>, <code>:noh</code>, <code>:nohl</code></td><td>Clear the persistent search highlight (vim :nohlsearch).</td></tr>
 <tr><td><code>:clearjumps</code></td><td>Clear the current view’s jump list (vim :clearjumps).</td></tr>
 <tr><td><code>:project-replace</code>, <code>:replace-in-files</code></td><td>Regex-replace across all matching workspace files (JetBrains Replace in Files).</td></tr>
@@ -624,6 +637,13 @@
 <tr><td><code>:theme-prev</code></td><td>Switch to the previous theme (alphabetical).</td></tr>
 <tr><td><code>:run</code>, <code>:r!</code></td><td>Run a command in the IDE Run tool window (defaults to <code>cargo run</code>).</td></tr>
 <tr><td><code>:grep</code>, <code>:rg</code>, <code>:search-project</code></td><td>Search the project (ripgrep) and show jumpable results in the Run console.</td></tr>
+<tr><td><code>:grepadd</code>, <code>:grepa</code></td><td>Search the project like :grep (vim :grepadd appends; zemacs uses one unified results console).</td></tr>
+<tr><td><code>:lgrep</code>, <code>:lgr</code></td><td>Location-list variant of :grep (vim :lgrep; zemacs uses one unified results console).</td></tr>
+<tr><td><code>:lgrepadd</code>, <code>:lgrepa</code></td><td>Location-list append variant of :grep (vim :lgrepadd; zemacs uses one unified results console).</td></tr>
+<tr><td><code>:vimgrepadd</code>, <code>:vimgrepa</code></td><td>Search the project like :vimgrep, appending (vim :vimgrepadd; zemacs uses one unified results console).</td></tr>
+<tr><td><code>:lvimgrepadd</code>, <code>:lvimgrepa</code></td><td>Location-list append variant of :vimgrep (vim :lvimgrepadd; zemacs uses one unified results console).</td></tr>
+<tr><td><code>:helpgrep</code>, <code>:helpg</code></td><td>Search the help: open the inline Help browser filtered to {pattern} (vim :helpgrep).</td></tr>
+<tr><td><code>:lhelpgrep</code>, <code>:lh</code></td><td>Location-list variant of :helpgrep — open the Help browser filtered to {pattern} (vim :lhelpgrep).</td></tr>
 <tr><td><code>:copen</code>, <code>:cwindow</code>, <code>:cw</code></td><td>Open the quickfix list window.</td></tr>
 <tr><td><code>:cclose</code>, <code>:ccl</code></td><td>Close the quickfix list window.</td></tr>
 <tr><td><code>:cnext</code>, <code>:cn</code></td><td>Jump to the next quickfix entry.</td></tr>
@@ -674,6 +694,21 @@
 <tr><td><code>:windo</code></td><td>Run an ex-command in every window of the current tabpage.</td></tr>
 <tr><td><code>:wincmd</code></td><td>Run a window (CTRL-W) command by key, e.g. :wincmd h focuses left.</td></tr>
 <tr><td><code>:source</code>, <code>:so</code></td><td>Source a Vimscript file through the embedded vimlrs interpreter.</td></tr>
+<tr><td><code>:runtime</code>, <code>:ru</code></td><td>Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime).</td></tr>
+<tr><td><code>:diffthis</code>, <code>:difft</code></td><td>Show the current buffer’s changes as a side-by-side diff vs git HEAD (vim :diffthis).</td></tr>
+<tr><td><code>:diffupdate</code>, <code>:diffu</code></td><td>Recompute and redisplay the buffer’s diff vs git HEAD (vim :diffupdate).</td></tr>
+<tr><td><code>:doautocmd</code>, <code>:do</code>, <code>:doa</code></td><td>Fire the autocommands registered for {event} on the current buffer (vim :doautocmd).</td></tr>
+<tr><td><code>:drop</code>, <code>:dr</code></td><td>Jump to a buffer already editing {file}, else edit it (vim :drop).</td></tr>
+<tr><td><code>:lua</code></td><td>Run a Lua snippet through the system lua interpreter and echo its output (vim :lua).</td></tr>
+<tr><td><code>:luafile</code>, <code>:luaf</code></td><td>Run a Lua script file through the system lua interpreter (vim :luafile).</td></tr>
+<tr><td><code>:perl</code>, <code>:pe</code></td><td>Run a Perl snippet through the system perl interpreter and echo its output (vim :perl).</td></tr>
+<tr><td><code>:perlfile</code>, <code>:perlf</code></td><td>Run a Perl script file through the system perl interpreter (vim :perlfile).</td></tr>
+<tr><td><code>:python</code>, <code>:py</code></td><td>Run a Python snippet through the system python interpreter and echo its output (vim :python).</td></tr>
+<tr><td><code>:pyfile</code>, <code>:pyf</code></td><td>Run a Python script file through the system python interpreter (vim :pyfile).</td></tr>
+<tr><td><code>:py3</code>, <code>:python3</code></td><td>Run a Python 3 snippet through the system python3 interpreter and echo its output (vim :py3 / :python3).</td></tr>
+<tr><td><code>:py3file</code>, <code>:py3f</code>, <code>:python3file</code></td><td>Run a Python 3 script file through the system python3 interpreter (vim :py3file).</td></tr>
+<tr><td><code>:ruby</code>, <code>:rub</code></td><td>Run a Ruby snippet through the system ruby interpreter and echo its output (vim :ruby).</td></tr>
+<tr><td><code>:rubyfile</code>, <code>:rubyf</code></td><td>Run a Ruby script file through the system ruby interpreter (vim :rubyfile).</td></tr>
 <tr><td><code>:tabs</code></td><td>List the tabpages and switch to the selected one.</td></tr>
 <tr><td><code>:cdo</code></td><td>Run an ex-command on each quickfix entry.</td></tr>
 <tr><td><code>:cfdo</code></td><td>Run an ex-command on the first quickfix entry of each file.</td></tr>
@@ -859,6 +894,19 @@
 <tr><td><code>:character-info</code>, <code>:char</code></td><td>Get info about the character under the primary cursor.</td></tr>
 <tr><td><code>:reload</code>, <code>:rl</code></td><td>Discard changes and reload from the source file.</td></tr>
 <tr><td><code>:reload-all</code>, <code>:rla</code></td><td>Discard changes and reload all documents from the source files.</td></tr>
+<tr><td><code>:checktime</code>, <code>:checkt</code></td><td>Reload loaded buffers that changed on disk (vim :checktime).</td></tr>
+<tr><td><code>:filetype</code>, <code>:filet</code></td><td>Report the buffer’s detected language / accept on</td></tr>
+<tr><td><code>:scriptnames</code>, <code>:scr</code></td><td>List the sourced config files (vim :scriptnames).</td></tr>
+<tr><td><code>:mksession</code>, <code>:mks</code></td><td>Write a session file (cwd + buffers) that :source restores (vim :mksession).</td></tr>
+<tr><td><code>:mkvimrc</code>, <code>:mkv</code></td><td>Write the current runtime mappings to a vimrc file (vim :mkvimrc; mappings only).</td></tr>
+<tr><td><code>:mkexrc</code>, <code>:mk</code></td><td>Write the current runtime mappings to an exrc file (vim :mkexrc; mappings only).</td></tr>
+<tr><td><code>:mkview</code>, <code>:mkvie</code></td><td>Write the current window’s view (cursor position) to a file (vim :mkview).</td></tr>
+<tr><td><code>:loadview</code>, <code>:lo</code></td><td>Restore the current window’s view by sourcing its :mkview file (vim :loadview).</td></tr>
+<tr><td><code>:swapname</code>, <code>:sw</code></td><td>Show the current buffer’s swap file name (vim :swapname).</td></tr>
+<tr><td><code>:preserve</code>, <code>:pre</code></td><td>Flush the buffer to its swap file now (vim :preserve).</td></tr>
+<tr><td><code>:recover</code>, <code>:rec</code></td><td>Replace the buffer with the contents of its swap file (vim :recover).</td></tr>
+<tr><td><code>:wundo</code>, <code>:wun</code></td><td>Write the buffer’s undo history to {file} (vim :wundo).</td></tr>
+<tr><td><code>:rundo</code>, <code>:rund</code></td><td>Read the buffer’s undo history from {file} (vim :rundo).</td></tr>
 <tr><td><code>:git-stage</code>, <code>:stage</code>, <code>:git-add</code></td><td>Stage the current buffer’s file (git add).</td></tr>
 <tr><td><code>:git-unstage</code>, <code>:unstage</code></td><td>Unstage the current buffer’s file (git reset HEAD).</td></tr>
 <tr><td><code>:stash</code>, <code>:git-stash</code></td><td>git stash the working-tree changes (then reload open buffers).</td></tr>
@@ -890,6 +938,11 @@
 <tr><td><code>:nmapclear</code></td><td>Clear runtime normal-mode mappings.</td></tr>
 <tr><td><code>:imapclear</code></td><td>Clear runtime insert-mode mappings.</td></tr>
 <tr><td><code>:vmapclear</code></td><td>Clear runtime select/visual-mode mappings.</td></tr>
+<tr><td><code>:xmapclear</code></td><td>Clear runtime visual-mode mappings (Vim :xmapclear).</td></tr>
+<tr><td><code>:smapclear</code></td><td>Clear runtime select-mode mappings (Vim :smapclear).</td></tr>
+<tr><td><code>:omapclear</code></td><td>Clear runtime operator-pending mappings (Vim :omapclear).</td></tr>
+<tr><td><code>:sunmap</code></td><td>Remove a runtime select-mode {lhs} mapping (Vim :sunmap).</td></tr>
+<tr><td><code>:ounmap</code></td><td>Remove a runtime operator-pending {lhs} mapping (Vim :ounmap).</td></tr>
 <tr><td><code>:normal</code>, <code>:norm</code></td><td>Execute {commands} as normal-mode keystrokes (vim :normal[!]).</td></tr>
 <tr><td><code>:mark</code>, <code>:k</code></td><td>Set mark {x} at the cursor position (vim :mark / :k).</td></tr>
 <tr><td><code>:buffer</code>, <code>:buf</code></td><td>Switch to the open buffer whose path contains {name} (vim :buffer / :b).</td></tr>
@@ -975,6 +1028,7 @@
 <tr><td><code>:rightbelow</code>, <code>:rightb</code></td><td>Run {cmd} placing a new split right/below (vim :rightbelow; best-effort).</td></tr>
 <tr><td><code>:topleft</code>, <code>:to</code></td><td>Run {cmd} placing a new split at the top/left (vim :topleft; best-effort).</td></tr>
 <tr><td><code>:botright</code>, <code>:bo</code></td><td>Run {cmd} placing a new split at the bottom/right (vim :botright; best-effort).</td></tr>
+<tr><td><code>:tab</code></td><td>Run {cmd} opening its window in a new tab (vim :tab; best-effort placement).</td></tr>
 <tr><td><code>:lsp-stop</code></td><td>Stops the given language servers, or all language servers that are used by the current file if no arguments are supplied</td></tr>
 <tr><td><code>:tree-sitter-scopes</code></td><td>Display tree sitter scopes, primarily for theming and development.</td></tr>
 <tr><td><code>:tree-sitter-highlight-name</code>, <code>:Inspect</code></td><td>Display the tree-sitter highlight capture under the cursor (neovim :Inspect).</td></tr>
@@ -1496,7 +1550,7 @@
 <tr><td><code>shrink_to_line_bounds</code></td><td>Shrink selection to line bounds</td><td></td></tr>
 <tr><td><code>delete_selection</code></td><td>Delete selection</td><td></td></tr>
 <tr><td><code>delete_selection_noyank</code></td><td>Delete selection without yanking</td><td></td></tr>
-<tr><td><code>change_selection</code></td><td>Change selection</td><td>select: <code>c</code>, <code>s</code></td></tr>
+<tr><td><code>change_selection</code></td><td>Change selection</td><td></td></tr>
 <tr><td><code>change_selection_noyank</code></td><td>Change selection without yanking</td><td></td></tr>
 <tr><td><code>collapse_selection</code></td><td>Collapse selection into single cursor</td><td></td></tr>
 <tr><td><code>flip_selections</code></td><td>Flip selection cursor and anchor</td><td>normal: <code>&lt;C-x&gt;&lt;C-x&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-x&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-x&gt;</code></td></tr>
