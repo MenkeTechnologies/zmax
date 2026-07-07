@@ -35534,7 +35534,7 @@
   },
   {
     "spec_id": "neovim.option.grepprg",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -35694,7 +35694,7 @@
   },
   {
     "spec_id": "neovim.option.joinspaces",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -35814,7 +35814,7 @@
   },
   {
     "spec_id": "neovim.option.makeprg",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -36462,7 +36462,7 @@
   },
   {
     "spec_id": "neovim.option.tags",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],

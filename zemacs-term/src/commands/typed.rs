@@ -587,10 +587,15 @@ fn make(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     }
     let extra = args.join(" ");
     let extra = extra.trim();
-    let command = if extra.is_empty() {
-        "make".to_string()
+    // vim `makeprg` (default `make`); `$*` is replaced by the `:make` arguments,
+    // otherwise they are appended.
+    let prog = vim_opt_str("makeprg").unwrap_or_else(|| "make".to_string());
+    let command = if prog.contains("$*") {
+        prog.replace("$*", extra)
+    } else if extra.is_empty() {
+        prog
     } else {
-        format!("make {extra}")
+        format!("{prog} {extra}")
     };
     run_compile(cx, &command)?;
     // vim jumps to the first error after `:make`; only if the build reported any.
@@ -651,18 +656,32 @@ thread_local! {
 /// beside the current buffer, then `tags` in the working directory. Returns the
 /// file and the directory relative entry paths resolve against.
 fn find_tags_file(cx: &compositor::Context) -> Option<(std::path::PathBuf, std::path::PathBuf)> {
-    let mut dirs: Vec<std::path::PathBuf> = Vec::new();
     let (_view, doc) = current_ref!(cx.editor);
-    if let Some(parent) = doc.path().and_then(|p| p.parent()).map(|p| p.to_path_buf()) {
-        dirs.push(parent);
-    }
-    if let Ok(cwd) = std::env::current_dir() {
-        dirs.push(cwd);
-    }
-    for dir in dirs {
-        let f = dir.join("tags");
-        if f.is_file() {
-            return Some((f, dir));
+    let buf_dir = doc.path().and_then(|p| p.parent()).map(|p| p.to_path_buf());
+    let cwd = std::env::current_dir().ok();
+    // vim `tags` (default `./tags,tags`): comma/space separated list; a `./`
+    // prefix anchors the name to the current buffer's directory, an absolute
+    // path is used as-is, anything else is relative to the working directory.
+    let spec = vim_opt_str("tags").unwrap_or_else(|| "./tags,tags".to_string());
+    for entry in spec.split([',', ' ']).filter(|s| !s.is_empty()) {
+        let (base, name): (Option<std::path::PathBuf>, &str) =
+            if let Some(rest) = entry.strip_prefix("./") {
+                (buf_dir.clone(), rest)
+            } else if std::path::Path::new(entry).is_absolute() {
+                let p = std::path::PathBuf::from(entry);
+                let dir = p.parent().map(|d| d.to_path_buf());
+                if p.is_file() {
+                    return Some((p, dir.unwrap_or_default()));
+                }
+                continue;
+            } else {
+                (cwd.clone(), entry)
+            };
+        if let Some(dir) = base {
+            let f = dir.join(name);
+            if f.is_file() {
+                return Some((f, dir));
+            }
         }
     }
     None
@@ -9396,7 +9415,20 @@ fn grep(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     if pattern.trim().is_empty() {
         bail!("usage: :grep <pattern>");
     }
-    spawn_into_run_console(cx, grep_command(&pattern, false));
+    // vim `grepprg`: run it instead of the built-in ripgrep. `$*` is replaced by
+    // the pattern, otherwise the (shell-quoted) pattern is appended.
+    let cmd = match vim_opt_str("grepprg") {
+        Some(prog) => {
+            let pat = shell_single_quote(&pattern);
+            if prog.contains("$*") {
+                prog.replace("$*", &pat)
+            } else {
+                format!("{prog} {pat}")
+            }
+        }
+        None => grep_command(&pattern, false),
+    };
+    spawn_into_run_console(cx, cmd);
     Ok(())
 }
 
@@ -18969,11 +19001,20 @@ fn substitute_is_global(flags: &str, gdefault: bool) -> bool {
     }
 }
 
+/// The current string value of a vim option from the session store (set via
+/// `:set opt=value`), or `None` if unset/empty. For string-valued options that
+/// are read at command time (`makeprg`, `grepprg`, `tags`, `keywordprg`, …).
+pub(crate) fn vim_opt_str(name: &str) -> Option<String> {
+    VIM_OPTION_STORE
+        .with(|s| s.borrow().get(name).cloned())
+        .filter(|v| !v.is_empty())
+}
+
 /// Whether a vim boolean option is currently ON — the session store value if it
 /// was `:set`, else the compiled default. For behaviours that must read an option
 /// at command time rather than mapping it to editor config (e.g. `gdefault`
 /// flipping `:substitute`'s global flag).
-fn vim_opt_bool(name: &str) -> bool {
+pub(crate) fn vim_opt_bool(name: &str) -> bool {
     let on = |v: &str| matches!(v, "on" | "1" | "true" | "yes");
     match VIM_OPTION_STORE.with(|s| s.borrow().get(name).cloned()) {
         Some(v) => on(&v),

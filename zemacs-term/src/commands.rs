@@ -23862,7 +23862,12 @@ fn join_lines_below_vim(cx: &mut Context, space: bool) {
                 if end == line_end_char_index(&slice, line + 1) {
                     None
                 } else {
-                    Some(Tendril::from(" "))
+                    // vim `joinspaces`: insert two spaces when the joined-onto line
+                    // ends in sentence punctuation (`.`/`?`/`!`), else one.
+                    let two = typed::vim_opt_bool("joinspaces")
+                        && start > 0
+                        && matches!(slice.char(start - 1), '.' | '?' | '!');
+                    Some(Tendril::from(if two { "  " } else { " " }))
                 }
             } else {
                 // vim `gJ` removes only the newline, preserving all whitespace.
