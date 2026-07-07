@@ -37891,5 +37891,21 @@
       "typable:recover"
     ],
     "note": "replace the buffer with its swap file contents (vim :recover)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_mkvimrc",
+    "status": "partial",
+    "evidence": [
+      "typable:mkvimrc"
+    ],
+    "note": "write the current runtime mappings to a vimrc file (mappings only, not all settings)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_mkexrc",
+    "status": "partial",
+    "evidence": [
+      "typable:mkexrc"
+    ],
+    "note": "write the current runtime mappings to an exrc file (mappings only)"
   }
 ]
