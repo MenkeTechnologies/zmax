@@ -27359,6 +27359,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "view",
+        aliases: &["vie"],
+        doc: "Edit a file read-only (vim :view).",
+        fun: view_readonly,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sview",
+        aliases: &["svie"],
+        doc: "Split and edit a file read-only (vim :sview).",
+        fun: sview_readonly,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "autocmd",
         aliases: &["au"],
         doc: "Register an autocommand: :autocmd {events} {pattern} {command} (`:autocmd !` clears).",
@@ -36915,6 +36937,28 @@ pub(crate) fn fire_autocmd(cx: &mut compositor::Context, event: &str) {
     for cmd in crate::vim_autocmd::matching_commands(event, &name) {
         run_command_line(cx, &cmd);
     }
+}
+
+/// vim `:view {file}`: edit a file read-only.
+fn view_readonly(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    open_impl(cx, args, Action::Replace)?;
+    let (_view, doc) = current!(cx.editor);
+    doc.readonly = true;
+    Ok(())
+}
+
+/// vim `:sview {file}`: split the window and edit the file read-only.
+fn sview_readonly(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    open_impl(cx, args, Action::HorizontalSplit)?;
+    let (_view, doc) = current!(cx.editor);
+    doc.readonly = true;
+    Ok(())
 }
 
 /// vim `:autocmd` — register an autocommand, list the count, or (`:autocmd !` /
