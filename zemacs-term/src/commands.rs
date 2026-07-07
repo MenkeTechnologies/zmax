@@ -23453,9 +23453,18 @@ fn indent(cx: &mut Context) {
             let pos = doc.text().line_to_char(line);
 
             let indent = if let IndentStyle::Spaces(indent_width) = doc.indent_style {
-                let line = doc.text().line(line);
-                let offset = line.first_non_whitespace_char().unwrap_or(0) % indent_width as usize;
-                indent.clone().split_off(offset)
+                // vim `shiftround`: round the indent up to a multiple of
+                // shiftwidth (drop the leading columns already past a boundary).
+                // zemacs rounds by default; `:set noshiftround` adds a full level
+                // regardless of current alignment instead.
+                if typed::vim_opt_str("shiftround").as_deref() != Some("off") {
+                    let line = doc.text().line(line);
+                    let offset =
+                        line.first_non_whitespace_char().unwrap_or(0) % indent_width as usize;
+                    indent.clone().split_off(offset)
+                } else {
+                    indent.clone()
+                }
             } else {
                 indent.clone()
             };
