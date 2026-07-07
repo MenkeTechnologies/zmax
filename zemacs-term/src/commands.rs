@@ -1928,11 +1928,73 @@ fn move_impl(cx: &mut Context, move_fn: MoveFn, dir: Direction, behaviour: Movem
 
 use zemacs_core::movement::{move_horizontally, move_vertically};
 
+/// vim `whichwrap`: does the option permit horizontal motion to cross a line
+/// boundary in `dir`? Backward is enabled by `h`/`<`, forward by `l`/`>`. The
+/// default value is empty, so this is off (and zero-cost) unless the user opts in.
+fn whichwrap_enabled(dir: Direction) -> bool {
+    let flags: &[&str] = match dir {
+        Direction::Backward => &["h", "<"],
+        Direction::Forward => &["l", ">"],
+    };
+    typed::vim_opt_str("whichwrap")
+        .map(|w| {
+            w.split(',')
+                .any(|f| flags.iter().any(|g| f.trim() == *g))
+        })
+        .unwrap_or(false)
+}
+
+/// If `whichwrap` allows it and the cursor is against the line boundary in `dir`,
+/// cross to the adjacent line (end of previous / start of next) and return true.
+/// Only handles the single-step case (count 1); larger counts fall through to the
+/// normal in-line move.
+fn whichwrap_cross(cx: &mut Context, dir: Direction) -> bool {
+    if cx.count.map(|c| c.get()).unwrap_or(1) != 1 || !whichwrap_enabled(dir) {
+        return false;
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let pos = doc.selection(view.id).primary().cursor(text);
+    let line = text.char_to_line(pos);
+    let line_start = text.line_to_char(line);
+    let target = match dir {
+        Direction::Backward => {
+            if pos != line_start || line == 0 {
+                return false;
+            }
+            // Last character of the previous line (its start if it is empty).
+            let prev_start = text.line_to_char(line - 1);
+            line_end_char_index(&text, line - 1)
+                .saturating_sub(1)
+                .max(prev_start)
+        }
+        Direction::Forward => {
+            let last = line_end_char_index(&text, line).saturating_sub(1).max(line_start);
+            if pos != last || line + 1 >= text.len_lines() {
+                return false;
+            }
+            text.line_to_char(line + 1)
+        }
+    };
+    let selection = doc
+        .selection(view.id)
+        .clone()
+        .transform(|_| Range::point(target));
+    doc.set_selection(view.id, selection);
+    true
+}
+
 fn move_char_left(cx: &mut Context) {
+    if whichwrap_cross(cx, Direction::Backward) {
+        return;
+    }
     move_impl(cx, move_horizontally, Direction::Backward, Movement::Move)
 }
 
 fn move_char_right(cx: &mut Context) {
+    if whichwrap_cross(cx, Direction::Forward) {
+        return;
+    }
     move_impl(cx, move_horizontally, Direction::Forward, Movement::Move)
 }
 

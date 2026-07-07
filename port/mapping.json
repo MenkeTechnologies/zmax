@@ -36702,11 +36702,11 @@
   },
   {
     "spec_id": "neovim.option.whichwrap",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set whichwrap is accepted, stored and queryable (:set whichwrap?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set whichwrap -> h/l/arrows cross line boundaries"
   },
   {
     "spec_id": "neovim.option.wildchar",
