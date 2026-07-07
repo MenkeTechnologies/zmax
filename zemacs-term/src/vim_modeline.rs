@@ -8,6 +8,7 @@
 /// empty vec when the line has no modeline. Handles both forms:
 /// * `[text] {vim|vi|ex}: set {opts}:` — options run up to the closing colon.
 /// * `[text] {vim|vi|ex}: {opts}`      — the rest of the line is options.
+///
 /// The marker must be at the start of the line or preceded by whitespace.
 pub fn parse_modeline(line: &str) -> Vec<String> {
     // Accept `vim:`, `vi:`, `ex:` and version-tagged `vim>=800:` style markers.

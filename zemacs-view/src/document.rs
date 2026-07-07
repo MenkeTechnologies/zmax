@@ -3303,9 +3303,11 @@ mod test {
     async fn backup_keeps_previous_file_contents_on_save() {
         // vim `:set backup`: overwriting a file first copies its old contents to
         // `<file>~`.
-        let mut cfg = Config::default();
-        cfg.backup = true;
-        cfg.atomic_save = false;
+        let cfg = Config {
+            backup: true,
+            atomic_save: false,
+            ..Config::default()
+        };
         let mut path = std::env::temp_dir();
         path.push(format!("zemacs_backup_{}.txt", std::process::id()));
         std::fs::write(&path, b"old contents\n").unwrap();
