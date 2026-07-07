@@ -18711,6 +18711,9 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     (&["fixendofline", "fixeol"],  "insert-final-newline", VimOptKind::Bool),
     (&["splitright", "spr"],       "split-right",        VimOptKind::Bool),
     (&["splitbelow", "sb"],        "split-below",        VimOptKind::Bool),
+    (&["scroll", "scr"],           "scroll-lines",       VimOptKind::Num),
+    (&["updatetime", "ut"],        "idle-timeout",       VimOptKind::Num),
+    (&["smarttab", "sta"],         "smart-tab.enable",   VimOptKind::Bool),
 ];
 
 fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {
@@ -18915,6 +18918,43 @@ fn clipboard_default_register(value: &str) -> char {
     } else {
         '"'
     }
+}
+
+/// Parse a vim `guicursor` value into (zemacs `cursor-shape` mode key, shape)
+/// pairs. vim form: `n-v-c:block,i:ver25,ci:ver20-Cursor` — mode letters group
+/// on `-`, shape is `block` / `ver<N>` (vertical bar) / `hor<N>` (underline),
+/// with an optional `-highlight` suffix. Only normal/insert/select map onto
+/// zemacs's three cursor modes; unknown modes/shapes are skipped.
+fn parse_guicursor(spec: &str) -> Vec<(&'static str, &'static str)> {
+    let mut out = Vec::new();
+    for part in spec.split(',') {
+        let Some((modes, rest)) = part.split_once(':') else {
+            continue;
+        };
+        let tok = rest.split('-').next().unwrap_or("").to_ascii_lowercase();
+        let shape = if tok.starts_with("ver") {
+            "bar"
+        } else if tok.starts_with("hor") {
+            "underline"
+        } else if tok.starts_with("block") {
+            "block"
+        } else {
+            continue;
+        };
+        for m in modes.split('-') {
+            let keys: &[&str] = match m {
+                "a" => &["normal", "insert", "select"],
+                "n" | "no" | "nv" => &["normal"],
+                "i" | "ci" | "ic" => &["insert"],
+                "v" | "ve" | "s" => &["select"],
+                _ => &[],
+            };
+            for k in keys {
+                out.push((*k, shape));
+            }
+        }
+    }
+    out
 }
 
 /// Whether a `:substitute` should replace every match on a line, honoring vim's
@@ -19159,6 +19199,8 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     let mut indent_width: Option<u8> = None;
     let mut tab_width: Option<u8> = None;
     let mut doc_readonly: Option<bool> = None;
+    // vim `filetype`/`syntax` set the current buffer's language.
+    let mut set_language: Option<String> = None;
     // vim `foldenable`/`foldlevel` drive the existing fold commands: Some(true)
     // opens all folds, Some(false) closes them.
     let mut fold_open: Option<bool> = None;
@@ -19340,6 +19382,29 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
+        // `filetype`/`syntax` (`ft`/`syn`) set the current buffer's language,
+        // driving highlighting, indentation and comments (vim `:set ft=rust`).
+        if matches!(name, "filetype" | "ft" | "syntax" | "syn") {
+            if let Some(v) = value {
+                if !v.is_empty() && v != "off" && v != "on" {
+                    set_language = Some(v.to_string());
+                }
+            }
+            continue;
+        }
+        // `guicursor` sets the per-mode cursor shape (vim
+        // `:set guicursor=n:block,i:ver25,v:hor20`).
+        if matches!(name, "guicursor" | "gcr") {
+            for (mode_key, shape) in parse_guicursor(value.unwrap_or("")) {
+                config_set_key(
+                    &mut config,
+                    &format!("cursor-shape.{mode_key}"),
+                    Value::String(shape.into()),
+                )?;
+                changed = true;
+            }
+            continue;
+        }
         // `clipboard=unnamed`/`unnamedplus` routes unnamed yanks and deletes
         // through the system clipboard by switching the default yank register to
         // the clipboard register (`*` for `unnamed`, `+` for `unnamedplus`); any
@@ -19429,6 +19494,14 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     if let Some(ro) = doc_readonly {
         let (_view, doc) = current!(cx.editor);
         doc.readonly = ro;
+    }
+    // Buffer-local language (vim `filetype`/`syntax`).
+    if let Some(lang) = set_language {
+        let loader = cx.editor.syn_loader.load();
+        let (_view, doc) = current!(cx.editor);
+        if let Err(e) = doc.set_language_by_language_id(&lang, &loader) {
+            log::debug!("vim :set filetype={lang}: {e}");
+        }
     }
     // Drive folding (vim `foldenable`/`foldlevel`) via the fold commands.
     if let Some(open) = fold_open {
@@ -39151,6 +39224,24 @@ mod vim_set_tests {
     }
 
     #[test]
+    fn guicursor_maps_modes_to_shapes() {
+        // n:block, i:ver -> bar, v:hor -> underline; grouped modes + suffixes.
+        assert_eq!(
+            parse_guicursor("n-c:block,i:ver25,v:hor20-Cursor"),
+            vec![
+                ("normal", "block"),
+                ("insert", "bar"),
+                ("select", "underline"),
+            ]
+        );
+        // `a` applies to all three modes.
+        assert_eq!(
+            parse_guicursor("a:block"),
+            vec![("normal", "block"), ("insert", "block"), ("select", "block")]
+        );
+    }
+
+    #[test]
     fn clipboard_option_picks_register() {
         // vim `:set clipboard=unnamedplus` -> `+`, `unnamed` -> `*`, else `"`.
         assert_eq!(clipboard_default_register("unnamedplus"), '+');
@@ -39186,6 +39277,28 @@ mod vim_set_tests {
 
     fn tr(tok: &str, cur: bool) -> (String, Value) {
         translate_vim_option(tok, |_| cur).unwrap().unwrap()
+    }
+
+    #[test]
+    fn translate_newly_wired_options() {
+        // scroll -> scroll-lines, updatetime -> idle-timeout (numbers)
+        assert_eq!(
+            tr("scroll=10", false),
+            ("scroll-lines".into(), Value::Number(10.into()))
+        );
+        assert_eq!(
+            tr("ut=100", false),
+            ("idle-timeout".into(), Value::Number(100.into()))
+        );
+        // smarttab -> smart-tab.enable (nested bool)
+        assert_eq!(
+            tr("smarttab", false),
+            ("smart-tab.enable".into(), Value::Bool(true))
+        );
+        assert_eq!(
+            tr("nosmarttab", false),
+            ("smart-tab.enable".into(), Value::Bool(false))
+        );
     }
 
     #[test]

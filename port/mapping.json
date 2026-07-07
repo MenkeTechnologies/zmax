@@ -3043,7 +3043,7 @@
   },
   {
     "spec_id": "neovim.option.wildmenu",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -7492,7 +7492,7 @@
   },
   {
     "spec_id": "neovim.option.fileformats",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:line-ending"
     ],
@@ -7508,7 +7508,7 @@
   },
   {
     "spec_id": "neovim.option.encoding",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:encoding"
     ],
@@ -7524,7 +7524,7 @@
   },
   {
     "spec_id": "neovim.option.ruler",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -7532,7 +7532,7 @@
   },
   {
     "spec_id": "neovim.option.guicursor",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -7548,7 +7548,7 @@
   },
   {
     "spec_id": "neovim.option.updatetime",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -7644,7 +7644,7 @@
   },
   {
     "spec_id": "neovim.option.autoindent",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -7932,7 +7932,7 @@
   },
   {
     "spec_id": "neovim.option.wildignorecase",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -20061,7 +20061,7 @@
   },
   {
     "spec_id": "neovim.option.showmode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -34942,7 +34942,7 @@
   },
   {
     "spec_id": "neovim.option.backspace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -34982,7 +34982,7 @@
   },
   {
     "spec_id": "neovim.option.belloff",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -35046,7 +35046,7 @@
   },
   {
     "spec_id": "neovim.option.casemap",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -35374,7 +35374,7 @@
   },
   {
     "spec_id": "neovim.option.filetype",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -35582,7 +35582,7 @@
   },
   {
     "spec_id": "neovim.option.hidden",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -36398,7 +36398,7 @@
   },
   {
     "spec_id": "neovim.option.syntax",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -36582,7 +36582,7 @@
   },
   {
     "spec_id": "neovim.option.ttyfast",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -36710,7 +36710,7 @@
   },
   {
     "spec_id": "neovim.option.wildchar",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -36774,7 +36774,7 @@
   },
   {
     "spec_id": "neovim.option.window",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
