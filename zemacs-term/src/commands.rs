@@ -32674,9 +32674,25 @@ fn increment_impl(cx: &mut Context, increment_direction: IncrementDirection) {
     for range in selection {
         let selected_text: Cow<str> = range.fragment(text);
         let new_from = ((range.from() as i128) + cumulative_length_diff) as usize;
-        let incremented = [increment::integer, increment::date_time]
-            .iter()
-            .find_map(|incrementor| incrementor(selected_text.as_ref(), amount));
+        // vim `nrformats`: gate which radix-prefixed literals CTRL-A/CTRL-X touch.
+        // Default recognizes bin/octal/hex (decimal is always incremented).
+        let nf = typed::vim_opt_str("nrformats").unwrap_or_else(|| "bin,octal,hex".to_string());
+        let t = selected_text.as_ref();
+        let radix_allowed = if t.starts_with("0x") || t.starts_with("0X") {
+            nf.contains("hex")
+        } else if t.starts_with("0b") || t.starts_with("0B") {
+            nf.contains("bin")
+        } else if t.starts_with("0o") || t.starts_with("0O") {
+            nf.contains("octal")
+        } else {
+            true
+        };
+        let incremented = if radix_allowed {
+            increment::integer(t, amount)
+        } else {
+            None
+        }
+        .or_else(|| increment::date_time(t, amount));
 
         amount += increase_by;
 

@@ -35946,7 +35946,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set nrformats is accepted, stored and queryable (:set nrformats?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set nrformats gates bin/octal/hex for CTRL-A/CTRL-X (alpha unsupported)"
   },
   {
     "spec_id": "neovim.option.omnifunc",
