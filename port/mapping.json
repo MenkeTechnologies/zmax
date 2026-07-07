@@ -37355,5 +37355,21 @@
       "key:dired:Y"
     ],
     "note": ""
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_view",
+    "status": "ported",
+    "evidence": [
+      "typable:view"
+    ],
+    "note": ":view read-only"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sview",
+    "status": "ported",
+    "evidence": [
+      "typable:sview"
+    ],
+    "note": ":sview split+read-only"
   }
 ]
