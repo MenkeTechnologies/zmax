@@ -1696,6 +1696,8 @@ impl MappableCommand {
         set_mark, "Set mark (m{a-z} buffer, m{A-Z} global)",
         goto_mark, "Goto mark exact (`{a-z/A-Z/0-9}, `` for last jump)",
         goto_mark_line, "Goto mark line ('{a-z/A-Z/0-9}, '' for last jump)",
+        goto_mark_nojump, "Goto mark exact without changing jumplist (g`)",
+        goto_mark_line_nojump, "Goto mark line without changing jumplist (g')",
         repeat_substitute, "Repeat last :substitute (&)",
         repeat_substitute_global, "Repeat last :substitute on whole file (g&)",
         vim_record_macro, "Record macro into register (q{reg})",
@@ -3134,6 +3136,8 @@ fn goto_window(cx: &mut Context, align: Align) {
         .selection(view.id)
         .clone()
         .transform(|range| range.put_cursor(text, pos, cx.editor.mode == Mode::Select));
+    // vim `H`/`M`/`L` are jump commands: record the position we are leaving.
+    push_jump(view, doc);
     doc.set_selection(view.id, selection);
 }
 
@@ -3696,6 +3700,12 @@ where
     F: Fn(RopeSlice, Range, usize, Movement) -> Range + 'static,
 {
     let count = cx.count();
+    // vim `{`/`}`/`(`/`)`/`[[`/`]]` are jump commands: record the position we are
+    // leaving before the paragraph/sentence/section move.
+    {
+        let (view, doc) = current!(cx.editor);
+        push_jump(view, doc);
+    }
     let motion = move |editor: &mut Editor| {
         let (view, doc) = current!(editor);
         let text = doc.text().slice(..);
@@ -4285,7 +4295,7 @@ fn set_mark(cx: &mut Context) {
     ));
 }
 
-fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
+fn goto_mark_impl(cx: &mut Context, to_line_start: bool, record_jump: bool) {
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
@@ -4297,7 +4307,7 @@ fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
                     cx.editor.set_error(format!("Mark '{ch}' not set"));
                     return;
                 };
-                {
+                if record_jump {
                     let (view, doc) = current!(cx.editor);
                     push_jump(view, doc);
                 }
@@ -4356,7 +4366,9 @@ fn goto_mark_impl(cx: &mut Context, to_line_start: bool) {
                     .map(|p| p + text.line_to_char(line))
                     .unwrap_or_else(|| text.line_to_char(line));
             }
-            push_jump(view, doc);
+            if record_jump {
+                push_jump(view, doc);
+            }
             doc.set_selection(view.id, Selection::point(pos));
         }
     });
@@ -4478,11 +4490,21 @@ fn repeat_substitute_global(cx: &mut Context) {
 }
 
 fn goto_mark(cx: &mut Context) {
-    goto_mark_impl(cx, false);
+    goto_mark_impl(cx, false, true);
 }
 
 fn goto_mark_line(cx: &mut Context) {
-    goto_mark_impl(cx, true);
+    goto_mark_impl(cx, true, true);
+}
+
+// vim `` g` `` / `g'`: jump to a mark exactly like `` ` `` / `'`, but WITHOUT
+// changing the jumplist (that is the whole point of the `g`-prefixed variants).
+fn goto_mark_nojump(cx: &mut Context) {
+    goto_mark_impl(cx, false, false);
+}
+
+fn goto_mark_line_nojump(cx: &mut Context) {
+    goto_mark_impl(cx, true, false);
 }
 
 // vim operator + find-char: extend to the target char (inclusive `f`/`F`,
@@ -8104,6 +8126,12 @@ fn search_next_or_prev_impl(cx: &mut Context, movement: Movement, direction: Dir
             )
             .build(&query)
         {
+            // vim treats `n`/`N`/`*`/`#` (repeat/word search) as jump commands:
+            // record the pre-search position once, before moving to the match.
+            {
+                let (view, doc) = current!(cx.editor);
+                push_jump(view, doc);
+            }
             for _ in 0..count {
                 search_impl(
                     cx.editor,
@@ -21206,7 +21234,7 @@ fn goto_column_impl(cx: &mut Context, movement: Movement) {
         let pos = graphemes::nth_next_grapheme_boundary(text, line_start, count - 1).min(line_end);
         range.put_cursor(text, pos, movement == Movement::Extend)
     });
-    push_jump(view, doc);
+    // vim `|` (goto column) is a plain intra-line move, not a jump command.
     doc.set_selection(view.id, selection);
 }
 
@@ -21228,7 +21256,7 @@ fn goto_last_modification(cx: &mut Context) {
             .selection(view.id)
             .clone()
             .transform(|range| range.put_cursor(text, pos, cx.editor.mode == Mode::Select));
-        push_jump(view, doc);
+        // vim `g;`/`g,` walk the change list, which is independent of the jumplist.
         doc.set_selection(view.id, selection);
     }
 }
@@ -25722,6 +25750,13 @@ fn select_all_children(cx: &mut Context) {
 // `{count}%` jumps to {count} percent through the file, on the first non-blank.
 fn match_brackets_or_goto_percent(cx: &mut Context) {
     let Some(count) = cx.count else {
+        // vim `%` (match the bracket under the cursor) is itself a jump command.
+        // The operator form `d%`/`y%` uses `match_brackets` directly, so recording
+        // the jump here keeps standalone `%` correct without affecting operators.
+        {
+            let (view, doc) = current!(cx.editor);
+            push_jump(view, doc);
+        }
         match_brackets(cx);
         return;
     };

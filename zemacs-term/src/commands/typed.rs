@@ -898,6 +898,13 @@ fn jump_to_tag_action(
     entry: &TagEntry,
     action: Action,
 ) -> anyhow::Result<()> {
+    // vim `:tag`/`:tselect`/`:tjump`/`:tnext` are jump commands: record where we
+    // jumped from before opening the target (a cross-file open also pushes via
+    // Editor::switch, but push_impl dedups the identical consecutive entry).
+    {
+        let (view, doc) = current!(cx.editor);
+        super::push_jump(view, doc);
+    }
     cx.editor.open(&entry.file, action)?;
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
@@ -22148,6 +22155,9 @@ pub(crate) fn do_substitute(
         return Ok(());
     }
 
+    // vim `:s` (substitute) is a jump command: record the pre-substitute position
+    // so `<C-o>` returns to where the cursor was before the substitution.
+    super::push_jump(view, doc);
     let transaction = Transaction::change(doc.text(), changes.into_iter());
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
