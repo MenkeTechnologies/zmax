@@ -36955,5 +36955,141 @@
       "static:isearch_emoji_by_name"
     ],
     "note": "search+insert emoji by name"
+  },
+  {
+    "spec_id": "neovim.function.acos",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:acos"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.asin",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:asin"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.atan",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:atan"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.ceil",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ceil"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.cos",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:cos"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.cosh",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:cosh"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.exp",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:exp"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.floor",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:floor"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.log",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:log"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.log10",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:log10"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.round",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:round"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.sin",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:sin"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.sinh",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:sinh"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.sqrt",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:sqrt"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.tan",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:tan"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.tanh",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:tanh"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "neovim.function.trunc",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:trunc"
+    ],
+    "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
   }
 ]
