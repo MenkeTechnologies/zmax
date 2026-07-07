@@ -1473,6 +1473,37 @@ fn cabbrev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     abbrev_define(cx, AbbrevMode::Command, &args)
 }
 
+// `:noreabbrev` / `:inoreabbrev` / `:cnoreabbrev` are the non-recursive forms of
+// `:abbreviate` / `:iabbrev` / `:cabbrev`. Vim's `nore` prefix means the rhs is
+// not itself subject to further mapping/abbreviation expansion. zemacs
+// abbreviations always expand to literal text (no recursive re-expansion), so
+// the `nore` variants are behaviourally identical to the plain forms — they
+// exist so muscle-memory `:noreabbrev` etc. work.
+
+/// `:noreabbrev` — like `:abbreviate` (Insert + Command-line), non-recursive.
+fn noreabbrev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    abbrev_define(cx, AbbrevMode::Both, &args)
+}
+
+/// `:inoreabbrev` — like `:iabbrev` (Insert mode), non-recursive.
+fn inoreabbrev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    abbrev_define(cx, AbbrevMode::Insert, &args)
+}
+
+/// `:cnoreabbrev` — like `:cabbrev` (Command-line mode), non-recursive.
+fn cnoreabbrev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    abbrev_define(cx, AbbrevMode::Command, &args)
+}
+
 /// `:unabbreviate {lhs}` — remove an abbreviation (both modes).
 fn unabbreviate(
     cx: &mut compositor::Context,
@@ -19770,6 +19801,57 @@ fn source_file(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     }
 }
 
+/// vim `:runtime[!] {file}` — source `{file}` found in the 'runtimepath'. zemacs's
+/// runtimepath is its config directory (`~/.config/zemacs` or `$ZEMACS_CONFIG`),
+/// so each argument is resolved relative to `config_dir()` and sourced through
+/// the embedded vimlrs interpreter, exactly like `:source`.
+fn runtime_source(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    // A leading `!` (`:runtime!`) means "source every match", but with a single
+    // runtimepath entry there is at most one, so both forms behave the same.
+    let names: Vec<&str> = args
+        .iter()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty() && *s != "!")
+        .collect();
+    if names.is_empty() {
+        bail!("usage: :runtime <file>");
+    }
+    let base = zemacs_loader::config_dir();
+    let mut sourced = 0usize;
+    for name in names {
+        let path = base.join(name);
+        if !path.exists() {
+            continue;
+        }
+        crate::commands::scripting::source_viml_file(cx, &path).map_err(|e| anyhow!("{e}"))?;
+        sourced += 1;
+    }
+    if sourced == 0 {
+        bail!("runtime: not found in runtimepath ({})", base.display());
+    }
+    cx.editor
+        .set_status(format!("sourced {sourced} runtime file(s)"));
+    Ok(())
+}
+
+/// vim `:diffthis` — make the current window a diff window. zemacs shows the
+/// focused buffer's changes as a read-only side-by-side diff against its git
+/// HEAD base (the same view as `:diff` / the `git_diff` command).
+fn diffthis(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    open_diff(cx.editor, cx.jobs);
+    Ok(())
+}
+
 /// vim `:let {name} = {expr}` — evaluate the assignment in the embedded vimlrs
 /// interpreter, so the variable persists (readable by `:echo`, sourced plugins,
 /// `&opt` bridges, etc.). Bare `:let` lists variables (vimlrs handles it).
@@ -20806,6 +20888,11 @@ vim_map_typable!(vim_map_mapclear, "mapclear");
 vim_map_typable!(vim_map_nmapclear, "nmapclear");
 vim_map_typable!(vim_map_imapclear, "imapclear");
 vim_map_typable!(vim_map_vmapclear, "vmapclear");
+vim_map_typable!(vim_map_xmapclear, "xmapclear");
+vim_map_typable!(vim_map_smapclear, "smapclear");
+vim_map_typable!(vim_map_omapclear, "omapclear");
+vim_map_typable!(vim_map_sunmap, "sunmap");
+vim_map_typable!(vim_map_ounmap, "ounmap");
 
 /// Wrap a no-argument static editor command as a vim `:`-command, ported to our
 /// Rust internals — reachable from the `:` line AND, via the vimlrs bridge, from
@@ -30577,6 +30664,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "noreabbrev",
+        aliases: &["norea"],
+        doc: "List or define a non-recursive Insert+Command-line abbreviation (vim :noreabbrev).",
+        fun: noreabbrev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "inoreabbrev",
+        aliases: &["inorea"],
+        doc: "List or define a non-recursive Insert-mode abbreviation (vim :inoreabbrev).",
+        fun: inoreabbrev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cnoreabbrev",
+        aliases: &["cnorea"],
+        doc: "List or define a non-recursive Command-line-mode abbreviation (vim :cnoreabbrev).",
+        fun: cnoreabbrev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "unabbreviate",
         aliases: &["una"],
         doc: "Remove an abbreviation for both modes (vim :unabbreviate).",
@@ -32041,6 +32161,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: source_file,
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "runtime",
+        aliases: &["ru"],
+        doc: "Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime).",
+        fun: runtime_source,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "diffthis",
+        aliases: &["difft"],
+        doc: "Show the current buffer's changes as a side-by-side diff vs git HEAD (vim :diffthis).",
+        fun: diffthis,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "tabs",
@@ -34083,6 +34219,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     vim_map_command!("nmapclear", vim_map_nmapclear, "Clear runtime normal-mode mappings."),
     vim_map_command!("imapclear", vim_map_imapclear, "Clear runtime insert-mode mappings."),
     vim_map_command!("vmapclear", vim_map_vmapclear, "Clear runtime select/visual-mode mappings."),
+    vim_map_command!("xmapclear", vim_map_xmapclear, "Clear runtime visual-mode mappings (Vim :xmapclear)."),
+    vim_map_command!("smapclear", vim_map_smapclear, "Clear runtime select-mode mappings (Vim :smapclear)."),
+    vim_map_command!("omapclear", vim_map_omapclear, "Clear runtime operator-pending mappings (Vim :omapclear)."),
+    vim_map_command!("sunmap", vim_map_sunmap, "Remove a runtime select-mode {lhs} mapping (Vim :sunmap)."),
+    vim_map_command!("ounmap", vim_map_ounmap, "Remove a runtime operator-pending {lhs} mapping (Vim :ounmap)."),
     TypableCommand {
         name: "normal",
         aliases: &["norm"],

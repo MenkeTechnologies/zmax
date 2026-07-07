@@ -2717,7 +2717,7 @@
     "evidence": [
       "key:normal:d i"
     ],
-    "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+    "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
   },
   {
     "spec_id": "neovim.normal-mode.it",
@@ -9477,7 +9477,7 @@
     "evidence": [
       "typable:Files"
     ],
-    "note": "fzf.vim :Files \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `open {}` on the pick."
+    "note": "fzf.vim :Files → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `open {}` on the pick."
   },
   {
     "spec_id": "fzf.command.gfiles",
@@ -9485,7 +9485,7 @@
     "evidence": [
       "typable:GFiles"
     ],
-    "note": "fzf.vim :GFiles via external fzf binary (Application::run_fzf); git ls-files \u2192 open."
+    "note": "fzf.vim :GFiles via external fzf binary (Application::run_fzf); git ls-files → open."
   },
   {
     "spec_id": "fzf.command.gfiles_status",
@@ -9493,7 +9493,7 @@
     "evidence": [
       "typable:GFiles"
     ],
-    "note": "fzf.vim :GFiles via external fzf binary; git status --porcelain \u2192 open."
+    "note": "fzf.vim :GFiles via external fzf binary; git status --porcelain → open."
   },
   {
     "spec_id": "fzf.command.buffers",
@@ -9501,7 +9501,7 @@
     "evidence": [
       "typable:Buffers"
     ],
-    "note": "fzf.vim :Buffers \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `buffer {}` on the pick."
+    "note": "fzf.vim :Buffers → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `buffer {}` on the pick."
   },
   {
     "spec_id": "fzf.command.colors",
@@ -9509,7 +9509,7 @@
     "evidence": [
       "typable:Colors"
     ],
-    "note": "fzf.vim :Colors \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `theme {}` on the pick."
+    "note": "fzf.vim :Colors → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `theme {}` on the pick."
   },
   {
     "spec_id": "fzf.command.ag",
@@ -9517,7 +9517,7 @@
     "evidence": [
       "typable:Rg"
     ],
-    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg \u2192 open at line (fzf-goto)."
+    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
   },
   {
     "spec_id": "fzf.command.rg",
@@ -9525,7 +9525,7 @@
     "evidence": [
       "typable:Rg"
     ],
-    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg \u2192 open at line (fzf-goto)."
+    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
   },
   {
     "spec_id": "fzf.command.rg_reload",
@@ -9533,7 +9533,7 @@
     "evidence": [
       "typable:Rg"
     ],
-    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg \u2192 open at line (fzf-goto)."
+    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
   },
   {
     "spec_id": "fzf.command.lines",
@@ -9541,7 +9541,7 @@
     "evidence": [
       "typable:Lines"
     ],
-    "note": "fzf.vim :Lines via external fzf binary; all-buffer lines \u2192 open at line."
+    "note": "fzf.vim :Lines via external fzf binary; all-buffer lines → open at line."
   },
   {
     "spec_id": "fzf.command.blines",
@@ -9549,7 +9549,7 @@
     "evidence": [
       "typable:BLines"
     ],
-    "note": "fzf.vim :BLines via external fzf binary (Application::run_fzf); current-buffer lines \u2192 goto (fzf-line)."
+    "note": "fzf.vim :BLines via external fzf binary (Application::run_fzf); current-buffer lines → goto (fzf-line)."
   },
   {
     "spec_id": "fzf.command.tags",
@@ -9589,7 +9589,7 @@
     "evidence": [
       "typable:Locate"
     ],
-    "note": "fzf.vim :Locate via external fzf binary (Application::run_fzf); locate \u2192 open."
+    "note": "fzf.vim :Locate via external fzf binary (Application::run_fzf); locate → open."
   },
   {
     "spec_id": "fzf.command.history",
@@ -9597,7 +9597,7 @@
     "evidence": [
       "typable:History"
     ],
-    "note": "fzf.vim :History via external fzf binary; recent files \u2192 open."
+    "note": "fzf.vim :History via external fzf binary; recent files → open."
   },
   {
     "spec_id": "fzf.command.history_cmd",
@@ -9605,7 +9605,7 @@
     "evidence": [
       "typable:History:"
     ],
-    "note": "fzf.vim :History: via external fzf binary; command history \u2192 run."
+    "note": "fzf.vim :History: via external fzf binary; command history → run."
   },
   {
     "spec_id": "fzf.command.history_search",
@@ -9613,7 +9613,7 @@
     "evidence": [
       "typable:History/"
     ],
-    "note": "fzf.vim :History/ via external fzf binary; search history \u2192 search."
+    "note": "fzf.vim :History/ via external fzf binary; search history → search."
   },
   {
     "spec_id": "fzf.command.commands",
@@ -9621,7 +9621,7 @@
     "evidence": [
       "typable:Commands"
     ],
-    "note": "fzf.vim :Commands \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `{}` on the pick."
+    "note": "fzf.vim :Commands → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `{}` on the pick."
   },
   {
     "spec_id": "fzf.command.maps",
@@ -9637,7 +9637,7 @@
     "evidence": [
       "typable:BCommits"
     ],
-    "note": "fzf.vim :BCommits via external fzf binary; git log -- file \u2192 git show."
+    "note": "fzf.vim :BCommits via external fzf binary; git log -- file → git show."
   },
   {
     "spec_id": "fzf.command.commits",
@@ -9645,7 +9645,7 @@
     "evidence": [
       "typable:Commits"
     ],
-    "note": "fzf.vim :Commits via external fzf binary; git log \u2192 git show."
+    "note": "fzf.vim :Commits via external fzf binary; git log → git show."
   },
   {
     "spec_id": "spacemacs.keybinding.spc_g_f_l",
@@ -18732,7 +18732,7 @@
       "key:insert:C-c ;",
       "key:normal:C-c ;"
     ],
-    "note": "Complete Current Statement (Cmd-Shift-Enter) = complete_current_statement, bound under the Emacs major-mode prefix C-c as `C-c ;` \u2014 active in Insert, Normal AND Select (spacemacs), so it fires while typing like JetBrains. Closes brackets/parens left open on the line, appends the language terminator (; for C/Rust/Java/JS/... via lang_uses_semicolons), leaves `{` blocks open, then opens an indented line below in insert mode. Line-local heuristic (not full PSI)."
+    "note": "Complete Current Statement (Cmd-Shift-Enter) = complete_current_statement, bound under the Emacs major-mode prefix C-c as `C-c ;` — active in Insert, Normal AND Select (spacemacs), so it fires while typing like JetBrains. Closes brackets/parens left open on the line, appends the language terminator (; for C/Rust/Java/JS/... via lang_uses_semicolons), leaves `{` blocks open, then opens an indented line below in insert mode. Line-local heuristic (not full PSI)."
   },
   {
     "spec_id": "jetbrains.coding-assistance.generate",
@@ -18741,7 +18741,7 @@
       "key:normal:space l g",
       "static:generate_code"
     ],
-    "note": "Generate (Cmd N) = generate_code: title-filtered (\"generate\") LSP code-action menu \u2014 getters/constructors/impls/derives (SPC l g)"
+    "note": "Generate (Cmd N) = generate_code: title-filtered (\"generate\") LSP code-action menu — getters/constructors/impls/derives (SPC l g)"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_p_v",
@@ -23860,7 +23860,7 @@
     "evidence": [
       "typable:fold"
     ],
-    "note": "vim :fold \u2192 fold_create (create a fold over the range)"
+    "note": "vim :fold → fold_create (create a fold over the range)"
   },
   {
     "spec_id": "neovim.ex-command.colon_foldopen",
@@ -23868,7 +23868,7 @@
     "evidence": [
       "typable:foldopen"
     ],
-    "note": "vim :foldopen \u2192 fold_open"
+    "note": "vim :foldopen → fold_open"
   },
   {
     "spec_id": "neovim.ex-command.colon_foldclose",
@@ -23876,7 +23876,7 @@
     "evidence": [
       "typable:foldclose"
     ],
-    "note": "vim :foldclose \u2192 fold_close"
+    "note": "vim :foldclose → fold_close"
   },
   {
     "spec_id": "neovim.ex-command.colon_silent",
@@ -23884,7 +23884,7 @@
     "evidence": [
       "typable:silent"
     ],
-    "note": "vim :silent modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (suppress messages) is best-effort/not enforced."
+    "note": "vim :silent modifier — wrapped command runs via our :dispatcher; modifier effect (suppress messages) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_unsilent",
@@ -23892,7 +23892,7 @@
     "evidence": [
       "typable:unsilent"
     ],
-    "note": "vim :unsilent modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (show messages (default)) is best-effort/not enforced."
+    "note": "vim :unsilent modifier — wrapped command runs via our :dispatcher; modifier effect (show messages (default)) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_verbose",
@@ -23900,7 +23900,7 @@
     "evidence": [
       "typable:verbose"
     ],
-    "note": "vim :verbose modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (verbose level (leading count dropped)) is best-effort/not enforced."
+    "note": "vim :verbose modifier — wrapped command runs via our :dispatcher; modifier effect (verbose level (leading count dropped)) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_noautocmd",
@@ -23908,7 +23908,7 @@
     "evidence": [
       "typable:noautocmd"
     ],
-    "note": "vim :noautocmd modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (skip autocommands) is best-effort/not enforced."
+    "note": "vim :noautocmd modifier — wrapped command runs via our :dispatcher; modifier effect (skip autocommands) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_keepalt",
@@ -23916,7 +23916,7 @@
     "evidence": [
       "typable:keepalt"
     ],
-    "note": "vim :keepalt modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep alternate file) is best-effort/not enforced."
+    "note": "vim :keepalt modifier — wrapped command runs via our :dispatcher; modifier effect (keep alternate file) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_keepjumps",
@@ -23924,7 +23924,7 @@
     "evidence": [
       "typable:keepjumps"
     ],
-    "note": "vim :keepjumps modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep jumplist) is best-effort/not enforced."
+    "note": "vim :keepjumps modifier — wrapped command runs via our :dispatcher; modifier effect (keep jumplist) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_keepmarks",
@@ -23932,7 +23932,7 @@
     "evidence": [
       "typable:keepmarks"
     ],
-    "note": "vim :keepmarks modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep marks) is best-effort/not enforced."
+    "note": "vim :keepmarks modifier — wrapped command runs via our :dispatcher; modifier effect (keep marks) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_keeppatterns",
@@ -23940,7 +23940,7 @@
     "evidence": [
       "typable:keeppatterns"
     ],
-    "note": "vim :keeppatterns modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep search pattern) is best-effort/not enforced."
+    "note": "vim :keeppatterns modifier — wrapped command runs via our :dispatcher; modifier effect (keep search pattern) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_lockmarks",
@@ -23948,7 +23948,7 @@
     "evidence": [
       "typable:lockmarks"
     ],
-    "note": "vim :lockmarks modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (do not adjust marks) is best-effort/not enforced."
+    "note": "vim :lockmarks modifier — wrapped command runs via our :dispatcher; modifier effect (do not adjust marks) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_sandbox",
@@ -23956,7 +23956,7 @@
     "evidence": [
       "typable:sandbox"
     ],
-    "note": "vim :sandbox modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (sandbox) is best-effort/not enforced."
+    "note": "vim :sandbox modifier — wrapped command runs via our :dispatcher; modifier effect (sandbox) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_confirm",
@@ -23964,7 +23964,7 @@
     "evidence": [
       "typable:confirm"
     ],
-    "note": "vim :confirm modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (confirm prompts) is best-effort/not enforced."
+    "note": "vim :confirm modifier — wrapped command runs via our :dispatcher; modifier effect (confirm prompts) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_browse",
@@ -23972,7 +23972,7 @@
     "evidence": [
       "typable:browse"
     ],
-    "note": "vim :browse modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (file dialog (N/A in TUI)) is best-effort/not enforced."
+    "note": "vim :browse modifier — wrapped command runs via our :dispatcher; modifier effect (file dialog (N/A in TUI)) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_noswapfile",
@@ -23980,7 +23980,7 @@
     "evidence": [
       "typable:noswapfile"
     ],
-    "note": "vim :noswapfile modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (no swapfile) is best-effort/not enforced."
+    "note": "vim :noswapfile modifier — wrapped command runs via our :dispatcher; modifier effect (no swapfile) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_hide",
@@ -23988,7 +23988,7 @@
     "evidence": [
       "typable:hide"
     ],
-    "note": "vim :hide modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (hidden buffer) is best-effort/not enforced."
+    "note": "vim :hide modifier — wrapped command runs via our :dispatcher; modifier effect (hidden buffer) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_vertical",
@@ -23996,7 +23996,7 @@
     "evidence": [
       "typable:vertical"
     ],
-    "note": "vim :vertical modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (vertical split placement) is best-effort/not enforced."
+    "note": "vim :vertical modifier — wrapped command runs via our :dispatcher; modifier effect (vertical split placement) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_horizontal",
@@ -24004,7 +24004,7 @@
     "evidence": [
       "typable:horizontal"
     ],
-    "note": "vim :horizontal modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (horizontal split placement) is best-effort/not enforced."
+    "note": "vim :horizontal modifier — wrapped command runs via our :dispatcher; modifier effect (horizontal split placement) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_aboveleft",
@@ -24012,7 +24012,7 @@
     "evidence": [
       "typable:aboveleft"
     ],
-    "note": "vim :aboveleft modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split above/left) is best-effort/not enforced."
+    "note": "vim :aboveleft modifier — wrapped command runs via our :dispatcher; modifier effect (split above/left) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_belowright",
@@ -24020,7 +24020,7 @@
     "evidence": [
       "typable:belowright"
     ],
-    "note": "vim :belowright modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split below/right) is best-effort/not enforced."
+    "note": "vim :belowright modifier — wrapped command runs via our :dispatcher; modifier effect (split below/right) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_leftabove",
@@ -24028,7 +24028,7 @@
     "evidence": [
       "typable:leftabove"
     ],
-    "note": "vim :leftabove modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split left/above) is best-effort/not enforced."
+    "note": "vim :leftabove modifier — wrapped command runs via our :dispatcher; modifier effect (split left/above) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_rightbelow",
@@ -24036,7 +24036,7 @@
     "evidence": [
       "typable:rightbelow"
     ],
-    "note": "vim :rightbelow modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split right/below) is best-effort/not enforced."
+    "note": "vim :rightbelow modifier — wrapped command runs via our :dispatcher; modifier effect (split right/below) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_topleft",
@@ -24044,7 +24044,7 @@
     "evidence": [
       "typable:topleft"
     ],
-    "note": "vim :topleft modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split at top/left) is best-effort/not enforced."
+    "note": "vim :topleft modifier — wrapped command runs via our :dispatcher; modifier effect (split at top/left) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_botright",
@@ -24052,7 +24052,7 @@
     "evidence": [
       "typable:botright"
     ],
-    "note": "vim :botright modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split at bottom/right) is best-effort/not enforced."
+    "note": "vim :botright modifier — wrapped command runs via our :dispatcher; modifier effect (split at bottom/right) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_redrawstatus",
@@ -24060,7 +24060,7 @@
     "evidence": [
       "typable:redrawstatus"
     ],
-    "note": "vim :redrawstatus \u2192 full redraw (approximation)"
+    "note": "vim :redrawstatus → full redraw (approximation)"
   },
   {
     "spec_id": "neovim.ex-command.colon_redrawtabline",
@@ -24068,7 +24068,7 @@
     "evidence": [
       "typable:redrawtabline"
     ],
-    "note": "vim :redrawtabline \u2192 full redraw (approximation)"
+    "note": "vim :redrawtabline → full redraw (approximation)"
   },
   {
     "spec_id": "neovim.ex-command.colon_normal",
@@ -24076,7 +24076,7 @@
     "evidence": [
       "typable:normal"
     ],
-    "note": "vim :normal[!] {cmds} \u2192 ex_normal: parses the arg into a key sequence and replays it through compositor.handle_event (the macro-replay path), so every motion/operator/command applies."
+    "note": "vim :normal[!] {cmds} → ex_normal: parses the arg into a key sequence and replays it through compositor.handle_event (the macro-replay path), so every motion/operator/command applies."
   },
   {
     "spec_id": "neovim.ex-command.colon_mark",
@@ -24084,7 +24084,7 @@
     "evidence": [
       "typable:mark"
     ],
-    "note": "vim :mark {x} \u2192 ex_mark: doc.set_mark(x, cursor)"
+    "note": "vim :mark {x} → ex_mark: doc.set_mark(x, cursor)"
   },
   {
     "spec_id": "neovim.ex-command.colon_k",
@@ -24092,7 +24092,7 @@
     "evidence": [
       "typable:mark"
     ],
-    "note": "vim :k {x} \u2192 ex_mark (alias of :mark)"
+    "note": "vim :k {x} → ex_mark (alias of :mark)"
   },
   {
     "spec_id": "neovim.ex-command.colon_resize",
@@ -24100,7 +24100,7 @@
     "evidence": [
       "typable:resize"
     ],
-    "note": "vim :resize [+/-]{N} \u2192 ex_resize: relative grow/shrink or absolute height via tree.resize_vertical (height-only; :vertical resize width is best-effort)."
+    "note": "vim :resize [+/-]{N} → ex_resize: relative grow/shrink or absolute height via tree.resize_vertical (height-only; :vertical resize width is best-effort)."
   },
   {
     "spec_id": "neovim.ex-command.colon_buffer",
@@ -24108,7 +24108,7 @@
     "evidence": [
       "typable:buffer"
     ],
-    "note": "vim :buffer {name} / :b \u2192 ex_buffer: switch to the open buffer whose path contains {name} via editor.switch; errors on no match / >1 match (E93/E94). Buffer numbers not modeled."
+    "note": "vim :buffer {name} / :b → ex_buffer: switch to the open buffer whose path contains {name} via editor.switch; errors on no match / >1 match (E93/E94). Buffer numbers not modeled."
   },
   {
     "spec_id": "emacs.command.describe_command",
@@ -24283,7 +24283,7 @@
     "evidence": [
       "static:view_register"
     ],
-    "note": "view-register (C-x r v): show a register\u2019s contents"
+    "note": "view-register (C-x r v): show a register’s contents"
   },
   {
     "spec_id": "emacs.command.suspend_frame",
@@ -26606,7 +26606,7 @@
       "key:normal:C-x space",
       "static:visual_block_mode"
     ],
-    "note": "emacs C-x SPC (rectangle-mark-mode \u2014 toggle a rectangular region) -> visual_block_mode"
+    "note": "emacs C-x SPC (rectangle-mark-mode — toggle a rectangular region) -> visual_block_mode"
   },
   {
     "spec_id": "emacs.keybinding.c_x_apostrophe",
@@ -26615,7 +26615,7 @@
       "key:normal:C-x '",
       "static:expand_abbrev"
     ],
-    "note": "emacs C-x ' (expand-abbrev \u2014 expand the abbrev before point) -> expand_abbrev"
+    "note": "emacs C-x ' (expand-abbrev — expand the abbrev before point) -> expand_abbrev"
   },
   {
     "spec_id": "emacs.command.dired",
@@ -28471,7 +28471,7 @@
     "evidence": [
       "key:bufmenu:I"
     ],
-    "note": "Buffer-menu-toggle-internal -> I toggles showing internal (space-prefixed / *\u2026* special) buffers; the filter is faithful but zemacs does not create Emacs-style internal buffers, so in practice it reveals nothing"
+    "note": "Buffer-menu-toggle-internal -> I toggles showing internal (space-prefixed / *…* special) buffers; the filter is faithful but zemacs does not create Emacs-style internal buffers, so in practice it reveals nothing"
   },
   {
     "spec_id": "emacs.keybinding.ret_lparenbuffer_menu_rparen",
@@ -33440,7 +33440,7 @@
     "evidence": [
       "static:isearch_char_by_name"
     ],
-    "note": "Adds a character by zemacs digraph mnemonic (e.g. a: -> \u00e4); no full Unicode-name database."
+    "note": "Adds a character by zemacs digraph mnemonic (e.g. a: -> ä); no full Unicode-name database."
   },
   {
     "spec_id": "emacs.command.isearch_emoji_by_name",
@@ -34446,7 +34446,7 @@
       "key:normal:r",
       "static:replace_chars_vim"
     ],
-    "note": "gr{char} virtual replace \u2248 r{char}; monospace TUI has no virtual columns to distinguish them"
+    "note": "gr{char} virtual replace ≈ r{char}; monospace TUI has no virtual columns to distinguish them"
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_d_1",
@@ -34455,7 +34455,7 @@
       "key:normal:[ C-d",
       "static:goto_declaration"
     ],
-    "note": "[d show first #define \u2248 jump to declaration of word under cursor"
+    "note": "[d show first #define ≈ jump to declaration of word under cursor"
   },
   {
     "spec_id": "neovim.normal-mode.rbracket_d_1",
@@ -34464,7 +34464,7 @@
       "key:normal:] C-d",
       "static:goto_definition"
     ],
-    "note": "]d show first #define \u2248 jump to definition of word under cursor"
+    "note": "]d show first #define ≈ jump to definition of word under cursor"
   },
   {
     "spec_id": "neovim.normal-mode.q_colon",
@@ -34472,7 +34472,7 @@
     "evidence": [
       "static:command_history_picker"
     ],
-    "note": "q: edit command-line history \u2248 fuzzy command-history picker"
+    "note": "q: edit command-line history ≈ fuzzy command-history picker"
   },
   {
     "spec_id": "neovim.normal-mode.q_slash",
@@ -34480,7 +34480,7 @@
     "evidence": [
       "static:search_history_picker"
     ],
-    "note": "q/ edit search history \u2248 fuzzy search-history picker"
+    "note": "q/ edit search history ≈ fuzzy search-history picker"
   },
   {
     "spec_id": "neovim.normal-mode.q_question",
@@ -34488,7 +34488,7 @@
     "evidence": [
       "static:search_history_picker"
     ],
-    "note": "q? edit search history \u2248 fuzzy search-history picker"
+    "note": "q? edit search history ≈ fuzzy search-history picker"
   },
   {
     "spec_id": "neovim.normal-mode.lt_space_gt",
@@ -34520,7 +34520,7 @@
     "evidence": [
       "key:insert:C-r"
     ],
-    "note": "C-r C-r {reg} insert register literally \u2248 i_CTRL-R (no virtual-column distinction in a TUI)"
+    "note": "C-r C-r {reg} insert register literally ≈ i_CTRL-R (no virtual-column distinction in a TUI)"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_r_ctrl_o_lbrace_register_rbrace",
@@ -34528,7 +34528,7 @@
     "evidence": [
       "key:insert:C-r"
     ],
-    "note": "C-r C-o {reg} insert register literally \u2248 i_CTRL-R"
+    "note": "C-r C-o {reg} insert register literally ≈ i_CTRL-R"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_r_ctrl_p_lbrace_register_rbrace",
@@ -34536,7 +34536,7 @@
     "evidence": [
       "key:insert:C-r"
     ],
-    "note": "C-r C-p {reg} insert register, fix indent \u2248 i_CTRL-R"
+    "note": "C-r C-p {reg} insert register, fix indent ≈ i_CTRL-R"
   },
   {
     "spec_id": "neovim.insert-mode.0_ctrl_d",
@@ -34544,7 +34544,7 @@
     "evidence": [
       "key:insert:C-d"
     ],
-    "note": "0 CTRL-D delete all indent \u2248 i_CTRL-D unindent"
+    "note": "0 CTRL-D delete all indent ≈ i_CTRL-D unindent"
   },
   {
     "spec_id": "neovim.insert-mode.caret_ctrl_d",
@@ -34552,7 +34552,7 @@
     "evidence": [
       "key:insert:C-d"
     ],
-    "note": "^ CTRL-D delete indent for current line \u2248 i_CTRL-D unindent"
+    "note": "^ CTRL-D delete indent for current line ≈ i_CTRL-D unindent"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_shift_q_lbrace_char_rbrace",
@@ -34560,7 +34560,7 @@
     "evidence": [
       "key:insert:C-v"
     ],
-    "note": "CTRL-SHIFT-Q {char} literal insert \u2248 i_CTRL-V insert_char_interactive"
+    "note": "CTRL-SHIFT-Q {char} literal insert ≈ i_CTRL-V insert_char_interactive"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_shift_v_lbrace_char_rbrace",
@@ -34568,7 +34568,7 @@
     "evidence": [
       "key:insert:C-v"
     ],
-    "note": "CTRL-SHIFT-V {char} literal insert \u2248 i_CTRL-V insert_char_interactive"
+    "note": "CTRL-SHIFT-V {char} literal insert ≈ i_CTRL-V insert_char_interactive"
   },
   {
     "spec_id": "neovim.insert-mode.lt_help_gt",
@@ -34584,7 +34584,7 @@
     "evidence": [
       "key:command:C-l"
     ],
-    "note": "c_CTRL-A do completion \u2248 C-l completion on the pattern before the cursor"
+    "note": "c_CTRL-A do completion ≈ C-l completion on the pattern before the cursor"
   },
   {
     "spec_id": "neovim.cmdline-editing.ctrl_b",
@@ -34592,7 +34592,7 @@
     "evidence": [
       "key:command:C-a"
     ],
-    "note": "c_CTRL-B cursor to begin of command-line \u2248 C-a / Home (move_start)"
+    "note": "c_CTRL-B cursor to begin of command-line ≈ C-a / Home (move_start)"
   },
   {
     "spec_id": "neovim.cmdline-editing.ctrl_d",
@@ -34600,7 +34600,7 @@
     "evidence": [
       "key:command:C-l"
     ],
-    "note": "c_CTRL-D list completions \u2248 C-l / Tab completion"
+    "note": "c_CTRL-D list completions ≈ C-l / Tab completion"
   },
   {
     "spec_id": "neovim.cmdline-editing.ctrl_r_ctrl_r_lbrace_regname_rbrace",
@@ -34608,7 +34608,7 @@
     "evidence": [
       "key:command:C-r"
     ],
-    "note": "c_CTRL-R CTRL-R {reg} insert register literally \u2248 c_CTRL-R"
+    "note": "c_CTRL-R CTRL-R {reg} insert register literally ≈ c_CTRL-R"
   },
   {
     "spec_id": "neovim.cmdline-editing.ctrl_r_ctrl_o_lbrace_regname_rbrace",
@@ -34616,7 +34616,7 @@
     "evidence": [
       "key:command:C-r"
     ],
-    "note": "c_CTRL-R CTRL-O {reg} insert register/object \u2248 c_CTRL-R"
+    "note": "c_CTRL-R CTRL-O {reg} insert register/object ≈ c_CTRL-R"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_o",
@@ -37499,5 +37499,85 @@
       "key:normal:right"
     ],
     "note": ""
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_xmapclear",
+    "status": "ported",
+    "evidence": [
+      "typable:xmapclear"
+    ],
+    "note": "clear runtime visual-mode mappings"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_smapclear",
+    "status": "ported",
+    "evidence": [
+      "typable:smapclear"
+    ],
+    "note": "clear runtime select-mode mappings"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_omapclear",
+    "status": "ported",
+    "evidence": [
+      "typable:omapclear"
+    ],
+    "note": "clear runtime operator-pending mappings"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sunmap",
+    "status": "ported",
+    "evidence": [
+      "typable:sunmap"
+    ],
+    "note": "remove a select-mode mapping"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ounmap",
+    "status": "ported",
+    "evidence": [
+      "typable:ounmap"
+    ],
+    "note": "remove an operator-pending mapping"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_noreabbrev",
+    "status": "ported",
+    "evidence": [
+      "typable:noreabbrev"
+    ],
+    "note": "non-recursive insert+cmdline abbreviation"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_inoreabbrev",
+    "status": "ported",
+    "evidence": [
+      "typable:inoreabbrev"
+    ],
+    "note": "non-recursive insert-mode abbreviation"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cnoreabbrev",
+    "status": "ported",
+    "evidence": [
+      "typable:cnoreabbrev"
+    ],
+    "note": "non-recursive cmdline-mode abbreviation"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_runtime",
+    "status": "ported",
+    "evidence": [
+      "typable:runtime"
+    ],
+    "note": "source a file from the runtimepath (config dir)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_diffthis",
+    "status": "ported",
+    "evidence": [
+      "typable:diffthis"
+    ],
+    "note": "side-by-side diff of current buffer vs git HEAD"
   }
 ]
