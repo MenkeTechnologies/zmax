@@ -37843,5 +37843,29 @@
       "typable:pbuffer"
     ],
     "note": "show a buffer in a preview (split) window; no dedicated preview window"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_mksession",
+    "status": "partial",
+    "evidence": [
+      "typable:mksession"
+    ],
+    "note": "write a session file that :source restores (buffer list; not cwd/window layout)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_mkview",
+    "status": "partial",
+    "evidence": [
+      "typable:mkview"
+    ],
+    "note": "write the current window view (cursor line) to a file"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_loadview",
+    "status": "partial",
+    "evidence": [
+      "typable:loadview"
+    ],
+    "note": "restore the current window view (cursor line) from its :mkview file"
   }
 ]

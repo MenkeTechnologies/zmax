@@ -425,6 +425,22 @@ fn install_viml_host_hooks() {
     // scheme file is fully sourced) rebuilds + applies the zemacs theme from the
     // registry. Trailing standalone `:highlight` overrides in the vimrc are
     // flushed after sourcing (see `flush_viml_theme`).
+    // Editor `:` commands vimlrs doesn't implement (`:edit`, `:cd`, `:badd`,
+    // `:buffer`, …) → run them through zemacs's own command dispatch, so a sourced
+    // vimrc / session file can drive the editor. Only claim a line whose first
+    // word is a known zemacs typable command (name or alias); anything else is
+    // left to vimlrs's statement evaluation.
+    vimlrs::fusevm_bridge::install_excmd_hook(Box::new(|line: &str| {
+        let word = line
+            .trim_start_matches([':', ' '])
+            .split(|c: char| c.is_whitespace() || c == '!')
+            .next()
+            .unwrap_or("");
+        if word.is_empty() || !crate::commands::typed::TYPABLE_COMMAND_MAP.contains_key(word) {
+            return false;
+        }
+        with_cx(|cx| crate::commands::typed::run_command_line(cx, line.trim())).is_ok()
+    }));
     vimlrs::fusevm_bridge::add_colorscheme_dir(zemacs_loader::config_dir());
     vimlrs::fusevm_bridge::install_highlight_hook(Box::new(|_args: &str| {
         VIML_THEME_DIRTY.with(|d| d.set(true));
