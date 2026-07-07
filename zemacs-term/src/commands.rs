@@ -30209,10 +30209,27 @@ pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
     let count = ranges.len();
     let folds = doc.folds_mut();
     folds.clear();
-    for (s, e) in ranges {
-        folds.create(s, e);
+    for (s, e) in &ranges {
+        folds.create(*s, *e);
     }
     folds.clamp(last);
+    // vim `foldlevelstart` (>= 0): close folds whose nesting depth is at or below
+    // the start level on open (`0` closes everything, higher keeps outer levels
+    // open); `-1` (the default) leaves folds open.
+    if let Some(start) = typed::vim_opt_str("foldlevelstart").and_then(|v| v.parse::<isize>().ok()) {
+        if start >= 0 {
+            let start = start as usize;
+            for (s, e) in &ranges {
+                let depth = ranges
+                    .iter()
+                    .filter(|o| o.0 <= *s && o.1 >= *e && (o.0 < *s || o.1 > *e))
+                    .count();
+                if depth >= start {
+                    doc.folds_mut().close(*s);
+                }
+            }
+        }
+    }
     cx.editor
         .set_status(format!("foldmethod={method}: {count} fold(s)"));
 }

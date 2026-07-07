@@ -35438,11 +35438,11 @@
   },
   {
     "spec_id": "neovim.option.foldlevelstart",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldlevelstart is accepted, stored and queryable (:set foldlevelstart?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set foldlevelstart -> close folds by depth on apply"
   },
   {
     "spec_id": "neovim.option.foldmarker",
