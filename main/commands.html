@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-de74ca28.js";
+            window.path_to_searchindex_js = "searchindex-1e9e0e48.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -234,6 +234,9 @@
 <tr><td><code>:next</code>, <code>:argnext</code></td><td>Edit the next file in the argument list (vim :next).</td></tr>
 <tr><td><code>:previous</code>, <code>:Next</code>, <code>:prev</code>, <code>:argprev</code></td><td>Edit the previous file in the argument list (vim :previous / :Next).</td></tr>
 <tr><td><code>:first</code>, <code>:rewind</code>, <code>:rew</code></td><td>Edit the first file in the argument list (vim :first / :rewind).</td></tr>
+<tr><td><code>:view</code>, <code>:vie</code>, <code>:find-file-read-only</code></td><td>Edit a file read-only (vim :view / emacs find-file-read-only).</td></tr>
+<tr><td><code>:sview</code>, <code>:svie</code>, <code>:find-file-read-only-other-window</code></td><td>Split and edit a file read-only (vim :sview / emacs find-file-read-only-other-window).</td></tr>
+<tr><td><code>:autocmd</code>, <code>:au</code></td><td>Register an autocommand: :autocmd {events} {pattern} {command} (<code>:autocmd !</code> clears).</td></tr>
 <tr><td><code>:last</code>, <code>:la</code></td><td>Edit the last file in the argument list (vim :last).</td></tr>
 <tr><td><code>:argument</code>, <code>:argu</code></td><td>Edit the Nth file in the argument list (vim :argument).</td></tr>
 <tr><td><code>:snext</code>, <code>:sn</code></td><td>Split the window and edit the next argument (vim :snext).</td></tr>
@@ -528,6 +531,9 @@
 <tr><td><code>:kill-all-abbrevs</code></td><td>Remove all defined abbreviations (emacs kill-all-abbrevs).</td></tr>
 <tr><td><code>:iabbrev</code>, <code>:ia</code></td><td>List or define an Insert-mode abbreviation (vim :iabbrev).</td></tr>
 <tr><td><code>:cabbrev</code>, <code>:ca</code></td><td>List or define a Command-line-mode abbreviation (vim :cabbrev).</td></tr>
+<tr><td><code>:noreabbrev</code>, <code>:norea</code></td><td>List or define a non-recursive Insert+Command-line abbreviation (vim :noreabbrev).</td></tr>
+<tr><td><code>:inoreabbrev</code>, <code>:inorea</code></td><td>List or define a non-recursive Insert-mode abbreviation (vim :inoreabbrev).</td></tr>
+<tr><td><code>:cnoreabbrev</code>, <code>:cnorea</code></td><td>List or define a non-recursive Command-line-mode abbreviation (vim :cnoreabbrev).</td></tr>
 <tr><td><code>:unabbreviate</code>, <code>:una</code></td><td>Remove an abbreviation for both modes (vim :unabbreviate).</td></tr>
 <tr><td><code>:iunabbreviate</code>, <code>:iuna</code></td><td>Remove an Insert-mode abbreviation (vim :iunabbreviate).</td></tr>
 <tr><td><code>:cunabbreviate</code>, <code>:cuna</code></td><td>Remove a Command-line-mode abbreviation (vim :cunabbreviate).</td></tr>
@@ -674,6 +680,8 @@
 <tr><td><code>:windo</code></td><td>Run an ex-command in every window of the current tabpage.</td></tr>
 <tr><td><code>:wincmd</code></td><td>Run a window (CTRL-W) command by key, e.g. :wincmd h focuses left.</td></tr>
 <tr><td><code>:source</code>, <code>:so</code></td><td>Source a Vimscript file through the embedded vimlrs interpreter.</td></tr>
+<tr><td><code>:runtime</code>, <code>:ru</code></td><td>Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime).</td></tr>
+<tr><td><code>:diffthis</code>, <code>:difft</code></td><td>Show the current buffer’s changes as a side-by-side diff vs git HEAD (vim :diffthis).</td></tr>
 <tr><td><code>:tabs</code></td><td>List the tabpages and switch to the selected one.</td></tr>
 <tr><td><code>:cdo</code></td><td>Run an ex-command on each quickfix entry.</td></tr>
 <tr><td><code>:cfdo</code></td><td>Run an ex-command on the first quickfix entry of each file.</td></tr>
@@ -890,6 +898,11 @@
 <tr><td><code>:nmapclear</code></td><td>Clear runtime normal-mode mappings.</td></tr>
 <tr><td><code>:imapclear</code></td><td>Clear runtime insert-mode mappings.</td></tr>
 <tr><td><code>:vmapclear</code></td><td>Clear runtime select/visual-mode mappings.</td></tr>
+<tr><td><code>:xmapclear</code></td><td>Clear runtime visual-mode mappings (Vim :xmapclear).</td></tr>
+<tr><td><code>:smapclear</code></td><td>Clear runtime select-mode mappings (Vim :smapclear).</td></tr>
+<tr><td><code>:omapclear</code></td><td>Clear runtime operator-pending mappings (Vim :omapclear).</td></tr>
+<tr><td><code>:sunmap</code></td><td>Remove a runtime select-mode {lhs} mapping (Vim :sunmap).</td></tr>
+<tr><td><code>:ounmap</code></td><td>Remove a runtime operator-pending {lhs} mapping (Vim :ounmap).</td></tr>
 <tr><td><code>:normal</code>, <code>:norm</code></td><td>Execute {commands} as normal-mode keystrokes (vim :normal[!]).</td></tr>
 <tr><td><code>:mark</code>, <code>:k</code></td><td>Set mark {x} at the cursor position (vim :mark / :k).</td></tr>
 <tr><td><code>:buffer</code>, <code>:buf</code></td><td>Switch to the open buffer whose path contains {name} (vim :buffer / :b).</td></tr>
@@ -1496,7 +1509,7 @@
 <tr><td><code>shrink_to_line_bounds</code></td><td>Shrink selection to line bounds</td><td></td></tr>
 <tr><td><code>delete_selection</code></td><td>Delete selection</td><td></td></tr>
 <tr><td><code>delete_selection_noyank</code></td><td>Delete selection without yanking</td><td></td></tr>
-<tr><td><code>change_selection</code></td><td>Change selection</td><td>select: <code>c</code>, <code>s</code></td></tr>
+<tr><td><code>change_selection</code></td><td>Change selection</td><td></td></tr>
 <tr><td><code>change_selection_noyank</code></td><td>Change selection without yanking</td><td></td></tr>
 <tr><td><code>collapse_selection</code></td><td>Collapse selection into single cursor</td><td></td></tr>
 <tr><td><code>flip_selections</code></td><td>Flip selection cursor and anchor</td><td>normal: <code>&lt;C-x&gt;&lt;C-x&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-x&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-x&gt;</code></td></tr>
