@@ -18372,6 +18372,44 @@ fn reload_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// vim `:checktime` — check the timestamps of loaded buffers and reload any that
+/// changed on disk. zemacs reloads the loaded buffers from disk (reusing
+/// `:reload-all`'s per-document reload, which no-ops when a buffer already
+/// matches disk); it doesn't gate strictly on mtime, so it's a partial port.
+fn ex_checktime(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    reload_all(cx, args, event)
+}
+
+/// vim `:filetype[on|off|detect|plugin|indent]` — zemacs keeps language (file
+/// type) detection always on, so the on/off/plugin/indent forms are accepted for
+/// compatibility; with no argument (or `detect`) it reports the current buffer's
+/// detected language, like vim's bare `:filetype`.
+fn ex_filetype(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let arg = args.join(" ");
+    let arg = arg.trim();
+    if arg.is_empty() || arg.eq_ignore_ascii_case("detect") {
+        let lang = doc!(cx.editor)
+            .language_name()
+            .unwrap_or("text")
+            .to_string();
+        cx.editor.set_status(format!(
+            "filetype detection:ON  plugin:ON  indent:ON  (current: {lang})"
+        ));
+    } else {
+        cx.editor.set_status(format!(
+            "filetype {arg}: zemacs language detection is always on"
+        ));
+    }
+    Ok(())
+}
+
 /// Update the [`Document`] if it has been modified.
 fn update(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -34616,6 +34654,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "checktime",
+        aliases: &["checkt"],
+        doc: "Reload loaded buffers that changed on disk (vim :checktime).",
+        fun: ex_checktime,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filetype",
+        aliases: &["filet"],
+        doc: "Report the buffer's detected language / accept on|off|detect|plugin|indent (vim :filetype).",
+        fun: ex_filetype,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "git-stage",
         aliases: &["stage", "git-add"],
         doc: "Stage the current buffer's file (git add).",
@@ -35283,6 +35343,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     ex_modifier_entry!("rightbelow", &["rightb"], "Run {cmd} placing a new split right/below (vim :rightbelow; best-effort)."),
     ex_modifier_entry!("topleft", &["to"], "Run {cmd} placing a new split at the top/left (vim :topleft; best-effort)."),
     ex_modifier_entry!("botright", &["bo"], "Run {cmd} placing a new split at the bottom/right (vim :botright; best-effort)."),
+    ex_modifier_entry!("tab", &[], "Run {cmd} opening its window in a new tab (vim :tab; best-effort placement)."),
     TypableCommand {
         name: "lsp-stop",
         aliases: &[],

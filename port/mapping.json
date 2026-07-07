@@ -37795,5 +37795,29 @@
       "typable:drop"
     ],
     "note": "jump to a buffer already editing the file, else edit it (vim :drop)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tab",
+    "status": "partial",
+    "evidence": [
+      "typable:tab"
+    ],
+    "note": "run the following command opening its window in a new tab (best-effort placement)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_checktime",
+    "status": "partial",
+    "evidence": [
+      "typable:checktime"
+    ],
+    "note": "reload loaded buffers from disk (does not strictly gate on mtime)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_filetype",
+    "status": "partial",
+    "evidence": [
+      "typable:filetype"
+    ],
+    "note": "language detection is always on; reports the buffer language / accepts on|off|detect"
   }
 ]

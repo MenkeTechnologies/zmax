@@ -691,6 +691,8 @@
 | `:character-info`, `:char` | Get info about the character under the primary cursor. |
 | `:reload`, `:rl` | Discard changes and reload from the source file. |
 | `:reload-all`, `:rla` | Discard changes and reload all documents from the source files. |
+| `:checktime`, `:checkt` | Reload loaded buffers that changed on disk (vim :checktime). |
+| `:filetype`, `:filet` | Report the buffer's detected language / accept on|off|detect|plugin|indent (vim :filetype). |
 | `:git-stage`, `:stage`, `:git-add` | Stage the current buffer's file (git add). |
 | `:git-unstage`, `:unstage` | Unstage the current buffer's file (git reset HEAD). |
 | `:stash`, `:git-stash` | git stash the working-tree changes (then reload open buffers). |
@@ -812,6 +814,7 @@
 | `:rightbelow`, `:rightb` | Run {cmd} placing a new split right/below (vim :rightbelow; best-effort). |
 | `:topleft`, `:to` | Run {cmd} placing a new split at the top/left (vim :topleft; best-effort). |
 | `:botright`, `:bo` | Run {cmd} placing a new split at the bottom/right (vim :botright; best-effort). |
+| `:tab` | Run {cmd} opening its window in a new tab (vim :tab; best-effort placement). |
 | `:lsp-stop` | Stops the given language servers, or all language servers that are used by the current file if no arguments are supplied |
 | `:tree-sitter-scopes` | Display tree sitter scopes, primarily for theming and development. |
 | `:tree-sitter-highlight-name`, `:Inspect` | Display the tree-sitter highlight capture under the cursor (neovim :Inspect). |
