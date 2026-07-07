@@ -85,9 +85,47 @@ pub fn indent_levels(lines: &[&str], tab_width: usize, shiftwidth: usize) -> Vec
     levels
 }
 
+/// Apply vim `foldminlines` (drop folds that span fewer than `min_lines` lines)
+/// and `foldnestmax` (drop folds nested deeper than `max_nest` levels). Ranges
+/// are inclusive `(start, end)` line pairs; nesting depth counts how many other
+/// ranges strictly contain a fold.
+pub fn filter_folds(
+    ranges: Vec<(usize, usize)>,
+    min_lines: usize,
+    max_nest: usize,
+) -> Vec<(usize, usize)> {
+    let min_lines = min_lines.max(1);
+    let kept: Vec<(usize, usize)> = ranges
+        .into_iter()
+        .filter(|(s, e)| e - s + 1 >= min_lines)
+        .collect();
+    kept.iter()
+        .filter(|r| {
+            let depth = kept
+                .iter()
+                .filter(|o| o.0 <= r.0 && o.1 >= r.1 && (o.0 < r.0 || o.1 > r.1))
+                .count();
+            depth < max_nest.max(1)
+        })
+        .copied()
+        .collect()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn filters_by_min_lines_and_nesting() {
+        // (0,5) depth0, (2,4) depth1, (3,3) depth2 single-line.
+        let folds = vec![(0, 5), (2, 4), (3, 3)];
+        // min_lines=2 drops the single-line (3,3).
+        assert_eq!(filter_folds(folds.clone(), 2, 20), vec![(0, 5), (2, 4)]);
+        // max_nest=2 keeps depths 0,1 and drops depth 2.
+        assert_eq!(filter_folds(folds.clone(), 1, 2), vec![(0, 5), (2, 4)]);
+        // max_nest=1 keeps only the outermost.
+        assert_eq!(filter_folds(folds, 1, 1), vec![(0, 5)]);
+    }
 
     #[test]
     fn markers_pair_and_nest() {

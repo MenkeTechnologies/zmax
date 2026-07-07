@@ -30197,6 +30197,15 @@ pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
         _ => Vec::new(),
     };
 
+    // vim `foldminlines` (default 1) and `foldnestmax` (default 20) prune folds.
+    let min_lines = typed::vim_opt_str("foldminlines")
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(1);
+    let max_nest = typed::vim_opt_str("foldnestmax")
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(20);
+    let ranges = crate::vim_fold::filter_folds(ranges, min_lines, max_nest);
+
     let count = ranges.len();
     let folds = doc.folds_mut();
     folds.clear();

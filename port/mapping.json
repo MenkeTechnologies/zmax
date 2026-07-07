@@ -35462,19 +35462,19 @@
   },
   {
     "spec_id": "neovim.option.foldminlines",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldminlines is accepted, stored and queryable (:set foldminlines?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set foldminlines -> filter_folds in apply_foldmethod"
   },
   {
     "spec_id": "neovim.option.foldnestmax",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldnestmax is accepted, stored and queryable (:set foldnestmax?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set foldnestmax -> filter_folds in apply_foldmethod"
   },
   {
     "spec_id": "neovim.option.foldopen",
