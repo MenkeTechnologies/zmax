@@ -1468,6 +1468,37 @@ async fn vim_gv_reselect() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn vim_gv_reselect_after_yank() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(zemacs_term::config::Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        // vll selects "abc", y yanks it (and, like vim, records the visual area),
+        // 0 moves to the start, gv reselects the yanked "abc". Regression: yank
+        // used to leave Select without saving the gv selection.
+        ("#[|a]#bcde\n", "vlly0gv", "#[abc|]#de\n"),
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_gv_reselect_after_register_yank() -> anyhow::Result<()> {
+    test_with_config(
+        AppBuilder::new().with_config(zemacs_term::config::Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        }),
+        // The reported bug: yanking into a named register (`"ay`) must still
+        // record the visual area so gv reselects it.
+        ("#[|a]#bcde\n", "vll\"ay0gv", "#[abc|]#de\n"),
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn vim_gi_insert_at_last() -> anyhow::Result<()> {
     test_with_config(
         AppBuilder::new().with_config(zemacs_term::config::Config {

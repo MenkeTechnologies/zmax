@@ -1840,12 +1840,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "a" => select_textobject_around,
 
         "d" | "x" => [delete_selection, normal_mode],
-        "c" | "s" => change_selection,
+        "c" | "s" => [save_visual_selection, change_selection], // gv reselects the changed area
         "\"" => select_register, // "{reg} in Visual: pick the register for the next y/d/p (e.g. "+y)
         "y"       => [yank, collapse_selection, normal_mode],
         "p"       => replace_with_yanked,
         "r"       => replace,
-        "J"       => [join_selections, normal_mode],
+        "J"       => [save_visual_selection, join_selections, normal_mode],
         "~"       => switch_case,
         "u"       => [switch_to_lowercase, normal_mode],
         "U"       => [switch_to_uppercase, normal_mode],
@@ -1868,15 +1868,15 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A"       => append_mode,
         "V"       => extend_to_line_bounds,
         "P"       => replace_with_yanked,      // replace the highlighted area with a register
-        "=" => [format_selections, normal_mode], // reformat/reindent the highlighted lines
+        "=" => [save_visual_selection, format_selections, normal_mode], // reformat/reindent the highlighted lines
 
         // filter highlighted text through an external command (vim visual !)
-        "!"       => [shell_pipe, normal_mode],
+        "!"       => [save_visual_selection, shell_pipe, normal_mode],
 
         // linewise visual operators: extend to whole lines, then act
         "D" | "X" => [extend_to_line_bounds, delete_selection, normal_mode],
         "Y"       => [extend_to_line_bounds, yank, collapse_selection, normal_mode],
-        "C" | "S" | "R" => [extend_to_line_bounds, change_selection],
+        "C" | "S" | "R" => [save_visual_selection, extend_to_line_bounds, change_selection],
 
         // zf: create a fold over the highlighted lines (vim visual zf)
         "z" => { "Fold"
@@ -1890,10 +1890,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "e" => [extend_to_last_line, block_reproject],    // ge: extend to last line
             "h" => [extend_to_first_nonwhitespace, block_reproject], // extend to first non-blank
             "l" | "$" => [extend_to_line_end, block_reproject],      // extend to line end
-            "q" => [format_selections, normal_mode],
-            "w" => [format_selections, normal_mode],
+            "q" => [save_visual_selection, format_selections, normal_mode],
+            "w" => [save_visual_selection, format_selections, normal_mode],
             "v" => reselect_visual,                  // gv: reselect previous highlighted area
-            "J" => [join_selections, normal_mode],   // gJ: join lines, no space (approx)
+            "J" => [save_visual_selection, join_selections, normal_mode],   // gJ: join lines, no space (approx)
             "C-a" => increment,                      // g CTRL-A: increment in selection
             "C-x" => decrement,                      // g CTRL-X: decrement in selection
         },
