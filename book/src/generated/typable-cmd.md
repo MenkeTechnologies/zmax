@@ -38,6 +38,10 @@
 | `:argdedupe` | Remove duplicate entries from the argument list (vim :argdedupe). |
 | `:next`, `:argnext` | Edit the next file in the argument list (vim :next). |
 | `:previous`, `:Next`, `:prev`, `:argprev` | Edit the previous file in the argument list (vim :previous / :Next). |
+| `:wnext`, `:wn` | Write the current buffer, then edit the next file in the argument list (vim :wnext). |
+| `:wprevious`, `:wp`, `:wNext`, `:wN` | Write the current buffer, then edit the previous file in the argument list (vim :wprevious / :wNext). |
+| `:find`, `:fin` | Find a file in the 'path' (buffer dir, cwd, then a recursive cwd walk) and edit it (vim :find). |
+| `:sfind`, `:sf` | Split the window and edit a file found in the 'path' (vim :sfind). |
 | `:first`, `:rewind`, `:rew` | Edit the first file in the argument list (vim :first / :rewind). |
 | `:view`, `:vie`, `:find-file-read-only` | Edit a file read-only (vim :view / emacs find-file-read-only). |
 | `:sview`, `:svie`, `:find-file-read-only-other-window` | Split and edit a file read-only (vim :sview / emacs find-file-read-only-other-window). |

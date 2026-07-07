@@ -205,6 +205,67 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
     Ok(())
 }
 
+/// vim `:find` search: locate `name` in the 'path'. zemacs approximates vim's
+/// default 'path' (`.,,`) *plus* the common `set path+=**`: try the current
+/// buffer's directory and the working directory directly, then walk the working
+/// directory (honouring .gitignore, like the file picker) and return the first
+/// file whose trailing path components match `name`.
+fn find_in_path(cx: &mut compositor::Context, name: &str) -> Option<std::path::PathBuf> {
+    let name = name.trim();
+    if name.is_empty() {
+        return None;
+    }
+    let cwd = zemacs_stdx::env::current_working_dir();
+    let bufdir = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()));
+    for base in [bufdir.as_deref(), Some(cwd.as_path())]
+        .into_iter()
+        .flatten()
+    {
+        let p = base.join(name);
+        if p.is_file() {
+            return Some(p);
+        }
+    }
+    for entry in ignore::WalkBuilder::new(&cwd).build().flatten() {
+        let p = entry.path();
+        if p.is_file() && p.ends_with(name) {
+            return Some(p.to_path_buf());
+        }
+    }
+    None
+}
+
+/// Shared body of `:find` / `:sfind`: resolve `name` through [`find_in_path`] and
+/// open it with `action` (`Replace` for `:find`, `HorizontalSplit` for `:sfind`).
+fn find_open(cx: &mut compositor::Context, args: &Args, action: Action) -> anyhow::Result<()> {
+    let name = args.join(" ");
+    match find_in_path(cx, &name) {
+        Some(p) => {
+            cx.editor.open(&p, action)?;
+            Ok(())
+        }
+        None => bail!("E345: Can't find file \"{}\" in path", name.trim()),
+    }
+}
+
+/// vim `:find {file}` — find `{file}` in the 'path' and edit it.
+fn ex_find(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    find_open(cx, &args, Action::Replace)
+}
+
+/// vim `:sfind {file}` — split the window and edit `{file}` found in the 'path'.
+fn ex_sfind(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    find_open(cx, &args, Action::HorizontalSplit)
+}
+
 // ---------------------------------------------------------------------------
 // Vim argument list (`:args`, `:next`, `:argadd`, …). One process-global list,
 // held in a thread-local (commands run on the main thread, like the vimlrs
@@ -411,6 +472,52 @@ fn arg_prev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
     match file {
         Some(f) => edit_arg_file(cx, &f),
         None => bail!("Cannot go before first file"),
+    }
+}
+
+/// vim `:wnext [file]` — write the current buffer (to `[file]` if given), then
+/// edit the next file in the argument list (`:write` followed by `:next`).
+fn write_next(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    fire_autocmd(cx, "BufWritePre");
+    write_impl(
+        cx,
+        args.first(),
+        WriteOptions {
+            force: false,
+            auto_format: true,
+            code_actions: true,
+        },
+    )?;
+    fire_autocmd(cx, "BufWritePost");
+    match with_arglist(|a| a.next(1).map(str::to_string)) {
+        Some(f) => edit_arg_file(cx, &f),
+        None => bail!("E165: Cannot go beyond last file"),
+    }
+}
+
+/// vim `:wprevious [file]` / `:wNext` — write the current buffer, then edit the
+/// previous file in the argument list (`:write` followed by `:previous`).
+fn write_prev(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    fire_autocmd(cx, "BufWritePre");
+    write_impl(
+        cx,
+        args.first(),
+        WriteOptions {
+            force: false,
+            auto_format: true,
+            code_actions: true,
+        },
+    )?;
+    fire_autocmd(cx, "BufWritePost");
+    match with_arglist(|a| a.prev(1).map(str::to_string)) {
+        Some(f) => edit_arg_file(cx, &f),
+        None => bail!("E164: Cannot go before first file"),
     }
 }
 
@@ -27514,6 +27621,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "wnext",
+        aliases: &["wn"],
+        doc: "Write the current buffer, then edit the next file in the argument list (vim :wnext).",
+        fun: write_next,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "wprevious",
+        aliases: &["wp", "wNext", "wN"],
+        doc: "Write the current buffer, then edit the previous file in the argument list (vim :wprevious / :wNext).",
+        fun: write_prev,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "find",
+        aliases: &["fin"],
+        doc: "Find a file in the 'path' (buffer dir, cwd, then a recursive cwd walk) and edit it (vim :find).",
+        fun: ex_find,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sfind",
+        aliases: &["sf"],
+        doc: "Split the window and edit a file found in the 'path' (vim :sfind).",
+        fun: ex_sfind,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },

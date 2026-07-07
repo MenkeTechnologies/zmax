@@ -37667,5 +37667,45 @@
       "typable:rubyfile"
     ],
     "note": "run a Ruby script file via the system ruby interpreter"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_wnext_1",
+    "status": "ported",
+    "evidence": [
+      "typable:wnext"
+    ],
+    "note": "write current buffer then edit next arg (vim :wnext)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_wprevious",
+    "status": "ported",
+    "evidence": [
+      "typable:wprevious"
+    ],
+    "note": "write current buffer then edit previous arg (vim :wprevious)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_wnext",
+    "status": "ported",
+    "evidence": [
+      "typable:wNext"
+    ],
+    "note": "write current buffer then edit previous arg (vim :wNext = :wprevious)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_find",
+    "status": "ported",
+    "evidence": [
+      "typable:find"
+    ],
+    "note": "find file in path (buffer dir, cwd, recursive cwd walk) and edit"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sfind",
+    "status": "ported",
+    "evidence": [
+      "typable:sfind"
+    ],
+    "note": "split and edit a file found in the path"
   }
 ]
