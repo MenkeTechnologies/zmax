@@ -37091,5 +37091,269 @@
       "builtin:viml:trunc"
     ],
     "note": "vimlrs libm builtin (compile_viml VIML_FN_ dispatch)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.p_87",
+    "status": "ported",
+    "evidence": [
+      "key:normal:[ p"
+    ],
+    "note": "[p paste before/above (paste_before)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.p_88",
+    "status": "ported",
+    "evidence": [
+      "key:normal:] p"
+    ],
+    "note": "]p paste after/below (paste_after)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_l_s",
+    "status": "ported",
+    "evidence": [
+      "static:layout_save"
+    ],
+    "note": "save layouts to file"
+  },
+  {
+    "spec_id": "emacs.keybinding.bang_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:!"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.hash_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:#"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.plus_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:+"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.lt_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:<"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.eq_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:="
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.gt_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:>"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.tilde_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:~"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.b_lparenbuffer_menu_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:bufmenu:b"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:C"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_d_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-d"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_o_lparenbuffer_menu_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:bufmenu:C-o"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_o_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:C-o"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_v_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:C-v"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.e_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:e"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.h_lparencalendar_mode_rparen_1",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:h"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.h_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:H"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.l_lparendired_rparen_1",
+    "status": "ported",
+    "evidence": [
+      "key:dired:l"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.m_lparendired_rparen_1",
+    "status": "ported",
+    "evidence": [
+      "key:dired:M"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.m_n_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:A-n"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.m_p_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:A-p"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.m_v_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:A-v"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.m_lbrace_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-{"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.m_rbrace_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-}"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.o_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:o"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.o_lparendired_rparen_1",
+    "status": "ported",
+    "evidence": [
+      "key:dired:O"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.ret_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:ret"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.s_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:S"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.t_lparendired_rparen_1",
+    "status": "ported",
+    "evidence": [
+      "key:dired:T"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.v_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:v"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.y_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:Y"
+    ],
+    "note": ""
   }
 ]
