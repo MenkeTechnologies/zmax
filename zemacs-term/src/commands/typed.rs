@@ -18746,6 +18746,8 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     (&["scroll", "scr"],           "scroll-lines",       VimOptKind::Num),
     (&["updatetime", "ut"],        "idle-timeout",       VimOptKind::Num),
     (&["smarttab", "sta"],         "smart-tab.enable",   VimOptKind::Bool),
+    (&["autocompletedelay"],       "completion-timeout", VimOptKind::Num),
+    (&["autocompletetimeout"],     "completion-timeout", VimOptKind::Num),
 ];
 
 fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {

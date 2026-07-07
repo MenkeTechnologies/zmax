@@ -7396,7 +7396,7 @@
   },
   {
     "spec_id": "neovim.option.autocompletedelay",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
@@ -7404,7 +7404,7 @@
   },
   {
     "spec_id": "neovim.option.autocompletetimeout",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
