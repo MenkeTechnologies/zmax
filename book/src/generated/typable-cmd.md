@@ -487,6 +487,16 @@
 | `:source`, `:so` | Source a Vimscript file through the embedded vimlrs interpreter. |
 | `:runtime`, `:ru` | Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime). |
 | `:diffthis`, `:difft` | Show the current buffer's changes as a side-by-side diff vs git HEAD (vim :diffthis). |
+| `:lua` | Run a Lua snippet through the system lua interpreter and echo its output (vim :lua). |
+| `:luafile`, `:luaf` | Run a Lua script file through the system lua interpreter (vim :luafile). |
+| `:perl`, `:pe` | Run a Perl snippet through the system perl interpreter and echo its output (vim :perl). |
+| `:perlfile`, `:perlf` | Run a Perl script file through the system perl interpreter (vim :perlfile). |
+| `:python`, `:py` | Run a Python snippet through the system python interpreter and echo its output (vim :python). |
+| `:pyfile`, `:pyf` | Run a Python script file through the system python interpreter (vim :pyfile). |
+| `:py3`, `:python3` | Run a Python 3 snippet through the system python3 interpreter and echo its output (vim :py3 / :python3). |
+| `:py3file`, `:py3f`, `:python3file` | Run a Python 3 script file through the system python3 interpreter (vim :py3file). |
+| `:ruby`, `:rub` | Run a Ruby snippet through the system ruby interpreter and echo its output (vim :ruby). |
+| `:rubyfile`, `:rubyf` | Run a Ruby script file through the system ruby interpreter (vim :rubyfile). |
 | `:tabs` | List the tabpages and switch to the selected one. |
 | `:cdo` | Run an ex-command on each quickfix entry. |
 | `:cfdo` | Run an ex-command on the first quickfix entry of each file. |
