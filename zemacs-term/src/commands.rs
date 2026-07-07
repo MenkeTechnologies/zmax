@@ -21271,6 +21271,16 @@ fn select_mode(cx: &mut Context) {
 
 fn exit_select_mode(cx: &mut Context) {
     if cx.editor.mode == Mode::Select {
+        // vim: leaving Visual mode via an operator — yank (`y`/`Y`), delete
+        // (`d`/`x`), `~`, `r`, `>`/`<`, duplicate, move-line, align — records the
+        // visual area so `gv` reselects it and sets the `` `< ``/`` `> `` marks.
+        // These operators call this *before* the keymap's trailing
+        // `collapse_selection`, so the full selection is still present here. The
+        // remaining exits save it themselves, ahead of their own collapse: the
+        // Esc/C-c/C-n/C-g family and the operators that leave via a bare
+        // `normal_mode` (`c`/`s`/`C`, `J`, `=`, `!`) both prepend
+        // `save_visual_selection` in the keymap.
+        save_visual_selection(cx);
         cx.editor.mode = Mode::Normal;
     }
 }
