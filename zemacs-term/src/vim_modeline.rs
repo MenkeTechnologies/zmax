@@ -68,7 +68,9 @@ pub fn parse_modeline(line: &str) -> Vec<String> {
 pub fn scan_modeline(lines: &[&str], count: usize) -> Vec<String> {
     let n = lines.len();
     let mut heads: Vec<usize> = (0..count.min(n)).collect();
-    let tail_start = n.saturating_sub(count).max(heads.last().map_or(0, |&h| h + 1));
+    let tail_start = n
+        .saturating_sub(count)
+        .max(heads.last().map_or(0, |&h| h + 1));
     heads.extend(tail_start..n);
     for i in heads {
         let opts = parse_modeline(lines[i]);
@@ -97,7 +99,9 @@ pub fn apply_modeline(editor: &mut zemacs_view::Editor, doc_id: zemacs_view::Doc
             return;
         };
         let text = doc.text();
-        let lines: Vec<String> = (0..text.len_lines()).map(|i| text.line(i).to_string()).collect();
+        let lines: Vec<String> = (0..text.len_lines())
+            .map(|i| text.line(i).to_string())
+            .collect();
         let refs: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
         scan_modeline(&refs, count)
     };
@@ -201,10 +205,7 @@ mod test {
             parse_modeline("// vim: set sw=4 ts=4 et:"),
             vec!["sw=4", "ts=4", "et"]
         );
-        assert_eq!(
-            parse_modeline("/* vim: set tw=80: */"),
-            vec!["tw=80"]
-        );
+        assert_eq!(parse_modeline("/* vim: set tw=80: */"), vec!["tw=80"]);
     }
 
     #[test]

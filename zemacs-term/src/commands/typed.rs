@@ -37081,7 +37081,11 @@ pub(crate) fn fire_autocmd(cx: &mut compositor::Context, event: &str) {
 }
 
 /// vim `:view {file}`: edit a file read-only.
-fn view_readonly(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn view_readonly(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -37092,7 +37096,11 @@ fn view_readonly(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
 }
 
 /// vim `:sview {file}`: split the window and edit the file read-only.
-fn sview_readonly(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn sview_readonly(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -37120,8 +37128,10 @@ fn autocmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
         return Ok(());
     }
     if trimmed.is_empty() {
-        cx.editor
-            .set_status(format!("{} autocmd(s) registered", crate::vim_autocmd::len()));
+        cx.editor.set_status(format!(
+            "{} autocmd(s) registered",
+            crate::vim_autocmd::len()
+        ));
         return Ok(());
     }
     match crate::vim_autocmd::parse_autocmd(trimmed) {
@@ -39695,7 +39705,11 @@ mod vim_set_tests {
         // `a` applies to all three modes.
         assert_eq!(
             parse_guicursor("a:block"),
-            vec![("normal", "block"), ("insert", "block"), ("select", "block")]
+            vec![
+                ("normal", "block"),
+                ("insert", "block"),
+                ("select", "block")
+            ]
         );
     }
 

@@ -1311,9 +1311,7 @@ impl EditorView {
         while i < haystack.len() {
             if haystack[i].is_alphabetic() {
                 let start = i;
-                while i < haystack.len()
-                    && (haystack[i].is_alphabetic() || haystack[i] == '\'')
-                {
+                while i < haystack.len() && (haystack[i].is_alphabetic() || haystack[i] == '\'') {
                     i += 1;
                 }
                 // Trim trailing apostrophes so `word'` checks `word`.

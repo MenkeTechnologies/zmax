@@ -152,13 +152,13 @@ mod test {
     #[test]
     fn indent_levels_and_ranges() {
         let lines = vec![
-            "def f():",     // 0 -> level 0
-            "    a = 1",    // 4 -> level 1
-            "    if a:",    // 4 -> level 1
+            "def f():",      // 0 -> level 0
+            "    a = 1",     // 4 -> level 1
+            "    if a:",     // 4 -> level 1
             "        b = 2", // 8 -> level 2
-            "",             // blank -> inherits 2
-            "    c = 3",    // 4 -> level 1
-            "back",         // 0 -> level 0
+            "",              // blank -> inherits 2
+            "    c = 3",     // 4 -> level 1
+            "back",          // 0 -> level 0
         ];
         let levels = indent_levels(&lines, 8, 4);
         assert_eq!(levels, vec![0, 1, 1, 2, 2, 1, 0]);

@@ -35,7 +35,11 @@ fn swap_path(file: &std::path::Path, dir: &str) -> Option<PathBuf> {
     let name = file.file_name()?.to_string_lossy();
     let swp = format!(".{name}.swp");
     if dir.is_empty() {
-        Some(file.parent().unwrap_or_else(|| std::path::Path::new(".")).join(swp))
+        Some(
+            file.parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .join(swp),
+        )
     } else {
         let dir = if let Some(rest) = dir.strip_prefix("~/") {
             std::env::var_os("HOME")

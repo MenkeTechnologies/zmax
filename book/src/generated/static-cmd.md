@@ -321,7 +321,7 @@
 | `shrink_to_line_bounds` | Shrink selection to line bounds |  |
 | `delete_selection` | Delete selection |  |
 | `delete_selection_noyank` | Delete selection without yanking |  |
-| `change_selection` | Change selection | select: `` c ``, `` s `` |
+| `change_selection` | Change selection |  |
 | `change_selection_noyank` | Change selection without yanking |  |
 | `collapse_selection` | Collapse selection into single cursor |  |
 | `flip_selections` | Flip selection cursor and anchor | normal: `` <C-x><C-x> ``, select: `` <C-x><C-x> ``, insert: `` <C-x><C-x> `` |
