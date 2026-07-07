@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-faa3c2f3.js";
+            window.path_to_searchindex_js = "searchindex-607926be.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1620,6 +1620,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:compile</code></td><td>Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile).</td></tr>
 <tr><td><code>:recompile</code></td><td>Re-run the last compile command (emacs recompile).</td></tr>
 <tr><td><code>:make</code></td><td>Run <code>make [args]</code>, collect errors into the quickfix list, jump to the first (vim :make).</td></tr>
+<tr><td><code>:lmake</code>, <code>:lmak</code></td><td>Run <code>make [args]</code> and collect errors, like :make (vim :lmake targets the location list; zemacs uses one unified results console).</td></tr>
 <tr><td><code>:tag</code>, <code>:ta</code></td><td>Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag).</td></tr>
 <tr><td><code>:tselect</code>, <code>:ts</code></td><td>List every matching tag in a picker; select one to jump (vim :tselect).</td></tr>
 <tr><td><code>:tjump</code>, <code>:tj</code></td><td>Jump to the tag if unique, else show the tag picker (vim :tjump).</td></tr>
@@ -2001,6 +2002,13 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:theme-prev</code></td><td>Switch to the previous theme (alphabetical).</td></tr>
 <tr><td><code>:run</code>, <code>:r!</code></td><td>Run a command in the IDE Run tool window (defaults to <code>cargo run</code>).</td></tr>
 <tr><td><code>:grep</code>, <code>:rg</code>, <code>:search-project</code></td><td>Search the project (ripgrep) and show jumpable results in the Run console.</td></tr>
+<tr><td><code>:grepadd</code>, <code>:grepa</code></td><td>Search the project like :grep (vim :grepadd appends; zemacs uses one unified results console).</td></tr>
+<tr><td><code>:lgrep</code>, <code>:lgr</code></td><td>Location-list variant of :grep (vim :lgrep; zemacs uses one unified results console).</td></tr>
+<tr><td><code>:lgrepadd</code>, <code>:lgrepa</code></td><td>Location-list append variant of :grep (vim :lgrepadd; zemacs uses one unified results console).</td></tr>
+<tr><td><code>:vimgrepadd</code>, <code>:vimgrepa</code></td><td>Search the project like :vimgrep, appending (vim :vimgrepadd; zemacs uses one unified results console).</td></tr>
+<tr><td><code>:lvimgrepadd</code>, <code>:lvimgrepa</code></td><td>Location-list append variant of :vimgrep (vim :lvimgrepadd; zemacs uses one unified results console).</td></tr>
+<tr><td><code>:helpgrep</code>, <code>:helpg</code></td><td>Search the help: open the inline Help browser filtered to {pattern} (vim :helpgrep).</td></tr>
+<tr><td><code>:lhelpgrep</code>, <code>:lh</code></td><td>Location-list variant of :helpgrep — open the Help browser filtered to {pattern} (vim :lhelpgrep).</td></tr>
 <tr><td><code>:copen</code>, <code>:cwindow</code>, <code>:cw</code></td><td>Open the quickfix list window.</td></tr>
 <tr><td><code>:cclose</code>, <code>:ccl</code></td><td>Close the quickfix list window.</td></tr>
 <tr><td><code>:cnext</code>, <code>:cn</code></td><td>Jump to the next quickfix entry.</td></tr>
@@ -2053,6 +2061,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:source</code>, <code>:so</code></td><td>Source a Vimscript file through the embedded vimlrs interpreter.</td></tr>
 <tr><td><code>:runtime</code>, <code>:ru</code></td><td>Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime).</td></tr>
 <tr><td><code>:diffthis</code>, <code>:difft</code></td><td>Show the current buffer’s changes as a side-by-side diff vs git HEAD (vim :diffthis).</td></tr>
+<tr><td><code>:diffupdate</code>, <code>:diffu</code></td><td>Recompute and redisplay the buffer’s diff vs git HEAD (vim :diffupdate).</td></tr>
+<tr><td><code>:doautocmd</code>, <code>:do</code>, <code>:doa</code></td><td>Fire the autocommands registered for {event} on the current buffer (vim :doautocmd).</td></tr>
+<tr><td><code>:drop</code>, <code>:dr</code></td><td>Jump to a buffer already editing {file}, else edit it (vim :drop).</td></tr>
 <tr><td><code>:lua</code></td><td>Run a Lua snippet through the system lua interpreter and echo its output (vim :lua).</td></tr>
 <tr><td><code>:luafile</code>, <code>:luaf</code></td><td>Run a Lua script file through the system lua interpreter (vim :luafile).</td></tr>
 <tr><td><code>:perl</code>, <code>:pe</code></td><td>Run a Perl snippet through the system perl interpreter and echo its output (vim :perl).</td></tr>
@@ -7137,11 +7148,11 @@ languages. It is only necessary when the node that increments the nesting level
 <h2 id="headline"><a class="header" href="#headline">Headline</a></h2>
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
-<li>Ported: <strong>3774</strong> (55.1%)</li>
-<li>Partial: <strong>874</strong> (12.8%)</li>
-<li>Absent: <strong>2199</strong></li>
+<li>Ported: <strong>3777</strong> (55.2%)</li>
+<li>Partial: <strong>882</strong> (12.9%)</li>
+<li>Absent: <strong>2188</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1465 static commands, 1831 typable <code>:</code> commands, 2964 default keybindings</li>
+<li>zemacs source surface: 1465 static commands, 1854 typable <code>:</code> commands, 2964 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -7201,7 +7212,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">185</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">204</td><td style="text-align: right">14</td><td style="text-align: right">93.6%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1421</td><td style="text-align: right">406</td><td style="text-align: right">68.4%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1424</td><td style="text-align: right">414</td><td style="text-align: right">68.6%</td></tr>
 <tr><td>spacemacs</td><td style="text-align: right">1296</td><td style="text-align: right">721</td><td style="text-align: right">158</td><td style="text-align: right">55.6%</td></tr>
 </tbody>
 </table>
@@ -7265,7 +7276,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">35</td><td style="text-align: right">6</td><td style="text-align: right">66.0%</td></tr>
-<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">285</td><td style="text-align: right">73</td><td style="text-align: right">50.8%</td></tr>
+<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">288</td><td style="text-align: right">81</td><td style="text-align: right">51.3%</td></tr>
 <tr><td>neovim</td><td>function</td><td style="text-align: right">451</td><td style="text-align: right">448</td><td style="text-align: right">0</td><td style="text-align: right">99.3%</td></tr>
 <tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">62</td><td style="text-align: right">25</td><td style="text-align: right">63.3%</td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">422</td><td style="text-align: right">38</td><td style="text-align: right">88.1%</td></tr>
