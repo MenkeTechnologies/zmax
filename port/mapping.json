@@ -36354,7 +36354,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set startofline is accepted, stored and queryable (:set startofline?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set nostartofline keeps the column on {count}G (default lands on first non-blank); not yet all jumps"
   },
   {
     "spec_id": "neovim.option.suffixes",

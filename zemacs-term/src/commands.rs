@@ -21125,7 +21125,18 @@ fn goto_line_without_jumplist(
             text.len_lines() - 1
         };
         let line_idx = std::cmp::min(count.get() - 1, max_line);
-        let pos = first_nonblank_of_line(text, line_idx);
+        // vim `startofline` (default on): land on the first non-blank. With
+        // `:set nostartofline`, keep the cursor's current column instead.
+        let pos = if typed::vim_opt_str("startofline").as_deref() == Some("off") {
+            let cur = doc.selection(view.id).primary().cursor(text);
+            let cur_line = text.char_to_line(cur);
+            let col = cur - text.line_to_char(cur_line);
+            let start = text.line_to_char(line_idx);
+            let last = line_end_char_index(&text, line_idx).saturating_sub(start);
+            start + col.min(last)
+        } else {
+            first_nonblank_of_line(text, line_idx)
+        };
         let selection = doc
             .selection(view.id)
             .clone()
