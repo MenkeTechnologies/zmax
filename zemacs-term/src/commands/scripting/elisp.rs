@@ -273,10 +273,12 @@ fn b_kill_new(h: &mut ElispHost, args: &[Value]) -> Result<Value, String> {
 
 fn b_kill_region(h: &mut ElispHost, args: &[Value]) -> Result<Value, String> {
     let (lo, hi) = clamp_range(h, args[0].to_int(), args[1].to_int());
-    let buf = h.cur_buf();
-    let text: String = buf.text[lo..hi].iter().collect();
-    buf.text.drain(lo..hi);
-    buf.point = lo + 1;
+    let text: String = h.cur_buf().text[lo..hi].iter().collect();
+    // Delete through the host so `zv`/`begv`/markers stay in sync with the
+    // shortened text (a raw `text.drain` leaves `point-max` past the end, which
+    // later panics `buffer-string`). `cur_delete` takes 1-based `[from, to)`.
+    h.cur_delete(lo + 1, hi + 1);
+    h.cur_buf().point = lo + 1;
     super::kill_push(text);
     super::mark_deactivate();
     Ok(nil())
@@ -293,11 +295,14 @@ fn b_copy_region_as_kill(h: &mut ElispHost, args: &[Value]) -> Result<Value, Str
 fn b_yank(h: &mut ElispHost, _args: &[Value]) -> Result<Value, String> {
     let s = super::kill_current(0).unwrap_or_default();
     let chars: Vec<char> = s.chars().collect();
-    let len = chars.len();
-    let buf = h.cur_buf();
-    let at = buf.point.saturating_sub(1).min(buf.text.len());
-    buf.text.splice(at..at, chars);
-    buf.point = at + len + 1;
+    let at = {
+        let buf = h.cur_buf();
+        buf.point.saturating_sub(1).min(buf.text.len())
+    };
+    // Insert through the host (1-based point) so `zv`/`begv`/markers advance with
+    // the inserted text; `cur_insert(_, true)` leaves point after the insertion.
+    h.cur_buf().point = at + 1;
+    h.cur_insert(chars, true);
     // Emacs leaves point after the insertion and the mark (inactive) at its start.
     super::mark_set(at);
     super::mark_deactivate();
