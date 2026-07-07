@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-607926be.js";
+            window.path_to_searchindex_js = "searchindex-edf3a67d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -570,6 +570,8 @@
 <tr><td><code>:sblast</code>, <code>:sbl</code></td><td>Split window and go to the last buffer (vim :sblast).</td></tr>
 <tr><td><code>:sbmodified</code>, <code>:sbm</code></td><td>Split window and go to the next modified buffer (vim :sbmodified).</td></tr>
 <tr><td><code>:sbuffer</code>, <code>:sb</code></td><td>Split window and go to the buffer whose path contains {name} (vim :sbuffer / :sb).</td></tr>
+<tr><td><code>:pedit</code>, <code>:ped</code></td><td>Edit {file} in a preview (horizontal split) window (vim :pedit).</td></tr>
+<tr><td><code>:pbuffer</code>, <code>:pb</code></td><td>Show the buffer whose path contains {name} in a preview (split) window (vim :pbuffer).</td></tr>
 <tr><td><code>:nohlsearch</code>, <code>:noh</code>, <code>:nohl</code></td><td>Clear the persistent search highlight (vim :nohlsearch).</td></tr>
 <tr><td><code>:clearjumps</code></td><td>Clear the current view’s jump list (vim :clearjumps).</td></tr>
 <tr><td><code>:project-replace</code>, <code>:replace-in-files</code></td><td>Regex-replace across all matching workspace files (JetBrains Replace in Files).</td></tr>
@@ -892,6 +894,9 @@
 <tr><td><code>:character-info</code>, <code>:char</code></td><td>Get info about the character under the primary cursor.</td></tr>
 <tr><td><code>:reload</code>, <code>:rl</code></td><td>Discard changes and reload from the source file.</td></tr>
 <tr><td><code>:reload-all</code>, <code>:rla</code></td><td>Discard changes and reload all documents from the source files.</td></tr>
+<tr><td><code>:checktime</code>, <code>:checkt</code></td><td>Reload loaded buffers that changed on disk (vim :checktime).</td></tr>
+<tr><td><code>:filetype</code>, <code>:filet</code></td><td>Report the buffer’s detected language / accept on</td></tr>
+<tr><td><code>:scriptnames</code>, <code>:scr</code></td><td>List the sourced config files (vim :scriptnames).</td></tr>
 <tr><td><code>:git-stage</code>, <code>:stage</code>, <code>:git-add</code></td><td>Stage the current buffer’s file (git add).</td></tr>
 <tr><td><code>:git-unstage</code>, <code>:unstage</code></td><td>Unstage the current buffer’s file (git reset HEAD).</td></tr>
 <tr><td><code>:stash</code>, <code>:git-stash</code></td><td>git stash the working-tree changes (then reload open buffers).</td></tr>
@@ -1013,6 +1018,7 @@
 <tr><td><code>:rightbelow</code>, <code>:rightb</code></td><td>Run {cmd} placing a new split right/below (vim :rightbelow; best-effort).</td></tr>
 <tr><td><code>:topleft</code>, <code>:to</code></td><td>Run {cmd} placing a new split at the top/left (vim :topleft; best-effort).</td></tr>
 <tr><td><code>:botright</code>, <code>:bo</code></td><td>Run {cmd} placing a new split at the bottom/right (vim :botright; best-effort).</td></tr>
+<tr><td><code>:tab</code></td><td>Run {cmd} opening its window in a new tab (vim :tab; best-effort placement).</td></tr>
 <tr><td><code>:lsp-stop</code></td><td>Stops the given language servers, or all language servers that are used by the current file if no arguments are supplied</td></tr>
 <tr><td><code>:tree-sitter-scopes</code></td><td>Display tree sitter scopes, primarily for theming and development.</td></tr>
 <tr><td><code>:tree-sitter-highlight-name</code>, <code>:Inspect</code></td><td>Display the tree-sitter highlight capture under the cursor (neovim :Inspect).</td></tr>
