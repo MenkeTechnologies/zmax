@@ -37707,5 +37707,69 @@
       "typable:sfind"
     ],
     "note": "split and edit a file found in the path"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_grepadd",
+    "status": "partial",
+    "evidence": [
+      "typable:grepadd"
+    ],
+    "note": "project search like :grep (unified results console; no separate quickfix append)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lgrep",
+    "status": "partial",
+    "evidence": [
+      "typable:lgrep"
+    ],
+    "note": "project search like :grep (unified results console; no separate location list)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lgrepadd",
+    "status": "partial",
+    "evidence": [
+      "typable:lgrepadd"
+    ],
+    "note": "project search like :grep (unified results console)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_vimgrepadd",
+    "status": "partial",
+    "evidence": [
+      "typable:vimgrepadd"
+    ],
+    "note": "project search like :grep (unified results console)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lvimgrepadd",
+    "status": "partial",
+    "evidence": [
+      "typable:lvimgrepadd"
+    ],
+    "note": "project search like :grep (unified results console)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lmake",
+    "status": "partial",
+    "evidence": [
+      "typable:lmake"
+    ],
+    "note": "run make and collect errors like :make (unified results console)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_helpgrep",
+    "status": "partial",
+    "evidence": [
+      "typable:helpgrep"
+    ],
+    "note": "open the inline Help browser filtered to the pattern (not a raw help-text grep)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lhelpgrep",
+    "status": "partial",
+    "evidence": [
+      "typable:lhelpgrep"
+    ],
+    "note": "open the inline Help browser filtered to the pattern (not a raw help-text grep)"
   }
 ]

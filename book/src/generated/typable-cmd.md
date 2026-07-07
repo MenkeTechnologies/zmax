@@ -58,6 +58,7 @@
 | `:compile` | Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile). |
 | `:recompile` | Re-run the last compile command (emacs recompile). |
 | `:make` | Run `make [args]`, collect errors into the quickfix list, jump to the first (vim :make). |
+| `:lmake`, `:lmak` | Run `make [args]` and collect errors, like :make (vim :lmake targets the location list; zemacs uses one unified results console). |
 | `:tag`, `:ta` | Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag). |
 | `:tselect`, `:ts` | List every matching tag in a picker; select one to jump (vim :tselect). |
 | `:tjump`, `:tj` | Jump to the tag if unique, else show the tag picker (vim :tjump). |
@@ -439,6 +440,13 @@
 | `:theme-prev` | Switch to the previous theme (alphabetical). |
 | `:run`, `:r!` | Run a command in the IDE Run tool window (defaults to `cargo run`). |
 | `:grep`, `:rg`, `:search-project` | Search the project (ripgrep) and show jumpable results in the Run console. |
+| `:grepadd`, `:grepa` | Search the project like :grep (vim :grepadd appends; zemacs uses one unified results console). |
+| `:lgrep`, `:lgr` | Location-list variant of :grep (vim :lgrep; zemacs uses one unified results console). |
+| `:lgrepadd`, `:lgrepa` | Location-list append variant of :grep (vim :lgrepadd; zemacs uses one unified results console). |
+| `:vimgrepadd`, `:vimgrepa` | Search the project like :vimgrep, appending (vim :vimgrepadd; zemacs uses one unified results console). |
+| `:lvimgrepadd`, `:lvimgrepa` | Location-list append variant of :vimgrep (vim :lvimgrepadd; zemacs uses one unified results console). |
+| `:helpgrep`, `:helpg` | Search the help: open the inline Help browser filtered to {pattern} (vim :helpgrep). |
+| `:lhelpgrep`, `:lh` | Location-list variant of :helpgrep — open the Help browser filtered to {pattern} (vim :lhelpgrep). |
 | `:copen`, `:cwindow`, `:cw` | Open the quickfix list window. |
 | `:cclose`, `:ccl` | Close the quickfix list window. |
 | `:cnext`, `:cn` | Jump to the next quickfix entry. |

@@ -20974,6 +20974,29 @@ fn fzf_helptag(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// vim `:helpgrep {pattern}` / `:lhelpgrep` — search the help. zemacs opens its
+/// inline Help browser filtered to `{pattern}` (over all commands / keys /
+/// topics) rather than grepping raw help-file text into a quickfix / location
+/// list, so this is a partial port of a different model.
+fn help_grep(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pat = args.join(" ").trim().to_string();
+    if pat.is_empty() {
+        bail!("usage: :helpgrep {{pattern}}");
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(
+                crate::ui::preferences::PreferencesPanel::new_help(pat.clone()),
+            ));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
 /// Shared body of the `:map`-family typable commands: reconstruct the Vim
 /// command line and either record a mapping (then re-apply the overlay) or —
 /// when there's no rhs — list the current bindings for the command's modes,
@@ -27834,6 +27857,18 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "lmake",
+        aliases: &["lmak"],
+        doc: "Run `make [args]` and collect errors, like :make (vim :lmake targets the location list; zemacs uses one unified results console).",
+        fun: make,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "tag",
         aliases: &["ta"],
         doc: "Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag).",
@@ -31992,6 +32027,65 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             positionals: (0, None),
             ..Signature::DEFAULT
         },
+    },
+    // vim's grep family distinguishes quickfix vs location list and add vs
+    // replace; zemacs collects every search into one jumpable Run console, so
+    // these all run the same project search — partial ports of a different model.
+    TypableCommand {
+        name: "grepadd",
+        aliases: &["grepa"],
+        doc: "Search the project like :grep (vim :grepadd appends; zemacs uses one unified results console).",
+        fun: grep,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lgrep",
+        aliases: &["lgr"],
+        doc: "Location-list variant of :grep (vim :lgrep; zemacs uses one unified results console).",
+        fun: grep,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lgrepadd",
+        aliases: &["lgrepa"],
+        doc: "Location-list append variant of :grep (vim :lgrepadd; zemacs uses one unified results console).",
+        fun: grep,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "vimgrepadd",
+        aliases: &["vimgrepa"],
+        doc: "Search the project like :vimgrep, appending (vim :vimgrepadd; zemacs uses one unified results console).",
+        fun: grep,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lvimgrepadd",
+        aliases: &["lvimgrepa"],
+        doc: "Location-list append variant of :vimgrep (vim :lvimgrepadd; zemacs uses one unified results console).",
+        fun: grep,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "helpgrep",
+        aliases: &["helpg"],
+        doc: "Search the help: open the inline Help browser filtered to {pattern} (vim :helpgrep).",
+        fun: help_grep,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lhelpgrep",
+        aliases: &["lh"],
+        doc: "Location-list variant of :helpgrep — open the Help browser filtered to {pattern} (vim :lhelpgrep).",
+        fun: help_grep,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
     },
     // --- Quickfix list ---
     TypableCommand {
