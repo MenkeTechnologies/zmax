@@ -907,7 +907,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-d" => page_cursor_half_down,
         "C-u" => page_cursor_half_up,
         "C-f" | "pagedown" => page_down,
-        "C-b" | "pageup"   => page_up,
+        "pageup"           => page_up,
+        "C-b"              => yank_to_clipboard, // quick copy selection to system clipboard (was "*y)
         "C-o" => jump_backward,
         "C-i" | "tab" => jump_forward,
         "C-e" => scroll_down,
@@ -1843,6 +1844,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "c" | "s" => change_selection,
         "\"" => select_register, // "{reg} in Visual: pick the register for the next y/d/p (e.g. "+y)
         "y"       => [yank, collapse_selection, normal_mode],
+        "C-b"     => [yank_to_clipboard, collapse_selection, normal_mode], // quick copy to system clipboard (was "*y)
         "p"       => replace_with_yanked,
         "r"       => replace,
         "J"       => [join_selections, normal_mode],
