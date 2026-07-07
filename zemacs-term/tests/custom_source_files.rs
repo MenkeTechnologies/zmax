@@ -100,3 +100,44 @@ async fn custom_source_files_off_by_default() -> anyhow::Result<()> {
     let _ = std::fs::remove_dir_all(&dir);
     Ok(())
 }
+
+/// A sourced Vimscript file can drive the editor with its own `:` commands
+/// (`:badd`/`:edit`/…): vimlrs would otherwise "handle" those against its
+/// internal scratch buffer, so the ex-command host bridge must route them to
+/// zemacs. This is what makes `:mksession` / `:source Session.vim` restore work.
+#[tokio::test(flavor = "multi_thread")]
+async fn sourced_viml_editor_commands_reach_zemacs() -> anyhow::Result<()> {
+    let dir = std::env::temp_dir().join(format!("zemacs-src-excmd-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(dir.join(".zemacs"))?;
+    std::env::set_var("HOME", &dir);
+
+    // A real file for the session to add to the buffer list.
+    let target = dir.join("added_by_session.txt");
+    std::fs::write(&target, "hello from the session\n")?;
+
+    // A "session" .vim that opens the file via the editor `:edit`.
+    let vim = dir.join("session.vim");
+    std::fs::write(&vim, format!("edit {}\n", target.to_string_lossy()))?;
+
+    let mut app = make_app(None, Some(vim.to_string_lossy().into_owned()))?;
+    app.load_init_scripts();
+
+    // `:badd` reached zemacs: the target file is now a known document.
+    let has_target = app.editor.documents().any(|d| {
+        d.path()
+            .map(|p| p.ends_with("added_by_session.txt"))
+            .unwrap_or(false)
+    });
+    assert!(
+        has_target,
+        "sourced `:badd` must add the buffer to zemacs (ex-command bridge); open docs = {:?}",
+        app.editor
+            .documents()
+            .filter_map(|d| d.path().map(|p| p.to_path_buf()))
+            .collect::<Vec<_>>()
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+    Ok(())
+}

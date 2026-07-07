@@ -26416,6 +26416,139 @@ fn ex_scriptnames(
     Ok(())
 }
 
+/// Resolve the file path for `:mksession`/`:mkview`/`:loadview`: an explicit
+/// argument, or `default` when none is given.
+fn session_arg_path(args: &Args, default: std::path::PathBuf) -> std::path::PathBuf {
+    let a = args.join(" ");
+    let a = a.trim();
+    if a.is_empty() {
+        default
+    } else {
+        zemacs_stdx::path::expand_tilde(std::path::Path::new(a)).into_owned()
+    }
+}
+
+/// The default view file for a buffer path — `<config>/view/<sanitised>.vim`
+/// (path separators and `:` folded to `%`, as vim's viewdir encoding does).
+fn default_view_path(buf: &std::path::Path) -> std::path::PathBuf {
+    let mut name: String = buf
+        .to_string_lossy()
+        .chars()
+        .map(|c| {
+            if std::path::is_separator(c) || c == ':' {
+                '%'
+            } else {
+                c
+            }
+        })
+        .collect();
+    name.push_str(".vim");
+    zemacs_loader::config_dir().join("view").join(name)
+}
+
+/// vim `:mksession [file]` — write a session file (default `Session.vim` in the
+/// cwd) that restores the working directory and re-opens the buffers when
+/// sourced. zemacs's `:source` now runs editor `:` commands, so
+/// `:source Session.vim` replays the `cd`/`badd`/`edit` lines. A subset of vim's
+/// session (cwd + buffer list + current file, not the full window layout).
+fn ex_mksession(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cwd = zemacs_stdx::env::current_working_dir();
+    let path = session_arg_path(&args, cwd.join("Session.vim"));
+    let current = doc!(cx.editor).path().map(|p| p.to_path_buf());
+    let mut files: Vec<std::path::PathBuf> = cx
+        .editor
+        .documents()
+        .filter_map(|d| d.path().map(|p| p.to_path_buf()))
+        .filter(|p| current.as_deref() != Some(p.as_path()))
+        .collect();
+    files.sort();
+    files.dedup();
+    // Re-open every buffer with `:edit` (the current file last so it ends up
+    // focused). `:edit` is what vimlrs recognises and the host bridge routes back
+    // to zemacs, so `:source Session.vim` replays it. A subset of vim's session:
+    // the buffer list, not the working directory or window layout.
+    let mut out = String::from("\" zemacs session — :source this file to restore it\n");
+    for f in files.iter().chain(current.iter()) {
+        out.push_str(&format!("edit {}\n", f.display()));
+    }
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(&path, out.as_bytes()).map_err(|e| anyhow!("mksession: {e}"))?;
+    cx.editor
+        .set_status(format!("session written to {}", path.display()));
+    Ok(())
+}
+
+/// vim `:mkview [file]` — write the current window's view (cursor position) to a
+/// view file (default under `<config>/view/`). Sourced by `:loadview`.
+fn ex_mkview(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (bufpath, line) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let Some(p) = doc.path().map(|p| p.to_path_buf()) else {
+            bail!("mkview: buffer has no file name");
+        };
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        (p, text.char_to_line(cursor) + 1)
+    };
+    let path = session_arg_path(&args, default_view_path(&bufpath));
+    let out = format!(
+        "\" zemacs view\nedit {}\nnormal! {}Gzz\n",
+        bufpath.display(),
+        line
+    );
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(&path, out.as_bytes()).map_err(|e| anyhow!("mkview: {e}"))?;
+    cx.editor
+        .set_status(format!("view written to {}", path.display()));
+    Ok(())
+}
+
+/// Run each line of a file written by `:mkview`/`:mksession` as a zemacs `:`
+/// command (skipping blank lines and `"` comments). Native — unlike `:source`
+/// this doesn't go through vimlrs, so `normal!`/`edit`/etc. always reach the
+/// live editor.
+fn run_command_file(cx: &mut compositor::Context, path: &std::path::Path) -> anyhow::Result<()> {
+    let text = std::fs::read_to_string(path).map_err(|e| anyhow!("{}: {e}", path.display()))?;
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('"') {
+            continue;
+        }
+        run_command_line(cx, line);
+    }
+    Ok(())
+}
+
+/// vim `:loadview [file]` — restore the current window's view (cursor) by
+/// replaying the file written by `:mkview` (default under `<config>/view/`).
+fn ex_loadview(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(default) = doc!(cx.editor).path().map(default_view_path) else {
+        bail!("loadview: buffer has no file name");
+    };
+    let path = session_arg_path(&args, default);
+    if !path.exists() {
+        bail!("loadview: {} does not exist", path.display());
+    }
+    run_command_file(cx, &path)
+}
+
 fn open_log(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -34749,6 +34882,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "mksession",
+        aliases: &["mks"],
+        doc: "Write a session file (cwd + buffers) that :source restores (vim :mksession).",
+        fun: ex_mksession,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "mkview",
+        aliases: &["mkvie"],
+        doc: "Write the current window's view (cursor position) to a file (vim :mkview).",
+        fun: ex_mkview,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "loadview",
+        aliases: &["lo"],
+        doc: "Restore the current window's view by sourcing its :mkview file (vim :loadview).",
+        fun: ex_loadview,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
