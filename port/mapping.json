@@ -35446,19 +35446,19 @@
   },
   {
     "spec_id": "neovim.option.foldmarker",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldmarker is accepted, stored and queryable (:set foldmarker?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set foldmarker -> apply_foldmethod (indent/marker computed folds)"
   },
   {
     "spec_id": "neovim.option.foldmethod",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldmethod is accepted, stored and queryable (:set foldmethod?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set foldmethod -> apply_foldmethod (indent/marker computed folds)"
   },
   {
     "spec_id": "neovim.option.foldminlines",

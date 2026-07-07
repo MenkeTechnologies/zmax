@@ -30168,6 +30168,46 @@ fn fold_open_all(cx: &mut Context) {
     doc.folds_mut().open_all();
 }
 
+/// vim `:set foldmethod=…`: rebuild the document's folds from the buffer.
+/// `manual` clears computed folds (leaving only hand-made `zf` ones cleared too);
+/// `indent` folds by indentation, `marker` by `foldmarker` pairs (default
+/// `{{{`/`}}}`). Other methods (`syntax`/`expr`/`diff`) have no computed folds
+/// yet, so they clear. Folds are created open; `foldlevel`/`zM` close them.
+pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
+    let (_view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let last = text.len_lines().saturating_sub(1);
+    let lines: Vec<String> = (0..text.len_lines()).map(|i| text.line(i).to_string()).collect();
+    let line_refs: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
+
+    let ranges = match method {
+        "marker" => {
+            let spec = typed::vim_opt_str("foldmarker").unwrap_or_else(|| "{{{,}}}".to_string());
+            let mut it = spec.splitn(2, ',');
+            let open = it.next().unwrap_or("{{{");
+            let close = it.next().unwrap_or("}}}");
+            crate::vim_fold::marker_fold_ranges(&line_refs, open, close)
+        }
+        "indent" => {
+            let tw = doc.tab_width();
+            let sw = doc.indent_width();
+            let levels = crate::vim_fold::indent_levels(&line_refs, tw, sw);
+            crate::vim_fold::indent_fold_ranges(&levels)
+        }
+        _ => Vec::new(),
+    };
+
+    let count = ranges.len();
+    let folds = doc.folds_mut();
+    folds.clear();
+    for (s, e) in ranges {
+        folds.create(s, e);
+    }
+    folds.clamp(last);
+    cx.editor
+        .set_status(format!("foldmethod={method}: {count} fold(s)"));
+}
+
 /// SPC n w : widen — remove any narrowing (document-wide and this view's) and reveal the whole
 /// buffer (Emacs `widen`).
 fn widen(cx: &mut Context) {

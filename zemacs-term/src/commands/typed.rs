@@ -19246,6 +19246,8 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     let mut doc_readonly: Option<bool> = None;
     // vim `filetype`/`syntax` set the current buffer's language.
     let mut set_language: Option<String> = None;
+    // vim `foldmethod`: recompute the document's folds after the option loop.
+    let mut set_foldmethod: Option<String> = None;
     // vim `foldenable`/`foldlevel` drive the existing fold commands: Some(true)
     // opens all folds, Some(false) closes them.
     let mut fold_open: Option<bool> = None;
@@ -19427,6 +19429,15 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
+        // `foldmethod` (`fdm`) chooses how folds are computed; recompute after
+        // the option loop so `foldmarker`/indent settings in the same `:set` are
+        // already stored (vim `:set foldmethod=indent`).
+        if matches!(name, "foldmethod" | "fdm") {
+            if let Some(v) = value {
+                set_foldmethod = Some(v.to_string());
+            }
+            continue;
+        }
         // `backupext` sets the suffix for vim `backup` copies.
         if matches!(name, "backupext" | "bex") {
             if let Some(v) = value {
@@ -19557,6 +19568,10 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
         if let Err(e) = doc.set_language_by_language_id(&lang, &loader) {
             log::debug!("vim :set filetype={lang}: {e}");
         }
+    }
+    // Recompute folds for the chosen fold method (vim `foldmethod`).
+    if let Some(method) = set_foldmethod {
+        super::apply_foldmethod(&mut editor_context(cx), &method);
     }
     // Drive folding (vim `foldenable`/`foldlevel`) via the fold commands.
     if let Some(open) = fold_open {
