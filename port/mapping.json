@@ -36883,5 +36883,77 @@
       "typable:autocmd"
     ],
     "note": ":autocmd {events} {pat} {cmd} registers; fires BufReadPost/BufEnter/BufWritePre/Post (vim_autocmd)"
+  },
+  {
+    "spec_id": "emacs.command.delete_trailing_whitespace_comma_and_editorconfig_settings",
+    "status": "ported",
+    "evidence": [
+      "typable:delete-trailing-whitespace"
+    ],
+    "note": "emacs cmd already implemented"
+  },
+  {
+    "spec_id": "emacs.command.woman",
+    "status": "ported",
+    "evidence": [
+      "static:man_page_search"
+    ],
+    "note": "emacs cmd already implemented"
+  },
+  {
+    "spec_id": "emacs.command.zrgrep",
+    "status": "ported",
+    "evidence": [
+      "typable:grep"
+    ],
+    "note": "emacs cmd already implemented"
+  },
+  {
+    "spec_id": "emacs.command.enable_theme",
+    "status": "ported",
+    "evidence": [
+      "typable:theme"
+    ],
+    "note": "enable a theme by name (:theme <name>)"
+  },
+  {
+    "spec_id": "emacs.command.eldoc_print_current_symbol_info",
+    "status": "ported",
+    "evidence": [
+      "static:hover"
+    ],
+    "note": "echo symbol doc (LSP hover)"
+  },
+  {
+    "spec_id": "emacs.command.eldoc_doc_buffer",
+    "status": "ported",
+    "evidence": [
+      "static:hover"
+    ],
+    "note": "symbol doc (LSP hover)"
+  },
+  {
+    "spec_id": "emacs.command.xref_find_definitions_other_frame",
+    "status": "ported",
+    "evidence": [
+      "static:xref_find_definitions_other_window"
+    ],
+    "note": "goto def in other split"
+  },
+  {
+    "spec_id": "emacs.command.emoji_insert",
+    "status": "ported",
+    "evidence": [
+      "static:isearch_emoji_by_name"
+    ],
+    "note": "insert emoji by name"
+  },
+  {
+    "spec_id": "emacs.command.emoji_search",
+    "status": "ported",
+    "evidence": [
+      "static:isearch_emoji_by_name"
+    ],
+    "note": "search+insert emoji by name"
   }
 ]
