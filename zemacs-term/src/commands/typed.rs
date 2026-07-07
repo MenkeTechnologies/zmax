@@ -18992,6 +18992,49 @@ fn vim_opt_reset(name: &str) {
     }
 }
 
+/// Parse a vim `iskeyword` value into the set of characters it names. Handles
+/// comma-separated single chars, `a-b` char ranges, and numeric code / code
+/// ranges (`48-57`); `@` (alphabetic) and `^`-exclusions are ignored (the base
+/// word set already covers alphanumerics and `_`). Used to feed
+/// `zemacs_core::chars::set_extra_keyword_chars`.
+fn parse_iskeyword(value: &str) -> Vec<char> {
+    let mut out = Vec::new();
+    let code = |s: &str| -> Option<char> {
+        if let Ok(n) = s.parse::<u32>() {
+            char::from_u32(n)
+        } else {
+            let mut it = s.chars();
+            match (it.next(), it.next()) {
+                (Some(c), None) => Some(c),
+                _ => None,
+            }
+        }
+    };
+    for raw in value.split(',') {
+        let item = raw.trim();
+        if item.is_empty() || item == "@" || item.starts_with('^') {
+            continue;
+        }
+        // A range `a-b` (but not a lone `-`, which is a literal hyphen).
+        if let Some((a, b)) = item.split_once('-') {
+            if !a.is_empty() && !b.is_empty() {
+                if let (Some(lo), Some(hi)) = (code(a), code(b)) {
+                    for n in (lo as u32)..=(hi as u32) {
+                        if let Some(c) = char::from_u32(n) {
+                            out.push(c);
+                        }
+                    }
+                    continue;
+                }
+            }
+        }
+        if let Some(c) = code(item) {
+            out.push(c);
+        }
+    }
+    out
+}
+
 /// The default yank register implied by vim's `clipboard` option: `unnamedplus`
 /// routes unnamed yanks/deletes through `+`, `unnamed` through `*`, anything else
 /// (incl. empty) restores the normal unnamed register `"`.
@@ -19518,6 +19561,13 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                     changed = true;
                 }
             }
+            continue;
+        }
+        // `iskeyword` (`isk`) defines which characters count as word/keyword
+        // chars for word motions and text objects (vim `:set iskeyword=@,48-57,_`).
+        if matches!(name, "iskeyword" | "isk") {
+            zemacs_core::chars::set_extra_keyword_chars(parse_iskeyword(value.unwrap_or("")));
+            changed = true;
             continue;
         }
         // `filetype`/`syntax` (`ft`/`syn`) set the current buffer's language,
@@ -39434,6 +39484,16 @@ mod vim_set_tests {
         assert_eq!(parse_set_token("tw=80"), (false, false, "tw", Some("80")));
         assert_eq!(parse_set_token("wrap!"), (false, true, "wrap", None));
         assert_eq!(parse_set_token("invwrap"), (false, true, "wrap", None));
+    }
+
+    #[test]
+    fn iskeyword_parses_chars_and_ranges() {
+        // single chars, a code range, and a literal hyphen.
+        let mut got = parse_iskeyword("_,48-50,-,.");
+        got.sort_unstable();
+        assert_eq!(got, vec!['-', '.', '0', '1', '2', '_']);
+        // `@` and exclusions are ignored; empties skipped.
+        assert_eq!(parse_iskeyword("@,,^x"), Vec::<char>::new());
     }
 
     #[test]

@@ -35682,7 +35682,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set iskeyword is accepted, stored and queryable (:set iskeyword?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set iskeyword=... adds word chars for motions/text objects (categorize_char); += not parsed"
   },
   {
     "spec_id": "neovim.option.isprint",

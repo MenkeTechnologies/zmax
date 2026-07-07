@@ -11,13 +11,31 @@ pub enum CharCategory {
     Unknown,
 }
 
+thread_local! {
+    /// vim `iskeyword`: extra characters (beyond alphanumerics and `_`) that count
+    /// as word/keyword characters for word motions and text objects. Empty by
+    /// default, so behaviour is unchanged unless `:set iskeyword` opts in.
+    static EXTRA_KEYWORD_CHARS: std::cell::RefCell<Vec<char>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// vim `iskeyword`: replace the set of extra word/keyword characters.
+pub fn set_extra_keyword_chars(chars: Vec<char>) {
+    EXTRA_KEYWORD_CHARS.with(|c| *c.borrow_mut() = chars);
+}
+
+#[inline]
+fn is_extra_keyword_char(ch: char) -> bool {
+    EXTRA_KEYWORD_CHARS.with(|c| c.borrow().contains(&ch))
+}
+
 #[inline]
 pub fn categorize_char(ch: char) -> CharCategory {
     if char_is_line_ending(ch) {
         CharCategory::Eol
     } else if ch.is_whitespace() {
         CharCategory::Whitespace
-    } else if char_is_word(ch) {
+    } else if char_is_word(ch) || is_extra_keyword_char(ch) {
         CharCategory::Word
     } else if char_is_punctuation(ch) {
         CharCategory::Punctuation
