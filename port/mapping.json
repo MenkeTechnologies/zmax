@@ -35154,15 +35154,15 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set concealcursor is accepted, stored and queryable (:set concealcursor?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set concealcursor -> conceal render (vim_conceal, markdown)"
   },
   {
     "spec_id": "neovim.option.conceallevel",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set conceallevel is accepted, stored and queryable (:set conceallevel?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set conceallevel -> conceal render (vim_conceal, markdown)"
   },
   {
     "spec_id": "neovim.option.confirm",

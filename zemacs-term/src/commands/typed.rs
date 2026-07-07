@@ -18718,6 +18718,8 @@ enum VimOptKind {
     /// String enum: the value used when the option is set / unset.
     Enum(&'static str, Option<&'static str>),
     Num,
+    /// Free-form string value (`opt=text`) mapped straight to a config string.
+    Str,
 }
 
 /// vim option (and abbreviations) -> (zemacs config key, kind).
@@ -18750,6 +18752,8 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     (&["autocompletetimeout"],     "completion-timeout", VimOptKind::Num),
     (&["backup", "bk"],            "backup",             VimOptKind::Bool),
     (&["writebackup", "wb"],       "backup",             VimOptKind::Bool),
+    (&["conceallevel", "cole"],    "conceallevel",       VimOptKind::Num),
+    (&["concealcursor", "cocu"],   "concealcursor",      VimOptKind::Str),
 ];
 
 fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {
@@ -18828,6 +18832,7 @@ fn translate_vim_option(
                     .map_err(|_| anyhow!("expected number for {name}"))?;
                 Value::Number(n.into())
             }
+            VimOptKind::Str => Value::String(value.unwrap_or("").to_string()),
         };
         Ok((hkey.to_string(), json))
     })();
@@ -19114,6 +19119,7 @@ fn vim_opt_effective(cfg: &Value, name: &str) -> Option<String> {
         VimOptKind::Bool => bool_word(v.as_bool()?),
         VimOptKind::Num => v.as_i64()?.to_string(),
         VimOptKind::Enum(on, _) => bool_word(v.as_str() == Some(on)),
+        VimOptKind::Str => v.as_str()?.to_string(),
     })
 }
 
