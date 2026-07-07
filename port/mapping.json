@@ -7868,11 +7868,11 @@
   },
   {
     "spec_id": "neovim.option.shiftround",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": ":set shiftround / noshiftround controls indent rounding to shiftwidth"
   },
   {
     "spec_id": "neovim.option.lispwords",
