@@ -640,8 +640,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "n" => search_next,                // gn: select the next search match
             "N" => search_prev,                // gN: select the previous search match
             "." => goto_last_modification,
-            "'" => goto_mark_line,             // g'{mark}: like ' but keep jumplist
-            "`" => goto_mark,                  // g`{mark}: like ` but keep jumplist
+            "'" => goto_mark_line_nojump,      // g'{mark}: like ' but keep jumplist unchanged
+            "`" => goto_mark_nojump,           // g`{mark}: like ` but keep jumplist unchanged
             "down" => move_line_down,          // g<Down>: like gj (display line down)
             "up"   => move_line_up,            // g<Up>: like gk (display line up)
             "home" => goto_line_start,         // g<Home>: like g0

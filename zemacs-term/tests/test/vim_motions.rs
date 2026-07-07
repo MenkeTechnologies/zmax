@@ -549,3 +549,39 @@ async fn auto_fill_wraps_at_text_width() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+// --- jumplist parity: which motions record a jump (vim `:help jump-motions`) ---
+// Each test moves to a distinct origin with non-jump motions (`ll`), performs the
+// jump motion, then `<C-o>` (jump_backward). If the motion recorded the jump the
+// cursor returns to the origin; if it did not, `<C-o>` falls through to an older
+// entry and lands elsewhere.
+
+#[tokio::test(flavor = "multi_thread")]
+async fn paragraph_motion_records_jump() -> anyhow::Result<()> {
+    // `}` is a vim jump command: after `}`, `<C-o>` returns to the pre-jump 'c'.
+    test_with_config(vim(), ("#[a|]#bcd\n\nefgh", "ll}<C-o>", "ab#[c|]#d\n\nefgh")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn percent_records_jump() -> anyhow::Result<()> {
+    // `%` (match bracket) is a vim jump command; `<C-o>` returns to the '('.
+    test_with_config(vim(), ("#[x|]#y(abc)", "ll%<C-o>", "xy#[(|]#abc)")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn star_records_jump() -> anyhow::Result<()> {
+    // `*` (search word under cursor) is a vim jump command; `<C-o>` returns to the
+    // first "foo". Regression: `*`/`#`/`n`/`N` previously did not record a jump.
+    test_with_config(vim(), ("#[f|]#oo bar foo", "*<C-o>", "#[f|]#oo bar foo")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn hash_search_records_jump() -> anyhow::Result<()> {
+    // `#` (backward search of the word under cursor) shares the `n`/`N` search path,
+    // itself a vim jump command; `<C-o>` returns to the last "foo".
+    test_with_config(vim(), ("foo bar #[f|]#oo", "#<C-o>", "foo bar #[f|]#oo")).await?;
+    Ok(())
+}

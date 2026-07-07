@@ -1124,6 +1124,20 @@ async fn substitute_global_flag() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn substitute_records_jump() -> anyhow::Result<()> {
+    // vim `:s` is a jump command. Move to line 3 (`jj`, no jump), substitute there,
+    // move back up (`kk`, no jump), then `<C-o>` returns to the `:s` position on
+    // line 3 — proving the substitute recorded a jumplist entry.
+    test((
+        "#[x|]#xx\nyyy\nzzz\n",
+        "jj:s/z/Z/<ret>kk<C-o>",
+        "xxx\nyyy\n#[Z|]#zz\n",
+    ))
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn substitute_whole_file() -> anyhow::Result<()> {
     test(("#[|a]#bc\nabc\n", ":%s/b/X/g<ret>", "#[a|]#Xc\naXc\n")).await?;
     Ok(())
