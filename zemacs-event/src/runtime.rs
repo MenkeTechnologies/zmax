@@ -44,6 +44,9 @@ pub struct RuntimeLocal<T: 'static> {
     data: parking_lot::RwLock<
         hashbrown::HashMap<tokio::runtime::Id, &'static T, foldhash::fast::FixedState>,
     >,
+    /// Process-wide instance used when `deref` runs on a thread with no current
+    /// tokio runtime — see the comment in `deref`.
+    fallback: std::sync::OnceLock<&'static T>,
     init: fn() -> T,
 }
 
@@ -56,6 +59,7 @@ impl<T> RuntimeLocal<T> {
             data: parking_lot::RwLock::new(hashbrown::HashMap::with_hasher(
                 foldhash::fast::FixedState::with_seed(12345678910),
             )),
+            fallback: std::sync::OnceLock::new(),
             init,
         }
     }
@@ -65,7 +69,20 @@ impl<T> RuntimeLocal<T> {
 impl<T> Deref for RuntimeLocal<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        let id = tokio::runtime::Handle::current().id();
+        // `Handle::current()` panics when there is no tokio runtime on this
+        // thread. That happens during teardown: a nucleo/rayon worker spawned by
+        // a fuzzy picker can outlive the per-test runtime and still deref a
+        // `runtime_local!` static, and rayon promotes the resulting panic to a
+        // process `SIGABRT` — aborting the whole integration-test binary even
+        // though every test passed. Fall back to a process-wide instance instead
+        // of panicking; the runtime is already gone, so which instance a stray
+        // teardown access sees is immaterial.
+        let Ok(handle) = tokio::runtime::Handle::try_current() else {
+            return self
+                .fallback
+                .get_or_init(|| Box::leak(Box::new((self.init)())));
+        };
+        let id = handle.id();
         let guard = self.data.read();
         match guard.get(&id) {
             Some(res) => res,

@@ -75,7 +75,7 @@ pub fn clear(event: Option<&str>) {
             None => list.clear(),
             Some(ev) => {
                 let ev = ev.to_ascii_lowercase();
-                list.retain(|e| !e.events.iter().any(|x| *x == ev));
+                list.retain(|e| !e.events.contains(&ev));
             }
         }
     });
@@ -88,7 +88,7 @@ pub fn matching_commands(event: &str, name: &str) -> Vec<String> {
     AUTOCMDS.with(|a| {
         a.borrow()
             .iter()
-            .filter(|e| e.events.iter().any(|x| *x == event) && pattern_matches(&e.pattern, name))
+            .filter(|e| e.events.contains(&event) && pattern_matches(&e.pattern, name))
             .map(|e| e.command.clone())
             .collect()
     })
