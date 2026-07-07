@@ -181,6 +181,9 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
             align_view(doc, view, Align::Center);
         }
     }
+    // vim autocmd: a file was read into / entered a window.
+    fire_autocmd(cx, "BufReadPost");
+    fire_autocmd(cx, "BufEnter");
     Ok(())
 }
 
@@ -2487,7 +2490,9 @@ fn write(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
         return Ok(());
     }
 
-    write_impl(
+    // vim autocmd: BufWritePre runs before the write, BufWritePost after success.
+    fire_autocmd(cx, "BufWritePre");
+    let res = write_impl(
         cx,
         args.first(),
         WriteOptions {
@@ -2495,7 +2500,11 @@ fn write(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
             auto_format: !args.has_flag(WRITE_NO_FORMAT_FLAG.name),
             code_actions: !args.has_flag(WRITE_NO_CODE_ACTIONS_FLAG.name),
         },
-    )
+    );
+    if res.is_ok() {
+        fire_autocmd(cx, "BufWritePost");
+    }
+    res
 }
 
 fn force_write(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -27266,6 +27275,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "autocmd",
+        aliases: &["au"],
+        doc: "Register an autocommand: :autocmd {events} {pattern} {command} (`:autocmd !` clears).",
+        fun: autocmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "last",
         aliases: &["la"],
         doc: "Edit the last file in the argument list (vim :last).",
@@ -36797,6 +36817,54 @@ fn repl_open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
 /// vim `@:`: re-run the most recently executed command-line (`:` history).
 /// Run a command line (without the leading `:`) from a picker/job callback that
 /// already holds a `compositor::Context`. Used by `command_history_picker`.
+/// Run every autocmd registered for `event` whose pattern matches the current
+/// buffer's file name (vim `:autocmd` firing). Called from the command layer at
+/// lifecycle points (open, write) that have a `Context` to run the commands.
+pub(crate) fn fire_autocmd(cx: &mut compositor::Context, event: &str) {
+    let name = {
+        let (_v, doc) = current_ref!(cx.editor);
+        doc.path()
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    };
+    for cmd in crate::vim_autocmd::matching_commands(event, &name) {
+        run_command_line(cx, &cmd);
+    }
+}
+
+/// vim `:autocmd` — register an autocommand, list the count, or (`:autocmd !` /
+/// `:autocmd ! {event}`) clear registered ones.
+fn autocmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined: String = (0..args.len())
+        .map(|i| args[i].to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let trimmed = joined.trim();
+    if let Some(rest) = trimmed.strip_prefix('!') {
+        let rest = rest.trim();
+        crate::vim_autocmd::clear(if rest.is_empty() { None } else { Some(rest) });
+        cx.editor.set_status("autocmds cleared");
+        return Ok(());
+    }
+    if trimmed.is_empty() {
+        cx.editor
+            .set_status(format!("{} autocmd(s) registered", crate::vim_autocmd::len()));
+        return Ok(());
+    }
+    match crate::vim_autocmd::parse_autocmd(trimmed) {
+        Some(a) => {
+            crate::vim_autocmd::register(a);
+            cx.editor.set_status("autocmd added");
+        }
+        None => bail!("usage: :autocmd {{events}} {{pattern}} {{command}}"),
+    }
+    Ok(())
+}
+
 pub(crate) fn run_command_line(cx: &mut compositor::Context, line: &str) {
     if let Err(err) = execute_command_line(cx, line, PromptEvent::Validate) {
         cx.editor.set_error(err.to_string());

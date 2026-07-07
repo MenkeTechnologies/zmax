@@ -36875,5 +36875,13 @@
       "typable:set"
     ],
     "note": ":set writedelay is accepted, stored and queryable (:set writedelay?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_autocmd",
+    "status": "ported",
+    "evidence": [
+      "typable:autocmd"
+    ],
+    "note": ":autocmd {events} {pat} {cmd} registers; fires BufReadPost/BufEnter/BufWritePre/Post (vim_autocmd)"
   }
 ]

@@ -43,6 +43,7 @@ pub mod run_config;
 pub mod snippet_store;
 pub mod spell;
 pub mod ui;
+pub mod vim_autocmd;
 pub mod vim_conceal;
 pub mod vim_fold;
 pub mod vim_modeline;
