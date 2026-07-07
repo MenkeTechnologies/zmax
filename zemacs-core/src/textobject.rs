@@ -582,11 +582,14 @@ mod test {
             (
                 "samexx 'single' surround pairs",
                 vec![
-                    (3, Inside, (3, 3), '\'', 1),
+                    // Cursor before the quotes: Vim's `i'`/`a'` jump forward to
+                    // the next quoted string on the line (was point-unchanged in
+                    // upstream Helix; changed by the vim dot-repeat/quote work).
+                    (3, Inside, (8, 14), '\'', 1),
                     (7, Inside, (7, 7), '\'', 1),
                     (10, Inside, (8, 14), '\'', 1),
                     (14, Inside, (14, 14), '\'', 1),
-                    (3, Around, (3, 3), '\'', 1),
+                    (3, Around, (7, 15), '\'', 1),
                     (7, Around, (7, 7), '\'', 1),
                     (10, Around, (7, 15), '\'', 1),
                     (14, Around, (14, 14), '\'', 1),

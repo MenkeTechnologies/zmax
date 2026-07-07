@@ -1651,7 +1651,7 @@ fn wincmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let arg = args.first().map(|a| a.as_ref()).unwrap_or("");
+    let arg = args.first().unwrap_or("");
     match arg {
         "h" | "C-h" | "left" => cx.editor.focus_direction(Direction::Left),
         "j" | "C-j" | "down" => cx.editor.focus_direction(Direction::Down),

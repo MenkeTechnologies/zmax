@@ -160,13 +160,17 @@ async fn char_count_override() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn dot_does_not_repeat_yank() -> anyhow::Result<()> {
     // vim: yank is not a "change"; after `dd` then `yy`, `.` repeats the delete.
-    test_with_config(vim(), (
-        indoc! {"\
+    test_with_config(
+        vim(),
+        (
+            indoc! {"\
             #[o|]#ne
             two
             three"},
-        "ddyy.",
-        "#[t|]#hree",
-    )).await?;
+            "ddyy.",
+            "#[t|]#hree",
+        ),
+    )
+    .await?;
     Ok(())
 }
