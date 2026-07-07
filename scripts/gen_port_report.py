@@ -430,6 +430,14 @@ def parse_builtins():
         _t=open(_ast,encoding="utf-8").read()
         for _kw in ["let","if","elseif","else","endif","for","endfor","while","endwhile","function","endfunction","return","call","execute","echo","echon","echomsg","echoerr","try","catch","finally","endtry","throw","break","continue","unlet","const"]:
             if _re.search(r"\b"+_kw.capitalize()+r"\b",_t): builtins.add("viml:ex:"+_kw)
+    # vimlrs also routes libm-backed builtins (`sqrt`, `sin`, `acos`, …) through a
+    # name -> `h::VIML_FN_*` dispatch table in compile_viml.rs rather than a
+    # `pub fn f_<name>`, so scan that table too.
+    _cv=_os.path.join(ROOT,"vendor","vimlrs","src","compile_viml.rs")
+    if _os.path.isfile(_cv):
+        _t=open(_cv,encoding="utf-8").read()
+        for m in _re.finditer(r'"([A-Za-z0-9_]+)"\s*=>\s*h::VIML_FN_',_t):
+            builtins.add("viml:"+m.group(1))
     return builtins
 
 
