@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-607926be.js";
+            window.path_to_searchindex_js = "searchindex-edf3a67d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1937,6 +1937,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:sblast</code>, <code>:sbl</code></td><td>Split window and go to the last buffer (vim :sblast).</td></tr>
 <tr><td><code>:sbmodified</code>, <code>:sbm</code></td><td>Split window and go to the next modified buffer (vim :sbmodified).</td></tr>
 <tr><td><code>:sbuffer</code>, <code>:sb</code></td><td>Split window and go to the buffer whose path contains {name} (vim :sbuffer / :sb).</td></tr>
+<tr><td><code>:pedit</code>, <code>:ped</code></td><td>Edit {file} in a preview (horizontal split) window (vim :pedit).</td></tr>
+<tr><td><code>:pbuffer</code>, <code>:pb</code></td><td>Show the buffer whose path contains {name} in a preview (split) window (vim :pbuffer).</td></tr>
 <tr><td><code>:nohlsearch</code>, <code>:noh</code>, <code>:nohl</code></td><td>Clear the persistent search highlight (vim :nohlsearch).</td></tr>
 <tr><td><code>:clearjumps</code></td><td>Clear the current view’s jump list (vim :clearjumps).</td></tr>
 <tr><td><code>:project-replace</code>, <code>:replace-in-files</code></td><td>Regex-replace across all matching workspace files (JetBrains Replace in Files).</td></tr>
@@ -2259,6 +2261,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:character-info</code>, <code>:char</code></td><td>Get info about the character under the primary cursor.</td></tr>
 <tr><td><code>:reload</code>, <code>:rl</code></td><td>Discard changes and reload from the source file.</td></tr>
 <tr><td><code>:reload-all</code>, <code>:rla</code></td><td>Discard changes and reload all documents from the source files.</td></tr>
+<tr><td><code>:checktime</code>, <code>:checkt</code></td><td>Reload loaded buffers that changed on disk (vim :checktime).</td></tr>
+<tr><td><code>:filetype</code>, <code>:filet</code></td><td>Report the buffer’s detected language / accept on</td></tr>
+<tr><td><code>:scriptnames</code>, <code>:scr</code></td><td>List the sourced config files (vim :scriptnames).</td></tr>
 <tr><td><code>:git-stage</code>, <code>:stage</code>, <code>:git-add</code></td><td>Stage the current buffer’s file (git add).</td></tr>
 <tr><td><code>:git-unstage</code>, <code>:unstage</code></td><td>Unstage the current buffer’s file (git reset HEAD).</td></tr>
 <tr><td><code>:stash</code>, <code>:git-stash</code></td><td>git stash the working-tree changes (then reload open buffers).</td></tr>
@@ -2380,6 +2385,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:rightbelow</code>, <code>:rightb</code></td><td>Run {cmd} placing a new split right/below (vim :rightbelow; best-effort).</td></tr>
 <tr><td><code>:topleft</code>, <code>:to</code></td><td>Run {cmd} placing a new split at the top/left (vim :topleft; best-effort).</td></tr>
 <tr><td><code>:botright</code>, <code>:bo</code></td><td>Run {cmd} placing a new split at the bottom/right (vim :botright; best-effort).</td></tr>
+<tr><td><code>:tab</code></td><td>Run {cmd} opening its window in a new tab (vim :tab; best-effort placement).</td></tr>
 <tr><td><code>:lsp-stop</code></td><td>Stops the given language servers, or all language servers that are used by the current file if no arguments are supplied</td></tr>
 <tr><td><code>:tree-sitter-scopes</code></td><td>Display tree sitter scopes, primarily for theming and development.</td></tr>
 <tr><td><code>:tree-sitter-highlight-name</code>, <code>:Inspect</code></td><td>Display the tree-sitter highlight capture under the cursor (neovim :Inspect).</td></tr>
@@ -7149,10 +7155,10 @@ languages. It is only necessary when the node that increments the nesting level
 <ul>
 <li>Denominator (cited feature items): <strong>6847</strong></li>
 <li>Ported: <strong>3777</strong> (55.2%)</li>
-<li>Partial: <strong>882</strong> (12.9%)</li>
-<li>Absent: <strong>2188</strong></li>
+<li>Partial: <strong>888</strong> (13.0%)</li>
+<li>Absent: <strong>2182</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1465 static commands, 1854 typable <code>:</code> commands, 2964 default keybindings</li>
+<li>zemacs source surface: 1465 static commands, 1865 typable <code>:</code> commands, 2964 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
@@ -7212,7 +7218,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>functionality</td><td style="text-align: right">186</td><td style="text-align: right">185</td><td style="text-align: right">1</td><td style="text-align: right">99.5%</td></tr>
 <tr><td>fzf.vim</td><td style="text-align: right">26</td><td style="text-align: right">25</td><td style="text-align: right">1</td><td style="text-align: right">96.2%</td></tr>
 <tr><td>jetbrains</td><td style="text-align: right">218</td><td style="text-align: right">204</td><td style="text-align: right">14</td><td style="text-align: right">93.6%</td></tr>
-<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1424</td><td style="text-align: right">414</td><td style="text-align: right">68.6%</td></tr>
+<tr><td>neovim</td><td style="text-align: right">2077</td><td style="text-align: right">1424</td><td style="text-align: right">420</td><td style="text-align: right">68.6%</td></tr>
 <tr><td>spacemacs</td><td style="text-align: right">1296</td><td style="text-align: right">721</td><td style="text-align: right">158</td><td style="text-align: right">55.6%</td></tr>
 </tbody>
 </table>
@@ -7276,7 +7282,7 @@ languages. It is only necessary when the node that increments the nesting level
 <tr><td>jetbrains</td><td>view</td><td style="text-align: right">5</td><td style="text-align: right">5</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>jetbrains</td><td>window</td><td style="text-align: right">15</td><td style="text-align: right">15</td><td style="text-align: right">0</td><td style="text-align: right">100.0%</td></tr>
 <tr><td>neovim</td><td>cmdline-editing</td><td style="text-align: right">53</td><td style="text-align: right">35</td><td style="text-align: right">6</td><td style="text-align: right">66.0%</td></tr>
-<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">288</td><td style="text-align: right">81</td><td style="text-align: right">51.3%</td></tr>
+<tr><td>neovim</td><td>ex-command</td><td style="text-align: right">561</td><td style="text-align: right">288</td><td style="text-align: right">87</td><td style="text-align: right">51.3%</td></tr>
 <tr><td>neovim</td><td>function</td><td style="text-align: right">451</td><td style="text-align: right">448</td><td style="text-align: right">0</td><td style="text-align: right">99.3%</td></tr>
 <tr><td>neovim</td><td>insert-mode</td><td style="text-align: right">98</td><td style="text-align: right">62</td><td style="text-align: right">25</td><td style="text-align: right">63.3%</td></tr>
 <tr><td>neovim</td><td>normal-mode</td><td style="text-align: right">479</td><td style="text-align: right">422</td><td style="text-align: right">38</td><td style="text-align: right">88.1%</td></tr>
