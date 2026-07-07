@@ -478,6 +478,13 @@ pub struct Config {
     /// This prevents data loss if the editor is interrupted while writing the file, but may
     /// confuse some file watching/hot reloading programs. Defaults to `true`.
     pub atomic_save: bool,
+    /// vim `backup`: keep a persistent backup copy of a file's previous contents
+    /// (named `<file><backup_ext>`) before overwriting it on write. Defaults to
+    /// `false` (vim's default; `writebackup` makes a transient one).
+    pub backup: bool,
+    /// vim `backupext`: the suffix appended to the backup file name. Defaults to
+    /// `~`.
+    pub backup_ext: String,
     /// Whether to automatically remove all trailing line-endings after the final one on write.
     /// Defaults to `false`.
     pub trim_final_newlines: bool,
@@ -1392,6 +1399,8 @@ impl Default for Config {
             default_line_ending: LineEndingConfig::default(),
             insert_final_newline: true,
             atomic_save: true,
+            backup: false,
+            backup_ext: "~".to_string(),
             trim_final_newlines: false,
             trim_trailing_whitespace: false,
             smart_tab: Some(SmartTabConfig::default()),

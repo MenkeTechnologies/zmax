@@ -18748,6 +18748,8 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     (&["smarttab", "sta"],         "smart-tab.enable",   VimOptKind::Bool),
     (&["autocompletedelay"],       "completion-timeout", VimOptKind::Num),
     (&["autocompletetimeout"],     "completion-timeout", VimOptKind::Num),
+    (&["backup", "bk"],            "backup",             VimOptKind::Bool),
+    (&["writebackup", "wb"],       "backup",             VimOptKind::Bool),
 ];
 
 fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {
@@ -19420,6 +19422,16 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                 };
                 if let Some(le) = le {
                     config_set_key(&mut config, "default-line-ending", Value::String(le.into()))?;
+                    changed = true;
+                }
+            }
+            continue;
+        }
+        // `backupext` sets the suffix for vim `backup` copies.
+        if matches!(name, "backupext" | "bex") {
+            if let Some(v) = value {
+                if !v.is_empty() {
+                    config_set_key(&mut config, "backup-ext", Value::String(v.to_string()))?;
                     changed = true;
                 }
             }

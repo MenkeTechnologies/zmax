@@ -7580,19 +7580,19 @@
   },
   {
     "spec_id": "neovim.option.backup",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set atomic-save"
+    "note": ":set backup -> backup-on-write (Config.backup/backup-ext)"
   },
   {
     "spec_id": "neovim.option.writebackup",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set atomic-save"
+    "note": ":set writebackup -> backup-on-write (Config.backup/backup-ext)"
   },
   {
     "spec_id": "neovim.option.completeopt",
@@ -34966,11 +34966,11 @@
   },
   {
     "spec_id": "neovim.option.backupext",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set backupext is accepted, stored and queryable (:set backupext?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set backupext -> backup-on-write (Config.backup/backup-ext)"
   },
   {
     "spec_id": "neovim.option.backupskip",

@@ -1144,6 +1144,11 @@ impl Document {
         let current_rev = self.get_current_revision();
         let doc_id = self.id();
         let atomic_save = self.config.load().atomic_save;
+        // vim `backup`: keep a persistent `<file><backup_ext>` copy on overwrite.
+        let (keep_backup, backup_ext) = {
+            let cfg = self.config.load();
+            (cfg.backup, cfg.backup_ext.clone())
+        };
 
         let encoding_with_bom_info = (self.encoding, self.has_bom);
         // Clone the shared cell (not its value): the future reads it at write time
@@ -1192,6 +1197,19 @@ impl Document {
                     std::io::ErrorKind::PermissionDenied,
                     "Path is read only"
                 ));
+            }
+
+            // vim `backup`: copy the current on-disk contents to
+            // `<file><backup_ext>` before overwriting, so the previous version is
+            // recoverable. Best-effort — a failed backup must not block the save.
+            if keep_backup && !backup_ext.is_empty() {
+                if let Ok(meta) = fs::metadata(&write_path).await {
+                    if meta.is_file() {
+                        let mut backup_path = write_path.clone().into_os_string();
+                        backup_path.push(&backup_ext);
+                        let _ = fs::copy(&write_path, PathBuf::from(backup_path)).await;
+                    }
+                }
             }
 
             // Assume it is a hardlink to prevent data loss if the metadata cant be read (e.g. on certain Windows configurations)
@@ -3240,6 +3258,37 @@ mod test {
             original,
             "undo truncated/changed the buffer instead of reverting the edit"
         );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn backup_keeps_previous_file_contents_on_save() {
+        // vim `:set backup`: overwriting a file first copies its old contents to
+        // `<file>~`.
+        let mut cfg = Config::default();
+        cfg.backup = true;
+        cfg.atomic_save = false;
+        let mut path = std::env::temp_dir();
+        path.push(format!("zemacs_backup_{}.txt", std::process::id()));
+        std::fs::write(&path, b"old contents\n").unwrap();
+
+        let mut doc = Document::from(
+            Rope::from("new contents\n"),
+            None,
+            Arc::new(ArcSwap::new(Arc::new(cfg))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        doc.set_path(Some(&path));
+        doc.save(Some(path.clone()), true).unwrap().await.unwrap();
+
+        let backup = std::path::PathBuf::from(format!("{}~", path.display()));
+        assert_eq!(
+            std::fs::read_to_string(&backup).unwrap(),
+            "old contents\n",
+            "backup must hold the pre-overwrite contents"
+        );
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "new contents\n");
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&backup);
     }
 
     #[test]
