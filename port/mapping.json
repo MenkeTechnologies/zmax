@@ -37867,5 +37867,29 @@
       "typable:loadview"
     ],
     "note": "restore the current window view (cursor line) from its :mkview file"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_preserve",
+    "status": "ported",
+    "evidence": [
+      "typable:preserve"
+    ],
+    "note": "flush the buffer to its swap file now (vim :preserve)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_swapname",
+    "status": "ported",
+    "evidence": [
+      "typable:swapname"
+    ],
+    "note": "show the buffer swap file name (vim :swapname)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_recover",
+    "status": "ported",
+    "evidence": [
+      "typable:recover"
+    ],
+    "note": "replace the buffer with its swap file contents (vim :recover)"
   }
 ]

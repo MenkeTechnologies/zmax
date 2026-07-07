@@ -66,6 +66,22 @@ fn write_swap(doc: &Document) {
     let _ = std::fs::write(path, doc.text().to_string());
 }
 
+/// The swap-file path for a document (vim `:swapname`), if it has a file name.
+pub fn path_for(doc: &Document) -> Option<PathBuf> {
+    swap_path(doc.path()?, &swap_dir())
+}
+
+/// vim `:preserve` — flush the buffer to its swap file now (rather than waiting
+/// for the periodic change hook).
+pub fn preserve(doc: &Document) {
+    write_swap(doc);
+}
+
+/// vim `:recover` — the contents of the document's swap file, if one exists.
+pub fn recover_text(doc: &Document) -> Option<String> {
+    std::fs::read_to_string(path_for(doc)?).ok()
+}
+
 /// Remove a document's swap file (on a clean save).
 pub fn remove(doc: &Document) {
     let dir = swap_dir();
