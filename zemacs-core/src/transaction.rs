@@ -660,8 +660,11 @@ impl Transaction {
     pub fn from_snapshot(s: TransactionSnapshot) -> Self {
         let mut tx = Transaction::from(ChangeSet::from_snapshot(s.changes));
         if let Some(sel) = s.selection {
-            let ranges: SmallVec<[Range; 1]> =
-                sel.ranges.into_iter().map(|(a, h)| Range::new(a, h)).collect();
+            let ranges: SmallVec<[Range; 1]> = sel
+                .ranges
+                .into_iter()
+                .map(|(a, h)| Range::new(a, h))
+                .collect();
             tx = tx.with_selection(Selection::new(ranges, sel.primary_index));
         }
         tx

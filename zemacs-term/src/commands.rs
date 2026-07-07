@@ -1937,10 +1937,7 @@ fn whichwrap_enabled(dir: Direction) -> bool {
         Direction::Forward => &["l", ">"],
     };
     typed::vim_opt_str("whichwrap")
-        .map(|w| {
-            w.split(',')
-                .any(|f| flags.iter().any(|g| f.trim() == *g))
-        })
+        .map(|w| w.split(',').any(|f| flags.iter().any(|g| f.trim() == *g)))
         .unwrap_or(false)
 }
 
@@ -1969,7 +1966,9 @@ fn whichwrap_cross(cx: &mut Context, dir: Direction) -> bool {
                 .max(prev_start)
         }
         Direction::Forward => {
-            let last = line_end_char_index(&text, line).saturating_sub(1).max(line_start);
+            let last = line_end_char_index(&text, line)
+                .saturating_sub(1)
+                .max(line_start);
             if pos != last || line + 1 >= text.len_lines() {
                 return false;
             }
@@ -30257,7 +30256,9 @@ pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
     let (_view, doc) = current!(cx.editor);
     let text = doc.text();
     let last = text.len_lines().saturating_sub(1);
-    let lines: Vec<String> = (0..text.len_lines()).map(|i| text.line(i).to_string()).collect();
+    let lines: Vec<String> = (0..text.len_lines())
+        .map(|i| text.line(i).to_string())
+        .collect();
     let line_refs: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
 
     let ranges = match method {
@@ -30296,7 +30297,8 @@ pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
     // vim `foldlevelstart` (>= 0): close folds whose nesting depth is at or below
     // the start level on open (`0` closes everything, higher keeps outer levels
     // open); `-1` (the default) leaves folds open.
-    if let Some(start) = typed::vim_opt_str("foldlevelstart").and_then(|v| v.parse::<isize>().ok()) {
+    if let Some(start) = typed::vim_opt_str("foldlevelstart").and_then(|v| v.parse::<isize>().ok())
+    {
         if start >= 0 {
             let start = start as usize;
             for (s, e) in &ranges {

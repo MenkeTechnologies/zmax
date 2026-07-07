@@ -127,8 +127,14 @@ mod test {
         clear(None);
         register(parse_autocmd("BufWritePost *.rs echo saved").unwrap());
         register(parse_autocmd("BufRead *.py echo py").unwrap());
-        assert_eq!(matching_commands("bufwritepost", "a.rs"), vec!["echo saved"]);
-        assert_eq!(matching_commands("BufWritePost", "a.py"), Vec::<String>::new());
+        assert_eq!(
+            matching_commands("bufwritepost", "a.rs"),
+            vec!["echo saved"]
+        );
+        assert_eq!(
+            matching_commands("BufWritePost", "a.py"),
+            Vec::<String>::new()
+        );
         assert_eq!(matching_commands("bufread", "x.py"), vec!["echo py"]);
         clear(Some("BufRead"));
         assert!(matching_commands("bufread", "x.py").is_empty());

@@ -39,6 +39,9 @@
 | `:next`, `:argnext` | Edit the next file in the argument list (vim :next). |
 | `:previous`, `:Next`, `:prev`, `:argprev` | Edit the previous file in the argument list (vim :previous / :Next). |
 | `:first`, `:rewind`, `:rew` | Edit the first file in the argument list (vim :first / :rewind). |
+| `:view`, `:vie`, `:find-file-read-only` | Edit a file read-only (vim :view / emacs find-file-read-only). |
+| `:sview`, `:svie`, `:find-file-read-only-other-window` | Split and edit a file read-only (vim :sview / emacs find-file-read-only-other-window). |
+| `:autocmd`, `:au` | Register an autocommand: :autocmd {events} {pattern} {command} (`:autocmd !` clears). |
 | `:last`, `:la` | Edit the last file in the argument list (vim :last). |
 | `:argument`, `:argu` | Edit the Nth file in the argument list (vim :argument). |
 | `:snext`, `:sn` | Split the window and edit the next argument (vim :snext). |
@@ -333,6 +336,9 @@
 | `:kill-all-abbrevs` | Remove all defined abbreviations (emacs kill-all-abbrevs). |
 | `:iabbrev`, `:ia` | List or define an Insert-mode abbreviation (vim :iabbrev). |
 | `:cabbrev`, `:ca` | List or define a Command-line-mode abbreviation (vim :cabbrev). |
+| `:noreabbrev`, `:norea` | List or define a non-recursive Insert+Command-line abbreviation (vim :noreabbrev). |
+| `:inoreabbrev`, `:inorea` | List or define a non-recursive Insert-mode abbreviation (vim :inoreabbrev). |
+| `:cnoreabbrev`, `:cnorea` | List or define a non-recursive Command-line-mode abbreviation (vim :cnoreabbrev). |
 | `:unabbreviate`, `:una` | Remove an abbreviation for both modes (vim :unabbreviate). |
 | `:iunabbreviate`, `:iuna` | Remove an Insert-mode abbreviation (vim :iunabbreviate). |
 | `:cunabbreviate`, `:cuna` | Remove a Command-line-mode abbreviation (vim :cunabbreviate). |
@@ -479,6 +485,8 @@
 | `:windo` | Run an ex-command in every window of the current tabpage. |
 | `:wincmd` | Run a window (CTRL-W) command by key, e.g. :wincmd h focuses left. |
 | `:source`, `:so` | Source a Vimscript file through the embedded vimlrs interpreter. |
+| `:runtime`, `:ru` | Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime). |
+| `:diffthis`, `:difft` | Show the current buffer's changes as a side-by-side diff vs git HEAD (vim :diffthis). |
 | `:tabs` | List the tabpages and switch to the selected one. |
 | `:cdo` | Run an ex-command on each quickfix entry. |
 | `:cfdo` | Run an ex-command on the first quickfix entry of each file. |
@@ -689,6 +697,11 @@
 | `:nmapclear` | Clear runtime normal-mode mappings. |
 | `:imapclear` | Clear runtime insert-mode mappings. |
 | `:vmapclear` | Clear runtime select/visual-mode mappings. |
+| `:xmapclear` | Clear runtime visual-mode mappings (Vim :xmapclear). |
+| `:smapclear` | Clear runtime select-mode mappings (Vim :smapclear). |
+| `:omapclear` | Clear runtime operator-pending mappings (Vim :omapclear). |
+| `:sunmap` | Remove a runtime select-mode {lhs} mapping (Vim :sunmap). |
+| `:ounmap` | Remove a runtime operator-pending {lhs} mapping (Vim :ounmap). |
 | `:normal`, `:norm` | Execute {commands} as normal-mode keystrokes (vim :normal[!]). |
 | `:mark`, `:k` | Set mark {x} at the cursor position (vim :mark / :k). |
 | `:buffer`, `:buf` | Switch to the open buffer whose path contains {name} (vim :buffer / :b). |

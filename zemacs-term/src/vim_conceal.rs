@@ -16,11 +16,11 @@ fn markdown_patterns() -> &'static [Regex] {
     static PATS: OnceLock<Vec<Regex>> = OnceLock::new();
     PATS.get_or_init(|| {
         [
-            r"\*\*(.+?)\*\*",                 // **bold**
-            r"__(.+?)__",                     // __bold__
-            r"~~(.+?)~~",                     // ~~strike~~
-            r"`([^`\n]+?)`",                  // `code`
-            r"\[([^\]\n]+?)\]\([^)\n]*?\)",   // [text](url)
+            r"\*\*(.+?)\*\*",               // **bold**
+            r"__(.+?)__",                   // __bold__
+            r"~~(.+?)~~",                   // ~~strike~~
+            r"`([^`\n]+?)`",                // `code`
+            r"\[([^\]\n]+?)\]\([^)\n]*?\)", // [text](url)
         ]
         .iter()
         .filter_map(|p| Regex::new(p).ok())
