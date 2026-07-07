@@ -26372,6 +26372,35 @@ fn open_workspace_config(
     Ok(())
 }
 
+/// vim `:scriptnames` — list the scripts that have been sourced. zemacs sources
+/// its TOML config plus an optional workspace-local override; list those that
+/// exist (numbered, like vim). Partial: zemacs doesn't keep an arbitrary
+/// `:source` history.
+fn ex_scriptnames(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut lines = Vec::new();
+    for path in [
+        zemacs_loader::config_file(),
+        zemacs_loader::workspace_config_file(),
+    ] {
+        if path.exists() {
+            lines.push(format!("{:3}: {}", lines.len() + 1, path.display()));
+        }
+    }
+    if lines.is_empty() {
+        cx.editor.set_status("no config files sourced");
+    } else {
+        cx.editor.set_status(lines.join("   "));
+    }
+    Ok(())
+}
+
 fn open_log(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -34672,6 +34701,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "scriptnames",
+        aliases: &["scr"],
+        doc: "List the sourced config files (vim :scriptnames).",
+        fun: ex_scriptnames,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

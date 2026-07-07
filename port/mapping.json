@@ -37819,5 +37819,13 @@
       "typable:filetype"
     ],
     "note": "language detection is always on; reports the buffer language / accepts on|off|detect"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_scriptnames",
+    "status": "partial",
+    "evidence": [
+      "typable:scriptnames"
+    ],
+    "note": "list the sourced config files (no arbitrary :source history tracked)"
   }
 ]

@@ -693,6 +693,7 @@
 | `:reload-all`, `:rla` | Discard changes and reload all documents from the source files. |
 | `:checktime`, `:checkt` | Reload loaded buffers that changed on disk (vim :checktime). |
 | `:filetype`, `:filet` | Report the buffer's detected language / accept on|off|detect|plugin|indent (vim :filetype). |
+| `:scriptnames`, `:scr` | List the sourced config files (vim :scriptnames). |
 | `:git-stage`, `:stage`, `:git-add` | Stage the current buffer's file (git add). |
 | `:git-unstage`, `:unstage` | Unstage the current buffer's file (git reset HEAD). |
 | `:stash`, `:git-stash` | git stash the working-tree changes (then reload open buffers). |
