@@ -37827,5 +37827,21 @@
       "typable:scriptnames"
     ],
     "note": "list the sourced config files (no arbitrary :source history tracked)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_pedit",
+    "status": "partial",
+    "evidence": [
+      "typable:pedit"
+    ],
+    "note": "edit a file in a preview (horizontal split) window; no dedicated preview window"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_pbuffer",
+    "status": "partial",
+    "evidence": [
+      "typable:pbuffer"
+    ],
+    "note": "show a buffer in a preview (split) window; no dedicated preview window"
   }
 ]

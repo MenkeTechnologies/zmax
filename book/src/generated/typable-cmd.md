@@ -375,6 +375,8 @@
 | `:sblast`, `:sbl` | Split window and go to the last buffer (vim :sblast). |
 | `:sbmodified`, `:sbm` | Split window and go to the next modified buffer (vim :sbmodified). |
 | `:sbuffer`, `:sb` | Split window and go to the buffer whose path contains {name} (vim :sbuffer / :sb). |
+| `:pedit`, `:ped` | Edit {file} in a preview (horizontal split) window (vim :pedit). |
+| `:pbuffer`, `:pb` | Show the buffer whose path contains {name} in a preview (split) window (vim :pbuffer). |
 | `:nohlsearch`, `:noh`, `:nohl` | Clear the persistent search highlight (vim :nohlsearch). |
 | `:clearjumps` | Clear the current view's jump list (vim :clearjumps). |
 | `:project-replace`, `:replace-in-files` | Regex-replace across all matching workspace files (JetBrains Replace in Files). |

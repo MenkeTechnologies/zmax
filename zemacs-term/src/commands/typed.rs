@@ -205,6 +205,21 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
     Ok(())
 }
 
+/// vim `:pedit {file}` — edit `{file}` in the preview window. zemacs has no
+/// dedicated preview window; it opens the file in a horizontal split (which it
+/// already treats as a "preview window" for e.g. tag/definition previews), so
+/// this is a partial port of a different window model.
+fn preview_edit(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    open_impl(cx, args, Action::HorizontalSplit)
+}
+
 /// vim `:find` search: locate `name` in the 'path'. zemacs approximates vim's
 /// default 'path' (`.,,`) *plus* the common `set path+=**`: try the current
 /// buffer's directory and the working directory directly, then walk the working
@@ -31436,6 +31451,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         name: "sbuffer",
         aliases: &["sb"],
         doc: "Split window and go to the buffer whose path contains {name} (vim :sbuffer / :sb).",
+        fun: sbuffer_open,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pedit",
+        aliases: &["ped"],
+        doc: "Edit {file} in a preview (horizontal split) window (vim :pedit).",
+        fun: preview_edit,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pbuffer",
+        aliases: &["pb"],
+        doc: "Show the buffer whose path contains {name} in a preview (split) window (vim :pbuffer).",
         fun: sbuffer_open,
         completer: CommandCompleter::none(),
         signature: Signature {
