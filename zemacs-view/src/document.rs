@@ -1479,6 +1479,16 @@ impl Document {
         self.encoding
     }
 
+    /// vim `bomb`: whether to write a byte-order mark for this document.
+    pub fn set_bom(&mut self, on: bool) {
+        self.has_bom = on;
+    }
+
+    /// Whether the document is written with a byte-order mark (vim `bomb`).
+    pub fn has_bom(&self) -> bool {
+        self.has_bom
+    }
+
     /// sets the document path without sending events to various
     /// observers (like LSP), in most cases `Editor::set_doc_path`
     /// should be used instead

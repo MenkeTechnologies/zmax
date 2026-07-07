@@ -7500,11 +7500,11 @@
   },
   {
     "spec_id": "neovim.option.fileencoding",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:encoding"
     ],
-    "note": "vim option -> zemacs :encoding encoding"
+    "note": ":set fileencoding -> Document.set_encoding/set_bom (encoding_rs write path)"
   },
   {
     "spec_id": "neovim.option.encoding",
@@ -7512,7 +7512,7 @@
     "evidence": [
       "typable:encoding"
     ],
-    "note": "vim option -> zemacs :encoding encoding"
+    "note": ":set encoding -> Document.set_encoding/set_bom (encoding_rs write path)"
   },
   {
     "spec_id": "neovim.option.laststatus",
@@ -34998,11 +34998,11 @@
   },
   {
     "spec_id": "neovim.option.bomb",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set bomb is accepted, stored and queryable (:set bomb?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set bomb -> Document.set_encoding/set_bom (encoding_rs write path)"
   },
   {
     "spec_id": "neovim.option.breakat",

@@ -19248,6 +19248,9 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     let mut set_language: Option<String> = None;
     // vim `foldmethod`: recompute the document's folds after the option loop.
     let mut set_foldmethod: Option<String> = None;
+    // vim `fileencoding`/`encoding` and `bomb`: buffer-local write encoding/BOM.
+    let mut set_encoding: Option<String> = None;
+    let mut set_bom: Option<bool> = None;
     // vim `foldenable`/`foldlevel` drive the existing fold commands: Some(true)
     // opens all folds, Some(false) closes them.
     let mut fold_open: Option<bool> = None;
@@ -19429,6 +19432,24 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
+        // `fileencoding`/`encoding` (`fenc`/`enc`) set the buffer's write
+        // encoding; `bomb`/`nobomb` toggle the byte-order mark (vim).
+        if matches!(name, "fileencoding" | "fenc" | "encoding" | "enc") {
+            if let Some(v) = value {
+                if !v.is_empty() {
+                    set_encoding = Some(v.to_string());
+                }
+            }
+            continue;
+        }
+        if value.is_none() && matches!(name, "bomb") {
+            set_bom = Some(!neg);
+            continue;
+        }
+        if value.is_none() && matches!(name, "nobomb") {
+            set_bom = Some(false);
+            continue;
+        }
         // `foldmethod` (`fdm`) chooses how folds are computed; recompute after
         // the option loop so `foldmarker`/indent settings in the same `:set` are
         // already stored (vim `:set foldmethod=indent`).
@@ -19572,6 +19593,18 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     // Recompute folds for the chosen fold method (vim `foldmethod`).
     if let Some(method) = set_foldmethod {
         super::apply_foldmethod(&mut editor_context(cx), &method);
+    }
+    // Buffer-local write encoding / BOM (vim `fileencoding`/`bomb`).
+    if set_encoding.is_some() || set_bom.is_some() {
+        let (_view, doc) = current!(cx.editor);
+        if let Some(enc) = set_encoding {
+            if let Err(e) = doc.set_encoding(&enc) {
+                return Err(anyhow!("{e}"));
+            }
+        }
+        if let Some(bom) = set_bom {
+            doc.set_bom(bom);
+        }
     }
     // Drive folding (vim `foldenable`/`foldlevel`) via the fold commands.
     if let Some(open) = fold_open {
