@@ -37579,5 +37579,93 @@
       "typable:diffthis"
     ],
     "note": "side-by-side diff of current buffer vs git HEAD"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lua",
+    "status": "partial",
+    "evidence": [
+      "typable:lua"
+    ],
+    "note": "run a Lua snippet via the system lua interpreter (no embedded editor API)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_luafile",
+    "status": "partial",
+    "evidence": [
+      "typable:luafile"
+    ],
+    "note": "run a Lua script file via the system lua interpreter"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_perl",
+    "status": "partial",
+    "evidence": [
+      "typable:perl"
+    ],
+    "note": "run a Perl snippet via the system perl interpreter (no embedded editor API)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_perlfile",
+    "status": "partial",
+    "evidence": [
+      "typable:perlfile"
+    ],
+    "note": "run a Perl script file via the system perl interpreter"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_python",
+    "status": "partial",
+    "evidence": [
+      "typable:python"
+    ],
+    "note": "run a Python snippet via the system python interpreter (no embedded editor API)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_pyfile",
+    "status": "partial",
+    "evidence": [
+      "typable:pyfile"
+    ],
+    "note": "run a Python script file via the system python interpreter"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_python3",
+    "status": "partial",
+    "evidence": [
+      "typable:python3"
+    ],
+    "note": "run a Python 3 snippet via the system python3 interpreter (no embedded editor API)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_py3",
+    "status": "partial",
+    "evidence": [
+      "typable:py3"
+    ],
+    "note": "run a Python 3 snippet via the system python3 interpreter (no embedded editor API)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_py3file",
+    "status": "partial",
+    "evidence": [
+      "typable:py3file"
+    ],
+    "note": "run a Python 3 script file via the system python3 interpreter"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ruby",
+    "status": "partial",
+    "evidence": [
+      "typable:ruby"
+    ],
+    "note": "run a Ruby snippet via the system ruby interpreter (no embedded editor API)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_rubyfile",
+    "status": "partial",
+    "evidence": [
+      "typable:rubyfile"
+    ],
+    "note": "run a Ruby script file via the system ruby interpreter"
   }
 ]

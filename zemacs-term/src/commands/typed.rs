@@ -4555,6 +4555,89 @@ fn embedded_capture(argv: &[String]) -> anyhow::Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
+/// Surface an interpreter's captured stdout: nothing → a status ack, one line →
+/// the status line (like vim echoing a `:lua`/`:python` result), many lines → a
+/// scratch buffer.
+fn surface_interp_output(cx: &mut compositor::Context, label: &str, out: &str) {
+    let out = out.trim_end();
+    if out.is_empty() {
+        cx.editor.set_status(format!("{label}: ok"));
+    } else if !out.contains('\n') {
+        cx.editor.set_status(out.to_string());
+    } else {
+        super::show_text_in_scratch(cx.editor, out);
+    }
+}
+
+/// Ports vim's `:lua`/`:perl`/`:python`/`:py3`/`:ruby` code commands: run `code`
+/// through the real system interpreter (`bin <flag> code`) and show its stdout.
+/// Pure computation works; unlike Vim's *embedded* interpreter there is no editor
+/// API (`vim.*` etc.), so this is a partial port. Missing interpreters are
+/// reported by [`require_tool`] rather than panicking.
+fn run_interp_code(
+    cx: &mut compositor::Context,
+    bin: &str,
+    flag: &str,
+    code: &str,
+) -> anyhow::Result<()> {
+    let code = code.trim();
+    if code.is_empty() {
+        bail!("usage: :{bin} {{code}}");
+    }
+    let out = embedded_capture(&[bin.to_string(), flag.to_string(), code.to_string()])?;
+    surface_interp_output(cx, bin, &out);
+    Ok(())
+}
+
+/// Ports vim's `:luafile`/`:perlfile`/`:pyfile`/`:py3file`/`:rubyfile`: run a
+/// script `file` through the real system interpreter (`bin file`).
+fn run_interp_file(cx: &mut compositor::Context, bin: &str, file: &str) -> anyhow::Result<()> {
+    let file = file.trim();
+    if file.is_empty() {
+        bail!("usage: :{bin}file {{file}}");
+    }
+    let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(file)).into_owned();
+    if !path.exists() {
+        bail!("{bin}file: {} does not exist", path.display());
+    }
+    let out = embedded_capture(&[bin.to_string(), path.to_string_lossy().into_owned()])?;
+    surface_interp_output(cx, bin, &out);
+    Ok(())
+}
+
+macro_rules! interp_code_cmd {
+    ($fn:ident, $bin:literal, $flag:literal) => {
+        fn $fn(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            run_interp_code(cx, $bin, $flag, &args.join(" "))
+        }
+    };
+}
+
+macro_rules! interp_file_cmd {
+    ($fn:ident, $bin:literal) => {
+        fn $fn(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            run_interp_file(cx, $bin, &args.join(" "))
+        }
+    };
+}
+
+interp_code_cmd!(ex_lua, "lua", "-e");
+interp_code_cmd!(ex_perl, "perl", "-e");
+interp_code_cmd!(ex_python, "python", "-c");
+interp_code_cmd!(ex_python3, "python3", "-c");
+interp_code_cmd!(ex_ruby, "ruby", "-e");
+interp_file_cmd!(ex_luafile, "lua");
+interp_file_cmd!(ex_perlfile, "perl");
+interp_file_cmd!(ex_pythonfile, "python");
+interp_file_cmd!(ex_python3file, "python3");
+interp_file_cmd!(ex_rubyfile, "ruby");
+
 /// Spawn `argv` in a live PTY terminal panel (for upload / serial monitor),
 /// created on the main thread since the PTY handle isn't `Send`.
 fn embedded_spawn_terminal(
@@ -32177,6 +32260,90 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: diffthis,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    // vim `:lua`/`:perl`/`:python`/`:py3`/`:ruby` (+ their `*file` forms) run the
+    // real system interpreter on the code/file and echo its stdout. Pure
+    // computation works; there is no embedded editor API, so these are tracked as
+    // partial ports. A missing interpreter is reported, not fatal.
+    TypableCommand {
+        name: "lua",
+        aliases: &[],
+        doc: "Run a Lua snippet through the system lua interpreter and echo its output (vim :lua).",
+        fun: ex_lua,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "luafile",
+        aliases: &["luaf"],
+        doc: "Run a Lua script file through the system lua interpreter (vim :luafile).",
+        fun: ex_luafile,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "perl",
+        aliases: &["pe"],
+        doc: "Run a Perl snippet through the system perl interpreter and echo its output (vim :perl).",
+        fun: ex_perl,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "perlfile",
+        aliases: &["perlf"],
+        doc: "Run a Perl script file through the system perl interpreter (vim :perlfile).",
+        fun: ex_perlfile,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "python",
+        aliases: &["py"],
+        doc: "Run a Python snippet through the system python interpreter and echo its output (vim :python).",
+        fun: ex_python,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "pyfile",
+        aliases: &["pyf"],
+        doc: "Run a Python script file through the system python interpreter (vim :pyfile).",
+        fun: ex_pythonfile,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "py3",
+        aliases: &["python3"],
+        doc: "Run a Python 3 snippet through the system python3 interpreter and echo its output (vim :py3 / :python3).",
+        fun: ex_python3,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "py3file",
+        aliases: &["py3f", "python3file"],
+        doc: "Run a Python 3 script file through the system python3 interpreter (vim :py3file).",
+        fun: ex_python3file,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "ruby",
+        aliases: &["rub"],
+        doc: "Run a Ruby snippet through the system ruby interpreter and echo its output (vim :ruby).",
+        fun: ex_ruby,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "rubyfile",
+        aliases: &["rubyf"],
+        doc: "Run a Ruby script file through the system ruby interpreter (vim :rubyfile).",
+        fun: ex_rubyfile,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "tabs",
