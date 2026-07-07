@@ -485,6 +485,12 @@ pub struct Config {
     /// vim `backupext`: the suffix appended to the backup file name. Defaults to
     /// `~`.
     pub backup_ext: String,
+    /// vim `swapfile`: keep a recovery swap file of unsaved changes; warn when a
+    /// swap file already exists on open. Defaults to false.
+    pub swapfile: bool,
+    /// vim `directory`: directory for swap files. Empty keeps them beside the
+    /// edited file (as a dotfile).
+    pub swap_directory: String,
     /// vim `undofile`: persist the undo history to disk on write and reload it on
     /// open, so undo survives closing the file. Defaults to false.
     pub undofile: bool,
@@ -1419,6 +1425,8 @@ impl Default for Config {
             atomic_save: true,
             backup: false,
             backup_ext: "~".to_string(),
+            swapfile: false,
+            swap_directory: String::new(),
             undofile: false,
             undo_dir: String::new(),
             title: false,

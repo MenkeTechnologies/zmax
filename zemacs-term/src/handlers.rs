@@ -73,6 +73,7 @@ pub fn setup(config: Arc<ArcSwap<Config>>) -> Handlers {
     recent_files::register_hooks(&handlers);
     crate::vim_modeline::register_hooks();
     crate::vim_conceal::register_hooks();
+    crate::vim_swap::register_hooks();
     closed_files::register_hooks(&handlers);
     handlers
 }

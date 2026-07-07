@@ -35254,11 +35254,11 @@
   },
   {
     "spec_id": "neovim.option.directory",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set directory is accepted, stored and queryable (:set directory?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set directory -> recovery swap file (write on edit, remove on save, warn on open)"
   },
   {
     "spec_id": "neovim.option.display",
@@ -36374,11 +36374,11 @@
   },
   {
     "spec_id": "neovim.option.swapfile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set swapfile is accepted, stored and queryable (:set swapfile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set swapfile -> recovery swap file (write on edit, remove on save, warn on open)"
   },
   {
     "spec_id": "neovim.option.switchbuf",

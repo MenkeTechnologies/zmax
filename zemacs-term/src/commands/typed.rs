@@ -188,6 +188,17 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
         let (_view, doc) = current!(cx.editor);
         crate::vim_undo::load(doc, &undo_dir);
     }
+    // vim `swapfile`: warn if a swap file already exists (recovery, vim E325).
+    if cx.editor.config().swapfile {
+        let exists = {
+            let (_view, doc) = current_ref!(cx.editor);
+            crate::vim_swap::swap_exists(doc)
+        };
+        if exists {
+            cx.editor
+                .set_error("swap file already exists (recovery) — :w overwrites it");
+        }
+    }
     // vim autocmd: a file was read into / entered a window.
     fire_autocmd(cx, "BufReadPost");
     fire_autocmd(cx, "BufEnter");
@@ -2515,6 +2526,11 @@ fn write(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
             let undo_dir = cfg.undo_dir.clone();
             let (_view, doc) = current_ref!(cx.editor);
             crate::vim_undo::save(doc, &undo_dir);
+        }
+        // vim `swapfile`: a clean save removes the recovery swap file.
+        if cfg.swapfile {
+            let (_view, doc) = current_ref!(cx.editor);
+            crate::vim_swap::remove(doc);
         }
         fire_autocmd(cx, "BufWritePost");
     }
@@ -18781,6 +18797,8 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     (&["titlestring"],             "title-string",       VimOptKind::Str),
     (&["undofile", "udf"],         "undofile",           VimOptKind::Bool),
     (&["undodir", "udir"],         "undo-dir",           VimOptKind::Str),
+    (&["swapfile", "swf"],         "swapfile",           VimOptKind::Bool),
+    (&["directory", "dir"],        "swap-directory",     VimOptKind::Str),
 ];
 
 fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {
