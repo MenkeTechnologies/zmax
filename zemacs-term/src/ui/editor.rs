@@ -780,6 +780,11 @@ impl EditorView {
             overlays.push(overlay);
         }
 
+        // vim `spell`: underline misspelled words in the viewport.
+        if let Some(overlay) = Self::doc_spell_highlights(doc, view, theme) {
+            overlays.push(overlay);
+        }
+
         if is_focused {
             if config.lsp.auto_document_highlight {
                 if let Some(overlay) = Self::doc_document_highlights(doc, view, theme) {
@@ -1274,6 +1279,65 @@ impl EditorView {
             }
         }
         out
+    }
+
+    /// vim `spell`: underline misspelled words in the visible viewport when
+    /// `:set spell` is active. Uses the existing spell engine (`crate::spell`);
+    /// scans only the visible line range so it stays cheap on large files.
+    pub fn doc_spell_highlights(
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+    ) -> Option<OverlayHighlights> {
+        if !crate::commands::vim_opt_bool("spell") {
+            return None;
+        }
+        let text = doc.text().slice(..);
+        if text.len_chars() == 0 {
+            return None;
+        }
+        let view_offset = doc.view_offset(view.id);
+        let height = view.inner_area(doc).height as usize;
+        let first_line = text.char_to_line(view_offset.anchor);
+        let last_line = (first_line + height + 1).min(text.len_lines());
+        let scan_start = text.line_to_char(first_line);
+        let scan_end = text.line_to_char(last_line);
+        let haystack: Vec<char> = text.slice(scan_start..scan_end).chars().collect();
+
+        // Tokenize into words (alphabetic runs, apostrophes allowed inside) and
+        // flag the misspelled ones.
+        let mut ranges: Vec<ops::Range<usize>> = Vec::new();
+        let mut i = 0;
+        while i < haystack.len() {
+            if haystack[i].is_alphabetic() {
+                let start = i;
+                while i < haystack.len()
+                    && (haystack[i].is_alphabetic() || haystack[i] == '\'')
+                {
+                    i += 1;
+                }
+                // Trim trailing apostrophes so `word'` checks `word`.
+                let mut end = i;
+                while end > start && haystack[end - 1] == '\'' {
+                    end -= 1;
+                }
+                let word: String = haystack[start..end].iter().collect();
+                if word.chars().count() >= 2 && crate::spell::is_misspelled(&word) {
+                    ranges.push((scan_start + start)..(scan_start + end));
+                }
+            } else {
+                i += 1;
+            }
+        }
+
+        if ranges.is_empty() {
+            return None;
+        }
+        let highlight = theme
+            .find_highlight_exact("diagnostic.spell")
+            .or_else(|| theme.find_highlight_exact("diagnostic.error"))
+            .or_else(|| theme.find_highlight_exact("diagnostic"))?;
+        Some(OverlayHighlights::Homogeneous { highlight, ranges })
     }
 
     /// vim `hlsearch`: highlight every match of the last search pattern (register

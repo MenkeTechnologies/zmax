@@ -36278,11 +36278,11 @@
   },
   {
     "spec_id": "neovim.option.spell",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set spell is accepted, stored and queryable (:set spell?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set spell -> live misspelling underline (doc_spell_highlights)"
   },
   {
     "spec_id": "neovim.option.spellcapcheck",
